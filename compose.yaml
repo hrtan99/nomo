@@ -1,0 +1,53 @@
+name: nomo
+
+x-nomo-common: &nomo-common
+  build:
+    context: .
+    dockerfile: Dockerfile
+  image: nomo-dev:ubuntu-26.04-arm64
+  platform: linux/arm64
+  init: true
+  user: "10001:10001"
+  working_dir: /workspace
+  read_only: true
+  cap_drop:
+    - ALL
+  security_opt:
+    - no-new-privileges:true
+  pids_limit: 256
+  cpus: 4.0
+  mem_limit: 4g
+  stop_grace_period: 10s
+  environment:
+    CARGO_HOME: /home/nomo/.cargo
+    HISTFILE: /tmp/.bash_history
+    HOME: /home/nomo
+  volumes:
+    - type: bind
+      source: .
+      target: /workspace
+    - type: volume
+      source: cargo-cache
+      target: /home/nomo/.cargo
+  tmpfs:
+    - /tmp:rw,nosuid,nodev,noexec,size=512m,mode=1777
+    - /home/nomo/.cache:rw,nosuid,nodev,noexec,size=256m,uid=10001,gid=10001,mode=0700
+
+services:
+  dev:
+    <<: *nomo-common
+    network_mode: none
+    stdin_open: true
+    tty: true
+
+  dependency:
+    <<: *nomo-common
+    profiles:
+      - networked
+    network_mode: bridge
+    stdin_open: true
+    tty: true
+
+volumes:
+  cargo-cache:
+    name: nomo-cargo-cache

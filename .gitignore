@@ -1,0 +1,30 @@
+# Operating systems and editors
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Local secrets and runtime configuration
+.env
+.env.*
+!.env.example
+etas.local.toml
+
+# Etas and build artifacts
+.etas/
+target/
+build/
+dist/
+coverage/
+
+# Runtime artifacts
+*.log
+traces/
+checkpoints/
+tmp/
+
+# Local toolchain patch configuration
+.cargo/config.toml
+
+# Local development and agent working documents
+docs/agent/
