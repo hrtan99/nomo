@@ -1,0 +1,30 @@
+[package]
+name = "etas002-console-project"
+version = "0.1.0"
+edition = "2026"
+
+[source]
+root = "src"
+
+[runtime]
+default_profile = "console-allow"
+
+[runtime.profiles.console-allow]
+boundary_policy = "etas002-console"
+
+[runtime.profiles.console-allow.policy]
+mode = "local-static"
+rules = ["console=allow"]
+
+[runtime.profiles.console-deny]
+boundary_policy = "etas002-console"
+
+[runtime.profiles.console-deny.policy]
+mode = "local-static"
+rules = ["console=deny"]
+
+[[bin]]
+name = "console"
+module = "app.main"
+flow = "main"
+profile = "console-allow"
