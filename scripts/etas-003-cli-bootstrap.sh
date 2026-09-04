@@ -79,21 +79,30 @@ prepare_checkout() {
         echo "checkout did not resolve to ${base_revision}" >&2
         exit 1
     fi
+    if ! /usr/bin/git -C "${source_dir}" diff --cached --quiet HEAD --; then
+        echo "refusing tracked index drift from locked HEAD in ${source_dir}" >&2
+        exit 1
+    fi
     local untracked
     untracked="$(/usr/bin/git -C "${source_dir}" ls-files --others --exclude-standard)"
-    if [[ "${untracked}" != "${allowed_untracked}" ]]; then
+    if [[ -n "${untracked}" && "${untracked}" != "${allowed_untracked}" ]]; then
         echo "unexpected untracked source in ${source_dir}: ${untracked}" >&2
         exit 1
     fi
 
-    if /usr/bin/git -C "${source_dir}" diff --quiet --; then
+    local actual_patch_sha256
+    actual_patch_sha256="$(/usr/bin/git -C "${source_dir}" diff --binary HEAD -- \
+        | /usr/bin/sha256sum | cut -d ' ' -f 1)"
+    if /usr/bin/git -C "${source_dir}" diff --quiet HEAD --; then
         /usr/bin/gzip --decompress --stdout "${patch_path}" \
             | /usr/bin/git -C "${source_dir}" apply --check -
         /usr/bin/gzip --decompress --stdout "${patch_path}" \
             | /usr/bin/git -C "${source_dir}" apply -
+    elif [[ "${actual_patch_sha256}" != "${diff_sha256}" ]]; then
+        echo "refusing tracked worktree drift from locked HEAD in ${source_dir}" >&2
+        exit 1
     fi
-    local actual_patch_sha256
-    actual_patch_sha256="$(/usr/bin/git -C "${source_dir}" diff --binary -- \
+    actual_patch_sha256="$(/usr/bin/git -C "${source_dir}" diff --binary HEAD -- \
         | /usr/bin/sha256sum | cut -d ' ' -f 1)"
     if [[ "${actual_patch_sha256}" != "${diff_sha256}" ]]; then
         echo "patched source drifted in ${source_dir}" >&2
