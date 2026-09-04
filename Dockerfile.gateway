@@ -1,0 +1,26 @@
+# syntax=docker/dockerfile:1.7@sha256:a57df69d0ea827fb7266491f2813635de6f17269be881f696fbfdf2d83dda33e
+
+ARG UBUNTU_IMAGE="ubuntu:26.04@sha256:61b65dc6bddff5e68c552f22126fe77496395f956ff2e983e05d8a52efd63e55"
+FROM ${UBUNTU_IMAGE}
+
+ARG DEBIAN_FRONTEND=noninteractive
+ARG GATEWAY_UID=10001
+ARG GATEWAY_GID=10001
+
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends ca-certificates python3 \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --gid "${GATEWAY_GID}" gateway \
+    && useradd \
+        --create-home \
+        --gid "${GATEWAY_GID}" \
+        --shell /usr/sbin/nologin \
+        --uid "${GATEWAY_UID}" \
+        gateway \
+    && install -d -o gateway -g gateway /opt/nomo
+
+COPY --chown=gateway:gateway scripts/etas003_gateway.py /opt/nomo/etas003_gateway.py
+
+USER gateway:gateway
+WORKDIR /tmp
+ENTRYPOINT ["python3", "/opt/nomo/etas003_gateway.py"]

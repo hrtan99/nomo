@@ -1,0 +1,8 @@
+[patch."https://github.com/etas-project/etas-core.git"]
+etas_builtin = { path = "/home/nomo/.cargo/etas003-core-src/crates/etas_builtin" }
+etas_cache = { path = "/home/nomo/.cargo/etas003-core-src/crates/etas_cache" }
+etas_core = { path = "/home/nomo/.cargo/etas003-core-src/crates/etas_core" }
+etas_host = { path = "/home/nomo/.cargo/etas003-core-src/crates/etas_host" }
+etas_package_metadata = { path = "/home/nomo/.cargo/etas003-core-src/crates/etas_package_metadata" }
+etas_std = { path = "/home/nomo/.cargo/etas003-core-src/crates/etas_std" }
+etas_utils = { path = "/home/nomo/.cargo/etas003-core-src/crates/etas_utils" }

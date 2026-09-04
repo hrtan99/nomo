@@ -1,0 +1,171 @@
+[package]
+name = "etas003-model-project"
+version = "0.1.0"
+edition = "2026"
+
+[source]
+root = "src"
+
+[runtime]
+default_profile = "mock-success"
+
+[runtime.profiles.mock-success]
+boundary_policy = "etas003-model"
+
+[runtime.profiles.mock-success.model]
+adapter = "omlx-openai"
+model = "mock-success"
+base_url = "http://127.0.0.1:18848/v1"
+api_key_env = "ETAS003_TEST_API_KEY"
+enable_thinking = false
+
+[runtime.profiles.mock-success.model.timeout]
+request_deadline_ms = 3000
+connect_timeout_ms = 500
+
+[runtime.profiles.mock-success.model.retry]
+attempts = 1
+delay_ms = 0
+
+[runtime.profiles.mock-success.policy]
+mode = "local-static"
+rules = ["model=allow"]
+
+[runtime.profiles.mock-unauthorized]
+boundary_policy = "etas003-model"
+
+[runtime.profiles.mock-unauthorized.model]
+adapter = "omlx-openai"
+model = "mock-success"
+base_url = "http://127.0.0.1:18848/v1"
+api_key_env = "ETAS003_MISSING_API_KEY"
+enable_thinking = false
+
+[runtime.profiles.mock-unauthorized.model.timeout]
+request_deadline_ms = 3000
+connect_timeout_ms = 500
+
+[runtime.profiles.mock-unauthorized.model.retry]
+attempts = 1
+delay_ms = 0
+
+[runtime.profiles.mock-unauthorized.policy]
+mode = "local-static"
+rules = ["model=allow"]
+
+[runtime.profiles.mock-unavailable]
+boundary_policy = "etas003-model"
+
+[runtime.profiles.mock-unavailable.model]
+adapter = "omlx-openai"
+model = "mock-unavailable"
+base_url = "http://127.0.0.1:18848/v1"
+api_key_env = "ETAS003_TEST_API_KEY"
+enable_thinking = false
+
+[runtime.profiles.mock-unavailable.model.timeout]
+request_deadline_ms = 3000
+connect_timeout_ms = 500
+
+[runtime.profiles.mock-unavailable.model.retry]
+attempts = 1
+delay_ms = 0
+
+[runtime.profiles.mock-unavailable.policy]
+mode = "local-static"
+rules = ["model=allow"]
+
+[runtime.profiles.mock-malformed]
+boundary_policy = "etas003-model"
+
+[runtime.profiles.mock-malformed.model]
+adapter = "omlx-openai"
+model = "mock-malformed"
+base_url = "http://127.0.0.1:18848/v1"
+api_key_env = "ETAS003_TEST_API_KEY"
+enable_thinking = false
+
+[runtime.profiles.mock-malformed.model.timeout]
+request_deadline_ms = 3000
+connect_timeout_ms = 500
+
+[runtime.profiles.mock-malformed.model.retry]
+attempts = 1
+delay_ms = 0
+
+[runtime.profiles.mock-malformed.policy]
+mode = "local-static"
+rules = ["model=allow"]
+
+[runtime.profiles.mock-timeout]
+boundary_policy = "etas003-model"
+
+[runtime.profiles.mock-timeout.model]
+adapter = "omlx-openai"
+model = "mock-timeout"
+base_url = "http://127.0.0.1:18848/v1"
+api_key_env = "ETAS003_TEST_API_KEY"
+enable_thinking = false
+
+[runtime.profiles.mock-timeout.model.timeout]
+request_deadline_ms = 500
+connect_timeout_ms = 200
+
+[runtime.profiles.mock-timeout.model.retry]
+attempts = 1
+delay_ms = 0
+
+[runtime.profiles.mock-timeout.policy]
+mode = "local-static"
+rules = ["model=allow"]
+
+[runtime.profiles.mock-connection-failure]
+boundary_policy = "etas003-model"
+
+[runtime.profiles.mock-connection-failure.model]
+adapter = "omlx-openai"
+model = "mock-success"
+base_url = "http://127.0.0.1:18849/v1"
+api_key_env = "ETAS003_TEST_API_KEY"
+enable_thinking = false
+
+[runtime.profiles.mock-connection-failure.model.timeout]
+request_deadline_ms = 1000
+connect_timeout_ms = 200
+
+[runtime.profiles.mock-connection-failure.model.retry]
+attempts = 1
+delay_ms = 0
+
+[runtime.profiles.mock-connection-failure.policy]
+mode = "local-static"
+rules = ["model=allow"]
+
+[runtime.profiles.gateway-qwen]
+boundary_policy = "etas003-gateway-qwen"
+
+[runtime.profiles.gateway-qwen.model]
+adapter = "omlx-openai"
+model = "Qwen3.5-9B-MLX-4bit"
+base_url = "http://model-gateway:8080/v1"
+api_key_env = "NOMO_GATEWAY_CLIENT_TOKEN"
+allow_private = true
+enable_thinking = false
+
+[runtime.profiles.gateway-qwen.model.timeout]
+request_deadline_ms = 120000
+connect_timeout_ms = 2000
+
+[runtime.profiles.gateway-qwen.model.retry]
+attempts = 1
+delay_ms = 0
+
+[runtime.profiles.gateway-qwen.policy]
+mode = "local-static"
+rules = ["model=allow"]
+
+[[bin]]
+name = "model-probe"
+module = "app.main"
+flow = "main"
+profile = "mock-success"

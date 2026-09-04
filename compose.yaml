@@ -48,6 +48,67 @@ services:
     stdin_open: true
     tty: true
 
+  model-gateway:
+    <<: *nomo-common
+    build:
+      context: .
+      dockerfile: Dockerfile.gateway
+    image: nomo-omlx-gateway:0.1.0
+    profiles:
+      - model-integration
+    working_dir: /tmp
+    networks:
+      - model-internal
+      - model-upstream
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes: []
+    secrets:
+      - source: omlx_api_key
+        target: omlx_api_key
+      - source: gateway_client_token
+        target: gateway_client_token
+    healthcheck:
+      test:
+        - CMD
+        - python3
+        - -c
+        - >-
+          import urllib.request;
+          urllib.request.urlopen('http://127.0.0.1:8080/healthz', timeout=2).read()
+      interval: 2s
+      timeout: 3s
+      retries: 15
+      start_period: 2s
+
+  model-integration:
+    <<: *nomo-common
+    profiles:
+      - model-integration
+    networks:
+      - model-internal
+    depends_on:
+      model-gateway:
+        condition: service_healthy
+    environment:
+      CARGO_HOME: /home/nomo/.cargo
+      HISTFILE: /tmp/.bash_history
+      HOME: /home/nomo
+      NOMO_GATEWAY_CLIENT_TOKEN: "${NOMO_GATEWAY_CLIENT_TOKEN:-}"
+
 volumes:
   cargo-cache:
     name: nomo-cargo-cache
+
+networks:
+  model-internal:
+    name: nomo-model-internal
+    internal: true
+  model-upstream:
+    name: nomo-model-upstream
+
+secrets:
+  omlx_api_key:
+    file: "${NOMO_OMLX_API_KEY_FILE:-/dev/null}"
+  gateway_client_token:
+    file: "${NOMO_GATEWAY_CLIENT_TOKEN_FILE:-/dev/null}"
