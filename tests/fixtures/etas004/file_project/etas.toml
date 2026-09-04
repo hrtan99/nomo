@@ -1,0 +1,49 @@
+[package]
+name = "etas004-file-project"
+version = "0.1.0"
+edition = "2026"
+
+[source]
+root = "src"
+
+[runtime]
+default_profile = "readwrite"
+
+[runtime.profiles.readonly]
+boundary_policy = "etas004-filesystem"
+
+[runtime.profiles.readonly.filesystem]
+mode = "readonly"
+workspace_root = "/tmp/nomo-etas004/workspace"
+
+[runtime.profiles.readonly.policy]
+mode = "local-static"
+rules = ["filesystem=allow"]
+
+[runtime.profiles.readwrite]
+boundary_policy = "etas004-filesystem"
+
+[runtime.profiles.readwrite.filesystem]
+mode = "readwrite"
+workspace_root = "/tmp/nomo-etas004/workspace"
+
+[runtime.profiles.readwrite.policy]
+mode = "local-static"
+rules = ["filesystem=allow"]
+
+[runtime.profiles.policy-deny]
+boundary_policy = "etas004-filesystem"
+
+[runtime.profiles.policy-deny.filesystem]
+mode = "readwrite"
+workspace_root = "/tmp/nomo-etas004/workspace"
+
+[runtime.profiles.policy-deny.policy]
+mode = "local-static"
+rules = ["filesystem=deny"]
+
+[[bin]]
+name = "file-probe"
+module = "app.main"
+flow = "main"
+profile = "readwrite"

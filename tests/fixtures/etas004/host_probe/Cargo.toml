@@ -1,0 +1,10 @@
+[package]
+name = "etas004-host-probe"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+etas_host = { path = "/home/nomo/.cargo/etas003-core-src/crates/etas_host" }
+
+[workspace]
