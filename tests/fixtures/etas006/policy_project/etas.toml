@@ -1,0 +1,79 @@
+[package]
+name = "etas006-policy-project"
+version = "0.1.0"
+edition = "2026"
+
+[source]
+root = "src"
+
+[runtime]
+default_profile = "allow"
+
+[runtime.profiles.allow]
+boundary_policy = "etas006-policy"
+
+[runtime.profiles.allow.policy]
+mode = "local-static"
+rules = ["console=allow"]
+
+[runtime.profiles.allow.approval]
+mode = "deny"
+
+[runtime.profiles.unmatched-deny]
+boundary_policy = "etas006-policy"
+
+[runtime.profiles.unmatched-deny.policy]
+mode = "local-static"
+rules = ["model=allow"]
+
+[runtime.profiles.unmatched-deny.approval]
+mode = "deny"
+
+[runtime.profiles.approval-auto]
+boundary_policy = "etas006-policy"
+
+[runtime.profiles.approval-auto.policy]
+mode = "local-static"
+rules = ["console=approval"]
+
+[runtime.profiles.approval-auto.approval]
+mode = "auto"
+
+[runtime.profiles.approval-deny]
+boundary_policy = "etas006-policy"
+
+[runtime.profiles.approval-deny.policy]
+mode = "local-static"
+rules = ["console=approval"]
+
+[runtime.profiles.approval-deny.approval]
+mode = "deny"
+
+[runtime.profiles.approval-prompt]
+boundary_policy = "etas006-policy"
+
+[runtime.profiles.approval-prompt.policy]
+mode = "local-static"
+rules = ["console=approval"]
+
+[runtime.profiles.approval-prompt.approval]
+mode = "prompt"
+
+[runtime.profiles.unknown-policy]
+boundary_policy = "etas006-unknown-policy"
+
+[runtime.profiles.invalid-approval]
+boundary_policy = "etas006-policy"
+
+[runtime.profiles.invalid-approval.policy]
+mode = "local-static"
+rules = ["console=approval"]
+
+[runtime.profiles.invalid-approval.approval]
+mode = "invalid"
+
+[[bin]]
+name = "policy-probe"
+module = "app.main"
+flow = "main"
+profile = "allow"
