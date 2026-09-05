@@ -8,10 +8,10 @@ readonly cargo_patch_config="${project_root}/config/etas-003-cargo-patch.toml"
 readonly etas_source_dir="${CARGO_HOME:?CARGO_HOME must be set}/etas003-cli-src"
 readonly core_source_dir="${CARGO_HOME}/etas003-core-src"
 readonly interpreter_source_dir="${CARGO_HOME}/git/checkouts/etas-interpreter-d9a8cde496090f26/a5252c9"
-readonly etas_base_revision="3e4a0b0757d24ef9a9325ae8d7ce59d1720bffca"
-readonly etas_diff_sha256="aa0c96adb30b68f1f39883fa544f150b3d652195daf9204b59f5982d3e824bb6"
-readonly core_base_revision="a1636207a8c5c2aadbebf11543871ab058d86e00"
-readonly core_diff_sha256="f6645ad702a04f11d571ab18fa5d81b34093fedd858d788f5eb5bcd93ad089a2"
+readonly etas_revision="e8a38bc86ad9a5d9706da6f3c28735d29203e555"
+readonly etas_tree="d6db6a20a35dd0130cfc9d4732da99e3469fc834"
+readonly core_revision="64997eedc8436e9a9124b41e2e0de4723dafa056"
+readonly core_tree="7063d934e85499c9b74a90d4876ccdec0f31d097"
 readonly interpreter_revision="a5252c9c60f96327b91cb6647ef4fc4ef8404799"
 readonly cargo_lock_sha256="f2c001fcd3227fcedc9f6c32c83ee3c512d4fedf695f011b4f89dbfbb300d550"
 readonly case_root="$(mktemp -d "${CARGO_HOME}/nomo-etas006.XXXXXX")"
@@ -22,23 +22,22 @@ cleanup() {
 }
 trap cleanup EXIT
 
-verify_patched_checkout() {
+verify_merged_checkout() {
     local source_dir="$1"
-    local base_revision="$2"
-    local diff_sha256="$3"
-    local actual_diff
+    local revision="$2"
+    local expected_tree="$3"
 
-    if [[ "$(git -C "${source_dir}" rev-parse HEAD)" != "${base_revision}" ]]; then
-        echo "unexpected locked checkout base: ${source_dir}" >&2
+    if [[ "$(git -C "${source_dir}" rev-parse HEAD)" != "${revision}" ]] \
+        || [[ "$(git -C "${source_dir}" rev-parse HEAD^{tree})" != "${expected_tree}" ]]; then
+        echo "unexpected merged checkout identity: ${source_dir}" >&2
         exit 1
     fi
     if ! git -C "${source_dir}" diff --cached --quiet HEAD --; then
         echo "locked checkout index is not clean: ${source_dir}" >&2
         exit 1
     fi
-    actual_diff="$(git -C "${source_dir}" diff --binary HEAD -- | sha256sum | cut -d ' ' -f 1)"
-    if [[ "${actual_diff}" != "${diff_sha256}" ]]; then
-        echo "locked checkout diff identity changed: ${source_dir}" >&2
+    if ! git -C "${source_dir}" diff --quiet HEAD --; then
+        echo "merged checkout worktree is not clean: ${source_dir}" >&2
         exit 1
     fi
 }
@@ -93,8 +92,8 @@ expect_run() {
     case_count=$((case_count + 1))
 }
 
-verify_patched_checkout "${core_source_dir}" "${core_base_revision}" "${core_diff_sha256}"
-verify_patched_checkout "${etas_source_dir}" "${etas_base_revision}" "${etas_diff_sha256}"
+verify_merged_checkout "${core_source_dir}" "${core_revision}" "${core_tree}"
+verify_merged_checkout "${etas_source_dir}" "${etas_revision}" "${etas_tree}"
 if [[ "$(git -C "${interpreter_source_dir}" rev-parse HEAD)" != "${interpreter_revision}" ]]; then
     echo "interpreter checkout is not at the CLI-locked revision" >&2
     exit 1
