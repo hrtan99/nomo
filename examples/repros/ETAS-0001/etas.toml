@@ -1,0 +1,32 @@
+[package]
+name = "etas-model-deadline-repro"
+version = "0.1.0"
+edition = "2026"
+
+[source]
+root = "src"
+
+[runtime]
+default_profile = "slow-model"
+
+[runtime.profiles.slow-model]
+boundary_policy = "model-deadline-repro"
+
+[runtime.profiles.slow-model.model]
+adapter = "omlx-openai"
+model = "slow-model"
+base_url = "http://127.0.0.1:18851/v1"
+api_key_env = "ETAS_REPRO_API_KEY"
+
+[runtime.profiles.slow-model.model.retry]
+attempts = 1
+delay_ms = 0
+
+[runtime.profiles.slow-model.policy]
+mode = "local-static"
+rules = ["model=allow"]
+
+[[bin]]
+name = "model-deadline-repro"
+module = "app.main"
+flow = "main"

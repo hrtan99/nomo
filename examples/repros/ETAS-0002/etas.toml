@@ -1,0 +1,32 @@
+[package]
+name = "etas-omlx-thinking-option-repro"
+version = "0.1.0"
+edition = "2026"
+
+[source]
+root = "src"
+
+[runtime]
+default_profile = "requires-thinking-option"
+
+[runtime.profiles.requires-thinking-option]
+boundary_policy = "thinking-option-repro"
+
+[runtime.profiles.requires-thinking-option.model]
+adapter = "omlx-openai"
+model = "qwen-thinking-model"
+base_url = "http://127.0.0.1:18852/v1"
+api_key_env = "ETAS_REPRO_API_KEY"
+
+[runtime.profiles.requires-thinking-option.model.retry]
+attempts = 1
+delay_ms = 0
+
+[runtime.profiles.requires-thinking-option.policy]
+mode = "local-static"
+rules = ["model=allow"]
+
+[[bin]]
+name = "omlx-thinking-option-repro"
+module = "app.main"
+flow = "main"
