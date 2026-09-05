@@ -1,0 +1,26 @@
+[package]
+name = "etas008-line-terminal"
+version = "0.1.0"
+edition = "2026"
+
+[source]
+root = "src"
+
+[runtime]
+default_profile = "line"
+
+[runtime.profiles.line]
+boundary_policy = "etas008-line"
+
+[runtime.profiles.line.policy]
+mode = "local-static"
+rules = ["console=allow"]
+
+[runtime.profiles.line.approval]
+mode = "deny"
+
+[[bin]]
+name = "line-terminal"
+module = "app.main"
+flow = "main"
+profile = "line"
