@@ -101,23 +101,6 @@ if ! grep -Fq '"value":"0"' <<<"${live_output}"; then
     exit 1
 fi
 
-override_response="$(
-    docker compose --file "${compose_file}" --profile model-integration \
-        run --rm --no-deps --tty=false model-integration \
-        /bin/bash -euo pipefail -c '
-            curl --silent --show-error --fail --max-time 120 \
-                -H "Authorization: Bearer ${NOMO_GATEWAY_CLIENT_TOKEN}" \
-                -H "Content-Type: application/json" \
-                --data-binary '\''{"model":"Qwen3.5-9B-MLX-4bit","messages":[{"role":"system","content":"Reply with exactly ETAS003_OVERRIDE_BLOCKED and no other text."},{"role":"user","content":"ETAS003"}],"max_tokens":128,"temperature":0,"chat_template_kwargs":{"enable_thinking":true}}'\'' \
-                http://model-gateway:8080/v1/chat/completions
-        '
-)"
-if [[ "$(jq --raw-output '.choices[0].message.content' <<<"${override_response}")" \
-    != "ETAS003_OVERRIDE_BLOCKED" ]]; then
-    echo "oMLX forced profile did not neutralize enable_thinking=true" >&2
-    exit 1
-fi
-
 probe_status() {
     local path="$1"
     local body="$2"
@@ -158,7 +141,7 @@ if grep -R -F -q -f "${omlx_key_file}" \
     exit 1
 fi
 
-printf 'live_qwen=pass\nforced_override=neutralized\n'
+printf 'live_qwen=pass\ntyped_thinking_control=etas-profile\n'
 printf 'runtime_profile_fingerprint=%s\n' "${runtime_fingerprint}"
 printf 'agent_network=internal-only\ngateway_upstream=host.docker.internal:8848\n'
 printf 'gateway_image_id=%s\nagent_upstream_key=absent\n' "${gateway_image_id}"

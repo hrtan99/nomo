@@ -17,6 +17,7 @@ adapter = "omlx-openai"
 model = "qwen-thinking-model"
 base_url = "http://127.0.0.1:18852/v1"
 api_key_env = "ETAS_REPRO_API_KEY"
+enable_thinking = false
 
 [runtime.profiles.requires-thinking-option.model.retry]
 attempts = 1

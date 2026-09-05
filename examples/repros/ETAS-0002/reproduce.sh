@@ -39,13 +39,16 @@ sed 's/^/STDOUT: /' "${run_root}/etas.stdout"
 sed 's/^/STDERR: /' "${run_root}/etas.stderr"
 echo "EXIT: ${status}"
 
-if [[ "${status}" -ne 3 ]]; then
-    echo "expected Etas exit 3" >&2
+if [[ "${status}" -ne 0 ]]; then
+    echo "expected Etas exit 0 with typed thinking control" >&2
     exit 1
 fi
-if ! grep -Fq "OpenAI-compatible endpoint returned an error status" \
-    "${run_root}/etas.stderr"; then
-    echo "expected provider rejection diagnostic" >&2
+if ! grep -Fq '"value":"0"' "${run_root}/etas.stdout"; then
+    echo "expected the provider to accept the Etas request" >&2
+    exit 1
+fi
+if [[ -s "${run_root}/etas.stderr" ]]; then
+    echo "expected no Etas error output" >&2
     exit 1
 fi
 python3 - "${run_root}/request.json" <<'PY'
@@ -54,9 +57,9 @@ import sys
 
 with open(sys.argv[1], encoding="utf-8") as request_file:
     request = json.load(request_file)
-if "chat_template_kwargs" in request:
-    raise SystemExit("unexpected chat_template_kwargs in Etas request")
-print("REQUEST_FIELD: chat_template_kwargs absent")
+if request.get("chat_template_kwargs", {}).get("enable_thinking") is not False:
+    raise SystemExit("expected chat_template_kwargs.enable_thinking=false")
+print("REQUEST_FIELD: chat_template_kwargs.enable_thinking=false")
 PY
 
-echo "ETAS-0002 reproduced: omlx thinking-control option cannot be expressed"
+echo "ETAS-0002 regression passed: typed omlx thinking control reached the provider"

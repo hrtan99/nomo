@@ -41,17 +41,21 @@ sed 's/^/STDERR: /' "${run_root}/etas.stderr"
 echo "EXIT: ${status}"
 echo "ELAPSED_SECONDS: ${elapsed}"
 
-if [[ "${status}" -ne 3 ]]; then
-    echo "expected Etas exit 3" >&2
+if [[ "${status}" -ne 0 ]]; then
+    echo "expected Etas exit 0 with the configured eight-second deadline" >&2
     exit 1
 fi
-if ! grep -Fq "HTTP request failed" "${run_root}/etas.stderr"; then
-    echo "expected the fixed transport timeout diagnostic" >&2
+if ! grep -Fq '"value":"0"' "${run_root}/etas.stdout"; then
+    echo "expected the slow model request to complete successfully" >&2
     exit 1
 fi
-if ((elapsed < 4 || elapsed > 7)); then
-    echo "expected failure near the fixed 4.5-second deadline" >&2
+if [[ -s "${run_root}/etas.stderr" ]]; then
+    echo "expected no Etas error output" >&2
+    exit 1
+fi
+if ((elapsed < 5 || elapsed > 9)); then
+    echo "expected completion near the six-second model response" >&2
     exit 1
 fi
 
-echo "ETAS-0001 reproduced: model deadline is fixed and not configurable"
+echo "ETAS-0001 regression passed: configured model deadline permits the slow response"

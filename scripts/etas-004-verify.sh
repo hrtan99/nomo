@@ -5,8 +5,8 @@ readonly project_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)
 readonly fixture_root="${project_root}/tests/fixtures/etas004"
 readonly surface_project="${fixture_root}/file_project"
 readonly core_source_dir="${CARGO_HOME:?CARGO_HOME must be set}/etas003-core-src"
-readonly core_base_revision="a1636207a8c5c2aadbebf11543871ab058d86e00"
-readonly core_diff_sha256="f6645ad702a04f11d571ab18fa5d81b34093fedd858d788f5eb5bcd93ad089a2"
+readonly core_revision="64997eedc8436e9a9124b41e2e0de4723dafa056"
+readonly core_tree="7063d934e85499c9b74a90d4876ccdec0f31d097"
 readonly case_root="$(mktemp -d "${CARGO_HOME}/nomo-etas004.XXXXXX")"
 readonly runtime_root="/tmp/nomo-etas004/workspace"
 
@@ -15,17 +15,17 @@ cleanup() {
 }
 trap cleanup EXIT
 
-if [[ "$(git -C "${core_source_dir}" rev-parse HEAD)" != "${core_base_revision}" ]]; then
-    echo "etas-core checkout is not at the ETAS-003 locked base" >&2
+if [[ "$(git -C "${core_source_dir}" rev-parse HEAD)" != "${core_revision}" ]] \
+    || [[ "$(git -C "${core_source_dir}" rev-parse HEAD^{tree})" != "${core_tree}" ]]; then
+    echo "etas-core checkout is not at the merged locked revision" >&2
     exit 1
 fi
 if ! git -C "${core_source_dir}" diff --cached --quiet HEAD --; then
     echo "etas-core index is not clean" >&2
     exit 1
 fi
-actual_core_diff="$(git -C "${core_source_dir}" diff --binary HEAD -- | sha256sum | cut -d ' ' -f 1)"
-if [[ "${actual_core_diff}" != "${core_diff_sha256}" ]]; then
-    echo "etas-core patch identity does not match the reviewed integration" >&2
+if ! git -C "${core_source_dir}" diff --quiet HEAD --; then
+    echo "etas-core worktree is not clean" >&2
     exit 1
 fi
 

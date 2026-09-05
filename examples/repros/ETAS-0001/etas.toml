@@ -18,6 +18,10 @@ model = "slow-model"
 base_url = "http://127.0.0.1:18851/v1"
 api_key_env = "ETAS_REPRO_API_KEY"
 
+[runtime.profiles.slow-model.model.timeout]
+request_deadline_ms = 8000
+connect_timeout_ms = 500
+
 [runtime.profiles.slow-model.model.retry]
 attempts = 1
 delay_ms = 0

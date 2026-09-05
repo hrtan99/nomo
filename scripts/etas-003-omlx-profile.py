@@ -13,13 +13,15 @@ from pathlib import Path
 MODEL_ID = "Qwen3.5-9B-MLX-4bit"
 PROFILE_NAME = "nomo-etas003"
 PROFILE_SETTINGS = {
-    "chat_template_kwargs": {"enable_thinking": False},
-    "enable_thinking": False,
-    "forced_ct_kwargs": ["enable_thinking"],
     "max_tokens": 256,
     "preserve_thinking": False,
     "temperature": 0.0,
 }
+REMOVED_PROFILE_SETTINGS = (
+    "chat_template_kwargs",
+    "enable_thinking",
+    "forced_ct_kwargs",
+)
 
 
 def main() -> None:
@@ -44,7 +46,7 @@ def main() -> None:
             MODEL_ID,
             PROFILE_NAME,
             "Nomo ETAS-003",
-            "Forced non-thinking profile for the Nomo ETAS-003 integration gate.",
+            "Nomo ETAS-003 integration profile; thinking control comes from Etas.",
             PROFILE_SETTINGS,
             expose_as_model=False,
             api_name=PROFILE_NAME,
@@ -54,7 +56,7 @@ def main() -> None:
             MODEL_ID,
             PROFILE_NAME,
             display_name="Nomo ETAS-003",
-            description="Forced non-thinking profile for the Nomo ETAS-003 integration gate.",
+            description="Nomo ETAS-003 integration profile; thinking control comes from Etas.",
             settings=PROFILE_SETTINGS,
             expose_as_model=False,
             api_name=PROFILE_NAME,
@@ -67,6 +69,9 @@ def main() -> None:
     for key, expected in PROFILE_SETTINGS.items():
         if effective.get(key) != expected:
             raise RuntimeError(f"effective profile mismatch for {key}")
+    for key in REMOVED_PROFILE_SETTINGS:
+        if key in effective:
+            raise RuntimeError(f"obsolete forced profile setting remains: {key}")
     canonical = json.dumps(
         {
             "model": MODEL_ID,
