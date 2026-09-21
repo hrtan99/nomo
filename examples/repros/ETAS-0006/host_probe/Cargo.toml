@@ -1,0 +1,11 @@
+[package]
+name = "etas-command-cancellation-repro"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+etas_host = { path = "/home/nomo/.cargo/etas003-core-src/crates/etas_host" }
+tokio = { version = "1.53.0", features = ["macros", "process", "rt", "time"] }
+
+[workspace]
