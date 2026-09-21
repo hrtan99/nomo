@@ -5,6 +5,7 @@ import std.text.{trim, len};
 import nomo.config.load;
 import nomo.loop.{turn, reject};
 import nomo.conversation.fresh;
+import nomo.model_entry.run_model;
 
 flow help() -> unit {
     println("Nomo foundation: --model stub --steps 1..16 --budget 1..16 [--once TEXT]");
@@ -18,6 +19,11 @@ flow help() -> unit {
     println("recall reads the latest completed tool result; recall:user reads prior input. No tool redispatch.");
     println("New process = fresh non-durable conversation, never resume.");
     println("Unavailable in stub entry: persistence, resume, live models, real tools, graceful active-turn cancellation.");
+    println("Opt-in model entry: --flow model --profile gateway-qwen --args --model qwen.");
+}
+
+flow model(args: Array<string>) -> i32 {
+    return run_model(args);
 }
 
 flow main(args: Array<string>) -> i32 {
