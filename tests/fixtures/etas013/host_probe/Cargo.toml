@@ -1,0 +1,12 @@
+[package]
+name = "nomo-etas013-storage-tests"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+etas_host = { path = "/validation/core/crates/etas_host" }
+tokio = { version = "=1.53.1", features = ["macros", "rt", "time"] }
+rusqlite = { version = "=0.32.1", features = ["bundled"] }
+
+[workspace]
