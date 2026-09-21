@@ -6,6 +6,11 @@ import nomo.config.load;
 import nomo.loop.{turn, reject};
 import nomo.conversation.fresh;
 import nomo.model_entry.run_model;
+import nomo.tool_agent.run_tools;
+
+flow tools(args: Array<string>) -> i32 {
+    return run_tools(args);
+}
 
 flow help() -> unit {
     println("Nomo foundation: --model stub --steps 1..16 --budget 1..16 [--once TEXT]");

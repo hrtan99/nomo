@@ -1,0 +1,11 @@
+services:
+  dev:
+    volumes:
+      - type: bind
+        source: .
+        target: /workspace
+        read_only: true
+      - type: volume
+        source: cargo-cache
+        target: /home/nomo/.cargo
+        read_only: true

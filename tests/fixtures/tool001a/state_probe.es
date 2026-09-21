@@ -1,0 +1,45 @@
+module nomo.tool_test;
+
+import nomo.conversation.{fresh, add, Event};
+import nomo.tool_agent.{tool_turn, fresh_tools, Session};
+import std.io.println;
+
+flow main(args: Array<string>) -> i32 {
+    let first = tool_turn("read:docs/a.txt", 3, 3, fresh_tools());
+    if first.status != 0 || first.state.history.spent != 3 { abort("first turn accounting"); }
+    let events = first.state.history.events;
+    if events[2].role != "tool" || events[2].kind != "complete" { abort("completed event missing"); }
+    if events[3].text != "read-only result: " + events[2].text { abort("result not fed to final"); }
+    let second = tool_turn("read:missing.txt", 3, 3, first.state);
+    if second.status != 4 || second.state.history.spent != 3 { abort("budget not preserved"); }
+    println("STATE_OK");
+    return 0;
+}
+
+flow after_tool(args: Array<string>) -> i32 {
+    let first = tool_turn("read:docs/a.txt", 2, 3, fresh_tools());
+    if first.status != 4 || first.state.history.spent != 2 || first.state.history.events[2].kind != "complete" { abort("lost completed result"); }
+    println("AFTER_TOOL_OK");
+    return 0;
+}
+
+flow capacity(args: Array<string>) -> i32 {
+    var state = fresh();
+    for i in [1, 2, 3, 4, 5, 6, 7] limit Iterations(7) {
+        state = add(state, Event { role = "user", kind = "input", name = "", text = args[0] });
+    }
+    let result = tool_turn("read:missing.txt", 3, 3, Session { history = state, reserved = 0 });
+    if result.status != 4 || result.state.history.spent != 0 || !result.state.history.stopped { abort("capacity not reserved"); }
+    println("CAPACITY_OK");
+    return 0;
+}
+
+flow scan_budget(args: Array<string>) -> i32 {
+    let first = tool_turn("search:maxscan1.txt,maxscan2.txt:absent", 3, 16, fresh_tools());
+    let second = tool_turn("search:maxscan1.txt,maxscan2.txt:absent", 3, 16, first.state);
+    if second.status != 0 || second.state.reserved != 8192 { abort("scan reservation accounting"); }
+    let third = tool_turn("read:missing.txt", 3, 16, second.state);
+    if third.status != 4 || third.state.history.spent != 6 || third.state.reserved != 8192 { abort("scan reservation not enforced"); }
+    println("SCAN_BUDGET_OK");
+    return 0;
+}
