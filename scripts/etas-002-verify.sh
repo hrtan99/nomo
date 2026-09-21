@@ -130,11 +130,11 @@ expect_case profile_project_check_phase1 1 "checked 1 file" \
     "RuntimeRequiredInPhase1" \
     etas check --phase1 "${console_project}"
 expect_case profile_allow_fingerprint 0 \
-    '"profile_fingerprint": "fnv1a64:057c43f0b22de726"' EMPTY \
+    '"profile_fingerprint": "fnv1a64:372d2aa76d5ab8c9"' EMPTY \
     etas run "${console_project}" --profile console-allow --allow-effects \
     --print-runtime-profile
 expect_case profile_deny_fingerprint 0 \
-    '"profile_fingerprint": "fnv1a64:183260c9ff39649f"' EMPTY \
+    '"profile_fingerprint": "fnv1a64:37acab1654094bce"' EMPTY \
     etas run "${console_project}" --profile console-deny --allow-effects \
     --print-runtime-profile
 expect_case profile_allow_run 0 "profile console boundary" EMPTY \

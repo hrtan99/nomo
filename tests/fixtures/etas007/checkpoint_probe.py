@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import select
 import shutil
 import signal
 import subprocess
@@ -114,7 +115,7 @@ def assert_checkpoint_shape(
 ) -> None:
     first = load(checkpoint_zero)
     second = load(checkpoint_one)
-    if first["schema"] != "etas.cli.interpreter-checkpoint.v15":
+    if first["schema"] != "etas.cli.interpreter-checkpoint.v18":
         raise AssertionError(f"unexpected schema: {first['schema']!r}")
     if first["flow"] != "main" or first["sources"] != [str(source_path)]:
         raise AssertionError("checkpoint does not preserve its source/flow identity")
@@ -141,6 +142,9 @@ def assert_checkpoint_shape(
         raise AssertionError(f"unexpected second completion ledger: {second_ledger!r}")
     if {entry["result"]["kind"] for entry in second_ledger} - {"runtime", "host"}:
         raise AssertionError("unexpected completed-boundary result kind")
+    occurrences = [entry["occurrence"] for entry in second_ledger]
+    assert all(item["kind"] == "host_request" for item in occurrences)
+    assert len({item["request_id"] for item in occurrences}) == len(second_ledger)
 
     budget = first_state["host_state"]["budget"]
     if budget["limits"] != {
@@ -194,13 +198,15 @@ def assert_interrupted_checkpoint_is_not_durable(
         start_new_session=True,
     )
     assert process.stdout is not None
-    ready = process.stdout.readline()
-    if ready != b"BLOCKING_READY\n":
-        process.kill()
-        raise AssertionError(f"blocking flow did not reach checkpoint: {ready!r}")
-    time.sleep(0.1)
-    os.killpg(process.pid, signal.SIGKILL)
-    process.wait(timeout=2)
+    try:
+        assert select.select([process.stdout], [], [], 3)[0], "checkpoint marker timed out"
+        ready = os.read(process.stdout.fileno(), 4096)
+        if ready != b"BLOCKING_READY\n":
+            raise AssertionError(f"blocking flow did not pass checkpoint: {ready!r}")
+    finally:
+        if process.poll() is None:
+            os.killpg(process.pid, signal.SIGKILL)
+        process.wait(timeout=2)
     if process.returncode != -signal.SIGKILL:
         raise AssertionError(f"blocking flow exit changed: {process.returncode}")
     artifacts = list(checkpoint_dir.glob("*")) if checkpoint_dir.exists() else []
@@ -327,6 +333,20 @@ def main() -> None:
         2,
         stderr_contains=b"unsupported checkpoint artifact schema",
     )
+    future_schema["schema"] = "etas.cli.interpreter-checkpoint.v15"
+    save(schema_path, future_schema)
+    expect("previous_schema_fails_closed", run(resume(args.etas, 4, checkpoint_dir)), 2,
+           stderr_contains=b"unsupported checkpoint artifact schema")
+
+    expired_path = copied_checkpoint(checkpoint_zero, checkpoint_dir, 6)
+    expired = load(expired_path)
+    expired["checkpoint"]["host_state"]["budget"]["state"]["deadline_unix_millis"] = "1"
+    save(expired_path, expired)
+    expired_result = run(resume(args.etas, 6, checkpoint_dir))
+    assert expired_result.returncode != 0, expired_result
+    assert b"AFTER" not in expired_result.stdout, expired_result.stdout
+    assert b"budget" in expired_result.stderr, expired_result.stderr
+    print("CASE expired_absolute_deadline_fails_closed\nRESULT pass\n")
 
     corrupt_path = checkpoint_dir / "checkpoint-5.json"
     corrupt_path.write_bytes(b"{")
@@ -344,7 +364,7 @@ def main() -> None:
     print("CASE missing_checkpoint_fails_closed\nEXIT 2\nRESULT pass\n")
 
     assert_interrupted_checkpoint_is_not_durable(args.etas, project, args.work_root)
-    print("ETAS-007 checkpoint probe completed: 11 pass, 3 bounded gaps")
+    print("ETAS-007 checkpoint probe completed: 13 pass, 3 bounded persistence/workspace observations")
 
 
 if __name__ == "__main__":

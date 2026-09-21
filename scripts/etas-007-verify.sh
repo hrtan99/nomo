@@ -6,13 +6,13 @@ readonly fixture_root="${project_root}/tests/fixtures/etas007"
 readonly cargo_patch_config="${project_root}/config/etas-003-cargo-patch.toml"
 readonly etas_source_dir="${CARGO_HOME:?CARGO_HOME must be set}/etas003-cli-src"
 readonly core_source_dir="${CARGO_HOME}/etas003-core-src"
-readonly interpreter_source_dir="${CARGO_HOME}/git/checkouts/etas-interpreter-d9a8cde496090f26/a5252c9"
-readonly etas_revision="e8a38bc86ad9a5d9706da6f3c28735d29203e555"
-readonly etas_tree="d6db6a20a35dd0130cfc9d4732da99e3469fc834"
-readonly core_revision="64997eedc8436e9a9124b41e2e0de4723dafa056"
-readonly core_tree="7063d934e85499c9b74a90d4876ccdec0f31d097"
-readonly interpreter_revision="a5252c9c60f96327b91cb6647ef4fc4ef8404799"
-readonly cargo_lock_sha256="f2c001fcd3227fcedc9f6c32c83ee3c512d4fedf695f011b4f89dbfbb300d550"
+readonly interpreter_source_dir="${CARGO_HOME}/git/checkouts/etas-interpreter-d9a8cde496090f26/5de9203"
+readonly etas_revision="eb3d22b10f30fd1d5b4a376d896fec866efe964b"
+readonly etas_tree="6ec029dff3d603eafbb42a062a5aee74734e329c"
+readonly core_revision="9c9d3a17b007745c81e03bb49c977c9f65454b6f"
+readonly core_tree="f0c50e90db91f1029cb88ccfc2cedee62ee7f157"
+readonly interpreter_revision="5de9203109c75746f53e8e6bd8083fbd932f73bc"
+readonly cargo_lock_sha256="3e8bfec4e09a57b52bcf4bb29f9e8c394eb91e23eadf1eb8287de9a2ff8e60d1"
 readonly case_root="$(mktemp -d "${CARGO_HOME}/nomo-etas007.XXXXXX")"
 
 cleanup() {
@@ -47,7 +47,7 @@ readonly completed_boundary="${interpreter_source_dir}/crates/etas_interpreter/s
 grep -Fq -- 'std::fs::rename(&tmp, path)' "${checkpoint_writer}"
 grep -Fq -- 'current host runtime profile is not compatible with the checkpoint' \
     "${resume_command}"
-grep -Fq -- 'etas.cli.interpreter-checkpoint.v15' "${checkpoint_identity}"
+grep -Fq -- 'etas.cli.interpreter-checkpoint.v18' "${checkpoint_identity}"
 grep -Fq -- 'pub enum CompletedHostBoundaryResult' "${completed_boundary}"
 if grep -Fq -- 'write_checkpoint_files' "${resume_command}"; then
     echo "locked resume command unexpectedly persists new checkpoints" >&2
@@ -76,7 +76,8 @@ do
         --config "${cargo_patch_config}" \
         --manifest-path "${case_root}/interpreter/Cargo.toml" \
         --target-dir "${case_root}/interpreter-target" \
-        "${filter}"
+        "${filter}" | tee "${case_root}/interpreter-test.log"
+    grep -Eq 'test result: ok\. [1-9][0-9]* passed;' "${case_root}/interpreter-test.log"
     printf 'CASE interpreter_%s\nEXIT 0\nRESULT pass\n\n' "${filter}"
 done
 
@@ -90,7 +91,7 @@ by_name = {package["name"]: package for package in packages}
 assert by_name["etas_host"].get("source") is None
 assert by_name["etas_core"].get("source") is None
 assert by_name["etas_frontend"]["source"].endswith(
-    "#12ec1aa27e215e750d8cc9eb26633743609788e2"
+    "#f24b44550c655099c9773ab22ba231cfd8ee1fcc"
 )
 print("CASE interpreter_dependency_identity")
 print("EXIT 0")
@@ -99,4 +100,4 @@ PY
 
 fixture_bytes="$(du -sb "${fixture_root}" | cut -f 1)"
 printf 'ARTIFACT fixture_bytes=%s\n' "${fixture_bytes}"
-echo "ETAS-007 verification completed: 11 CLI passes, 3 bounded gaps, and 8 interpreter regressions"
+echo "ETAS-007 verification completed: 13 CLI passes, 3 bounded persistence/workspace observations, and 8 interpreter regressions"

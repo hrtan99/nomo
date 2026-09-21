@@ -8,10 +8,10 @@ readonly single_line_project="${fixture_root}/single_line_project"
 readonly approval_project="${fixture_root}/approval_project"
 readonly etas_source_dir="${CARGO_HOME:?CARGO_HOME must be set}/etas003-cli-src"
 readonly core_source_dir="${CARGO_HOME}/etas003-core-src"
-readonly etas_revision="e8a38bc86ad9a5d9706da6f3c28735d29203e555"
-readonly etas_tree="d6db6a20a35dd0130cfc9d4732da99e3469fc834"
-readonly core_revision="64997eedc8436e9a9124b41e2e0de4723dafa056"
-readonly core_tree="7063d934e85499c9b74a90d4876ccdec0f31d097"
+readonly etas_revision="eb3d22b10f30fd1d5b4a376d896fec866efe964b"
+readonly etas_tree="6ec029dff3d603eafbb42a062a5aee74734e329c"
+readonly core_revision="9c9d3a17b007745c81e03bb49c977c9f65454b6f"
+readonly core_tree="f0c50e90db91f1029cb88ccfc2cedee62ee7f157"
 readonly console_source="${core_source_dir}/crates/etas_host/src/console"
 readonly cli_host_source="${etas_source_dir}/crates/etas_cli/src/command/interpreter/host.rs"
 
@@ -42,7 +42,7 @@ do
 done
 rm -f /tmp/etas008-effects.txt
 
-grep -Fq -- 'std::io::stdin().read_line(&mut input)' \
+grep -Fq -- 'self.input.read(&request.budget, request.id, false).await?' \
     "${console_source}/local_stdio.rs"
 grep -Fq -- 'if !std::io::IsTerminal::is_terminal(&std::io::stdin())' \
     "${cli_host_source}"

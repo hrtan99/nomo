@@ -83,11 +83,11 @@ fn main() {
     expect_error(
         sandbox.read_file(&root, Path::new("missing.txt")),
         HostErrorCode::InvalidRequest,
-        "workspace path does not exist",
+        "workspace capability operation failed",
     );
     pass(
         "missing_path",
-        "InvalidRequest; workspace path does not exist",
+        "InvalidRequest; workspace capability operation failed",
     );
 
     fs::write(workspace.join("unreadable.txt"), b"private").expect("seed unreadable file");
@@ -98,8 +98,8 @@ fn main() {
     .expect("remove file permissions");
     let permission_error = expect_error(
         sandbox.read_file(&root, Path::new("unreadable.txt")),
-        HostErrorCode::ProviderUnavailable,
-        "failed to read workspace file",
+        HostErrorCode::AuthorityDenied,
+        "workspace capability operation failed",
     );
     assert!(
         permission_error
@@ -115,7 +115,7 @@ fn main() {
     .expect("restore file permissions");
     pass(
         "permission_denial",
-        "ProviderUnavailable; OS Permission denied retained in details",
+        "AuthorityDenied; OS Permission denied retained in details",
     );
 
     expect_error(
@@ -138,13 +138,13 @@ fn main() {
     expect_error(
         sandbox.read_file(&root, Path::new("leak.txt")),
         HostErrorCode::AuthorityDenied,
-        "workspace path escapes the configured root",
+        "workspace capability operation failed",
     );
     symlink(outside.join("linked-dir"), workspace.join("linked-dir")).expect("create dir symlink");
     expect_error(
         sandbox.atomic_write(&root, Path::new("linked-dir/pwned.txt"), b"blocked"),
         HostErrorCode::AuthorityDenied,
-        "workspace path escapes the configured root",
+        "workspace capability operation failed",
     );
     assert!(!outside.join("linked-dir/pwned.txt").exists());
     pass(
@@ -158,8 +158,8 @@ fn main() {
     fs::set_permissions(&locked, fs::Permissions::from_mode(0o500)).expect("lock directory");
     expect_error(
         sandbox.atomic_write(&root, Path::new("locked/target.txt"), b"AFTER"),
-        HostErrorCode::ProviderUnavailable,
-        "failed to create temporary workspace file",
+        HostErrorCode::AuthorityDenied,
+        "workspace capability operation failed",
     );
     fs::set_permissions(&locked, fs::Permissions::from_mode(0o700)).expect("unlock directory");
     assert_eq!(

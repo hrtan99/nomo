@@ -6,10 +6,10 @@ use std::{
 };
 
 use etas_host::{
-    AuthorityContext, Budget, CommandClient, CommandOutput, CommandPolicy, CommandRequest,
-    DestructiveOpPolicy, ExecutionBudget, FilesystemPolicy, HostActionGrant, HostError,
-    HostErrorCode, HostRequestId, LocalCommandClient, NetworkPolicy, PolicyContext, SandboxPolicy,
-    TimeBudget, TraceContext, TraceId,
+    AuthorityContext, Budget, CommandClient, CommandExecutionPolicy, CommandOutput, CommandPolicy,
+    CommandRequest, DestructiveOpPolicy, ExecutionBudget, FilesystemPolicy, HostActionGrant,
+    HostError, HostErrorCode, HostRequestId, LocalCommandClient, NetworkPolicy, PolicyContext,
+    SandboxPolicy, TimeBudget, TraceContext, TraceId,
 };
 
 const SHELL: &str = "/bin/sh";
@@ -87,13 +87,6 @@ fn expect_error<T>(result: Result<T, HostError>, code: HostErrorCode, message: &
 
 fn pass(name: &str, detail: impl AsRef<str>) {
     println!("CASE {name}\nRESULT pass\nDETAIL {}\n", detail.as_ref());
-}
-
-fn expected_gap(name: &str, detail: impl AsRef<str>) {
-    println!(
-        "CASE {name}\nRESULT expected-gap\nDETAIL {}\n",
-        detail.as_ref()
-    );
 }
 
 fn process_is_live(pid: u32) -> bool {
@@ -229,15 +222,87 @@ async fn main() {
         "large_output",
         "stdout_bytes=1048576 stderr_bytes=1048576 captured exactly",
     );
-    expected_gap(
+    for (id, script, stream) in [
+        (
+            40,
+            "import sys; sys.stdout.buffer.write(b'O' * 4097)",
+            "stdout",
+        ),
+        (
+            41,
+            "import sys; sys.stderr.buffer.write(b'E' * 4097)",
+            "stderr",
+        ),
+        (
+            42,
+            "import os,threading; t=threading.Thread(target=lambda: os.write(2,b'E'*65536)); t.start(); os.write(1,b'O'*65536); t.join()",
+            "either",
+        ),
+    ] {
+        let error = tokio::time::timeout(
+            Duration::from_secs(3),
+            LocalCommandClient::with_policy(CommandExecutionPolicy::new(4096, 4096)).execute(
+                request(
+                    id,
+                    argv(&[PYTHON, "-c", script]),
+                    Vec::new(),
+                    None,
+                    granted(),
+                    sandbox(&[PYTHON]),
+                    ExecutionBudget::default(),
+                ),
+            ),
+        )
+        .await
+        .expect("output collection must not deadlock");
+        let error = expect_error(error, HostErrorCode::BudgetExceeded, "capture limit");
+        assert!(
+            error
+                .details
+                .iter()
+                .any(|d| d.key == "limit_bytes" && d.value == "4096")
+        );
+        assert!(
+            error
+                .details
+                .iter()
+                .any(|d| d.key == "stream" && (d.value == stream || stream == "either"))
+        );
+    }
+    pass(
         "bounded_output",
-        "actual=captured full 2097152 bytes; CommandRequest/runtime profile expose no output limit",
+        "per-stream cap=4096; stdout, stderr and simultaneous overflow return BudgetExceeded",
+    );
+    for size in [0, 4095, 4096] {
+        let script = format!("import os; os.write(1,b'O'*{size}); os.write(2,b'E'*{size})");
+        let output = tokio::time::timeout(
+            Duration::from_secs(3),
+            LocalCommandClient::with_policy(CommandExecutionPolicy::new(4096, 4096)).execute(
+                request(
+                    43,
+                    argv(&[PYTHON, "-c", &script]),
+                    Vec::new(),
+                    None,
+                    granted(),
+                    sandbox(&[PYTHON]),
+                    ExecutionBudget::default(),
+                ),
+            ),
+        )
+        .await
+        .expect("boundary output must finish")
+        .expect("cap permits exact limit")
+        .result
+        .expect("command output");
+        assert_eq!(output.stdout, vec![b'O'; size]);
+        assert_eq!(output.stderr, vec![b'E'; size]);
+    }
+    pass(
+        "output_cap_edges",
+        "0, limit-1 and exact per-stream limit preserved",
     );
 
-    let denied_marker = PathBuf::from(format!(
-        "/tmp/nomo-etas005-denied-marker-{}",
-        process::id()
-    ));
+    let denied_marker = PathBuf::from(format!("/tmp/nomo-etas005-denied-marker-{}", process::id()));
     let error = LocalCommandClient::new()
         .execute(request(
             5,
@@ -304,32 +369,33 @@ async fn main() {
         ..Budget::default()
     });
     let started = Instant::now();
-    let output = execute(request(
+    let timeout_client = LocalCommandClient::new();
+    let output = timeout_client.execute(request(
         7,
-        argv(&[PYTHON, "-c", "import time; time.sleep(0.30)"]),
+        argv(&[PYTHON, "-c", "import time; time.sleep(5)"]),
         Vec::new(),
         None,
         granted(),
         sandbox(&[PYTHON]),
         budget,
-    ))
-    .await;
+    ));
+    let output = tokio::time::timeout(Duration::from_secs(2), output)
+        .await
+        .expect("runtime must stop command before harness watchdog");
     let elapsed = started.elapsed();
-    assert_eq!(output.exit_code, 0);
-    assert!(
-        elapsed >= Duration::from_millis(250),
-        "50ms budget unexpectedly stopped the 300ms command after {elapsed:?}"
-    );
-    expected_gap(
+    expect_error(output, HostErrorCode::BudgetExceeded, "time budget");
+    assert!(elapsed < Duration::from_secs(2));
+    pass(
         "command_timeout",
         format!(
-            "configured_budget_ms=50 actual_exit=0 elapsed_ms={}; command ignored deadline",
+            "configured_budget_ms=50 workload_ms=5000 elapsed_ms={}; BudgetExceeded",
             elapsed.as_millis()
         ),
     );
 
     let pid_file = PathBuf::from(format!("/tmp/nomo-etas005-child-{}.pid", process::id()));
-    let script = "printf '%s' \"$$\" > \"$1\"; exec /bin/sleep 30";
+    let descendant_file = pid_file.with_extension("descendant.pid");
+    let script = "/bin/sleep 30 & printf '%s' \"$!\" > \"$2\"; printf '%s' \"$$\" > \"$1\"; wait";
     let cancellation_request = request(
         8,
         argv(&[
@@ -338,6 +404,7 @@ async fn main() {
             script,
             "etas005-fixture",
             pid_file.to_str().expect("UTF-8 pid path"),
+            descendant_file.to_str().expect("UTF-8 descendant path"),
         ]),
         Vec::new(),
         None,
@@ -351,29 +418,42 @@ async fn main() {
             .await
     });
     let child_pid = wait_for_pid(&pid_file).await;
+    let descendant_pid = wait_for_pid(&descendant_file).await;
     task.abort();
-    let cancellation = task.await.expect_err("aborted command task must be cancelled");
+    let cancellation = task
+        .await
+        .expect_err("aborted command task must be cancelled");
     assert!(cancellation.is_cancelled());
-    tokio::time::sleep(Duration::from_millis(100)).await;
+    for _ in 0..200 {
+        if !process_is_live(child_pid) && !process_is_live(descendant_pid) {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+    let runtime_cleaned = !process_is_live(child_pid) && !process_is_live(descendant_pid);
+    // Cleanup cannot turn a failed runtime observation into a passing assertion.
+    if !runtime_cleaned {
+        terminate_fixture_process(child_pid).await;
+        terminate_fixture_process(descendant_pid).await;
+    }
     assert!(
-        process_is_live(child_pid),
-        "dropping the command Future unexpectedly terminated the child"
+        runtime_cleaned,
+        "runtime left child/descendant after Future cancellation"
     );
-    expected_gap(
+    pass(
         "command_cancellation",
-        format!("caller task cancelled; command pid {child_pid} remained live"),
+        "caller task cancelled; owned child terminated and reaped",
     );
-    expected_gap(
+    pass(
         "orphan_process_cleanup",
-        format!("actual=pid {child_pid} survived Future drop; harness cleanup required"),
+        "owned descendant gone before harness cleanup",
     );
-    terminate_fixture_process(child_pid).await;
-    assert!(!process_is_live(child_pid));
     let _ = fs::remove_file(&pid_file);
+    let _ = fs::remove_file(&descendant_file);
     pass(
         "fixture_process_cleanup",
-        format!("test harness terminated and reaped pid {child_pid}"),
+        "no process cleanup needed on success; removed fixture pid files",
     );
 
-    println!("ETAS-005 host command matrix completed: 7 pass, 4 expected-gap");
+    println!("ETAS-005 host command matrix completed: 12 pass");
 }

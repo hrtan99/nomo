@@ -6,12 +6,14 @@ from __future__ import annotations
 import argparse
 import errno
 import fcntl
+import json
 import os
 import pty
 import select
 import signal
 import subprocess
 import termios
+import tempfile
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -158,7 +160,7 @@ def assert_ordered(output: bytes, markers: list[bytes]) -> None:
         position = next_position + len(marker)
 
 
-def pipe_budget_gap(argv: list[str]) -> None:
+def pipe_budget_regression(argv: list[str]) -> None:
     process = subprocess.Popen(
         argv,
         stdin=subprocess.PIPE,
@@ -168,34 +170,26 @@ def pipe_budget_gap(argv: list[str]) -> None:
     assert process.stdin is not None
     assert process.stdout is not None
     assert process.stderr is not None
-    output = bytearray()
-    deadline = time.monotonic() + 3
-    while b"READY\n" not in output:
-        remaining = deadline - time.monotonic()
-        if remaining <= 0:
+    started = time.monotonic()
+    try:
+        # Keep stdin open; communicate() would inject EOF and invalidate this test.
+        process.wait(timeout=2)
+        elapsed = time.monotonic() - started
+        output, error = process.stdout.read(), process.stderr.read()
+        assert_plain(output, error)
+        assert process.returncode == 3, (process.returncode, output, error)
+        assert output == b"READY\n", output
+        assert b"time budget" in error, error
+        assert elapsed < 2
+    finally:
+        if process.poll() is None:
             process.kill()
-            raise AssertionError("budget probe did not reach its blocking read")
-        ready, _, _ = select.select([process.stdout], [], [], remaining)
-        if ready:
-            output.extend(os.read(process.stdout.fileno(), 4096))
-    time.sleep(0.35)
-    if process.poll() is not None:
-        raise AssertionError("console read honored the expected-gap time budget")
-    process.stdin.write(b"late\nsecond\n")
-    process.stdin.close()
-    process.wait(timeout=3)
-    output.extend(process.stdout.read())
-    error = process.stderr.read()
-    assert_plain(bytes(output), error)
-    if process.returncode != 3 or b"execution time budget is exhausted" not in error:
-        raise AssertionError(
-            f"unexpected post-read budget result: exit={process.returncode}, "
-            f"stdout={bytes(output)!r}, stderr={error!r}"
-        )
+            process.wait(timeout=2)
+        process.stdin.close()
     print(
         "CASE non_tty_read_budget\n"
-        "RESULT expected-gap\n"
-        "DETAIL read_line remained blocked past 100ms and reported budget exhaustion only after input arrived\n"
+        "RESULT pass\n"
+        f"DETAIL budget_ms=100 elapsed_ms={elapsed * 1000:.0f}; stdin stayed open without a release line\n"
     )
 
 
@@ -211,16 +205,35 @@ def main() -> None:
     single_line_command = command(args.etas, args.single_line_project, "line")
     approval_command = command(args.etas, args.approval_project, "prompt")
 
-    stdout, stderr = pipe_case(
-        "non_tty_stdlib_multiline", line_command, b"alpha\nbeta", 0
-    )
-    if stdout != b"READY\nFIRST<alpha\n>\nSECOND<" or stderr != b"ERR_DONE\n":
-        raise AssertionError(f"stdlib multi-line gap changed: {stdout!r}, {stderr!r}")
+    with tempfile.TemporaryDirectory(prefix="etas008-trace-") as trace_root:
+        trace_path = Path(trace_root) / "trace.json"
+        stdout, stderr = pipe_case(
+            "non_tty_stdlib_multiline", line_command + ["--trace-out", str(trace_path)], b"alpha\nbeta", 0
+        )
+        events = json.loads(trace_path.read_text())["events"]
+        reads = [event for event in events if event["kind"] == "host_request_started"
+                 and event.get("qualified_action") == "Console.stdin_read_line"]
+        assert len(reads) == 2, reads
+    if stdout != b"READY\nFIRST<alpha\n>\nSECOND<beta>\n" or stderr != b"ERR_DONE\n":
+        raise AssertionError(f"unexpected multi-line streams: {stdout!r}, {stderr!r}")
     print(
         "CASE stdlib_repeated_line_io\n"
-        "RESULT expected-gap\n"
-        "DETAIL second read_line and its dependent stdout writes were skipped\n"
+        "RESULT pass\n"
+        "DETAIL two input Host calls and exact dependent stdout/stderr\n"
     )
+
+    terminal = spawn_terminal(line_command)
+    try:
+        terminal.read_until(b"READY")
+        os.write(terminal.master_fd, b"alpha\nbeta\n")
+        code, output = terminal.finish()
+    except BaseException:
+        terminal.terminate()
+        raise
+    assert code == 0, (code, output)
+    assert output == b"READY\nFIRST<alpha\n>\nSECOND<beta\n>\nERR_DONE\n", output
+    assert_plain(output)
+    print("CASE tty_repeated_line_io\nEXIT 0\nRESULT pass\n")
 
     stdout, stderr = pipe_case("non_tty_single_line", single_line_command, b"alpha\n", 0)
     expected = b"READY\nINPUT<alpha\n>\n"
@@ -324,10 +337,10 @@ def main() -> None:
         "DETAIL terminal interrupt terminates the CLI process; no structured turn-cancel result is emitted\n"
     )
 
-    pipe_budget_gap(
+    pipe_budget_regression(
         command(args.etas, args.single_line_project, "line", "--budget-time", "100ms")
     )
-    print("ETAS-008 terminal probe completed: 7 pass, 1 bounded cancel, 3 expected-gaps")
+    print("ETAS-008 terminal probe completed: 10 pass, 1 bounded cancel, 1 short-y boundary")
 
 
 if __name__ == "__main__":

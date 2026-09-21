@@ -5,8 +5,8 @@ readonly project_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)
 readonly fixture_root="${project_root}/tests/fixtures/etas004"
 readonly surface_project="${fixture_root}/file_project"
 readonly core_source_dir="${CARGO_HOME:?CARGO_HOME must be set}/etas003-core-src"
-readonly core_revision="64997eedc8436e9a9124b41e2e0de4723dafa056"
-readonly core_tree="7063d934e85499c9b74a90d4876ccdec0f31d097"
+readonly core_revision="9c9d3a17b007745c81e03bb49c977c9f65454b6f"
+readonly core_tree="f0c50e90db91f1029cb88ccfc2cedee62ee7f157"
 readonly case_root="$(mktemp -d "${CARGO_HOME}/nomo-etas004.XXXXXX")"
 readonly runtime_root="/tmp/nomo-etas004/workspace"
 
@@ -74,7 +74,7 @@ if ! grep -Fq -- 'is not assignable' "${case_root}/constructor-gap.stderr"; then
 fi
 printf 'CASE cli_workspace_path_constructor\nEXIT %s\n' "${constructor_exit}"
 sed 's/^/STDERR: /' "${case_root}/constructor-gap.stderr"
-printf 'RESULT expected-gap\n\n'
+printf 'RESULT pass (invalid record remains rejected)\n\n'
 
 cp -R "${fixture_root}/host_probe" "${case_root}/host_probe"
 cargo run --quiet --offline \

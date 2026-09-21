@@ -6,8 +6,8 @@ readonly fixture_root="${project_root}/tests/fixtures/etas005"
 readonly surface_project="${fixture_root}/command_project"
 readonly core_source_dir="${CARGO_HOME:?CARGO_HOME must be set}/etas003-core-src"
 readonly command_source="${core_source_dir}/crates/etas_host/src/command/local.rs"
-readonly core_revision="64997eedc8436e9a9124b41e2e0de4723dafa056"
-readonly core_tree="7063d934e85499c9b74a90d4876ccdec0f31d097"
+readonly core_revision="9c9d3a17b007745c81e03bb49c977c9f65454b6f"
+readonly core_tree="f0c50e90db91f1029cb88ccfc2cedee62ee7f157"
 readonly case_root="$(mktemp -d "${CARGO_HOME}/nomo-etas005.XXXXXX")"
 
 cleanup() {
@@ -72,7 +72,7 @@ if [[ "${constructor_exit}" -ne 1 ]] || ! grep -Fq -- 'error[' "${case_root}/con
 fi
 printf 'CASE cli_command_constructor\nEXIT %s\n' "${constructor_exit}"
 sed 's/^/STDERR: /' "${case_root}/constructor-gap.stderr"
-printf 'RESULT expected-gap\n\n'
+printf 'RESULT pass (invalid record remains rejected)\n\n'
 
 set +e
 etas run "${surface_project}" --flow run_command --profile command --allow-effects \
@@ -88,20 +88,14 @@ if [[ "${entry_exit}" -ne 1 ]] \
 fi
 printf 'CASE cli_command_entry_input\nEXIT %s\n' "${entry_exit}"
 sed 's/^/STDERR: /' "${case_root}/entry.stderr"
-printf 'RESULT expected-gap\n\n'
+printf 'RESULT pass (unsupported CLI entry remains rejected)\n\n'
 
-if ! grep -Fq -- 'child.wait_with_output().await' "${command_source}"; then
-    echo "locked LocalCommandClient implementation changed; re-audit ETAS-005" >&2
-    exit 1
-fi
-if grep -Eq -- 'request\.budget|timeout_at|kill_on_drop|output_limit|max_output' "${command_source}"; then
-    echo "locked LocalCommandClient gained lifecycle or output controls; re-audit ETAS-005" >&2
-    exit 1
-fi
+grep -Fq -- 'request.budget.check_time()?' "${command_source}"
+grep -Fq -- 'SupervisedCommand::spawn' "${command_source}"
 printf '%s\n' \
     'CASE locked_command_lifecycle_source' \
-    'RESULT expected-gap' \
-    'DETAIL direct wait_with_output; no budget/deadline, cancellation cleanup, or output-limit control' \
+    'RESULT pass' \
+    'DETAIL merged supervisor selected; behavior checked by Host probe' \
     ''
 
 cp -R "${fixture_root}/host_probe" "${case_root}/host_probe"

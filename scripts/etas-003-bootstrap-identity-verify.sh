@@ -43,6 +43,7 @@ select_clean_tracked_file() {
 expect_staged_drift_rejected() {
     local case_name="$1"
     local source_dir="$2"
+    local drift_mode="${3:-index}"
     local stdout_path="${case_root}/${case_name}.stdout"
     local stderr_path="${case_root}/${case_name}.stderr"
     local actual_exit
@@ -51,7 +52,9 @@ expect_staged_drift_rejected() {
     active_test_file="$(select_clean_tracked_file "${source_dir}")"
     printf '\nETAS003 harmless staged-drift regression marker\n' \
         >>"${source_dir}/${active_test_file}"
-    /usr/bin/git -C "${source_dir}" add -- "${active_test_file}"
+    if [[ "${drift_mode}" == "index" ]]; then
+        /usr/bin/git -C "${source_dir}" add -- "${active_test_file}"
+    fi
 
     set +e
     "${project_root}/scripts/etas-003-cli-bootstrap.sh" \
@@ -68,7 +71,7 @@ expect_staged_drift_rejected() {
         exit 1
     fi
     if ! grep -Fq -- \
-        "refusing tracked index drift from locked HEAD in ${source_dir}" \
+        "refusing tracked ${drift_mode} drift from locked HEAD in ${source_dir}" \
         "${stderr_path}"; then
         echo "bootstrap did not report the expected staged-drift diagnostic" >&2
         exit 1
@@ -85,9 +88,13 @@ for source_dir in "${core_source_dir}" "${etas_source_dir}"; do
         echo "required prepared checkout is missing: ${source_dir}" >&2
         exit 1
     fi
+    /usr/bin/git -C "${source_dir}" diff --quiet HEAD --
+    /usr/bin/git -C "${source_dir}" diff --cached --quiet HEAD --
 done
 
 expect_staged_drift_rejected core_staged_drift "${core_source_dir}"
 expect_staged_drift_rejected etas_staged_drift "${etas_source_dir}"
+expect_staged_drift_rejected core_unstaged_drift "${core_source_dir}" worktree
+expect_staged_drift_rejected etas_unstaged_drift "${etas_source_dir}" worktree
 
 echo "ETAS-003 bootstrap identity regression passed: ${case_count} cases"

@@ -18,8 +18,8 @@ flow main(args: Array<string>) -> i32 ![Error<IOError>]
 flow blocking(args: Array<string>) -> i32 ![Error<IOError>]
     ~ CheckpointSession
 {
-    println("BLOCKING_READY");
     checkpoint("before-blocking-read");
+    println("BLOCKING_READY");
     let ignored = read_line();
     return 0;
 }

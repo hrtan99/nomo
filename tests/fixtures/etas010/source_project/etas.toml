@@ -1,0 +1,70 @@
+[package]
+name = "etas010-source-regression"
+version = "0.1.0"
+edition = "2026"
+
+[source]
+root = "src"
+
+[[bin]]
+name = "source-regression"
+module = "app.main"
+flow = "main"
+profile = "allowed"
+
+[runtime.profiles.allowed]
+boundary_policy = "etas010-source"
+
+[runtime.profiles.allowed.filesystem.regions."app.main.ProjectRoot"]
+root = "."
+read = true
+
+[runtime.profiles.allowed.command]
+allow = ["/bin/sh"]
+
+[runtime.profiles.allowed.policy]
+mode = "local-static"
+rules = ["filesystem=allow", "command=allow"]
+
+[runtime.profiles.denied]
+boundary_policy = "etas010-source"
+
+[runtime.profiles.denied.filesystem.regions."app.main.ProjectRoot"]
+root = "."
+read = true
+
+[runtime.profiles.denied.command]
+allow = ["/bin/sh"]
+
+[runtime.profiles.denied.policy]
+mode = "local-static"
+rules = ["filesystem=allow", "command=deny"]
+
+[runtime.profiles.not-allowlisted]
+boundary_policy = "etas010-source"
+
+[runtime.profiles.not-allowlisted.filesystem.regions."app.main.ProjectRoot"]
+root = "."
+read = true
+
+[runtime.profiles.not-allowlisted.command]
+allow = ["/bin/false"]
+
+[runtime.profiles.not-allowlisted.policy]
+mode = "local-static"
+rules = ["filesystem=allow", "command=allow"]
+
+[runtime.profiles.file-denied.filesystem.regions."app.main.ProjectRoot"]
+root = "."
+read = false
+write = true
+
+[runtime.profiles.file-denied.command]
+allow = ["/bin/sh"]
+
+[runtime.profiles.console]
+boundary_policy = "etas010-console"
+
+[runtime.profiles.console.policy]
+mode = "local-static"
+rules = ["console=allow"]
