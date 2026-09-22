@@ -93,14 +93,18 @@ mode = "deny"
         print('PASS bounded_synthetic_tree_preflight', flush=True)
 
         def case(name, request=None, code=0, contains=(), absent=(), options=(), profile='read-only',
-                 flow='tools', args=None, config=None):
+                 flow='tools', args=None, config=None, stdout=None):
             (project / 'etas.toml').write_text(config or manifest)
             command = ['etas', 'run', str(project), '--flow', flow, '--profile', profile, '--allow-effects',
                        '--args'] + (args if args is not None else ['--model', 'scripted', *options, '--once', request])
-            result = subprocess.run(command, capture_output=True, text=True, timeout=15)
+            result = subprocess.run(command, capture_output=True, timeout=15)
+            # Decode explicitly: text=True would normalize raw CR and hide this bug.
+            result.stdout, result.stderr = result.stdout.decode(), result.stderr.decode()
             record = dict(case=name, exit=result.returncode, stdout=result.stdout, stderr=result.stderr)
             results.append(record)
             assert result.returncode == code, record
+            if stdout is not None:
+                assert result.stdout == stdout, record
             for text in contains:
                 assert text in result.stdout + result.stderr, record
             for text in absent:
@@ -115,6 +119,24 @@ mode = "deny"
         case('literal_not_regex', 'search:literal.txt:a.*b', contains=['literal.txt:1<LF>'], absent=['literal.txt:2'])
         case('no_match_complete', 'search:docs/a.txt:absent', contains=['assistant: read-only result: complete:'])
         case('empty_file_complete', 'read:empty.txt', contains=['assistant: read-only result: complete:'])
+        raw_requests = []
+        for label, control in [('lf', '\n'), ('cr', '\r'), ('tab', '\t')]:
+            for position, request in [('leading', control + 'read:docs/a.txt'),
+                                      ('trailing', 'read:docs/a.txt' + control),
+                                      ('interior', 'read:docs/' + control + 'a.txt')]:
+                name = label + '_' + position
+                raw_requests.append((name, request))
+                case('raw_control_' + name, request, 3,
+                     stdout='error: expected printable ASCII single-line input\n',
+                     absent=['user:', 'model:', 'tool:', 'assistant:', 'filesystem host boundary'])
+        case('leading_space_not_normalized', ' read:docs/a.txt', 3,
+             stdout='error: unsupported operation or arguments\n')
+        case('trailing_path_space_not_normalized', 'read:docs/a.txt ', 3,
+             contains=['invalid relative path'], absent=['tool: read: complete:', 'assistant:'])
+        case('literal_interior_space_preserved', 'search:docs/a.txt:second line',
+             contains=['docs/a.txt:2<LF>'])
+        case('literal_trailing_space_preserved', 'search:docs/a.txt:NEEDLE ',
+             stdout='user: search:docs/a.txt:NEEDLE \nmodel: tool search\ntool: search: complete: \nassistant: read-only result: complete: \n')
         case('opaque_listing_explicit', 'list:docs', 3, ['unsupported: named listing unavailable:', 'entries=2'], ['assistant:'])
         case('directory_entry_bound', 'list:many', 3, ['directory exceeds 16 entries'], ['assistant:'])
         for request in ['read:../outside.txt', 'read:/tmp/outside.txt', 'read:docs//a.txt', 'read:docs/./a.txt', 'read:a/b/c/d/e', 'read:docs\\a.txt']:
@@ -146,6 +168,11 @@ mode = "deny"
         case('once_required', code=3, args=['--model', 'scripted'], contains=['requires --once'])
         shutil.copyfile(ROOT / 'tests/fixtures/tool001a/state_probe.es', project / 'src/nomo/tool_test.es')
         state_manifest = manifest.replace('module = "nomo.main"', 'module = "nomo.tool_test"')
+        for name, request in raw_requests:
+            case('state_raw_control_' + name, flow='raw_refusal', args=[request],
+                 config=state_manifest.replace('"filesystem=allow"', '"filesystem=deny"'),
+                 stdout='error: expected printable ASCII single-line input\nRAW_REFUSAL_OK\n',
+                 absent=['user:', 'model:', 'filesystem policy denied'])
         case('state_budget_and_result_data', flow='main', args=[], config=state_manifest, contains=['STATE_OK'])
         case('state_completed_result_survives_budget', flow='after_tool', args=[], config=state_manifest, contains=['AFTER_TOOL_OK'])
         case('state_capacity_before_host', flow='capacity', args=['x' * 1000], config=state_manifest, contains=['CAPACITY_OK'])

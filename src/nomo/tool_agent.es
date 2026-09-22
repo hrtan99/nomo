@@ -6,7 +6,7 @@ import std.io.println;
 import nomo.config.load_for;
 import nomo.conversation.{State, fresh, capacity_error, charge, stop};
 import nomo.loop.{Turn, emit, failure, reject};
-import nomo.text.input_error;
+import nomo.text.{input_error, printable};
 import nomo.workspace.{Outcome, outcome, read_file, list_directory, search_files, display};
 
 public type Request = { operation: string, files: Array<string>, literal: string };
@@ -46,6 +46,8 @@ flow perform_turn(raw: string, maximum: i32, budget: i32, previous: State) -> Tu
     if previous.stopped { return Turn { state = previous, status = 4 }; }
     let invalid = input_error(raw);
     if invalid != "" { return reject(previous, invalid); }
+    // The shared validator trims for stub/model input; this protocol uses raw.
+    if !printable(raw) { return reject(previous, "expected printable ASCII single-line input"); }
     let parts = split(raw, ":");
     if count(parts) < 2 || count(parts) > 3 { return reject(previous, "expected read:FILE, list:DIR or search:FILE[,FILE]:LITERAL"); }
     let operation = parts[0];

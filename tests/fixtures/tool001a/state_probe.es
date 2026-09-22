@@ -3,6 +3,7 @@ module nomo.tool_test;
 import nomo.conversation.{fresh, add, Event};
 import nomo.tool_agent.{tool_turn, fresh_tools, Session};
 import std.io.println;
+import std.collections.len;
 
 flow main(args: Array<string>) -> i32 {
     let first = tool_turn("read:docs/a.txt", 3, 3, fresh_tools());
@@ -41,5 +42,20 @@ flow scan_budget(args: Array<string>) -> i32 {
     let third = tool_turn("read:missing.txt", 3, 16, second.state);
     if third.status != 4 || third.state.history.spent != 6 || third.state.reserved != 8192 { abort("scan reservation not enforced"); }
     println("SCAN_BUDGET_OK");
+    return 0;
+}
+
+flow raw_refusal(args: Array<string>) -> i32 {
+    let prior = add(fresh(), Event { role = "tool", kind = "complete", name = "read", text = "SAFE_PRIOR" });
+    let result = tool_turn(args[0], 3, 3, Session { history = prior, reserved = 0 });
+    let history = result.state.history;
+    if result.status != 2 || history.spent != 0 || history.stopped { abort("invalid raw request charged or stopped"); }
+    if result.state.reserved != 4096 { abort("conservative scan reservation changed"); }
+    if len(history.events) != 2 || history.events[0] != prior.events[0] { abort("unsafe event or prior context changed"); }
+    let error = history.events[1];
+    if error.role != "error" || error.kind != "error" || error.name != "" || error.text != "expected printable ASCII single-line input" {
+        abort("raw input stored instead of bounded rejection");
+    }
+    println("RAW_REFUSAL_OK");
     return 0;
 }
