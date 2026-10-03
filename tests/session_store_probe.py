@@ -16,7 +16,7 @@ from session_state_probe import snapshot, render
 ROOT = Path(__file__).resolve().parent.parent
 GRAPH = Path('/validation')
 CLI = GRAPH / 'target/debug/etas'
-SHARED = ['conversation.es', 'session_state.es', 'text.es']
+SHARED = ['conversation.es', 'session_state.es', 'text.es', 'loop.es', 'stub.es']
 
 
 def digest(path):
