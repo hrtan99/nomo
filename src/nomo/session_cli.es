@@ -10,14 +10,14 @@ import nomo.session_state.Request;
 import nomo.session_store.{save, reload};
 import nomo.session_display.display;
 
-// Opt-in entry only. Namespace provisioning belongs to the synthetic fixture.
+// Opt-in entry only. Initialize the fresh project-owned demo store explicitly.
 // show is a data projection, never resume, dispatch, repair or ID-only discovery.
-public flow main(args: Array<string>) -> i32 ![Console, Memory, Error<StorageError>, Error<IndexError>, Error<IOError>] {
+public flow run_session(args: Array<string>) -> i32 ![Console, Memory, Error<StorageError>, Error<IndexError>, Error<IOError>] {
     let options = match parse(args) {
         Ok(value) => value, Err(error) => { println("REFUSED " + error); return 2; }
     };
     if options.verb == "help" {
-        println("Isolated stub storage; requires a fixture-provisioned fresh synthetic store.");
+        println("Opt-in stub session storage; initialize a fresh project-owned demo store first.");
         println("save --session ID --save SAVE_ID --binding EXPECTED --input TEXT [--steps 1..16] [--budget 1..16]");
         println("show --session ID --save SAVE_ID --binding EXPECTED [--steps 1..16] [--budget 1..16]");
         println("Defaults: steps 3, budget 16. Show is read-only data, not resumed execution or trusted workspace ownership.");

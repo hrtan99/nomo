@@ -1,0 +1,20 @@
+# The source must already exist: Docker must never create a missing demo directory.
+services:
+  dev:
+    working_dir: /state
+    environment:
+      PYTHONDONTWRITEBYTECODE: "1"
+    volumes:
+      - type: bind
+        source: .
+        target: /workspace
+        read_only: true
+      - type: volume
+        source: cargo-cache
+        target: /home/nomo/.cargo
+        read_only: true
+      - type: bind
+        source: "${NOMO_SESSION_DEMO_DIR:?explicit existing demo directory required}"
+        target: /state
+        bind:
+          create_host_path: false

@@ -85,7 +85,7 @@ root = "src"
 [[bin]]
 name = "session"
 module = "nomo.session_cli"
-flow = "main"
+flow = "run_session"
 ''')
     generated = project / 'inputs'
     generated.mkdir()
@@ -113,11 +113,12 @@ flow = "main"
         print('PASS ' + name, flush=True)
 
     def run(database, arguments, module='nomo.session_cli', fault='none', actual_cli=False):
-        command = ([str(CLI), 'run', str(project), '--allow-effects', '--args', *arguments] if actual_cli else
-                   [str(HARNESS), str(project / 'src'), module, 'main', str(database), fault, *arguments])
+        entry_flow = 'main' if module == 'app.main' else 'run_session'
+        command = ([str(CLI), 'run', str(project), '--flow', entry_flow, '--allow-effects', '--args', *arguments] if actual_cli else
+                   [str(HARNESS), str(project / 'src'), module, entry_flow, str(database), fault, *arguments])
         profile = {'kind': 'CLI environment' if actual_cli else 'embedded Host, RunOptions::default; no CLI profile loaded',
                    'memory_sqlite': str(database / 'memory.sqlite3'), 'session_sqlite': str(database / 'session.sqlite3'),
-                   'module': module, 'fault': fault, 'binary_sha256': digest(CLI if actual_cli else HARNESS)}
+                   'module': module, 'flow': entry_flow, 'fault': fault, 'binary_sha256': digest(CLI if actual_cli else HARNESS)}
         entry = source if module == 'app.main' else project / 'src/nomo/session_cli.es'
         env = dict(os.environ, PYTHONDONTWRITEBYTECODE='1',
                    ETAS_HOST_MEMORY='sqlite:' + str(database / 'memory.sqlite3'),

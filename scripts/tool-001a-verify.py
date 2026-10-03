@@ -14,7 +14,7 @@ def main():
     subprocess.run(['python3', '-B', str(ROOT / 'tests/tool_workspace_probe.py')], env=env, check=True, timeout=90)
     with tempfile.TemporaryDirectory(prefix='nomo-tool001a-regression-') as directory:
         project = Path(directory)
-        for name in ['src', 'packages', 'tests', 'scripts', 'examples']:
+        for name in ['src', 'tests', 'scripts', 'examples']:
             shutil.copytree(ROOT / name, project / name, ignore=shutil.ignore_patterns('__pycache__'))
         inputs = ['etas.toml', 'etas.lock', 'patches/etas-003/Cargo.lock']
         if env.get('NOMO_NORMAL_GRAPH', 'etas0013') == 'etas0013':

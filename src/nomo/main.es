@@ -7,6 +7,15 @@ import nomo.loop.{turn, reject};
 import nomo.conversation.fresh;
 import nomo.model_entry.run_model;
 import nomo.tool_agent.run_tools;
+import nomo.session_demo.demo;
+
+// Convert the opt-in handler's typed refusal into a failing CLI process.
+// The Etas CLI itself does not map a returned i32 to an OS exit status.
+flow session(args: Array<string>) -> i32 {
+    let status = demo(args);
+    if status != 0 { abort("Nomo session demo refused; see REFUSED output"); }
+    return 0;
+}
 
 flow tools(args: Array<string>) -> i32 {
     return run_tools(args);

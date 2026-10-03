@@ -45,6 +45,42 @@ rules = ["console=allow", "model=allow"]
 [runtime.profiles.gateway-qwen.approval]
 mode = "deny"
 
+[runtime.profiles.session-demo-create]
+boundary_policy = "nomo-session-demo"
+
+[runtime.profiles.session-demo-create.memory]
+backend = "sqlite"
+path = "memory.sqlite3"
+
+[runtime.profiles.session-demo-create.session]
+backend = "sqlite"
+path = "session.sqlite3"
+
+[runtime.profiles.session-demo-create.policy]
+mode = "local-static"
+rules = ["console=allow", "memory=allow", "session=allow"]
+
+[runtime.profiles.session-demo-create.approval]
+mode = "deny"
+
+[runtime.profiles.session-demo-existing]
+boundary_policy = "nomo-session-demo"
+
+[runtime.profiles.session-demo-existing.memory]
+backend = "sqlite"
+path = "file:memory.sqlite3?mode=rw"
+
+[runtime.profiles.session-demo-existing.session]
+backend = "sqlite"
+path = "file:session.sqlite3?mode=rw"
+
+[runtime.profiles.session-demo-existing.policy]
+mode = "local-static"
+rules = ["console=allow", "memory=allow", "session=allow"]
+
+[runtime.profiles.session-demo-existing.approval]
+mode = "deny"
+
 [[bin]]
 name = "nomo"
 module = "nomo.main"

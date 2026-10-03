@@ -125,7 +125,7 @@ def main():
     for name in ['conversation.es', 'loop.es', 'stub.es', 'text.es', 'session_state.es']:
         shutil.copyfile(ROOT / 'src/nomo' / name, target / name)
     for name in ['stub_snapshot.es', 'session_display.es']:
-        shutil.copyfile(ROOT / 'packages/session-store/src/nomo' / name, target / name)
+        shutil.copyfile(ROOT / 'src/nomo' / name, target / name)
     source = project / 'src/app/main.es'
     source.parent.mkdir()
     calls = '\n'.join('observed(' + ', '.join(json.dumps(v) for v in (*case[:4], case[-1])) + ');' for case in CASES)

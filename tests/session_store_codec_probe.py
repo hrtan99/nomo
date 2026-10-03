@@ -122,12 +122,12 @@ def cases():
 def main():
     originals = {p: hashlib.sha256((ROOT / p).read_bytes()).hexdigest() for p in [
         'etas.toml', 'etas.lock', 'src/nomo/session_state.es', 'src/nomo/text.es',
-        'packages/session-store/src/nomo/bundle_codec.es']}
+        'src/nomo/bundle_codec.es']}
     project = Path(tempfile.mkdtemp(prefix='session-store-codec-', dir=EVIDENCE))
     print('EVIDENCE ' + str(project), flush=True)
     (project / 'src/nomo').mkdir(parents=True)
     (project / 'src/app').mkdir()
-    shutil.copyfile(ROOT / 'packages/session-store/src/nomo/bundle_codec.es', project / 'src/nomo/bundle_codec.es')
+    shutil.copyfile(ROOT / 'src/nomo/bundle_codec.es', project / 'src/nomo/bundle_codec.es')
     shutil.copyfile(ROOT / 'src/nomo/text.es', project / 'src/nomo/text.es')
     source = project / 'src/app/main.es'
     source.write_text(SOURCE)

@@ -4,7 +4,7 @@ from pathlib import Path
 import sys
 
 ROOT = Path(__file__).resolve().parent.parent
-PRODUCT_ROOTS = ("src", "packages/session-store/src")
+PRODUCT_ROOTS = ("src",)
 OTHER_ROOTS = ("tests", "examples", "scripts")
 SUFFIXES = {".es", ".rs", ".py", ".sh"}
 EXCLUDED = {"target", "node_modules", ".git", "__pycache__"}
@@ -24,6 +24,9 @@ def count(directory):
 
 
 def inventory(root):
+    retired = root / "packages/session-store/src"
+    if count(retired)[2]:
+        raise ValueError("retired product root still contains counted sources: packages/session-store/src")
     missing = [name for name in PRODUCT_ROOTS + OTHER_ROOTS if not (root / name).is_dir()]
     if missing:
         raise ValueError("authoritative inventory requires directories: " + ", ".join(missing))

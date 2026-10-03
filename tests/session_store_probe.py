@@ -18,6 +18,8 @@ GRAPH = Path(os.environ.get('SESSION_STORE_GRAPH', '/validation'))
 CLI = Path(os.environ.get('ETAS', str(GRAPH / 'target/debug/etas')))
 EVIDENCE = Path(os.environ.get('NOMO_TEST_EVIDENCE', str(GRAPH)))
 SHARED = ['conversation.es', 'session_state.es', 'text.es', 'loop.es', 'stub.es']
+STORAGE = ['bundle_codec.es', 'store_record.es', 'metadata_store.es', 'history_store.es',
+           'session_store.es', 'session_cli.es', 'session_cli_args.es', 'stub_snapshot.es', 'session_display.es']
 
 
 def digest(path):
@@ -43,9 +45,7 @@ def retain_input(project, source):
 def materialize(project):
     target = project / 'src/nomo'
     target.mkdir(parents=True)
-    for path in (ROOT / 'packages/session-store/src/nomo').glob('*.es'):
-        shutil.copyfile(path, target / path.name)
-    for name in SHARED:
+    for name in STORAGE + SHARED:
         source = ROOT / 'src/nomo' / name
         shutil.copyfile(source, target / name)
         assert digest(source) == digest(target / name)

@@ -31,7 +31,7 @@ def read(path):
 
 def sources():
     paths = [ROOT / name for name in ('etas.toml', 'etas.lock', 'compose.yaml', 'Dockerfile')]
-    for directory in ('src', 'packages', 'tests', 'scripts', 'config', 'patches', 'examples'):
+    for directory in ('src', 'tests', 'scripts', 'config', 'patches', 'examples'):
         paths += [path for path in (ROOT / directory).rglob('*') if path.is_file()
                   and path.suffix in ('.es', '.rs', '.py', '.sh', '.toml', '.yaml', '.lock')
                   and not {'__pycache__', 'target', '.etas'}.intersection(path.parts)]

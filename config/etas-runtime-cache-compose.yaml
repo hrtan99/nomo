@@ -1,0 +1,6 @@
+# The dependency-free project must not consume or rewrite a stale local index.
+# Mask only disposable Etas project cache; keep source and installed graph read-only.
+services:
+  dev:
+    tmpfs:
+      - /workspace/.etas:rw,nosuid,nodev,noexec,size=16m,uid=10001,gid=10001,mode=0700

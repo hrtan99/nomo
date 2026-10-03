@@ -26,13 +26,12 @@ class SlocCounterTest(unittest.TestCase):
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(text)
 
-    def test_package_contributes_to_combined_product(self):
+    def test_moved_storage_contributes_to_canonical_product(self):
         self.write("src/nomo/main.es", "// note\ncode;\n\n")
-        self.write("packages/session-store/src/nomo/store.es", "first;\nsecond;\n")
+        self.write("src/nomo/store.es", "first;\nsecond;\n")
         self.write("tests/fixture.py", "fixture()\n")
         counts = COUNTER.inventory(self.root)
-        self.assertEqual(counts["src"], (1, 3, 1))
-        self.assertEqual(counts["packages/session-store/src"], (2, 2, 1))
+        self.assertEqual(counts["src"], (3, 5, 2))
         self.assertEqual(counts["product"], (3, 5, 2))
         self.assertEqual(counts["tests"], (1, 1, 1))
 
@@ -65,34 +64,42 @@ class SlocCounterTest(unittest.TestCase):
         self.write("src/lines.py", '\n \n  # comment\n\t// comment\ncode # inline\n"""doc"""\n/* block */\n')
         self.assertEqual(COUNTER.inventory(self.root)["src"], (3, 7, 1))
 
-    def test_suffixes_exclusions_and_package_boundary(self):
+    def test_suffixes_exclusions_and_product_boundary(self):
         for suffix in COUNTER.SUFFIXES:
-            self.write("packages/session-store/src/file" + suffix)
+            self.write("src/file" + suffix)
         for excluded in COUNTER.EXCLUDED:
-            self.write("packages/session-store/src/" + excluded + "/ignored.es")
-        self.write("packages/session-store/src/ignored.md")
+            self.write("src/" + excluded + "/ignored.es")
+        self.write("src/ignored.md")
         self.write("packages/session-store/tests/outside.es")
         self.write("packages/unrelated/src/outside.es")
         self.assertEqual(COUNTER.inventory(self.root)["product"], (4, 4, 4))
 
     def test_cli_reports_version_roots_and_aggregate(self):
         self.write("src/main.es")
-        self.write("packages/session-store/src/store.es")
+        self.write("src/store.es")
         output = io.StringIO()
         with patch.object(COUNTER, "ROOT", self.root), contextlib.redirect_stdout(output):
             self.assertEqual(COUNTER.main(), 0)
         self.assertIn("nomo-physical-v2; authoritative", output.getvalue())
-        self.assertIn("src: 1 SLOC, 1 raw lines, 1 files", output.getvalue())
-        self.assertIn("packages/session-store/src: 1 SLOC, 1 raw lines, 1 files", output.getvalue())
+        self.assertIn("product roots: src;", output.getvalue())
+        self.assertIn("src: 2 SLOC, 2 raw lines, 2 files", output.getvalue())
         self.assertIn("product: 2 SLOC, 2 raw lines, 2 files", output.getvalue())
 
     def test_cli_missing_root_has_no_authoritative_totals(self):
-        (self.root / "packages/session-store/src").rmdir()
+        (self.root / "src").rmdir()
         output, errors = io.StringIO(), io.StringIO()
         with patch.object(COUNTER, "ROOT", self.root), contextlib.redirect_stdout(output), contextlib.redirect_stderr(errors):
             self.assertEqual(COUNTER.main(), 2)
         self.assertEqual(output.getvalue(), "")
-        self.assertIn("authoritative inventory requires directories: packages/session-store/src", errors.getvalue())
+        self.assertIn("authoritative inventory requires directories: src", errors.getvalue())
+
+    def test_retired_product_root_refuses_stale_or_duplicate_sources(self):
+        self.write("packages/session-store/src/nomo/store.es")
+        output, errors = io.StringIO(), io.StringIO()
+        with patch.object(COUNTER, "ROOT", self.root), contextlib.redirect_stdout(output), contextlib.redirect_stderr(errors):
+            self.assertEqual(COUNTER.main(), 2)
+        self.assertEqual(output.getvalue(), "")
+        self.assertIn("retired product root still contains counted sources", errors.getvalue())
 
 
 if __name__ == "__main__":
