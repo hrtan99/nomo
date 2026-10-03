@@ -1,0 +1,15 @@
+[package]
+name = "nomo-session-store-host-faults"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+# Build only with the SESSION-STORE-GRAPH-001 retained local path overrides.
+# These are the reviewed source pins, not the normal application's dependencies.
+[dependencies]
+etas_core = { git = "https://github.com/etas-project/etas-core.git", rev = "375a6a088eca4df2d0accf4d8c9550901721b1e3" }
+etas_host = { git = "https://github.com/etas-project/etas-core.git", rev = "375a6a088eca4df2d0accf4d8c9550901721b1e3" }
+etas_frontend = { git = "https://github.com/etas-project/etas-frontend.git", rev = "59b2115de2ca7c33b5c5743f4113fa51eb3eb69e" }
+etas_interpreter = { git = "https://github.com/etas-project/etas-interpreter.git", rev = "481ff62c895978853bc7385d76c1a799a5f780b1" }
+serde_json = "1"
+tokio = { version = "1", default-features = false, features = ["macros", "rt", "time"] }
