@@ -11,9 +11,8 @@ import subprocess
 import tempfile
 
 from session_state_probe import snapshot
-from session_store_probe import expected, fixture_source, materialize, plain
+from session_store_probe import EVIDENCE, GRAPH, expected, fixture_source, materialize, plain
 
-GRAPH = Path('/validation')
 ROOT = Path(__file__).resolve().parent.parent
 HARNESS = GRAPH / 'target/debug/nomo-session-store-host-faults'
 FAULTS = ('pending', 'append', 'publish', 'missing-history', 'conflict',
@@ -69,7 +68,7 @@ def main():
     assert digest(GRAPH / 'host-faults/Cargo.lock') == identity['fixture_lock_sha256']
     fixture_root = ROOT / 'tests/fixtures/session_store/host_faults'
     assert {name: digest(fixture_root / name) for name in identity['fixture_source_sha256']} == identity['fixture_source_sha256']
-    project = Path(tempfile.mkdtemp(prefix='session-store-actual-faults-', dir=GRAPH))
+    project = Path(tempfile.mkdtemp(prefix='session-store-actual-faults-', dir=EVIDENCE))
     print('EVIDENCE ' + str(project), flush=True)
     source = materialize(project)
     results = []
@@ -159,11 +158,15 @@ def main():
                 assert any(event.get('kind') == 'storage_write'
                            and event['evidence']['status']['kind'] == 'unknown'
                            for event in saved['events']), saved
-                if fault == 'pending':
+                if fault in ('pending', 'publish'):
+                    # Prepared writes expose Unknown as Err; bounded refusal logging
+                    # is allowed, but no readback, retry or success follows it.
                     assert saved['after_store_marker'] and saved['diagnostics'] == [], saved
                     assert saved['application_stdout'] == 'REFUSED metadata commit unknown; no retry\n', saved
+                    assert saved['value'] == {'kind': 'number', 'type': 'i32', 'value': '1'}, saved
                     assert saved['post_fault_reads'] == 0, saved
                 else:
+                    # The Session append still uses its unchanged terminal route.
                     assert not saved['after_store_marker'] and saved['stdout'] == '', saved
                     assert saved['post_fault_reads'] == saved['post_fault_console'] == 0, saved
             else:
@@ -174,7 +177,10 @@ def main():
                     assert any(event.get('actual_sqlite_cas_conflict') for event in saved['trace']), saved
                     assert not any(event.get('ordinal') == 2 and event['actual_sqlite_commit']
                                    for event in saved['trace']), saved
-                    assert saved['stdout'] == '' and not saved['after_store_marker'], saved
+                    assert saved['after_store_marker'] and saved['diagnostics'] == [], saved
+                    assert saved['application_stdout'] == 'REFUSED metadata commit refused; no retry\n', saved
+                    assert saved['value'] == {'kind': 'number', 'type': 'i32', 'value': '1'}, saved
+                    assert saved['post_fault_reads'] == 0, saved
                 elif fault == 'stale-pending':
                     assert saved['application_stdout'] == 'REFUSED pending metadata changed\n', saved
                 else:

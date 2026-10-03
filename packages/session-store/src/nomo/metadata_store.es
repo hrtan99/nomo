@@ -1,6 +1,6 @@
 module nomo.metadata_store;
 
-import std.memory.{get_entry, put_versioned, prepare_put, operation_ref, commit, WriteCondition, MemoryVersion, MemoryEntry,
+import std.memory.{get_entry, prepare_put, operation_ref, commit, WriteCondition, MemoryVersion, MemoryEntry,
     WriteOutcome, MemoryWriteChange, StorageDurability};
 import nomo.store_record.Record;
 
@@ -9,14 +9,17 @@ let Metadata = std.memory.region<Schema>(stable_id = "nomo-session-store-v1", st
 
 public flow read(id: string) -> Option<MemoryEntry<string, Record>> { return get_entry(Metadata.Rows, id); }
 
-// Scoped Match-constructor workaround: the runtime performs exact-version CAS.
-// No source receipt is exposed here; Unknown/errors terminate, without retry.
+// Publish only against the confirmed Pending version, then verify the receipt's
+// committed version and exact row. Unknown/refused writes return without retry.
 public flow publish(row: Record, expected: MemoryVersion) -> Result<MemoryVersion, string> ![Memory, Error<StorageError>] {
-    put_versioned(Metadata.Rows, row.snapshot.session_id, row, expected);
+    let committed = match write(row, std.memory.Match(expected)) {
+        Ok(version) => version, Err(error) => { return Err(error); }
+    };
     let observed = match read(row.snapshot.session_id) {
         Some(value) => value, None() => { return Err("published metadata missing"); }
     };
-    if observed.key != row.snapshot.session_id || observed.value != row || observed.version.opaque == expected.opaque {
+    if observed.key != row.snapshot.session_id || observed.value != row ||
+        observed.version.opaque == expected.opaque || observed.version.opaque != committed.opaque {
         return Err("published metadata readback mismatch");
     }
     return Ok(observed.version);

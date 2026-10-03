@@ -1,0 +1,13 @@
+# Explicit historical ETAS-011 selection; never remove or replace its cache.
+services:
+  dev:
+    environment:
+      CARGO_TARGET_DIR: /home/nomo/.cargo/etas003-cli-src/target
+      NOMO_NORMAL_GRAPH: legacy
+  dependency:
+    environment:
+      CARGO_TARGET_DIR: /home/nomo/.cargo/etas003-cli-src/target
+      NOMO_NORMAL_GRAPH: legacy
+volumes:
+  cargo-cache:
+    name: nomo-cargo-cache

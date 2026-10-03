@@ -73,7 +73,12 @@ def main():
     assert profile["approval"] == {"mode": "deny"}
     effects = subprocess.run(["etas", "effects", str(ROOT), "--flow", "model"], capture_output=True, text=True, timeout=12, check=True)
     actions = next(line.strip()[len("requested actions: ["):-1] for line in effects.stdout.splitlines() if line.strip().startswith("requested actions: ["))
-    assert set(actions.split(", ")) == {"Console.stdin_read_line", "Console.stdout_write", "Agentic.infer[nomo.provider.TextModel]"}, actions
+    selected = os.environ.get("NOMO_NORMAL_GRAPH", "etas0013")
+    assert selected in ("legacy", "etas0013"), selected
+    model_action = ("Agentic.infer[nomo.provider.TextModel]" if selected == "legacy"
+                    else "Agentic.infer[nomo.provider.TextModel, string]")
+    # The new graph prints the result type, whose comma is not an action separator.
+    assert actions == "Console.stdin_read_line, Console.stdout_write, " + model_action, actions
     print("PASS opt_in_profile_and_exact_actions (static, not live)", flush=True)
     server = ThreadingHTTPServer(("127.0.0.1", 18848), Handler)
     server.daemon_threads = True

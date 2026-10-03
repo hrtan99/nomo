@@ -1,0 +1,31 @@
+# Reproducible ETAS-0013 adoption; the previous nomo-cargo-cache is never mounted.
+services:
+  dev:
+    environment:
+      CARGO_TARGET_DIR: /home/nomo/.cargo/etas0013/target
+      CARGO_BUILD_JOBS: "2"
+      PYTHONDONTWRITEBYTECODE: "1"
+    volumes:
+      - type: bind
+        source: .
+        target: /workspace
+        read_only: true
+      - type: volume
+        source: etas0013-cargo-cache
+        target: /home/nomo/.cargo
+  dependency:
+    environment:
+      CARGO_TARGET_DIR: /home/nomo/.cargo/etas0013/target
+      CARGO_BUILD_JOBS: "2"
+      PYTHONDONTWRITEBYTECODE: "1"
+    volumes:
+      - type: bind
+        source: .
+        target: /workspace
+        read_only: true
+      - type: volume
+        source: etas0013-cargo-cache
+        target: /home/nomo/.cargo
+volumes:
+  etas0013-cargo-cache:
+    name: nomo-cargo-cache-etas0013

@@ -7,7 +7,7 @@ import shutil
 import subprocess
 import tempfile
 
-from session_store_probe import CLI, GRAPH, ROOT, digest, retain_input
+from session_store_probe import CLI, EVIDENCE, GRAPH, ROOT, digest, retain_input
 
 CASES = [
     ('plain', 'hello', 3, 16, 1, 0, False, None, 'active'),
@@ -118,7 +118,7 @@ public flow main(args: Array<string>) -> i32 {
 def main():
     assert digest(CLI) == json.loads((GRAPH / 'binary.json').read_text())['sha256']
     protected = {name: digest(ROOT / name) for name in ['etas.toml', 'etas.lock', 'src/nomo/loop.es', 'src/nomo/session_state.es']}
-    project = Path(tempfile.mkdtemp(prefix='session-cli-mapping-', dir=GRAPH))
+    project = Path(tempfile.mkdtemp(prefix='session-cli-mapping-', dir=EVIDENCE))
     print('EVIDENCE ' + str(project), flush=True)
     target = project / 'src/nomo'
     target.mkdir(parents=True)

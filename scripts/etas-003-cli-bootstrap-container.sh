@@ -5,6 +5,7 @@ readonly project_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)
 
 exec docker compose \
     --file "${project_root}/compose.yaml" \
+    --file "${project_root}/config/etas-legacy-compose.yaml" \
     --profile networked \
     run \
     --rm \

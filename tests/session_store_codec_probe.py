@@ -8,7 +8,7 @@ import shutil
 import subprocess
 import tempfile
 
-from session_store_probe import retain_input
+from session_store_probe import EVIDENCE, retain_input
 
 ROOT = Path(__file__).resolve().parent.parent
 ETAS = os.environ.get('ETAS', '/validation/target/debug/etas')
@@ -123,7 +123,7 @@ def main():
     originals = {p: hashlib.sha256((ROOT / p).read_bytes()).hexdigest() for p in [
         'etas.toml', 'etas.lock', 'src/nomo/session_state.es', 'src/nomo/text.es',
         'packages/session-store/src/nomo/bundle_codec.es']}
-    project = Path(tempfile.mkdtemp(prefix='session-store-codec-', dir=GRAPH))
+    project = Path(tempfile.mkdtemp(prefix='session-store-codec-', dir=EVIDENCE))
     print('EVIDENCE ' + str(project), flush=True)
     (project / 'src/nomo').mkdir(parents=True)
     (project / 'src/app').mkdir()

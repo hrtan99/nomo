@@ -13,11 +13,9 @@ import tempfile
 
 from session_state_probe import snapshot, event, reference
 from session_store_fault_probe import contents, stored
-from session_store_probe import fixture_source, materialize
+from session_store_probe import CLI, EVIDENCE, GRAPH, fixture_source, materialize
 
 ROOT = Path(__file__).resolve().parent.parent
-GRAPH = Path('/validation')
-CLI = GRAPH / 'target/debug/etas'
 HARNESS = GRAPH / 'target/debug/nomo-session-store-host-faults'
 BINDING = 'independent-fixture-binding'
 SHARED = ('conversation.es', 'session_state.es', 'text.es', 'loop.es', 'stub.es', 'config.es')
@@ -72,7 +70,7 @@ def main():
     assert digest(CLI) == json.loads((GRAPH / 'binary.json').read_text())['sha256']
     protected = ['etas.toml', 'etas.lock', 'src/nomo/main.es', 'src/nomo/config.es', 'src/nomo/session_state.es']
     original = {name: digest(ROOT / name) for name in protected}
-    project = Path(tempfile.mkdtemp(prefix='session-cli-cases-', dir=GRAPH))
+    project = Path(tempfile.mkdtemp(prefix='session-cli-cases-', dir=EVIDENCE))
     print('EVIDENCE ' + str(project), flush=True)
     source = materialize(project)
     for name in SHARED:

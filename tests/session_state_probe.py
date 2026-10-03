@@ -7,7 +7,7 @@ import shutil
 import subprocess
 import tempfile
 
-from tool_workspace_probe import EXPECTED_CLI, digest
+from normal_graph_identity import digest, verify_cli
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -273,7 +273,7 @@ def fixture(all_cases):
 
 
 def main():
-    assert digest(Path(shutil.which('etas'))) == EXPECTED_CLI
+    verify_cli()
     originals = {p: digest(ROOT / p) for p in ['etas.toml', 'etas.lock', 'compose.yaml', 'patches/etas-003/Cargo.lock']}
     all_cases = cases()
     with tempfile.TemporaryDirectory(prefix='nomo-session001a-') as directory:

@@ -14,8 +14,9 @@ import tempfile
 from session_state_probe import snapshot, render
 
 ROOT = Path(__file__).resolve().parent.parent
-GRAPH = Path('/validation')
-CLI = GRAPH / 'target/debug/etas'
+GRAPH = Path(os.environ.get('SESSION_STORE_GRAPH', '/validation'))
+CLI = Path(os.environ.get('ETAS', str(GRAPH / 'target/debug/etas')))
+EVIDENCE = Path(os.environ.get('NOMO_TEST_EVIDENCE', str(GRAPH)))
 SHARED = ['conversation.es', 'session_state.es', 'text.es', 'loop.es', 'stub.es']
 
 
@@ -180,7 +181,7 @@ def main():
     parser.add_argument('--negative-only', action='store_true')
     opts = parser.parse_args()
     assert digest(CLI) == json.loads((GRAPH / 'binary.json').read_text())['sha256']
-    project = Path(tempfile.mkdtemp(prefix='session-store-cases-', dir=GRAPH))
+    project = Path(tempfile.mkdtemp(prefix='session-store-cases-', dir=EVIDENCE))
     print('EVIDENCE ' + str(project), flush=True)
     source = materialize(project)
     results = []

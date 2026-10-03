@@ -8,12 +8,9 @@ import shutil
 import subprocess
 import tempfile
 
+from normal_graph_identity import digest, verify_cli
+
 ROOT = Path(__file__).resolve().parent.parent
-EXPECTED_CLI = '0dead4ce2fd435a2c711629a7197bc0da041ed7ad2ff241f2f4f9b3ef17fbaad'
-
-
-def digest(path):
-    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def snapshot(root):
@@ -22,7 +19,7 @@ def snapshot(root):
 
 
 def main():
-    assert digest(Path(shutil.which('etas'))) == EXPECTED_CLI
+    verify_cli()
     mounts = Path('/proc/self/mountinfo').read_text().splitlines()
     for point in ['/workspace', '/home/nomo/.cargo']:
         row = next(line.split() for line in mounts if line.split()[4] == point)
@@ -32,7 +29,7 @@ def main():
     assert status['NoNewPrivs'].strip() == '1' and status['Seccomp'].strip() == '2'
     assert len(Path('/proc/net/route').read_text().splitlines()) == 1
     assert [p.name for p in Path('/sys/class/net').iterdir() if p.is_dir() and int((p / 'flags').read_text(), 16) & 1] == ['lo']
-    print('PASS accepted_binary_and_effective_readonly_mounts', flush=True)
+    print('PASS guarded_binary_and_effective_readonly_mounts', flush=True)
     original = {str(p): digest(p) for p in [ROOT / 'etas.lock', ROOT / 'patches/etas-003/Cargo.lock']}
     results = []
     with tempfile.TemporaryDirectory(prefix='nomo-tool001a-') as directory:
@@ -187,7 +184,7 @@ mode = "deny"
         if os.environ.get('NOMO_TOOL_TEST_VERBOSE') == '1':
             print('RESULTS ' + json.dumps(results), flush=True)
     assert all(digest(Path(p)) == value for p, value in original.items())
-    print('PASS accepted_locks_preserved_and_owned_temporary_fixture_cleaned', flush=True)
+    print('PASS selected_normal_locks_preserved_and_owned_temporary_fixture_cleaned', flush=True)
 
 
 if __name__ == '__main__':

@@ -3,13 +3,19 @@ set -euo pipefail
 
 readonly project_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
 
-exec docker compose \
+docker compose \
     --file "${project_root}/compose.yaml" \
+    --file "${project_root}/config/etas-0013-bootstrap-compose.yaml" \
     --profile networked \
     run \
     --rm \
     --no-deps \
     --tty=false \
-    --volume "${project_root}:/workspace:ro" \
     dependency \
-    /workspace/scripts/etas-cli-bootstrap.sh
+    /workspace/scripts/etas-cli-bootstrap.sh prepare
+
+exec docker compose \
+    --file "${project_root}/compose.yaml" \
+    --file "${project_root}/config/etas-0013-bootstrap-compose.yaml" \
+    run --rm --no-deps --tty=false dev \
+    /workspace/scripts/etas-cli-bootstrap.sh build

@@ -9,7 +9,7 @@ import subprocess
 import tempfile
 
 from session_state_probe import caps, event, record, reference, render, snapshot, set_field
-from session_store_probe import CLI, GRAPH, ROOT, digest, expected, fixture_source, materialize, retain_input
+from session_store_probe import CLI, EVIDENCE, GRAPH, ROOT, digest, expected, fixture_source, materialize, retain_input
 
 
 def change(source, before, after):
@@ -37,7 +37,7 @@ def main():
     assert not (options.negative_only and options.positive_only), 'Choose one case group.'
     assert digest(CLI) == json.loads((GRAPH / 'binary.json').read_text())['sha256']
     protected = {name: digest(ROOT / name) for name in ['etas.toml', 'etas.lock', 'src/nomo/session_state.es']}
-    evidence = Path(tempfile.mkdtemp(prefix='session-store-bounds-', dir=GRAPH))
+    evidence = Path(tempfile.mkdtemp(prefix='session-store-bounds-', dir=EVIDENCE))
     print('EVIDENCE ' + str(evidence), flush=True)
     results = []
     total = 0

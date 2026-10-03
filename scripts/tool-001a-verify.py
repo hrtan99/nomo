@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify accepted-graph TOOL-001A and existing product checks in an owned copy."""
+"""Verify the explicitly selected normal graph in an owned regression copy."""
 from pathlib import Path
 import os
 import shutil
@@ -16,7 +16,11 @@ def main():
         project = Path(directory)
         for name in ['src', 'packages', 'tests', 'scripts', 'examples']:
             shutil.copytree(ROOT / name, project / name, ignore=shutil.ignore_patterns('__pycache__'))
-        for name in ['etas.toml', 'etas.lock', 'patches/etas-003/Cargo.lock']:
+        inputs = ['etas.toml', 'etas.lock', 'patches/etas-003/Cargo.lock']
+        if env.get('NOMO_NORMAL_GRAPH', 'etas0013') == 'etas0013':
+            inputs += ['patches/etas-0013/' + name + '.Cargo.lock'
+                       for name in ('core', 'frontend', 'interpreter', 'cli')]
+        for name in inputs:
             target = project / name
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / name, target)

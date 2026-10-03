@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run MODEL-001 in a disposable copy; adapt only the new exact effect rendering."""
+"""Historical isolated MODEL-001 route using the explicit exact effect rendering."""
 import importlib.util
 import hashlib
 import os
@@ -37,14 +37,12 @@ def main():
     spec = importlib.util.spec_from_file_location('model_probe', ROOT / 'tests/model_probe.py')
     probe = importlib.util.module_from_spec(spec)
     text = (ROOT / 'tests/model_probe.py').read_text()
-    old = 'assert set(actions.split(", ")) == {"Console.stdin_read_line", "Console.stdout_write", "Agentic.infer[nomo.provider.TextModel]"}, actions'
-    new = 'assert actions == "Console.stdin_read_line, Console.stdout_write, Agentic.infer[nomo.provider.TextModel, string]", actions'
-    assert text.count(old) == 1, 'accepted harness changed; review the adapter'
-    text = text.replace(old, new)
+    assert 'Agentic.infer[nomo.provider.TextModel, string]' in text, 'effect oracle changed; review the adapter'
     (project / 'adapted_model_probe.py').write_text(text)
     # Keep the original __file__ for its existing mock import, then redirect product ROOT.
     exec(compile(text, str(project / 'adapted_model_probe.py'), 'exec'), probe.__dict__)
     probe.ROOT = project
+    os.environ['NOMO_NORMAL_GRAPH'] = 'etas0013'
     os.environ['PATH'] = '/validation/target/debug:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
     with (project / 'verification.log').open('w') as log:
         with redirect_stdout(Tee(sys.stdout, log)), redirect_stderr(Tee(sys.stderr, log)):

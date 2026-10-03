@@ -20,6 +20,8 @@ x-nomo-common: &nomo-common
   stop_grace_period: 10s
   environment:
     CARGO_HOME: /home/nomo/.cargo
+    CARGO_TARGET_DIR: /home/nomo/.cargo/etas0013/target
+    NOMO_NORMAL_GRAPH: etas0013
     HISTFILE: /tmp/.bash_history
     HOME: /home/nomo
   volumes:
@@ -92,13 +94,15 @@ services:
         condition: service_healthy
     environment:
       CARGO_HOME: /home/nomo/.cargo
+      CARGO_TARGET_DIR: /home/nomo/.cargo/etas0013/target
+      NOMO_NORMAL_GRAPH: etas0013
       HISTFILE: /tmp/.bash_history
       HOME: /home/nomo
       NOMO_GATEWAY_CLIENT_TOKEN: "${NOMO_GATEWAY_CLIENT_TOKEN:-}"
 
 volumes:
   cargo-cache:
-    name: nomo-cargo-cache
+    name: nomo-cargo-cache-etas0013
 
 networks:
   model-internal:
