@@ -3,9 +3,10 @@ module nomo.workspace;
 import std.fs.{Region, WorkspacePath, IOError, path, read_bytes, list};
 import std.bytes.len as byte_len;
 import std.codec.text.{utf8_decode, Strict};
-import std.text.{len, split, contains, starts_with, to_string_usize};
+import std.text.{len, split, contains, to_string_usize};
 import std.collections.len as count;
 import nomo.text.printable;
+import nomo.path_policy.valid_path as canonical_path;
 
 public type ReadOnlyRoot;
 impl ReadOnlyRoot ~ Region;
@@ -17,16 +18,7 @@ public flow outcome(status: string, text: string, scanned: usize) -> Outcome {
 
 // Conservative, canonical relative names only; the Host still enforces the region.
 public flow valid_path(name: string) -> bool {
-    if len(name) == 0 || len(name) > 128 || starts_with(name, "/") { return false; }
-    let parts = split(name, "/");
-    if count(parts) > 2 { return false; }
-    for part in parts limit Iterations(2) {
-        if part == "" || part == "." || part == ".." { return false; }
-        for character in split(part, "") limit Iterations(130) {
-            if character != "" && !contains("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-", character) { return false; }
-        }
-    }
-    return true;
+    return canonical_path(name);
 }
 
 flow target(name: string) -> WorkspacePath<ReadOnlyRoot> {

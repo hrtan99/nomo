@@ -86,12 +86,15 @@ def terminal_case(steps=None, args=None, label="pty_ordered_line_help_exit"):
 def main():
     phase1 = subprocess.run(["etas", "check", "--phase1", str(ROOT)], capture_output=True, timeout=12)
     assert phase1.returncode == 1, (phase1.returncode, phase1.stderr)
-    # Canonical storage/demo modules add 13 Host-bearing flows; the existing
-    # 18 foundation/model/tool diagnostics retain their exact Host categories.
-    assert phase1.stderr.count(b"warning[effect::RuntimeRequiredInPhase1]") == 31, phase1.stderr
+    assert phase1.stdout == b"checked 25 files\n", phase1.stdout
+    # MODEL-TOOL-001 adds five Host-bearing flows: one Console helper, one
+    # Agentic/Console attempt and three Agentic/Console/FileIO compositions.
+    # The pure contract/path policy adds no Host requirement; old flows retain theirs.
+    assert phase1.stderr.count(b"warning[effect::RuntimeRequiredInPhase1]") == 36, phase1.stderr
     supports = re.findall(rb"warning\[effect::RuntimeRequiredInPhase1\]: checked HIR execution requires host support: \{([^}]+)\}", phase1.stderr)
-    assert Counter(supports) == {b'Console': 7, b'Agentic, Console': 3, b'Console, FileIO': 4,
-                                 b'FileIO': 4, b'DurableMemory': 10, b'DurableMemory, Console': 3}, phase1.stderr
+    assert Counter(supports) == {b'Console': 8, b'Agentic, Console': 4, b'Console, FileIO': 4,
+                                 b'FileIO': 4, b'DurableMemory': 10, b'DurableMemory, Console': 3,
+                                 b'Agentic, Console, FileIO': 3}, phase1.stderr
     assert b"error[" not in phase1.stderr and b"{Console}" in phase1.stderr, phase1.stderr
     print("PASS phase1_requires_console_host", flush=True)
     effects = subprocess.run(["etas", "effects", str(ROOT), "--flow", "main"], capture_output=True, timeout=12, check=True)

@@ -8,6 +8,11 @@ import nomo.conversation.fresh;
 import nomo.model_entry.run_model;
 import nomo.tool_agent.run_tools;
 import nomo.session_demo.demo;
+import nomo.model_tool_entry.run_model_tools;
+
+flow model_tools(args: Array<string>) -> i32 {
+    return run_model_tools(args);
+}
 
 // Convert the opt-in handler's typed refusal into a failing CLI process.
 // The Etas CLI itself does not map a returned i32 to an OS exit status.

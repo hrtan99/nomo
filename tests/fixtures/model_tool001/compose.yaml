@@ -1,0 +1,22 @@
+services:
+  dev:
+    volumes:
+      - type: bind
+        source: .
+        target: /workspace
+        read_only: true
+      - type: volume
+        source: cargo-cache
+        target: /home/nomo/.cargo
+        read_only: true
+      - type: bind
+        source: ${NOMO_MODEL_TOOL_FIXTURE:?test fixture required}
+        target: /model-tool-fixture
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${NOMO_MODEL_TOOL_EVIDENCE:?test evidence required}
+        target: /validation
+        bind:
+          create_host_path: false

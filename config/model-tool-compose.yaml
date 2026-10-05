@@ -1,0 +1,26 @@
+# MODEL-TOOL-001 admits only the repository's two-file synthetic example.
+# Keep source and installed graph immutable; only the disposable project index is writable.
+x-model-tool-readonly: &model-tool-readonly
+  volumes:
+    - type: bind
+      source: .
+      target: /workspace
+      read_only: true
+    - type: volume
+      source: cargo-cache
+      target: /home/nomo/.cargo
+      read_only: true
+    - type: bind
+      source: ./examples/model-tool001/workspace
+      target: /model-tool-fixture
+      read_only: true
+      bind:
+        create_host_path: false
+  tmpfs:
+    - /workspace/.etas:rw,nosuid,nodev,noexec,size=16m,uid=10001,gid=10001,mode=0700
+
+services:
+  dev:
+    <<: *model-tool-readonly
+  model-integration:
+    <<: *model-tool-readonly

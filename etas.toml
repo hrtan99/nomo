@@ -45,6 +45,37 @@ rules = ["console=allow", "model=allow"]
 [runtime.profiles.gateway-qwen.approval]
 mode = "deny"
 
+[runtime.profiles.gateway-qwen-readonly]
+boundary_policy = "nomo-model-readonly"
+
+[runtime.profiles.gateway-qwen-readonly.model]
+adapter = "omlx-openai"
+model = "Qwen3.5-9B-MLX-4bit"
+base_url = "http://model-gateway:8080/v1"
+api_key_env = "NOMO_GATEWAY_CLIENT_TOKEN"
+allow_private = true
+enable_thinking = false
+
+[runtime.profiles.gateway-qwen-readonly.model.timeout]
+request_deadline_ms = 120000
+connect_timeout_ms = 2000
+
+[runtime.profiles.gateway-qwen-readonly.model.retry]
+attempts = 1
+delay_ms = 0
+
+[runtime.profiles.gateway-qwen-readonly.filesystem.regions."nomo.workspace.ReadOnlyRoot"]
+root = "/model-tool-fixture"
+read = true
+write = false
+
+[runtime.profiles.gateway-qwen-readonly.policy]
+mode = "local-static"
+rules = ["console=allow", "model=allow", "filesystem=allow"]
+
+[runtime.profiles.gateway-qwen-readonly.approval]
+mode = "deny"
+
 [runtime.profiles.session-demo-create]
 boundary_policy = "nomo-session-demo"
 
