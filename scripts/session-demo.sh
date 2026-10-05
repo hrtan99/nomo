@@ -3,14 +3,14 @@ set -euo pipefail
 
 readonly project_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
 if [[ $# -lt 2 ]]; then
-    echo 'Usage: session-demo.sh init|save|show EXISTING_DEMO_DIRECTORY [session arguments]' >&2
+    echo 'Usage: session-demo.sh init|save|continue|show EXISTING_DEMO_DIRECTORY [session arguments]' >&2
     exit 64
 fi
 readonly action="$1"
 case "$action" in
     init) profile=session-demo-create ;;
-    save|show) profile=session-demo-existing ;;
-    *) echo 'Expected init, save or show.' >&2; exit 64 ;;
+    save|continue|show) profile=session-demo-existing ;;
+    *) echo 'Expected init, save, continue or show.' >&2; exit 64 ;;
 esac
 if [[ ! -d "$2" || -L "$2" ]]; then
     echo 'An explicitly created, non-symlink demo directory is required.' >&2

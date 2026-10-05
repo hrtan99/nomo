@@ -90,7 +90,8 @@ def main():
     consumed = [ROOT / 'src/nomo' / name for name in (
         'bundle_codec.es', 'history_store.es', 'metadata_store.es', 'session_cli.es', 'session_cli_args.es',
         'session_demo.es', 'session_display.es', 'session_store.es', 'store_record.es', 'stub_snapshot.es',
-        'conversation.es', 'session_state.es', 'text.es', 'loop.es', 'stub.es', 'config.es')]
+        'conversation.es', 'session_state.es', 'text.es', 'loop.es', 'stub.es', 'config.es',
+        'continuation_args.es', 'continuation_state.es', 'session_continue.es', 'demo_claim.es')]
     before = {str(path): digest(path) for path in consumed}
     for path in consumed:
         shutil.copyfile(path, target / path.name)

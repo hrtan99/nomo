@@ -290,7 +290,9 @@ if stat.st_uid != 10001 or stat.st_gid != 10001 or stat.st_mode & 0o777 != 0o700
             assert observe(label + '-second-save-after', directory) == before
             for kind, bad in [('binding', args(session, steps, budget, binding='wrong')),
                               ('session', args('wrong', steps, budget)), ('save', args(session, steps, budget, save_id='wrong'))]:
-                refused(invoke(label + '-wrong-' + kind, 'show', directory, bad), 'demo identity or binding mismatch')
+                diagnostic = ('current checkpoint is not associated with demo claim; no historical show'
+                              if kind == 'save' else 'demo identity or binding mismatch')
+                refused(invoke(label + '-wrong-' + kind, 'show', directory, bad), diagnostic)
                 assert observe(label + '-wrong-' + kind + '-after', directory) == before
             lower = deepcopy(wanted)
             lower['caps'].update(steps=1, turn_steps=1)

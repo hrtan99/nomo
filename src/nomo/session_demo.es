@@ -2,51 +2,24 @@ module nomo.session_demo;
 
 import std.io.println;
 import std.collections.len as count;
-import std.memory.{get_entry, prepare_put, operation_ref, commit, WriteCondition, MemoryVersion,
-    WriteOutcome, MemoryWriteChange, StorageDurability, Missing, Match};
+import std.memory.{Missing, Match};
 import std.agent.session.Conversation;
 import nomo.session_cli_args.{parse, Options};
 import nomo.session_cli.run_session;
 import nomo.store_record.session_key;
 import nomo.metadata_store.read as read_metadata;
-
-type Claim = { format: i32, phase: string, session_id: string, save_id: string, binding: string,
-    maximum: i32, budget: i32 };
-alias Schema = MemoryRegion<{ Claims: Store<string, Claim> }>;
-let Demo = std.memory.region<Schema>(stable_id = "nomo-session-demo-v1", store = "session-demo");
+import nomo.stub_snapshot.caps;
+import nomo.continuation_args.parse_continue;
+import nomo.session_continue.run_continue;
+import nomo.demo_claim.{Claim, read_claim, write_claim};
 
 flow claim(options: Options, phase: string) -> Claim {
     return Claim { format = 1, phase = phase, session_id = options.session_id, save_id = options.save_id,
         binding = options.binding, maximum = options.maximum, budget = options.budget };
 }
 
-// This marker serializes one admitted demo. It is not proof that an arbitrary
-// database was unused; an exclusively created directory/single writer is required.
-flow write_claim(value: Claim, condition: WriteCondition) -> Result<MemoryVersion, string> ![Memory, Error<StorageError>] {
-    let intent = prepare_put(Demo.Claims, "single-demo", value, condition);
-    let operation = operation_ref(intent);
-    let receipt = match commit(intent) {
-        WriteOutcome.Unknown(_) => { return Err("demo initialization unknown; no retry"); }
-        WriteOutcome.NotCommitted(_, _) => { return Err("demo initialization refused; no retry"); }
-        WriteOutcome.Committed(value) => value,
-    };
-    if receipt.operation.key != operation.key || receipt.operation.fingerprint != operation.fingerprint ||
-        receipt.target.key != "single-demo" || receipt.target.region != "nomo-session-demo-v1" ||
-        receipt.target.store != ["Claims"] { return Err("demo receipt mismatch"); }
-    let durable = match receipt.durability { StorageDurability.SqliteWalFull() => true, _ => false };
-    if !durable { return Err("durable SQLite demo receipt required"); }
-    let committed = match receipt.change { MemoryWriteChange.Written(version) => version, _ => { return Err("demo write receipt required"); } };
-    let observed = match get_entry(Demo.Claims, "single-demo") {
-        Some(entry) => entry, None() => { return Err("demo claim missing after commit"); }
-    };
-    if observed.key != "single-demo" || observed.value != value || observed.version.opaque != committed.opaque {
-        return Err("demo claim readback mismatch");
-    }
-    return Ok(committed);
-}
-
 flow initialize(options: Options) -> Result<bool, string> ![Memory, Error<StorageError>] {
-    match get_entry(Demo.Claims, "single-demo") {
+    match read_claim() {
         Some(_) => { return Err("demo already claimed; no reinitialization or repair"); } None() => {}
     }
     match read_metadata(options.session_id) {
@@ -68,26 +41,43 @@ flow initialize(options: Options) -> Result<bool, string> ![Memory, Error<Storag
     return Ok(true);
 }
 
-flow ready(options: Options) -> Result<bool, string> {
-    let entry = match get_entry(Demo.Claims, "single-demo") {
+flow owned(options: Options) -> Result<Claim, string> {
+    let entry = match read_claim() {
         Some(value) => value, None() => { return Err("demo is not initialized"); }
     };
     let owner = entry.value;
-    if entry.key != "single-demo" || owner.format != 1 || owner.phase != "ready" {
+    if entry.key != "single-demo" || owner.format != 1 ||
+        (owner.phase != "ready" && !(options.verb == "show" && owner.phase == "continue-claimed")) {
         return Err("demo initialization is incomplete; no retry or repair");
     }
-    if owner.session_id != options.session_id || owner.save_id != options.save_id || owner.binding != options.binding {
+    if owner.session_id != options.session_id || owner.binding != options.binding {
         return Err("demo identity or binding mismatch");
     }
     if owner.maximum < 1 || owner.maximum > 16 || owner.budget < 1 || owner.budget > 16 {
         return Err("invalid demo cap claim");
     }
+    return Ok(owner);
+}
+
+flow ready(options: Options) -> Result<bool, string> {
+    let owner = match owned(options) { Ok(value) => value, Err(error) => { return Err(error); } };
+    if options.verb == "save" && owner.save_id != options.save_id { return Err("demo identity or binding mismatch"); }
     if options.verb == "save" && (owner.maximum != options.maximum || owner.budget != options.budget) {
         return Err("demo save caps differ from initialization");
     }
     if options.verb == "save" {
         match read_metadata(options.session_id) {
             Some(_) => { return Err("session metadata already exists"); } None() => {}
+        }
+    } else {
+        let row = match read_metadata(options.session_id) { Some(value) => value.value, None() => { return Err("session metadata missing"); } };
+        if row.format != 1 || row.phase != "published" || row.save_id != options.save_id ||
+            row.snapshot.session_id != owner.session_id || row.snapshot.binding != owner.binding || row.snapshot.mode != "stub" ||
+            row.snapshot.original_caps != caps(owner.maximum, owner.budget) ||
+            (row.snapshot.generation != 0 && row.snapshot.generation != 1) ||
+            (row.snapshot.generation == 0 && (row.save_id != owner.save_id || owner.phase != "ready")) ||
+            (row.snapshot.generation == 1 && (row.save_id == owner.save_id || owner.phase != "continue-claimed")) {
+            return Err("current checkpoint is not associated with demo claim; no historical show");
         }
     }
     // Show caps remain independent caller input. The accepted validator may
@@ -97,6 +87,14 @@ flow ready(options: Options) -> Result<bool, string> {
 
 // Unique opt-in handler; the root default stub remains a separate entry.
 public flow demo(args: Array<string>) -> i32 ![Console, Memory, Error<StorageError>, Error<IndexError>, Error<IOError>] {
+    if count(args) > 0 && args[0] == "continue" {
+        let options = match parse_continue(args) { Ok(value) => value, Err(error) => { println("REFUSED " + error); return 2; } };
+        let owner = match owned(options.turn) { Ok(value) => value, Err(error) => { println("REFUSED " + error); return 3; } };
+        if options.turn.save_id != owner.save_id { println("REFUSED predecessor differs from initial demo claim"); return 3; }
+        let current = match read_metadata(owner.session_id) { Some(value) => value.value, None() => { println("REFUSED session metadata missing"); return 3; } };
+        if current.snapshot.original_caps != caps(owner.maximum, owner.budget) { println("REFUSED original caps differ from demo claim"); return 3; }
+        return run_continue(options);
+    }
     if count(args) > 13 { println("REFUSED expected bounded demo arguments"); return 2; }
     var initializing = false;
     var normalized: Array<string> = [];
@@ -113,7 +111,8 @@ public flow demo(args: Array<string>) -> i32 ![Console, Memory, Error<StorageErr
         println("Dedicated fresh Docker demo only; exclusive directory creation and one writer are required.");
         println("init|show --session ID --save SAVE_ID --binding EXPECTED [--steps 1..16] [--budget 1..16]");
         println("save --session ID --save SAVE_ID --binding EXPECTED --input TEXT [--steps 1..16] [--budget 1..16]");
-        println("Save caps must match init. Show is data-only; no resume, repair, reinitialization or arbitrary-store adoption.");
+        println("continue --session ID --save PRIOR --generation 0 --next-save NEXT --binding EXPECTED --input TEXT [--steps 1..16] [--budget 1..16]");
+        println("Save caps must match init. One stub successor only; show is current data-only, no repair or arbitrary-store adoption.");
         return 0;
     }
     let admitted = if initializing { initialize(options) } else { ready(options) };

@@ -1,0 +1,5 @@
+# Static-reporting regression helper only. Ordinary demo remains at 4 GiB.
+# Dependencies, privileges, network and profiles are unchanged.
+services:
+  dev:
+    mem_limit: 6g

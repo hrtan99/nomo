@@ -9,7 +9,7 @@ let Metadata = std.memory.region<Schema>(stable_id = "nomo-session-store-v1", st
 
 public flow read(id: string) -> Option<MemoryEntry<string, Record>> { return get_entry(Metadata.Rows, id); }
 
-// Publish only against the confirmed Pending version, then verify the receipt's
+// Transition only against the observed/confirmed version, then verify the receipt's
 // committed version and exact row. Unknown/refused writes return without retry.
 public flow publish(row: Record, expected: MemoryVersion) -> Result<MemoryVersion, string> ![Memory, Error<StorageError>] {
     let committed = match write(row, std.memory.Match(expected)) {
