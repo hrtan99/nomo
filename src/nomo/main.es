@@ -9,6 +9,14 @@ import nomo.model_entry.run_model;
 import nomo.tool_agent.run_tools;
 import nomo.session_demo.demo;
 import nomo.model_tool_entry.run_model_tools;
+import nomo.harness_entry.run as run_harness;
+
+// Preserve the established opt-in wrapper's nonzero-result -> OS failure route.
+flow harness(args: Array<string>) -> i32 {
+    let status = run_harness(args);
+    if status != 0 { abort("Nomo harness request refused; see REFUSED output"); }
+    return 0;
+}
 
 flow model_tools(args: Array<string>) -> i32 {
     return run_model_tools(args);
