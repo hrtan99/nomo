@@ -10,6 +10,13 @@ import nomo.tool_agent.run_tools;
 import nomo.session_demo.demo;
 import nomo.model_tool_entry.run_model_tools;
 import nomo.harness_entry.run as run_harness;
+import nomo.harness_chat.run as run_harness_chat;
+
+flow harness_chat(args: Array<string>) -> i32 {
+    let status = run_harness_chat(args);
+    if status != 0 { abort("Nomo harness chat refused; see REFUSED or STOP output"); }
+    return 0;
+}
 
 // Preserve the established opt-in wrapper's nonzero-result -> OS failure route.
 flow harness(args: Array<string>) -> i32 {
