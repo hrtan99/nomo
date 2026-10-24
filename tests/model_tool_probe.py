@@ -183,7 +183,6 @@ def main():
     if args.recorder_self_test:
         recorder_self_test(evidence)
         return
-    assert os.environ.get('NOMO_NORMAL_GRAPH', 'etas0013') == 'etas0013'
     cli = str(verify_cli())
     mounts = Path('/proc/self/mountinfo').read_text()
     (evidence / 'mountinfo.txt').write_text(mounts)

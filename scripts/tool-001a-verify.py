@@ -9,17 +9,28 @@ import tempfile
 ROOT = Path(__file__).resolve().parent.parent
 
 
+def regression_inputs(selected):
+    inputs = ['etas.toml', 'etas.lock']
+    if selected == 'latest':
+        inputs += ['config/etas-latest-main.json']
+    elif selected == 'etas0013':
+        inputs += ['patches/etas-0013/' + name + '.Cargo.lock'
+                   for name in ('core', 'frontend', 'interpreter', 'cli')]
+    elif selected == 'legacy':
+        inputs += ['patches/etas-003/Cargo.lock']
+    else:
+        raise RuntimeError('NOMO_NORMAL_GRAPH must be latest, legacy or etas0013')
+    return inputs
+
+
 def main():
     env = dict(os.environ, PYTHONDONTWRITEBYTECODE='1')
+    inputs = regression_inputs(env.get('NOMO_NORMAL_GRAPH', 'latest'))
     subprocess.run(['python3', '-B', str(ROOT / 'tests/tool_workspace_probe.py')], env=env, check=True, timeout=90)
     with tempfile.TemporaryDirectory(prefix='nomo-tool001a-regression-') as directory:
         project = Path(directory)
         for name in ['src', 'tests', 'scripts', 'examples']:
             shutil.copytree(ROOT / name, project / name, ignore=shutil.ignore_patterns('__pycache__'))
-        inputs = ['etas.toml', 'etas.lock', 'patches/etas-003/Cargo.lock']
-        if env.get('NOMO_NORMAL_GRAPH', 'etas0013') == 'etas0013':
-            inputs += ['patches/etas-0013/' + name + '.Cargo.lock'
-                       for name in ('core', 'frontend', 'interpreter', 'cli')]
         for name in inputs:
             target = project / name
             target.parent.mkdir(parents=True, exist_ok=True)

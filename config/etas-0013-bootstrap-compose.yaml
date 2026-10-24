@@ -3,6 +3,7 @@ services:
   dev:
     environment:
       CARGO_TARGET_DIR: /home/nomo/.cargo/etas0013/target
+      NOMO_NORMAL_GRAPH: etas0013
       CARGO_BUILD_JOBS: "2"
       PYTHONDONTWRITEBYTECODE: "1"
     volumes:
@@ -16,6 +17,7 @@ services:
   dependency:
     environment:
       CARGO_TARGET_DIR: /home/nomo/.cargo/etas0013/target
+      NOMO_NORMAL_GRAPH: etas0013
       CARGO_BUILD_JOBS: "2"
       PYTHONDONTWRITEBYTECODE: "1"
     volumes:

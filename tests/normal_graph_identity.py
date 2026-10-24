@@ -16,10 +16,21 @@ def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def selected_graph():
+    selected = os.environ.get('NOMO_NORMAL_GRAPH', 'latest')
+    if selected not in ('latest', 'legacy', 'etas0013'):
+        raise RuntimeError('NOMO_NORMAL_GRAPH must be latest, legacy or etas0013')
+    return selected
+
+
+def bootstrap_path():
+    names = {'latest': 'etas-latest-cli-bootstrap.py', 'etas0013': 'etas-0013-cli-bootstrap.py',
+             'legacy': 'etas-003-cli-bootstrap.sh'}
+    return ROOT / 'scripts' / names[selected_graph()]
+
+
 def verify_cli():
-    selected = os.environ.get('NOMO_NORMAL_GRAPH', 'etas0013')
-    if selected not in ('legacy', 'etas0013'):
-        raise RuntimeError('NOMO_NORMAL_GRAPH must be legacy or etas0013')
+    selected = selected_graph()
     located = shutil.which('etas')
     if located is None:
         raise RuntimeError('Etas CLI is not installed on PATH')
@@ -32,7 +43,7 @@ def verify_cli():
         if digest(ROOT / 'patches/etas-003/Cargo.lock') != LEGACY_LOCK_SHA256:
             raise RuntimeError('legacy Cargo lock drift')
     else:
-        spec = importlib.util.spec_from_file_location('normal_etas0013_bootstrap', ROOT / 'scripts/etas-0013-cli-bootstrap.py')
+        spec = importlib.util.spec_from_file_location('normal_' + selected + '_bootstrap', bootstrap_path())
         bootstrap = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(bootstrap)
         # This checks the exact four pins, locks, origins and built/installed

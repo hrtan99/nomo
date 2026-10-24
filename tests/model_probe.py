@@ -12,6 +12,8 @@ import time
 import tomllib
 from http.server import ThreadingHTTPServer
 
+from normal_graph_identity import selected_graph, verify_cli
+
 ROOT = Path(__file__).resolve().parent.parent
 SPEC = importlib.util.spec_from_file_location("etas003_mock", ROOT / "tests/fixtures/etas003/mock_omlx.py")
 MOCK = importlib.util.module_from_spec(SPEC)
@@ -71,10 +73,10 @@ def main():
     assert profile["model"] == {"adapter": "omlx-openai", "model": "Qwen3.5-9B-MLX-4bit", "base_url": "http://model-gateway:8080/v1", "api_key_env": "NOMO_GATEWAY_CLIENT_TOKEN", "allow_private": True, "enable_thinking": False, "timeout": {"request_deadline_ms": 120000, "connect_timeout_ms": 2000}, "retry": {"attempts": 1, "delay_ms": 0}}
     assert profile["policy"] == {"mode": "local-static", "rules": ["console=allow", "model=allow"]}
     assert profile["approval"] == {"mode": "deny"}
-    effects = subprocess.run(["etas", "effects", str(ROOT), "--flow", "model"], capture_output=True, text=True, timeout=12, check=True)
+    cli = str(verify_cli())
+    effects = subprocess.run([cli, "effects", str(ROOT), "--flow", "model"], capture_output=True, text=True, timeout=12, check=True)
     actions = next(line.strip()[len("requested actions: ["):-1] for line in effects.stdout.splitlines() if line.strip().startswith("requested actions: ["))
-    selected = os.environ.get("NOMO_NORMAL_GRAPH", "etas0013")
-    assert selected in ("legacy", "etas0013"), selected
+    selected = selected_graph()
     model_action = ("Agentic.infer[nomo.provider.TextModel]" if selected == "legacy"
                     else "Agentic.infer[nomo.provider.TextModel, string]")
     # The new graph prints the result type, whose comma is not an action separator.
@@ -101,7 +103,7 @@ def main():
             def case(name, args=None, expected=None, code=0, calls=1, mode="ok", response="MODEL_OK", data="", diagnostic=None, config=None, environment=None, flow="model", target=None, options=()):
                 (project / "etas.toml").write_text(config or manifest)
                 server.requests, server.mode, server.response = [], mode, response
-                command = ["etas", "run", str(target or project), "--flow", flow, "--allow-effects"] + list(options) + ["--args"] + (args if args is not None else ["--model", "qwen", "--once", "hello"])
+                command = [cli, "run", str(target or project), "--flow", flow, "--allow-effects"] + list(options) + ["--args"] + (args if args is not None else ["--model", "qwen", "--once", "hello"])
                 started = time.monotonic()
                 result = subprocess.run(command, input=data, capture_output=True, text=True, env=environment or env, timeout=12)
                 assert result.returncode == code, (name, result.returncode, result.stdout, result.stderr)

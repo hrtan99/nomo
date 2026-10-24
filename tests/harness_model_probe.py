@@ -39,6 +39,7 @@ def load_module(name, path):
 
 previous = load_module("accepted_chat_evidence_helpers", ROOT / "tests/harness_chat_probe.py")
 specification = load_module("model_harness_exact_cases", FIXTURE / "cases.py")
+graph_identity = load_module("selected_normal_graph_identity", ROOT / "tests/normal_graph_identity.py")
 digest, save, retain = previous.digest, previous.save, previous.retain
 resources, pressure = previous.resources, previous.pressure
 
@@ -291,7 +292,7 @@ def main():
                     ROOT / "tests/harness_chat_probe.py", ROOT / "tests/fixtures/harness002a/cases.py",
                     ROOT / "tests/harness_entry_probe.py", ROOT / "tests/fixtures/harness001b/cases.py",
                     ROOT / "tests/foundation_probe.py", ROOT / "tests/normal_graph_identity.py",
-                    ROOT / "scripts/etas-0013-cli-bootstrap.py"]
+                    graph_identity.bootstrap_path()]
     frozen_product, frozen_runner = hashes(paths), hashes(runner_paths)
     destination.mkdir(parents=True, exist_ok=True)
     evidence = Path(tempfile.mkdtemp(prefix="harness-model001-", dir=destination))

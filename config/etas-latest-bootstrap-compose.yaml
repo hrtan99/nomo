@@ -1,0 +1,28 @@
+# Normal merged-main compiler build; seed downloads without changing the old graph.
+x-latest-build: &latest-build
+  environment:
+    CARGO_BUILD_JOBS: "1"
+    PYTHONDONTWRITEBYTECODE: "1"
+  volumes:
+    - type: bind
+      source: .
+      target: /workspace
+      read_only: true
+    - type: volume
+      source: cargo-cache
+      target: /home/nomo/.cargo
+    - type: volume
+      source: etas0013-download-seed
+      target: /baseline
+      read_only: true
+
+services:
+  dev:
+    <<: *latest-build
+  dependency:
+    <<: *latest-build
+
+volumes:
+  etas0013-download-seed:
+    external: true
+    name: nomo-cargo-cache-etas0013

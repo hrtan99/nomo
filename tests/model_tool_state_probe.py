@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """MODEL-TOOL-001 pure contracts and pre-adapter boundary checks on normal Etas."""
 import hashlib
-import importlib.util
 import io
 import json
 import os
@@ -12,6 +11,8 @@ import subprocess
 import sys
 import tempfile
 import traceback
+
+from normal_graph_identity import bootstrap_path, selected_graph, verify_cli
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -89,10 +90,8 @@ def main():
 
 
 def probe(directory, result):
-    spec = importlib.util.spec_from_file_location('normal_bootstrap', ROOT / 'scripts/etas-0013-cli-bootstrap.py')
-    bootstrap = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(bootstrap)
-    identity = bootstrap.verify(read_only=True)
+    cli = verify_cli()
+    identity = {'graph': selected_graph(), 'executable': str(cli), 'sha256': digest(cli)}
     cache_mount = next(line for line in Path('/proc/self/mountinfo').read_text().splitlines()
                        if line.split()[4] == '/home/nomo/.cargo')
     assert 'ro' in cache_mount.split()[5].split(',')
@@ -100,7 +99,7 @@ def probe(directory, result):
     fixture = ROOT / 'tests/fixtures/model_tool001_state.es'
     shutil.copyfile(fixture, directory / 'src/nomo/model_tool_test.es')
     shutil.copyfile(Path(__file__), directory / 'driver.py')
-    shutil.copyfile(ROOT / 'scripts/etas-0013-cli-bootstrap.py', directory / 'bootstrap.py')
+    shutil.copyfile(bootstrap_path(), directory / 'bootstrap.py')
     manifest = '''[package]
 name = "nomo-model-tool-pure-test"
 version = "0.0.0"
@@ -148,7 +147,7 @@ profile = "pure"
     save_result(directory, result)
 
     def run(arguments, flow='probe', command='run'):
-        args = [str(bootstrap.INSTALLED), command, str(directory)]
+        args = [str(cli), command, str(directory)]
         trace = directory / ('command-' + str(len(result['commands'])) + '.trace.json')
         if command == 'run':
             args += ['--flow', flow, '--allow-effects', '--trace-out', str(trace), '--args', *arguments]
