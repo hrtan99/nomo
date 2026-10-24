@@ -11,6 +11,13 @@ import nomo.session_demo.demo;
 import nomo.model_tool_entry.run_model_tools;
 import nomo.harness_entry.run as run_harness;
 import nomo.harness_chat.run as run_harness_chat;
+import nomo.harness_model_entry.run as run_harness_model;
+
+flow harness_model(args: Array<string>) -> i32 {
+    let status = run_harness_model(args);
+    if status != 0 { abort("Nomo model harness refused; see REFUSED output"); }
+    return 0;
+}
 
 flow harness_chat(args: Array<string>) -> i32 {
     let status = run_harness_chat(args);
