@@ -18,8 +18,10 @@ public type Previous = { task: string, result: string, tool: string, outcome: st
 public type Context = { phase: string, request: string, task: string, result: string, tool: string,
     outcome: string, allowed: Array<string>, prior: Previous };
 public type Invocation = { usage: Ledger, maximum: Ledger, admitted: i32, prior: Previous };
-public type LocalTurn = { status: i32, usage: Ledger, selected: Previous, resolved: bool };
-public type TurnResult = { status: i32, state: Invocation, resolved: bool };
+public type Completed = { request: string, task: string, result: string, tool: string, outcome: string,
+    answer: string, records: Array<Event> };
+public type LocalTurn = { status: i32, usage: Ledger, selected: Previous, resolved: bool, completed: Option<Completed> };
+public type TurnResult = { status: i32, state: Invocation, resolved: bool, completed: Option<Completed> };
 
 public flow default_maximum() -> Ledger { return Ledger { steps = 14, calls = 8, tokens = 16384, tools = 2, scan = 8192 }; }
 public flow fresh_invocation() -> Invocation {

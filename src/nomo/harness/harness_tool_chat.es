@@ -2,11 +2,12 @@ module nomo.harness.harness_tool_chat;
 
 import std.io.println;
 import std.text.to_string_i32;
+import nomo.core.conversation.{Event, State};
 import nomo.model.model_tool_contract.{question_error, allowed_error};
 import nomo.harness.harness_model_contract.{bounded, decode_plan};
 import nomo.harness.harness_tool_contract.{Ledger, fresh, bump, settle};
 import nomo.harness.harness_model_tools.{numbers, child_turn};
-import nomo.harness.harness_tool_chat_contract.{Previous, Context, Invocation, LocalTurn, TurnResult, empty, prior_error,
+import nomo.harness.harness_tool_chat_contract.{Previous, Context, Invocation, LocalTurn, TurnResult, Completed, empty, prior_error,
     context_error, seed, inspect_turn, turn_error, combine};
 
 @limits([Tokens(2048)])
@@ -19,7 +20,19 @@ agent ChatMain(input: Context) -> string {
 flow refused(usage: Ledger, error: string, resolved: bool) -> LocalTurn {
     println("REFUSED " + error);
     if !resolved { println("RESERVATION child-1 unresolved=true; returned child metadata refused"); }
-    return LocalTurn { status = 1, usage = usage, selected = empty(), resolved = resolved };
+    return LocalTurn { status = 1, usage = usage, selected = empty(), resolved = resolved, completed = None() };
+}
+
+flow completed(request: string, raw_plan: string, selected: Previous, child: State) -> Completed {
+    var records = [Event { role = "user", kind = "request", name = "", text = request },
+        Event { role = "main", kind = "plan", name = "", text = raw_plan },
+        Event { role = "main", kind = "delegate", name = "child-1", text = selected.task }];
+    for event in child.events limit Iterations(12) { records = records.push(event); }
+    records = records.push(Event { role = "main", kind = "consume", name = "child-1", text = selected.result });
+    if selected.tool != "" { records = records.push(Event { role = "main", kind = "tool", name = selected.tool, text = selected.outcome }); }
+    records = records.push(Event { role = "main", kind = "answer", name = "", text = selected.answer });
+    return Completed { request = request, task = selected.task, result = selected.result, tool = selected.tool,
+        outcome = selected.outcome, answer = selected.answer, records = records };
 }
 
 flow total(before: Ledger, local: Ledger) -> Ledger {
@@ -85,22 +98,23 @@ flow execute(request: string, allowed: Array<string>, prior: Previous, before: L
     let answer = ChatMain.run(aggregate);
     if !bounded(answer, 512) { return refused(state, "invalid bounded final answer", true); }
     println("FINAL " + answer);
-    return LocalTurn { status = 0, usage = state, selected = Previous { task = task, result = observed.result,
-        tool = observed.tool, outcome = observed.outcome, answer = answer }, resolved = true };
+    let selected = Previous { task = task, result = observed.result, tool = observed.tool, outcome = observed.outcome, answer = answer };
+    return LocalTurn { status = 0, usage = state, selected = selected, resolved = true,
+        completed = Some(completed(request, raw, selected, child.state.history)) };
 }
 
 public flow run_turn(request: string, allowed: Array<string>, invocation: Invocation) -> TurnResult {
     let invalid = turn_error(invocation);
-    if invalid != "" { println("REFUSED " + invalid); return TurnResult { status = 1, state = invocation, resolved = true }; }
+    if invalid != "" { println("REFUSED " + invalid); return TurnResult { status = 1, state = invocation, resolved = true, completed = None() }; }
     if invocation.admitted < 0 || invocation.admitted > 1 {
-        println("REFUSED turn limit reached"); return TurnResult { status = 1, state = invocation, resolved = true };
+        println("REFUSED turn limit reached"); return TurnResult { status = 1, state = invocation, resolved = true, completed = None() };
     }
     let turn = invocation.admitted + 1;
     let local = execute(request, allowed, invocation.prior, invocation.usage, turn);
-    if !local.resolved { return TurnResult { status = 1, state = invocation, resolved = false }; }
+    if !local.resolved { return TurnResult { status = 1, state = invocation, resolved = false, completed = None() }; }
     let usage = match combine(invocation.usage, local.usage, invocation.maximum) {
-        Ok(value) => value, Err(error) => { println("REFUSED " + error); return TurnResult { status = 1, state = invocation, resolved = false }; }
+        Ok(value) => value, Err(error) => { println("REFUSED " + error); return TurnResult { status = 1, state = invocation, resolved = false, completed = None() }; }
     };
     let next = Invocation { usage = usage, maximum = invocation.maximum, admitted = turn, prior = local.selected };
-    return TurnResult { status = local.status, state = next, resolved = true };
+    return TurnResult { status = local.status, state = next, resolved = true, completed = local.completed };
 }
