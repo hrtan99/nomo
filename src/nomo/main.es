@@ -19,6 +19,37 @@ import nomo.entry.harness_checkpoint_entry.run_save as checkpoint_save;
 import nomo.entry.harness_checkpoint_entry.run_show as checkpoint_show;
 import nomo.entry.harness_successor_entry.run_continue as checkpoint_continue;
 import nomo.entry.harness_successor_entry.run_show as successor_show;
+import nomo.entry.session_lifecycle.run_help as lifecycle_help;
+import nomo.entry.session_lifecycle.run_init as lifecycle_init;
+import nomo.entry.session_lifecycle.run_new as lifecycle_new;
+import nomo.entry.session_lifecycle.run_resume as lifecycle_resume;
+import nomo.entry.session_lifecycle.run_show as lifecycle_show;
+
+flow help(args: Array<string>) -> i32 {
+    let status = lifecycle_help(args);
+    if status != 0 { abort("Nomo session help refused; see REFUSED output"); }
+    return 0;
+}
+flow init(args: Array<string>) -> i32 {
+    let status = lifecycle_init(args);
+    if status != 0 { abort("Nomo session init refused; see REFUSED output"); }
+    return 0;
+}
+flow new(args: Array<string>) -> i32 {
+    let status = lifecycle_new(args);
+    if status != 0 { abort("Nomo session new refused; see REFUSED output"); }
+    return 0;
+}
+flow resume(args: Array<string>) -> i32 {
+    let status = lifecycle_resume(args);
+    if status != 0 { abort("Nomo session resume refused; see REFUSED output"); }
+    return 0;
+}
+flow show(args: Array<string>) -> i32 {
+    let status = lifecycle_show(args);
+    if status != 0 { abort("Nomo session show refused; see REFUSED output"); }
+    return 0;
+}
 
 flow harness_checkpoint_continue(args: Array<string>) -> i32 {
     let status = checkpoint_continue(args);
@@ -97,7 +128,7 @@ flow tools(args: Array<string>) -> i32 {
     return run_tools(args);
 }
 
-flow help() -> unit {
+flow foundation_help() -> unit {
     println("Nomo foundation: --model stub --steps 1..16 --budget 1..16 [--once TEXT]");
     println("Line mode: /help, /exit; at most 16 input lines; no prompt escapes.");
     println("Input: printable ASCII, at most 1024 characters; steps: canonical decimal 1..16.");
@@ -119,7 +150,7 @@ flow model(args: Array<string>) -> i32 {
 flow main(args: Array<string>) -> i32 {
     let config = load(args);
     if config.error != "" { println("error: " + config.error); abort("Nomo configuration rejected"); }
-    if config.help { help(); return 0; }
+    if config.help { foundation_help(); return 0; }
     var state = fresh();
     if config.once {
         let outcome = turn(config.request, config.steps, config.budget, state);
@@ -136,7 +167,7 @@ flow main(args: Array<string>) -> i32 {
         else {
             let command = trim(input);
             if command == "/exit" { println("bye: exit"); return 0; }
-            if command == "/help" { help(); }
+            if command == "/help" { foundation_help(); }
             else { let outcome = turn(input, config.steps, config.budget, state); state = outcome.state; }
         }
         if state.stopped { abort("Nomo history capacity exhausted"); }

@@ -2,7 +2,7 @@
 """Real Model Host main/child/main tests with bounded loopback protocol replies.
 
 Python supplies HTTP fixtures, never Nomo orchestration or a model policy. The
-normal 48-file product is copied byte-for-byte; only each test manifest changes
+normal product is copied byte-for-byte; only each test manifest changes
 the existing provider endpoint/profile. Old offline entry fixtures are reused
 unchanged on the new complete root. Pure defensive tests are labeled separately.
 """
@@ -46,8 +46,8 @@ resources, pressure = previous.resources, previous.pressure
 
 def product_paths():
     sources = sorted((ROOT / "src").rglob("*.es"))
-    if len(sources) != 52 or any(path.name.startswith("model_session") for path in sources):
-        raise ValueError("expected isolated actual 52-file product, not pending shared root")
+    if len(sources) != 54 or any(path.name.startswith("model_session") for path in sources):
+        raise ValueError("expected isolated actual 54-file product, not pending shared root")
     return sources + [ROOT / "etas.toml", ROOT / "etas.lock"]
 
 

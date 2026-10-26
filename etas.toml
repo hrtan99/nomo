@@ -180,3 +180,33 @@ name = "nomo"
 module = "nomo.main"
 flow = "main"
 profile = "foundation"
+
+[[bin]]
+name = "nomo-session-init"
+module = "nomo.main"
+flow = "init"
+profile = "harness-checkpoint-create"
+
+[[bin]]
+name = "nomo-session-new"
+module = "nomo.main"
+flow = "new"
+profile = "harness-checkpoint-save"
+
+[[bin]]
+name = "nomo-session-resume"
+module = "nomo.main"
+flow = "resume"
+profile = "harness-checkpoint-save"
+
+[[bin]]
+name = "nomo-session-show"
+module = "nomo.main"
+flow = "show"
+profile = "harness-checkpoint-show"
+
+[[bin]]
+name = "nomo-session-help"
+module = "nomo.main"
+flow = "help"
+profile = "foundation"
