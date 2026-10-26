@@ -2,7 +2,7 @@
 """Real Model Host main/child/main tests with bounded loopback protocol replies.
 
 Python supplies HTTP fixtures, never Nomo orchestration or a model policy. The
-normal 38-file product is copied byte-for-byte; only each test manifest changes
+normal 41-file product is copied byte-for-byte; only each test manifest changes
 the existing provider endpoint/profile. Old offline entry fixtures are reused
 unchanged on the new complete root. Pure defensive tests are labeled separately.
 """
@@ -46,8 +46,8 @@ resources, pressure = previous.resources, previous.pressure
 
 def product_paths():
     sources = sorted((ROOT / "src").rglob("*.es"))
-    if len(sources) != 38 or any(path.name.startswith("model_session") for path in sources):
-        raise ValueError("expected isolated actual 38-file product, not pending shared root")
+    if len(sources) != 41 or any(path.name.startswith("model_session") for path in sources):
+        raise ValueError("expected isolated actual 41-file product, not pending shared root")
     return sources + [ROOT / "etas.toml", ROOT / "etas.lock"]
 
 
@@ -336,7 +336,7 @@ def main():
                     if source.name != "etas.toml":
                         retain(source, project / source.relative_to(ROOT))
                 (project / "etas.toml").write_text(manifest(command["profile_mode"]))
-                command["product_copy_scope"] = "all 38 byte-identical product modules; generated test-only provider manifest"
+                command["product_copy_scope"] = "all 41 byte-identical product modules; generated test-only provider manifest"
                 assert {str(path.relative_to(project)): digest(path) for path in (project / "src").rglob("*.es")} == {
                     name: value for name, value in frozen_product.items() if name.startswith("src/")}, "actual model product copy differs"
             elif command["transport"] == "pure":
