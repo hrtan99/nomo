@@ -6,6 +6,7 @@ from copy import deepcopy
 import hashlib
 import json
 from pathlib import Path
+import re
 import shutil
 import sqlite3
 import subprocess
@@ -14,6 +15,17 @@ import tempfile
 INITIALIZED = 'INITIALIZED demo namespace; one save permitted\n'
 BINDING = 'ordinary-demo-binding-not-authority'
 DB_NAMES = ('memory.sqlite3', 'session.sqlite3')
+
+
+def accepted_compose_stderr(stderr, root):
+    """Accept only the exact existing-volume notice; retain raw stderr in evidence."""
+    names = re.findall(r'^  cargo-cache:\n    name: ([a-z0-9-]+)$',
+                       (root / 'compose.yaml').read_text(), re.M)
+    assert len(names) == 1, 'normal cache volume must be explicit'
+    notice = ('volume "' + names[0] + '" already exists but was not created by Docker Compose. '
+              'Use `external: true` to use an existing volume')
+    pattern = r'time="[^"\n]+" level=warning msg=' + re.escape(json.dumps(notice))
+    return all(re.fullmatch(pattern, line) for line in stderr.splitlines())
 
 
 def digest(path):
@@ -120,7 +132,8 @@ def main():
         paths = [root / name for name in ('etas.toml', 'etas.lock', 'compose.yaml', 'Dockerfile',
                  'config/session-demo-compose.yaml', 'config/etas-runtime-cache-compose.yaml',
                  'tests/fixtures/etas013/compose.yaml',
-                 'scripts/session-demo.sh', 'scripts/etas-0013-cli-bootstrap.py')]
+                 'scripts/session-demo.sh', 'tests/normal_graph_identity.py',
+                 'scripts/etas-latest-cli-bootstrap.py', 'config/etas-latest-main.json')]
         paths += list((root / 'src').rglob('*.es'))
         paths += [root / 'patches/etas-0013' / (name + '.Cargo.lock')
                   for name in ('core', 'frontend', 'interpreter', 'cli')]
@@ -226,7 +239,7 @@ if stat.st_uid != 10001 or stat.st_gid != 10001 or stat.st_mode & 0o777 != 0o700
     raise RuntimeError('project cache must be owned, private and empty in each fresh container')
 '''
         run('effective-read-only-helper-mounts', docker + ['python3', '-B', '-c', mount_probe])
-        run('normal-provenance', docker + ['python3', '-B', '/workspace/scripts/etas-0013-cli-bootstrap.py', 'verify', '--read-only'])
+        run('normal-provenance', docker + ['python3', '-B', '/workspace/tests/normal_graph_identity.py'])
         baseline = run('unchanged-default-stub', docker + ['etas', 'run', '/workspace', '--allow-effects', '--args', '--once', 'hello'])
         assert baseline['stdout'] == 'user: hello\nassistant: stub: hello\n', baseline
         effects = run('default-console-only', docker + ['etas', 'effects', '/workspace', '--flow', 'main'])

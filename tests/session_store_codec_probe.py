@@ -19,7 +19,7 @@ SOURCE = '''module app.main;
 import std.io.{read_all, println};
 import std.json.{parse, stringify};
 import std.agent.message.Message;
-import nomo.bundle_codec.{Bundle, encode, decode};
+import nomo.session.bundle_codec.{Bundle, encode, decode};
 
 public flow pure_probe() -> bool {
     let bodies: Array<string> = [];
@@ -121,14 +121,15 @@ def cases():
 
 def main():
     originals = {p: hashlib.sha256((ROOT / p).read_bytes()).hexdigest() for p in [
-        'etas.toml', 'etas.lock', 'src/nomo/session_state.es', 'src/nomo/text.es',
-        'src/nomo/bundle_codec.es']}
+        'etas.toml', 'etas.lock', 'src/nomo/session/session_state.es', 'src/nomo/core/text.es',
+        'src/nomo/session/bundle_codec.es']}
     project = Path(tempfile.mkdtemp(prefix='session-store-codec-', dir=EVIDENCE))
     print('EVIDENCE ' + str(project), flush=True)
-    (project / 'src/nomo').mkdir(parents=True)
-    (project / 'src/app').mkdir()
-    shutil.copyfile(ROOT / 'src/nomo/bundle_codec.es', project / 'src/nomo/bundle_codec.es')
-    shutil.copyfile(ROOT / 'src/nomo/text.es', project / 'src/nomo/text.es')
+    (project / 'src/app').mkdir(parents=True)
+    for name in ('session/bundle_codec.es', 'core/text.es'):
+        destination = project / 'src/nomo' / name
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(ROOT / 'src/nomo' / name, destination)
     source = project / 'src/app/main.es'
     source.write_text(SOURCE)
     (project / 'etas.toml').write_text('''[package]
@@ -157,7 +158,7 @@ profile = "fixture"
     assert hashlib.sha256(Path(ETAS).read_bytes()).hexdigest() == identity['sha256']
     (project / 'identity.json').write_text(json.dumps(identity, indent=2))
     (project / 'product-sources.json').write_text(json.dumps({str(path.relative_to(project)):
-        hashlib.sha256(path.read_bytes()).hexdigest() for path in (project / 'src/nomo').glob('*.es')}, indent=2))
+        hashlib.sha256(path.read_bytes()).hexdigest() for path in (project / 'src/nomo').rglob('*.es')}, indent=2))
 
     def invoke(arguments, stdin=None):
         inputs = retain_input(project, source)

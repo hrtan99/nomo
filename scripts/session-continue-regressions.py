@@ -21,6 +21,7 @@ def main():
     print('EVIDENCE ' + str(evidence), flush=True)
     selected = list((ROOT / 'src').rglob('*.es')) + list((ROOT / 'tests').rglob('*.py')) + list((ROOT / 'scripts').glob('*'))
     selected += [ROOT / name for name in ('etas.toml', 'etas.lock', 'compose.yaml', 'patches/etas-003/Cargo.lock',
+                  'config/etas-latest-main.json',
                   'config/etas-runtime-cache-compose.yaml', 'tests/fixtures/etas013/compose.yaml',
                   'tests/fixtures/session_continue/static-check-compose.yaml',
                   *(f'patches/etas-0013/{name}.Cargo.lock' for name in ('core', 'frontend', 'interpreter', 'cli')))]
@@ -45,7 +46,7 @@ def main():
               'helper_memory_max': Path('/sys/fs/cgroup/memory.max').read_text(),
               'validator_scope': 'same unmodified full-root 152-case driver and 5 typed-field refusals; complete product checks remain in the original chain',
               'validator_inputs': {str(p.relative_to(evidence)): digest(p) for p in fixtures.iterdir()}}
-    environment = dict(os.environ, PYTHONDONTWRITEBYTECODE='1', SESSION_STORE_GRAPH='/home/nomo/.cargo/etas0013',
+    environment = dict(os.environ, PYTHONDONTWRITEBYTECODE='1', SESSION_STORE_GRAPH='/home/nomo/.cargo/etas-latest',
                        ETAS='/home/nomo/.cargo/bin/etas', NOMO_TEST_EVIDENCE=str(evidence))
     commands = [['python3', '-B', str(ROOT / 'tests/session_cli_mapping_probe.py')],
                 ['python3', '-B', str(ROOT / 'tests/session_state_probe.py')], ['python3', '-B', str(ROOT / 'scripts/tool-001a-verify.py')]]

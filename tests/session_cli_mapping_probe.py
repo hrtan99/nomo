@@ -31,11 +31,11 @@ import std.text.{len, to_string_i32};
 import std.collections.len as count;
 import std.json.parse;
 import std.agent.message.Message;
-import nomo.conversation.{State, Event, fresh};
-import nomo.loop.turn;
-import nomo.stub_snapshot.{snapshot, caps};
-import nomo.session_state.{Projection, Request, Snapshot, validate};
-import nomo.session_display.display;
+import nomo.core.conversation.{State, Event, fresh};
+import nomo.agent.loop.turn;
+import nomo.session.stub_snapshot.{snapshot, caps};
+import nomo.session.session_state.{Projection, Request, Snapshot, validate};
+import nomo.session.session_display.display;
 
 flow project(state: State, maximum: i32, budget: i32, expected_lifecycle: string) -> Projection {
     let saved = match snapshot(state, "fixture-session", "independent-binding", maximum, budget) {
@@ -117,15 +117,19 @@ public flow main(args: Array<string>) -> i32 {
 
 def main():
     assert digest(CLI) == json.loads((GRAPH / 'binary.json').read_text())['sha256']
-    protected = {name: digest(ROOT / name) for name in ['etas.toml', 'etas.lock', 'src/nomo/loop.es', 'src/nomo/session_state.es']}
+    protected = {name: digest(ROOT / name) for name in ['etas.toml', 'etas.lock', 'src/nomo/agent/loop.es', 'src/nomo/session/session_state.es']}
     project = Path(tempfile.mkdtemp(prefix='session-cli-mapping-', dir=EVIDENCE))
     print('EVIDENCE ' + str(project), flush=True)
     target = project / 'src/nomo'
     target.mkdir(parents=True)
-    for name in ['conversation.es', 'loop.es', 'stub.es', 'text.es', 'session_state.es']:
-        shutil.copyfile(ROOT / 'src/nomo' / name, target / name)
-    for name in ['stub_snapshot.es', 'session_display.es']:
-        shutil.copyfile(ROOT / 'src/nomo' / name, target / name)
+    for name in ['core/conversation.es', 'agent/loop.es', 'model/stub.es', 'core/text.es', 'session/session_state.es']:
+        destination = target / name
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(ROOT / 'src/nomo' / name, destination)
+    for name in ['session/stub_snapshot.es', 'session/session_display.es']:
+        destination = target / name
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(ROOT / 'src/nomo' / name, destination)
     source = project / 'src/app/main.es'
     source.parent.mkdir()
     calls = '\n'.join('observed(' + ', '.join(json.dumps(v) for v in (*case[:4], case[-1])) + ');' for case in CASES)
@@ -151,7 +155,7 @@ module = "app.main"
 flow = "main"
 profile = "fixture"
 ''')
-    (project / 'product-sources.json').write_text(json.dumps({str(p.relative_to(project)): digest(p) for p in target.glob('*.es')}, indent=2))
+    (project / 'product-sources.json').write_text(json.dumps({str(p.relative_to(project)): digest(p) for p in target.rglob('*.es')}, indent=2))
     results = []
 
     def invoke(arguments, stdin=None):

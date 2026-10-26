@@ -17,9 +17,9 @@ ROOT = Path(__file__).resolve().parent.parent
 GRAPH = Path(os.environ.get('SESSION_STORE_GRAPH', '/validation'))
 CLI = Path(os.environ.get('ETAS', str(GRAPH / 'target/debug/etas')))
 EVIDENCE = Path(os.environ.get('NOMO_TEST_EVIDENCE', str(GRAPH)))
-SHARED = ['conversation.es', 'session_state.es', 'text.es', 'loop.es', 'stub.es']
-STORAGE = ['bundle_codec.es', 'store_record.es', 'metadata_store.es', 'history_store.es',
-           'session_store.es', 'session_cli.es', 'session_cli_args.es', 'stub_snapshot.es', 'session_display.es']
+SHARED = ['core/conversation.es', 'session/session_state.es', 'core/text.es', 'agent/loop.es', 'model/stub.es']
+STORAGE = ['session/bundle_codec.es', 'session/store_record.es', 'session/metadata_store.es', 'session/history_store.es',
+           'session/session_store.es', 'entry/session_cli.es', 'cli/session_cli_args.es', 'session/stub_snapshot.es', 'session/session_display.es']
 
 
 def digest(path):
@@ -47,8 +47,10 @@ def materialize(project):
     target.mkdir(parents=True)
     for name in STORAGE + SHARED:
         source = ROOT / 'src/nomo' / name
-        shutil.copyfile(source, target / name)
-        assert digest(source) == digest(target / name)
+        destination = target / name
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source, destination)
+        assert digest(source) == digest(destination)
     (project / 'etas.toml').write_text('''[package]
 name = "nomo-storage-fixture"
 version = "0.0.0"
@@ -63,7 +65,7 @@ flow = "main"
     fixture = project / 'src/app'
     fixture.mkdir()
     (project / 'product-sources.json').write_text(json.dumps({
-        str(path.relative_to(project)): digest(path) for path in target.glob('*.es')
+        str(path.relative_to(project)): digest(path) for path in target.rglob('*.es')
     }, indent=2))
     return fixture / 'main.es'
 
@@ -78,14 +80,14 @@ import std.io.println;
 import std.collections.len as count;
 import std.text.len;
 import std.json.{JsonValue, stringify, parse};
-import nomo.conversation.{Event, State};
-import nomo.session_state.{Caps, Ledger, Operation, Reference, Snapshot, Request, Projection};
-import nomo.store_record.{with_events, session_key};
-import nomo.bundle_codec.{decode, encode};
-import nomo.session_store.{save, reload};
-import nomo.store_record.{pending, published, Record};
-import nomo.metadata_store.write;
-import nomo.history_store.append;
+import nomo.core.conversation.{Event, State};
+import nomo.session.session_state.{Caps, Ledger, Operation, Reference, Snapshot, Request, Projection};
+import nomo.session.store_record.{with_events, session_key};
+import nomo.session.bundle_codec.{decode, encode};
+import nomo.session.session_store.{save, reload};
+import nomo.session.store_record.{pending, published, Record};
+import nomo.session.metadata_store.write;
+import nomo.session.history_store.append;
 import std.memory.Missing;
 
 flow fixture(id: string, json: string) -> Snapshot {

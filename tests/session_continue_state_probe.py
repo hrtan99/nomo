@@ -20,11 +20,13 @@ def main():
     print('EVIDENCE ' + str(project), flush=True)
     target = project / 'src/nomo'
     target.mkdir(parents=True)
-    names = ['conversation.es', 'text.es', 'session_state.es', 'stub_snapshot.es', 'store_record.es',
-             'bundle_codec.es', 'continuation_args.es', 'continuation_state.es', 'session_cli_args.es']
+    names = ['core/conversation.es', 'core/text.es', 'session/session_state.es', 'session/stub_snapshot.es', 'session/store_record.es',
+             'session/bundle_codec.es', 'cli/continuation_args.es', 'session/continuation_state.es', 'cli/session_cli_args.es']
     before = {name: digest(ROOT / 'src/nomo' / name) for name in names}
     for name in names:
-        shutil.copyfile(ROOT / 'src/nomo' / name, target / name)
+        destination = target / name
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(ROOT / 'src/nomo' / name, destination)
     app = project / 'src/app/main.es'
     app.parent.mkdir()
     base = snapshot()
@@ -122,11 +124,11 @@ def main():
         cases.append(('atomic_args_' + str(index), f'match parse_continue({render(arguments)}) {{ {test} }};'))
     source = '''module app.main;
 import std.io.println;
-import nomo.conversation.{State, Event};
-import nomo.session_state.{Snapshot, Request, Caps, Ledger, Operation, Reference};
-import nomo.continuation_state.{plan, continuing};
-import nomo.stub_snapshot.successor;
-import nomo.continuation_args.parse_continue;
+import nomo.core.conversation.{State, Event};
+import nomo.session.session_state.{Snapshot, Request, Caps, Ledger, Operation, Reference};
+import nomo.session.continuation_state.{plan, continuing};
+import nomo.session.stub_snapshot.successor;
+import nomo.cli.continuation_args.parse_continue;
 '''
     for index, (label, body) in enumerate(cases):
         source += f'flow case_{index}() -> i32 {{ {body} return 0; }}\n'

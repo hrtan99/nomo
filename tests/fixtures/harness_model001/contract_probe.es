@@ -4,7 +4,7 @@ import std.io.{read_all, println};
 import std.text.to_string_usize;
 import std.json.{JsonValue, parse};
 import std.agent.message.Message;
-import nomo.harness_model_contract.{Context, Ledger, fresh, bounded, decode_plan, context_error, charge_call, charge_boundary};
+import nomo.harness.harness_model_contract.{Context, Ledger, fresh, bounded, decode_plan, context_error, charge_call, charge_boundary};
 
 type Check = { label: string, mode: string, text: string, maximum: usize, context: Context,
     ledger: Ledger, accepted: bool, expected_text: string, expected: Ledger };

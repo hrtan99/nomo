@@ -2,16 +2,16 @@ module nomo.main;
 
 import std.io.{println, read_line};
 import std.text.{trim, len};
-import nomo.config.load;
-import nomo.loop.{turn, reject};
-import nomo.conversation.fresh;
-import nomo.model_entry.run_model;
-import nomo.tool_agent.run_tools;
-import nomo.session_demo.demo;
-import nomo.model_tool_entry.run_model_tools;
-import nomo.harness_entry.run as run_harness;
-import nomo.harness_chat.run as run_harness_chat;
-import nomo.harness_model_entry.run as run_harness_model;
+import nomo.cli.config.load;
+import nomo.agent.loop.{turn, reject};
+import nomo.core.conversation.fresh;
+import nomo.entry.model_entry.run_model;
+import nomo.entry.tool_agent.run_tools;
+import nomo.entry.session_demo.demo;
+import nomo.entry.model_tool_entry.run_model_tools;
+import nomo.entry.harness_entry.run as run_harness;
+import nomo.entry.harness_chat.run as run_harness_chat;
+import nomo.entry.harness_model_entry.run as run_harness_model;
 
 flow harness_model(args: Array<string>) -> i32 {
     let status = run_harness_model(args);

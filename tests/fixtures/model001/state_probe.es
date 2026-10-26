@@ -1,7 +1,7 @@
 module nomo.model_test;
 
-import nomo.conversation.{Event, fresh, add};
-import nomo.provider.model_turn;
+import nomo.core.conversation.{Event, fresh, add};
+import nomo.agent.provider.model_turn;
 import std.collections.len;
 
 flow main(args: Array<string>) -> i32 {

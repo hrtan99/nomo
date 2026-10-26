@@ -217,7 +217,7 @@ def main():
     assert profile['model'] == normal['gateway-qwen']['model']
     assert profile['policy'] == {'mode': 'local-static', 'rules': ['console=allow', 'model=allow', 'filesystem=allow']}
     assert profile['approval'] == {'mode': 'deny'}
-    assert profile['filesystem']['regions']['nomo.workspace.ReadOnlyRoot'] == {'root': '/model-tool-fixture', 'read': True, 'write': False}
+    assert profile['filesystem']['regions']['nomo.tools.workspace.ReadOnlyRoot'] == {'root': '/model-tool-fixture', 'read': True, 'write': False}
     manifest = root_manifest.replace('gateway-qwen-readonly', 'model-tool-mock').replace(
         'http://model-gateway:8080/v1', 'http://127.0.0.1:18848/v1').replace(
         'NOMO_GATEWAY_CLIENT_TOKEN', 'MODEL_TOOL_TEST_API_KEY').replace(
@@ -343,7 +343,7 @@ def main():
         (evidence / 'effects.stderr').write_bytes(effects.stderr)
         assert effects.returncode == 0, effects.stderr.decode()
         actions = next(line.strip() for line in effects.stdout.decode().splitlines() if line.strip().startswith('requested actions:'))
-        assert actions == 'requested actions: [Console.stdout_write, Agentic.infer[nomo.model_tool.ToolModel, string], Fs.read[nomo.workspace.ReadOnlyRoot]]', actions
+        assert actions == 'requested actions: [Console.stdout_write, Agentic.infer[nomo.agent.model_tool.ToolModel, string], Fs.read[nomo.tools.workspace.ReadOnlyRoot]]', actions
         for label, response, allow, observed in [
             ('read_roundtrip', ['read', 'docs/a.txt'], 'docs/a.txt,docs/b.txt', 'alpha NEEDLE<LF>second line<LF>'),
             ('search_roundtrip', ['search', 'NEEDLE', 'docs/a.txt', 'docs/b.txt'], 'docs/a.txt,docs/b.txt', 'docs/a.txt:1<LF>docs/b.txt:1<LF>'),

@@ -59,12 +59,14 @@ def main():
     project = evidence / 'project'
     target = project / 'src/nomo'
     target.mkdir(parents=True)
-    selected = ['conversation.es', 'text.es', 'session_state.es', 'stub.es', 'loop.es', 'stub_snapshot.es',
-                'bundle_codec.es', 'store_record.es', 'history_store.es', 'metadata_store.es', 'session_store.es',
-                'session_cli_args.es', 'session_cli.es', 'session_display.es', 'session_demo.es',
-                'continuation_args.es', 'continuation_state.es', 'session_continue.es', 'demo_claim.es']
+    selected = ['core/conversation.es', 'core/text.es', 'session/session_state.es', 'model/stub.es', 'agent/loop.es', 'session/stub_snapshot.es',
+                'session/bundle_codec.es', 'session/store_record.es', 'session/history_store.es', 'session/metadata_store.es', 'session/session_store.es',
+                'cli/session_cli_args.es', 'entry/session_cli.es', 'session/session_display.es', 'entry/session_demo.es',
+                'cli/continuation_args.es', 'session/continuation_state.es', 'entry/session_continue.es', 'session/demo_claim.es']
     for name in selected:
-        shutil.copyfile(ROOT / 'src/nomo' / name, target / name)
+        destination = target / name
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(ROOT / 'src/nomo' / name, destination)
     app = project / 'src/app/main.es'
     app.parent.mkdir()
     inputs = evidence / 'inputs'
@@ -93,7 +95,7 @@ def main():
     def save_result():
         (evidence / 'results.json').write_text(json.dumps(result, indent=2))
 
-    def command(database, arguments, fault='none', pause=None, module='nomo.session_demo', flow='demo', reject=None, loss=None, readback=None):
+    def command(database, arguments, fault='none', pause=None, module='nomo.entry.session_demo', flow='demo', reject=None, loss=None, readback=None):
         command = [str(host), str(project / 'src'), module, flow, str(database), fault, *arguments]
         item = {'command': command, 'sources': retain_sources(), 'pause': pause, 'reject': reject, 'loss': loss, 'readback': readback}
         result['commands'].append(item)

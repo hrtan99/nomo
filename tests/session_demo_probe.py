@@ -88,13 +88,15 @@ def main():
     target = project / 'src/nomo'
     target.mkdir(parents=True)
     consumed = [ROOT / 'src/nomo' / name for name in (
-        'bundle_codec.es', 'history_store.es', 'metadata_store.es', 'session_cli.es', 'session_cli_args.es',
-        'session_demo.es', 'session_display.es', 'session_store.es', 'store_record.es', 'stub_snapshot.es',
-        'conversation.es', 'session_state.es', 'text.es', 'loop.es', 'stub.es', 'config.es',
-        'continuation_args.es', 'continuation_state.es', 'session_continue.es', 'demo_claim.es')]
+        'session/bundle_codec.es', 'session/history_store.es', 'session/metadata_store.es', 'entry/session_cli.es', 'cli/session_cli_args.es',
+        'entry/session_demo.es', 'session/session_display.es', 'session/session_store.es', 'session/store_record.es', 'session/stub_snapshot.es',
+        'core/conversation.es', 'session/session_state.es', 'core/text.es', 'agent/loop.es', 'model/stub.es', 'cli/config.es',
+        'cli/continuation_args.es', 'session/continuation_state.es', 'entry/session_continue.es', 'session/demo_claim.es')]
     before = {str(path): digest(path) for path in consumed}
     for path in consumed:
-        shutil.copyfile(path, target / path.name)
+        destination = project / 'src' / path.relative_to(ROOT / 'src')
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(path, destination)
     shutil.copyfile(Path(__file__), evidence / 'driver.py')
     (project / 'etas.toml').write_text('''[package]
 name = "owned-session-demo-probe"
@@ -104,7 +106,7 @@ edition = "2026"
 root = "src"
 [[bin]]
 name = "demo"
-module = "nomo.session_demo"
+module = "nomo.entry.session_demo"
 flow = "demo"
 ''')
     identities = {str(path.relative_to(project)): digest(path) for path in project.rglob('*') if path.is_file()}
@@ -114,7 +116,7 @@ flow = "demo"
               'cache_mount': cache_mount,
               'driver_sha256': digest(evidence / 'driver.py'),
               'effective_profile': {'kind': 'embedded public Host, RunOptions::default; fixture manifest not used by Host',
-                                    'entry_module': 'nomo.session_demo', 'entry_flow': 'demo',
+                                    'entry_module': 'nomo.entry.session_demo', 'entry_flow': 'demo',
                                     'other_services': 'denied', 'database_and_fault': 'explicit owned directory/fault per command'},
               'commands': [], 'passed': []}
 
@@ -133,7 +135,7 @@ flow = "demo"
         return process
 
     def invoke(database, args, fault='none'):
-        observed = json.loads(command([host, project / 'src', 'nomo.session_demo', 'demo', database, fault, *args], args[0] if args else 'empty').stdout)
+        observed = json.loads(command([host, project / 'src', 'nomo.entry.session_demo', 'demo', database, fault, *args], args[0] if args else 'empty').stdout)
         assert observed['denied_services'] == observed['denied_writes'] == observed['writes_after_fault'] == 0, observed
         return observed
 

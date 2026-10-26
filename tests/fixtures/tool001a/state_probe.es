@@ -1,7 +1,7 @@
 module nomo.tool_test;
 
-import nomo.conversation.{fresh, add, Event};
-import nomo.tool_agent.{tool_turn, fresh_tools, Session};
+import nomo.core.conversation.{fresh, add, Event};
+import nomo.entry.tool_agent.{tool_turn, fresh_tools, Session};
 import std.io.println;
 import std.collections.len;
 

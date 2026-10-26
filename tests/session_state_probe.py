@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """SESSION-001A: typed synthetic data only; validation is executed by Etas."""
 from copy import deepcopy
+from contextlib import nullcontext
 import json
+import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -234,8 +236,8 @@ def cases():
 IMPORTS = '''module nomo.session_fixture;
 import std.io.println;
 import std.text.{len, contains};
-import nomo.conversation.{Event, State};
-import nomo.session_state.{Caps, Ledger, Operation, Reference, Snapshot, Request, Projection, validate};
+import nomo.core.conversation.{Event, State};
+import nomo.session.session_state.{Caps, Ledger, Operation, Reference, Snapshot, Request, Projection, validate};
 '''
 
 
@@ -276,15 +278,53 @@ def main():
     verify_cli()
     originals = {p: digest(ROOT / p) for p in ['etas.toml', 'etas.lock', 'compose.yaml', 'patches/etas-003/Cargo.lock']}
     all_cases = cases()
-    with tempfile.TemporaryDirectory(prefix='nomo-session001a-') as directory:
+    evidence_parent = os.environ.get('NOMO_TEST_EVIDENCE')
+    directory_context = (nullcontext(tempfile.mkdtemp(prefix='nomo-session001a-', dir=evidence_parent))
+                         if evidence_parent else tempfile.TemporaryDirectory(prefix='nomo-session001a-'))
+    with directory_context as directory:
         project = Path(directory)
+        if evidence_parent:
+            print('EVIDENCE ' + str(project), flush=True)
         shutil.copytree(ROOT / 'src', project / 'src')
         shutil.copyfile(ROOT / 'etas.lock', project / 'etas.lock')
         (project / 'etas.toml').write_text((ROOT / 'etas.toml').read_text().replace('module = "nomo.main"', 'module = "nomo.session_fixture"'))
         source = project / 'src/nomo/session_fixture.es'
+        observations = []
         def run(*args, timeout=60):
-            result = subprocess.run(['etas', *args], capture_output=True, text=True, timeout=timeout)
-            return result
+            command = ['etas', *args]
+            if not evidence_parent:
+                return subprocess.run(command, capture_output=True, text=True, timeout=timeout)
+            retained = project / 'generated-inputs' / (digest(source) + '.es')
+            retained.parent.mkdir(exist_ok=True)
+            if not retained.exists():
+                shutil.copyfile(source, retained)
+            assert digest(retained) == digest(source), 'generated-source evidence collision'
+            command_directory = project / 'commands' / str(len(observations)).zfill(3)
+            command_directory.mkdir(parents=True)
+            item = {'command': command, 'timeout_seconds': timeout, 'status': 'running',
+                    'input': {'path': str(source.relative_to(project)), 'sha256': digest(retained),
+                              'retained': str(retained.relative_to(project))}}
+            observations.append(item)
+            output = project / 'results.json'
+            output.write_text(json.dumps(observations, indent=2) + '\n')
+            stdout, stderr, exit_code = b'', b'', None
+            try:
+                result = subprocess.run(command, capture_output=True, timeout=timeout)
+                stdout, stderr, exit_code = result.stdout, result.stderr, result.returncode
+                return subprocess.CompletedProcess(command, exit_code, stdout.decode(), stderr.decode())
+            except subprocess.TimeoutExpired as error:
+                stdout, stderr = error.stdout or b'', error.stderr or b''
+                item['timed_out'] = True
+                raise
+            finally:
+                (command_directory / 'stdout.bin').write_bytes(stdout)
+                (command_directory / 'stderr.bin').write_bytes(stderr)
+                item.update(status='observed', exit=exit_code,
+                            stdout=stdout.decode('utf-8', errors='replace'),
+                            stderr=stderr.decode('utf-8', errors='replace'),
+                            stdout_retained=str((command_directory / 'stdout.bin').relative_to(project)),
+                            stderr_retained=str((command_directory / 'stderr.bin').relative_to(project)))
+                output.write_text(json.dumps(observations, indent=2) + '\n')
         for offset in range(0, len(all_cases), 12):
             batch = all_cases[offset:offset + 12]
             source.write_text(fixture(batch))

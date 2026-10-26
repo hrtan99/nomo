@@ -64,7 +64,7 @@ connect_timeout_ms = 2000
 attempts = 1
 delay_ms = 0
 
-[runtime.profiles.gateway-qwen-readonly.filesystem.regions."nomo.workspace.ReadOnlyRoot"]
+[runtime.profiles.gateway-qwen-readonly.filesystem.regions."nomo.tools.workspace.ReadOnlyRoot"]
 root = "/model-tool-fixture"
 read = true
 write = false

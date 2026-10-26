@@ -36,7 +36,7 @@ def main():
     options = parser.parse_args()
     assert not (options.negative_only and options.positive_only), 'Choose one case group.'
     assert digest(CLI) == json.loads((GRAPH / 'binary.json').read_text())['sha256']
-    protected = {name: digest(ROOT / name) for name in ['etas.toml', 'etas.lock', 'src/nomo/session_state.es']}
+    protected = {name: digest(ROOT / name) for name in ['etas.toml', 'etas.lock', 'src/nomo/session/session_state.es']}
     evidence = Path(tempfile.mkdtemp(prefix='session-store-bounds-', dir=EVIDENCE))
     print('EVIDENCE ' + str(evidence), flush=True)
     results = []

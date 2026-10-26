@@ -123,7 +123,7 @@ connect_timeout_ms = 200
 [runtime.profiles.pure.model.retry]
 attempts = 1
 delay_ms = 0
-[runtime.profiles.pure.filesystem.regions."nomo.workspace.ReadOnlyRoot"]
+[runtime.profiles.pure.filesystem.regions."nomo.tools.workspace.ReadOnlyRoot"]
 root = "/workspace/examples/model-tool001/workspace"
 read = true
 write = false

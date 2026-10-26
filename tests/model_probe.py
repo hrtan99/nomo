@@ -77,8 +77,8 @@ def main():
     effects = subprocess.run([cli, "effects", str(ROOT), "--flow", "model"], capture_output=True, text=True, timeout=12, check=True)
     actions = next(line.strip()[len("requested actions: ["):-1] for line in effects.stdout.splitlines() if line.strip().startswith("requested actions: ["))
     selected = selected_graph()
-    model_action = ("Agentic.infer[nomo.provider.TextModel]" if selected == "legacy"
-                    else "Agentic.infer[nomo.provider.TextModel, string]")
+    model_action = ("Agentic.infer[nomo.agent.provider.TextModel]" if selected == "legacy"
+                    else "Agentic.infer[nomo.agent.provider.TextModel, string]")
     # The new graph prints the result type, whose comma is not an action separator.
     assert actions == "Console.stdin_read_line, Console.stdout_write, " + model_action, actions
     print("PASS opt_in_profile_and_exact_actions (static, not live)", flush=True)

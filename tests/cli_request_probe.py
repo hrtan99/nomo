@@ -54,17 +54,28 @@ def save_json(path, value):
 
 def source_closure():
     """Copy real transitive Nomo modules, never replacement policy/test stubs."""
-    pending, found = ["cli_request"], {}
+    pending, found = ["nomo.cli.cli_request"], {}
     while pending:
         module = pending.pop()
         if module in found:
             continue
-        if module.startswith("model_session"):
+        if any(part.startswith("model_session") for part in module.split(".")[1:]):
             raise ValueError("pending model_session modules are outside CLI-001A")
-        source = ROOT / "src/nomo" / (module + ".es")
+        source = (ROOT / "src").joinpath(*module.split(".")).with_suffix(".es")
+        if not source.is_file():
+            raise ValueError("missing canonical Nomo module: " + module)
         body = source.read_text()
+        declarations = re.findall(r"^\s*module\s+([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)\s*;", body, re.M)
+        if declarations != [module]:
+            raise ValueError("Nomo declaration/path mismatch: " + str(source))
         found[module] = source
-        pending.extend(re.findall(r"^\s*import\s+nomo\.([A-Za-z_]\w*)[.\s;]", body, re.M))
+        for imported in re.findall(r"^\s*import\s+(nomo(?:\.[A-Za-z_]\w*)*)[.\s;]", body, re.M):
+            parts = imported.split(".")
+            candidates = [".".join(parts[:end]) for end in range(2, len(parts) + 1)
+                          if (ROOT / "src").joinpath(*parts[:end]).with_suffix(".es").is_file()]
+            if len(candidates) != 1:
+                raise ValueError("missing or ambiguous Nomo import: " + imported)
+            pending.append(candidates[0])
     return found
 
 
@@ -99,8 +110,9 @@ def main():
     (project / "src/nomo").mkdir()
     sources = source_closure()
     protected = {str(path): digest(path) for path in sources.values()}
-    for name, source in sources.items():
-        target = project / "src/nomo" / (name + ".es")
+    for source in sources.values():
+        target = project / source.relative_to(ROOT)
+        target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(source, target)
         assert digest(source) == protected[str(source)], "product source changed while copying"
         assert digest(target) == protected[str(source)], "copied product source differs from frozen input"
@@ -124,7 +136,7 @@ def main():
         "created_utc": datetime.now(timezone.utc).isoformat(),
         "status": "not_run", "prepared_only": options.prepare_only,
         "fixture_count": len(fixtures), "case_labels": [item["label"] for item in fixtures],
-        "product_sources": {"src/nomo/" + name + ".es": digest(path) for name, path in sources.items()},
+        "product_sources": {str(path.relative_to(ROOT)): digest(path) for path in sources.values()},
         "runner_inputs": {path.name: digest(path) for path in (evidence / "runner-inputs").iterdir()},
         "stdin_sha256": digest(project / "stdin.json"),
         "cli_requested": options.etas, "cli_path": None, "cli_sha256": None,

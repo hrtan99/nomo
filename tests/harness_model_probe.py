@@ -341,7 +341,7 @@ def main():
                     name: value for name, value in frozen_product.items() if name.startswith("src/")}, "actual model product copy differs"
             elif command["transport"] == "pure":
                 project = directory / "component-project"
-                for name in ["harness_model_contract.es", "text.es"]:
+                for name in ["harness/harness_model_contract.es", "core/text.es"]:
                     retain(ROOT / "src/nomo" / name, project / "src/nomo" / name)
                 retain(FIXTURE / "contract_probe.es", project / "src/nomo/harness_model_probe.es")
                 (project / "etas.toml").write_text(PURE_MANIFEST)
@@ -420,9 +420,9 @@ def main():
                     assert b"analysis::ExecutionAborted" in stderr and specification.WRAPPER.encode() in stderr, "known refusal must fail at actual wrapper"
                 else:
                     assert not stderr, "successful actual model route wrote stderr"
-                actions = ["Agentic.infer[nomo.harness_model.MainModel, string]", "Agentic.infer[nomo.harness_model.ChildModel, string]", "Agentic.infer[nomo.harness_model.MainModel, string]"]
+                actions = ["Agentic.infer[nomo.harness.harness_model.MainModel, string]", "Agentic.infer[nomo.harness.harness_model.ChildModel, string]", "Agentic.infer[nomo.harness.harness_model.MainModel, string]"]
                 if command["kind"] == "provider_smoke":
-                    actions = ["Agentic.infer[nomo.provider.TextModel, string]"]
+                    actions = ["Agentic.infer[nomo.agent.provider.TextModel, string]"]
                 command["observed_inference_actions"] = assert_trace(trace, actions[:command["last_stage"] or command["calls"]], abort=command["kind"] == "host_abort")
                 assert len(command["observed_inference_actions"]) >= len(records), "observed HTTP requests exceed traced inference actions"
             elif command["transport"] == "pure":

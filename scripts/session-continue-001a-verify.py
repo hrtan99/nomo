@@ -25,7 +25,8 @@ def main():
     paths = list((ROOT / 'src').rglob('*.es')) + [ROOT / name for name in (
         'etas.toml', 'etas.lock', 'compose.yaml', 'Dockerfile', 'scripts/session-demo.sh',
         'config/session-demo-compose.yaml', 'config/etas-runtime-cache-compose.yaml',
-        'scripts/etas-0013-cli-bootstrap.py', 'scripts/session-continue-001a-verify.py',
+        'tests/normal_graph_identity.py', 'scripts/etas-latest-cli-bootstrap.py', 'config/etas-latest-main.json',
+        'scripts/session-continue-001a-verify.py',
         'scripts/session-demo-001b-verify.py')]
     hashes = {str(p.relative_to(ROOT)): demo.digest(p) for p in paths}
     for p in paths:
@@ -57,7 +58,7 @@ def main():
         return item
 
     def projection(item, prefix, status=0):
-        assert item['exit'] == 0 and not item['stderr'], item
+        assert item['exit'] == 0 and demo.accepted_compose_stderr(item['stderr'], ROOT), item
         marker = prefix + ('turn_status=' + str(status) + ' ' if prefix == 'SAVED ' else '')
         lines = [line[len(marker):] for line in item['stdout'].splitlines() if line.startswith(marker)]
         assert len(lines) == 1 and lines[0].isascii(), item

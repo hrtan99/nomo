@@ -57,17 +57,28 @@ def save_json(path, value):
 
 def source_closure():
     """Retain real transitive product modules; never policy replacements."""
-    pending, found = ["harness", "harness_child", "harness_contract"], {}
+    pending, found = ["nomo.harness.harness", "nomo.harness.harness_child", "nomo.harness.harness_contract"], {}
     while pending:
         module = pending.pop()
         if module in found:
             continue
-        if module.startswith("model_session"):
+        if any(part.startswith("model_session") for part in module.split(".")[1:]):
             raise ValueError("pending model_session modules are outside HARNESS-001A")
-        source = ROOT / "src/nomo" / (module + ".es")
+        source = (ROOT / "src").joinpath(*module.split(".")).with_suffix(".es")
+        if not source.is_file():
+            raise ValueError("missing canonical Nomo module: " + module)
         body = source.read_text()
+        declarations = re.findall(r"^\s*module\s+([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)\s*;", body, re.M)
+        if declarations != [module]:
+            raise ValueError("Nomo declaration/path mismatch: " + str(source))
         found[module] = source
-        pending.extend(re.findall(r"^\s*import\s+nomo\.([A-Za-z_]\w*)[.\s;]", body, re.M))
+        for imported in re.findall(r"^\s*import\s+(nomo(?:\.[A-Za-z_]\w*)*)[.\s;]", body, re.M):
+            parts = imported.split(".")
+            candidates = [".".join(parts[:end]) for end in range(2, len(parts) + 1)
+                          if (ROOT / "src").joinpath(*parts[:end]).with_suffix(".es").is_file()]
+            if len(candidates) != 1:
+                raise ValueError("missing or ambiguous Nomo import: " + imported)
+            pending.append(candidates[0])
     return found
 
 
@@ -127,8 +138,8 @@ def main():
     (project / "src/nomo").mkdir()
     sources = source_closure()
     protected = {str(path): digest(path) for path in sources.values()}
-    for name, source in sources.items():
-        retain(source, project / "src/nomo" / (name + ".es"))
+    for source in sources.values():
+        retain(source, project / source.relative_to(ROOT))
     retain(FIXTURES / "main.es", project / "src/app/main.es")
     (project / "etas.toml").write_text(MANIFEST)
     fixtures = load_cases()
@@ -159,7 +170,7 @@ def main():
         "prepared_only": options.prepare_only, "fixture_count": len(fixtures),
         "case_labels": [item["label"] for item in fixtures],
         "case_modes": {mode: sum(item["mode"] == mode for item in fixtures) for mode in sorted({item["mode"] for item in fixtures})},
-        "product_sources": {"src/nomo/" + name + ".es": digest(path) for name, path in sources.items()},
+        "product_sources": {str(path.relative_to(ROOT)): digest(path) for path in sources.values()},
         "runner_inputs": runner_inputs, "normal_graph_inputs": graph_inputs,
         "stdin_sha256": digest(project / "stdin.json"), "fixture_manifest_sha256": digest(project / "etas.toml"),
         "prepared_project_inputs": project_inputs,

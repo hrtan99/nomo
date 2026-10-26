@@ -18,7 +18,7 @@ from session_store_probe import CLI, EVIDENCE, GRAPH, fixture_source, materializ
 ROOT = Path(__file__).resolve().parent.parent
 HARNESS = GRAPH / 'target/debug/nomo-session-store-host-faults'
 BINDING = 'independent-fixture-binding'
-SHARED = ('conversation.es', 'session_state.es', 'text.es', 'loop.es', 'stub.es', 'config.es')
+SHARED = ('core/conversation.es', 'session/session_state.es', 'core/text.es', 'agent/loop.es', 'model/stub.es', 'cli/config.es')
 
 
 def digest(path):
@@ -68,13 +68,15 @@ def main():
     identity = json.loads((GRAPH / 'host-faults-identity.json').read_text())
     assert digest(HARNESS) == identity['fixture_binary_sha256']
     assert digest(CLI) == json.loads((GRAPH / 'binary.json').read_text())['sha256']
-    protected = ['etas.toml', 'etas.lock', 'src/nomo/main.es', 'src/nomo/config.es', 'src/nomo/session_state.es']
+    protected = ['etas.toml', 'etas.lock', 'src/nomo/main.es', 'src/nomo/cli/config.es', 'src/nomo/session/session_state.es']
     original = {name: digest(ROOT / name) for name in protected}
     project = Path(tempfile.mkdtemp(prefix='session-cli-cases-', dir=EVIDENCE))
     print('EVIDENCE ' + str(project), flush=True)
     source = materialize(project)
     for name in SHARED:
-        shutil.copyfile(ROOT / 'src/nomo' / name, project / 'src/nomo' / name)
+        destination = project / 'src/nomo' / name
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(ROOT / 'src/nomo' / name, destination)
     source.write_text(fixture_source('stub'))
     (project / 'etas.toml').write_text('''[package]
 name = "nomo-isolated-session-cli-test"
@@ -84,7 +86,7 @@ edition = "2026"
 root = "src"
 [[bin]]
 name = "session"
-module = "nomo.session_cli"
+module = "nomo.entry.session_cli"
 flow = "run_session"
 ''')
     generated = project / 'inputs'
@@ -112,14 +114,14 @@ flow = "run_session"
         (project / 'summary.json').write_text(json.dumps({'passed': passed, 'count': len(passed)}, indent=2))
         print('PASS ' + name, flush=True)
 
-    def run(database, arguments, module='nomo.session_cli', fault='none', actual_cli=False):
+    def run(database, arguments, module='nomo.entry.session_cli', fault='none', actual_cli=False):
         entry_flow = 'main' if module == 'app.main' else 'run_session'
         command = ([str(CLI), 'run', str(project), '--flow', entry_flow, '--allow-effects', '--args', *arguments] if actual_cli else
                    [str(HARNESS), str(project / 'src'), module, entry_flow, str(database), fault, *arguments])
         profile = {'kind': 'CLI environment' if actual_cli else 'embedded Host, RunOptions::default; no CLI profile loaded',
                    'memory_sqlite': str(database / 'memory.sqlite3'), 'session_sqlite': str(database / 'session.sqlite3'),
                    'module': module, 'flow': entry_flow, 'fault': fault, 'binary_sha256': digest(CLI if actual_cli else HARNESS)}
-        entry = source if module == 'app.main' else project / 'src/nomo/session_cli.es'
+        entry = source if module == 'app.main' else project / 'src/nomo/entry/session_cli.es'
         env = dict(os.environ, PYTHONDONTWRITEBYTECODE='1',
                    ETAS_HOST_MEMORY='sqlite:' + str(database / 'memory.sqlite3'),
                    ETAS_HOST_SESSION='sqlite:' + str(database / 'session.sqlite3'))
@@ -291,13 +293,13 @@ flow = "run_session"
 
         database = new_database('presentation-failure')
         seed(database, 'setup', 'presentation-failure')
-        display_source = project / 'src/nomo/session_display.es'
+        display_source = project / 'src/nomo/session/session_display.es'
         original_display = display_source.read_bytes()
         try:
             # Deliberate test-only dependency substitution, not a natural input
             # counterexample or any change to repository product behavior.
-            display_source.write_text('''module nomo.session_display;
-import nomo.session_state.Projection;
+            display_source.write_text('''module nomo.session.session_display;
+import nomo.session.session_state.Projection;
 public flow display(value: Projection) -> Result<string, string> {
     return Err("injected presentation failure");
 }

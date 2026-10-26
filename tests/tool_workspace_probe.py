@@ -39,7 +39,7 @@ def main():
         manifest = (ROOT / 'etas.toml').read_text() + '''
 [runtime.profiles.read-only]
 boundary_policy = "nomo-tool001a"
-[runtime.profiles.read-only.filesystem.regions."nomo.workspace.ReadOnlyRoot"]
+[runtime.profiles.read-only.filesystem.regions."nomo.tools.workspace.ReadOnlyRoot"]
 root = "fixture"
 read = true
 write = false
@@ -56,7 +56,7 @@ mode = "deny"
         print('PASS product_check_all', flush=True)
         effects = subprocess.run(['etas', 'effects', str(project), '--flow', 'tools'], capture_output=True, text=True, timeout=15, check=True)
         actions = [line.strip() for line in effects.stdout.splitlines() if line.strip().startswith('requested actions:')]
-        assert actions == ['requested actions: [Console.stdout_write, Fs.read[nomo.workspace.ReadOnlyRoot], Fs.list[nomo.workspace.ReadOnlyRoot]]'], effects.stdout
+        assert actions == ['requested actions: [Console.stdout_write, Fs.read[nomo.tools.workspace.ReadOnlyRoot], Fs.list[nomo.tools.workspace.ReadOnlyRoot]]'], effects.stdout
         print('PASS exact_readonly_actions_no_model_command_or_write', flush=True)
         fixture = project / 'fixture'
         (fixture / 'docs').mkdir(parents=True)
