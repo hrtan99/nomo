@@ -2,9 +2,9 @@ module nomo.harness.harness_model_tools;
 
 import std.io.println;
 import std.text.to_string_i32;
-import nomo.core.conversation.{Event, add};
+import nomo.core.conversation.{Event, State, add};
 import nomo.model.model_tool_contract.{Session, fresh_loop, default_limits, question_error, allowed_error};
-import nomo.agent.model_tool.run_loop;
+import nomo.agent.model_tool.{LoopTurn, run_loop};
 import nomo.harness.harness_model_contract.{bounded, decode_plan};
 import nomo.harness.harness_tool_contract.{Context, Ledger, fresh, bump, settle, inspect, context_error};
 
@@ -15,7 +15,7 @@ agent MainModel(input: Context) -> string {
         .data(input);
 }
 
-flow numbers(state: Ledger) -> string {
+public flow numbers(state: Ledger) -> string {
     return "steps=" + to_string_i32(state.steps) + " calls=" + to_string_i32(state.calls) + " tokens=" + to_string_i32(state.tokens) +
         " tools=" + to_string_i32(state.tools) + " scan=" + to_string_i32(state.scan);
 }
@@ -46,6 +46,13 @@ flow unresolved(error: string) -> i32 {
     println("REFUSED " + error); println("RESERVATION child-1 unresolved=true; returned child metadata refused"); return 1;
 }
 
+// Both entries seed explicitly selected data; local counters are charged only
+// under their owner's prior reservation. No previous tool is dispatched here.
+public flow child_turn(task: string, allowed: Array<string>, selected: State) -> LoopTurn {
+    let seeded = Session { history = selected, calls = 0, tokens = 0, tools = 0, scan = 0 };
+    return run_loop(task, allowed, default_limits(), seeded);
+}
+
 public flow run(request: string, allowed: Array<string>) -> i32 {
     var state = fresh();
     let invalid = question_error(request); if invalid != "" { return refused(state, invalid); }
@@ -59,10 +66,9 @@ public flow run(request: string, allowed: Array<string>) -> i32 {
     state = match bump(state, false) { Ok(value) => value, Err(error) => { return refused(state, error); } };
     println("EVENT main -> child-1 request child-1: " + task);
     let empty = fresh_loop();
-    let seeded = Session { history = add(empty.history, Event { role = "user", kind = "context", name = "original", text = request }),
-        calls = 0, tokens = 0, tools = 0, scan = 0 };
+    let selected = add(empty.history, Event { role = "user", kind = "context", name = "original", text = request });
     stage("child", state);
-    let child = run_loop(task, allowed, default_limits(), seeded);
+    let child = child_turn(task, allowed, selected);
     let observed = match inspect(child.state, child.status, request, task, allowed) {
         Ok(value) => value, Err(error) => { return unresolved(error); }
     };

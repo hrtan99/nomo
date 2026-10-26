@@ -14,7 +14,7 @@ public type Ledger = { steps: i32, calls: i32, tokens: i32, tools: i32, scan: i3
 public type Observed = { result: string, tool: string, outcome: string };
 public flow fresh() -> Ledger { return Ledger { steps = 0, calls = 0, tokens = 0, tools = 0, scan = 0 }; }
 
-flow ledger_error(state: Ledger) -> string {
+public flow ledger_error(state: Ledger) -> string {
     if state.steps < 0 || state.steps > 7 || state.calls < 0 || state.calls > 4 || state.tokens < 0 ||
         state.tokens > 8192 || state.tools < 0 || state.tools > 1 || state.scan < 0 || state.scan > 4096 {
         return "invalid shared tool ledger";
