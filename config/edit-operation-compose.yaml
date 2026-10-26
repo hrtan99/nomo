@@ -1,0 +1,26 @@
+# Provision both private disposable directories explicitly before launching.
+services:
+  dev:
+    working_dir: /state
+    environment:
+      ETAS_HOST_APPROVAL: "prompt"
+      PYTHONDONTWRITEBYTECODE: "1"
+    volumes:
+      - type: bind
+        source: .
+        target: /workspace
+        read_only: true
+      - type: volume
+        source: cargo-cache
+        target: /home/nomo/.cargo
+        read_only: true
+      - type: bind
+        source: "${NOMO_EDIT_STATE_DIR:?explicit fresh private operation store required}"
+        target: /state
+        bind:
+          create_host_path: false
+      - type: bind
+        source: "${NOMO_EDIT_WORKSPACE_DIR:?explicit fresh private disposable workspace required}"
+        target: /edit-fixture
+        bind:
+          create_host_path: false

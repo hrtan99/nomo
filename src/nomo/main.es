@@ -24,6 +24,25 @@ import nomo.entry.session_lifecycle.run_init as lifecycle_init;
 import nomo.entry.session_lifecycle.run_new as lifecycle_new;
 import nomo.entry.session_lifecycle.run_resume as lifecycle_resume;
 import nomo.entry.session_lifecycle.run_show as lifecycle_show;
+import nomo.entry.edit_entry.run_apply as edit_apply_run;
+import nomo.entry.edit_entry.run_status as edit_status_run;
+import nomo.entry.edit_entry.run_help as edit_help_run;
+
+flow edit_apply(args: Array<string>) -> i32 {
+    let status = edit_apply_run(args);
+    if status != 0 { abort("Nomo edit apply refused; see REFUSED output"); }
+    return 0;
+}
+flow edit_status(args: Array<string>) -> i32 {
+    let status = edit_status_run(args);
+    if status != 0 { abort("Nomo edit status refused; see REFUSED output"); }
+    return 0;
+}
+flow edit_help(args: Array<string>) -> i32 {
+    let status = edit_help_run(args);
+    if status != 0 { abort("Nomo edit help refused; see REFUSED output"); }
+    return 0;
+}
 
 flow help(args: Array<string>) -> i32 {
     let status = lifecycle_help(args);

@@ -210,3 +210,48 @@ name = "nomo-session-help"
 module = "nomo.main"
 flow = "help"
 profile = "foundation"
+
+[runtime.profiles.edit-apply]
+boundary_policy = "nomo-owned-edit"
+[runtime.profiles.edit-apply.memory]
+backend = "sqlite"
+path = "edit.sqlite3"
+[runtime.profiles.edit-apply.filesystem.regions."nomo.tools.edit_file.EditableRoot"]
+root = "/edit-fixture"
+read = true
+write = true
+delete = false
+[runtime.profiles.edit-apply.policy]
+mode = "local-static"
+rules = ["console=allow", "memory=allow", "approval=allow", "filesystem:Fs.stat=allow", "filesystem:Fs.read=allow", "filesystem:Fs.atomic_replace=allow", "filesystem:Fs.write=deny", "filesystem:HostFilesystem.delete=deny"]
+[runtime.profiles.edit-apply.approval]
+mode = "prompt"
+
+[runtime.profiles.edit-status]
+boundary_policy = "nomo-owned-edit"
+[runtime.profiles.edit-status.memory]
+backend = "sqlite"
+path = "file:edit.sqlite3?mode=rw"
+[runtime.profiles.edit-status.policy]
+mode = "local-static"
+rules = ["console=allow", "memory:Memory.read=allow", "memory:Memory.write=deny"]
+[runtime.profiles.edit-status.approval]
+mode = "deny"
+
+[[bin]]
+name = "nomo-edit-apply"
+module = "nomo.main"
+flow = "edit_apply"
+profile = "edit-apply"
+
+[[bin]]
+name = "nomo-edit-status"
+module = "nomo.main"
+flow = "edit_status"
+profile = "edit-status"
+
+[[bin]]
+name = "nomo-edit-help"
+module = "nomo.main"
+flow = "edit_help"
+profile = "foundation"

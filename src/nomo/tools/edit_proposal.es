@@ -11,7 +11,7 @@ public type Proposal = { path: string, before: string, after: string };
 
 // Align with the read contract's 2048 UTF-8 bytes, not scalar/grapheme count.
 // Provided strings already exist; this is not a general allocation guarantee.
-flow text_bytes(value: string, field: string) -> Result<usize, string> {
+public flow text_bytes(value: string, field: string) -> Result<usize, string> {
     if len(value) > 2048 { return Err(field + " exceeds 2048 UTF-8 bytes"); }
     let bytes = utf8_encode(value); let size = byte_count(bytes);
     if size > 2048 { return Err(field + " exceeds 2048 UTF-8 bytes"); }
