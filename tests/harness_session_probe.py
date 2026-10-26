@@ -37,8 +37,8 @@ PROFILES = {"init": "harness-checkpoint-create", "save": "harness-checkpoint-sav
 
 def product_paths():
     paths = sorted((ROOT / "src").rglob("*.es"))
-    if len(paths) != 48 or any(path.name.startswith("model_session") for path in paths):
-        raise ValueError("actual complete isolated 48-module checkpoint product required")
+    if len(paths) != 52 or any(path.name.startswith("model_session") for path in paths):
+        raise ValueError("actual complete isolated 52-module product required")
     return paths + [ROOT / "etas.toml", ROOT / "etas.lock"]
 
 

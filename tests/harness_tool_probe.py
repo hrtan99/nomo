@@ -48,8 +48,8 @@ encoded, event, snapshot = tools.encoded, tools.event, tools.snapshot
 def product_paths():
     sources = sorted((ROOT / "src").rglob("*.es"))
     required = ["harness/harness_tool_contract.es", "harness/harness_model_tools.es", "entry/harness_model_tools_entry.es"]
-    if len(sources) != 48 or any(not (ROOT / "src/nomo" / name).is_file() for name in required):
-        raise ValueError("the actual complete 41-module tool-child product is required")
+    if len(sources) != 52 or any(not (ROOT / "src/nomo" / name).is_file() for name in required):
+        raise ValueError("the actual complete 52-module product is required")
     if any(path.name.startswith("model_session") for path in sources):
         raise ValueError("pending shared model_session source is not part of this product")
     return sources + [ROOT / "etas.toml", ROOT / "etas.lock"]

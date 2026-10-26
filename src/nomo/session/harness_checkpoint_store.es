@@ -5,6 +5,7 @@ import std.memory.{get_entry, prepare_put, operation_ref, commit, WriteCondition
 import nomo.session.harness_checkpoint.{Identity, Checkpoint, identity_error, validate, encode, decode};
 
 public type Record = { format: i32, phase: string, identity: Identity, body: string };
+public type Binding = { checkpoint: Checkpoint, version: MemoryVersion, body: string };
 alias Schema = MemoryRegion<{ Rows: Store<string, Record> }>;
 let Checkpoints = std.memory.region<Schema>(stable_id = "nomo-harness-checkpoint-v1", store = "harness-checkpoint");
 
@@ -78,7 +79,7 @@ public flow publish(saved: Checkpoint) -> Result<bool, string> ![Memory, Error<S
 }
 
 // Data only: this callgraph contains no model, File or Memory mutation action.
-public flow reload(identity: Identity) -> Result<Checkpoint, string> {
+public flow binding(identity: Identity) -> Result<Binding, string> {
     match owner(identity, "claimed") { Ok(_) => {} Err(error) => { return Err(error); } }
     let name = key(identity);
     let before = match read(name) { Some(value) => value, None() => { return Err("checkpoint missing; no completed save"); } };
@@ -89,5 +90,9 @@ public flow reload(identity: Identity) -> Result<Checkpoint, string> {
     let checked = match validate(saved, identity) { Ok(value) => value, Err(error) => { return Err(error); } };
     let after = match read(name) { Some(value) => value, None() => { return Err("checkpoint disappeared during show"); } };
     if after.version.opaque != before.version.opaque || after.value != row { return Err("checkpoint changed during show"); }
-    return Ok(checked);
+    return Ok(Binding { checkpoint = checked, version = before.version, body = row.body });
+}
+
+public flow reload(identity: Identity) -> Result<Checkpoint, string> {
+    return match binding(identity) { Ok(value) => Ok(value.checkpoint), Err(error) => Err(error) };
 }

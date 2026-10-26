@@ -17,6 +17,20 @@ import nomo.entry.harness_model_tools_chat.run as run_harness_model_tools_chat;
 import nomo.entry.harness_checkpoint_entry.run_init as checkpoint_init;
 import nomo.entry.harness_checkpoint_entry.run_save as checkpoint_save;
 import nomo.entry.harness_checkpoint_entry.run_show as checkpoint_show;
+import nomo.entry.harness_successor_entry.run_continue as checkpoint_continue;
+import nomo.entry.harness_successor_entry.run_show as successor_show;
+
+flow harness_checkpoint_continue(args: Array<string>) -> i32 {
+    let status = checkpoint_continue(args);
+    if status != 0 { abort("Nomo Harness checkpoint continue refused; see REFUSED output"); }
+    return 0;
+}
+
+flow harness_successor_show(args: Array<string>) -> i32 {
+    let status = successor_show(args);
+    if status != 0 { abort("Nomo Harness successor show refused; see REFUSED output"); }
+    return 0;
+}
 
 flow harness_checkpoint_init(args: Array<string>) -> i32 {
     let status = checkpoint_init(args);
