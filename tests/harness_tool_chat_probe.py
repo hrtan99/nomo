@@ -34,7 +34,7 @@ encoded, event = once.encoded, once.event
 
 def product_paths():
     sources = sorted((ROOT / "src").rglob("*.es"))
-    if len(sources) != 54 or any(path.name.startswith("model_session") for path in sources):
+    if len(sources) != 55 or any(path.name.startswith("model_session") for path in sources):
         raise ValueError("the complete isolated recursive tool-chat product is required")
     return sources + [ROOT / "etas.toml", ROOT / "etas.lock"]
 

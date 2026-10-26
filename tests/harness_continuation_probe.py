@@ -40,8 +40,8 @@ LEDGER_NAMES = ["steps", "calls", "tokens", "tools", "scan"]
 
 def product_paths():
     sources = sorted((ROOT / "src").rglob("*.es"))
-    if len(sources) != 54 or any(value.name.startswith("model_session") for value in sources):
-        raise ValueError("actual complete isolated 54-module continuation product required")
+    if len(sources) != 55 or any(value.name.startswith("model_session") for value in sources):
+        raise ValueError("actual complete isolated 55-module continuation product required")
     return sources + [ROOT / "etas.toml", ROOT / "etas.lock"]
 
 
