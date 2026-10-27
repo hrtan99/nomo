@@ -5,7 +5,7 @@ import std.collections.len as count;
 import std.json.{JsonValue, parse, stringify};
 import std.agent.message.Message;
 import nomo.core.text.printable;
-import nomo.harness.model_plan_diagnostic.read_plan_error;
+import nomo.harness.model_plan_diagnostic.{read_plan_error, response_error};
 
 public type Context = { phase: string, request: string, task: string, result: string };
 public type Ledger = { steps: i32, calls: i32, tokens: i32 };
@@ -72,6 +72,13 @@ public flow decode_read_plan(raw: string) -> Result<string, string> {
     if fields[0] != "delegate" { return Err(read_plan_error(raw, "verb")); }
     if !bounded(fields[1], 128) { return Err(read_plan_error(raw, "task")); }
     return Ok(fields[1]);
+}
+
+public flow read_aggregate_error(raw: string) -> string {
+    if len(raw) == 0 || len(raw) > 512 { return response_error(raw, "read-aggregate", "limit", 512); }
+    if !printable(raw) { return response_error(raw, "read-aggregate", "control", 512); }
+    if trim(raw) == "" { return response_error(raw, "read-aggregate", "summary", 512); }
+    return "";
 }
 
 // Check the complete Prompt.data encoding, not just its unescaped field values.

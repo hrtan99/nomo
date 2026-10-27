@@ -15,7 +15,8 @@ from normal_graph_identity import verify_cli
 ROOT = Path(__file__).resolve().parent.parent
 FIXTURE = ROOT/'tests/fixtures/harness_edit001/contract_probe.es'
 MODULES = ['core/text.es', 'tools/path_policy.es', 'tools/edit_proposal.es', 'tools/edit_encoding.es',
-           'session/edit_operation.es', 'harness/harness_edit_contract.es', 'cli/harness_edit_args.es']
+           'session/edit_operation.es', 'harness/harness_edit_contract.es', 'harness/model_plan_diagnostic.es',
+           'cli/harness_edit_args.es']
 wire = lambda value: json.dumps(value, ensure_ascii=False, separators=(',', ':'))
 sha = lambda value: hashlib.sha256(value.encode()).hexdigest()
 
@@ -89,7 +90,7 @@ def main():
     if args.prepare_only: return
     try:
         cli = verify_cli()
-        for label, argv, expected in [('check', [cli, 'check', '--all', project], 'checked 8 files\n'),
+        for label, argv, expected in [('check', [cli, 'check', '--all', project], 'checked 9 files\n'),
             ('effects', [cli, 'effects', project, '--flow', 'pure_probe'], None),
             ('observe', [cli, 'run', project, '--flow', 'observe', '--allow-effects'], ''.join('PASS '+label+'\n' for label, _ in checks))]:
             item = dict(label=label, command=list(map(str, argv))); result['commands'].append(item); save()

@@ -5,6 +5,7 @@ import std.collections.len as count;
 import std.json.{JsonValue, parse, stringify};
 import std.agent.message.Message;
 import nomo.core.text.printable;
+import nomo.harness.model_plan_diagnostic.response_error;
 import nomo.tools.path_policy.valid_path;
 import nomo.core.conversation.{Event, State, fresh, charge};
 
@@ -50,8 +51,8 @@ flow selected_error(names: Array<string>, allowed: Array<string>) -> string {
 
 // Bound the raw allocation and reject nested/object/scalar JSON before parsing.
 // JSON parsing below still validates commas, escapes and complete consumption.
-flow framed(raw: string) -> bool {
-    if len(raw) == 0 || len(raw) > 1152 { return false; }
+flow frame_error(raw: string) -> string {
+    if len(raw) == 0 || len(raw) > 1152 { return "limit"; }
     var opened = false;
     var closed = false;
     var quoted = false;
@@ -59,27 +60,29 @@ flow framed(raw: string) -> bool {
     var leaves: usize = 0;
     let slash = split("\\/", "")[1];
     for character in split(raw, "") limit Iterations(1154) {
-        if character != "" && !printable(character) { return false; }
+        if character != "" && !printable(character) { return "control"; }
         if quoted {
             if escaped { escaped = false; }
             else if character == slash { escaped = true; }
             else if character == "\"" { quoted = false; }
         } else if character == "" || character == " " {
         } else if character == "[" {
-            if opened || closed { return false; }
+            if opened || closed { return "shape"; }
             opened = true;
         } else if character == "]" {
-            if !opened || closed { return false; }
+            if !opened || closed { return "frame"; }
             closed = true;
         } else if character == "\"" {
-            if !opened || closed { return false; }
+            if !opened || closed { return "frame"; }
             leaves = leaves + 1;
-            if leaves > 4 { return false; }
+            if leaves > 4 { return "arity"; }
             quoted = true;
-        } else if character != "," || !opened || closed { return false; }
+        } else if character != "," || !opened || closed { return "frame"; }
     }
-    return opened && closed && !quoted;
+    return if opened && closed && !quoted { "" } else { "frame" };
 }
+
+flow framed(raw: string) -> bool { return frame_error(raw) == ""; }
 
 public flow decode_reply(raw: string, allowed: Array<string>, final_only: bool) -> Result<Action, string> {
     let invalid = allowed_error(allowed);
@@ -110,6 +113,37 @@ public flow decode_reply(raw: string, allowed: Array<string>, final_only: bool) 
     let selected = selected_error(files, allowed);
     if selected != "" { return Err(selected); }
     let action = Action { operation = fields[0], files = files, literal = literal, text = "" };
+    return Ok(action);
+}
+
+flow work_category(raw: string, error: string) -> string {
+    if error == "invalid action JSON" { return "json"; }
+    if error == "action fields must be strings" { return "shape"; }
+    if error == "invalid action field count" { return "arity"; }
+    if error == "invalid bounded final answer" { return "answer"; }
+    if error == "second response must be final" { return "verb"; }
+    if error == "tool action exceeds 384 raw characters" { return "limit"; }
+    if error == "invalid search literal" { return "literal"; }
+    if error == "unsupported action or arity" {
+        let parsed = match parse(raw) { Ok(value) => value, Err(_) => { return "json"; } };
+        let message = Message.new(parsed); let converted: Option<Message<Array<string>>> = message.cast<Array<string>>();
+        let fields = match converted { Some(value) => value.body, None() => { return "shape"; } };
+        return if fields[0] == "read" || fields[0] == "search" { "arity" } else { "verb" };
+    }
+    return "files";
+}
+// The v2 work intersection requires a tool first and a <=256-character result.
+// Legacy decode_reply and its history/evidence revalidation remain strict.
+public flow decode_work_reply(raw: string, allowed: Array<string>, final_only: bool) -> Result<Action, string> {
+    let phase = if final_only { "read-child-final" } else { "read-child-action" };
+    let maximum: usize = if final_only { 1152 } else { 384 };
+    if len(raw) == 0 || len(raw) > maximum { return Err(response_error(raw, phase, "limit", maximum)); }
+    let frame = frame_error(raw); if frame != "" { return Err(response_error(raw, phase, frame, maximum)); }
+    let action = match decode_reply(raw, allowed, final_only) {
+        Ok(value) => value, Err(error) => { return Err(response_error(raw, phase, work_category(raw, error), maximum)); }
+    };
+    if !final_only && action.operation == "final" { return Err(response_error(raw, phase, "verb", maximum)); }
+    if final_only && len(action.text) > 256 { return Err(response_error(raw, phase, "answer", maximum)); }
     return Ok(action);
 }
 

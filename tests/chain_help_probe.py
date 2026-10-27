@@ -16,7 +16,8 @@ from normal_graph_identity import verify_cli
 ROOT = Path(__file__).resolve().parent.parent
 FIXTURE = ROOT/'tests/fixtures/local_tryout001/help_probe.es'
 MODULES = ['core/text.es', 'core/conversation.es', 'tools/path_policy.es', 'session/edit_operation.es',
-           'model/model_tool_contract.es', 'entry/work_chain_help.es']
+           'model/model_tool_contract.es', 'harness/model_plan_diagnostic.es', 'tools/edit_encoding.es',
+           'entry/work_chain_help.es']
 FIRST = 'Replace old with the color from demo/context.txt'
 SELECTORS = ["parent'$HOME; $(false) `printf NEVER`", 'owned "$HOME" && false', 'a/b.txt']
 

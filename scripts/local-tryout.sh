@@ -4,7 +4,7 @@ umask 077
 
 readonly project_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
 if [[ $# -lt 1 ]]; then
-    echo 'Usage: local-tryout.sh help | prepare NEW_DIRECTORY | new|continue|inspect-new|show DIRECTORY [native arguments]' >&2
+    echo 'Usage: local-tryout.sh help | prepare NEW_DIRECTORY | new|continue|inspect-new|observe-new|observe-continue|show DIRECTORY [native arguments]' >&2
     exit 64
 fi
 readonly action="$1"
@@ -17,9 +17,11 @@ case "$action" in
     help) flow=chain_help; profile=chain-help ;;
     new) flow=chain_new; profile=work-chain ;;
     inspect-new) flow=chain_inspect; profile=work-chain ;;
+    observe-new) flow=chain_observe_new; profile=work-chain ;;
+    observe-continue) flow=chain_observe_continue; profile=work-chain ;;
     continue) flow=chain_continue; profile=work-chain ;;
     show) flow=chain_show; profile=work-chain-show ;;
-    *) echo 'Expected help, prepare, new, continue, inspect-new or show.' >&2; exit 64 ;;
+    *) echo 'Expected help, prepare, new, continue, inspect-new, observe-new, observe-continue or show.' >&2; exit 64 ;;
 esac
 
 compose=(docker compose --env-file /dev/null --file "$project_root/compose.yaml"
@@ -46,7 +48,7 @@ if [[ "$action" != help ]]; then
         native+=(--trace-out "/state/$trace_name")
     fi
 fi
-if [[ "$action" == new || "$action" == continue || "$action" == inspect-new ]]; then
+if [[ "$action" == new || "$action" == continue || "$action" == inspect-new || "$action" == observe-new || "$action" == observe-continue ]]; then
     compose+=(--file "$project_root/config/local-tryout-model-compose.yaml")
 else
     compose+=(--file "$project_root/config/local-tryout-readonly-compose.yaml")

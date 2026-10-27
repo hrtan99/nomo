@@ -4,11 +4,11 @@ import std.io.println;
 import std.text.to_string_i32;
 import nomo.core.conversation.{Event, State, add};
 import nomo.model.model_tool_contract.{Session, fresh_loop, default_limits, question_error, allowed_error};
-import nomo.agent.model_tool.{LoopTurn, run_loop, run_work_loop};
-import nomo.harness.harness_model_contract.{bounded, decode_plan, decode_read_plan};
+import nomo.agent.model_tool.{LoopTurn, run_loop, run_work_loop, run_chain_work_loop};
+import nomo.harness.harness_model_contract.{bounded, decode_plan, decode_read_plan, read_aggregate_error};
 import nomo.harness.harness_tool_contract.{Context, Ledger, Observed, fresh, bump, settle, inspect, context_error};
 import nomo.harness.harness_work_model.read_main;
-import nomo.harness.model_plan_diagnostic.returned_text;
+import nomo.harness.model_plan_diagnostic.{returned_text, response_text};
 
 public type Report = { request: string, task: string, allowed: Array<string>, child: Session,
     status: i32, observed: Observed, answer: string, ledger: Ledger };
@@ -64,6 +64,11 @@ flow work_child_turn(task: string, allowed: Array<string>, selected: State) -> L
     return run_work_loop(task, allowed, default_limits(), seeded);
 }
 
+flow chain_child_turn(task: string, allowed: Array<string>, selected: State, inspect_all: bool) -> LoopTurn {
+    let seeded = Session { history = selected, calls = 0, tokens = 0, tools = 0, scan = 0 };
+    return run_chain_work_loop(task, allowed, default_limits(), seeded, inspect_all);
+}
+
 flow failed(state: Ledger, error: string, resolved: bool) -> Result<Report, Failure> {
     return Err(Failure { state = state, error = error, resolved = resolved });
 }
@@ -71,7 +76,7 @@ flow failed(state: Ledger, error: string, resolved: bool) -> Result<Report, Fail
 // A caller owns the supplied read reservation and receives typed selected data.
 // Native aborts do not become resolved source returns or a fresh reservation.
 flow run_context(request: string, allowed: Array<string>, initial: Ledger,
-    main_infer: (Context) -> string, child_execute: (string, Array<string>, State) -> LoopTurn, prefix: string, require_tool: bool, compatible_plan: bool, inspect_plan: bool) -> Result<Report, Failure> {
+    main_infer: (Context) -> string, child_execute: (string, Array<string>, State) -> LoopTurn, prefix: string, require_tool: bool, compatible_plan: bool, inspect_plan: bool, inspect_all: bool) -> Result<Report, Failure> {
     var state = initial;
     let invalid = question_error(request); if invalid != "" { return failed(state, invalid, true); }
     let invalid_allowed = allowed_error(allowed); if invalid_allowed != "" { return failed(state, invalid_allowed, true); }
@@ -81,6 +86,7 @@ flow run_context(request: string, allowed: Array<string>, initial: Ledger,
     stage("plan", state, prefix);
     let raw = main_infer(plan);
     if inspect_plan { println(returned_text(raw, "lab-qwen-")); }
+    else if inspect_all { println(response_text(raw, "read-plan", "lab-qwen-", 384)); }
     let decoded = if compatible_plan { decode_read_plan(raw) } else { decode_plan(raw) };
     let task = match decoded { Ok(value) => value, Err(error) => { return failed(state, error, true); } };
     if inspect_plan { return failed(state, "read-plan inspection complete; no child, File or edit attempted", true); }
@@ -110,7 +116,11 @@ flow run_context(request: string, allowed: Array<string>, initial: Ledger,
     state = match bump(state, true) { Ok(value) => value, Err(error) => { return failed(state, error, true); } };
     stage("aggregate", state, prefix);
     let answer = main_infer(aggregate);
-    if !bounded(answer, 512) { return failed(state, "invalid bounded final answer", true); }
+    if inspect_all { println(response_text(answer, "read-aggregate", "lab-qwen-", 512)); }
+    var invalid_answer = "";
+    if compatible_plan { invalid_answer = read_aggregate_error(answer); }
+    else if !bounded(answer, 512) { invalid_answer = "invalid bounded final answer"; }
+    if invalid_answer != "" { return failed(state, invalid_answer, true); }
     return Ok(Report { request = request, task = task, allowed = allowed, child = child.state,
         status = child.status, observed = observed, answer = answer, ledger = state });
 }
@@ -118,7 +128,7 @@ flow run_context(request: string, allowed: Array<string>, initial: Ledger,
 public flow run(request: string, allowed: Array<string>) -> i32 {
     let main_infer = (context: Context) => MainModel.run(context);
     let child_execute = (task: string, files: Array<string>, selected: State) => child_turn(task, files, selected);
-    let report = match run_context(request, allowed, fresh(), main_infer, child_execute, "", false, false, false) {
+    let report = match run_context(request, allowed, fresh(), main_infer, child_execute, "", false, false, false, false) {
         Ok(value) => value,
         Err(failure) => { if !failure.resolved { return unresolved(failure.error); } return refused(failure.state, failure.error); }
     };
@@ -130,12 +140,12 @@ public flow run(request: string, allowed: Array<string>) -> i32 {
 public flow run_work_context(request: string, allowed: Array<string>, initial: Ledger) -> Result<Report, Failure> {
     let main_infer = (context: Context) => read_main(context);
     let child_execute = (task: string, files: Array<string>, selected: State) => work_child_turn(task, files, selected);
-    return run_context(request, allowed, initial, main_infer, child_execute, "read-", true, false, false);
+    return run_context(request, allowed, initial, main_infer, child_execute, "read-", true, false, false, false);
 }
 
 // Current v2 callers opt into JSON structural whitespace; legacy callers stay strict.
-public flow run_chain_work_context(request: string, allowed: Array<string>, initial: Ledger, inspect_plan: bool) -> Result<Report, Failure> {
+public flow run_chain_work_context(request: string, allowed: Array<string>, initial: Ledger, inspect_plan: bool, inspect_all: bool) -> Result<Report, Failure> {
     let main_infer = (context: Context) => read_main(context);
-    let child_execute = (task: string, files: Array<string>, selected: State) => work_child_turn(task, files, selected);
-    return run_context(request, allowed, initial, main_infer, child_execute, "read-", true, true, inspect_plan);
+    let child_execute = (task: string, files: Array<string>, selected: State) => chain_child_turn(task, files, selected, inspect_all);
+    return run_context(request, allowed, initial, main_infer, child_execute, "read-", true, true, inspect_plan, inspect_all);
 }

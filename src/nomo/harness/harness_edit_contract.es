@@ -1,6 +1,6 @@
 module nomo.harness.harness_edit_contract;
 
-import std.text.{len, split, trim};
+import std.text.{len, split, trim, contains};
 import std.collections.len as count;
 import std.bytes.len as byte_count;
 import std.codec.text.utf8_encode;
@@ -8,6 +8,7 @@ import std.json.{JsonValue, parse, stringify};
 import std.agent.message.Message;
 import nomo.tools.edit_proposal.text_bytes;
 import nomo.tools.edit_encoding.digest;
+import nomo.harness.model_plan_diagnostic.response_error;
 import nomo.session.edit_operation.{Binding, selector_error, binding_error};
 
 public type Child = { target: string, replacement: string };
@@ -59,10 +60,11 @@ public flow text_error(text: string, field: string) -> string {
     return "";
 }
 
-// Reject nested/non-string shapes before parsing. JSON parsing then validates
-// separators/escapes; UTF-8 byte admission precedes the bounded scalar scan.
-flow framed(raw: string, maximum: usize, fields: usize) -> bool {
-    if len(raw) == 0 || len(raw) > maximum || byte_count(utf8_encode(raw)) > maximum { return false; }
+// The same bounded scanner serves legacy and current-v2 decoding. Diagnostic
+// classification changes no accepted wire: outside-string JSON whitespace was
+// already supported, while quoted data is left for the complete JSON parser.
+flow frame_error(raw: string, maximum: usize, fields: usize, diagnostic: bool) -> string {
+    if len(raw) == 0 || len(raw) > maximum || byte_count(utf8_encode(raw)) > maximum { return "limit"; }
     var opened = false; var closed = false; var quoted = false; var escaped = false;
     var leaves: usize = 0; let slash = split("\\/", "")[1];
     for character in split(raw, "") limit Iterations(32770) {
@@ -72,39 +74,56 @@ flow framed(raw: string, maximum: usize, fields: usize) -> bool {
             else if character == "\"" { quoted = false; }
         } else if character == "" || character == " " || character == "\t" || character == "\r" || character == "\n" {
         } else if character == "[" {
-            if opened || closed { return false; } opened = true;
+            if opened || closed { return if diagnostic && !closed { "shape" } else { "frame" }; } opened = true;
         } else if character == "]" {
-            if !opened || closed { return false; } closed = true;
+            if !opened || closed { return "frame"; } closed = true;
         } else if character == "\"" {
-            if !opened || closed { return false; }
-            leaves = leaves + 1; if leaves > fields { return false; } quoted = true;
-        } else if character != "," || !opened || closed { return false; }
+            if !opened || closed { return if diagnostic && !closed { "shape" } else { "frame" }; }
+            leaves = leaves + 1; if !diagnostic && leaves > fields { return "frame"; } quoted = true;
+        } else if character != "," || !opened || closed {
+            if diagnostic && !closed && contains("{0123456789-tnf", character) { return "shape"; }
+            return "frame";
+        }
     }
-    return opened && closed && !quoted && leaves == fields;
+    if !opened || !closed || quoted { return "frame"; }
+    if !diagnostic && leaves != fields { return "frame"; }
+    return "";
 }
-
-public flow decode_plan(raw: string) -> Result<string, string> {
-    if !framed(raw, 4096, 2) { return Err("expected bounded flat delegation JSON"); }
-    let parsed = match parse(raw) { Ok(value) => value, Err(_) => { return Err("invalid delegation JSON"); } };
+flow decoded(raw: string, maximum: usize, expected: usize, diagnostic: bool) -> Result<Array<string>, string> {
+    let phase = if expected == 2 { "edit-plan" } else { "edit-child" };
+    let legacy = if expected == 2 { "delegation" } else { "edit" };
+    let framed = frame_error(raw, maximum, expected, diagnostic);
+    if framed != "" { return Err(if diagnostic { response_error(raw, phase, framed, maximum) } else { "expected bounded flat " + legacy + " JSON" }); }
+    let parsed = match parse(raw) { Ok(value) => value, Err(_) => { return Err(if diagnostic { response_error(raw, phase, "json", maximum) } else { "invalid " + legacy + " JSON" }); } };
     let message = Message.new(parsed);
     let conversion: Option<Message<Array<string>>> = message.cast<Array<string>>();
-    let fields = match conversion { Some(value) => value.body, None() => { return Err("delegation fields must be strings"); } };
-    if count(fields) != 2 || fields[0] != "delegate" { return Err("unsupported delegation verb or arity"); }
-    let invalid = text_error(fields[1], "delegated task"); if invalid != "" { return Err(invalid); }
+    let fields = match conversion { Some(value) => value.body, None() => { return Err(if diagnostic { response_error(raw, phase, "shape", maximum) } else { legacy + " fields must be strings" }); } };
+    let verb = if expected == 2 { "delegate" } else { "edit" };
+    if count(fields) != expected { return Err(if diagnostic { response_error(raw, phase, "arity", maximum) } else { "unsupported " + legacy + " verb or arity" }); }
+    if fields[0] != verb { return Err(if diagnostic { response_error(raw, phase, "verb", maximum) } else { "unsupported " + legacy + " verb or arity" }); }
+    return Ok(fields);
+}
+flow plan(raw: string, diagnostic: bool) -> Result<string, string> {
+    let fields = match decoded(raw, 4096, 2, diagnostic) { Ok(value) => value, Err(error) => { return Err(error); } };
+    let invalid = text_error(fields[1], "delegated task");
+    if invalid != "" { return Err(if diagnostic { response_error(raw, "edit-plan", "task", 4096) } else { invalid }); }
     return Ok(fields[1]);
 }
-
-public flow decode_edit(raw: string) -> Result<Child, string> {
-    if !framed(raw, 32768, 3) { return Err("expected bounded flat edit JSON"); }
-    let parsed = match parse(raw) { Ok(value) => value, Err(_) => { return Err("invalid edit JSON"); } };
-    let message = Message.new(parsed);
-    let conversion: Option<Message<Array<string>>> = message.cast<Array<string>>();
-    let fields = match conversion { Some(value) => value.body, None() => { return Err("edit fields must be strings"); } };
-    if count(fields) != 3 || fields[0] != "edit" { return Err("unsupported edit verb or arity"); }
-    let size = match text_bytes(fields[1], "target") { Ok(value) => value, Err(error) => { return Err(error); } };
-    match text_bytes(fields[2], "replacement") { Ok(_) => {} Err(error) => { return Err(error); } }
-    if size == 0 { return Err("target must not be empty"); }
+flow edit(raw: string, diagnostic: bool) -> Result<Child, string> {
+    let fields = match decoded(raw, 32768, 3, diagnostic) { Ok(value) => value, Err(error) => { return Err(error); } };
+    let size = match text_bytes(fields[1], "target") { Ok(value) => value, Err(error) => { return Err(if diagnostic { response_error(raw, "edit-child", "target", 32768) } else { error }); } };
+    match text_bytes(fields[2], "replacement") { Ok(_) => {} Err(error) => { return Err(if diagnostic { response_error(raw, "edit-child", "replacement", 32768) } else { error }); } }
+    if size == 0 { return Err(if diagnostic { response_error(raw, "edit-child", "target", 32768) } else { "target must not be empty" }); }
     return Ok(Child { target = fields[1], replacement = fields[2] });
+}
+public flow decode_plan(raw: string) -> Result<string, string> { return plan(raw, false); }
+public flow decode_edit(raw: string) -> Result<Child, string> { return edit(raw, false); }
+public flow decode_work_plan(raw: string) -> Result<string, string> { return plan(raw, true); }
+public flow decode_work_edit(raw: string) -> Result<Child, string> { return edit(raw, true); }
+public flow work_summary_error(raw: string) -> string {
+    if len(raw) == 0 || len(raw) > 512 || byte_count(utf8_encode(raw)) > 512 { return response_error(raw, "edit-aggregate", "limit", 512); }
+    let invalid = text_error(raw, "final answer");
+    return if invalid == "" { "" } else { response_error(raw, "edit-aggregate", "summary", 512) };
 }
 
 // All fields remain literal complete data. This validates shape and binding;

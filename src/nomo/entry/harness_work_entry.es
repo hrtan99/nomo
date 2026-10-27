@@ -5,12 +5,13 @@ import std.io.IOError as ConsoleError;
 import std.fs.IOError as FileError;
 import std.effects.Fs;
 import std.text.to_string_i32;
+import nomo.harness.model_plan_diagnostic.{response_error, response_text};
 import nomo.cli.harness_work_args.{Work, parse};
 import nomo.harness.harness_work_contract.{Context, Evidence, Ledger, fresh, ledger_error, bump_edit, native_tokens, collect, finish_evidence, context_error};
 import nomo.harness.harness_model_tools.{run_work_context, run_chain_work_context};
 import nomo.harness.harness_work_model.{edit_plan, edit_child, aggregate};
 import nomo.harness.work_chain_model.{ParentFacts, plan as chain_plan, child as chain_child, aggregate as chain_aggregate};
-import nomo.harness.harness_edit_contract.{decode_plan, decode_edit, text_error};
+import nomo.harness.harness_edit_contract.{decode_plan, decode_edit, text_error, decode_work_plan, decode_work_edit, work_summary_error};
 import nomo.tools.workspace.ReadOnlyRoot;
 import nomo.tools.edit_file.{EditableRoot, Prepared, read_original, prepare_original};
 import nomo.session.edit_operation_store.available;
@@ -43,12 +44,12 @@ public type Summary = { answer: string, state: Ledger };
 flow failed(state: Ledger, error: string) -> Result<Pending, Failure> { return Err(Failure { state = state, error = error }); }
 
 // Callers admit the unused edit slot before this shared Model/File preparation.
-flow prepare(input: Work, plan_infer: (Context) -> string, child_infer: (Context) -> string, original_error: (string) -> string, stage_log: (string, Ledger) -> unit, chain_read: bool, inspect_plan: bool) -> Result<Pending, Failure> {
+flow prepare(input: Work, plan_infer: (Context) -> string, child_infer: (Context) -> string, original_error: (string) -> string, stage_log: (string, Ledger) -> unit, chain_read: bool, inspect_plan: bool, inspect_all: bool) -> Result<Pending, Failure> {
     var state = fresh();
     let selected = Selector { id = input.edit.id, workspace = input.edit.workspace, path = input.edit.path };
     let invalid = ledger_error(state); if invalid != "" { return failed(state, invalid); }
     println("RESERVATION work13 steps/7 calls/47104 generation/196608 native; edit tail6 steps/3 calls/38912 generation/163840 native; one read/search and one atomic maximum");
-    let read_result = if chain_read { run_chain_work_context(input.edit.request, input.allowed, state.read, inspect_plan) }
+    let read_result = if chain_read { run_chain_work_context(input.edit.request, input.allowed, state.read, inspect_plan, inspect_all) }
         else { run_work_context(input.edit.request, input.allowed, state.read) };
     let read = match read_result {
         Ok(value) => value,
@@ -69,15 +70,21 @@ flow prepare(input: Work, plan_infer: (Context) -> string, child_infer: (Context
     let error = context_error(plan); if error != "" { return failed(state, error); }
     state = match bump_edit(state, true) { Ok(value) => value, Err(error) => { return failed(state, error); } };
     stage_log("edit-plan", state);
-    let task = match decode_plan(plan_infer(plan)) { Ok(value) => value, Err(error) => { return failed(state, error); } };
+    let plan_raw = plan_infer(plan);
+    if inspect_all { println(response_text(plan_raw, "edit-plan", "lab-qwen-", 4096)); }
+    let decoded_plan = if chain_read { decode_work_plan(plan_raw) } else { decode_plan(plan_raw) };
+    let task = match decoded_plan { Ok(value) => value, Err(error) => { return failed(state, error); } };
     state = match bump_edit(state, false) { Ok(value) => value, Err(error) => { return failed(state, error); } };
     display("EVENT main -> edit-child request ", task);
     let delegated = Context { edit = context("child", selected, input.edit.request, task, before), evidence = evidence };
     let child_error = context_error(delegated); if child_error != "" { return failed(state, child_error); }
     state = match bump_edit(state, true) { Ok(value) => value, Err(error) => { return failed(state, error); } };
     stage_log("edit-child", state);
-    let request = match decode_edit(child_infer(delegated)) { Ok(value) => value, Err(error) => { return failed(state, error); } };
-    let prepared = match prepare_original(selected.path, before, request.target, request.replacement) { Ok(value) => value, Err(error) => { return failed(state, error); } };
+    let edit_raw = child_infer(delegated);
+    if inspect_all { println(response_text(edit_raw, "edit-child", "lab-qwen-", 32768)); }
+    let decoded_edit = if chain_read { decode_work_edit(edit_raw) } else { decode_edit(edit_raw) };
+    let request = match decoded_edit { Ok(value) => value, Err(error) => { return failed(state, error); } };
+    let prepared = match prepare_original(selected.path, before, request.target, request.replacement) { Ok(value) => value, Err(error) => { return failed(state, if chain_read { response_error(edit_raw, "edit-child", "proposal", 32768) } else { error }); } };
     state = match bump_edit(state, false) { Ok(value) => value, Err(error) => { return failed(state, error); } };
     return Ok(Pending { selected = selected, prepared = prepared, evidence = evidence, request = input.edit.request, task = task, state = state });
 }
@@ -86,13 +93,13 @@ public flow prepare_work(input: Work) -> Result<Pending, Failure> {
     let plan = (value: Context) => edit_plan(value); let child = (value: Context) => edit_child(value);
     let original = (value: string) => "";
     let log = (name: string, state: Ledger) => stage(name, state);
-    return prepare(input, plan, child, original, log, false, false);
+    return prepare(input, plan, child, original, log, false, false, false);
 }
-public flow prepare_chain_work(input: Work, parent: Array<ParentFacts>, expected: Option<string>, inspect_plan: bool) -> Result<Pending, Failure> {
+public flow prepare_chain_work(input: Work, parent: Array<ParentFacts>, expected: Option<string>, inspect_plan: bool, inspect_all: bool) -> Result<Pending, Failure> {
     let plan = (value: Context) => chain_plan(value, parent); let child = (value: Context) => chain_child(value, parent);
     let original = (value: string) => match expected { Some(before) => if value == before { "" } else { "current original differs from confirmed parent result" }, None() => "" };
     let log = (name: string, state: Ledger) => chain_stage(name, state);
-    return prepare(input, plan, child, original, log, true, inspect_plan);
+    return prepare(input, plan, child, original, log, true, inspect_plan, inspect_all);
 }
 
 public flow completed_context_work(pending: Pending, outcome: Confirmed) -> Result<Completed, Failure> {
@@ -107,20 +114,21 @@ public flow finish_edit(pending: Pending, outcome: Confirmed) -> Result<Complete
     recorded(pending.selected); return completed_context_work(pending, outcome);
 }
 
-flow finish_summary(completed: Completed, infer: (Context) -> string, stage_log: (string, Ledger) -> unit) -> Result<Summary, Failure> {
+flow finish_summary(completed: Completed, infer: (Context) -> string, stage_log: (string, Ledger) -> unit, work: bool, inspect_all: bool) -> Result<Summary, Failure> {
     let state = match bump_edit(completed.state, true) { Ok(value) => value,
         Err(error) => { return Err(Failure { state = completed.state, error = "edit completed; " + error }); } };
     stage_log("edit-aggregate", state);
     let answer = infer(completed.context);
-    let error = text_error(answer, "final answer"); if error != "" { return Err(Failure { state = state, error = "edit completed; " + error }); }
+    if inspect_all { println(response_text(answer, "edit-aggregate", "lab-qwen-", 512)); }
+    let error = if work { work_summary_error(answer) } else { text_error(answer, "final answer") }; if error != "" { return Err(Failure { state = state, error = "edit completed; " + error }); }
     return Ok(Summary { answer = answer, state = state });
 }
 
 public flow summarize(completed: Completed) -> Result<Summary, Failure> {
-    let infer = (value: Context) => aggregate(value); let log = (name: string, state: Ledger) => stage(name, state); return finish_summary(completed, infer, log);
+    let infer = (value: Context) => aggregate(value); let log = (name: string, state: Ledger) => stage(name, state); return finish_summary(completed, infer, log, false, false);
 }
-public flow summarize_chain(completed: Completed, parent: Array<ParentFacts>) -> Result<Summary, Failure> {
-    let infer = (value: Context) => chain_aggregate(value, parent); let log = (name: string, state: Ledger) => chain_stage(name, state); return finish_summary(completed, infer, log);
+public flow summarize_chain(completed: Completed, parent: Array<ParentFacts>, inspect_all: bool) -> Result<Summary, Failure> {
+    let infer = (value: Context) => chain_aggregate(value, parent); let log = (name: string, state: Ledger) => chain_stage(name, state); return finish_summary(completed, infer, log, true, inspect_all);
 }
 
 public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read<ReadOnlyRoot>, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {
