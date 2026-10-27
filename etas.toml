@@ -388,3 +388,68 @@ name = "nomo-work-show"
 module = "nomo.main"
 flow = "work_show"
 profile = "harness-work-show"
+
+[runtime.profiles.work-chain]
+boundary_policy = "nomo-work-chain"
+[runtime.profiles.work-chain.memory]
+backend = "sqlite"
+path = "edit.sqlite3"
+[runtime.profiles.work-chain.model]
+adapter = "omlx-openai"
+model = "qwen3.8-flash-next-ud-iq4_xs"
+base_url = "http://143.89.191.75:8095/v1"
+api_key_env = "NOMO_QWEN_SERVER_API_KEY"
+allow_private = true
+enable_thinking = false
+[runtime.profiles.work-chain.model.timeout]
+request_deadline_ms = 120000
+connect_timeout_ms = 2000
+[runtime.profiles.work-chain.model.retry]
+attempts = 1
+delay_ms = 0
+[runtime.profiles.work-chain.filesystem.regions."nomo.tools.workspace.ReadOnlyRoot"]
+root = "/work-context"
+read = true
+write = false
+delete = false
+[runtime.profiles.work-chain.filesystem.regions."nomo.tools.edit_file.EditableRoot"]
+root = "/edit-fixture"
+read = true
+write = true
+delete = false
+[runtime.profiles.work-chain.policy]
+mode = "local-static"
+rules = ["console=allow", "memory=allow", "model=allow", "approval=allow", "filesystem:Fs.stat=allow", "filesystem:Fs.read=allow", "filesystem:Fs.atomic_replace=allow", "filesystem:Fs.write=deny", "filesystem:HostFilesystem.delete=deny"]
+[runtime.profiles.work-chain.approval]
+mode = "prompt"
+
+
+
+[runtime.profiles.work-chain-show]
+boundary_policy = "nomo-work-chain-show"
+[runtime.profiles.work-chain-show.memory]
+backend = "sqlite"
+path = "file:edit.sqlite3?mode=rw"
+[runtime.profiles.work-chain-show.policy]
+mode = "local-static"
+rules = ["console=allow", "memory:Memory.read=allow", "memory:Memory.write=deny"]
+[runtime.profiles.work-chain-show.approval]
+mode = "deny"
+
+[[bin]]
+name = "nomo-chain-new"
+module = "nomo.main"
+flow = "chain_new"
+profile = "work-chain"
+
+[[bin]]
+name = "nomo-chain-continue"
+module = "nomo.main"
+flow = "chain_continue"
+profile = "work-chain"
+
+[[bin]]
+name = "nomo-chain-show"
+module = "nomo.main"
+flow = "chain_show"
+profile = "work-chain-show"

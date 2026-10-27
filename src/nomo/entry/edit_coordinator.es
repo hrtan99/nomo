@@ -27,7 +27,7 @@ flow preview(value: Prepared, selected: Binding) -> Result<string, string> {
 
 // Both callers admit an unused slot before reading the original. No caller may
 // infer completion from Console text or continue after an uncertain outcome.
-public flow execute(selector: Selector, prepared: Prepared) -> Result<Confirmed, string> ![Console, Memory, Approval, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {
+public flow confirm_current(selector: Selector, prepared: Prepared) -> Result<Binding, string> ![Console, Approval, Error<IndexError>, Error<ConsoleError>] {
     let invalid = selector_error(selector.id, selector.workspace, selector.path); if invalid != "" { return Err(invalid); }
     if selector.path != prepared.request.path || selector.path != prepared.proposal.path {
         return Err("edit selector differs from prepared request");
@@ -44,6 +44,11 @@ public flow execute(selector: Selector, prepared: Prepared) -> Result<Confirmed,
     if len(raw) > 32 { return Err("application confirmation denied; no intent or File write"); }
     let answer = lowercase(trim(raw));
     if answer != "y" && answer != "yes" { return Err("application confirmation denied; no intent or File write"); }
+    return Ok(selected);
+}
+
+public flow execute(selector: Selector, prepared: Prepared) -> Result<Confirmed, string> ![Console, Memory, Approval, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {
+    let selected = match confirm_current(selector, prepared) { Ok(value) => value, Err(error) => { return Err(error); } };
     let ticket = match begin(selected) { Ok(value) => value, Err(error) => { return Err(error); } };
     println("INTENT durable " + selector.id);
     match apply(prepared) { Ok(_) => {} Err(error) => { return Err(error); } }

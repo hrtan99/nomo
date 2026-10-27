@@ -46,8 +46,8 @@ resources, pressure = previous.resources, previous.pressure
 
 def product_paths():
     sources = sorted((ROOT / "src").rglob("*.es"))
-    if len(sources) != 71 or any(path.name.startswith("model_session") for path in sources):
-        raise ValueError("expected isolated actual 71-file product, not pending shared root")
+    if len(sources) != 83 or any(path.name.startswith("model_session") for path in sources):
+        raise ValueError("expected isolated actual 83-file product, not pending shared root")
     return sources + [ROOT / "etas.toml", ROOT / "etas.lock"]
 
 
