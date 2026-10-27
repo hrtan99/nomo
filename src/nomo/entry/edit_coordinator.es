@@ -5,34 +5,17 @@ import std.io.IOError as ConsoleError;
 import std.fs.IOError as FileError;
 import std.effects.Fs;
 import std.text.{trim, lowercase, len, to_string_usize};
-import std.bytes.len as byte_count;
-import std.codec.text.utf8_encode;
 import nomo.tools.edit_file.{EditableRoot, Prepared, apply};
 import nomo.tools.edit_proposal.validate;
-import nomo.tools.edit_encoding.{json, object, digest};
-import nomo.session.edit_operation.{Binding, binding_error, selector_error};
+import nomo.tools.edit_encoding.object;
+import nomo.tools.edit_binding.bind;
+import nomo.session.edit_operation.{Binding, selector_error};
 import nomo.session.edit_operation_store.{begin, complete};
 
 // The selected native Prompt adapter accepts this string -> bool payload.
 public effect Approval { action request(reason: string) -> bool; }
 public type Selector = { id: string, workspace: string, path: string };
 public type Confirmed = { binding: Binding, after: string };
-let REGION = "nomo.tools.edit_file.EditableRoot";
-
-flow binding(selector: Selector, value: Prepared) -> Result<Binding, string> {
-    let proposal = value.proposal;
-    let canonical = match json(["nomo-edit-request-v1", selector.id, selector.workspace, REGION, proposal.path,
-        proposal.before, value.request.target, value.request.replacement, proposal.after]) { Ok(item) => item, Err(error) => { return Err(error); } };
-    let before = match digest(proposal.before) { Ok(item) => item, Err(error) => { return Err(error); } };
-    let after = match digest(proposal.after) { Ok(item) => item, Err(error) => { return Err(error); } };
-    let request = match digest(canonical) { Ok(item) => item, Err(error) => { return Err(error); } };
-    let result = Binding { id = selector.id, workspace = selector.workspace, region = REGION, path = proposal.path,
-        request_digest = request, before_digest = before, after_digest = after,
-        before_bytes = byte_count(utf8_encode(proposal.before)), after_bytes = byte_count(utf8_encode(proposal.after)) };
-    let invalid = binding_error(result); if invalid != "" { return Err(invalid); }
-    return Ok(result);
-}
-
 flow preview(value: Prepared, selected: Binding) -> Result<string, string> {
     return object(["format", "id", "workspace", "region", "path", "before", "target", "replacement", "after",
         "before_bytes", "after_bytes", "before_digest", "after_digest", "request_digest"],
@@ -50,7 +33,7 @@ public flow execute(selector: Selector, prepared: Prepared) -> Result<Confirmed,
         return Err("edit selector differs from prepared request");
     }
     match validate(prepared.request, prepared.proposal) { Ok(_) => {} Err(error) => { return Err(error); } }
-    let selected = match binding(selector, prepared) { Ok(value) => value, Err(error) => { return Err(error); } };
+    let selected = match bind(selector.id, selector.workspace, selector.path, prepared) { Ok(value) => value, Err(error) => { return Err(error); } };
     let shown = match preview(prepared, selected) { Ok(value) => value, Err(error) => { return Err(error); } };
     println("PREVIEW " + shown);
     println("CONFIRM Native gate requires yes; then confirm this request with y/yes.");

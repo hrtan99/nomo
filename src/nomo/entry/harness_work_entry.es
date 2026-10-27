@@ -5,23 +5,23 @@ import std.io.IOError as ConsoleError;
 import std.fs.IOError as FileError;
 import std.effects.Fs;
 import std.text.to_string_i32;
-import nomo.cli.harness_work_args.parse;
-import nomo.harness.harness_work_contract.{Context, Ledger, fresh, ledger_error, bump_edit, native_tokens, collect, finish_evidence, context_error};
+import nomo.cli.harness_work_args.{Work, parse};
+import nomo.harness.harness_work_contract.{Context, Evidence, Ledger, fresh, ledger_error, bump_edit, native_tokens, collect, finish_evidence, context_error};
 import nomo.harness.harness_model_tools.run_work_context;
 import nomo.harness.harness_work_model.{edit_plan, edit_child, aggregate};
 import nomo.harness.harness_edit_contract.{decode_plan, decode_edit, text_error};
 import nomo.tools.workspace.ReadOnlyRoot;
-import nomo.tools.edit_file.{EditableRoot, read_original, prepare_original};
+import nomo.tools.edit_file.{EditableRoot, Prepared, read_original, prepare_original};
 import nomo.session.edit_operation_store.available;
-import nomo.entry.edit_coordinator.{Approval, Selector, execute};
+import nomo.entry.edit_coordinator.{Approval, Selector, Confirmed, execute};
 import nomo.entry.edit_context.{context, completed_context, recorded, display};
 
-flow ledger(state: Ledger) -> unit {
+public flow ledger(state: Ledger) -> unit {
     println("LEDGER work steps=" + to_string_i32(state.read.steps + state.edit.steps) + "/13 calls=" +
         to_string_i32(state.read.calls + state.edit.calls) + "/7 generation_allowance=" + to_string_i32(state.read.tokens + state.edit.tokens) +
         "/47104 native_token_ceiling=" + to_string_i32(native_tokens(state)) + "/196608; configured allowances are not measured usage; no persisted Model history or mutating resume");
 }
-flow refused(state: Ledger, error: string) -> i32 { println("REFUSED " + error); ledger(state); return 1; }
+public flow refused(state: Ledger, error: string) -> i32 { println("REFUSED " + error); ledger(state); return 1; }
 flow stage(name: string, state: Ledger) -> unit { println("STAGE " + name); ledger(state); }
 flow help() -> unit {
     println("One read-context/edit workflow: --id ID --workspace BIND --path EDITFILE --once TASK --allow FILE[,FILE].");
@@ -31,50 +31,74 @@ flow help() -> unit {
     println("Exclusive owned disposable workspace/store; native yes then Nomo y/yes. Data-only edit_status, no automatic retries or mutating resume.");
 }
 
-public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read<ReadOnlyRoot>, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {
+public type Failure = { state: Ledger, error: string };
+public type Pending = { selected: Selector, prepared: Prepared, evidence: Evidence, request: string, task: string, state: Ledger };
+public type Completed = { context: Context, state: Ledger };
+public type Summary = { answer: string, state: Ledger };
+flow failed(state: Ledger, error: string) -> Result<Pending, Failure> { return Err(Failure { state = state, error = error }); }
+
+// Callers admit the unused edit slot before this shared Model/File preparation.
+public flow prepare_work(input: Work) -> Result<Pending, Failure> {
     var state = fresh();
-    let input = match parse(args) { Ok(value) => value, Err(error) => { return refused(state, error); } };
-    if input.edit.help { help(); return 0; }
     let selected = Selector { id = input.edit.id, workspace = input.edit.workspace, path = input.edit.path };
-    match available() { Ok(_) => {} Err(error) => { return refused(state, error); } }
-    let invalid = ledger_error(state); if invalid != "" { return refused(state, invalid); }
+    let invalid = ledger_error(state); if invalid != "" { return failed(state, invalid); }
     println("RESERVATION work13 steps/7 calls/47104 generation/196608 native; edit tail6 steps/3 calls/38912 generation/163840 native; one read/search and one atomic maximum");
     let read = match run_work_context(input.edit.request, input.allowed, state.read) {
         Ok(value) => value,
         Err(failure) => {
             state = Ledger { read = failure.state, edit = state.edit };
             if !failure.resolved { println("RESERVATION read unresolved; no subsequent edit work"); }
-            return refused(state, failure.error);
+            return failed(state, failure.error);
         }
     };
     state = Ledger { read = read.ledger, edit = state.edit };
-    let pending = match collect(read.child, read.status, read.request, read.task, read.allowed) { Ok(value) => value, Err(error) => { return refused(state, error); } };
-    let evidence = match finish_evidence(pending, read.answer) { Ok(value) => value, Err(error) => { return refused(state, error); } };
+    let pending = match collect(read.child, read.status, read.request, read.task, read.allowed) { Ok(value) => value, Err(error) => { return failed(state, error); } };
+    let evidence = match finish_evidence(pending, read.answer) { Ok(value) => value, Err(error) => { return failed(state, error); } };
     if evidence.ledger.steps != read.ledger.steps || evidence.ledger.calls != read.ledger.calls || evidence.ledger.tokens != read.ledger.tokens ||
-        evidence.ledger.tools != read.ledger.tools || evidence.ledger.scan != read.ledger.scan { return refused(state, "read evidence ledger mismatch"); }
-    let before = match read_original(selected.path) { Ok(value) => value, Err(error) => { return refused(state, error); } };
+        evidence.ledger.tools != read.ledger.tools || evidence.ledger.scan != read.ledger.scan { return failed(state, "read evidence ledger mismatch"); }
+    let before = match read_original(selected.path) { Ok(value) => value, Err(error) => { return failed(state, error); } };
     let plan = Context { edit = context("plan", selected, input.edit.request, "", before), evidence = evidence };
-    let error = context_error(plan); if error != "" { return refused(state, error); }
-    state = match bump_edit(state, true) { Ok(value) => value, Err(error) => { return refused(state, error); } };
+    let error = context_error(plan); if error != "" { return failed(state, error); }
+    state = match bump_edit(state, true) { Ok(value) => value, Err(error) => { return failed(state, error); } };
     stage("edit-plan", state);
-    let task = match decode_plan(edit_plan(plan)) { Ok(value) => value, Err(error) => { return refused(state, error); } };
-    state = match bump_edit(state, false) { Ok(value) => value, Err(error) => { return refused(state, error); } };
+    let task = match decode_plan(edit_plan(plan)) { Ok(value) => value, Err(error) => { return failed(state, error); } };
+    state = match bump_edit(state, false) { Ok(value) => value, Err(error) => { return failed(state, error); } };
     display("EVENT main -> edit-child request ", task);
     let delegated = Context { edit = context("child", selected, input.edit.request, task, before), evidence = evidence };
-    let child_error = context_error(delegated); if child_error != "" { return refused(state, child_error); }
-    state = match bump_edit(state, true) { Ok(value) => value, Err(error) => { return refused(state, error); } };
+    let child_error = context_error(delegated); if child_error != "" { return failed(state, child_error); }
+    state = match bump_edit(state, true) { Ok(value) => value, Err(error) => { return failed(state, error); } };
     stage("edit-child", state);
-    let request = match decode_edit(edit_child(delegated)) { Ok(value) => value, Err(error) => { return refused(state, error); } };
-    let prepared = match prepare_original(selected.path, before, request.target, request.replacement) { Ok(value) => value, Err(error) => { return refused(state, error); } };
-    state = match bump_edit(state, false) { Ok(value) => value, Err(error) => { return refused(state, error); } };
-    let outcome = match execute(selected, prepared) { Ok(value) => value, Err(error) => { return refused(state, error); } };
-    recorded(selected);
-    state = match bump_edit(state, false) { Ok(value) => value, Err(error) => { return refused(state, "edit completed; " + error); } };
-    let final = Context { edit = completed_context(input.edit.request, task, before, outcome), evidence = evidence };
-    let final_error = context_error(final); if final_error != "" { return refused(state, "edit completed; " + final_error); }
-    state = match bump_edit(state, true) { Ok(value) => value, Err(error) => { return refused(state, "edit completed; " + error); } };
+    let request = match decode_edit(edit_child(delegated)) { Ok(value) => value, Err(error) => { return failed(state, error); } };
+    let prepared = match prepare_original(selected.path, before, request.target, request.replacement) { Ok(value) => value, Err(error) => { return failed(state, error); } };
+    state = match bump_edit(state, false) { Ok(value) => value, Err(error) => { return failed(state, error); } };
+    return Ok(Pending { selected = selected, prepared = prepared, evidence = evidence, request = input.edit.request, task = task, state = state });
+}
+
+public flow finish_edit(pending: Pending, outcome: Confirmed) -> Result<Completed, Failure> {
+    recorded(pending.selected);
+    let state = match bump_edit(pending.state, false) { Ok(value) => value,
+        Err(error) => { return Err(Failure { state = pending.state, error = "edit completed; " + error }); } };
+    let final = Context { edit = completed_context(pending.request, pending.task, pending.prepared.proposal.before, outcome), evidence = pending.evidence };
+    let error = context_error(final); if error != "" { return Err(Failure { state = state, error = "edit completed; " + error }); }
+    return Ok(Completed { context = final, state = state });
+}
+
+public flow summarize(completed: Completed) -> Result<Summary, Failure> {
+    let state = match bump_edit(completed.state, true) { Ok(value) => value,
+        Err(error) => { return Err(Failure { state = completed.state, error = "edit completed; " + error }); } };
     stage("edit-aggregate", state);
-    let answer = aggregate(final);
-    let answer_error = text_error(answer, "final answer"); if answer_error != "" { return refused(state, "edit completed; " + answer_error); }
-    display("FINAL ", answer); ledger(state); return 0;
+    let answer = aggregate(completed.context);
+    let error = text_error(answer, "final answer"); if error != "" { return Err(Failure { state = state, error = "edit completed; " + error }); }
+    return Ok(Summary { answer = answer, state = state });
+}
+
+public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read<ReadOnlyRoot>, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {
+    let input = match parse(args) { Ok(value) => value, Err(error) => { return refused(fresh(), error); } };
+    if input.edit.help { help(); return 0; }
+    match available() { Ok(_) => {} Err(error) => { return refused(fresh(), error); } }
+    let pending = match prepare_work(input) { Ok(value) => value, Err(failure) => { return refused(failure.state, failure.error); } };
+    let outcome = match execute(pending.selected, pending.prepared) { Ok(value) => value, Err(error) => { return refused(pending.state, error); } };
+    let completed = match finish_edit(pending, outcome) { Ok(value) => value, Err(failure) => { return refused(failure.state, failure.error); } };
+    let summary = match summarize(completed) { Ok(value) => value, Err(failure) => { return refused(failure.state, failure.error); } };
+    display("FINAL ", summary.answer); ledger(summary.state); return 0;
 }

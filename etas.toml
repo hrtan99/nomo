@@ -330,3 +330,61 @@ name = "nomo-harness-work"
 module = "nomo.main"
 flow = "harness_work"
 profile = "harness-work"
+
+[runtime.profiles.harness-work-save]
+boundary_policy = "nomo-harness-work-save"
+[runtime.profiles.harness-work-save.memory]
+backend = "sqlite"
+path = "edit.sqlite3"
+[runtime.profiles.harness-work-save.model]
+adapter = "omlx-openai"
+model = "qwen3.8-flash-next-ud-iq4_xs"
+base_url = "http://143.89.191.75:8095/v1"
+api_key_env = "NOMO_QWEN_SERVER_API_KEY"
+allow_private = true
+enable_thinking = false
+[runtime.profiles.harness-work-save.model.timeout]
+request_deadline_ms = 120000
+connect_timeout_ms = 2000
+[runtime.profiles.harness-work-save.model.retry]
+attempts = 1
+delay_ms = 0
+[runtime.profiles.harness-work-save.filesystem.regions."nomo.tools.workspace.ReadOnlyRoot"]
+root = "/work-context"
+read = true
+write = false
+delete = false
+[runtime.profiles.harness-work-save.filesystem.regions."nomo.tools.edit_file.EditableRoot"]
+root = "/edit-fixture"
+read = true
+write = true
+delete = false
+[runtime.profiles.harness-work-save.policy]
+mode = "local-static"
+rules = ["console=allow", "memory=allow", "model=allow", "approval=allow", "filesystem:Fs.stat=allow", "filesystem:Fs.read=allow", "filesystem:Fs.atomic_replace=allow", "filesystem:Fs.write=deny", "filesystem:HostFilesystem.delete=deny"]
+[runtime.profiles.harness-work-save.approval]
+mode = "prompt"
+
+
+[runtime.profiles.harness-work-show]
+boundary_policy = "nomo-work-show"
+[runtime.profiles.harness-work-show.memory]
+backend = "sqlite"
+path = "file:edit.sqlite3?mode=rw"
+[runtime.profiles.harness-work-show.policy]
+mode = "local-static"
+rules = ["console=allow", "memory:Memory.read=allow", "memory:Memory.write=deny"]
+[runtime.profiles.harness-work-show.approval]
+mode = "deny"
+
+[[bin]]
+name = "nomo-work-save"
+module = "nomo.main"
+flow = "work_save"
+profile = "harness-work-save"
+
+[[bin]]
+name = "nomo-work-show"
+module = "nomo.main"
+flow = "work_show"
+profile = "harness-work-show"

@@ -29,6 +29,18 @@ import nomo.entry.edit_entry.run_status as edit_status_run;
 import nomo.entry.edit_entry.run_help as edit_help_run;
 import nomo.entry.harness_edit_entry.run as harness_edit_run;
 import nomo.entry.harness_work_entry.run as harness_work_run;
+import nomo.entry.work_session_entry.{run_save as work_save_run, run_show as work_show_run};
+
+flow work_save(args: Array<string>) -> i32 {
+    let status = work_save_run(args);
+    if status != 0 { abort("Nomo work save refused; see completed edit and work record status output"); }
+    return 0;
+}
+flow work_show(args: Array<string>) -> i32 {
+    let status = work_show_run(args);
+    if status != 0 { abort("Nomo work show refused; see REFUSED output"); }
+    return 0;
+}
 
 flow harness_work(args: Array<string>) -> i32 {
     let status = harness_work_run(args);
