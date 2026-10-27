@@ -453,3 +453,17 @@ name = "nomo-chain-show"
 module = "nomo.main"
 flow = "chain_show"
 profile = "work-chain-show"
+
+[runtime.profiles.chain-help]
+boundary_policy = "nomo-chain-help"
+[runtime.profiles.chain-help.policy]
+mode = "local-static"
+rules = ["console=allow"]
+[runtime.profiles.chain-help.approval]
+mode = "deny"
+
+[[bin]]
+name = "nomo-chain-help"
+module = "nomo.main"
+flow = "chain_help"
+profile = "chain-help"

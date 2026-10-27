@@ -1,0 +1,5 @@
+# Last overlay for help/show: do not inherit the edit mount overlay's prompt mode.
+services:
+  dev:
+    environment:
+      ETAS_HOST_APPROVAL: "deny"

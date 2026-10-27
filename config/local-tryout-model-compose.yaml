@@ -1,0 +1,8 @@
+# Only new/continue use this existing authenticated Model/forward route.
+services:
+  dev:
+    network_mode: bridge
+    environment:
+      NOMO_QWEN_SERVER_API_KEY: "${NOMO_QWEN_SERVER_API_KEY:?load the existing private Qwen process configuration}"
+      ETAS_HOST_MODEL_BASE_URL: "http://host.docker.internal:18095/v1"
+      ETAS_HOST_MODEL_API_KEY: "${NOMO_QWEN_SERVER_API_KEY:?load the existing private Qwen process configuration}"
