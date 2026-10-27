@@ -394,7 +394,7 @@ def main():
         }
         for label, value in invalid.items():
             case('reply_' + label, [encoded(value)], code=3)
-        for index, value in enumerate(['../outside.txt', '/etc/passwd', 'docs//a.txt', 'docs/./a.txt', 'a/b/c', 'docs\\a.txt', 'x' * 49]):
+        for index, value in enumerate(['../outside.txt', '/etc/passwd', 'docs//a.txt', 'docs/./a.txt', 'a/b/c/d/e/f/g/h/i', 'docs\\a.txt', 'x' * 49]):
             case('reply_invalid_path_' + str(index), [encoded(['read', value])], code=3)
         for label, value in [('not_json', 'read:docs/a.txt'), ('trailing', '["read","docs/a.txt"] trailing'),
                              ('object', '{"read":"docs/a.txt"}'), ('incomplete', '["read",'),

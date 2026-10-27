@@ -205,8 +205,11 @@ def assert_save_trace(trace, item):
 def run_case(cli, evidence, item):
     folder = evidence/item['name']; state = folder/'state'; workspace = folder/'workspace'; context = folder/'context'
     for path in [state, workspace, context]: path.mkdir(parents=True, mode=0o700)
+    (workspace/item['path']).parent.mkdir(parents=True, exist_ok=True)
     (workspace/item['path']).write_bytes(item['before'].encode())
-    for name, value in item['context_files'].items(): (context/name).write_text(value)
+    for name, value in item['context_files'].items():
+        (context/name).parent.mkdir(parents=True, exist_ok=True)
+        (context/name).write_text(value)
     context_before = {name: (context/name).read_bytes() for name in item['context_files']}
     project(folder, state, workspace, context, 'project'); project(folder, state, workspace, context, 'show-project', True)
     selectors = ['--id', item['id'], '--workspace', item['workspace'], '--path', item['path']]

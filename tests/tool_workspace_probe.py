@@ -136,7 +136,7 @@ mode = "deny"
              stdout='user: search:docs/a.txt:NEEDLE \nmodel: tool search\ntool: search: complete: \nassistant: read-only result: complete: \n')
         case('opaque_listing_explicit', 'list:docs', 3, ['unsupported: named listing unavailable:', 'entries=2'], ['assistant:'])
         case('directory_entry_bound', 'list:many', 3, ['directory exceeds 16 entries'], ['assistant:'])
-        for request in ['read:../outside.txt', 'read:/tmp/outside.txt', 'read:docs//a.txt', 'read:docs/./a.txt', 'read:a/b/c/d/e', 'read:docs\\a.txt']:
+        for request in ['read:../outside.txt', 'read:/tmp/outside.txt', 'read:docs//a.txt', 'read:docs/./a.txt', 'read:a/b/c/d/e/f/g/h/i', 'read:docs\\a.txt']:
             case('invalid_path_' + request, request, 3, ['invalid relative path'], ['assistant:'])
         for request in ['write:docs/a.txt', 'command:echo', 'read:docs/a.txt:extra']:
             case('unsupported_' + request, request, 3, ['unsupported operation or arguments'], ['model: tool', 'assistant:'])

@@ -72,7 +72,8 @@ def cases():
     add('path129', path='a'*129, error='invalid relative path')
     add('path_empty', path='', error='invalid relative path')
     add('path_unicode', path='资料.txt', error='invalid relative path')
-    old_paths = ['../outside.txt', '/tmp/outside.txt', 'docs//a.txt', 'docs/./a.txt', 'a/b/c/d/e', 'docs\\a.txt']
+    # WORKSPACE-002A intentionally admits depth3..8; depth9 is refused.
+    old_paths = ['../outside.txt', '/tmp/outside.txt', 'docs//a.txt', 'docs/./a.txt', 'a/b/c/d/e/f/g/h/i', 'docs\\a.txt']
     for index, path in enumerate(old_paths):
         add('proposal_old_invalid_path_'+str(index), path=path, error='invalid relative path')
     add('validated_exact', mode='validate')
@@ -80,7 +81,7 @@ def cases():
         add('validate_changed_'+field, mode='validate', forged={field: data}, error='proposal differs from validated replacement')
     add('validate_rechecks_request', 'aaa', 'aa', 'x', '', mode='validate', error='literal target is ambiguous')
     for index, path in enumerate(['docs/a.txt', *old_paths]):
-        add('unchanged_path_contract_'+str(index), path=path, mode='path', error='' if index==0 else 'invalid relative path')
+        add('current_path_contract_'+str(index), path=path, mode='path', error='' if index==0 else 'invalid relative path')
     assert len(values)==60 and len({value['label'] for value in values})==60
     return values
 
@@ -128,11 +129,11 @@ def main():
         result['compiler']=str(cli);result['status']='running';save()
         if args.reuse_root_check:
             prior=json.loads(args.reuse_root_check.read_text())['commands'][0]
-            assert prior['label']=='root-check' and prior['exit']==0 and prior['stdout']=='checked 71 files\n' and not prior['stderr']
+            assert prior['label']=='root-check' and prior['exit']==0 and prior['stdout']=='checked 76 files\n' and not prior['stderr']
             assert prior['command']==[str(cli),'check','--all',str(ROOT)]
             result['reused_root_check']=dict(source=str(args.reuse_root_check),command=prior);save()
         else:
-            run('root-check',[cli,'check','--all',ROOT],'checked 71 files\n')
+            run('root-check',[cli,'check','--all',ROOT],'checked 76 files\n')
         for index,group in enumerate(groups):
             project=evidence/('batch-'+str(index));prefix='batch-'+str(index)
             run(prefix+'-check',[cli,'check','--all',project],'checked 3 files\n')
