@@ -1,0 +1,10 @@
+# Combine with edit-operation-compose.yaml; add harness-edit-compose.yaml for Qwen.
+services:
+  dev:
+    volumes:
+      - type: bind
+        source: "${NOMO_WORK_CONTEXT_DIR:?explicit owned read-context directory required}"
+        target: /work-context
+        read_only: true
+        bind:
+          create_host_path: false

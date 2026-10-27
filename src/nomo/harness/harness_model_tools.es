@@ -4,9 +4,14 @@ import std.io.println;
 import std.text.to_string_i32;
 import nomo.core.conversation.{Event, State, add};
 import nomo.model.model_tool_contract.{Session, fresh_loop, default_limits, question_error, allowed_error};
-import nomo.agent.model_tool.{LoopTurn, run_loop};
+import nomo.agent.model_tool.{LoopTurn, run_loop, run_work_loop};
 import nomo.harness.harness_model_contract.{bounded, decode_plan};
-import nomo.harness.harness_tool_contract.{Context, Ledger, fresh, bump, settle, inspect, context_error};
+import nomo.harness.harness_tool_contract.{Context, Ledger, Observed, fresh, bump, settle, inspect, context_error};
+import nomo.harness.harness_work_model.read_main;
+
+public type Report = { request: string, task: string, allowed: Array<string>, child: Session,
+    status: i32, observed: Observed, answer: string, ledger: Ledger };
+public type Failure = { state: Ledger, error: string, resolved: bool };
 
 @limits([Tokens(2048)])
 agent MainModel(input: Context) -> string {
@@ -20,13 +25,13 @@ public flow numbers(state: Ledger) -> string {
         " tools=" + to_string_i32(state.tools) + " scan=" + to_string_i32(state.scan);
 }
 
-flow stage(phase: string, state: Ledger) -> unit {
+flow stage(phase: string, state: Ledger, prefix: string) -> unit {
     var steps: i32 = 0;
     if phase == "plan" { steps = 6; }
     if phase == "child" { steps = 5; }
     let calls = if phase == "aggregate" { 0 } else { 3 };
     let tools = if phase == "aggregate" { 0 } else { 1 };
-    println("STAGE " + phase + " child-1 " + numbers(state) + " reserved_steps=" + to_string_i32(steps) +
+    println("STAGE " + prefix + phase + " child-1 " + numbers(state) + " reserved_steps=" + to_string_i32(steps) +
         " reserved_calls=" + to_string_i32(calls) + " reserved_tokens=" + to_string_i32(calls * 2048) +
         " reserved_tools=" + to_string_i32(tools) + " reserved_scan=" + to_string_i32(tools * 4096));
     if phase == "child" {
@@ -53,43 +58,73 @@ public flow child_turn(task: string, allowed: Array<string>, selected: State) ->
     return run_loop(task, allowed, default_limits(), seeded);
 }
 
-public flow run(request: string, allowed: Array<string>) -> i32 {
-    var state = fresh();
-    let invalid = question_error(request); if invalid != "" { return refused(state, invalid); }
-    let invalid_allowed = allowed_error(allowed); if invalid_allowed != "" { return refused(state, invalid_allowed); }
+flow work_child_turn(task: string, allowed: Array<string>, selected: State) -> LoopTurn {
+    let seeded = Session { history = selected, calls = 0, tokens = 0, tools = 0, scan = 0 };
+    return run_work_loop(task, allowed, default_limits(), seeded);
+}
+
+flow failed(state: Ledger, error: string, resolved: bool) -> Result<Report, Failure> {
+    return Err(Failure { state = state, error = error, resolved = resolved });
+}
+
+// A caller owns the supplied read reservation and receives typed selected data.
+// Native aborts do not become resolved source returns or a fresh reservation.
+flow run_context(request: string, allowed: Array<string>, initial: Ledger,
+    main_infer: (Context) -> string, child_execute: (string, Array<string>, State) -> LoopTurn, prefix: string, require_tool: bool) -> Result<Report, Failure> {
+    var state = initial;
+    let invalid = question_error(request); if invalid != "" { return failed(state, invalid, true); }
+    let invalid_allowed = allowed_error(allowed); if invalid_allowed != "" { return failed(state, invalid_allowed, true); }
     let plan = Context { phase = "plan", request = request, task = "", result = "", tool = "", outcome = "", allowed = allowed };
-    let invalid_plan = context_error(plan); if invalid_plan != "" { return refused(state, invalid_plan); }
-    state = match bump(state, true) { Ok(value) => value, Err(error) => { return refused(state, error); } };
-    stage("plan", state);
-    let raw = MainModel.run(plan);
-    let task = match decode_plan(raw) { Ok(value) => value, Err(error) => { return refused(state, error); } };
-    state = match bump(state, false) { Ok(value) => value, Err(error) => { return refused(state, error); } };
+    let invalid_plan = context_error(plan); if invalid_plan != "" { return failed(state, invalid_plan, true); }
+    state = match bump(state, true) { Ok(value) => value, Err(error) => { return failed(state, error, true); } };
+    stage("plan", state, prefix);
+    let raw = main_infer(plan);
+    let task = match decode_plan(raw) { Ok(value) => value, Err(error) => { return failed(state, error, true); } };
+    state = match bump(state, false) { Ok(value) => value, Err(error) => { return failed(state, error, true); } };
     println("EVENT main -> child-1 request child-1: " + task);
     let empty = fresh_loop();
     let selected = add(empty.history, Event { role = "user", kind = "context", name = "original", text = request });
-    stage("child", state);
-    let child = child_turn(task, allowed, selected);
+    stage("child", state, prefix);
+    let child = child_execute(task, allowed, selected);
     let observed = match inspect(child.state, child.status, request, task, allowed) {
-        Ok(value) => value, Err(error) => { return unresolved(error); }
+        Ok(value) => value, Err(error) => { return failed(state, error, false); }
     };
-    state = match settle(state, child.state) { Ok(value) => value, Err(error) => { return unresolved(error); } };
+    state = match settle(state, child.state) { Ok(value) => value, Err(error) => { return failed(state, error, false); } };
     println("SETTLED child-1 " + numbers(state) + " released_steps=" + to_string_i32(5 - state.steps) +
         " released_calls=" + to_string_i32(3 - state.calls) + " released_tokens=" + to_string_i32(6144 - state.tokens) +
         " released_tools=" + to_string_i32(1 - state.tools) + " released_scan=" + to_string_i32(4096 - state.scan) + " unresolved=false");
-    if child.status != 0 { return refused(state, "child returned failure; no aggregation"); }
-    if !bounded(observed.result, 256) { return refused(state, "invalid bounded child result"); }
+    if child.status != 0 { return failed(state, "child returned failure; no aggregation", true); }
+    if require_tool && child.state.tools != 1 { return failed(state, "work requires a successful read or search child", true); }
+    if !bounded(observed.result, 256) { return failed(state, "invalid bounded child result", true); }
     println("EVENT child-1 -> main result child-1: " + observed.result);
-    state = match bump(state, false) { Ok(value) => value, Err(error) => { return refused(state, error); } };
+    state = match bump(state, false) { Ok(value) => value, Err(error) => { return failed(state, error, true); } };
     println("EVENT main -> main consume child-1: " + observed.result);
     if observed.tool != "" { println("EVENT main -> main tool " + observed.tool + ": " + observed.outcome); }
     let aggregate = Context { phase = "aggregate", request = request, task = task, result = observed.result,
         tool = observed.tool, outcome = observed.outcome, allowed = allowed };
-    let invalid_aggregate = context_error(aggregate); if invalid_aggregate != "" { return refused(state, invalid_aggregate); }
-    state = match bump(state, true) { Ok(value) => value, Err(error) => { return refused(state, error); } };
-    stage("aggregate", state);
-    let answer = MainModel.run(aggregate);
-    if !bounded(answer, 512) { return refused(state, "invalid bounded final answer"); }
-    println("FINAL " + answer);
-    finished(state);
+    let invalid_aggregate = context_error(aggregate); if invalid_aggregate != "" { return failed(state, invalid_aggregate, true); }
+    state = match bump(state, true) { Ok(value) => value, Err(error) => { return failed(state, error, true); } };
+    stage("aggregate", state, prefix);
+    let answer = main_infer(aggregate);
+    if !bounded(answer, 512) { return failed(state, "invalid bounded final answer", true); }
+    return Ok(Report { request = request, task = task, allowed = allowed, child = child.state,
+        status = child.status, observed = observed, answer = answer, ledger = state });
+}
+
+public flow run(request: string, allowed: Array<string>) -> i32 {
+    let main_infer = (context: Context) => MainModel.run(context);
+    let child_execute = (task: string, files: Array<string>, selected: State) => child_turn(task, files, selected);
+    let report = match run_context(request, allowed, fresh(), main_infer, child_execute, "", false) {
+        Ok(value) => value,
+        Err(failure) => { if !failure.resolved { return unresolved(failure.error); } return refused(failure.state, failure.error); }
+    };
+    println("FINAL " + report.answer);
+    finished(report.ledger);
     return 0;
+}
+
+public flow run_work_context(request: string, allowed: Array<string>, initial: Ledger) -> Result<Report, Failure> {
+    let main_infer = (context: Context) => read_main(context);
+    let child_execute = (task: string, files: Array<string>, selected: State) => work_child_turn(task, files, selected);
+    return run_context(request, allowed, initial, main_infer, child_execute, "read-", true);
 }

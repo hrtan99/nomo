@@ -28,6 +28,13 @@ import nomo.entry.edit_entry.run_apply as edit_apply_run;
 import nomo.entry.edit_entry.run_status as edit_status_run;
 import nomo.entry.edit_entry.run_help as edit_help_run;
 import nomo.entry.harness_edit_entry.run as harness_edit_run;
+import nomo.entry.harness_work_entry.run as harness_work_run;
+
+flow harness_work(args: Array<string>) -> i32 {
+    let status = harness_work_run(args);
+    if status != 0 { abort("Nomo read/edit work refused; see REFUSED or recorded completed output"); }
+    return 0;
+}
 
 flow harness_edit(args: Array<string>) -> i32 {
     let status = harness_edit_run(args);
