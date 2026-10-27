@@ -7,7 +7,7 @@ import std.effects.Fs;
 import std.text.to_string_i32;
 import nomo.cli.harness_work_args.{Work, parse};
 import nomo.harness.harness_work_contract.{Context, Evidence, Ledger, fresh, ledger_error, bump_edit, native_tokens, collect, finish_evidence, context_error};
-import nomo.harness.harness_model_tools.run_work_context;
+import nomo.harness.harness_model_tools.{run_work_context, run_chain_work_context};
 import nomo.harness.harness_work_model.{edit_plan, edit_child, aggregate};
 import nomo.harness.work_chain_model.{ParentFacts, plan as chain_plan, child as chain_child, aggregate as chain_aggregate};
 import nomo.harness.harness_edit_contract.{decode_plan, decode_edit, text_error};
@@ -43,12 +43,14 @@ public type Summary = { answer: string, state: Ledger };
 flow failed(state: Ledger, error: string) -> Result<Pending, Failure> { return Err(Failure { state = state, error = error }); }
 
 // Callers admit the unused edit slot before this shared Model/File preparation.
-flow prepare(input: Work, plan_infer: (Context) -> string, child_infer: (Context) -> string, original_error: (string) -> string, stage_log: (string, Ledger) -> unit) -> Result<Pending, Failure> {
+flow prepare(input: Work, plan_infer: (Context) -> string, child_infer: (Context) -> string, original_error: (string) -> string, stage_log: (string, Ledger) -> unit, chain_read: bool, inspect_plan: bool) -> Result<Pending, Failure> {
     var state = fresh();
     let selected = Selector { id = input.edit.id, workspace = input.edit.workspace, path = input.edit.path };
     let invalid = ledger_error(state); if invalid != "" { return failed(state, invalid); }
     println("RESERVATION work13 steps/7 calls/47104 generation/196608 native; edit tail6 steps/3 calls/38912 generation/163840 native; one read/search and one atomic maximum");
-    let read = match run_work_context(input.edit.request, input.allowed, state.read) {
+    let read_result = if chain_read { run_chain_work_context(input.edit.request, input.allowed, state.read, inspect_plan) }
+        else { run_work_context(input.edit.request, input.allowed, state.read) };
+    let read = match read_result {
         Ok(value) => value,
         Err(failure) => {
             state = Ledger { read = failure.state, edit = state.edit };
@@ -84,13 +86,13 @@ public flow prepare_work(input: Work) -> Result<Pending, Failure> {
     let plan = (value: Context) => edit_plan(value); let child = (value: Context) => edit_child(value);
     let original = (value: string) => "";
     let log = (name: string, state: Ledger) => stage(name, state);
-    return prepare(input, plan, child, original, log);
+    return prepare(input, plan, child, original, log, false, false);
 }
-public flow prepare_chain_work(input: Work, parent: Array<ParentFacts>, expected: Option<string>) -> Result<Pending, Failure> {
+public flow prepare_chain_work(input: Work, parent: Array<ParentFacts>, expected: Option<string>, inspect_plan: bool) -> Result<Pending, Failure> {
     let plan = (value: Context) => chain_plan(value, parent); let child = (value: Context) => chain_child(value, parent);
     let original = (value: string) => match expected { Some(before) => if value == before { "" } else { "current original differs from confirmed parent result" }, None() => "" };
     let log = (name: string, state: Ledger) => chain_stage(name, state);
-    return prepare(input, plan, child, original, log);
+    return prepare(input, plan, child, original, log, true, inspect_plan);
 }
 
 public flow completed_context_work(pending: Pending, outcome: Confirmed) -> Result<Completed, Failure> {

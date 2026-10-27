@@ -46,8 +46,8 @@ resources, pressure = previous.resources, previous.pressure
 
 def product_paths():
     sources = sorted((ROOT / "src").rglob("*.es"))
-    if len(sources) != 84 or any(path.name.startswith("model_session") for path in sources):
-        raise ValueError("expected isolated actual 84-file product, not pending shared root")
+    if len(sources) != 85 or any(path.name.startswith("model_session") for path in sources):
+        raise ValueError("expected isolated actual 85-file product, not pending shared root")
     return sources + [ROOT / "etas.toml", ROOT / "etas.lock"]
 
 
@@ -341,7 +341,8 @@ def main():
                     name: value for name, value in frozen_product.items() if name.startswith("src/")}, "actual model product copy differs"
             elif command["transport"] == "pure":
                 project = directory / "component-project"
-                for name in ["harness/harness_model_contract.es", "core/text.es"]:
+                for name in ["harness/harness_model_contract.es", "core/text.es",
+                             "harness/model_plan_diagnostic.es", "tools/edit_encoding.es"]:
                     retain(ROOT / "src/nomo" / name, project / "src/nomo" / name)
                 retain(FIXTURE / "contract_probe.es", project / "src/nomo/harness_model_probe.es")
                 (project / "etas.toml").write_text(PURE_MANIFEST)

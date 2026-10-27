@@ -13,8 +13,8 @@ from normal_graph_identity import bootstrap_path, verify_cli
 
 ROOT = Path(__file__).resolve().parent.parent
 FIXTURE = ROOT / 'tests/fixtures/harness_session001/contract_probe.es'
-MODULES = ['core/text.es', 'core/conversation.es', 'tools/path_policy.es',
-           'model/model_tool_contract.es', 'harness/harness_model_contract.es',
+MODULES = ['core/text.es', 'core/conversation.es', 'tools/path_policy.es', 'tools/edit_encoding.es',
+           'model/model_tool_contract.es', 'harness/harness_model_contract.es', 'harness/model_plan_diagnostic.es',
            'harness/harness_tool_contract.es', 'harness/harness_tool_chat_contract.es',
            'session/harness_checkpoint.es']
 KEYS = ['steps', 'calls', 'tokens', 'tools', 'scan']

@@ -12,6 +12,7 @@ from normal_graph_identity import verify_cli
 
 ROOT = Path(__file__).resolve().parent.parent
 MODULES = ['harness/harness_tool_contract.es', 'harness/harness_model_contract.es',
+           'harness/model_plan_diagnostic.es', 'tools/edit_encoding.es',
            'model/model_tool_contract.es', 'core/text.es', 'core/conversation.es', 'tools/path_policy.es']
 
 

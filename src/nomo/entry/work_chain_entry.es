@@ -34,10 +34,13 @@ flow execute(ticket: Ticket, pending: Pending) -> Result<Confirmed, string> {
     println("APPLIED " + selected.id);
     return Ok(Confirmed { binding = selected, after = pending.prepared.proposal.after });
 }
-flow run(args: Array<string>, continuing: bool) -> i32 {
+flow run(args: Array<string>, continuing: bool, inspect_plan: bool) -> i32 {
     let input = match parse(args, continuing) { Ok(value) => value, Err(error) => { return refused(fresh(), error); } };
     if input.work.edit.help { return chain_help([]); }
     let edit = input.work.edit; var prior: Array<ParentFacts> = []; var expected: Option<string> = None();
+    if inspect_plan && (continuing || edit.workspace != "local-tryout" || edit.path != "demo/value.txt" || input.work.allowed != ["demo/context.txt"]) {
+        return refused(fresh(), "read-plan inspection requires the fixed local-tryout fixture binding");
+    }
     var selected_ticket: Option<Ticket> = None();
     if continuing {
         let parent = match read_parent(input.parent, edit.workspace, edit.path) { Ok(value) => value, Err(error) => { return refused(fresh(), error); } };
@@ -56,7 +59,7 @@ flow run(args: Array<string>, continuing: bool) -> i32 {
     let ticket = match selected_ticket { Some(value) => value, None() => { return refused(fresh(), "v2 admission unavailable"); } };
     println("ADMITTED v2 complete turn reservation durable; lifetime26 steps/14 calls/94208 generation/393216 native/2 atomic attempts; configured allowances, no automatic retry or refund.");
     show_hint(edit.id, edit.workspace, edit.path);
-    let pending = match prepare_chain_work(input.work, prior, expected) { Ok(value) => value, Err(failure) => { return refused(failure.state, failure.error); } };
+    let pending = match prepare_chain_work(input.work, prior, expected, inspect_plan) { Ok(value) => value, Err(failure) => { return refused(failure.state, failure.error); } };
     let selected = pending.selected;
     let binding = match bind(selected.id, selected.workspace, selected.path, pending.prepared) { Ok(value) => value, Err(error) => { return refused(pending.state, error); } };
     let candidate = match partial(binding, pending.evidence, pending.task, pending.prepared) { Ok(value) => value, Err(error) => { return refused(pending.state, error); } };
@@ -78,8 +81,9 @@ flow run(args: Array<string>, continuing: bool) -> i32 {
     if ticket.row.turn == 1 { continue_hint(edit.id, edit.workspace, edit.path, input.work.allowed); }
     return 0;
 }
-public flow run_new(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read<ReadOnlyRoot>, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] { return run(args, false); }
-public flow run_continue(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read<ReadOnlyRoot>, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] { return run(args, true); }
+public flow run_new(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read<ReadOnlyRoot>, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] { return run(args, false, false); }
+public flow run_continue(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read<ReadOnlyRoot>, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] { return run(args, true, false); }
+public flow run_inspect(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read<ReadOnlyRoot>, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] { return run(args, false, true); }
 public flow run_show(args: Array<string>) -> i32 {
     let input = match selectors(args, false) { Ok(value) => value, Err(error) => { println("REFUSED " + error); help_hint(); return 1; } };
     if input.help { return chain_help([]); }

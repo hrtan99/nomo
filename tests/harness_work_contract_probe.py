@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parent.parent
 FIXTURE = ROOT/'tests/fixtures/harness_work001/contract_probe.es'
 MODULES = ['core/text.es', 'core/conversation.es', 'tools/path_policy.es', 'tools/edit_proposal.es', 'tools/edit_encoding.es',
            'session/edit_operation.es', 'model/model_tool_contract.es', 'harness/harness_model_contract.es',
+           'harness/model_plan_diagnostic.es',
            'harness/harness_tool_contract.es', 'harness/harness_edit_contract.es', 'harness/harness_work_contract.es',
            'cli/harness_edit_args.es', 'cli/harness_work_args.es']
 sha = lambda value: hashlib.sha256(value.encode()).hexdigest()

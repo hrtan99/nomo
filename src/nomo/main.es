@@ -30,7 +30,7 @@ import nomo.entry.edit_entry.run_help as edit_help_run;
 import nomo.entry.harness_edit_entry.run as harness_edit_run;
 import nomo.entry.harness_work_entry.run as harness_work_run;
 import nomo.entry.work_session_entry.{run_save as work_save_run, run_show as work_show_run};
-import nomo.entry.work_chain_entry.{run_new as chain_new_run, run_continue as chain_continue_run, run_show as chain_show_run};
+import nomo.entry.work_chain_entry.{run_new as chain_new_run, run_continue as chain_continue_run, run_show as chain_show_run, run_inspect as chain_inspect_run};
 import nomo.entry.work_chain_help.help as chain_help_run;
 
 flow work_save(args: Array<string>) -> i32 {
@@ -229,3 +229,5 @@ flow chain_continue(args: Array<string>) -> i32 { let status = chain_continue_ru
 flow chain_show(args: Array<string>) -> i32 { let status = chain_show_run(args); if status != 0 { abort("Nomo v2 show refused; see REFUSED"); } return 0; }
 
 flow chain_help(args: Array<string>) -> i32 { let status = chain_help_run(args); if status != 0 { abort("Nomo chain help refused; see REFUSED"); } return 0; }
+
+flow chain_inspect(args: Array<string>) -> i32 { let status = chain_inspect_run(args); if status != 0 { abort("Nomo fixture read-plan inspection stopped; no retry or edit"); } return 0; }
