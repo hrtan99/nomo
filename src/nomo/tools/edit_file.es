@@ -7,7 +7,7 @@ import std.bytes.len as byte_count;
 import std.codec.text.{utf8_encode, utf8_decode, Strict};
 import std.agent.message.Message;
 import nomo.tools.path_policy.valid_path;
-import nomo.tools.edit_proposal.{Request, Proposal, propose, validate};
+import nomo.tools.edit_proposal.{Request, Proposal, propose, validate, text_bytes};
 
 public type EditableRoot;
 impl EditableRoot ~ Region;
@@ -34,12 +34,24 @@ flow read_existing(name: string) -> Result<bytes, string> {
     return Ok(bytes);
 }
 
-public flow prepare(name: string, target: string, replacement: string) -> Result<Prepared, string> {
+public flow read_original(name: string) -> Result<string, string> {
     let bytes = match read_existing(name) { Ok(value) => value, Err(error) => { return Err(error); } };
     let original = match utf8_decode(bytes, Strict) { Ok(value) => value, Err(_) => { return Err("edit file is not UTF-8"); } };
+    match text_bytes(original, "original") { Ok(_) => {} Err(error) => { return Err(error); } }
+    return Ok(original);
+}
+
+// Reuse the complete supported original already supplied to an edit child.
+// File state is still checked by apply after the durable intent.
+public flow prepare_original(name: string, original: string, target: string, replacement: string) -> Result<Prepared, string> {
     let request = Request { path = name, original = original, target = target, replacement = replacement };
     let proposal = match propose(request) { Ok(value) => value, Err(error) => { return Err(error); } };
     return Ok(Prepared { request = request, proposal = proposal });
+}
+
+public flow prepare(name: string, target: string, replacement: string) -> Result<Prepared, string> {
+    let original = match read_original(name) { Ok(value) => value, Err(error) => { return Err(error); } };
+    return prepare_original(name, original, target, replacement);
 }
 
 // Called once only after confirmed current consent and a durable intent. A File

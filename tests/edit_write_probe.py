@@ -87,7 +87,7 @@ def manifest(state, workspace, status=False):
         text='\n'.join(output)+'\n'
     return text
 
-def run_pty(argv, state, item, folder, binding):
+def run_pty(argv, state, item, folder, binding, preview_check=None, failure_output=None):
     master,slave=pty.openpty();settings=termios.tcgetattr(slave)
     settings[3] &= ~(termios.ECHO|termios.ECHONL);settings[1] &= ~termios.ONLCR
     settings[6][termios.VEOF]=b'\x04';termios.tcsetattr(slave,termios.TCSANOW,settings)
@@ -104,7 +104,10 @@ def run_pty(argv, state, item, folder, binding):
                 if fd==master:out+=raw
                 else:err+=raw
             if b'Type `yes` to approve:' in err and not native:
-                assert expected(item)[1].encode() in out, 'native prompt preceded complete exact preview'
+                if preview_check is None:
+                    assert expected(item)[1].encode() in out, 'native prompt preceded complete exact preview'
+                else:
+                    preview_check(out, item, binding)
                 assert rows(state)=={}, 'intent existed before both current confirmations'
                 native=True;milestones.append('native_prompt_observed');os.write(master,b'no\n' if item['kind']=='native_no' else b'yes\n')
             if PROMPT in out and not nominal:
@@ -138,6 +141,9 @@ def run_pty(argv, state, item, folder, binding):
                 break
             assert time.monotonic()<deadline, 'PTY edit deadline'
         return out,err,proc.wait(),milestones
+    except BaseException:
+        if failure_output is not None: failure_output(out,err)
+        raise
     finally:
         if proc.poll() is None: os.killpg(proc.pid,signal.SIGKILL);proc.wait()
         os.close(master);proc.stderr.close()
@@ -145,11 +151,12 @@ def run_pty(argv, state, item, folder, binding):
 
 def main():
     parser=argparse.ArgumentParser();parser.add_argument('--evidence-dir',type=Path,required=True)
-    parser.add_argument('--suite',choices=['smoke','remaining','tail','readonly'],default='smoke');options=parser.parse_args()
+    parser.add_argument('--suite',choices=['smoke','remaining','tail','readonly','shared'],default='smoke');options=parser.parse_args()
     cli=verify_cli();options.evidence_dir.mkdir(parents=True,exist_ok=True)
     evidence=Path(tempfile.mkdtemp(prefix='edit-write-',dir=options.evidence_dir))
     names={'smoke':['applied'],'remaining':['non_tty','native_no','nomo_no','nomo_blank','nomo_eof','mismatch','completion_error','boundary','deletion'],
-           'tail':['completion_error','boundary','deletion'],'readonly':['read_only']}[options.suite]
+           'tail':['completion_error','boundary','deletion'],'readonly':['read_only'],
+           'shared':['applied','nomo_no','mismatch','completion_error']}[options.suite]
     result=dict(task='TOOL-002B',status='running',suite=options.suite,cases=[],commands=[]);output=evidence/'results.json'
     save=lambda:output.write_text(json.dumps(result,indent=2)+'\n')
     print('EVIDENCE '+str(evidence),flush=True)

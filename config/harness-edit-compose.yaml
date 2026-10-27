@@ -1,0 +1,7 @@
+# Combine with edit-operation-compose.yaml and explicitly provisioned owned dirs.
+# Supply the key through private process configuration, never a committed value.
+services:
+  dev:
+    network_mode: bridge
+    environment:
+      NOMO_QWEN_SERVER_API_KEY: "${NOMO_QWEN_SERVER_API_KEY:?private Qwen API key required}"

@@ -128,11 +128,11 @@ def main():
         result['compiler']=str(cli);result['status']='running';save()
         if args.reuse_root_check:
             prior=json.loads(args.reuse_root_check.read_text())['commands'][0]
-            assert prior['label']=='root-check' and prior['exit']==0 and prior['stdout']=='checked 61 files\n' and not prior['stderr']
+            assert prior['label']=='root-check' and prior['exit']==0 and prior['stdout']=='checked 66 files\n' and not prior['stderr']
             assert prior['command']==[str(cli),'check','--all',str(ROOT)]
             result['reused_root_check']=dict(source=str(args.reuse_root_check),command=prior);save()
         else:
-            run('root-check',[cli,'check','--all',ROOT],'checked 61 files\n')
+            run('root-check',[cli,'check','--all',ROOT],'checked 66 files\n')
         for index,group in enumerate(groups):
             project=evidence/('batch-'+str(index));prefix='batch-'+str(index)
             run(prefix+'-check',[cli,'check','--all',project],'checked 3 files\n')

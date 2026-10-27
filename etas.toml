@@ -255,3 +255,38 @@ name = "nomo-edit-help"
 module = "nomo.main"
 flow = "edit_help"
 profile = "foundation"
+
+[runtime.profiles.harness-edit]
+boundary_policy = "nomo-harness-edit"
+[runtime.profiles.harness-edit.memory]
+backend = "sqlite"
+path = "edit.sqlite3"
+[runtime.profiles.harness-edit.model]
+adapter = "omlx-openai"
+model = "qwen3.8-flash-next-ud-iq4_xs"
+base_url = "http://143.89.191.75:8095/v1"
+api_key_env = "NOMO_QWEN_SERVER_API_KEY"
+allow_private = true
+enable_thinking = false
+[runtime.profiles.harness-edit.model.timeout]
+request_deadline_ms = 120000
+connect_timeout_ms = 2000
+[runtime.profiles.harness-edit.model.retry]
+attempts = 1
+delay_ms = 0
+[runtime.profiles.harness-edit.filesystem.regions."nomo.tools.edit_file.EditableRoot"]
+root = "/edit-fixture"
+read = true
+write = true
+delete = false
+[runtime.profiles.harness-edit.policy]
+mode = "local-static"
+rules = ["console=allow", "memory=allow", "model=allow", "approval=allow", "filesystem:Fs.stat=allow", "filesystem:Fs.read=allow", "filesystem:Fs.atomic_replace=allow", "filesystem:Fs.write=deny", "filesystem:HostFilesystem.delete=deny"]
+[runtime.profiles.harness-edit.approval]
+mode = "prompt"
+
+[[bin]]
+name = "nomo-harness-edit"
+module = "nomo.main"
+flow = "harness_edit"
+profile = "harness-edit"

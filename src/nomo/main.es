@@ -27,6 +27,13 @@ import nomo.entry.session_lifecycle.run_show as lifecycle_show;
 import nomo.entry.edit_entry.run_apply as edit_apply_run;
 import nomo.entry.edit_entry.run_status as edit_status_run;
 import nomo.entry.edit_entry.run_help as edit_help_run;
+import nomo.entry.harness_edit_entry.run as harness_edit_run;
+
+flow harness_edit(args: Array<string>) -> i32 {
+    let status = harness_edit_run(args);
+    if status != 0 { abort("Nomo model edit refused; see REFUSED or recorded completed output"); }
+    return 0;
+}
 
 flow edit_apply(args: Array<string>) -> i32 {
     let status = edit_apply_run(args);

@@ -9,7 +9,7 @@ spec.loader.exec_module(prior)
 chat, first, encoded = prior.chat, prior.first, prior.encoded
 TOKEN, REGION, MAXIMUM = prior.TOKEN, prior.REGION, prior.MAXIMUM
 PROTOCOL_READY = True
-SOURCE_MODULES = 61
+SOURCE_MODULES = 66
 FLOWS = {name: name for name in ["init", "new", "resume", "show", "help"]}
 PROFILES = {"init": "harness-checkpoint-create", "new": "harness-checkpoint-save",
             "resume": "harness-checkpoint-save", "show": "harness-checkpoint-show", "help": "foundation"}
