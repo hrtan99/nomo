@@ -53,7 +53,9 @@ public flow help(args: Array<string>) -> i32 {
     println("Native ETAS entries (select work-chain for new/continue, work-chain-show for show, chain-help for help):");
     println("chain_new --id ID --workspace BIND --path FILE --once REQUEST --allow FILE[,FILE] [--cap CSV]");
     println("chain_continue --parent ROOT_ID --id NEW_CHILD_ID --workspace BIND --path FILE --once REQUEST --allow FILE[,FILE] [--cap CSV]");
-    println("chain_show --id ID --workspace BIND --path FILE");
+    println("chain_show --id ID|--latest --workspace BIND --path FILE");
+    println("chain_sessions --workspace BIND --path FILE (host: local-tryout.sh sessions DIRECTORY OPTIONS)");
+    println("Latest selects the highest validated turn in this configured one-chain store. Any second slot blocks another continuation; no root fallback.");
     println("chain_help [--help]");
     println("Host launcher from the project root; export NOMO_TRYOUT_DIR to one new, unused directory before prepare:");
     println("./scripts/local-tryout.sh prepare \"$NOMO_TRYOUT_DIR\"");
@@ -67,6 +69,6 @@ public flow help(args: Array<string>) -> i32 {
     println("Requests are1..128 printable ASCII characters; read paths1..2 at most48 characters each; edit path at most128 characters/eight components; edit text at most2048 UTF-8 bytes.");
     println("Show uses captured application/journal facts only and never checks the current File. An admitted row may already have an intent/completed journal without a work snapshot.");
     println("V1, partial, denied, consumed or unknown work cannot be resumed/replayed here. Approval is current each turn; failed work is not reset, repaired or refunded.");
-    println("Help/show need no Provider configuration. See docs/agent/LOCAL_TRYOUT_GUIDE.md for the current setup and private Model configuration.");
+    println("Help/list/show need no Provider configuration. See docs/agent/LOCAL_TRYOUT_GUIDE.md for the current setup and private Model configuration.");
     return 0;
 }

@@ -2,7 +2,8 @@ module nomo.session.work_chain_journal;
 
 import std.memory.{get_entry, prepare_put, operation_ref, commit, WriteCondition, MemoryVersion, MemoryEntry,
     WriteOutcome, MemoryWriteChange, StorageDurability, Missing, Match};
-import nomo.session.edit_operation.{Binding, selector_error, binding_error};
+import nomo.session.edit_operation.{Binding, selector_error};
+import nomo.session.work_chain_journal_contract.{CapturedJournal, invalid as journal_error};
 
 public type Record = { format: i32, chain: string, turn: i32, phase: string, binding: Binding };
 public type Ticket = { row: Record, version: MemoryVersion };
@@ -11,16 +12,9 @@ let Journal = std.memory.region<Schema>(stable_id = "nomo-work-chain-edit-v2", s
 flow key(turn: i32) -> string { return if turn == 1 { "turn:1" } else { "turn:2" }; }
 flow read(turn: i32) -> Option<MemoryEntry<string, Record>> { return get_entry(Journal.Rows, key(turn)); }
 
-flow invalid(row: Record) -> string {
-    if row.format != 2 || (row.turn != 1 && row.turn != 2) || (row.phase != "intent" && row.phase != "completed") {
-        return "invalid v2 edit journal format, turn or phase";
-    }
-    let binding = binding_error(row.binding); if binding != "" { return binding; }
-    let chain = selector_error(row.chain, row.binding.workspace, row.binding.path); if chain != "" { return chain; }
-    if (row.turn == 1 && row.chain != row.binding.id) || (row.turn == 2 && row.chain == row.binding.id) {
-        return "v2 edit journal chain identity mismatch";
-    }
-    return "";
+flow invalid(row: Record) -> string { return journal_error(captured(row)); }
+public flow captured(row: Record) -> CapturedJournal {
+    return CapturedJournal { format = row.format, chain = row.chain, turn = row.turn, phase = row.phase, binding = row.binding };
 }
 
 flow write(row: Record, condition: WriteCondition) -> Result<MemoryVersion, string> ![Memory, Error<StorageError>, Error<IndexError>] {
@@ -79,4 +73,10 @@ public flow inspect(chain: string, turn: i32, id: string, workspace: string, pat
     let after = match read(turn) { Some(value) => value, None() => { return Err("v2 edit journal disappeared during inspect"); } };
     if after != before { return Err("v2 edit journal changed during inspect"); }
     return Ok(Some(row));
+}
+
+// Fixed-slot read only; storage errors remain native errors, never empty results.
+public flow observe(turn: i32) -> Result<Option<MemoryEntry<string, Record>>, string> {
+    if turn != 1 && turn != 2 { return Err("v2 edit journal permits only two turns"); }
+    return Ok(read(turn));
 }

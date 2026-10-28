@@ -519,3 +519,9 @@ name = "nomo-terminal-once"
 module = "nomo.main"
 flow = "terminal_once"
 profile = "work-chain-once"
+
+[[bin]]
+name = "nomo-chain-sessions"
+module = "nomo.main"
+flow = "chain_sessions"
+profile = "work-chain-show"

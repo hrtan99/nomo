@@ -30,11 +30,12 @@ import nomo.entry.edit_entry.run_help as edit_help_run;
 import nomo.entry.harness_edit_entry.run as harness_edit_run;
 import nomo.entry.harness_work_entry.run as harness_work_run;
 import nomo.entry.work_session_entry.{run_save as work_save_run, run_show as work_show_run};
-import nomo.entry.work_chain_entry.{run_new as chain_new_run, run_continue as chain_continue_run, run_show as chain_show_run, run_inspect as chain_inspect_run, run_observed_new as chain_observed_new_run, run_observed_continue as chain_observed_continue_run};
+import nomo.entry.work_chain_entry.{run_new as chain_new_run, run_continue as chain_continue_run, run_inspect as chain_inspect_run, run_observed_new as chain_observed_new_run, run_observed_continue as chain_observed_continue_run};
 import nomo.entry.work_chain_help.help as chain_help_run;
 import nomo.entry.terminal_entry.run as terminal_run;
 import nomo.entry.terminal_entry.run_once as terminal_once_run;
 import nomo.entry.terminal_help.help as terminal_help_run;
+import nomo.entry.work_chain_sessions.{run_sessions as chain_sessions_run, run_show as chain_show_run};
 
 flow terminal(args: Array<string>) -> i32 {
     let status = terminal_run(args);
@@ -253,3 +254,5 @@ flow chain_inspect(args: Array<string>) -> i32 { let status = chain_inspect_run(
 
 flow chain_observe_new(args: Array<string>) -> i32 { let status = chain_observed_new_run(args); if status != 0 { abort("Nomo observed fixture new refused; preserve state, no retry"); } return 0; }
 flow chain_observe_continue(args: Array<string>) -> i32 { let status = chain_observed_continue_run(args); if status != 0 { abort("Nomo observed fixture continuation refused; preserve state, no retry"); } return 0; }
+
+flow chain_sessions(args: Array<string>) -> i32 { let status = chain_sessions_run(args); if status != 0 { abort("Nomo session discovery refused; see REFUSED"); } return 0; }

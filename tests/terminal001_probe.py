@@ -22,7 +22,7 @@ CAP='13,7,47104,196608,1,4096,3,6144,1,2048'
 REQUEST='replace selected literal'
 NEW=['new','--id','root-op','--child-id','child-op','--workspace','owned','--path','target.txt','--allow','context.txt']
 CONTINUE=['continue','--parent','root-op','--id','child-op','--workspace','owned','--path','target.txt','--allow','context.txt']
-BINDING=dict(help=False,root_id='root-op',child_id='child-op',parent='',workspace='owned',path='target.txt',allowed=['context.txt'],cap_raw='',once_supplied=False,once='')
+BINDING=dict(help=False,root_id='root-op',child_id='child-op',parent='',workspace='owned',path='target.txt',allowed=['context.txt'],cap_raw='',once_supplied=False,once='',latest=False)
 
 
 def cases():
@@ -72,7 +72,7 @@ def cases():
     add('invalid_stopped_render_turn_refused',*[call('render_refused',last) for last in [0,3,-1]])
     values=['literal "quoted" \\ text','\x1b[2J\n\r\t\x7f\x85\u202e雪😀','x'*128]
     add('user_echo_is_ascii_escaped',*[call('rendered_request',value,'USER '+ascii_json([value])) for value in values],call('request_render_refused','x'*129))
-    add('non_tty_once_help_without_binding',*[once_parsed(args,help=True,root_id='',child_id='',workspace='',path='',allowed=[],once_supplied=False,once='') for args in [['help'],['--help']]])
+    add('non_tty_once_help_without_binding',*[once_parsed(args,help=True,root_id='',child_id='',workspace='',path='',allowed=[],once_supplied=False,once='',latest=False) for args in [['help'],['--help']]])
     add('non_tty_once_requires_explicit_request',call('once_required',NEW),call('once_required',CONTINUE),call('once_refused',NEW+['--once']))
     add('non_tty_once_keeps_literal_startup_values',once_parsed(NEW+['--once',REQUEST]),once_parsed(CONTINUE+['--cap',CAP,'--once',REQUEST],parent='root-op',cap_raw=CAP),once_parsed(NEW+['--once','--help'],once='--help'),once_parsed(NEW+['--once','x'*128],once='x'*128))
     add('non_tty_once_refuses_conflicts_and_invalid_values',*[call('once_refused',args) for args in [NEW+['--once','x','--once','y'],NEW+['--once',REQUEST,'--cap',''],NEW+['--once',''],NEW+['--once',' '],NEW+['--once','x'*129],NEW+['--once','x\n'],NEW+['--once','雪'],['--help',*NEW[1:],'--once',REQUEST]]])

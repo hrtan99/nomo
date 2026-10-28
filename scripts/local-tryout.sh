@@ -4,7 +4,7 @@ umask 077
 
 readonly project_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
 if [[ $# -lt 1 ]]; then
-    echo 'Usage: local-tryout.sh help|terminal-help | prepare NEW_DIRECTORY | new|continue|inspect-new|observe-new|observe-continue|terminal|show DIRECTORY [native arguments]' >&2
+    echo 'Usage: local-tryout.sh help|terminal-help | prepare NEW_DIRECTORY | new|continue|inspect-new|observe-new|observe-continue|terminal|show|sessions DIRECTORY [native arguments]' >&2
     exit 64
 fi
 readonly action="$1"
@@ -29,7 +29,8 @@ case "$action" in
     observe-continue) flow=chain_observe_continue; profile=work-chain ;;
     continue) flow=chain_continue; profile=work-chain ;;
     show) flow=chain_show; profile=work-chain-show ;;
-    *) echo 'Expected help, terminal-help, prepare, new, continue, inspect-new, observe-new, observe-continue, terminal or show.' >&2; exit 64 ;;
+    sessions) flow=chain_sessions; profile=work-chain-show ;;
+    *) echo 'Expected help, terminal-help, prepare, new, continue, inspect-new, observe-new, observe-continue, terminal, show or sessions.' >&2; exit 64 ;;
 esac
 
 compose=(docker compose --env-file /dev/null --file "$project_root/compose.yaml"

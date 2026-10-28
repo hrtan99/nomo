@@ -15,7 +15,8 @@ import nomo.harness.work_chain_model.{ParentFacts, parent_facts};
 import nomo.session.work_record.{partial, admit, validate as captured};
 import nomo.session.work_chain.{Record, publish_partial as projected, linked};
 import nomo.session.work_chain_store.{Ticket, read_parent, admit_new, admit_continue, claim, publish_partial, complete, inspect};
-import nomo.session.work_chain_journal.{begin, complete as complete_edit, inspect as journal};
+import nomo.session.work_chain_journal.{begin, complete as complete_edit, inspect as journal, captured as captured_journal};
+import nomo.session.work_chain_journal_contract.CapturedJournal as Journal;
 import nomo.entry.edit_coordinator.{Approval, Confirmed, confirm_current};
 import nomo.entry.edit_context.display;
 import nomo.entry.harness_work_entry.{Pending, prepare_chain_work, completed_context_work, summarize_chain, chain_ledger as ledger};
@@ -91,6 +92,10 @@ public flow run_show(args: Array<string>) -> i32 {
     if input.help { return chain_help([]); }
     let row = match inspect(input.id, input.workspace, input.path) { Ok(Some(value)) => value, Ok(None()) => { println("CHAIN missing; missing data never establishes no edit occurred."); return 0; } Err(error) => { println("REFUSED " + error); help_hint(); return 1; } };
     let operation = match journal(row.chain, row.turn, row.id, row.workspace, row.path) { Ok(value) => value, Err(error) => { println("REFUSED " + error); help_hint(); return 1; } };
+    let captured = match operation { Some(value) => Some(captured_journal(value)), None() => None() };
+    return show_captured(row, captured);
+}
+public flow show_captured(row: Record, operation: Option<Journal>) -> i32 {
     let lines = match render(row, operation) { Ok(value) => value, Err(error) => { println("REFUSED " + error); help_hint(); return 1; } };
     for line in lines limit Iterations(16) { println(line); }
     show_hint(row.id, row.workspace, row.path);

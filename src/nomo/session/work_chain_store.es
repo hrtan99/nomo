@@ -2,13 +2,17 @@ module nomo.session.work_chain_store;
 
 import std.memory.{get_entry, prepare_put, operation_ref, commit, WriteCondition, MemoryVersion, MemoryEntry,
     WriteOutcome, MemoryWriteChange, StorageDurability, Missing, Match};
-import nomo.session.edit_operation.{selector_error, same_binding};
+import nomo.session.edit_operation.selector_error;
 import nomo.session.work_record.Record as WorkRecord;
 import nomo.session.work_chain.{Record, Caps, initial, successor, validate, linked};
 import nomo.session.work_chain.publish_partial as partial_row;
 import nomo.session.work_chain.confirm as confirmed_row;
 import nomo.session.work_chain_journal.inspect as inspect_journal;
 import nomo.session.work_chain_journal.available as journal_available;
+import nomo.session.work_chain_journal.{observe as observed_journal, captured as captured_journal};
+import nomo.session.work_chain_observation.{SessionObservation, observe as observe_sessions};
+import nomo.session.work_chain_selection.{Snapshot, ObservedRow, ObservedJournal, Selector, select, consistent};
+import nomo.session.work_chain_selection.journal_error as selected_journal_error;
 
 public type Ticket = { row: Record, version: MemoryVersion, parent: Option<MemoryEntry<string, Record>> };
 alias Schema = MemoryRegion<{ Rows: Store<string, Record> }>;
@@ -20,14 +24,8 @@ flow journal_error(row: Record) -> string {
     let journal = match inspect_journal(row.chain, row.turn, row.id, row.workspace, row.path) {
         Ok(value) => value, Err(error) => { return error; }
     };
-    match row.work {
-        Some(work) => {
-            let observed = match journal { Some(value) => value, None() => { return "v2 work has no confirmed edit journal"; } };
-            if observed.phase != "completed" || !same_binding(observed.binding, work.binding) { return "v2 work and completed edit journal differ"; }
-        }
-        None() => {}
-    }
-    return "";
+    let projected = match journal { Some(value) => Some(captured_journal(value)), None() => None() };
+    return selected_journal_error(row, projected);
 }
 
 // The first fixed turn row is also the global owner/root admission. It is
@@ -157,4 +155,41 @@ public flow inspect(id: string, workspace: string, path: string) -> Result<Optio
     if !found || selected.workspace != workspace || selected.path != path { return Err("v2 chain selected identity or workspace mismatch"); }
     if read(1) != root || read(2) != child { return Err("v2 chain changed during show"); }
     return Ok(Some(selected));
+}
+
+flow observed_snapshot() -> Result<Snapshot, string> {
+    let root = read(1); let child = read(2);
+    let root_edit = match observed_journal(1) { Ok(value) => value, Err(error) => { return Err(error); } };
+    let child_edit = match observed_journal(2) { Ok(value) => value, Err(error) => { return Err(error); } };
+    return Ok(Snapshot {
+        root = match root { Some(value) => Some(ObservedRow { key = value.key, version = value.version.opaque, value = value.value }), None() => None() },
+        child = match child { Some(value) => Some(ObservedRow { key = value.key, version = value.version.opaque, value = value.value }), None() => None() },
+        root_journal = match root_edit { Some(value) => Some(ObservedJournal { key = value.key, version = value.version.opaque, value = captured_journal(value.value) }), None() => None() },
+        child_journal = match child_edit { Some(value) => Some(ObservedJournal { key = value.key, version = value.version.opaque, value = captured_journal(value.value) }), None() => None() } });
+}
+public flow snapshot(workspace: string, path: string) -> Result<Snapshot, string> {
+    return handle { observe_sessions(workspace, path) } with {
+        SessionObservation.capture(pass) => { resume observed_snapshot(); }
+    };
+}
+public flow discover(workspace: string, path: string, selector: Selector) -> Result<Snapshot, string> {
+    let before = match snapshot(workspace, path) { Ok(value) => value, Err(error) => { return Err(error); } };
+    let selected = match select(before, workspace, path, selector) { Ok(value) => value, Err(error) => { return Err(error); } };
+    for row in selected limit Iterations(2) {
+        let actual = match inspect(row.id, workspace, path) { Ok(value) => value, Err(error) => { return Err(error); } };
+        if actual != Some(row) { return Err("v2 discovery selected row differs from inspect authority"); }
+    }
+    let after = match snapshot(workspace, path) { Ok(value) => value, Err(error) => { return Err(error); } };
+    let change = consistent(before, after); if change != "" { return Err(change); }
+    return Ok(before);
+}
+public flow latest_parent(workspace: string, path: string) -> Result<string, string> {
+    let before = match snapshot(workspace, path) { Ok(value) => value, Err(error) => { return Err(error); } };
+    let selected = match select(before, workspace, path, Selector.Parent) { Ok(value) => value, Err(error) => { return Err(error); } };
+    let actual = match read_parent(selected[0].id, workspace, path) { Ok(value) => value, Err(error) => { return Err(error); } };
+    let root = match before.root { Some(value) => value, None() => { return Err("v2 discovery parent missing"); } };
+    if actual.key != root.key || actual.version.opaque != root.version || actual.value != root.value { return Err("v2 discovered parent changed before continuation"); }
+    let after = match snapshot(workspace, path) { Ok(value) => value, Err(error) => { return Err(error); } };
+    let change = consistent(before, after); if change != "" { return Err(change); }
+    return Ok(actual.value.id);
 }
