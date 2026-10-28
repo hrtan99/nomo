@@ -2,7 +2,7 @@ module nomo.entry.work_chain_display;
 
 import std.text.{len, to_string_i32, to_string_usize};
 import nomo.session.work_chain.{Record, values, validate};
-import nomo.session.work_chain_journal.Record as Journal;
+import nomo.session.work_chain_journal_contract.CapturedJournal as Journal;
 import nomo.tools.edit_encoding.object;
 import nomo.entry.work_record_display.render as work_lines;
 

@@ -7,16 +7,22 @@ import std.fs.IOError as FileError;
 import std.effects.Fs;
 import nomo.tools.workspace.ReadOnlyRoot;
 import nomo.tools.edit_file.EditableRoot;
-import nomo.cli.terminal_args.{Config, LineCommand, parse, parse_once, line, work_arguments, show_arguments};
+import nomo.cli.terminal_args.{Config, LineCommand, parse, parse_once, bind_parent, line, work_arguments, show_arguments};
 import nomo.ui.terminal_session.{State, fresh, turn, work_error, after_turn, state_line, request_line};
 import nomo.tools.edit_encoding.json;
 import nomo.session.work_chain.{turn_caps, values};
 import nomo.entry.work_chain_entry.{run_new, run_continue, run_show};
 import nomo.entry.terminal_help.help;
+import nomo.session.work_chain_store.latest_parent;
 
 flow refused(error: string) -> i32 {
     let encoded = match json([error]) { Ok(value) => value, Err(_) => "[\"terminal diagnostic encoding refused\"]" };
     println("ERROR " + encoded); return 1;
+}
+flow selected_config(config: Config) -> Result<Config, string> {
+    if !config.latest { return Ok(config); }
+    let parent = match latest_parent(config.workspace, config.path) { Ok(value) => value, Err(error) => { return Err(error); } };
+    return bind_parent(config, parent);
 }
 flow policy(config: Config) -> string {
     if config.cap_raw != "" { return config.cap_raw; }
@@ -54,8 +60,9 @@ flow show(config: Config, state: State) -> i32 {
     return 0;
 }
 public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read<ReadOnlyRoot>, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {
-    let config = match parse(args) { Ok(value) => value, Err(error) => { return refused(error); } };
-    if config.help { return help([]); }
+    let parsed = match parse(args) { Ok(value) => value, Err(error) => { return refused(error); } };
+    if parsed.help { return help([]); }
+    let config = match selected_config(parsed) { Ok(value) => value, Err(error) => { return refused(error); } };
     var state = fresh(config.parent != "");
     match display(config, state) { Ok(_) => {} Err(error) => { return refused(error); } }
     if config.once_supplied {
@@ -82,8 +89,9 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
 
 // No outer request read: missing --once is refused before any work admission.
 public flow run_once(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read<ReadOnlyRoot>, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {
-    let config = match parse_once(args) { Ok(value) => value, Err(error) => { return refused(error); } };
-    if config.help { return help([]); }
+    let parsed = match parse_once(args) { Ok(value) => value, Err(error) => { return refused(error); } };
+    if parsed.help { return help([]); }
+    let config = match selected_config(parsed) { Ok(value) => value, Err(error) => { return refused(error); } };
     let state = fresh(config.parent != "");
     match display(config, state) { Ok(_) => {} Err(error) => { return refused(error); } }
     return match request(config, state, config.once) { Ok(_) => 0, Err(error) => refused(error) };

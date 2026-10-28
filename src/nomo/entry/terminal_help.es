@@ -11,9 +11,11 @@ public flow help(args: Array<string>) -> i32 {
     println("Nomo terminal: line-oriented wrapper around the existing two-turn work chain.");
     println("terminal new --id ROOT --child-id CHILD --workspace BIND --path FILE --allow FILE[,FILE] [--cap CSV] [--once REQUEST]");
     println("terminal continue --parent ROOT --id CHILD --workspace BIND --path FILE --allow FILE[,FILE] [--cap CSV] [--once REQUEST]");
+    println("terminal continue --latest --id CHILD --workspace BIND --path FILE --allow FILE[,FILE] [--cap CSV] [--once REQUEST]");
     println("terminal_once new|continue OPTIONS --once REQUEST (supported non-TTY entry, native Deny profile)");
     println("terminal_help [--help]");
     println("Use one privately prepared fixed fixture/store. Root and child IDs must differ; continuation names its parent explicitly.");
+    println("--latest resolves only a confirmed first parent with no second slot; explicit --parent conflicts. Native continuation admission and both confirmations still apply.");
     println("Commands: /help, /show, /exit; EOF stops. Requests:1..128 printable ASCII characters before trimming; at most32 input lines.");
     println("--once runs only the selected request and never reads a second request. A blank line is invalid, not EOF.");
     println("Only a confirmed first-turn result offers the second request. Failed, denied or uncertain work stops; no retry, refund, replay or third turn.");
