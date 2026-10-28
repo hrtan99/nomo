@@ -1,8 +1,19 @@
 {
   "selector": "latest",
-  "source": "official merged main, observed once for TYPED-WORK-001 / TERMINAL-002 batch on 2026-10-28",
-  "official_observation_sha256": "db66306d4eb6de7fbb09004ed4d0220d14620c806d5e817695d4d3a315e7c3ce",
+  "source": "official merged main, observed once for SESSION-DISCOVERY-001 / TYPED-WORK-CALLERS-001 batch on 2026-10-28",
+  "official_observation_sha256": "2b504092672b494c984eb5f7b3e8a039de7b6b5109a1fc5015801e31a9d0ee60",
   "repositories": {
+    "cli": {
+      "repository": "etas",
+      "revision": "b2254eb24a472e73cad40423123e907b3612d453",
+      "tree": "b1709395c03469f5475445e1f234b695fd15df78",
+      "packages": [
+        "etas_cli",
+        "etas_driver",
+        "etas_package",
+        "etas_tests"
+      ]
+    },
     "core": {
       "repository": "etas-core",
       "revision": "32855a230b6ed2671484f0c21b4e0d64662c5016",
@@ -35,21 +46,10 @@
     },
     "interpreter": {
       "repository": "etas-interpreter",
-      "revision": "1f9b32a0f3b773151065d271bcf87f766354a1ab",
-      "tree": "ff2e0dd69f63f1f7eb41cb536b678f96dfb54fd3",
+      "revision": "4647415b79c077d08675e75e2623abb096e243a8",
+      "tree": "f607d0385a3d89d60747a1bd667160b7d51eff39",
       "packages": [
         "etas_interpreter"
-      ]
-    },
-    "cli": {
-      "repository": "etas",
-      "revision": "b7e20625d4b8f18cfe77156afc9518fa22951d25",
-      "tree": "d104d1b7ab76b3e87baf88209834f3839f98e0cb",
-      "packages": [
-        "etas_cli",
-        "etas_driver",
-        "etas_package",
-        "etas_tests"
       ]
     }
   }
