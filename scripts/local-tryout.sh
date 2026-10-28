@@ -16,7 +16,13 @@ case "$action" in
         ;;
     help) flow=chain_help; profile=chain-help ;;
     terminal-help) flow=terminal_help; profile=chain-help ;;
-    terminal) flow=terminal; profile=work-chain ;;
+    terminal)
+        if [[ -t 0 ]]; then
+            flow=terminal; profile=work-chain; terminal_tty=true; terminal_approval=prompt
+        else
+            flow=terminal_once; profile=work-chain-once; terminal_tty=false; terminal_approval=deny
+        fi
+        ;;
     new) flow=chain_new; profile=work-chain ;;
     inspect-new) flow=chain_inspect; profile=work-chain ;;
     observe-new) flow=chain_observe_new; profile=work-chain ;;
@@ -32,8 +38,7 @@ compose=(docker compose --env-file /dev/null --file "$project_root/compose.yaml"
 native=(etas run /workspace --flow "$flow" --profile "$profile" --allow-effects)
 run=(run --rm --no-deps)
 if [[ "$action" == terminal ]]; then
-    if [[ -t 0 ]]; then run+=(--tty=true); else run+=(--tty=false); fi
-    run+=(-e ETAS_HOST_APPROVAL=prompt)
+    run+=(--tty="$terminal_tty" -e "ETAS_HOST_APPROVAL=$terminal_approval")
 fi
 if [[ "$action" != help && "$action" != terminal-help ]]; then
     [[ $# -ge 1 ]] || { echo 'An explicitly prepared fixed tryout directory is required.' >&2; exit 64; }
@@ -66,4 +71,7 @@ else
     if [[ "$action" == terminal-help ]]; then run+=(-e ETAS_HOST_APPROVAL=deny); fi
 fi
 # Transport only: all application parsing, claims, budgets and confirmations stay in Etas.
+if [[ "$action" == terminal ]]; then
+    exec python3 "$project_root/scripts/terminal-transport.py" "${compose[@]}" "${run[@]}" dev "${native[@]}" --args "$@"
+fi
 exec "${compose[@]}" "${run[@]}" dev "${native[@]}" --args "$@"

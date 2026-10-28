@@ -7,7 +7,7 @@ import std.fs.IOError as FileError;
 import std.effects.Fs;
 import nomo.tools.workspace.ReadOnlyRoot;
 import nomo.tools.edit_file.EditableRoot;
-import nomo.cli.terminal_args.{Config, LineCommand, parse, line, work_arguments, show_arguments};
+import nomo.cli.terminal_args.{Config, LineCommand, parse, parse_once, line, work_arguments, show_arguments};
 import nomo.ui.terminal_session.{State, fresh, turn, work_error, after_turn, state_line, request_line};
 import nomo.tools.edit_encoding.json;
 import nomo.session.work_chain.{turn_caps, values};
@@ -78,4 +78,13 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
         }
     }
     return refused("terminal input limit reached; inspect captured state; no further request in this process");
+}
+
+// No outer request read: missing --once is refused before any work admission.
+public flow run_once(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read<ReadOnlyRoot>, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {
+    let config = match parse_once(args) { Ok(value) => value, Err(error) => { return refused(error); } };
+    if config.help { return help([]); }
+    let state = fresh(config.parent != "");
+    match display(config, state) { Ok(_) => {} Err(error) => { return refused(error); } }
+    return match request(config, state, config.once) { Ok(_) => 0, Err(error) => refused(error) };
 }

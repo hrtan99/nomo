@@ -33,11 +33,17 @@ import nomo.entry.work_session_entry.{run_save as work_save_run, run_show as wor
 import nomo.entry.work_chain_entry.{run_new as chain_new_run, run_continue as chain_continue_run, run_show as chain_show_run, run_inspect as chain_inspect_run, run_observed_new as chain_observed_new_run, run_observed_continue as chain_observed_continue_run};
 import nomo.entry.work_chain_help.help as chain_help_run;
 import nomo.entry.terminal_entry.run as terminal_run;
+import nomo.entry.terminal_entry.run_once as terminal_once_run;
 import nomo.entry.terminal_help.help as terminal_help_run;
 
 flow terminal(args: Array<string>) -> i32 {
     let status = terminal_run(args);
     if status != 0 { abort("Nomo terminal stopped; inspect current journal and work state"); }
+    return 0;
+}
+flow terminal_once(args: Array<string>) -> i32 {
+    let status = terminal_once_run(args);
+    if status != 0 { abort("Nomo one-shot terminal stopped; inspect current journal and work state"); }
     return 0;
 }
 flow terminal_help(args: Array<string>) -> i32 {
