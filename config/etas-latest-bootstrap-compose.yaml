@@ -25,4 +25,4 @@ services:
 volumes:
   latest-download-seed:
     external: true
-    name: nomo-cargo-cache-latest-004-20261028
+    name: nomo-cargo-cache-latest-005-20261028
