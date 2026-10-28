@@ -12,6 +12,7 @@ import nomo.core.conversation.{Event, State, fresh, charge};
 public type Action = { operation: string, files: Array<string>, literal: string, text: string };
 public type Context = { history: Array<Event>, allowed: Array<string>, final_only: bool };
 public type Session = { history: State, calls: usize, tokens: usize, tools: usize, scan: usize };
+public type LoopTurn = { state: Session, status: i32 };
 public type Limits = { steps: i32, calls: usize, tokens: usize, scan: usize };
 
 public flow fresh_loop() -> Session {

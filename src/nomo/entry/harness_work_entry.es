@@ -8,9 +8,11 @@ import std.text.to_string_i32;
 import nomo.harness.model_plan_diagnostic.{response_error, response_text};
 import nomo.cli.harness_work_args.{Work, parse};
 import nomo.harness.harness_work_contract.{Context, Evidence, Ledger, fresh, ledger_error, bump_edit, native_tokens, collect, finish_evidence, context_error};
-import nomo.harness.harness_model_tools.{run_work_context, run_chain_work_context};
-import nomo.harness.harness_work_model.{edit_plan, edit_child, aggregate};
-import nomo.harness.work_chain_model.{ParentFacts, plan as chain_plan, child as chain_child, aggregate as chain_aggregate};
+import nomo.harness.harness_model_tools.{run_context as read_context, work_child_turn, chain_child_turn};
+import nomo.harness.legacy_string_stages.{LegacyStringStages, LegacyEditStages};
+import nomo.harness.harness_work_model.{read_main, edit_plan, edit_child, aggregate};
+import nomo.harness.work_chain_context.ParentFacts;
+import nomo.harness.work_chain_model.{plan as chain_plan, child as chain_child, aggregate as chain_aggregate};
 import nomo.harness.harness_edit_contract.{decode_plan, decode_edit, text_error, decode_work_plan, decode_work_edit, work_summary_error};
 import nomo.tools.workspace.ReadOnlyRoot;
 import nomo.tools.edit_file.{EditableRoot, Prepared, read_original, prepare_original};
@@ -44,13 +46,12 @@ public type Summary = { answer: string, state: Ledger };
 flow failed(state: Ledger, error: string) -> Result<Pending, Failure> { return Err(Failure { state = state, error = error }); }
 
 // Callers admit the unused edit slot before this shared Model/File preparation.
-flow prepare(input: Work, plan_infer: (Context) -> string, child_infer: (Context) -> string, original_error: (string) -> string, stage_log: (string, Ledger) -> unit, chain_read: bool, inspect_plan: bool, inspect_all: bool) -> Result<Pending, Failure> {
+public flow prepare(input: Work, original_error: (string) -> string, stage_log: (string, Ledger) -> unit, chain_read: bool, inspect_plan: bool, inspect_all: bool) -> Result<Pending, Failure> {
     var state = fresh();
     let selected = Selector { id = input.edit.id, workspace = input.edit.workspace, path = input.edit.path };
     let invalid = ledger_error(state); if invalid != "" { return failed(state, invalid); }
     println("RESERVATION work13 steps/7 calls/47104 generation/196608 native; edit tail6 steps/3 calls/38912 generation/163840 native; one read/search and one atomic maximum");
-    let read_result = if chain_read { run_chain_work_context(input.edit.request, input.allowed, state.read, inspect_plan, inspect_all) }
-        else { run_work_context(input.edit.request, input.allowed, state.read) };
+    let read_result = read_context(input.edit.request, input.allowed, state.read, "read-", true, chain_read, inspect_plan, inspect_all);
     let read = match read_result {
         Ok(value) => value,
         Err(failure) => {
@@ -70,7 +71,7 @@ flow prepare(input: Work, plan_infer: (Context) -> string, child_infer: (Context
     let error = context_error(plan); if error != "" { return failed(state, error); }
     state = match bump_edit(state, true) { Ok(value) => value, Err(error) => { return failed(state, error); } };
     stage_log("edit-plan", state);
-    let plan_raw = plan_infer(plan);
+    let plan_raw = perform LegacyEditStages.plan(plan);
     if inspect_all { println(response_text(plan_raw, "edit-plan", "lab-qwen-", 4096)); }
     let decoded_plan = if chain_read { decode_work_plan(plan_raw) } else { decode_plan(plan_raw) };
     let task = match decoded_plan { Ok(value) => value, Err(error) => { return failed(state, error); } };
@@ -80,7 +81,7 @@ flow prepare(input: Work, plan_infer: (Context) -> string, child_infer: (Context
     let child_error = context_error(delegated); if child_error != "" { return failed(state, child_error); }
     state = match bump_edit(state, true) { Ok(value) => value, Err(error) => { return failed(state, error); } };
     stage_log("edit-child", state);
-    let edit_raw = child_infer(delegated);
+    let edit_raw = perform LegacyEditStages.child(delegated);
     if inspect_all { println(response_text(edit_raw, "edit-child", "lab-qwen-", 32768)); }
     let decoded_edit = if chain_read { decode_work_edit(edit_raw) } else { decode_edit(edit_raw) };
     let request = match decoded_edit { Ok(value) => value, Err(error) => { return failed(state, error); } };
@@ -90,16 +91,26 @@ flow prepare(input: Work, plan_infer: (Context) -> string, child_infer: (Context
 }
 
 public flow prepare_work(input: Work) -> Result<Pending, Failure> {
-    let plan = (value: Context) => edit_plan(value); let child = (value: Context) => edit_child(value);
     let original = (value: string) => "";
     let log = (name: string, state: Ledger) => stage(name, state);
-    return prepare(input, plan, child, original, log, false, false, false);
+    return prepare(input, original, log, false, false, false) with {
+        LegacyStringStages.main(value) => { resume read_main(value); }
+        LegacyStringStages.child(task, files, selected) => { resume work_child_turn(task, files, selected); }
+        LegacyEditStages.plan(value) => { resume edit_plan(value); }
+        LegacyEditStages.child(value) => { resume edit_child(value); }
+        LegacyEditStages.aggregate(value) => { resume aggregate(value); }
+    };
 }
 public flow prepare_chain_work(input: Work, parent: Array<ParentFacts>, expected: Option<string>, inspect_plan: bool, inspect_all: bool) -> Result<Pending, Failure> {
-    let plan = (value: Context) => chain_plan(value, parent); let child = (value: Context) => chain_child(value, parent);
     let original = (value: string) => match expected { Some(before) => if value == before { "" } else { "current original differs from confirmed parent result" }, None() => "" };
     let log = (name: string, state: Ledger) => chain_stage(name, state);
-    return prepare(input, plan, child, original, log, true, inspect_plan, inspect_all);
+    return prepare(input, original, log, true, inspect_plan, inspect_all) with {
+        LegacyStringStages.main(value) => { resume read_main(value); }
+        LegacyStringStages.child(task, files, selected) => { resume chain_child_turn(task, files, selected, inspect_all); }
+        LegacyEditStages.plan(value) => { resume chain_plan(value, parent); }
+        LegacyEditStages.child(value) => { resume chain_child(value, parent); }
+        LegacyEditStages.aggregate(value) => { resume chain_aggregate(value, parent); }
+    };
 }
 
 public flow completed_context_work(pending: Pending, outcome: Confirmed) -> Result<Completed, Failure> {
@@ -114,21 +125,31 @@ public flow finish_edit(pending: Pending, outcome: Confirmed) -> Result<Complete
     recorded(pending.selected); return completed_context_work(pending, outcome);
 }
 
-flow finish_summary(completed: Completed, infer: (Context) -> string, stage_log: (string, Ledger) -> unit, work: bool, inspect_all: bool) -> Result<Summary, Failure> {
+public flow finish_summary(completed: Completed, stage_log: (string, Ledger) -> unit, work: bool, inspect_all: bool) -> Result<Summary, Failure> {
     let state = match bump_edit(completed.state, true) { Ok(value) => value,
         Err(error) => { return Err(Failure { state = completed.state, error = "edit completed; " + error }); } };
     stage_log("edit-aggregate", state);
-    let answer = infer(completed.context);
+    let answer = perform LegacyEditStages.aggregate(completed.context);
     if inspect_all { println(response_text(answer, "edit-aggregate", "lab-qwen-", 512)); }
     let error = if work { work_summary_error(answer) } else { text_error(answer, "final answer") }; if error != "" { return Err(Failure { state = state, error = "edit completed; " + error }); }
     return Ok(Summary { answer = answer, state = state });
 }
 
 public flow summarize(completed: Completed) -> Result<Summary, Failure> {
-    let infer = (value: Context) => aggregate(value); let log = (name: string, state: Ledger) => stage(name, state); return finish_summary(completed, infer, log, false, false);
+    let log = (name: string, state: Ledger) => stage(name, state);
+    return finish_summary(completed, log, false, false) with {
+        LegacyEditStages.plan(value) => { resume edit_plan(value); }
+        LegacyEditStages.child(value) => { resume edit_child(value); }
+        LegacyEditStages.aggregate(value) => { resume aggregate(value); }
+    };
 }
 public flow summarize_chain(completed: Completed, parent: Array<ParentFacts>, inspect_all: bool) -> Result<Summary, Failure> {
-    let infer = (value: Context) => chain_aggregate(value, parent); let log = (name: string, state: Ledger) => chain_stage(name, state); return finish_summary(completed, infer, log, true, inspect_all);
+    let log = (name: string, state: Ledger) => chain_stage(name, state);
+    return finish_summary(completed, log, true, inspect_all) with {
+        LegacyEditStages.plan(value) => { resume chain_plan(value, parent); }
+        LegacyEditStages.child(value) => { resume chain_child(value, parent); }
+        LegacyEditStages.aggregate(value) => { resume chain_aggregate(value, parent); }
+    };
 }
 
 public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read<ReadOnlyRoot>, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {

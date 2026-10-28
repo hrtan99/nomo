@@ -8,7 +8,8 @@ import nomo.agent.loop.{emit, failure};
 import nomo.model.model_tool_contract.{Session, Limits, Context, allowed_error, question_error, decode_reply, decode_work_reply, context_error, budget_error, charge_action};
 import nomo.tools.workspace.{Outcome, outcome, read_file, search_files, display};
 
-public type LoopTurn = { state: Session, status: i32 };
+public import nomo.model.model_tool_contract.LoopTurn;
+import nomo.harness.legacy_string_stages.LegacyChildModel;
 type ModelAttempt = { state: Session, context: Context };
 
 @limits([Tokens(2048)])
@@ -66,23 +67,25 @@ flow model_attempt(previous: Session, allowed: Array<string>, limits: Limits, fi
 public flow old_infer(context: Context) -> string { return ToolModel.run(context); }
 
 public flow run_loop(raw: string, allowed: Array<string>, limits: Limits, previous: Session) -> LoopTurn {
-    let infer = (context: Context) => old_infer(context);
-    return run_loop_with(raw, allowed, limits, previous, infer, false, false);
+    return run_loop_with(raw, allowed, limits, previous, false, false) with {
+        LegacyChildModel.infer(context) => { resume old_infer(context); }
+    };
 }
 
 public flow run_work_loop(raw: string, allowed: Array<string>, limits: Limits, previous: Session) -> LoopTurn {
-    let infer = (context: Context) => work_infer(context);
-    return run_loop_with(raw, allowed, limits, previous, infer, false, false);
+    return run_loop_with(raw, allowed, limits, previous, false, false) with {
+        LegacyChildModel.infer(context) => { resume work_infer(context); }
+    };
 }
 
 public flow run_chain_work_loop(raw: string, allowed: Array<string>, limits: Limits, previous: Session, inspect_all: bool) -> LoopTurn {
-    let infer = (context: Context) => work_infer(context);
-    return run_loop_with(raw, allowed, limits, previous, infer, true, inspect_all);
+    return run_loop_with(raw, allowed, limits, previous, true, inspect_all) with {
+        LegacyChildModel.infer(context) => { resume work_infer(context); }
+    };
 }
 
-// Keep the callback private and invoke it here directly: frozen public latent
-// metadata cannot transport callbacks through another callback-parameter flow.
-flow run_loop_with(raw: string, allowed: Array<string>, limits: Limits, previous: Session, infer: (Context) -> string, work: bool, inspect_all: bool) -> LoopTurn {
+// This same controller is used by scoped production and deterministic handlers.
+public flow run_loop_with(raw: string, allowed: Array<string>, limits: Limits, previous: Session, work: bool, inspect_all: bool) -> LoopTurn {
     if previous.history.stopped { return LoopTurn { state = previous, status = 4 }; }
     let full = capacity(previous, 1, 128);
     if full != "" { return failed(history(previous, stop(previous.history)), full, 4); }
@@ -92,7 +95,7 @@ flow run_loop_with(raw: string, allowed: Array<string>, limits: Limits, previous
     var session = history(previous, emit(previous.history, "user", "input", "", raw));
     let first = match model_attempt(session, allowed, limits, false) { Ok(value) => value, Err(error) => { return error; } };
     // Host failure aborts here, without a recoverable source error event.
-    let first_raw = infer(first.context);
+    let first_raw = perform LegacyChildModel.infer(first.context);
     session = first.state;
     if inspect_all { println(response_text(first_raw, "read-child-action", "lab-qwen-", 384)); }
     let decoded = if work { decode_work_reply(first_raw, allowed, false) } else { decode_reply(first_raw, allowed, false) };
@@ -121,7 +124,7 @@ flow run_loop_with(raw: string, allowed: Array<string>, limits: Limits, previous
     }
     session = history(session, emit(session.history, "tool", "complete", action.operation, data));
     let second = match model_attempt(session, allowed, limits, true) { Ok(value) => value, Err(error) => { return error; } };
-    let second_raw = infer(second.context);
+    let second_raw = perform LegacyChildModel.infer(second.context);
     if inspect_all { println(response_text(second_raw, "read-child-final", "lab-qwen-", 1152)); }
     let decoded_final = if work { decode_work_reply(second_raw, allowed, true) } else { decode_reply(second_raw, allowed, true) };
     let final = match decoded_final {
