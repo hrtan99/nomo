@@ -106,14 +106,17 @@ def cases():
     add('literal_clarification_typed_context_quotes_unicode',call('typed_context_roundtrip','head "quoted" \\ path 雪😀\r\nsample\n'))
     received_planner_object = '["delegate",{"edit.request":"replace old with blue","before":"old\\n","path":"demo/value.txt"}]'
     add('planner_role_exact_received_object_is_not_task_string',diagnosed('edit-plan',received_planner_object,'shape'),plan('edit-plan','one plain-language instruction to the edit child'),plan('edit-plan',encoded({'instruction':'replace selected literal'})))
+    received_child_path = '["edit", "demo/value.txt", "blue\\n", "green\\n"]'
+    add('child_role_received_path_is_not_a_literal_field',diagnosed('edit-child',received_child_path,'arity'),edit('selected literal','replacement literal'),proposal('prefix selected literal suffix','selected literal','replacement literal','prefix replacement literal suffix',True),proposal('selected literal and selected literal','selected literal','replacement literal'))
     assert len(checks)<=96 and len(checks)==len({label for label,_ in checks})
     return checks
 
 
 def main():
-    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--evidence-dir',type=Path,required=True);parser.add_argument('--prepare-only',action='store_true');parser.add_argument('--literal-only',action='store_true',help='run only non-admitting literal clarification and the unchanged received-response regression');parser.add_argument('--planner-role-only',action='store_true',help='run only the non-admitting planner role/received-object regression');options=parser.parse_args()
+    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--evidence-dir',type=Path,required=True);parser.add_argument('--prepare-only',action='store_true');parser.add_argument('--literal-only',action='store_true',help='run only non-admitting literal clarification and the unchanged received-response regression');parser.add_argument('--planner-role-only',action='store_true',help='run only the non-admitting planner role/received-object regression');parser.add_argument('--child-role-only',action='store_true',help='run only the non-admitting child bound-path/received-arity regression');options=parser.parse_args()
     checks=cases()
-    if options.planner_role_only:checks=[item for item in checks if item[0]=='planner_role_exact_received_object_is_not_task_string']
+    if options.child_role_only:checks=[item for item in checks if item[0]=='child_role_received_path_is_not_a_literal_field']
+    elif options.planner_role_only:checks=[item for item in checks if item[0]=='planner_role_exact_received_object_is_not_task_string']
     elif options.literal_only:checks=[item for item in checks if item[0].startswith('literal_clarification_') or item[0]=='received_edit_literal_backslash_n_is_not_file_lf']
     options.evidence_dir.mkdir(parents=True,exist_ok=True);evidence=Path(tempfile.mkdtemp(prefix='model-protocol002-',dir=options.evidence_dir)).resolve();project=evidence/'project';(project/'src/app').mkdir(parents=True)
     print('EVIDENCE '+str(evidence),flush=True);sources={}
@@ -123,8 +126,8 @@ def main():
     (project/'src/app/contract_probe.es').write_text(FIXTURE.read_text().replace('__CHECKS__','['+',\n'.join(expressions)+']'))
     (project/'etas.toml').write_text(MANIFEST.replace('harness-checkpoint-contract-probe','model-protocol002-contract-probe'))
     entry=(ROOT/'src/nomo/entry/work_chain_entry.es').read_text();ordered=[entry.index(value) for value in ['let saved = match publish_partial(ticket, candidate)','let summary = match summarize_chain(completed, prior','match complete(saved, summary.answer)']];assert ordered==sorted(ordered)
-    result=dict(task='MODEL-PROTOCOL-002-pure',suite='planner-role-clarification' if options.planner_role_only else ('literal-clarification' if options.literal_only else 'all-seven-boundaries'),status='prepared',checks=[label for label,_ in checks],sources=sources,commands=[],
-        lifetime_ledger=dict(actual_new_v2_admissions=0,maximum=3,already_used=3,runtime_authorized=False,reserved='none; original two plus added one exhausted; this runner has no integration/admission mode'),
+    result=dict(task='MODEL-PROTOCOL-002-pure',suite='child-bound-path-role' if options.child_role_only else ('planner-role-clarification' if options.planner_role_only else ('literal-clarification' if options.literal_only else 'all-seven-boundaries')),status='prepared',checks=[label for label,_ in checks],sources=sources,commands=[],
+        lifetime_ledger=dict(actual_new_v2_admissions=0,maximum=5,already_used=4,conditional_second_eligible=False,runtime_authorized=False,reserved='none in this pure runner; last conditional actual slot requires meaningful correction, TL acceptance, PM commit and fresh binding'),
         postatomic_qualification='typed validated pending work/completed journal +pure display and source call-order; no actual atomic edit/store/admission; unchanged accepted prior actual failure evidence reused separately',source_publish_summary_complete_positions=ordered,
         source_fixture_encoding='reuse accepted local FF literal correction; exact decoded data and byte bounds remain semantic oracles')
     output=evidence/'results.json';save=lambda:output.write_text(json.dumps(result,indent=2)+'\n');save()
