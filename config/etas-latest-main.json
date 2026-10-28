@@ -1,12 +1,12 @@
 {
   "selector": "latest",
   "source": "PM frozen official merged main for accelerated official-fix adoption on 2026-10-29",
-  "official_observation_sha256": "2ffe59b2f73479218aa583fab1030c47d20b81d64760340b5a80dc1d2be0dec7",
+  "official_observation_sha256": "37ba37147aefce4a950628967a477d2b3bf90b1c18ddd2b7f7da992766d7767a",
   "repositories": {
     "cli": {
       "repository": "etas",
-      "revision": "cfd497493ed5b13406c46aeb8df409e8e6b8ef0e",
-      "tree": "06c078bf32dc8a2b7f4a005e12b50fc4b78c404f",
+      "revision": "1e047b3df985994be5374258914985e9ebf42361",
+      "tree": "50a31318cf6129057ba81f12478796b3ea9d96c4",
       "packages": [
         "etas_cli",
         "etas_driver",
@@ -32,8 +32,8 @@
     },
     "frontend": {
       "repository": "etas-frontend",
-      "revision": "bf00fb6322d35f9f5fe053e8278535c3f3781e3a",
-      "tree": "e5c70120110b65c2fbd10d19401a5afeec7441ea",
+      "revision": "c4a2ffc195c46c570b55a3d1f40625a76d349db9",
+      "tree": "f1f91e048674aeacd0b3fd77fda215a542a2a23d",
       "packages": [
         "etas_effects",
         "etas_frontend",
@@ -46,8 +46,8 @@
     },
     "interpreter": {
       "repository": "etas-interpreter",
-      "revision": "03643409884350906d73fe7ffaa1fb4c5076d687",
-      "tree": "a7d2a2864512ac13ed4b17853ba7980cd1647970",
+      "revision": "a36646db41392ca8ae88e807ba9d7631defbb377",
+      "tree": "588f8350c462f8d7e3e3b4485d6097e467ee3f63",
       "packages": [
         "etas_interpreter"
       ]
