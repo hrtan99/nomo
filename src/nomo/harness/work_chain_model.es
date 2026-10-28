@@ -12,7 +12,7 @@ import nomo.harness.harness_work_model.{plan_system, child_system, aggregate_sys
 
 public type ParentFacts = { chain: string, root: string, id: string, turn: i32, after_digest: string, request: string,
     read_task: string, operation: string, files: Array<string>, literal: string, outcome: string, result: string, read_summary: string, final_summary: string };
-type Input = { current: Context, parent: Array<ParentFacts> };
+public type Input = { current: Context, parent: Array<ParentFacts> };
 public flow parent_facts(parent: Record) -> Result<Array<ParentFacts>, string> {
     let invalid = validate(parent); if invalid != "" { return Err(invalid); }
     if parent.turn != 1 || parent.phase != "summary-confirmed" { return Err("only a confirmed first v2 parent supplies context"); }
@@ -28,7 +28,7 @@ public flow parent_facts(parent: Record) -> Result<Array<ParentFacts>, string> {
     if byte_count(utf8_encode(encoded)) > 8192 { return Err("parent facts exceed 8192 UTF-8 bytes before admission"); }
     return Ok(result);
 }
-flow combined(current: Context, parent: Array<ParentFacts>) -> Input {
+public flow combined(current: Context, parent: Array<ParentFacts>) -> Input {
     let error = context_error(current); if error != "" { abort(error); }
     if count(parent) > 1 { abort("at most one confirmed parent context"); }
     let value = Input { current = current, parent = parent };

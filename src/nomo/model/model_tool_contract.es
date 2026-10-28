@@ -49,6 +49,18 @@ flow selected_error(names: Array<string>, allowed: Array<string>) -> string {
     return "";
 }
 
+// Shared semantic selection guard for legacy wire decoding and native records.
+public flow read_selection_error(operation: string, files: Array<string>, literal: string, allowed: Array<string>) -> string {
+    let invalid = allowed_error(allowed); if invalid != "" { return invalid; }
+    if operation == "read" {
+        if count(files) != 1 { return "unsupported action or arity"; }
+        if literal != "" { return "read action requires an empty literal"; }
+    } else if operation == "search" {
+        if len(literal) == 0 || len(literal) > 64 || !printable(literal) { return "invalid search literal"; }
+    } else { return "unsupported action or arity"; }
+    return selected_error(files, allowed);
+}
+
 // Bound the raw allocation and reject nested/object/scalar JSON before parsing.
 // JSON parsing below still validates commas, escapes and complete consumption.
 flow frame_error(raw: string) -> string {
@@ -106,11 +118,10 @@ public flow decode_reply(raw: string, allowed: Array<string>, final_only: bool) 
     if fields[0] == "read" && count(fields) == 2 { files = [fields[1]]; }
     else if fields[0] == "search" && (count(fields) == 3 || count(fields) == 4) {
         literal = fields[1];
-        if len(literal) == 0 || len(literal) > 64 || !printable(literal) { return Err("invalid search literal"); }
         files = [fields[2]];
         if count(fields) == 4 { files = files.push(fields[3]); }
     } else { return Err("unsupported action or arity"); }
-    let selected = selected_error(files, allowed);
+    let selected = read_selection_error(fields[0], files, literal, allowed);
     if selected != "" { return Err(selected); }
     let action = Action { operation = fields[0], files = files, literal = literal, text = "" };
     return Ok(action);
