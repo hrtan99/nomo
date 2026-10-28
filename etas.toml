@@ -467,3 +467,15 @@ name = "nomo-chain-help"
 module = "nomo.main"
 flow = "chain_help"
 profile = "chain-help"
+
+[[bin]]
+name = "nomo-terminal"
+module = "nomo.main"
+flow = "terminal"
+profile = "work-chain"
+
+[[bin]]
+name = "nomo-terminal-help"
+module = "nomo.main"
+flow = "terminal_help"
+profile = "chain-help"

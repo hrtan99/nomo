@@ -4,7 +4,7 @@ umask 077
 
 readonly project_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
 if [[ $# -lt 1 ]]; then
-    echo 'Usage: local-tryout.sh help | prepare NEW_DIRECTORY | new|continue|inspect-new|observe-new|observe-continue|show DIRECTORY [native arguments]' >&2
+    echo 'Usage: local-tryout.sh help|terminal-help | prepare NEW_DIRECTORY | new|continue|inspect-new|observe-new|observe-continue|terminal|show DIRECTORY [native arguments]' >&2
     exit 64
 fi
 readonly action="$1"
@@ -15,13 +15,15 @@ case "$action" in
         exec python3 "$project_root/scripts/prepare-local-tryout.py" -- "$1"
         ;;
     help) flow=chain_help; profile=chain-help ;;
+    terminal-help) flow=terminal_help; profile=chain-help ;;
+    terminal) flow=terminal; profile=work-chain ;;
     new) flow=chain_new; profile=work-chain ;;
     inspect-new) flow=chain_inspect; profile=work-chain ;;
     observe-new) flow=chain_observe_new; profile=work-chain ;;
     observe-continue) flow=chain_observe_continue; profile=work-chain ;;
     continue) flow=chain_continue; profile=work-chain ;;
     show) flow=chain_show; profile=work-chain-show ;;
-    *) echo 'Expected help, prepare, new, continue, inspect-new, observe-new, observe-continue or show.' >&2; exit 64 ;;
+    *) echo 'Expected help, terminal-help, prepare, new, continue, inspect-new, observe-new, observe-continue, terminal or show.' >&2; exit 64 ;;
 esac
 
 compose=(docker compose --env-file /dev/null --file "$project_root/compose.yaml"
@@ -29,7 +31,11 @@ compose=(docker compose --env-file /dev/null --file "$project_root/compose.yaml"
     --file "$project_root/config/local-tryout-compose.yaml")
 native=(etas run /workspace --flow "$flow" --profile "$profile" --allow-effects)
 run=(run --rm --no-deps)
-if [[ "$action" != help ]]; then
+if [[ "$action" == terminal ]]; then
+    if [[ -t 0 ]]; then run+=(--tty=true); else run+=(--tty=false); fi
+    run+=(-e ETAS_HOST_APPROVAL=prompt)
+fi
+if [[ "$action" != help && "$action" != terminal-help ]]; then
     [[ $# -ge 1 ]] || { echo 'An explicitly prepared fixed tryout directory is required.' >&2; exit 64; }
     tryout_root="$(python3 "$project_root/scripts/prepare-local-tryout.py" --check -- "$1")"
     shift
@@ -48,15 +54,16 @@ if [[ "$action" != help ]]; then
         native+=(--trace-out "/state/$trace_name")
     fi
 fi
-if [[ "$action" == new || "$action" == continue || "$action" == inspect-new || "$action" == observe-new || "$action" == observe-continue ]]; then
+if [[ "$action" == new || "$action" == continue || "$action" == inspect-new || "$action" == observe-new || "$action" == observe-continue || "$action" == terminal ]]; then
     compose+=(--file "$project_root/config/local-tryout-model-compose.yaml")
 else
     compose+=(--file "$project_root/config/local-tryout-readonly-compose.yaml")
-    # Do not carry native endpoint overrides or any Provider key into help/show.
+    # Do not carry native endpoint overrides or any Provider key into help/terminal-help/show.
     for variable in $(compgen -e); do
         case "$variable" in ETAS_HOST_MODEL*|ETAS_HOST_OMLX*|NOMO_QWEN_SERVER_API_KEY|NOMO_GATEWAY_CLIENT_TOKEN) unset "$variable" ;; esac
     done
     run+=(--tty=false)
+    if [[ "$action" == terminal-help ]]; then run+=(-e ETAS_HOST_APPROVAL=deny); fi
 fi
 # Transport only: all application parsing, claims, budgets and confirmations stay in Etas.
 exec "${compose[@]}" "${run[@]}" dev "${native[@]}" --args "$@"

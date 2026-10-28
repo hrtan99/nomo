@@ -1,0 +1,116 @@
+module nomo.cli.terminal_args;
+
+import std.collections.len as count;
+import std.text.{len, split, trim, starts_with};
+import nomo.core.text.printable;
+import nomo.session.edit_operation.selector_error;
+import nomo.model.model_tool_contract.{question_error, allowed_error};
+import nomo.session.work_chain.policy;
+import nomo.cli.work_chain_args.parse as chain_args;
+
+public type Config = { help: bool, root_id: string, child_id: string, parent: string,
+    workspace: string, path: string, allowed: Array<string>, cap_raw: string,
+    once_supplied: bool, once: string };
+public enum LineCommand { Request(string), Help, Show, Exit, Eof }
+
+flow configuration_error(value: Config) -> string {
+    if value.help { return "help configuration cannot dispatch work"; }
+    let root = selector_error(value.root_id, value.workspace, value.path); if root != "" { return root; }
+    let child = selector_error(value.child_id, value.workspace, value.path); if child != "" { return child; }
+    if value.root_id == value.child_id { return "terminal root and child IDs must differ"; }
+    if value.parent != "" && value.parent != value.root_id { return "terminal parent must equal the explicit root ID"; }
+    let allowed = allowed_error(value.allowed); if allowed != "" { return allowed; }
+    if value.cap_raw != "" { match policy(value.cap_raw) { Ok(_) => {} Err(error) => { return error; } } }
+    if value.once_supplied { return question_error(value.once); }
+    return "";
+}
+
+public flow parse(args: Array<string>) -> Result<Config, string> {
+    if count(args) == 1 && (args[0] == "help" || args[0] == "--help") {
+        return Ok(Config { help = true, root_id = "", child_id = "", parent = "", workspace = "", path = "",
+            allowed = [], cap_raw = "", once_supplied = false, once = "" });
+    }
+    if count(args) < 11 || count(args) > 15 || count(args) % 2 == 0 { return Err("expected bounded terminal new or continue arguments"); }
+    let mode = args[0]; if mode != "new" && mode != "continue" { return Err("expected terminal new, continue or standalone help"); }
+    var id = ""; var child = ""; var parent = ""; var workspace = ""; var path = ""; var allow = ""; var cap = "";
+    var once = ""; var supplied_once = false; var seen: Array<string> = []; var index: usize = 1;
+    while index < count(args) limit Iterations(7) {
+        let flag = args[index]; let value = args[index + 1];
+        for previous in seen limit Iterations(7) { if previous == flag { return Err("duplicate terminal option"); } }
+        seen = seen.push(flag);
+        match flag {
+            "--id" => { id = value; }
+            "--child-id" => { if mode != "new" { return Err("continuation cannot bind another child or third turn"); } child = value; }
+            "--parent" => { if mode != "continue" { return Err("new terminal work forbids --parent"); } parent = value; }
+            "--workspace" => { workspace = value; }
+            "--path" => { path = value; }
+            "--allow" => { allow = value; }
+            "--cap" => { match policy(value) { Ok(_) => {} Err(error) => { return Err(error); } } cap = value; }
+            "--once" => { once = value; supplied_once = true; }
+            _ => { return Err("unknown terminal option"); }
+        }
+        index = index + 2;
+    }
+    if len(allow) > 97 { return Err("terminal allowlist exceeds 97 characters"); }
+    if mode == "continue" && parent == "" { return Err("continuation requires explicit --parent"); }
+    let root = if mode == "new" { id } else { parent };
+    let child_id = if mode == "new" { child } else { id };
+    let result = Config { help = false, root_id = root, child_id = child_id, parent = parent,
+        workspace = workspace, path = path, allowed = split(allow, ","), cap_raw = cap,
+        once_supplied = supplied_once, once = once };
+    let invalid = configuration_error(result); if invalid != "" { return Err(invalid); }
+    return Ok(result);
+}
+
+// Console returns an empty raw string for EOF; a blank LF/CRLF line is not EOF.
+public flow line(raw: string) -> Result<LineCommand, string> {
+    if raw == "" { return Ok(LineCommand.Eof); }
+    if len(raw) > 130 { return Err("raw terminal line exceeds 128 characters plus LF/CRLF"); }
+    var body = ""; var position: usize = 0; var carriage_return = false;
+    for character in split(raw, "") limit Iterations(132) {
+        if character != "" {
+            position = position + 1;
+            if carriage_return && character != "\n" { return Err("expected printable ASCII terminal line"); }
+            if character == "\r" && position + 1 == len(raw) { carriage_return = true; }
+            else if character == "\n" && position == len(raw) { }
+            else {
+                if !printable(character) { return Err("expected printable ASCII terminal line"); }
+                body = body + character;
+            }
+        }
+    }
+    if len(body) > 128 { return Err("terminal line exceeds 128 characters before trimming"); }
+    let text = trim(body);
+    match text {
+        "/help" => { return Ok(LineCommand.Help); }
+        "/show" => { return Ok(LineCommand.Show); }
+        "/exit" => { return Ok(LineCommand.Exit); }
+        _ => {}
+    }
+    if starts_with(text, "/") { return Err("unknown terminal command; use /help, /show or /exit"); }
+    let invalid = question_error(text); if invalid != "" { return Err(invalid); }
+    return Ok(LineCommand.Request(text));
+}
+
+public flow work_arguments(config: Config, turn: i32, request: string) -> Result<Array<string>, string> {
+    let invalid = configuration_error(config); if invalid != "" { return Err(invalid); }
+    if turn != 1 && turn != 2 { return Err("terminal work forbids a third or invalid turn"); }
+    if turn == 1 && config.parent != "" { return Err("explicit continuation starts at the second turn"); }
+    if config.once_supplied && ((config.parent == "" && turn != 1) || (config.parent != "" && turn != 2)) { return Err("one-shot startup permits only its selected turn"); }
+    if config.once_supplied && request != config.once { return Err("one-shot request differs from its startup binding"); }
+    let invalid_request = question_error(request); if invalid_request != "" { return Err(invalid_request); }
+    let id = if turn == 1 { config.root_id } else { config.child_id };
+    var allowed = ""; for path in config.allowed limit Iterations(2) { if allowed != "" { allowed = allowed + ","; } allowed = allowed + path; }
+    var args = ["--id", id, "--workspace", config.workspace, "--path", config.path, "--once", request, "--allow", allowed];
+    if turn == 2 { args = args.push("--parent").push(config.root_id); }
+    if config.cap_raw != "" { args = args.push("--cap").push(config.cap_raw); }
+    match chain_args(args, turn == 2) { Ok(_) => {} Err(error) => { return Err(error); } }
+    return Ok(args);
+}
+
+public flow show_arguments(config: Config, turn: i32) -> Result<Array<string>, string> {
+    let invalid = configuration_error(config); if invalid != "" { return Err(invalid); }
+    if turn != 1 && turn != 2 { return Err("terminal show requires a bound first or second turn"); }
+    let id = if turn == 1 { config.root_id } else { config.child_id };
+    return Ok(["--id", id, "--workspace", config.workspace, "--path", config.path]);
+}
