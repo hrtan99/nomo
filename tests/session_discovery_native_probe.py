@@ -45,8 +45,13 @@ def reserve(path, evidence, review):
         assert not previous or (len(previous)==1 and previous[0]['status']=='failed' and review), 'only one concretely corrected, independently reviewed fresh lifecycle is available'
         assert not review or previous
         assert not any(item['status']=='reserved' for item in previous)
-        assert sum(item['reserved']['logical_starts'] for item in previous)+14<=28
-        assert sum(item['reserved']['atomic_writes'] for item in previous)+2<=4
+        reservation=dict(lifecycles=1,logical_starts=14,native_starts=14,HTTP_attempts=14,atomic_writes=2)
+        assert all(item['reserved']==reservation for item in previous), 'prior reservation fields differ'
+        for key in ('logical_starts','native_starts','HTTP_attempts','atomic_writes'):
+            known=value[key];assert type(known) is int and known>=0
+            reserved=sum(item['reserved'][key] for item in previous)
+            ceiling=value['max_atomic'] if key=='atomic_writes' else value['max_each']
+            assert max(reserved,known)+reservation[key]<=ceiling, 'cumulative '+key+' ceiling exceeded'
         value['lifecycles_used']+=1
         previous.append(dict(id=identity,status='reserved',evidence=str(evidence),correction_review=review,
             reserved=dict(lifecycles=1,logical_starts=14,native_starts=14,HTTP_attempts=14,atomic_writes=2)))
@@ -59,7 +64,7 @@ def charged(path, identity, record):
         steps=record.get('steps',[])
         exact=record.get('status')=='passed' and len(steps)==2 and all(item.get('counts',{}).get('exact_stage_proof') for item in steps)
         lower=dict(logical_starts=sum(item.get('counts',{}).get('logical_starts') or 0 for item in steps),
-            native_starts=sum(item.get('lower_bounds',{}).get('trace_native_starts',0) for item in steps),
+            native_starts=sum(max(item.get('lower_bounds',{}).get('trace_native_starts',0),item.get('lower_bounds',{}).get('HTTP_received',0)) for item in steps),
             HTTP_attempts=sum(item.get('lower_bounds',{}).get('HTTP_received',0) for item in steps),
             atomic_writes=sum(item.get('lower_bounds',{}).get('atomic_starts',0) for item in steps))
         observed=dict(logical_starts=14 if exact else None,native_starts=14 if exact else None,
@@ -161,7 +166,7 @@ def projection(evidence,directory,label,action,args,expected_ids,latest=None):
 
 
 def source_facts():
-    paths=['etas.toml','etas.lock','scripts/local-tryout.sh','scripts/terminal-transport.py','scripts/prepare-local-tryout.py',
+    paths=['etas.toml','etas.lock','compose.yaml','config/etas-latest-main.json','config/local-tryout-compose.yaml','config/local-tryout-model-compose.yaml','scripts/local-tryout.sh','scripts/terminal-transport.py','scripts/prepare-local-tryout.py',
         'src/nomo/cli/terminal_args.es','src/nomo/cli/work_chain_selection_args.es','src/nomo/session/work_chain_selection.es',
         'src/nomo/session/work_chain_observation.es','src/nomo/session/work_chain_store.es','src/nomo/entry/work_chain_sessions.es',
         'src/nomo/entry/terminal_entry.es']
@@ -169,7 +174,7 @@ def source_facts():
     assert profile['model']['retry']==dict(attempts=1,delay_ms=0)
     return dict(model=profile['model']['model'],HTTP_attempts_per_native_request=1,
         hashes={name:hashlib.sha256((ROOT/name).read_bytes()).hexdigest() for name in paths},
-        qualification='Source/effective normal005 qualification belongs to root/TL. Actual native trace, received HTTP and application projections remain separate observations.')
+        qualification='Source/effective selected official compiler qualification belongs to root/TL. Actual native trace, received HTTP and application projections remain separate observations.')
 
 
 def main():
