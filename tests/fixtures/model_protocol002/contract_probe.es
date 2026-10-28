@@ -1,6 +1,12 @@
 module app.contract_probe;
 
 import std.io.println;
+import std.agent.message.Message;
+import std.json.{JsonValue, parse, stringify};
+import std.codec.text.utf8_encode;
+import std.bytes.len as byte_count;
+import nomo.harness.harness_edit_contract.Context as EditContext;
+import nomo.harness.harness_work_contract.{Context as WorkContext, context_error as work_context_error};
 import std.text.{split, contains, len};
 import nomo.core.text.printable;
 import nomo.harness.harness_model_contract.{decode_read_plan, read_aggregate_error};
@@ -76,6 +82,25 @@ flow snippet(raw: string, phase: string, maximum: usize, required: Array<string>
     for item in forbidden limit Iterations(16) { if contains(value, item) { return false; } }
     return true;
 }
+// Nomo typed-data round trip only; no Provider or Model boundary is invoked.
+flow typed_context_roundtrip(before: string) -> bool {
+    let request = "replace selected literal";
+    let edit = EditContext { phase = "child", request = request, task = "Replace selected literal \"quote\" 雪", id = "literal-op", workspace = "owned", path = "target.txt",
+        before = before, after = "", request_digest = "", before_digest = "", after_digest = "",
+        before_bytes = byte_count(utf8_encode(before)), after_bytes = 0, completed = false };
+    let evidence = Evidence { request = request, task = "Read context.txt", operation = "read", files = ["context.txt"], literal = "",
+        outcome = "complete: observed context", result = "Observed context.", summary = "Use actual context.", allowed = ["context.txt"],
+        ledger = ReadLedger { steps = 7, calls = 4, tokens = 8192, tools = 1, scan = 4096 } };
+    let value = WorkContext { edit = edit, evidence = evidence };
+    if work_context_error(value) != "" { return false; }
+    let message = Message.new(value); let converted: Option<Message<JsonValue>> = message.cast<JsonValue>();
+    let json = match converted { Some(item) => item.body, None() => { return false; } };
+    let encoded = match stringify(json) { Ok(item) => item, Err(_) => { return false; } };
+    let parsed = match parse(encoded) { Ok(item) => item, Err(_) => { return false; } };
+    let restored_message = Message.new(parsed); let restored: Option<Message<WorkContext>> = restored_message.cast<WorkContext>();
+    return match restored { Some(item) => item.body == value && item.body.edit.before == before && item.body.edit.before_bytes == byte_count(utf8_encode(before)), None() => false };
+}
+
 // Typed values exercise projections only: no store/admission/atomic/Host call.
 flow post_atomic_failure(summary: string) -> bool {
     let row = match initial("root-op", "owned", "target.txt", "update target from context", ["context.txt"], turn_caps()) { Ok(value) => value, Err(_) => { return false; } };

@@ -98,13 +98,21 @@ def cases():
     add('legacy_edit_plan_child_errors_unchanged',call('legacy_error','edit-plan','["delegate"]','expected bounded flat delegation JSON'),call('legacy_error','edit-child','["write","x","y"]','unsupported edit verb or arity'))
     add('legacy_final512_remains_distinct_from_work256',call('legacy_final',encoded(['final','x'*512]),'x'*512),denied('read-child-final',encoded(['final','x'*512])))
     add('typed_postatomic_invalid_summary_retains_unconfirmed_and_show',*[call('post_atomic_failure',raw) for raw in ['', 'x'*513, 'a\0b']])
+    add('literal_clarification_minimal_span_preserves_lf',proposal('head\nsample\ntail\n', 'sample', 'updated', 'head\nupdated\ntail\n',True))
+    add('literal_clarification_minimal_span_preserves_crlf',proposal('head\r\nsample\r\ntail\r\n', 'sample', 'updated', 'head\r\nupdated\r\ntail\r\n',True))
+    add('literal_clarification_minimal_span_preserves_backslash_n',proposal('head\\nsample\\ntail\\n', 'sample', 'updated', 'head\\nupdated\\ntail\\n',True))
+    add('literal_clarification_explicit_line_ending_change',proposal('head\r\nsample\r\ntail', 'sample\r\n', 'sample\n', 'head\r\nsample\ntail',True))
+    add('literal_clarification_typed_context_lf_crlf_backslash_n',*[call('typed_context_roundtrip',value) for value in ['head\nsample\n', 'head\r\nsample\r\n', 'head\\nsample\\n']])
+    add('literal_clarification_typed_context_quotes_unicode',call('typed_context_roundtrip','head "quoted" \\ path 雪😀\r\nsample\n'))
     assert len(checks)<=96 and len(checks)==len({label for label,_ in checks})
     return checks
 
 
 def main():
-    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--evidence-dir',type=Path,required=True);parser.add_argument('--prepare-only',action='store_true');options=parser.parse_args()
-    checks=cases();options.evidence_dir.mkdir(parents=True,exist_ok=True);evidence=Path(tempfile.mkdtemp(prefix='model-protocol002-',dir=options.evidence_dir)).resolve();project=evidence/'project';(project/'src/app').mkdir(parents=True)
+    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--evidence-dir',type=Path,required=True);parser.add_argument('--prepare-only',action='store_true');parser.add_argument('--literal-only',action='store_true',help='run only non-admitting literal clarification and the unchanged received-response regression');options=parser.parse_args()
+    checks=cases()
+    if options.literal_only:checks=[item for item in checks if item[0].startswith('literal_clarification_') or item[0]=='received_edit_literal_backslash_n_is_not_file_lf']
+    options.evidence_dir.mkdir(parents=True,exist_ok=True);evidence=Path(tempfile.mkdtemp(prefix='model-protocol002-',dir=options.evidence_dir)).resolve();project=evidence/'project';(project/'src/app').mkdir(parents=True)
     print('EVIDENCE '+str(evidence),flush=True);sources={}
     for name in dict.fromkeys(MODULES):
         source=ROOT/'src/nomo'/name;target=project/'src/nomo'/name;target.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(source,target);sources[str(source.relative_to(ROOT))]=hashlib.sha256(source.read_bytes()).hexdigest()
@@ -112,8 +120,8 @@ def main():
     (project/'src/app/contract_probe.es').write_text(FIXTURE.read_text().replace('__CHECKS__','['+',\n'.join(expressions)+']'))
     (project/'etas.toml').write_text(MANIFEST.replace('harness-checkpoint-contract-probe','model-protocol002-contract-probe'))
     entry=(ROOT/'src/nomo/entry/work_chain_entry.es').read_text();ordered=[entry.index(value) for value in ['let saved = match publish_partial(ticket, candidate)','let summary = match summarize_chain(completed, prior','match complete(saved, summary.answer)']];assert ordered==sorted(ordered)
-    result=dict(task='MODEL-PROTOCOL-002-pure',status='prepared',checks=[label for label,_ in checks],sources=sources,commands=[],
-        lifetime_ledger=dict(actual_new_v2_admissions=0,maximum=2,reserved='both actual lifetimes reserved for real-Qwen diagnostic/final validation; this runner has no integration/admission mode'),
+    result=dict(task='MODEL-PROTOCOL-002-pure',suite='literal-clarification' if options.literal_only else 'all-seven-boundaries',status='prepared',checks=[label for label,_ in checks],sources=sources,commands=[],
+        lifetime_ledger=dict(actual_new_v2_admissions=0,maximum=2,already_used=2,runtime_authorized=False,reserved='none; both lifetimes exhausted; this runner has no integration/admission mode'),
         postatomic_qualification='typed validated pending work/completed journal +pure display and source call-order; no actual atomic edit/store/admission; unchanged accepted prior actual failure evidence reused separately',source_publish_summary_complete_positions=ordered,
         source_fixture_encoding='reuse accepted local FF literal correction; exact decoded data and byte bounds remain semantic oracles')
     output=evidence/'results.json';save=lambda:output.write_text(json.dumps(result,indent=2)+'\n');save()
