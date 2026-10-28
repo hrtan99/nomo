@@ -103,7 +103,7 @@ services:
 
 volumes:
   cargo-cache:
-    name: nomo-cargo-cache-latest-002-20261024
+    name: nomo-cargo-cache-latest-003b-20261028
 
 networks:
   model-internal:

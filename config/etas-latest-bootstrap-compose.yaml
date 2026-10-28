@@ -12,7 +12,7 @@ x-latest-build: &latest-build
       source: cargo-cache
       target: /home/nomo/.cargo
     - type: volume
-      source: etas0013-download-seed
+      source: latest-download-seed
       target: /baseline
       read_only: true
 
@@ -23,6 +23,6 @@ services:
     <<: *latest-build
 
 volumes:
-  etas0013-download-seed:
+  latest-download-seed:
     external: true
-    name: nomo-cargo-cache-etas0013
+    name: nomo-cargo-cache-latest-002-20261024

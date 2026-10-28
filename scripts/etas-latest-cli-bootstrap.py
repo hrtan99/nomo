@@ -106,7 +106,7 @@ def metadata_origins(data):
             require(name not in origins and package['source'] is None, 'mixed Etas origin: ' + name)
             require(package['manifest_path'] == expected.get(name), 'wrong Etas path: ' + name)
             origins[name] = package['manifest_path']
-    require(len(expected) == 18 and origins == expected, 'incomplete local Etas graph')
+    require(len(expected) == 21 and origins == expected, 'incomplete local Etas graph')
     return origins
 
 
@@ -147,8 +147,8 @@ def prepare(sources=None, seed=None):
         for name in ('registry', 'git'):
             if (seed / name).exists() and not (CACHE / name).exists():
                 shutil.copytree(seed / name, CACHE / name, symlinks=True)
-        lock = seed / 'etas0013/src/cli/Cargo.lock'
-        require(lock.is_file(), 'old CLI seed lock unavailable')
+        lock = seed / 'etas-latest/resolved.Cargo.lock'
+        require(lock.is_file(), 'normal CLI seed lock unavailable')
         shutil.copyfile(lock, SOURCE / 'cli/Cargo.lock')
     overrides = ROOT / 'overrides.toml'
     if overrides.exists():
