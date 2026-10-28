@@ -9,6 +9,7 @@ import nomo.tools.edit_file.{EditableRoot, Prepared, apply};
 import nomo.tools.edit_proposal.validate;
 import nomo.tools.edit_encoding.object;
 import nomo.tools.edit_binding.bind;
+import nomo.ui.edit_diff.render;
 import nomo.session.edit_operation.{Binding, selector_error};
 import nomo.session.edit_operation_store.{begin, complete};
 
@@ -35,7 +36,9 @@ public flow confirm_current(selector: Selector, prepared: Prepared) -> Result<Bi
     match validate(prepared.request, prepared.proposal) { Ok(_) => {} Err(error) => { return Err(error); } }
     let selected = match bind(selector.id, selector.workspace, selector.path, prepared) { Ok(value) => value, Err(error) => { return Err(error); } };
     let shown = match preview(prepared, selected) { Ok(value) => value, Err(error) => { return Err(error); } };
+    let readable = match render(prepared.proposal.before, prepared.proposal.after) { Ok(value) => value, Err(error) => { return Err(error); } };
     println("PREVIEW " + shown);
+    println("DIFF request=" + selected.request_digest + "\n" + readable);
     println("CONFIRM Native gate requires yes; then confirm this request with y/yes.");
     let approved = perform Approval.request("Nomo edit " + selector.id + " request=" + selected.request_digest);
     if !approved { return Err("native approval denied; no intent or File write"); }
