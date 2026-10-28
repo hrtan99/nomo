@@ -3,7 +3,7 @@ module app.contract_probe;
 import std.io.println;
 import std.text.{len, split};
 import nomo.core.text.printable;
-import nomo.cli.terminal_args.{Config, LineCommand, parse, line, work_arguments, show_arguments};
+import nomo.cli.terminal_args.{Config, LineCommand, parse, parse_once, line, work_arguments, show_arguments};
 import nomo.ui.terminal_session.{State, fresh, turn, work_error, after_turn, state_line, request_line};
 
 type Check = { label: string, passed: bool };
@@ -13,6 +13,22 @@ flow parsed(args: Array<string>, expected: Config) -> bool {
     return match parse(args) { Ok(value) => value == expected, Err(_) => false };
 }
 flow refused(args: Array<string>) -> bool { return match parse(args) { Ok(_) => false, Err(_) => true }; }
+flow once_parsed(args: Array<string>, expected: Config) -> bool {
+    return match parse_once(args) { Ok(value) => value == expected, Err(_) => false };
+}
+flow once_refused(args: Array<string>) -> bool { return match parse_once(args) { Ok(_) => false, Err(_) => true }; }
+flow once_required(args: Array<string>) -> bool {
+    let valid = match parse(args) { Ok(_) => true, Err(_) => false };
+    return valid && match parse_once(args) { Ok(_) => false, Err(error) => error == "non-TTY terminal mode requires explicit --once REQUEST" };
+}
+flow once_work(args: Array<string>, selected_turn: i32, request: string, expected: Array<string>) -> bool {
+    let config = match parse_once(args) { Ok(value) => value, Err(_) => { return false; } };
+    return match work_arguments(config, selected_turn, request) { Ok(value) => value == expected, Err(_) => false };
+}
+flow once_work_refused(args: Array<string>, selected_turn: i32, request: string) -> bool {
+    let config = match parse_once(args) { Ok(value) => value, Err(_) => { return false; } };
+    return match work_arguments(config, selected_turn, request) { Ok(_) => false, Err(_) => true };
+}
 flow command(raw: string, expected: string, text: string) -> bool {
     return match line(raw) {
         Err(_) => expected == "invalid",

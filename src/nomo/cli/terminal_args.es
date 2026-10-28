@@ -62,6 +62,13 @@ public flow parse(args: Array<string>) -> Result<Config, string> {
     return Ok(result);
 }
 
+// The supported non-TTY transport selects this entry, never an outer input loop.
+public flow parse_once(args: Array<string>) -> Result<Config, string> {
+    let config = match parse(args) { Ok(value) => value, Err(error) => { return Err(error); } };
+    if !config.help && !config.once_supplied { return Err("non-TTY terminal mode requires explicit --once REQUEST"); }
+    return Ok(config);
+}
+
 // Console returns an empty raw string for EOF; a blank LF/CRLF line is not EOF.
 public flow line(raw: string) -> Result<LineCommand, string> {
     if raw == "" { return Ok(LineCommand.Eof); }
