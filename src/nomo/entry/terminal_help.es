@@ -18,6 +18,7 @@ public flow help(args: Array<string>) -> i32 {
     println("--latest resolves only a confirmed first parent with no second slot; explicit --parent conflicts. Native continuation admission and both confirmations still apply.");
     println("Commands: /help, /show, /exit; EOF stops. Requests:1..128 printable ASCII characters before trimming; at most32 input lines.");
     println("--once runs only the selected request and never reads a second request. A blank line is invalid, not EOF.");
+    println("Interactive malformed input prints its diagnostic and returns to the prompt, consuming one of the 32 raw input lines. Admitted work failures still stop.");
     println("Only a confirmed first-turn result offers the second request. Failed, denied or uncertain work stops; no retry, refund, replay or third turn.");
     println("TTY edits require fresh native and Nomo confirmation. The supported non-TTY launcher requires --once and selects native Deny.");
     println("Non-TTY mode never reads an outer request line. Native denial returns before Nomo y/yes, so piped text cannot approve an edit.");
