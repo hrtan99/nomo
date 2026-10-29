@@ -2,7 +2,7 @@ module nomo.tools.edit_binding;
 
 import std.bytes.len as byte_count;
 import std.codec.text.utf8_encode;
-import nomo.tools.edit_file.Prepared;
+import nomo.tools.edit_contract.Prepared;
 import nomo.tools.edit_proposal.validate;
 import nomo.tools.edit_encoding.{json, digest};
 import nomo.session.edit_operation.{Binding, binding_error, selector_error};

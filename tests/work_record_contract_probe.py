@@ -17,7 +17,7 @@ from normal_graph_identity import verify_cli
 
 ROOT = Path(__file__).resolve().parent.parent
 FIXTURE = ROOT/'tests/fixtures/work_record001/contract_probe.es'
-MODULES = WORK_MODULES + ['tools/edit_file.es', 'tools/edit_binding.es', 'session/work_record.es']
+MODULES = WORK_MODULES + ['model/tool_context.es', 'tools/edit_contract.es', 'tools/edit_file.es', 'tools/edit_binding.es', 'session/work_record.es']
 REGION = 'nomo.tools.edit_file.EditableRoot'
 sha = lambda value: hashlib.sha256(value.encode()).hexdigest()
 READ = dict(steps=7, calls=4, tokens=8192, tools=1, scan=4096)

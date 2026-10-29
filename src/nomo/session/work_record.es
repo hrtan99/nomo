@@ -11,7 +11,7 @@ import nomo.harness.harness_work_contract.{Evidence, Ledger, evidence_error};
 import nomo.harness.harness_tool_contract.Ledger as ReadLedger;
 import nomo.harness.harness_edit_contract.Ledger as EditLedger;
 import nomo.harness.harness_edit_contract.text_error;
-import nomo.tools.edit_file.{Prepared, prepare_original};
+import nomo.tools.edit_contract.{Prepared, prepare_original};
 import nomo.tools.edit_binding.bind;
 
 public type Record = { format: i32, phase: string, binding: Binding, body: string };
