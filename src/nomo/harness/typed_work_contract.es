@@ -8,7 +8,7 @@ import nomo.harness.harness_tool_contract.context_error as read_context_error;
 import nomo.harness.harness_model_contract.{bounded, read_aggregate_error};
 import nomo.harness.harness_work_contract.{Evidence, context_error, finish_evidence};
 import nomo.harness.harness_edit_contract.{text_error, work_summary_error};
-import nomo.harness.work_chain_model.Input;
+import nomo.harness.work_chain_context.Input;
 import nomo.harness.typed_edit_contract.project_context;
 import nomo.tools.edit_contribution.Contribution;
 import nomo.tools.edit_proposal.Proposal;

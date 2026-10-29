@@ -11,7 +11,7 @@ import nomo.tools.edit_binding.bind;
 import nomo.cli.work_chain_args.parse;
 import nomo.cli.edit_args.parse as selectors;
 import nomo.harness.harness_work_contract.{Ledger, fresh};
-import nomo.harness.work_chain_model.{ParentFacts, parent_facts};
+import nomo.harness.work_chain_context.{ParentFacts, parent_facts};
 import nomo.session.work_record.{partial, admit, validate as captured};
 import nomo.session.work_chain.{Record, publish_partial as projected, linked};
 import nomo.session.work_chain_store.{Ticket, read_parent, admit_new, admit_continue, claim, publish_partial, complete, inspect};
