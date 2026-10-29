@@ -72,15 +72,20 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
     while lines < 32 limit Iterations(32) {
         println("REQUEST /help /show /exit");
         let raw = read_line(); lines = lines + 1;
-        let command = match line(raw) { Ok(value) => value, Err(error) => { return refused(error); } };
-        match command {
-            LineCommand.Eof => { println("STOP EOF; captured state is preserved"); return 0; }
-            LineCommand.Exit => { println("STOP exit; captured state is preserved"); return 0; }
-            LineCommand.Help => { if help([]) != 0 { return 1; } }
-            LineCommand.Show => { if show(config, state) != 0 { return 1; } }
-            LineCommand.Request(text) => {
-                state = match request(config, state, text) { Ok(value) => value, Err(error) => { return refused(error); } };
-                if work_error(state) != "" { println("STOP selected work complete; no further request in this process"); return 0; }
+        // Only malformed input recovers; admitted work errors still stop.
+        match line(raw) {
+            Err(error) => { let refused_status = refused(error); }
+            Ok(command) => {
+                match command {
+                    LineCommand.Eof => { println("STOP EOF; captured state is preserved"); return 0; }
+                    LineCommand.Exit => { println("STOP exit; captured state is preserved"); return 0; }
+                    LineCommand.Help => { if help([]) != 0 { return 1; } }
+                    LineCommand.Show => { if show(config, state) != 0 { return 1; } }
+                    LineCommand.Request(text) => {
+                        state = match request(config, state, text) { Ok(value) => value, Err(error) => { return refused(error); } };
+                        if work_error(state) != "" { println("STOP selected work complete; no further request in this process"); return 0; }
+                    }
+                }
             }
         }
     }
