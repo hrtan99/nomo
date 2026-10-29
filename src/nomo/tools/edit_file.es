@@ -7,11 +7,11 @@ import std.bytes.len as byte_count;
 import std.codec.text.{utf8_encode, utf8_decode, Strict};
 import std.agent.message.Message;
 import nomo.tools.path_policy.valid_path;
-import nomo.tools.edit_proposal.{Request, Proposal, propose, validate, text_bytes};
+import nomo.tools.edit_proposal.{validate, text_bytes};
+public import nomo.tools.edit_contract.{Prepared, prepare_original};
 
 public type EditableRoot;
 impl EditableRoot ~ Region;
-public type Prepared = { request: Request, proposal: Proposal };
 type FileInfo = { is_file: bool, is_dir: bool, len: u64 };
 
 flow checked_path(name: string) -> Result<WorkspacePath<EditableRoot>, string> {
@@ -39,14 +39,6 @@ public flow read_original(name: string) -> Result<string, string> {
     let original = match utf8_decode(bytes, Strict) { Ok(value) => value, Err(_) => { return Err("edit file is not UTF-8"); } };
     match text_bytes(original, "original") { Ok(_) => {} Err(error) => { return Err(error); } }
     return Ok(original);
-}
-
-// Reuse the complete supported original already supplied to an edit child.
-// File state is still checked by apply after the durable intent.
-public flow prepare_original(name: string, original: string, target: string, replacement: string) -> Result<Prepared, string> {
-    let request = Request { path = name, original = original, target = target, replacement = replacement };
-    let proposal = match propose(request) { Ok(value) => value, Err(error) => { return Err(error); } };
-    return Ok(Prepared { request = request, proposal = proposal });
 }
 
 public flow prepare(name: string, target: string, replacement: string) -> Result<Prepared, string> {

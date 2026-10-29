@@ -5,7 +5,7 @@ import std.bytes.len as byte_count;
 import std.codec.text.utf8_encode;
 import nomo.harness.harness_edit_contract.Context;
 import nomo.tools.edit_encoding.json;
-import nomo.entry.edit_coordinator.{Selector, Confirmed};
+import nomo.tools.edit_contract.{Selector, Confirmed};
 
 public flow context(phase: string, selector: Selector, request: string, task: string, before: string) -> Context {
     return Context { phase = phase, request = request, task = task, id = selector.id, workspace = selector.workspace,
