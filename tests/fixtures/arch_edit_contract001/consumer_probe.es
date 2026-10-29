@@ -16,6 +16,8 @@ import nomo.tools.edit_contract.{Prepared, Selector, Confirmed, prepare_original
 import nomo.tools.edit_binding.bind;
 import nomo.tools.edit_proposal.{Request, Proposal};
 import nomo.entry.edit_context.{context, completed_context};
+import nomo.harness.edit_context.context as leaf_context;
+import nomo.harness.edit_context.completed_context as leaf_completed_context;
 
 type Check = { label: string, passed: bool };
 flow slash() -> string { return split("\\/", "")[1]; }
@@ -64,7 +66,9 @@ flow projected(selector: Selector, binding: Binding, before: string, after: stri
     initial: Context, completed: Context) -> bool {
     let confirmed = Confirmed { binding = binding, after = after };
     return context("child", selector, "request", "task", before) == initial &&
-        completed_context("request", "task", before, confirmed) == completed;
+        leaf_context("child", selector, "request", "task", before) == initial &&
+        completed_context("request", "task", before, confirmed) == completed &&
+        leaf_completed_context("request", "task", before, confirmed) == completed;
 }
 flow checks() -> Array<Check> { return __CHECKS__; }
 public flow pure_probe() -> bool {

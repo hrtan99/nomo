@@ -18,7 +18,8 @@ import nomo.tools.workspace.ReadOnlyRoot;
 import nomo.tools.edit_file.{EditableRoot, Prepared, read_original, prepare_original};
 import nomo.session.edit_operation_store.available;
 import nomo.entry.edit_coordinator.{Approval, Selector, Confirmed, execute};
-import nomo.entry.edit_context.{context, completed_context, recorded, display};
+import nomo.harness.edit_context.{context, completed_context};
+import nomo.entry.edit_context.{recorded, display};
 
 flow ledger_text(state: Ledger) -> string {
     return "LEDGER work steps=" + to_string_i32(state.read.steps + state.edit.steps) + "/13 calls=" +

@@ -11,7 +11,8 @@ import nomo.harness.harness_model_edit.{plan, propose, aggregate};
 import nomo.tools.edit_file.{EditableRoot, read_original, prepare_original};
 import nomo.session.edit_operation_store.available;
 import nomo.entry.edit_coordinator.{Approval, Selector, execute};
-import nomo.entry.edit_context.{context, completed_context, recorded, display};
+import nomo.harness.edit_context.{context, completed_context};
+import nomo.entry.edit_context.{recorded, display};
 
 flow ledger(state: Ledger) -> unit {
     println("LEDGER steps=" + to_string_i32(state.steps) + "/6 calls=" + to_string_i32(state.calls) +

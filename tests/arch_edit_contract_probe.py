@@ -23,7 +23,7 @@ from normal_graph_identity import verify_cli
 
 ROOT = Path(__file__).resolve().parent.parent
 FIXTURES = ROOT / 'tests/fixtures/arch_edit_contract001'
-COMPONENTS = {'leaf': {'fixture': 'leaf_probe.es', 'modules': ['core/text.es', 'session/edit_operation.es', 'tools/edit_contract.es', 'tools/edit_proposal.es', 'tools/path_policy.es']}, 'consumers': {'fixture': 'consumer_probe.es', 'modules': ['core/conversation.es', 'core/text.es', 'entry/edit_context.es', 'harness/harness_edit_contract.es', 'harness/harness_model_contract.es', 'harness/harness_tool_contract.es', 'harness/harness_work_contract.es', 'harness/model_plan_diagnostic.es', 'model/model_tool_contract.es', 'model/tool_context.es', 'session/edit_operation.es', 'session/work_record.es', 'tools/edit_binding.es', 'tools/edit_contract.es', 'tools/edit_encoding.es', 'tools/edit_proposal.es', 'tools/path_policy.es']}, 'compat': {'fixture': 'compat_probe.es', 'modules': ['core/text.es', 'entry/edit_coordinator.es', 'session/edit_operation.es', 'session/edit_operation_store.es', 'tools/edit_binding.es', 'tools/edit_contract.es', 'tools/edit_encoding.es', 'tools/edit_file.es', 'tools/edit_proposal.es', 'tools/path_policy.es', 'ui/edit_diff.es']}}
+COMPONENTS = {'leaf': {'fixture': 'leaf_probe.es', 'modules': ['core/text.es', 'session/edit_operation.es', 'tools/edit_contract.es', 'tools/edit_proposal.es', 'tools/path_policy.es']}, 'consumers': {'fixture': 'consumer_probe.es', 'modules': ['core/conversation.es', 'core/text.es', 'entry/edit_context.es', 'harness/edit_context.es', 'harness/harness_edit_contract.es', 'harness/harness_model_contract.es', 'harness/harness_tool_contract.es', 'harness/harness_work_contract.es', 'harness/model_plan_diagnostic.es', 'model/model_tool_contract.es', 'model/tool_context.es', 'session/edit_operation.es', 'session/work_record.es', 'tools/edit_binding.es', 'tools/edit_contract.es', 'tools/edit_encoding.es', 'tools/edit_proposal.es', 'tools/path_policy.es']}, 'compat': {'fixture': 'compat_probe.es', 'modules': ['core/text.es', 'entry/edit_coordinator.es', 'session/edit_operation.es', 'session/edit_operation_store.es', 'tools/edit_binding.es', 'tools/edit_contract.es', 'tools/edit_encoding.es', 'tools/edit_file.es', 'tools/edit_proposal.es', 'tools/path_policy.es', 'ui/edit_diff.es']}}
 
 REGION = 'nomo.tools.edit_file.EditableRoot'
 sha = lambda value: hashlib.sha256(value.encode()).hexdigest()
@@ -99,10 +99,17 @@ def consumer_cases():
                      before_bytes=selected['before_bytes'], after_bytes=selected['after_bytes'], completed=True)
     projected = 'projected(' + ', '.join([record('Selector', selector), binding(selected), literal(value['before']),
                                          literal(value['after']), record('Context', initial), record('Context', completed)]) + ')'
+    empty_binding = dict(selected, before_bytes=0, after_bytes=0)
+    empty_initial = dict(initial, before='', after='', before_bytes=0, after_bytes=0)
+    empty_completed = dict(empty_initial, phase='aggregate', request_digest=empty_binding['request_digest'],
+                           before_digest=empty_binding['before_digest'], after_digest=empty_binding['after_digest'], completed=True)
+    empty_projected = 'projected(' + ', '.join([record('Selector', selector), binding(empty_binding), literal(''), literal(''),
+                                               record('Context', empty_initial), record('Context', empty_completed)]) + ')'
     return [('ascii_work_record_and_exact_binding_roundtrip', roundtrip(projection())),
             ('unicode_crlf_work_record_and_region_digest_roundtrip', roundtrip(value)),
             ('forged_prepared_value_refused_by_binding', 'binding_refused("proposal differs from validated replacement")'),
-            ('whole_initial_and_confirmed_context_projection', projected)]
+            ('whole_initial_and_confirmed_context_projection', projected),
+            ('empty_initial_and_confirmed_context_projection', empty_projected)]
 
 
 def save(path, value):
