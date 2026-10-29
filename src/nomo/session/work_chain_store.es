@@ -10,8 +10,9 @@ import nomo.session.work_chain.confirm as confirmed_row;
 import nomo.session.work_chain_journal.inspect as inspect_journal;
 import nomo.session.work_chain_journal.available as journal_available;
 import nomo.session.work_chain_journal.{observe as observed_journal, captured as captured_journal};
-import nomo.session.work_chain_observation.{SessionObservation, observe as observe_sessions};
-import nomo.session.work_chain_selection.{Snapshot, ObservedRow, ObservedJournal, Selector, select, consistent};
+import nomo.session.work_chain_observation.{ObservationPass, SessionObservation, observe as observe_sessions};
+import nomo.session.work_chain_selection.{Snapshot, ObservedRow, ObservedJournal, Selector};
+import nomo.session.work_chain_discovery.{DiscoveryAuthority, SnapshotCapture, InspectAuthority, ConfirmedParentAuthority, discover as discover_controller, latest_parent as latest_parent_controller};
 import nomo.session.work_chain_selection.journal_error as selected_journal_error;
 
 public type Ticket = { row: Record, version: MemoryVersion, parent: Option<MemoryEntry<string, Record>> };
@@ -172,24 +173,29 @@ public flow snapshot(workspace: string, path: string) -> Result<Snapshot, string
         SessionObservation.capture(pass) => { resume observed_snapshot(); }
     };
 }
+// Native adapters retain all original storage and journal validation. The copied
+// observation is never a MemoryVersion or authority to admit a write.
+flow capture_adapter(pass: ObservationPass) -> Result<Snapshot, string> ![Memory, Error<StorageError>, Error<IndexError>] ~ SnapshotCapture {
+    return observed_snapshot();
+}
+flow inspect_adapter(id: string, workspace: string, path: string) -> Result<Option<Record>, string> ![Memory, Error<StorageError>, Error<IndexError>] ~ InspectAuthority {
+    return inspect(id, workspace, path);
+}
+flow confirmed_parent_adapter(id: string, workspace: string, path: string) -> Result<ObservedRow, string> ![Memory, Error<StorageError>, Error<IndexError>] ~ ConfirmedParentAuthority {
+    let actual = match read_parent(id, workspace, path) { Ok(value) => value, Err(error) => { return Err(error); } };
+    return Ok(ObservedRow { key = actual.key, version = actual.version.opaque, value = actual.value });
+}
 public flow discover(workspace: string, path: string, selector: Selector) -> Result<Snapshot, string> {
-    let before = match snapshot(workspace, path) { Ok(value) => value, Err(error) => { return Err(error); } };
-    let selected = match select(before, workspace, path, selector) { Ok(value) => value, Err(error) => { return Err(error); } };
-    for row in selected limit Iterations(2) {
-        let actual = match inspect(row.id, workspace, path) { Ok(value) => value, Err(error) => { return Err(error); } };
-        if actual != Some(row) { return Err("v2 discovery selected row differs from inspect authority"); }
-    }
-    let after = match snapshot(workspace, path) { Ok(value) => value, Err(error) => { return Err(error); } };
-    let change = consistent(before, after); if change != "" { return Err(change); }
-    return Ok(before);
+    return discover_controller(workspace, path, selector) with {
+        SessionObservation.capture(pass) => { resume capture_adapter(pass); }
+        DiscoveryAuthority.inspect(id, selected_workspace, selected_path) => { resume inspect_adapter(id, selected_workspace, selected_path); }
+        DiscoveryAuthority.confirmed_parent(id, selected_workspace, selected_path) => { resume confirmed_parent_adapter(id, selected_workspace, selected_path); }
+    };
 }
 public flow latest_parent(workspace: string, path: string) -> Result<string, string> {
-    let before = match snapshot(workspace, path) { Ok(value) => value, Err(error) => { return Err(error); } };
-    let selected = match select(before, workspace, path, Selector.Parent) { Ok(value) => value, Err(error) => { return Err(error); } };
-    let actual = match read_parent(selected[0].id, workspace, path) { Ok(value) => value, Err(error) => { return Err(error); } };
-    let root = match before.root { Some(value) => value, None() => { return Err("v2 discovery parent missing"); } };
-    if actual.key != root.key || actual.version.opaque != root.version || actual.value != root.value { return Err("v2 discovered parent changed before continuation"); }
-    let after = match snapshot(workspace, path) { Ok(value) => value, Err(error) => { return Err(error); } };
-    let change = consistent(before, after); if change != "" { return Err(change); }
-    return Ok(actual.value.id);
+    return latest_parent_controller(workspace, path) with {
+        SessionObservation.capture(pass) => { resume capture_adapter(pass); }
+        DiscoveryAuthority.inspect(id, selected_workspace, selected_path) => { resume inspect_adapter(id, selected_workspace, selected_path); }
+        DiscoveryAuthority.confirmed_parent(id, selected_workspace, selected_path) => { resume confirmed_parent_adapter(id, selected_workspace, selected_path); }
+    };
 }
