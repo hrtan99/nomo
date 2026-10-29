@@ -7,10 +7,10 @@ import std.agent.message.Message;
 import nomo.core.text.printable;
 import nomo.harness.model_plan_diagnostic.response_error;
 import nomo.tools.path_policy.valid_path;
+public import nomo.model.tool_context.{Context, allowed_error};
 import nomo.core.conversation.{Event, State, fresh, charge};
 
 public type Action = { operation: string, files: Array<string>, literal: string, text: string };
-public type Context = { history: Array<Event>, allowed: Array<string>, final_only: bool };
 public type Session = { history: State, calls: usize, tokens: usize, tools: usize, scan: usize };
 public type LoopTurn = { state: Session, status: i32 };
 public type Limits = { steps: i32, calls: usize, tokens: usize, scan: usize };
@@ -25,15 +25,6 @@ public flow question_error(raw: string) -> string {
     if len(raw) == 0 || len(raw) > 128 || !printable(raw) || trim(raw) == "" {
         return "question requires 1..128 printable ASCII chars, not only spaces";
     }
-    return "";
-}
-
-public flow allowed_error(names: Array<string>) -> string {
-    if count(names) < 1 || count(names) > 2 { return "expected one or two allowed files"; }
-    for name in names limit Iterations(2) {
-        if len(name) > 48 || !valid_path(name) { return "invalid allowed file"; }
-    }
-    if count(names) == 2 && names[0] == names[1] { return "duplicate allowed file"; }
     return "";
 }
 

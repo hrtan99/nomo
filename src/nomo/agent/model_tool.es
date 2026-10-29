@@ -1,12 +1,13 @@
 module nomo.agent.model_tool;
 
-import std.text.len;
+import std.text.{len, to_string_usize};
 import std.io.println;
 import nomo.harness.model_plan_diagnostic.response_text;
 import nomo.core.conversation.{State, capacity_error, stop};
 import nomo.agent.loop.{emit, failure};
 import nomo.model.model_tool_contract.{Session, Limits, Context, allowed_error, question_error, decode_reply, decode_work_reply, context_error, budget_error, charge_action};
 import nomo.tools.workspace.{Outcome, outcome, read_file, search_files, display};
+import nomo.context.selection.{EventPolicy, SelectionRefusal, select as select_context};
 
 public import nomo.model.model_tool_contract.LoopTurn;
 import nomo.harness.legacy_string_stages.LegacyChildModel;
@@ -44,6 +45,35 @@ flow capacity(session: Session, slots: usize, characters: usize) -> string {
     return capacity_error(session.history, slots, characters);
 }
 
+// Retain all task, parent, tool and confirmed outcome events. Only controller
+// Model-text history is optional; state history/accounting is never rewritten.
+flow bounded_model_context(input: Context) -> Result<Context, string> {
+    var policies: Array<EventPolicy> = [];
+    for event in input.history limit Iterations(32) {
+        var policy = EventPolicy.Required;
+        if event.role == "model" && event.kind == "text" { policy = EventPolicy.Optional; }
+        if event.role == "user" && event.kind == "input" { policy = EventPolicy.Task; }
+        policies = policies.push(policy);
+    }
+    let selected = match select_context(input, policies, 2048) {
+        Ok(value) => value,
+        Err(error) => {
+            let message = match error {
+                SelectionRefusal.InvalidPolicy => "invalid model context event policy",
+                SelectionRefusal.InvalidContext => "invalid bounded model context",
+                SelectionRefusal.InvalidLimit => "invalid model context byte limit",
+                SelectionRefusal.Encoding => "model context encoding refused",
+                SelectionRefusal.RequiredTooLarge => "required model context exceeds 2048 encoded UTF-8 bytes",
+            };
+            return Err(message);
+        },
+    };
+    if selected.omitted_count > 0 {
+        println("CONTEXT omitted " + to_string_usize(selected.omitted_count) + " optional history events; required facts retained.");
+    }
+    return Ok(selected.context);
+}
+
 // Reserve the attempted model event and its largest final/action/error output.
 // The context includes all preceding events, never the not-yet-made request.
 flow model_attempt(previous: Session, allowed: Array<string>, limits: Limits, final_only: bool) -> Result<ModelAttempt, LoopTurn> {
@@ -52,7 +82,10 @@ flow model_attempt(previous: Session, allowed: Array<string>, limits: Limits, fi
     if full != "" {
         return Err(failed(history(session, stop(session.history)), full, 4));
     }
-    let context = Context { history = session.history.events, allowed = allowed, final_only = final_only };
+    let original = Context { history = session.history.events, allowed = allowed, final_only = final_only };
+    let context = match bounded_model_context(original) {
+        Ok(value) => value, Err(error) => { return Err(failed(session, error, 4)); }
+    };
     var error = context_error(context);
     if error == "" { error = budget_error(session, limits, false); }
     if error != "" {
