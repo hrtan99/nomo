@@ -94,10 +94,11 @@ flow serialized(row: Record) -> Result<string, string> {
 }
 
 public flow validate(row: Record) -> string {
-    if row.format != 2 || (row.turn != 1 && row.turn != 2) ||
+    if (row.format != 2 && row.format != 3) || (row.turn != 1 && row.turn != 2) ||
         (row.phase != "admitted" && row.phase != "summary-unconfirmed" && row.phase != "summary-confirmed") {
         return "invalid work-chain v2 format, turn or phase";
     }
+    if row.format == 3 && row.turn != 1 { return "user-context work is limited to one turn"; }
     let identity = selector_error(row.id, row.workspace, row.path); if identity != "" { return identity; }
     let chain = selector_error(row.chain, row.workspace, row.path); if chain != "" { return chain; }
     if row.region != "nomo.tools.edit_file.EditableRoot" { return "work-chain region binding mismatch"; }
@@ -160,18 +161,25 @@ public flow fingerprint(row: Record) -> Result<string, string> {
     return digest(encoded);
 }
 
-public flow initial(id: string, workspace: string, path: string, request: string, allowed: Array<string>, policy: Caps) -> Result<Record, string> {
+flow initial_format(id: string, workspace: string, path: string, request: string, allowed: Array<string>, policy: Caps, format: i32) -> Result<Record, string> {
     let reservation = match reserve(lifetime(), policy) { Ok(value) => value, Err(error) => { return Err(error); } };
-    let row = Record { format = 2, phase = "admitted", chain = id, turn = 1, id = id, workspace = workspace,
+    let row = Record { format = format, phase = "admitted", chain = id, turn = 1, id = id, workspace = workspace,
         region = "nomo.tools.edit_file.EditableRoot", path = path, request = request, allowed = allowed,
         parent_id = "", parent_version = "", parent_digest = "", maximum = lifetime(), available = reservation.available,
         remaining = reservation.remaining, reserved = turn_caps(), work = None() };
     let invalid = validate(row); if invalid != "" { return Err(invalid); }
     return Ok(row);
 }
+public flow initial(id: string, workspace: string, path: string, request: string, allowed: Array<string>, policy: Caps) -> Result<Record, string> {
+    return initial_format(id, workspace, path, request, allowed, policy, 2);
+}
+public flow initial_user_context(id: string, workspace: string, path: string, request: string, allowed: Array<string>, policy: Caps) -> Result<Record, string> {
+    return initial_format(id, workspace, path, request, allowed, policy, 3);
+}
 
 public flow successor(parent: Record, parent_version: string, id: string, request: string, allowed: Array<string>, policy: Caps) -> Result<Record, string> {
     let invalid = validate(parent); if invalid != "" { return Err(invalid); }
+    if parent.format != 2 { return Err("user-context work cannot continue or resume"); }
     if parent.turn != 1 || parent.phase != "summary-confirmed" { return Err("only a confirmed first v2 turn can continue; no third turn or v1 upgrade"); }
     let reservation = match reserve(parent.remaining, policy) { Ok(value) => value, Err(error) => { return Err(error); } };
     let proof = match fingerprint(parent) { Ok(value) => value, Err(error) => { return Err(error); } };
@@ -185,6 +193,7 @@ public flow successor(parent: Record, parent_version: string, id: string, reques
 }
 
 public flow linked(parent: Record, parent_version: string, child: Record) -> string {
+    if parent.format != 2 || child.format != 2 { return "user-context work cannot have a successor"; }
     let invalid = validate(parent); if invalid != "" { return invalid; }
     let invalid_child = validate(child); if invalid_child != "" { return invalid_child; }
     if parent.turn != 1 || parent.phase != "summary-confirmed" || child.turn != 2 || child.parent_id != parent.id ||

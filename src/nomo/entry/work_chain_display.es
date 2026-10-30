@@ -9,7 +9,7 @@ import nomo.entry.work_record_display.render as work_lines;
 public flow render(row: Record, journal: Option<Journal>) -> Result<Array<string>, string> {
     let error = validate(row); if error != "" { return Err(error); }
     let metadata = match object(["format", "phase", "chain", "id", "turn", "workspace", "region", "path", "parent_id", "parent_version", "parent_digest", "request"],
-        ["2", row.phase, row.chain, row.id, to_string_i32(row.turn), row.workspace, row.region, row.path, row.parent_id, row.parent_version, row.parent_digest, row.request]) {
+        [to_string_i32(row.format), row.phase, row.chain, row.id, to_string_i32(row.turn), row.workspace, row.region, row.path, row.parent_id, row.parent_version, row.parent_digest, row.request]) {
         Ok(value) => value, Err(error) => { return Err(error); } };
     var lines = ["CHAIN " + metadata]; let labels = ["ALLOWANCE ", "AVAILABLE ", "REMAINING ", "RESERVATION "];
     let caps = [row.maximum, row.available, row.remaining, row.reserved]; var index: usize = 0;

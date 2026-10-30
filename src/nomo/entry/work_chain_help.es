@@ -68,6 +68,10 @@ public flow help(args: Array<string>) -> i32 {
     println("Declared two-turn lifetime:26,14,94208,393216,2,8192,6,12288,2,4096. These are configured allowances, not measured Provider usage.");
     println("Requests are1..128 printable ASCII characters; read paths1..2 at most48 characters each; edit path at most128 characters/eight components; edit text at most2048 UTF-8 bytes.");
     println("Show uses captured application/journal facts only and never checks the current File. An admitted row may already have an intent/completed journal without a work snapshot.");
+    println("Optional user-context-new reads explicitly allowed files from --read-root ABSOLUTE_DIRECTORY and edits only the prepared demo/value.txt. It is single-turn and cannot resume or continue.");
+    println("Example: local-tryout.sh user-context-new DIRECTORY --read-root ABSOLUTE_DIRECTORY --id ID --workspace BIND --path demo/value.txt --once REQUEST --allow FILE[,FILE].");
+    println("The whole selected directory is mounted read-only and visible to the native process. Internal symlinks and hard links may expose content; reads are not atomic snapshots. Allowed content may be sent to the configured model.");
+    println("TTY mode requires fresh read-context confirmation. Non-TTY mode requires --accept-read-root and denies edit approval.");
     println("V1, partial, denied, consumed or unknown work cannot be resumed/replayed here. Approval is current each turn; failed work is not reset, repaired or refunded.");
     println("Help/list/show need no Provider configuration. See docs/agent/LOCAL_TRYOUT_GUIDE.md for the current setup and private Model configuration.");
     return 0;

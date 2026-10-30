@@ -443,6 +443,12 @@ flow = "chain_new"
 profile = "work-chain"
 
 [[bin]]
+name = "nomo-user-context-new"
+module = "nomo.main"
+flow = "chain_user_context_new"
+profile = "work-chain"
+
+[[bin]]
 name = "nomo-chain-continue"
 module = "nomo.main"
 flow = "chain_continue"

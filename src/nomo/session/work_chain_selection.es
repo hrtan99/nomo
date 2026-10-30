@@ -45,6 +45,7 @@ public flow validate(view: Snapshot, workspace: string, path: string) -> string 
         }
     };
     let invalid = row_error(root.value); if invalid != "" { return invalid; }
+    if root.value.format == 3 && (view.child != None() || view.child_journal != None()) { return "user-context work cannot have a successor or second journal"; }
     if root.key != "turn:1" || root.value.turn != 1 { return "v2 discovery root slot mismatch"; }
     if root.value.workspace != workspace || root.value.path != path { return "v2 discovery workspace or path mismatch"; }
     let root_edit = journal_row(root.value, view.root_journal); if root_edit != "" { return root_edit; }
@@ -61,7 +62,7 @@ public flow validate(view: Snapshot, workspace: string, path: string) -> string 
 public flow eligible(view: Snapshot, workspace: string, path: string) -> bool {
     if validate(view, workspace, path) != "" { return false; }
     return match view.root {
-        Some(value) => value.value.phase == "summary-confirmed" && view.child == None() && view.child_journal == None(),
+        Some(value) => value.value.format == 2 && value.value.phase == "summary-confirmed" && view.child == None() && view.child_journal == None(),
         None() => false,
     };
 }

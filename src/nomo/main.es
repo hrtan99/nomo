@@ -36,6 +36,7 @@ import nomo.entry.terminal_entry.run as terminal_run;
 import nomo.entry.terminal_entry.run_once as terminal_once_run;
 import nomo.entry.terminal_help.help as terminal_help_run;
 import nomo.entry.work_chain_sessions.{run_sessions as chain_sessions_run, run_show as chain_show_run};
+import nomo.entry.user_context_entry.run as user_context_new_run;
 
 flow terminal(args: Array<string>) -> i32 {
     let status = terminal_run(args);
@@ -245,6 +246,7 @@ flow main(args: Array<string>) -> i32 {
 }
 
 flow chain_new(args: Array<string>) -> i32 { let status = chain_new_run(args); if status != 0 { abort("Nomo v2 chain new refused; see admission/journal status"); } return 0; }
+flow chain_user_context_new(args: Array<string>) -> i32 { let status = user_context_new_run(args); if status != 0 { abort("Nomo user-context work stopped; inspect admission/journal status"); } return 0; }
 flow chain_continue(args: Array<string>) -> i32 { let status = chain_continue_run(args); if status != 0 { abort("Nomo v2 continuation refused; see admission/journal status"); } return 0; }
 flow chain_show(args: Array<string>) -> i32 { let status = chain_show_run(args); if status != 0 { abort("Nomo v2 show refused; see REFUSED"); } return 0; }
 

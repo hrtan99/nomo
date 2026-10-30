@@ -11,7 +11,7 @@ import nomo.cli.terminal_args.{Config, LineCommand, parse, parse_once, bind_pare
 import nomo.ui.terminal_session.{State, fresh, turn, work_error, after_turn, state_line, request_line};
 import nomo.tools.edit_encoding.json;
 import nomo.session.work_chain.{turn_caps, values};
-import nomo.entry.work_chain_entry.{execute_application, inspect_application, present_outcome, present_show};
+import nomo.entry.work_chain_entry.{execute_application_detailed, project_outcome, present_detailed_outcome, inspect_application, present_show};
 import nomo.session.work_chain_usecase.{TerminalWork, TerminalRead, WorkOutcome, dispatch, read_selected, read_latest, latest_error};
 import nomo.entry.terminal_help.help;
 import nomo.session.work_chain_store.latest_parent;
@@ -110,7 +110,7 @@ flow latest_application(workspace: string, path: string) -> Result<string, strin
 }
 flow production(args: Array<string>, once: bool) -> i32 {
     return handle { if once { run_once_with_operations(args) } else { run_with_operations(args) } } with {
-        TerminalWork.execute(request) => { let outcome = execute_application(request); let status = present_outcome(outcome); resume outcome; }
+        TerminalWork.execute(request) => { let detailed = execute_application_detailed(request); let status = present_detailed_outcome(detailed); resume project_outcome(detailed); }
         TerminalRead.show(selected) => { resume inspect_application(selected); }
         TerminalRead.latest(workspace, path) => { resume latest_application(workspace, path); }
     };

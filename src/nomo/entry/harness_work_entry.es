@@ -29,7 +29,11 @@ flow ledger_text(state: Ledger) -> string {
 }
 public flow ledger(state: Ledger) -> unit { println(ledger_text(state) + "; configured allowances are not measured usage; no persisted Model history or mutating resume"); }
 public flow chain_ledger(state: Ledger) -> unit { println(ledger_text(state) + "; per-turn configured allowances are not measured usage; bounded v2 continuation requires a fresh durable claim and current confirmation"); }
-flow chain_stage(name: string, state: Ledger) -> unit { println("STAGE " + name); chain_ledger(state); }
+public flow user_context_ledger(state: Ledger) -> unit { println(ledger_text(state) + "; per-turn configured allowances are not measured usage; user-context work cannot continue or resume"); }
+flow chain_stage(name: string, state: Ledger, user_context: bool) -> unit {
+    println("STAGE " + name);
+    if user_context { user_context_ledger(state); } else { chain_ledger(state); }
+}
 
 public flow refused(state: Ledger, error: string) -> i32 { println("REFUSED " + error); ledger(state); return 1; }
 flow stage(name: string, state: Ledger) -> unit { println("STAGE " + name); ledger(state); }
@@ -111,9 +115,9 @@ public flow prepare_work(input: Work) -> Result<Pending, Failure> {
         LegacyEditStages.aggregate(value) => { resume aggregate(value); }
     };
 }
-public flow prepare_chain_work(input: Work, parent: Array<ParentFacts>, expected: Option<string>, inspect_plan: bool, inspect_all: bool) -> Result<Pending, Failure> {
+flow prepare_chain_mode(input: Work, parent: Array<ParentFacts>, expected: Option<string>, inspect_plan: bool, inspect_all: bool, user_context: bool) -> Result<Pending, Failure> {
     let original = (value: string) => match expected { Some(before) => if value == before { "" } else { "current original differs from confirmed parent result" }, None() => "" };
-    let log = (name: string, state: Ledger) => chain_stage(name, state);
+    let log = (name: string, state: Ledger) => chain_stage(name, state, user_context);
     return prepare(input, original, log, true, inspect_plan, inspect_all) with {
         LegacyStringStages.main(value) => { resume read_main(value); }
         LegacyStringStages.child(task, files, selected) => { resume chain_child_turn(task, files, selected, inspect_all); }
@@ -121,6 +125,14 @@ public flow prepare_chain_work(input: Work, parent: Array<ParentFacts>, expected
         LegacyEditStages.child(value) => { resume chain_child(value, parent); }
         LegacyEditStages.aggregate(value) => { resume chain_aggregate(value, parent); }
     };
+}
+
+
+public flow prepare_chain_work(input: Work, parent: Array<ParentFacts>, expected: Option<string>, inspect_plan: bool, inspect_all: bool) -> Result<Pending, Failure> {
+    return prepare_chain_mode(input, parent, expected, inspect_plan, inspect_all, false);
+}
+public flow prepare_user_context_work(input: Work, parent: Array<ParentFacts>, expected: Option<string>, inspect_plan: bool, inspect_all: bool) -> Result<Pending, Failure> {
+    return prepare_chain_mode(input, parent, expected, inspect_plan, inspect_all, true);
 }
 
 public flow completed_context_work(pending: Pending, outcome: Confirmed) -> Result<Completed, Failure> {
@@ -153,13 +165,21 @@ public flow summarize(completed: Completed) -> Result<Summary, Failure> {
         LegacyEditStages.aggregate(value) => { resume aggregate(value); }
     };
 }
-public flow summarize_chain(completed: Completed, parent: Array<ParentFacts>, inspect_all: bool) -> Result<Summary, Failure> {
-    let log = (name: string, state: Ledger) => chain_stage(name, state);
+flow summarize_chain_mode(completed: Completed, parent: Array<ParentFacts>, inspect_all: bool, user_context: bool) -> Result<Summary, Failure> {
+    let log = (name: string, state: Ledger) => chain_stage(name, state, user_context);
     return finish_summary(completed, log, true, inspect_all) with {
         LegacyEditStages.plan(value) => { resume chain_plan(value, parent); }
         LegacyEditStages.child(value) => { resume chain_child(value, parent); }
         LegacyEditStages.aggregate(value) => { resume chain_aggregate(value, parent); }
     };
+}
+
+
+public flow summarize_chain(completed: Completed, parent: Array<ParentFacts>, inspect_all: bool) -> Result<Summary, Failure> {
+    return summarize_chain_mode(completed, parent, inspect_all, false);
+}
+public flow summarize_user_context(completed: Completed, parent: Array<ParentFacts>, inspect_all: bool) -> Result<Summary, Failure> {
+    return summarize_chain_mode(completed, parent, inspect_all, true);
 }
 
 public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read<ReadOnlyRoot>, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {

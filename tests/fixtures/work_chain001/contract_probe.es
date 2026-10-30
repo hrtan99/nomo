@@ -2,7 +2,7 @@ module app.contract_probe;
 
 import std.io.println;
 import std.text.len;
-import nomo.session.work_chain.{Record, Caps, initial, successor, validate, linked, publish_partial, confirm,
+import nomo.session.work_chain.{Record, Caps, initial, initial_user_context, successor, validate, linked, publish_partial, confirm,
     maximum, turn_caps, zero, summary_reservation, values, reserve, policy, caps_error, fingerprint};
 import nomo.session.work_record.Record as WorkRecord;
 import nomo.session.work_record.partial;
@@ -22,6 +22,18 @@ flow changed_caps(value: Caps, selected: usize, difference: i32) -> Caps {
     return from_values(result);
 }
 flow admitted() -> Result<Record, string> { return initial("root-op", "owned", "target.txt", "update target from context", ["context.txt"], turn_caps()); }
+flow user_context_states() -> bool {
+    let row = match initial_user_context("root-op", "owned", "target.txt", "update target from context", ["context.txt"], turn_caps()) { Ok(value) => value, Err(_) => { return false; } };
+    let saved = match work("root-op", "old", "old", "blue") { Ok(value) => value, Err(_) => { return false; } };
+    let pending = match publish_partial(row, saved) { Ok(value) => value, Err(_) => { return false; } };
+    let completed = match confirm(pending, "first result") { Ok(value) => value, Err(_) => { return false; } };
+    let parent = match first(true) { Ok(value) => value, Err(_) => { return false; } };
+    let child = match second(parent, "blue", "blue") { Ok(value) => value, Err(_) => { return false; } };
+    let refused = match successor(completed, "observed-opaque-version", "child-op", "update target from context", ["context.txt"], turn_caps()) { Ok(_) => false, Err(_) => true };
+    let legacy_name = match initial("root-op", "user-context-once", "target.txt", "update target from context", ["context.txt"], turn_caps()) { Ok(value) => value, Err(_) => { return false; } };
+    return row.format == 3 && pending.format == 3 && completed.format == 3 && validate(row) == "" && validate(pending) == "" && validate(completed) == "" &&
+        refused && linked(completed, "observed-opaque-version", child) != "" && legacy_name.format == 2 && validate(legacy_name) == "";
+}
 flow work(id: string, before: string, target: string, replacement: string) -> Result<WorkRecord, string> {
     let prepared = match prepare_original("target.txt", before, target, replacement) { Ok(value) => value, Err(error) => { return Err(error); } };
     let binding = match bind(id, "owned", "target.txt", prepared) { Ok(value) => value, Err(error) => { return Err(error); } };

@@ -21,6 +21,7 @@ def cases():
     values=[]
     add=lambda name,checks: values.append((name,' && '.join(checks)))
     add('declared_two_turn_lifetime_before_work',['declared_lifetime()'])
+    add('user_context_format_survives_publication_and_refuses_successor',['user_context_states()'])
     add('reservation_conserved_no_refund_after_summary',['conservation()'])
     add('parent_opaque_token_and_full_row_digest',['opaque_fingerprint()'])
     add('each_saved_dimension_shortage_refused',['shortage('+str(i)+', true)' for i in range(10)])

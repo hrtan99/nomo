@@ -23,6 +23,7 @@ public flow run_sessions(args: Array<string>) -> i32 {
                 if row.turn == 1 && eligible(view, input.workspace, input.path) { "true" } else { "false" }, row.workspace, row.path]) {
             Ok(value) => value, Err(error) => { return refused(error); } };
         println("SESSION " + encoded);
+        if row.format == 3 { println("User-context work is single-turn; continuation and resume are unavailable."); }
     }
     println("Captured fixed slots only. Continuation revalidates the graph, journals and admission; no replay, refund or current File claim.");
     return 0;

@@ -4,7 +4,7 @@ import std.memory.{get_entry, prepare_put, operation_ref, commit, WriteCondition
     WriteOutcome, MemoryWriteChange, StorageDurability, Missing, Match};
 import nomo.session.edit_operation.selector_error;
 import nomo.session.work_record.Record as WorkRecord;
-import nomo.session.work_chain.{Record, Caps, initial, successor, validate, linked};
+import nomo.session.work_chain.{Record, Caps, initial, initial_user_context, successor, validate, linked};
 import nomo.session.work_chain.publish_partial as partial_row;
 import nomo.session.work_chain.confirm as confirmed_row;
 import nomo.session.work_chain_journal.inspect as inspect_journal;
@@ -50,18 +50,28 @@ flow write(row: Record, condition: WriteCondition) -> Result<MemoryVersion, stri
     return Ok(version);
 }
 
-public flow read_parent(id: string, workspace: string, path: string) -> Result<MemoryEntry<string, Record>, string> {
-    let error = selector_error(id, workspace, path); if error != "" { return Err(error); }
-    let before = match read(1) { Some(value) => value, None() => { return Err("v2 parent missing; v1 records are not executable parents"); } };
-    let invalid = validate(before.value); if invalid != "" { return Err(invalid); }
+public enum ParentAccess { Found(MemoryEntry<string, Record>), Refused(string), UserContext }
+public flow read_parent_access(id: string, workspace: string, path: string) -> ParentAccess {
+    let error = selector_error(id, workspace, path); if error != "" { return ParentAccess.Refused(error); }
+    let before = match read(1) { Some(value) => value, None() => { return ParentAccess.Refused("v2 parent missing; v1 records are not executable parents"); } };
+    if before.value.format == 3 { return ParentAccess.UserContext; }
+    let invalid = validate(before.value); if invalid != "" { return ParentAccess.Refused(invalid); }
     let row = before.value;
     if before.key != key(1) || row.turn != 1 || row.phase != "summary-confirmed" || row.id != id || row.chain != id || row.workspace != workspace || row.path != path {
-        return Err("only the matching fully confirmed first v2 turn can continue; no partial or third turn");
+        return ParentAccess.Refused("only the matching fully confirmed first v2 turn can continue; no partial or third turn");
     }
-    let journal = journal_error(row); if journal != "" { return Err(journal); }
-    let after = match read(1) { Some(value) => value, None() => { return Err("v2 parent disappeared; no retry"); } };
-    if after != before { return Err("v2 parent changed during reload; no retry"); }
-    return Ok(before);
+    let journal = journal_error(row); if journal != "" { return ParentAccess.Refused(journal); }
+    let after = match read(1) { Some(value) => value, None() => { return ParentAccess.Refused("v2 parent disappeared; no retry"); } };
+    if after != before { return ParentAccess.Refused("v2 parent changed during reload; no retry"); }
+    return ParentAccess.Found(before);
+}
+
+public flow read_parent(id: string, workspace: string, path: string) -> Result<MemoryEntry<string, Record>, string> {
+    return match read_parent_access(id, workspace, path) {
+        ParentAccess.Found(value) => Ok(value),
+        ParentAccess.Refused(error) => Err(error),
+        ParentAccess.UserContext => Err("user-context work cannot continue or resume"),
+    };
 }
 
 flow parent_error(ticket: Ticket, row: Record) -> string {
@@ -87,13 +97,20 @@ public flow claim(ticket: Ticket) -> Result<bool, string> {
     return Ok(true);
 }
 
-public flow admit_new(id: string, workspace: string, path: string, request: string, allowed: Array<string>, policy: Caps) -> Result<Ticket, string> ![Memory, Error<StorageError>, Error<IndexError>] {
-    let row = match initial(id, workspace, path, request, allowed, policy) { Ok(value) => value, Err(error) => { return Err(error); } };
+flow admit_first(id: string, workspace: string, path: string, request: string, allowed: Array<string>, policy: Caps, user_context: bool) -> Result<Ticket, string> {
+    let proposed = if user_context { initial_user_context(id, workspace, path, request, allowed, policy) } else { initial(id, workspace, path, request, allowed, policy) };
+    let row = match proposed { Ok(value) => value, Err(error) => { return Err(error); } };
     if read(1) != None() || read(2) != None() { return Err("v2 root/turn slot already consumed; no changed-ID retry"); }
     match journal_available(1) { Ok(_) => {} Err(error) => { return Err(error); } }
     match journal_available(2) { Ok(_) => {} Err(error) => { return Err(error); } }
     let version = match write(row, Missing) { Ok(value) => value, Err(error) => { return Err(error); } };
     return Ok(Ticket { row = row, version = version, parent = None() });
+}
+public flow admit_new(id: string, workspace: string, path: string, request: string, allowed: Array<string>, policy: Caps) -> Result<Ticket, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+    return admit_first(id, workspace, path, request, allowed, policy, false);
+}
+public flow admit_user_context(id: string, workspace: string, path: string, request: string, allowed: Array<string>, policy: Caps) -> Result<Ticket, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+    return admit_first(id, workspace, path, request, allowed, policy, true);
 }
 
 // The caller preflights the parent facts from exactly expected_parent. Missing
@@ -141,6 +158,10 @@ public flow inspect(id: string, workspace: string, path: string) -> Result<Optio
     let first = match root { Some(value) => value, None() => {
         if child != None() { return Err("v2 successor exists without its root"); } return Ok(None()); } };
     let invalid = validate(first.value); if invalid != "" { return Err(invalid); }
+    if first.value.format == 3 {
+        if child != None() { return Err("user-context work cannot have a successor"); }
+        match journal_available(2) { Ok(_) => {} Err(_) => { return Err("user-context work cannot have a second journal"); } }
+    }
     if first.key != key(1) || first.value.turn != 1 { return Err("v2 root slot mismatch"); }
     let first_journal = journal_error(first.value); if first_journal != "" { return Err(first_journal); }
     var selected = first.value; var found = first.value.id == id;
@@ -155,6 +176,7 @@ public flow inspect(id: string, workspace: string, path: string) -> Result<Optio
     }
     if !found || selected.workspace != workspace || selected.path != path { return Err("v2 chain selected identity or workspace mismatch"); }
     if read(1) != root || read(2) != child { return Err("v2 chain changed during show"); }
+    if first.value.format == 3 { match journal_available(2) { Ok(_) => {} Err(_) => { return Err("user-context second journal changed during show"); } } }
     return Ok(Some(selected));
 }
 
