@@ -7,11 +7,12 @@ import std.fs.IOError as FileError;
 import std.effects.Fs;
 import nomo.tools.workspace.ReadOnlyRoot;
 import nomo.tools.edit_file.EditableRoot;
-import nomo.cli.terminal_args.{Config, LineCommand, parse, parse_once, bind_parent, line, work_arguments, show_arguments};
+import nomo.cli.terminal_args.{Config, LineCommand, parse, parse_once, bind_parent, line, work_request, show_selector};
 import nomo.ui.terminal_session.{State, fresh, turn, work_error, after_turn, state_line, request_line};
 import nomo.tools.edit_encoding.json;
 import nomo.session.work_chain.{turn_caps, values};
-import nomo.entry.work_chain_entry.{run_new, run_continue, run_show};
+import nomo.entry.work_chain_entry.{execute_application, inspect_application, present_outcome, present_show};
+import nomo.session.work_chain_usecase.{TerminalWork, TerminalRead, WorkOutcome, dispatch, read_selected, read_latest, latest_error};
 import nomo.entry.terminal_help.help;
 import nomo.session.work_chain_store.latest_parent;
 
@@ -21,7 +22,7 @@ flow refused(error: string) -> i32 {
 }
 flow selected_config(config: Config) -> Result<Config, string> {
     if !config.latest { return Ok(config); }
-    let parent = match latest_parent(config.workspace, config.path) { Ok(value) => value, Err(error) => { return Err(error); } };
+    let parent = match read_latest(config.workspace, config.path) { Ok(value) => value, Err(error) => { return Err(error); } };
     return bind_parent(config, parent);
 }
 flow policy(config: Config) -> string {
@@ -40,26 +41,27 @@ flow display(config: Config, state: State) -> Result<bool, string> {
 }
 flow request(config: Config, state: State, text: string) -> Result<State, string> {
     let invalid = work_error(state); if invalid != "" { return Err(invalid); }
-    let args = match work_arguments(config, turn(state), text) { Ok(value) => value, Err(error) => { return Err(error); } };
+    let operation = match work_request(config, turn(state), text) { Ok(value) => value, Err(error) => { return Err(error); } };
     let rendered = match request_line(text) { Ok(value) => value, Err(error) => { return Err(error); } };
     println(rendered);
-    let status = if turn(state) == 1 { run_new(args) } else { run_continue(args) };
-    let next = match after_turn(state, status == 0, config.once_supplied) { Ok(value) => value, Err(error) => { return Err(error); } };
+    let outcome = dispatch(operation);
+    let completed = match outcome { WorkOutcome.Completed => true, WorkOutcome.Stopped(_) => false };
+    let next = match after_turn(state, completed, config.once_supplied) { Ok(value) => value, Err(error) => { return Err(error); } };
     match display(config, next) { Ok(_) => {} Err(error) => { return Err(error); } }
-    if status != 0 { return Err("work stopped; inspect captured work and journal state before any further action"); }
+    if !completed { return Err("work stopped; inspect captured work and journal state before any further action"); }
     return Ok(next);
 }
 flow show(config: Config, state: State) -> i32 {
     // Explicit selectors only. Missing/captured records never advance control state.
-    let root = match show_arguments(config, 1) { Ok(value) => value, Err(error) => { return refused(error); } };
-    if run_show(root) != 0 { return 1; }
+    let root = match show_selector(config, 1) { Ok(value) => value, Err(error) => { return refused(error); } };
+    if present_show(read_selected(root)) != 0 { return 1; }
     if turn(state) == 2 {
-        let child = match show_arguments(config, 2) { Ok(value) => value, Err(error) => { return refused(error); } };
-        if run_show(child) != 0 { return 1; }
+        let child = match show_selector(config, 2) { Ok(value) => value, Err(error) => { return refused(error); } };
+        if present_show(read_selected(child)) != 0 { return 1; }
     }
     return 0;
 }
-public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read<ReadOnlyRoot>, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {
+public flow run_with_operations(args: Array<string>) -> i32 ![Console, TerminalWork.execute, TerminalRead.show, TerminalRead.latest, Error<IndexError>, Error<ConsoleError>] {
     let parsed = match parse(args) { Ok(value) => value, Err(error) => { return refused(error); } };
     if parsed.help { return help([]); }
     let config = match selected_config(parsed) { Ok(value) => value, Err(error) => { return refused(error); } };
@@ -93,7 +95,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
 }
 
 // No outer request read: missing --once is refused before any work admission.
-public flow run_once(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read<ReadOnlyRoot>, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {
+public flow run_once_with_operations(args: Array<string>) -> i32 ![Console, TerminalWork.execute, TerminalRead.show, TerminalRead.latest, Error<IndexError>, Error<ConsoleError>] {
     let parsed = match parse_once(args) { Ok(value) => value, Err(error) => { return refused(error); } };
     if parsed.help { return help([]); }
     let config = match selected_config(parsed) { Ok(value) => value, Err(error) => { return refused(error); } };
@@ -101,3 +103,17 @@ public flow run_once(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs
     match display(config, state) { Ok(_) => {} Err(error) => { return refused(error); } }
     return match request(config, state, config.once) { Ok(_) => 0, Err(error) => refused(error) };
 }
+
+flow latest_application(workspace: string, path: string) -> Result<string, string> {
+    let invalid = latest_error(workspace, path); if invalid != "" { return Err(invalid); }
+    return latest_parent(workspace, path);
+}
+flow production(args: Array<string>, once: bool) -> i32 {
+    return handle { if once { run_once_with_operations(args) } else { run_with_operations(args) } } with {
+        TerminalWork.execute(request) => { let outcome = execute_application(request); let status = present_outcome(outcome); resume outcome; }
+        TerminalRead.show(selected) => { resume inspect_application(selected); }
+        TerminalRead.latest(workspace, path) => { resume latest_application(workspace, path); }
+    };
+}
+public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read<ReadOnlyRoot>, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] { return production(args, false); }
+public flow run_once(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read<ReadOnlyRoot>, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] { return production(args, true); }

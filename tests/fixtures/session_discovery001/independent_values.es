@@ -1,5 +1,8 @@
 module app.contract_probe;
 
+import nomo.tools.edit_contract.Selector as EditSelector;
+import nomo.session.work_chain_usecase.{WorkRequest, ContinueRequest, TurnRequest};
+
 import std.io.println;
 import std.text.{len, split};
 import nomo.session.work_chain.{Record, Caps, initial, successor, validate, linked, publish_partial, confirm,
@@ -15,7 +18,7 @@ import nomo.harness.harness_tool_contract.Ledger;
 import nomo.session.work_chain_selection.{Snapshot, ObservedRow, ObservedJournal, Selector, select as choose, validate as selection_error, eligible, journal_phase, consistent};
 import nomo.session.work_chain_journal_contract.CapturedJournal as Journal;
 import nomo.cli.work_chain_selection_args.{Command, parse as selection_args};
-import nomo.cli.terminal_args.{parse as startup, parse_once, bind_parent, work_arguments, show_arguments};
+import nomo.cli.terminal_args.{parse as startup, parse_once, bind_parent, work_request, show_selector};
 
 type Check = { label: string, passed: bool };
 flow admitted() -> Result<Record, string> { return initial("root-op", "owned", "target.txt", "update target from context", ["context.txt"], turn_caps()); }
@@ -157,14 +160,14 @@ flow terminal_parsed(args: Array<string>, latest: bool) -> bool {
     return match startup(args) { Ok(value) => value.latest == latest, Err(_) => false };
 }
 flow terminal_refused(args: Array<string>) -> bool { return match startup(args) { Ok(_) => false, Err(_) => true }; }
-flow latest_bound(args: Array<string>, parent: string, expected: Array<string>) -> bool {
+flow latest_bound(args: Array<string>, parent: string, expected: TurnRequest) -> bool {
     let input = match startup(args) { Ok(value) => value, Err(_) => { return false; } };
     if !input.latest || input.root_id != "" || input.parent != "" { return false; }
-    match work_arguments(input, 2, "replace selected literal") { Ok(_) => { return false; } Err(_) => {} }
-    match show_arguments(input, 1) { Ok(_) => { return false; } Err(_) => {} }
+    match work_request(input, 2, "replace selected literal") { Ok(_) => { return false; } Err(_) => {} }
+    match show_selector(input, 1) { Ok(_) => { return false; } Err(_) => {} }
     let selected = match bind_parent(input, parent) { Ok(value) => value, Err(_) => { return false; } };
     return !selected.latest && selected.parent == parent && selected.root_id == parent &&
-        match work_arguments(selected, 2, "replace selected literal") { Ok(value) => value == expected, Err(_) => false };
+        match work_request(selected, 2, "replace selected literal") { Ok(value) => value == expected, Err(_) => false };
 }
 flow latest_bind_refused(args: Array<string>, parent: string) -> bool {
     let input = match startup(args) { Ok(value) => value, Err(_) => { return false; } };

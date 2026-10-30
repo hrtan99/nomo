@@ -5,8 +5,9 @@ import std.text.{len, split, trim, starts_with};
 import nomo.core.text.printable;
 import nomo.session.edit_operation.selector_error;
 import nomo.model.model_tool_contract.{question_error, allowed_error};
-import nomo.session.work_chain.policy;
-import nomo.cli.work_chain_args.parse as chain_args;
+import nomo.session.work_chain.{policy, turn_caps};
+import nomo.tools.edit_contract.Selector;
+import nomo.session.work_chain_usecase.{WorkRequest, ContinueRequest, TurnRequest, request_error};
 
 public type Config = { help: bool, root_id: string, child_id: string, parent: string,
     workspace: string, path: string, allowed: Array<string>, cap_raw: string,
@@ -120,7 +121,7 @@ public flow line(raw: string) -> Result<LineCommand, string> {
     return Ok(LineCommand.Request(text));
 }
 
-public flow work_arguments(config: Config, turn: i32, request: string) -> Result<Array<string>, string> {
+public flow work_request(config: Config, turn: i32, request: string) -> Result<TurnRequest, string> {
     let invalid = configuration_error(config, false); if invalid != "" { return Err(invalid); }
     if turn != 1 && turn != 2 { return Err("terminal work forbids a third or invalid turn"); }
     if turn == 1 && config.parent != "" { return Err("explicit continuation starts at the second turn"); }
@@ -128,17 +129,17 @@ public flow work_arguments(config: Config, turn: i32, request: string) -> Result
     if config.once_supplied && request != config.once { return Err("one-shot request differs from its startup binding"); }
     let invalid_request = question_error(request); if invalid_request != "" { return Err(invalid_request); }
     let id = if turn == 1 { config.root_id } else { config.child_id };
-    var allowed = ""; for path in config.allowed limit Iterations(2) { if allowed != "" { allowed = allowed + ","; } allowed = allowed + path; }
-    var args = ["--id", id, "--workspace", config.workspace, "--path", config.path, "--once", request, "--allow", allowed];
-    if turn == 2 { args = args.push("--parent").push(config.root_id); }
-    if config.cap_raw != "" { args = args.push("--cap").push(config.cap_raw); }
-    match chain_args(args, turn == 2) { Ok(_) => {} Err(error) => { return Err(error); } }
-    return Ok(args);
+    let selected = Selector { id = id, workspace = config.workspace, path = config.path };
+    let cap = if config.cap_raw == "" { turn_caps() } else { match policy(config.cap_raw) { Ok(value) => value, Err(error) => { return Err(error); } } };
+    let value = WorkRequest { selected = selected, request = request, allowed = config.allowed, cap = cap };
+    let result = if turn == 1 { TurnRequest.New(value) } else { TurnRequest.Continue(ContinueRequest { parent = config.root_id, work = value }) };
+    let error = request_error(result); if error != "" { return Err(error); }
+    return Ok(result);
 }
 
-public flow show_arguments(config: Config, turn: i32) -> Result<Array<string>, string> {
+public flow show_selector(config: Config, turn: i32) -> Result<Selector, string> {
     let invalid = configuration_error(config, false); if invalid != "" { return Err(invalid); }
     if turn != 1 && turn != 2 { return Err("terminal show requires a bound first or second turn"); }
     let id = if turn == 1 { config.root_id } else { config.child_id };
-    return Ok(["--id", id, "--workspace", config.workspace, "--path", config.path]);
+    return Ok(Selector { id = id, workspace = config.workspace, path = config.path });
 }

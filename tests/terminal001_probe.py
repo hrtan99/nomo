@@ -17,7 +17,7 @@ from work_chain_contract_probe import MODULES as CHAIN_MODULES
 
 ROOT=Path(__file__).resolve().parent.parent
 FIXTURE=ROOT/'tests/fixtures/terminal001/contract_probe.es'
-MODULES=CHAIN_MODULES+['cli/work_chain_args.es','cli/terminal_args.es','ui/terminal_session.es']
+MODULES=CHAIN_MODULES+['cli/work_chain_args.es','cli/terminal_args.es','ui/terminal_session.es','session/work_chain_journal_contract.es','session/work_chain_usecase.es']
 CAP='13,7,47104,196608,1,4096,3,6144,1,2048'
 REQUEST='replace selected literal'
 NEW=['new','--id','root-op','--child-id','child-op','--workspace','owned','--path','target.txt','--allow','context.txt']
@@ -25,21 +25,36 @@ CONTINUE=['continue','--parent','root-op','--id','child-op','--workspace','owned
 BINDING=dict(help=False,root_id='root-op',child_id='child-op',parent='',workspace='owned',path='target.txt',allowed=['context.txt'],cap_raw='',once_supplied=False,once='',latest=False)
 
 
+def typed_expected(arguments):
+    # Independent complete expected values from preserved explicit test literals.
+    fields=dict(zip(arguments[::2],arguments[1::2]))
+    names=['steps','calls','generation','native_tokens','read_tools','scan','edit_reads','edit_read_bytes','atomic','atomic_bytes']
+    counters=list(map(int,fields.get('--cap',CAP).split(',')))
+    selected='EditSelector { id = '+literal(fields['--id'])+', workspace = '+literal(fields['--workspace'])+', path = '+literal(fields['--path'])+' }'
+    cap='Caps { '+', '.join(key+' = '+str(value) for key,value in zip(names,counters))+' }'
+    work='WorkRequest { selected = '+selected+', request = '+literal(fields['--once'])+', allowed = '+literal(fields['--allow'].split(','))+', cap = '+cap+' }'
+    if '--parent' in fields:return 'TurnRequest.Continue(ContinueRequest { parent = '+literal(fields['--parent'])+', work = '+work+' })'
+    return 'TurnRequest.New('+work+')'
+
+
 def cases():
     checks=[]
     def add(label,*expressions):checks.append((label,' && '.join(expressions)))
-    def call(name,*values):return name+'('+', '.join(map(literal,values))+')'
+    def call(name,*values):
+        if name in ['work','once_work','selected']:
+            return name+'('+', '.join(map(literal,values[:-1]))+', '+values[-1]+')'
+        return name+'('+', '.join(map(literal,values))+')'
     def parsed(args,**changes):return 'parsed('+literal(args)+', '+record('Config',dict(BINDING,**changes))+')'
     def denied(*args):return [call('refused',value) for value in args]
     def once_parsed(args,**changes):
         expected=dict(BINDING,once_supplied=True,once=REQUEST);expected.update(changes)
         return 'once_parsed('+literal(args)+', '+record('Config',expected)+')'
     def argv(turn,request=REQUEST,cap=''):
-        value=['--id','root-op' if turn==1 else 'child-op','--workspace','owned','--path','target.txt','--once',request,'--allow','context.txt']
-        if turn==2:value+=['--parent','root-op']
-        if cap:value+=['--cap',cap]
-        return value
-    def selected(turn):return ['--id','root-op' if turn==1 else 'child-op','--workspace','owned','--path','target.txt']
+        counters=list(map(int,(cap or CAP).split(',')))
+        caps='Caps { '+', '.join(key+' = '+str(value) for key,value in zip(['steps','calls','generation','native_tokens','read_tools','scan','edit_reads','edit_read_bytes','atomic','atomic_bytes'],counters))+' }'
+        value='WorkRequest { selected = '+selected(turn)+', request = '+literal(request)+', allowed = ["context.txt"], cap = '+caps+' }'
+        return 'TurnRequest.New('+value+')' if turn==1 else 'TurnRequest.Continue(ContinueRequest { parent = "root-op", work = '+value+' })'
+    def selected(turn):return 'Selector { id = '+literal('root-op' if turn==1 else 'child-op')+', workspace = "owned", path = "target.txt" }'
     def rendered(state,turn,phase,remaining,once=False,root='root-op',child='child-op',workspace='owned',path='target.txt',cap=''):
         expected='SESSION '+ascii_json(dict(phase=phase,root_id=root,current_id=root if turn==1 else child,turn=str(turn),configured_turns_in_process=str(remaining),workspace=workspace,path=path,configured_cap=cap or 'work-chain defaults',once='true' if once else 'false',scope='configuration only; not a durable balance, File observation or permission'))
         return 'rendered('+state+', '+', '.join(map(literal,[root,child,workspace,path,cap,once,expected]))+')'
@@ -61,6 +76,11 @@ def cases():
     add('unknown_slash_commands_refused',*[call('command',raw,'invalid','') for raw in ['/unknown','/show extra','/Help','/']],call('command','path/a.txt','request','path/a.txt'))
     add('help_show_exit_EOF_are_non_work_intents',*[call('non_work',raw) for raw in ['/help\n','/show\r\n','/exit','']])
     add('first_and_second_work_arguments',call('work',NEW,1,REQUEST,argv(1)),call('work',NEW,2,REQUEST,argv(2)),call('work',CONTINUE,2,REQUEST,argv(2)))
+    lowered='12,6,47000,190000,0,4000,2,6000,0,2000'
+    ordered=NEW[:-1]+['other.txt,context.txt','--cap',lowered]
+    expected_first=typed_expected(['--id','root-op','--workspace','owned','--path','target.txt','--once',REQUEST,'--allow','other.txt,context.txt','--cap',lowered]).replace('EditSelector','Selector')
+    expected_second=typed_expected(['--id','child-op','--workspace','owned','--path','target.txt','--once',REQUEST,'--allow','other.txt,context.txt','--cap',lowered,'--parent','root-op']).replace('EditSelector','Selector')
+    add('typed_caps_and_ordered_allowlist_preserved',call('work',ordered,1,REQUEST,expected_first),call('work',ordered,2,REQUEST,expected_second))
     add('cap_and_once_projection_preserve_startup_request',call('work',NEW+['--cap',CAP,'--once','--help'],1,'--help',argv(1,'--help',CAP)),call('work_refused',NEW+['--once',REQUEST],1,'substituted request'),call('work_refused',NEW+['--once',REQUEST],2,REQUEST),call('work',CONTINUE+['--once',REQUEST],2,REQUEST,argv(2)))
     add('invalid_third_or_wrong_initial_work_turn_refused',*[call('work_refused',NEW,turn,REQUEST) for turn in [0,3,-1]],call('work_refused',CONTINUE,1,REQUEST),call('work_refused',NEW,1,'x'*129))
     add('show_selects_only_explicit_bound_ids',*[call('selected',args,turn,selected(turn)) for args in [NEW,CONTINUE] for turn in [1,2]],*[call('selection_refused',NEW,turn) for turn in [0,3,-1]])
@@ -86,7 +106,9 @@ def main():
     parser.add_argument('--evidence-dir',type=Path,required=True)
     parser.add_argument('--prepare-only',action='store_true')
     parser.add_argument('--once-only',action='store_true',help='Select only the new non-TTY one-shot pure groups')
+    parser.add_argument('--usecase-only',action='store_true',help='Select changed typed builders only; retained parser/state vectors are not replayed')
     options=parser.parse_args();checks=cases()
+    if options.usecase_only:checks=[check for check in checks if check[0] in ['first_and_second_work_arguments','cap_and_once_projection_preserve_startup_request','invalid_third_or_wrong_initial_work_turn_refused','show_selects_only_explicit_bound_ids','non_tty_once_projects_only_selected_request']]
     if options.once_only:checks=[check for check in checks if check[0].startswith('non_tty_once_')]
     options.evidence_dir.mkdir(parents=True,exist_ok=True)
     evidence=Path(tempfile.mkdtemp(prefix='terminal001-pure-',dir=options.evidence_dir)).resolve();project=evidence/'project';(project/'src/app').mkdir(parents=True)

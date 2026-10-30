@@ -11,7 +11,7 @@ import tempfile
 from harness_checkpoint_contract_probe import MANIFEST
 from model_protocol_probe import literal, resources
 from normal_graph_identity import verify_cli
-from terminal001_probe import MODULES as TERMINAL_MODULES
+from terminal001_probe import MODULES as TERMINAL_MODULES, typed_expected
 
 ROOT=Path(__file__).resolve().parent.parent
 FIXTURE=ROOT/'tests/fixtures/session_discovery001/contract_probe.es'
@@ -26,7 +26,9 @@ CAP='13,7,47104,196608,1,4096,3,6144,1,2048'
 def cases():
     values=[]
     def add(label,*checks):values.append((label,' && '.join(checks)))
-    def call(name,*args):return name+'('+', '.join(map(literal,args))+')'
+    def call(name,*args):
+        if name=='latest_bound':return name+'('+', '.join(map(literal,args[:-1]))+', '+typed_expected(args[-1])+')'
+        return name+'('+', '.join(map(literal,args))+')'
     add('strict_fixed_store_list_and_standalone_help',call('parsed',BIND,True,'all'),*[call('parsed',args,listing,'help') for args in [['help'],['--help']] for listing in [True,False]])
     add('exact_and_latest_are_distinct_selectors',call('parsed',['--latest',*BIND],False,'latest'),call('parsed',['--id','root-op',*BIND],False,'root-op'),call('parsed',['--id','--latest',*BIND],False,'--latest'))
     add('selector_conflicts_duplicates_missing_and_unknown_refused',*[call('parsed',args,listing,'refused') for args,listing in [

@@ -3,7 +3,10 @@ module app.contract_probe;
 import std.io.println;
 import std.text.{len, split};
 import nomo.core.text.printable;
-import nomo.cli.terminal_args.{Config, LineCommand, parse, parse_once, line, work_arguments, show_arguments};
+import nomo.cli.terminal_args.{Config, LineCommand, parse, parse_once, line, work_request, show_selector};
+import nomo.tools.edit_contract.Selector;
+import nomo.session.work_chain.Caps;
+import nomo.session.work_chain_usecase.{WorkRequest, ContinueRequest, TurnRequest};
 import nomo.ui.terminal_session.{State, fresh, turn, work_error, after_turn, state_line, request_line};
 
 type Check = { label: string, passed: bool };
@@ -21,13 +24,13 @@ flow once_required(args: Array<string>) -> bool {
     let valid = match parse(args) { Ok(_) => true, Err(_) => false };
     return valid && match parse_once(args) { Ok(_) => false, Err(error) => error == "non-TTY terminal mode requires explicit --once REQUEST" };
 }
-flow once_work(args: Array<string>, selected_turn: i32, request: string, expected: Array<string>) -> bool {
+flow once_work(args: Array<string>, selected_turn: i32, request: string, expected: TurnRequest) -> bool {
     let config = match parse_once(args) { Ok(value) => value, Err(_) => { return false; } };
-    return match work_arguments(config, selected_turn, request) { Ok(value) => value == expected, Err(_) => false };
+    return match work_request(config, selected_turn, request) { Ok(value) => value == expected, Err(_) => false };
 }
 flow once_work_refused(args: Array<string>, selected_turn: i32, request: string) -> bool {
     let config = match parse_once(args) { Ok(value) => value, Err(_) => { return false; } };
-    return match work_arguments(config, selected_turn, request) { Ok(_) => false, Err(_) => true };
+    return match work_request(config, selected_turn, request) { Ok(_) => false, Err(_) => true };
 }
 flow command(raw: string, expected: string, text: string) -> bool {
     return match line(raw) {
@@ -53,21 +56,21 @@ flow non_work(raw: string) -> bool {
         },
     };
 }
-flow work(args: Array<string>, selected_turn: i32, request: string, expected: Array<string>) -> bool {
+flow work(args: Array<string>, selected_turn: i32, request: string, expected: TurnRequest) -> bool {
     let config = match parse(args) { Ok(value) => value, Err(_) => { return false; } };
-    return match work_arguments(config, selected_turn, request) { Ok(value) => value == expected, Err(_) => false };
+    return match work_request(config, selected_turn, request) { Ok(value) => value == expected, Err(_) => false };
 }
 flow work_refused(args: Array<string>, selected_turn: i32, request: string) -> bool {
     let config = match parse(args) { Ok(value) => value, Err(_) => { return false; } };
-    return match work_arguments(config, selected_turn, request) { Ok(_) => false, Err(_) => true };
+    return match work_request(config, selected_turn, request) { Ok(_) => false, Err(_) => true };
 }
-flow selected(args: Array<string>, selected_turn: i32, expected: Array<string>) -> bool {
+flow selected(args: Array<string>, selected_turn: i32, expected: Selector) -> bool {
     let config = match parse(args) { Ok(value) => value, Err(_) => { return false; } };
-    return match show_arguments(config, selected_turn) { Ok(value) => value == expected, Err(_) => false };
+    return match show_selector(config, selected_turn) { Ok(value) => value == expected, Err(_) => false };
 }
 flow selection_refused(args: Array<string>, selected_turn: i32) -> bool {
     let config = match parse(args) { Ok(value) => value, Err(_) => { return false; } };
-    return match show_arguments(config, selected_turn) { Ok(_) => false, Err(_) => true };
+    return match show_selector(config, selected_turn) { Ok(_) => false, Err(_) => true };
 }
 flow phase(value: State, expected_turn: i32, stopped: bool) -> bool {
     return turn(value) == expected_turn && (work_error(value) != "") == stopped;

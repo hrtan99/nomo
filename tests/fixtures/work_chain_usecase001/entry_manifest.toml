@@ -1,0 +1,91 @@
+[package]
+name = "terminal-input001-probe"
+version = "0.0.0"
+edition = "2026"
+[source]
+root = "src"
+[runtime]
+default_profile = "terminal-input-denied"
+[runtime.profiles.terminal-input-denied]
+boundary_policy = "terminal-input001-console-only"
+[runtime.profiles.terminal-input-denied.policy]
+mode = "local-static"
+rules = ["console=allow", "model=deny", "memory=deny", "session=deny", "filesystem=deny", "command=deny", "approval=deny"]
+[runtime.profiles.terminal-input-denied.approval]
+mode = "deny"
+[[bin]]
+name = "interactive"
+module = "app.terminal_input_probe"
+flow = "interactive"
+profile = "terminal-input-denied"
+[[bin]]
+name = "once"
+module = "app.terminal_input_probe"
+flow = "once"
+profile = "terminal-input-denied"
+
+[[bin]]
+name = "typed"
+module = "app.terminal_input_probe"
+flow = "typed"
+profile = "terminal-input-denied"
+
+[[bin]]
+name = "unbound_interactive"
+module = "app.terminal_input_probe"
+flow = "unbound_interactive"
+profile = "terminal-input-denied"
+
+[[bin]]
+name = "unbound_once"
+module = "app.terminal_input_probe"
+flow = "unbound_once"
+profile = "terminal-input-denied"
+
+[[bin]]
+name = "usecase_values"
+module = "app.usecase_probe"
+flow = "usecase_values"
+profile = "terminal-input-denied"
+
+[[bin]]
+name = "usecase_observe"
+module = "app.usecase_probe"
+flow = "usecase_observe"
+profile = "terminal-input-denied"
+
+[[bin]]
+name = "mapping_values"
+module = "app.contract_probe"
+flow = "mapping_values"
+profile = "terminal-input-denied"
+
+[[bin]]
+name = "mapping_observe"
+module = "app.contract_probe"
+flow = "mapping_observe"
+profile = "terminal-input-denied"
+
+[[bin]]
+name = "discovery_values"
+module = "app.discovery_probe"
+flow = "discovery_values"
+profile = "terminal-input-denied"
+
+[[bin]]
+name = "discovery_observe"
+module = "app.discovery_probe"
+flow = "discovery_observe"
+profile = "terminal-input-denied"
+
+[[bin]]
+name = "independent_values"
+module = "app.discovery_values"
+flow = "independent_values"
+profile = "terminal-input-denied"
+
+[[bin]]
+name = "independent_observe"
+module = "app.discovery_values"
+flow = "independent_observe"
+profile = "terminal-input-denied"
