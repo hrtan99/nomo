@@ -10,6 +10,7 @@ import nomo.cli.harness_work_args.{Work, parse};
 import nomo.harness.harness_work_contract.{Context, Evidence, Ledger, fresh, ledger_error, bump_edit, native_tokens, collect, finish_evidence, context_error};
 import nomo.harness.harness_model_tools.{run_context as read_context, work_child_turn, chain_child_turn};
 import nomo.harness.legacy_string_stages.{LegacyStringStages, LegacyEditStages};
+import nomo.harness.edit_original.EditOriginal;
 import nomo.harness.harness_work_model.{read_main, edit_plan, edit_child, aggregate};
 import nomo.harness.work_chain_context.ParentFacts;
 import nomo.harness.work_chain_model.{plan as chain_plan, child as chain_child, aggregate as chain_aggregate};
@@ -47,7 +48,7 @@ public type Summary = { answer: string, state: Ledger };
 flow failed(state: Ledger, error: string) -> Result<Pending, Failure> { return Err(Failure { state = state, error = error }); }
 
 // Callers admit the unused edit slot before this shared Model/File preparation.
-public flow prepare(input: Work, original_error: (string) -> string, stage_log: (string, Ledger) -> unit, chain_read: bool, inspect_plan: bool, inspect_all: bool) -> Result<Pending, Failure> {
+public flow prepare_with(input: Work, original_error: (string) -> string, stage_log: (string, Ledger) -> unit, chain_read: bool, inspect_plan: bool, inspect_all: bool) -> Result<Pending, Failure> {
     var state = fresh();
     let selected = Selector { id = input.edit.id, workspace = input.edit.workspace, path = input.edit.path };
     let invalid = ledger_error(state); if invalid != "" { return failed(state, invalid); }
@@ -66,7 +67,7 @@ public flow prepare(input: Work, original_error: (string) -> string, stage_log: 
     let evidence = match finish_evidence(pending, read.answer) { Ok(value) => value, Err(error) => { return failed(state, error); } };
     if evidence.ledger.steps != read.ledger.steps || evidence.ledger.calls != read.ledger.calls || evidence.ledger.tokens != read.ledger.tokens ||
         evidence.ledger.tools != read.ledger.tools || evidence.ledger.scan != read.ledger.scan { return failed(state, "read evidence ledger mismatch"); }
-    let before = match read_original(selected.path) { Ok(value) => value, Err(error) => { return failed(state, error); } };
+    let before = match perform EditOriginal.read(selected.path) { Ok(value) => value, Err(error) => { return failed(state, error); } };
     let original = original_error(before); if original != "" { return failed(state, original); }
     let plan = Context { edit = context("plan", selected, input.edit.request, "", before), evidence = evidence };
     let error = context_error(plan); if error != "" { return failed(state, error); }
@@ -89,6 +90,14 @@ public flow prepare(input: Work, original_error: (string) -> string, stage_log: 
     let prepared = match prepare_original(selected.path, before, request.target, request.replacement) { Ok(value) => value, Err(error) => { return failed(state, if chain_read { response_error(edit_raw, "edit-child", "proposal", 32768) } else { error }); } };
     state = match bump_edit(state, false) { Ok(value) => value, Err(error) => { return failed(state, error); } };
     return Ok(Pending { selected = selected, prepared = prepared, evidence = evidence, request = input.edit.request, task = task, state = state });
+}
+
+// The production facade binds the original native reader once; exceptions and
+// the caller-supplied original validation remain at their original boundary.
+public flow prepare(input: Work, original_error: (string) -> string, stage_log: (string, Ledger) -> unit, chain_read: bool, inspect_plan: bool, inspect_all: bool) -> Result<Pending, Failure> {
+    return prepare_with(input, original_error, stage_log, chain_read, inspect_plan, inspect_all) with {
+        EditOriginal.read(path) => { resume read_original(path); }
+    };
 }
 
 public flow prepare_work(input: Work) -> Result<Pending, Failure> {

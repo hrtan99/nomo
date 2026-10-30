@@ -7,6 +7,7 @@ import std.bytes.len as byte_count;
 import std.codec.text.{utf8_encode, utf8_decode, Strict};
 import std.agent.message.Message;
 import nomo.tools.path_policy.valid_path;
+import nomo.harness.edit_original.OriginalReader;
 import nomo.tools.edit_proposal.{validate, text_bytes};
 public import nomo.tools.edit_contract.{Prepared, prepare_original};
 
@@ -34,7 +35,7 @@ flow read_existing(name: string) -> Result<bytes, string> {
     return Ok(bytes);
 }
 
-public flow read_original(name: string) -> Result<string, string> {
+public flow read_original(name: string) -> Result<string, string> ![Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Error<FileError>, Error<IndexError>] ~ OriginalReader<EditableRoot> {
     let bytes = match read_existing(name) { Ok(value) => value, Err(error) => { return Err(error); } };
     let original = match utf8_decode(bytes, Strict) { Ok(value) => value, Err(_) => { return Err("edit file is not UTF-8"); } };
     match text_bytes(original, "original") { Ok(_) => {} Err(error) => { return Err(error); } }
