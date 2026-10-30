@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
-"""Recording doubles only: no Docker, Etas, work fixture, Provider or real PTY."""
+"""Recording doubles with real PTY descriptors; no Docker, Etas, fixture or Provider."""
 import ast
 import json
 import os
+import pty
+import termios
 from pathlib import Path
 import signal
 import subprocess
@@ -160,6 +162,43 @@ print(sys.argv[4])
         self.assertIn(str(ROOT/'config/local-tryout-model-compose.yaml'),argv)
         self.assertTrue(record['name'].startswith('nomo-terminal-'))
         self.assertIn('nomo.terminal.invocation='+record['owner'],argv)
+
+    def test_terminal_mixed_and_tty_descriptors_select_expected_mode(self):
+        for stdin_tty, stdout_tty in ((True, False), (False, True), (True, True)):
+            with self.subTest(stdin_tty=stdin_tty, stdout_tty=stdout_tty):
+                master, slave = pty.openpty()
+                settings = termios.tcgetattr(slave)
+                settings[3] &= ~(termios.ECHO | termios.ECHONL)
+                termios.tcsetattr(slave, termios.TCSANOW, settings)
+                process = None
+                try:
+                    process = subprocess.Popen(
+                        [str(LAUNCH), 'terminal', str(self.fixture), *self.arguments],
+                        cwd=ROOT, env=self.environment_with({}),
+                        stdin=slave if stdin_tty else subprocess.PIPE,
+                        stdout=slave if stdout_tty else subprocess.PIPE,
+                        stderr=subprocess.PIPE, start_new_session=True)
+                    os.close(slave); slave = -1
+                    if stdin_tty:
+                        os.write(master, b'\x04')
+                    out, err = process.communicate(input=None if stdin_tty else b'', timeout=20)
+                    self.assertEqual(process.returncode, 0, (out, err))
+                    record = json.loads(self.docker_record.read_text())
+                    argv = record['argv']; interactive = stdin_tty and stdout_tty
+                    self.assertIn('--tty=' + str(interactive).lower(), argv)
+                    self.assertIn('ETAS_HOST_APPROVAL=' + ('prompt' if interactive else 'deny'), argv)
+                    self.assertEqual(argv[argv.index('--flow') + 1], 'terminal' if interactive else 'terminal_once')
+                    self.assertEqual(argv[argv.index('--profile') + 1], 'work-chain' if interactive else 'work-chain-once')
+                    self.assertFalse(json.loads(self.container.read_text())['exists'])
+                    with self.assertRaises(ProcessLookupError):
+                        os.kill(record['client_pid'], 0)
+                    self.assertFalse(self.fixture.exists())
+                finally:
+                    if process is not None and process.poll() is None:
+                        os.killpg(process.pid, signal.SIGKILL)
+                        process.wait(timeout=2)
+                    if slave >= 0: os.close(slave)
+                    os.close(master)
 
     def test_terminal_help_is_provider_free_readonly_without_fixture(self):
         observed=self.launch('terminal-help',ETAS_HOST_APPROVAL='auto',

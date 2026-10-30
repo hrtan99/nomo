@@ -17,7 +17,7 @@ case "$action" in
     help) flow=chain_help; profile=chain-help ;;
     terminal-help) flow=terminal_help; profile=chain-help ;;
     terminal)
-        if [[ -t 0 ]]; then
+        if [[ -t 0 && -t 1 ]]; then
             flow=terminal; profile=work-chain; terminal_tty=true; terminal_approval=prompt
         else
             flow=terminal_once; profile=work-chain-once; terminal_tty=false; terminal_approval=deny
