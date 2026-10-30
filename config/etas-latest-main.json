@@ -3,8 +3,8 @@
   "repositories": {
     "cli": {
       "repository": "etas",
-      "revision": "83dd9ee6721d86c1c0634fffaf12c436d1286254",
-      "tree": "a32a638d5f05abb532cefd36bc19a876b706ff59",
+      "revision": "5de5cb3c24d1227450bb47705798360c52630578",
+      "tree": "5fe396b18ff83763fe8a06b25f057a36f1863801",
       "packages": [
         "etas_cli",
         "etas_driver",
@@ -14,8 +14,8 @@
     },
     "core": {
       "repository": "etas-core",
-      "revision": "79777dbb24aeef5206337d4be9fa83f011869b82",
-      "tree": "2c3b649d2ea937cda539092a2817890d4ac13aa4",
+      "revision": "ee0fa652cb7a8f703a4c389c351de5762ebdd50a",
+      "tree": "02839031f380925a98615bd436a20ec89845cc74",
       "packages": [
         "etas_builtin",
         "etas_cache",
@@ -30,8 +30,8 @@
     },
     "frontend": {
       "repository": "etas-frontend",
-      "revision": "8acf5bbb1130f38215b5b3707f4672adbe99f050",
-      "tree": "4928c4c12a0eaa7647d32a4e16107c460cfd33c7",
+      "revision": "f6bc92f65928d7ae5c49d0935feb8e267fbafb51",
+      "tree": "83a2cfc8d40c78c9abffb628cc4f07479c560fc0",
       "packages": [
         "etas_effects",
         "etas_frontend",
@@ -44,15 +44,15 @@
     },
     "interpreter": {
       "repository": "etas-interpreter",
-      "revision": "323e27d4b9b85e296873e4b348de0890bd43dfc7",
-      "tree": "22e18ba2a98f58227f870d0a3a82ffc05974a611",
+      "revision": "394b1ef4c24fe70bab6c9c91711fe6ad9f428dc2",
+      "tree": "51c03e02e39baace6dab9bad0f229668b3ad5483",
       "packages": [
         "etas_interpreter"
       ]
     }
   },
-  "source": "Official CLI manifest dependency graph, observed and built 2026-10-30",
-  "official_observation_sha256": "6c65fb761bcd4cf9776e7b8ba408f9f57a24acf581ca889143a4d4e213c7d034",
-  "cargo_lock_sha256": "6c5bc5472e0e6ab2d06c8d89ef36c2c46329f514f0973a284d6488ad9d907a3f",
-  "verified_seed_binary_sha256": "cd7cf71036fb7b488d021ad1a608e46efb4361aebf042c162b8b634ae4e2afc9"
+  "source": "Official CLI manifest dependency graph, observed 2026-10-30; candidate 0.1.9",
+  "official_observation_sha256": "f1205216183e297ee9c6931e8dc1cbf13418fe784a92e8cc2a7131dd43474f4a",
+  "cargo_lock_sha256": "a3f4b2bd1142e9d8a2cc3a8167cc3971708f6d06bae0065a1f8281828a38cbab",
+  "verified_seed_binary_sha256": "76b855252d03d95933677c971d4c2dc200c23e15f56a891c1036654dbd8c370e"
 }

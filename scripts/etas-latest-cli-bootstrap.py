@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build or adopt the official CLI's unmodified 011 Git dependency graph."""
+"""Build or adopt the official CLI's unmodified 012 Git dependency graph."""
 import argparse
 import hashlib
 import json
@@ -14,7 +14,7 @@ import tomllib
 
 REPO = Path(__file__).resolve().parent.parent
 CONFIG = REPO / 'config/etas-latest-main.json'
-LOCK = REPO / 'config/etas-011.Cargo.lock'
+LOCK = REPO / 'config/etas-012.Cargo.lock'
 SPEC = json.loads(CONFIG.read_text())
 PINS = SPEC['repositories']
 CACHE = Path('/home/nomo/.cargo')
@@ -155,7 +155,7 @@ def prepare(sources=None, seed=None):
     guard_environment()
     if (ROOT / 'identity.json').exists():
         guard(read_only=True)
-        print('PASS already prepared official 011 graph')
+        print('PASS already prepared official 012 graph')
         return
     require(not INSTALLED.exists(), 'refuse replacement of existing normal graph')
     require(not ROOT.exists(), 'refuse pre-existing unowned normal cache')
@@ -220,20 +220,20 @@ def build():
 
 def adopt(binary):
     guard()
-    require(digest(binary) == SPEC['verified_seed_binary_sha256'], 'seed binary is not the independently verified 011 build')
+    require(digest(binary) == SPEC['verified_seed_binary_sha256'], 'seed binary is not the independently verified 012 build')
     if (ROOT / 'binary.json').exists():
         return verify(read_only=True)
-    return install(binary, 'adopted-independently-verified-011-build')
+    return install(binary, 'adopted-independently-verified-012-build')
 
 
 def verify(read_only=False):
     guard(read_only=read_only)
     identity = json.loads((ROOT / 'binary.json').read_text())
     require(identity['path'] == str(INSTALLED) and digest(INSTALLED) == identity['sha256'], 'installed CLI drift')
-    require(identity['method'] in ('built-official-locked-graph', 'adopted-independently-verified-011-build'), 'unknown binary provenance')
-    require(identity['sha256'] == SPEC['verified_seed_binary_sha256'], 'binary is not the independently verified 011 build')
-    require(identity['lock_sha256'] == digest(LOCK) and read([INSTALLED, '--version']) == identity['version'] == 'etas 0.1.8\n', 'CLI version/lock drift')
-    print('PASS selected official 011 CLI: ' + json.dumps(identity, sort_keys=True))
+    require(identity['method'] in ('built-official-locked-graph', 'adopted-independently-verified-012-build'), 'unknown binary provenance')
+    require(identity['sha256'] == SPEC['verified_seed_binary_sha256'], 'binary is not the independently verified 012 build')
+    require(identity['lock_sha256'] == digest(LOCK) and read([INSTALLED, '--version']) == identity['version'] == 'etas 0.1.9\n', 'CLI version/lock drift')
+    print('PASS selected official 012 CLI: ' + json.dumps(identity, sort_keys=True))
     return identity
 
 
