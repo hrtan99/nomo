@@ -1,4 +1,3 @@
-# Normal merged-main compiler build; seed downloads without changing the old graph.
 x-latest-build: &latest-build
   environment:
     CARGO_BUILD_JOBS: "1"
@@ -11,18 +10,8 @@ x-latest-build: &latest-build
     - type: volume
       source: cargo-cache
       target: /home/nomo/.cargo
-    - type: volume
-      source: latest-download-seed
-      target: /baseline
-      read_only: true
-
 services:
   dev:
     <<: *latest-build
   dependency:
     <<: *latest-build
-
-volumes:
-  latest-download-seed:
-    external: true
-    name: nomo-cargo-cache-latest-008-20261029

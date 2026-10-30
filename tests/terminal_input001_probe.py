@@ -23,12 +23,12 @@ import tempfile
 
 
 ROOT = Path(__file__).resolve().parent.parent
-CLI_SHA256 = '9e1e7740a6cf6be7e62220db97ac2828d8b46d08b1750b3050123e6b49b0311c'
+CLI_SHA256 = '460f26bf3b1855b72581595cc0d85ac153312f32d9ed98e375e1beee8071d135'
 PINS = {
-    'cli': '2f15688dee84c380c666cf505b9d7fcde9d6fbd1',
-    'core': 'd572d2fe6d3ebf320451d95dad78ce9c1d7dcb20',
-    'frontend': '764be969d43a61dd204c8658efa52482b6c23c2c',
-    'interpreter': '63033efce18de2174865bc2b3ed2595f7db183d9',
+    'cli': '2a57d709f9a352b26e59917b2e3fe4da761397f9',
+    'core': '9da73aec66367f724e2870f7738b436edb0faad5',
+    'frontend': '9bba251b2e584080cbc37d7f525ce786674e837a',
+    'interpreter': '6baed226c66dea56a9f9b00a1bc4ba7a4ae49fe1',
 }
 PROFILE = 'terminal-input-denied'
 CAP = '13,7,47104,196608,1,4096,3,6144,1,2048'
@@ -115,10 +115,10 @@ def identity(source):
     config = json.loads((source / 'config/etas-latest-main.json').read_text())
     require(config['selector'] == 'latest' and
             {name: row['revision'] for name, row in config['repositories'].items()} == PINS,
-            'Actual official009 configuration required')
+            'Actual official010 configuration required')
     verify, resource = helpers(source)
     cli = verify()
-    require(digest(cli) == CLI_SHA256, 'Actual selected009 binary differs')
+    require(digest(cli) == CLI_SHA256, 'Actual selected010 binary differs')
     return cli, resource
 
 

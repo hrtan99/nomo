@@ -1,12 +1,12 @@
 {
   "selector": "latest",
-  "source": "PM frozen official merged main for accelerated official-fix adoption on 2026-10-29",
-  "official_observation_sha256": "c5db0fe29082343d43e6d64bda81d89c90681719f6b8e635dbb653185e7cca8f",
+  "source": "Official CLI manifest dependency graph, observed and built 2026-10-30",
+  "official_observation_sha256": "818ace46588b49a68188f54a2118609c1f484ece2f9dafe514845be784d56241",
   "repositories": {
     "cli": {
       "repository": "etas",
-      "revision": "2f15688dee84c380c666cf505b9d7fcde9d6fbd1",
-      "tree": "23254dea0607f87e40840780a08e7b01d6b519e4",
+      "revision": "2a57d709f9a352b26e59917b2e3fe4da761397f9",
+      "tree": "5d90caf224865223f2afec35fb300b758e0f76c9",
       "packages": [
         "etas_cli",
         "etas_driver",
@@ -16,8 +16,8 @@
     },
     "core": {
       "repository": "etas-core",
-      "revision": "d572d2fe6d3ebf320451d95dad78ce9c1d7dcb20",
-      "tree": "d6612be29dd9fc859f1bb97e66e6a7415075383d",
+      "revision": "9da73aec66367f724e2870f7738b436edb0faad5",
+      "tree": "b527cc614c080efbf9010aa76466b06da9cc780a",
       "packages": [
         "etas_builtin",
         "etas_cache",
@@ -32,8 +32,8 @@
     },
     "frontend": {
       "repository": "etas-frontend",
-      "revision": "764be969d43a61dd204c8658efa52482b6c23c2c",
-      "tree": "60661b784e71fb951caa9efd88df6a0a1e1dd5e8",
+      "revision": "9bba251b2e584080cbc37d7f525ce786674e837a",
+      "tree": "fcadf75926b8263edbab33aec5a4863bf3385547",
       "packages": [
         "etas_effects",
         "etas_frontend",
@@ -46,11 +46,13 @@
     },
     "interpreter": {
       "repository": "etas-interpreter",
-      "revision": "63033efce18de2174865bc2b3ed2595f7db183d9",
-      "tree": "a6ad8f85395c7e83bfed7120ff0c5c3f7ab1c679",
+      "revision": "6baed226c66dea56a9f9b00a1bc4ba7a4ae49fe1",
+      "tree": "96992ef130d1ff3252b35404ef9d5fcf745d8ea7",
       "packages": [
         "etas_interpreter"
       ]
     }
-  }
+  },
+  "cargo_lock_sha256": "b3a9594cde5f54c37c2e7e8170cc241e78b3458f1d0b815da34ca289a177114f",
+  "verified_seed_binary_sha256": "460f26bf3b1855b72581595cc0d85ac153312f32d9ed98e375e1beee8071d135"
 }

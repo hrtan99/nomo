@@ -50,6 +50,10 @@ class NormalGraphIdentityChecks(unittest.TestCase):
         os.environ['NOMO_NORMAL_GRAPH'] = 'latest'
         self.assert_bootstrap('latest', 'etas-latest-cli-bootstrap.py')
 
+    def test_explicit_009_recovery_uses_its_own_bootstrap(self):
+        os.environ['NOMO_NORMAL_GRAPH'] = 'latest009'
+        self.assert_bootstrap('latest009', 'etas-009-cli-bootstrap.py')
+
     def test_explicit_etas0013_remains_historical(self):
         os.environ['NOMO_NORMAL_GRAPH'] = 'etas0013'
         self.assert_bootstrap('etas0013', 'etas-0013-cli-bootstrap.py')
@@ -63,7 +67,7 @@ class NormalGraphIdentityChecks(unittest.TestCase):
 
     def test_unknown_selector_is_rejected_before_resolution(self):
         os.environ['NOMO_NORMAL_GRAPH'] = 'unrecorded-candidate'
-        with self.assertRaisesRegex(RuntimeError, 'must be latest, legacy or etas0013'):
+        with self.assertRaisesRegex(RuntimeError, 'must be latest, latest009, legacy or etas0013'):
             self.verify()
         G.shutil.which.assert_not_called()
         G.importlib.util.spec_from_file_location.assert_not_called()

@@ -1,0 +1,56 @@
+{
+  "selector": "latest",
+  "source": "PM frozen official merged main for accelerated official-fix adoption on 2026-10-29",
+  "official_observation_sha256": "c5db0fe29082343d43e6d64bda81d89c90681719f6b8e635dbb653185e7cca8f",
+  "repositories": {
+    "cli": {
+      "repository": "etas",
+      "revision": "2f15688dee84c380c666cf505b9d7fcde9d6fbd1",
+      "tree": "23254dea0607f87e40840780a08e7b01d6b519e4",
+      "packages": [
+        "etas_cli",
+        "etas_driver",
+        "etas_package",
+        "etas_tests"
+      ]
+    },
+    "core": {
+      "repository": "etas-core",
+      "revision": "d572d2fe6d3ebf320451d95dad78ce9c1d7dcb20",
+      "tree": "d6612be29dd9fc859f1bb97e66e6a7415075383d",
+      "packages": [
+        "etas_builtin",
+        "etas_cache",
+        "etas_code",
+        "etas_core",
+        "etas_host",
+        "etas_memory_derive",
+        "etas_package_metadata",
+        "etas_std",
+        "etas_utils"
+      ]
+    },
+    "frontend": {
+      "repository": "etas-frontend",
+      "revision": "764be969d43a61dd204c8658efa52482b6c23c2c",
+      "tree": "60661b784e71fb951caa9efd88df6a0a1e1dd5e8",
+      "packages": [
+        "etas_effects",
+        "etas_frontend",
+        "etas_hir",
+        "etas_hir_analysis",
+        "etas_syntax",
+        "etas_syntax_derive",
+        "etas_types"
+      ]
+    },
+    "interpreter": {
+      "repository": "etas-interpreter",
+      "revision": "63033efce18de2174865bc2b3ed2595f7db183d9",
+      "tree": "a6ad8f85395c7e83bfed7120ff0c5c3f7ab1c679",
+      "packages": [
+        "etas_interpreter"
+      ]
+    }
+  }
+}

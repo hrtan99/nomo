@@ -1,0 +1,12 @@
+services:
+  dev:
+    environment:
+      NOMO_NORMAL_GRAPH: latest009
+    volumes:
+      - type: volume
+        source: cargo-cache
+        target: /home/nomo/.cargo
+        read_only: true
+volumes:
+  cargo-cache:
+    name: nomo-cargo-cache-latest-009-20261029
