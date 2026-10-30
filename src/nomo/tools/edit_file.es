@@ -1,6 +1,6 @@
 module nomo.tools.edit_file;
 
-import std.fs.{Region, WorkspacePath, path, stat, read_bytes, atomic_replace};
+import std.fs.{Region, WorkspacePath, ReadLimitError, path, stat, read_bytes_limited, atomic_replace};
 import std.fs.IOError as FileError;
 import std.effects.Fs;
 import std.bytes.len as byte_count;
@@ -30,9 +30,16 @@ flow read_existing(name: string) -> Result<bytes, string> {
     let info = match conversion { Some(value) => value.body, None() => { return Err("edit stat projection refused"); } };
     if !info.is_file || info.is_dir { return Err("edit requires an existing regular file"); }
     if info.len > 2048 { return Err("edit file exceeds 2048 bytes"); }
-    let bytes = read_bytes(target);
-    if byte_count(bytes) > 2048 { return Err("edit file exceeds 2048 bytes after read"); }
-    return Ok(bytes);
+    return handle {
+        let bytes = read_bytes_limited(target, 2048);
+        if byte_count(bytes) > 2048 { return Err("edit file exceeds 2048 bytes after read"); }
+        Ok(bytes)
+    } with {
+        Error<ReadLimitError>.raise(ReadLimitError.LimitExceeded(maximum)) => {
+            if maximum != 2048 { abort("unexpected edit read limit"); }
+            finish Err("edit file exceeds 2048 bytes after read");
+        }
+    };
 }
 
 public flow read_original(name: string) -> Result<string, string> ![Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Error<FileError>, Error<IndexError>] ~ OriginalReader<EditableRoot> {
