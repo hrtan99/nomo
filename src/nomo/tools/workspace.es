@@ -7,15 +7,13 @@ import std.text.{len, split, contains, to_string_usize};
 import std.collections.len as count;
 import nomo.core.text.printable;
 import nomo.tools.path_policy.valid_path as canonical_path;
+import std.fs.IOError as FileError;
+import std.effects.Fs;
+import nomo.tools.read_contract.{NomoRead, NomoSearch};
+public import nomo.tools.read_contract.{Outcome, outcome, display};
 
 public type ReadOnlyRoot;
 impl ReadOnlyRoot ~ Region;
-public type Outcome = { status: string, text: string, scanned: usize };
-
-public flow outcome(status: string, text: string, scanned: usize) -> Outcome {
-    return Outcome { status = status, text = text, scanned = scanned };
-}
-
 // Conservative, canonical relative names only; the Host still enforces the region.
 public flow valid_path(name: string) -> bool {
     return canonical_path(name);
@@ -31,7 +29,7 @@ flow target(name: string) -> WorkspacePath<ReadOnlyRoot> {
 
 // The accepted Host reads the whole file. This is a POST-read processing bound,
 // not an allocation bound. Enable only for an externally admitted small fixture.
-public flow read_file(name: string) -> Outcome {
+public flow read_file(name: string) -> Outcome ![Fs.read<ReadOnlyRoot>, Error<FileError>, Error<IndexError>] ~ NomoRead<ReadOnlyRoot> {
     if !valid_path(name) { return outcome("refused", "invalid relative path", 0); }
     let bytes = read_bytes(target(name));
     if byte_len(bytes) > 2048 { return outcome("refused", "file exceeds 2048 bytes (post-read check)", 0); }
@@ -53,7 +51,7 @@ public flow list_directory(name: string) -> Outcome {
 
 // Search explicit files, never recurse or discover ambient paths. At most two
 // 2 KiB files are scanned, with 128 lines/file, 8 matches and 1024 output chars.
-public flow search_files(names: Array<string>, literal: string) -> Outcome {
+public flow search_files(names: Array<string>, literal: string) -> Outcome ![Fs.read<ReadOnlyRoot>, Error<FileError>, Error<IndexError>] ~ NomoSearch<ReadOnlyRoot> {
     if count(names) == 0 || count(names) > 2 { return outcome("refused", "search requires 1..2 explicit files", 0); }
     if len(literal) == 0 || len(literal) > 64 || !printable(literal) { return outcome("refused", "literal must be 1..64 printable ASCII characters", 0); }
     for name in names limit Iterations(2) {
@@ -81,29 +79,4 @@ public flow search_files(names: Array<string>, literal: string) -> Outcome {
         }
     }
     return outcome("complete", output, scanned);
-}
-
-// Terminal/history text stays one line. Marker encoding escapes '<' as <LT>,
-// so a literal marker cannot impersonate LF/CR/TAB. Other controls are refused.
-public flow display(result: Outcome) -> Outcome {
-    if len(result.text) > 1024 { return outcome("refused", "result exceeds 1024 characters", result.scanned); }
-    var escaped = "";
-    for character in split(result.text, "") limit Iterations(1026) {
-        if character == "\n" { escaped = escaped + "<LF>"; }
-        else {
-            if character == "\r" { escaped = escaped + "<CR>"; }
-            else {
-                if character == "\t" { escaped = escaped + "<TAB>"; }
-                else {
-                    if character == "<" { escaped = escaped + "<LT>"; }
-                    else {
-                        if !printable(character) { return outcome("unsupported", "result contains unsupported terminal characters", result.scanned); }
-                        escaped = escaped + character;
-                    }
-                }
-            }
-        }
-    }
-    if len(escaped) > 1024 { return outcome("refused", "escaped result exceeds 1024 characters", result.scanned); }
-    return outcome(result.status, escaped, result.scanned);
 }
