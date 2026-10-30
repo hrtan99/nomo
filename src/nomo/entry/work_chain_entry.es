@@ -175,6 +175,7 @@ public flow show_captured(row: Record, operation: Option<Journal>) -> i32 {
     for line in lines limit Iterations(16) { println(line); }
     if row.format == 3 { println("User-context work is single-turn; continuation and resume are unavailable."); }
     show_hint(row.id, row.workspace, row.path);
-    println("Remaining allocation belongs to the saved snapshot and does not establish current second-slot availability.");
+    if row.format == 3 { println("Remaining allocation is recorded history and does not authorize another turn."); }
+    else { println("Remaining allocation belongs to the saved snapshot and does not establish current second-slot availability."); }
     println("Captured facts, not current File state. Admitted work may have an intent or completed edit without a work snapshot. No replay or refund; reservations are configured, not measured usage."); return 0;
 }
