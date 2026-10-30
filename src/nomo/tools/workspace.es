@@ -1,6 +1,6 @@
 module nomo.tools.workspace;
 
-import std.fs.{Region, WorkspacePath, IOError, path, read_bytes, list};
+import std.fs.{Region, WorkspacePath, IOError, ReadLimitError, path, read_bytes_limited, list};
 import std.bytes.len as byte_len;
 import std.codec.text.{utf8_decode, Strict};
 import std.text.{len, split, contains, to_string_usize};
@@ -27,16 +27,21 @@ flow target(name: string) -> WorkspacePath<ReadOnlyRoot> {
     };
 }
 
-// The accepted Host reads the whole file. This is a POST-read processing bound,
-// not an allocation bound. Enable only for an externally admitted small fixture.
+// The Host enforces the byte cap while reading; overflow never returns a prefix.
 public flow read_file(name: string) -> Outcome ![Fs.read<ReadOnlyRoot>, Error<FileError>, Error<IndexError>] ~ NomoRead<ReadOnlyRoot> {
     if !valid_path(name) { return outcome("refused", "invalid relative path", 0); }
-    let bytes = read_bytes(target(name));
-    if byte_len(bytes) > 2048 { return outcome("refused", "file exceeds 2048 bytes (post-read check)", 0); }
-    let decoded = utf8_decode(bytes, Strict);
-    return match decoded {
-        Err(_) => outcome("unsupported", "file is not UTF-8", 0),
-        Ok(text) => outcome("complete", text, byte_len(bytes)),
+    return handle {
+        let bytes = read_bytes_limited(target(name), 2048);
+        let decoded = utf8_decode(bytes, Strict);
+        match decoded {
+            Err(_) => outcome("unsupported", "file is not UTF-8", 0),
+            Ok(text) => outcome("complete", text, byte_len(bytes)),
+        }
+    } with {
+        Error<ReadLimitError>.raise(ReadLimitError.LimitExceeded(maximum)) => {
+            if maximum != 2048 { abort("unexpected workspace read limit"); }
+            finish outcome("refused", "file exceeds 2048 bytes", 0);
+        }
     };
 }
 

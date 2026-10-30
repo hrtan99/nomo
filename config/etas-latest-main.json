@@ -1,12 +1,10 @@
 {
   "selector": "latest",
-  "source": "Official CLI manifest dependency graph, observed and built 2026-10-30",
-  "official_observation_sha256": "818ace46588b49a68188f54a2118609c1f484ece2f9dafe514845be784d56241",
   "repositories": {
     "cli": {
       "repository": "etas",
-      "revision": "2a57d709f9a352b26e59917b2e3fe4da761397f9",
-      "tree": "5d90caf224865223f2afec35fb300b758e0f76c9",
+      "revision": "83dd9ee6721d86c1c0634fffaf12c436d1286254",
+      "tree": "a32a638d5f05abb532cefd36bc19a876b706ff59",
       "packages": [
         "etas_cli",
         "etas_driver",
@@ -16,8 +14,8 @@
     },
     "core": {
       "repository": "etas-core",
-      "revision": "9da73aec66367f724e2870f7738b436edb0faad5",
-      "tree": "b527cc614c080efbf9010aa76466b06da9cc780a",
+      "revision": "79777dbb24aeef5206337d4be9fa83f011869b82",
+      "tree": "2c3b649d2ea937cda539092a2817890d4ac13aa4",
       "packages": [
         "etas_builtin",
         "etas_cache",
@@ -32,8 +30,8 @@
     },
     "frontend": {
       "repository": "etas-frontend",
-      "revision": "9bba251b2e584080cbc37d7f525ce786674e837a",
-      "tree": "fcadf75926b8263edbab33aec5a4863bf3385547",
+      "revision": "8acf5bbb1130f38215b5b3707f4672adbe99f050",
+      "tree": "4928c4c12a0eaa7647d32a4e16107c460cfd33c7",
       "packages": [
         "etas_effects",
         "etas_frontend",
@@ -46,13 +44,15 @@
     },
     "interpreter": {
       "repository": "etas-interpreter",
-      "revision": "6baed226c66dea56a9f9b00a1bc4ba7a4ae49fe1",
-      "tree": "96992ef130d1ff3252b35404ef9d5fcf745d8ea7",
+      "revision": "323e27d4b9b85e296873e4b348de0890bd43dfc7",
+      "tree": "22e18ba2a98f58227f870d0a3a82ffc05974a611",
       "packages": [
         "etas_interpreter"
       ]
     }
   },
-  "cargo_lock_sha256": "b3a9594cde5f54c37c2e7e8170cc241e78b3458f1d0b815da34ca289a177114f",
-  "verified_seed_binary_sha256": "460f26bf3b1855b72581595cc0d85ac153312f32d9ed98e375e1beee8071d135"
+  "source": "Official CLI manifest dependency graph, observed and built 2026-10-30",
+  "official_observation_sha256": "6c65fb761bcd4cf9776e7b8ba408f9f57a24acf581ca889143a4d4e213c7d034",
+  "cargo_lock_sha256": "6c5bc5472e0e6ab2d06c8d89ef36c2c46329f514f0973a284d6488ad9d907a3f",
+  "verified_seed_binary_sha256": "cd7cf71036fb7b488d021ad1a608e46efb4361aebf042c162b8b634ae4e2afc9"
 }
