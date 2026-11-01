@@ -18,13 +18,13 @@ def digest(path):
 
 def selected_graph():
     selected = os.environ.get('NOMO_NORMAL_GRAPH', 'latest')
-    if selected not in ('latest', 'latest009', 'legacy', 'etas0013'):
-        raise RuntimeError('NOMO_NORMAL_GRAPH must be latest, latest009, legacy or etas0013')
+    if selected not in ('latest', 'latest012', 'latest009', 'legacy', 'etas0013'):
+        raise RuntimeError('NOMO_NORMAL_GRAPH must be latest, latest012, latest009, legacy or etas0013')
     return selected
 
 
 def bootstrap_path():
-    names = {'latest': 'etas-latest-cli-bootstrap.py', 'latest009': 'etas-009-cli-bootstrap.py', 'etas0013': 'etas-0013-cli-bootstrap.py',
+    names = {'latest': 'etas-latest-cli-bootstrap.py', 'latest012': 'etas-012-official-cli-bootstrap.py', 'latest009': 'etas-009-cli-bootstrap.py', 'etas0013': 'etas-0013-cli-bootstrap.py',
              'legacy': 'etas-003-cli-bootstrap.sh'}
     return ROOT / 'scripts' / names[selected_graph()]
 

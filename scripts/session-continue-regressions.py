@@ -21,7 +21,7 @@ def main():
     print('EVIDENCE ' + str(evidence), flush=True)
     selected = list((ROOT / 'src').rglob('*.es')) + list((ROOT / 'tests').rglob('*.py')) + list((ROOT / 'scripts').glob('*'))
     selected += [ROOT / name for name in ('etas.toml', 'etas.lock', 'compose.yaml', 'patches/etas-003/Cargo.lock',
-                  'config/etas-latest-main.json',
+                  'config/etas-latest-main.json', 'config/etas-012-official.json', 'config/etas-012-official.Cargo.lock',
                   'config/etas-runtime-cache-compose.yaml', 'tests/fixtures/etas013/compose.yaml',
                   'tests/fixtures/session_continue/static-check-compose.yaml',
                   *(f'patches/etas-0013/{name}.Cargo.lock' for name in ('core', 'frontend', 'interpreter', 'cli')))]

@@ -1,0 +1,15 @@
+services:
+  dev:
+    environment:
+      NOMO_NORMAL_GRAPH: latest012
+      CARGO_BUILD_JOBS: "1"
+      PYTHONDONTWRITEBYTECODE: "1"
+  dependency:
+    environment:
+      NOMO_NORMAL_GRAPH: latest012
+      CARGO_BUILD_JOBS: "1"
+      PYTHONDONTWRITEBYTECODE: "1"
+
+volumes:
+  cargo-cache:
+    name: nomo-cargo-p0-012-20261030-a

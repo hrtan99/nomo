@@ -26,6 +26,7 @@ def main():
         'etas.toml', 'etas.lock', 'compose.yaml', 'Dockerfile', 'scripts/session-demo.sh',
         'config/session-demo-compose.yaml', 'config/etas-runtime-cache-compose.yaml',
         'tests/normal_graph_identity.py', 'scripts/etas-latest-cli-bootstrap.py', 'config/etas-latest-main.json',
+        'scripts/etas-012-official-cli-bootstrap.py', 'config/etas-012-official.json', 'config/etas-012-official.Cargo.lock',
         'scripts/session-continue-001a-verify.py',
         'scripts/session-demo-001b-verify.py')]
     hashes = {str(p.relative_to(ROOT)): demo.digest(p) for p in paths}

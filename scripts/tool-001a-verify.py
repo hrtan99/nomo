@@ -13,13 +13,15 @@ def regression_inputs(selected):
     inputs = ['etas.toml', 'etas.lock']
     if selected == 'latest':
         inputs += ['config/etas-latest-main.json']
+    elif selected == 'latest012':
+        inputs += ['config/etas-012-official.json', 'config/etas-012-official.Cargo.lock']
     elif selected == 'etas0013':
         inputs += ['patches/etas-0013/' + name + '.Cargo.lock'
                    for name in ('core', 'frontend', 'interpreter', 'cli')]
     elif selected == 'legacy':
         inputs += ['patches/etas-003/Cargo.lock']
     else:
-        raise RuntimeError('NOMO_NORMAL_GRAPH must be latest, legacy or etas0013')
+        raise RuntimeError('NOMO_NORMAL_GRAPH must be latest, latest012, legacy or etas0013')
     return inputs
 
 

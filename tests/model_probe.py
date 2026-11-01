@@ -78,7 +78,7 @@ def main():
     actions = next(line.strip()[len("requested actions: ["):-1] for line in effects.stdout.splitlines() if line.strip().startswith("requested actions: ["))
     selected = selected_graph()
     model_action = ("Agentic.infer[nomo.agent.provider.TextModel]" if selected == "legacy"
-                    else "Agentic.infer[nomo.agent.provider.TextModel.run, string]" if selected == "latest"
+                    else "Agentic.infer[nomo.agent.provider.TextModel.run, string]" if selected in ("latest", "latest012")
                     else "Agentic.infer[nomo.agent.provider.TextModel, string]")
     # Handled source operations are requested; only Console and the native Agent are default.
     expected = "Console.stdin_read_line, Console.stdout_write, ConversationOutput.publish, ModelText.infer, " + model_action

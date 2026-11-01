@@ -56,7 +56,12 @@ mode = "deny"
         print('PASS product_check_all', flush=True)
         effects = subprocess.run(['etas', 'effects', str(project), '--flow', 'tools'], capture_output=True, text=True, timeout=15, check=True)
         actions = [line.strip() for line in effects.stdout.splitlines() if line.strip().startswith('requested actions:')]
-        assert actions == ['requested actions: [Console.stdout_write, Fs.read[nomo.tools.workspace.ReadOnlyRoot], Fs.list[nomo.tools.workspace.ReadOnlyRoot]]'], effects.stdout
+        defaults = [line.strip() for line in effects.stdout.splitlines() if line.strip().startswith('default actions:')]
+        assert actions in [
+            ['requested actions: [Console.stdout_write, ConversationOutput.publish, Fs.read[nomo.tools.workspace.ReadOnlyRoot], Fs.list[nomo.tools.workspace.ReadOnlyRoot]]'],
+            ['requested actions: [Console.stdout_write, Fs.read[nomo.tools.workspace.ReadOnlyRoot], Fs.list[nomo.tools.workspace.ReadOnlyRoot]]'],
+        ], effects.stdout
+        assert defaults == ['default actions: [Console.stdout_write, Fs.read[nomo.tools.workspace.ReadOnlyRoot], Fs.list[nomo.tools.workspace.ReadOnlyRoot]]'], effects.stdout
         print('PASS exact_readonly_actions_no_model_command_or_write', flush=True)
         fixture = project / 'fixture'
         (fixture / 'docs').mkdir(parents=True)
