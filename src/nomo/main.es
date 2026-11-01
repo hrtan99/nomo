@@ -13,7 +13,9 @@ import nomo.entry.harness_entry.run as run_harness;
 import nomo.entry.harness_chat.run as run_harness_chat;
 import nomo.entry.harness_model_entry.run as run_harness_model;
 import nomo.entry.harness_model_tools_entry.run as run_harness_model_tools;
+import nomo.entry.read_model_tools_entry.run as run_read_model_tools;
 import nomo.entry.harness_model_tools_chat.run as run_harness_model_tools_chat;
+import nomo.entry.read_model_tools_chat.run as run_read_model_tools_chat;
 import nomo.entry.harness_checkpoint_entry.run_init as checkpoint_init;
 import nomo.entry.harness_checkpoint_entry.run_save as checkpoint_save;
 import nomo.entry.harness_checkpoint_entry.run_show as checkpoint_show;
@@ -153,6 +155,16 @@ flow harness_model_tools_chat(args: Array<string>) -> i32 {
     let status = run_harness_model_tools_chat(args);
     if status != 0 { abort("Nomo model/tool harness chat refused; see REFUSED or STOP output"); }
     return 0;
+}
+
+flow read_model_tools_chat(args: Array<string>) -> i32 {
+    let status = run_read_model_tools_chat(args);
+    return status;
+}
+
+flow read_model_tools(args: Array<string>) -> i32 {
+    let status = run_read_model_tools(args);
+    return status;
 }
 
 flow harness_model_tools(args: Array<string>) -> i32 {

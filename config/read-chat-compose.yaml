@@ -1,0 +1,17 @@
+services:
+  dev:
+    network_mode: bridge
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      ETAS_HOST_MODEL_BASE_URL: "${NOMO_READ_MODEL_BASE_URL:?set NOMO_READ_MODEL_BASE_URL}"
+      ETAS_HOST_MODEL_NAME: "${NOMO_READ_MODEL_NAME:-qwen3.8-flash-next-ud-iq4_xs}"
+      ETAS_HOST_MODEL_API_KEY: "${NOMO_QWEN_SERVER_API_KEY:?set NOMO_QWEN_SERVER_API_KEY}"
+      ETAS_HOST_APPROVAL: "deny"
+    volumes:
+      - type: bind
+        source: "${NOMO_READ_ROOT:?select a read directory}"
+        target: /model-tool-fixture
+        read_only: true
+        bind:
+          create_host_path: false

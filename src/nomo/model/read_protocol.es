@@ -1,0 +1,77 @@
+module nomo.model.read_protocol;
+
+import std.text.{len, split};
+import std.collections.len as count;
+import std.json.parse;
+import std.agent.message.Message;
+import nomo.core.read_text.{safe, bounded};
+import nomo.model.model_tool_contract.{Action, allowed_error, read_selection_error};
+
+public flow question_error(raw: string) -> string {
+    return if bounded(raw, 128) { "" } else { "question requires 1..128 safe UTF-8 bytes, not only spaces" };
+}
+
+// This protocol is scoped to the new non-durable read-only entry. Limits are
+// UTF-8 bytes, including serialized JSON, rather than just scalar counts.
+flow frame(raw: string, maximum: usize) -> bool {
+    if raw == "" || !safe(raw, maximum) { return false; }
+    var opened = false; var closed = false; var quoted = false; var escaped = false;
+    var leaves: usize = 0; let slash = split("\\/", "")[1];
+    for character in split(raw, "") limit Iterations(1154) {
+        if quoted {
+            if escaped { escaped = false; }
+            else if character == slash { escaped = true; }
+            else if character == "\"" { quoted = false; }
+        } else if character == "" || character == " " {
+        } else if character == "[" {
+            if opened || closed { return false; } opened = true;
+        } else if character == "]" {
+            if !opened || closed { return false; } closed = true;
+        } else if character == "\"" {
+            if !opened || closed { return false; }
+            leaves = leaves + 1; if leaves > 4 { return false; } quoted = true;
+        } else if character != "," || !opened || closed { return false; }
+    }
+    return opened && closed && !quoted;
+}
+
+flow fields(raw: string, maximum: usize) -> Result<Array<string>, string> {
+    if !frame(raw, maximum) { return Err("expected bounded flat single-line JSON string array"); }
+    let value = match parse(raw) { Ok(item) => item, Err(_) => { return Err("invalid JSON"); } };
+    let converted: Option<Message<Array<string>>> = Message.new(value).cast<Array<string>>();
+    return match converted { Some(item) => Ok(item.body), None() => Err("expected string fields") };
+}
+
+public flow decode_plan(raw: string) -> Result<string, string> {
+    let values = match fields(raw, 384) { Ok(item) => item, Err(error) => { return Err(error); } };
+    if count(values) != 2 || values[0] != "delegate" || !bounded(values[1], 128) {
+        return Err("invalid bounded delegated task");
+    }
+    return Ok(values[1]);
+}
+
+public flow answer(raw: string) -> Result<string, string> {
+    if !bounded(raw, 512) { return Err("invalid bounded final answer"); }
+    return Ok(raw);
+}
+
+public flow decode_child(raw: string, allowed: Array<string>, final_only: bool) -> Result<Action, string> {
+    let invalid = allowed_error(allowed); if invalid != "" { return Err(invalid); }
+    let values = match fields(raw, 1152) { Ok(item) => item, Err(error) => { return Err(error); } };
+    if count(values) < 2 || count(values) > 4 { return Err("invalid action field count"); }
+    if values[0] == "final" {
+        if count(values) != 2 || !bounded(values[1], 256) { return Err("invalid bounded child answer"); }
+        return Ok(Action { operation = "final", files = [], literal = "", text = values[1] });
+    }
+    if final_only { return Err("second response must be final"); }
+    if !safe(raw, 384) { return Err("tool action exceeds 384 UTF-8 bytes"); }
+    var files: Array<string> = []; var literal = "";
+    if values[0] == "read" && count(values) == 2 { files = [values[1]]; }
+    else if values[0] == "search" && (count(values) == 3 || count(values) == 4) {
+        literal = values[1]; files = [values[2]];
+        if count(values) == 4 { files = files.push(values[3]); }
+    } else { return Err("unsupported action or arity"); }
+    let selected = read_selection_error(values[0], files, literal, allowed);
+    if selected != "" { return Err(selected); }
+    return Ok(Action { operation = values[0], files = files, literal = literal, text = "" });
+}

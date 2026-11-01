@@ -19,10 +19,13 @@ import tempfile
 from harness_checkpoint_contract_probe import source_literal
 from model_protocol_probe import resources
 from normal_graph_identity import verify_cli
+from trace_report_contract import validate_report
 
 ROOT = Path(__file__).resolve().parent.parent
 FIXTURES = ROOT / 'tests/fixtures/arch_read001'
-PRODUCT_HASHES = {'src/nomo/agent/model_tool.es': 'f95117bd9c16dc54d28090664f8aad33f4f9e306e6f65db88982d9e166a64fc6', 'src/nomo/agent/model_tool_controller.es': '2f23f5a6d7d5427ad92bb51771163010aa3c8d2d87cdefc6792e018b2ec768cd', 'src/nomo/tools/workspace.es': '250aa11bf44ece5be6d457804e786987ce8b0907693139ac262e9cbce1b5aa5e', 'src/nomo/tools/read_contract.es': '2eccc270199e38581bf4fcc2f8fc327f1dcbd4f3c62ddceeec01a9105c6afabc'}
+# The workspace hash includes 492fe81's bounded native read. This suite checks
+# its source/effects only; its interpreted fixture does not execute native Fs.
+PRODUCT_HASHES = {'src/nomo/agent/model_tool.es': 'f95117bd9c16dc54d28090664f8aad33f4f9e306e6f65db88982d9e166a64fc6', 'src/nomo/agent/model_tool_controller.es': '2f23f5a6d7d5427ad92bb51771163010aa3c8d2d87cdefc6792e018b2ec768cd', 'src/nomo/tools/workspace.es': '664b846f941e62f70f7a875e84e5b352c6d980a395a671c69d4f9081983b5d8c', 'src/nomo/tools/read_contract.es': '2eccc270199e38581bf4fcc2f8fc327f1dcbd4f3c62ddceeec01a9105c6afabc'}
 POSITIVE_MODULES = ['agent/loop.es', 'agent/model_tool_controller.es', 'context/preflight.es', 'context/selection.es', 'core/conversation.es', 'core/text.es', 'harness/harness_edit_contract.es', 'harness/harness_model_contract.es', 'harness/harness_tool_contract.es', 'harness/harness_work_contract.es', 'harness/legacy_string_stages.es', 'harness/model_plan_diagnostic.es', 'model/model_tool_contract.es', 'model/stub.es', 'model/tool_context.es', 'session/edit_operation.es', 'tools/edit_encoding.es', 'tools/edit_proposal.es', 'tools/path_policy.es', 'tools/read_contract.es']
 # Current main's loop facade imports the following source implementations.
 POSITIVE_MODULES += ['agent/console_events.es', 'agent/conversation_events.es', 'agent/stub_loop_controller.es', 'model/conversation_output.es']
@@ -150,6 +153,7 @@ def action_rows(item):
         result[name] = set(actions)
     support = re.findall(r'^\s*support: (.+)$', item['stdout'], re.M)
     allowed_support = {'local', 'requires-host[FileIO]',
+                       'requires-orchestration[host=FileIO; features=EffectHandler]',
                        'requires-orchestration[host=Console; features=EffectHandler]',
                        'requires-orchestration[host=Agentic, Console, FileIO; features=EffectHandler]'}
     assert len(support) == 1 and support[0] in allowed_support, diagnostic(item)
@@ -158,10 +162,7 @@ def action_rows(item):
 
 
 def trace(path, completed):
-    value = json.loads(path.read_text())
-    assert value['schema'] == 'etas.cli.interpreter-report.v1' and not value.get('incomplete', False)
-    assert value['outcome']['kind'] == ('completed' if completed else 'failed')
-    assert value['termination']['local_work_settled'] is True
+    value = validate_report(json.loads(path.read_text()), completed)
     starts = [item for item in value['events'] if item['kind'] == 'host_request_started']
     finishes = [item for item in value['events'] if item['kind'] == 'host_request_finished']
     ids = [item['id'] for item in starts]; ends = [item['id'] for item in finishes]
@@ -236,7 +237,9 @@ def run(folder, values, inputs):
             item = invoke(production, flow + '-effects', ['effects', production, '--flow', flow]); rows = action_rows(item)
             fs = 'Fs.read[nomo.tools.workspace.ReadOnlyRoot]'
             if flow != 'production_loop':
-                assert rows['support'] == 'requires-host[FileIO]', diagnostic(item)
+                # Bounded read handles ReadLimitError inside the production
+                # implementation, so it requires the effect-handler runtime.
+                assert rows['support'] == 'requires-orchestration[host=FileIO; features=EffectHandler]', diagnostic(item)
                 assert rows['requested actions'] == rows['default actions'] == {fs}, diagnostic(item)
             else:
                 assert rows['support'] == 'requires-orchestration[host=Agentic, Console, FileIO; features=EffectHandler]', diagnostic(item)

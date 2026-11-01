@@ -1,0 +1,25 @@
+services:
+  dev:
+    environment:
+      NOMO_NORMAL_GRAPH: latest022
+      CARGO_BUILD_JOBS: "1"
+      PYTHONDONTWRITEBYTECODE: "1"
+    volumes:
+      - type: bind
+        source: .
+        target: /workspace
+        read_only: true
+  dependency:
+    environment:
+      NOMO_NORMAL_GRAPH: latest022
+      CARGO_BUILD_JOBS: "1"
+      PYTHONDONTWRITEBYTECODE: "1"
+    volumes:
+      - type: bind
+        source: .
+        target: /workspace
+        read_only: true
+
+volumes:
+  cargo-cache:
+    name: nomo-cargo-022-formal-20261101-v3
