@@ -134,7 +134,7 @@ def main():
                  'tests/fixtures/etas013/compose.yaml',
                  'scripts/session-demo.sh', 'tests/normal_graph_identity.py',
                  'scripts/etas-latest-cli-bootstrap.py', 'config/etas-latest-main.json',
-                 'scripts/etas-012-official-cli-bootstrap.py', 'config/etas-012-official.json', 'config/etas-012-official.Cargo.lock')]
+                 'scripts/etas-012-official-cli-bootstrap.py', 'scripts/etas-official-cli-common.py', 'config/etas-official-legacy-bridge.json', 'config/etas-012-official.json', 'config/etas-012-official.Cargo.lock')]
         paths += list((root / 'src').rglob('*.es'))
         paths += [root / 'patches/etas-0013' / (name + '.Cargo.lock')
                   for name in ('core', 'frontend', 'interpreter', 'cli')]

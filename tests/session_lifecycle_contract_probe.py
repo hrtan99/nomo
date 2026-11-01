@@ -10,7 +10,7 @@ import subprocess
 import tempfile
 
 import harness_checkpoint_contract_probe as checkpoint
-from normal_graph_identity import bootstrap_path, verify_cli
+from normal_graph_identity import bootstrap_evidence_paths, verify_cli
 
 ROOT = Path(__file__).resolve().parent.parent
 FIXTURE = ROOT / 'tests/fixtures/cli002a/contract_probe.es'
@@ -183,7 +183,7 @@ def main():
     print('EVIDENCE '+str(evidence), flush=True)
     paths = [ROOT/'src/nomo'/name for name in MODULES] + [Path(__file__).resolve(), FIXTURE,
              ROOT/'tests/harness_checkpoint_contract_probe.py', ROOT/'tests/normal_graph_identity.py',
-             bootstrap_path(), ROOT/'config/etas-latest-main.json', ROOT/'etas.lock']
+             *bootstrap_evidence_paths(), ROOT/'config/etas-latest-main.json', ROOT/'etas.lock']
     frozen = {str(path.relative_to(ROOT)): digest(path) for path in paths}
     for path in paths:
         target = evidence/'inputs'/path.relative_to(ROOT); target.parent.mkdir(parents=True, exist_ok=True)

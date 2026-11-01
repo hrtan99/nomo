@@ -90,7 +90,7 @@ def main():
                     ROOT / "scripts/session-demo-001b-verify.py", ROOT / "tests/harness_model_probe.py",
                     ROOT / "tests/harness_chat_probe.py", ROOT / "tests/harness_entry_probe.py", ROOT / "tests/model_tool_probe.py",
                     ROOT / "tests/foundation_probe.py", ROOT / "tests/normal_graph_identity.py",
-                    ROOT / "tests/fixtures/harness_model001/cases.py", chat.once.previous.graph_identity.bootstrap_path(),
+                    ROOT / "tests/fixtures/harness_model001/cases.py", *chat.once.previous.graph_identity.bootstrap_evidence_paths(),
                     ROOT / "config/etas-latest-main.json"]
     runner_paths += sorted(path for path in (chat.once.FIXTURE / "workspace").rglob("*") if path.is_file())
     frozen_product, frozen_runner = hashes(paths), hashes(runner_paths)

@@ -320,7 +320,7 @@ def main():
     runner_paths = [Path(__file__).resolve(), FIXTURE / "cases.py", ROOT / "tests/model_tool_probe.py", ROOT / "tests/harness_model_probe.py",
                     ROOT / "tests/harness_chat_probe.py", ROOT / "tests/harness_entry_probe.py", ROOT / "tests/foundation_probe.py",
                     ROOT / "tests/normal_graph_identity.py", ROOT / "tests/fixtures/harness_model001/cases.py",
-                    previous.graph_identity.bootstrap_path(), ROOT / "config/etas-latest-main.json"]
+                    *previous.graph_identity.bootstrap_evidence_paths(), ROOT / "config/etas-latest-main.json"]
     runner_paths += sorted(path for path in (FIXTURE / "workspace").rglob("*") if path.is_file())
     frozen_product, frozen_runner = hashes(paths), hashes(runner_paths)
     destination.mkdir(parents=True, exist_ok=True)

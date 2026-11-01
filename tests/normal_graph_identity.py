@@ -29,6 +29,18 @@ def bootstrap_path():
     return ROOT / 'scripts' / names[selected_graph()]
 
 
+def bootstrap_evidence_paths():
+    paths = [bootstrap_path()]
+    selected = selected_graph()
+    if selected in ('latest012', 'latest022'):
+        label = selected[-3:]
+        paths.extend([ROOT / 'scripts/etas-official-cli-common.py',
+                      ROOT / 'config/etas-official-legacy-bridge.json',
+                      ROOT / ('config/etas-' + label + '-official.json'),
+                      ROOT / ('config/etas-' + label + '-official.Cargo.lock')])
+    return paths
+
+
 def verify_cli():
     selected = selected_graph()
     located = shutil.which('etas')

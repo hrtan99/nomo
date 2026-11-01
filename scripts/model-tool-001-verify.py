@@ -22,7 +22,7 @@ def sources(root):
         'config/model-tool-compose.yaml', 'tests/model_tool_state_probe.py',
         'tests/fixtures/model_tool001_state.es',
         'tests/normal_graph_identity.py', 'scripts/etas-latest-cli-bootstrap.py',
-        'config/etas-latest-main.json', 'scripts/etas-012-official-cli-bootstrap.py',
+        'config/etas-latest-main.json', 'scripts/etas-012-official-cli-bootstrap.py', 'scripts/etas-official-cli-common.py', 'config/etas-official-legacy-bridge.json',
         'config/etas-012-official.json', 'config/etas-012-official.Cargo.lock',
         'scripts/model-tool-001-verify.py', 'tests/model_tool_probe.py')]
     paths += list((root / 'tests/fixtures/model_tool001').rglob('*'))

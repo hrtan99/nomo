@@ -1,0 +1,13 @@
+{
+  "format": 1,
+  "012": {
+    "legacy_sha256": "e13f4988826cef49555dfb7cbc5dfb968a517f8b8506d3ef36789d3ec8492b56",
+    "wrapper_sha256": "d618edbfb0757932b601ab5a88fdf294090ef4a101ee166d4f95a60d76a42e9d",
+    "common_sha256": "e7dcc0276b75c80747df667adb654fff304661ba2aa2d363de361657738e0a21"
+  },
+  "022": {
+    "legacy_sha256": "b585d9bf44b1482eba4d733016fe1b1566a23393f844989e3bc1b42af4277846",
+    "wrapper_sha256": "2781c4a72f5cb0f33c65b53a5cb9bb5975fd9dd1da8994c1496f77142f0860da",
+    "common_sha256": "e7dcc0276b75c80747df667adb654fff304661ba2aa2d363de361657738e0a21"
+  }
+}

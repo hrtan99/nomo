@@ -58,6 +58,19 @@ class NormalGraphIdentityChecks(unittest.TestCase):
         os.environ['NOMO_NORMAL_GRAPH'] = 'latest022'
         self.assert_bootstrap('latest022', 'etas-022-official-cli-bootstrap.py')
 
+    def test_official_evidence_includes_shared_guard_and_version_pins(self):
+        for label in ('012', '022'):
+            with self.subTest(label=label):
+                os.environ['NOMO_NORMAL_GRAPH'] = 'latest' + label
+                paths = G.bootstrap_evidence_paths()
+                self.assertEqual(paths, [self.root / ('scripts/etas-' + label + '-official-cli-bootstrap.py'),
+                                         self.root / 'scripts/etas-official-cli-common.py',
+                                         self.root / 'config/etas-official-legacy-bridge.json',
+                                         self.root / ('config/etas-' + label + '-official.json'),
+                                         self.root / ('config/etas-' + label + '-official.Cargo.lock')])
+        os.environ['NOMO_NORMAL_GRAPH'] = 'latest'
+        self.assertEqual(G.bootstrap_evidence_paths(), [self.root / 'scripts/etas-latest-cli-bootstrap.py'])
+
     def test_explicit_009_recovery_uses_its_own_bootstrap(self):
         os.environ['NOMO_NORMAL_GRAPH'] = 'latest009'
         self.assert_bootstrap('latest009', 'etas-009-cli-bootstrap.py')

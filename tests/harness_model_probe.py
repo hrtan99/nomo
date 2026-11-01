@@ -292,7 +292,7 @@ def main():
                     ROOT / "tests/harness_chat_probe.py", ROOT / "tests/fixtures/harness002a/cases.py",
                     ROOT / "tests/harness_entry_probe.py", ROOT / "tests/fixtures/harness001b/cases.py",
                     ROOT / "tests/foundation_probe.py", ROOT / "tests/normal_graph_identity.py",
-                    graph_identity.bootstrap_path()]
+                    *graph_identity.bootstrap_evidence_paths()]
     frozen_product, frozen_runner = hashes(paths), hashes(runner_paths)
     destination.mkdir(parents=True, exist_ok=True)
     evidence = Path(tempfile.mkdtemp(prefix="harness-model001-", dir=destination))

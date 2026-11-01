@@ -100,6 +100,9 @@ def probe(directory, result):
     shutil.copyfile(fixture, directory / 'src/nomo/model_tool_test.es')
     shutil.copyfile(Path(__file__), directory / 'driver.py')
     shutil.copyfile(bootstrap_path(), directory / 'bootstrap.py')
+    if selected_graph() in ('latest012', 'latest022'):
+        shutil.copyfile(ROOT / 'scripts/etas-official-cli-common.py', directory / 'bootstrap-common.py')
+        shutil.copyfile(ROOT / 'config/etas-official-legacy-bridge.json', directory / 'bootstrap-bridge.json')
     manifest = '''[package]
 name = "nomo-model-tool-pure-test"
 version = "0.0.0"
