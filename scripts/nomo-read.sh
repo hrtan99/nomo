@@ -10,6 +10,7 @@ Usage:
   nomo-read.sh chat --root ABSOLUTE_DIRECTORY --allow FILE[,FILE] [--turns 4]
   nomo-read.sh edit --root ABSOLUTE_DIRECTORY --state FRESH_PRIVATE_DIRECTORY --id ID --path FILE --target TEXT --replacement TEXT [--check COMMAND ARG ...]
   nomo-read.sh edit --root ABSOLUTE_DIRECTORY --state FRESH_PRIVATE_DIRECTORY --id ID --path FILE --once TASK [--check COMMAND ARG ...]
+  nomo-read.sh work --read-root ABSOLUTE_DIRECTORY --allow FILE[,FILE] --root ABSOLUTE_DIRECTORY --state FRESH_PRIVATE_DIRECTORY --id ID --path FILE --once TASK [--check COMMAND ARG ...]
   nomo-read.sh check --root ABSOLUTE_DIRECTORY -- COMMAND [ARG ...]
   nomo-read.sh edit-status --state PRIVATE_DIRECTORY --id ID --path FILE
   nomo-read.sh resume --id SESSION_ID  (not available yet)
@@ -28,6 +29,14 @@ output-token allowance; per-turn maximum: 4 calls and 8,192 output tokens.
 Questions require 1..128 safe UTF-8 bytes; /help shows all bounds
 and /exit ends chat. Successful completion does not verify factual accuracy.
 Model editing sends the selected file and task to the configured model.
+Work first reads or searches one of the allowed context files, then uses that
+evidence to propose an edit to the selected workspace file. It sends context
+and task to the model before write confirmation. Work is one-shot, not resume.
+Its task must be 1..128 printable ASCII characters; allow one or two distinct
+relative context paths of at most 48 characters each. At most one read/search
+and one confirmed edit occur. The read root can be the edit workspace; state
+must be separate from both. Work allows up to 7 model calls and 47,104 requested
+output tokens, not a measured usage or cost limit.
 For model editing, NOMO_MODEL_REQUEST_DEADLINE_MS sets each request deadline
 from 2000 to 3600000 milliseconds (default 120000); there are no automatic retries.
 Checks run offline and may modify the selected private workspace.
@@ -44,6 +53,7 @@ fi
 if [[ "$action" == edit-status ]]; then exec python3 "$root/scripts/nomo-edit.py" --status-only "$@"; fi
 if [[ "$action" == check ]]; then exec python3 "$root/scripts/nomo-edit.py" --check-only "$@"; fi
 if [[ "$action" == edit ]]; then exec python3 "$root/scripts/nomo-edit.py" "$@"; fi
+if [[ "$action" == work ]]; then exec python3 "$root/scripts/nomo-edit.py" --work "$@"; fi
 if [[ "$action" != ask && "$action" != chat ]]; then usage >&2; exit 64; fi
 if [[ $# -lt 4 || "$1" != --root || "$3" != --allow ]]; then usage >&2; exit 64; fi
 selected="$2"; allowed="$4"; shift 4

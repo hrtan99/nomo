@@ -2,6 +2,7 @@
 """Launch the existing confirmed edit flow for an exclusive private workspace."""
 import argparse
 import os
+import re
 import signal
 from pathlib import Path
 import stat
@@ -33,6 +34,20 @@ def prepare(args, stdin_tty, stdout_tty):
     if info.st_uid != os.getuid() or stat.S_IMODE(info.st_mode) != 0o700 or any(state.iterdir()):
         raise ValueError('state must be an empty directory owned by you with mode 0700')
     task = getattr(args, 'task', None)
+    read_root = getattr(args, 'read_root', None)
+    allowed = getattr(args, 'allow', None)
+    if read_root is not None:
+        read_root = directory(read_root, 'read root')
+        if read_root == state or read_root in state.parents or state in read_root.parents:
+            raise ValueError('read root and state must be separate, non-overlapping directories')
+        names = allowed.split(',') if allowed is not None else []
+        if (not 1 <= len(names) <= 2 or len(set(names)) != len(names) or
+                any(not 1 <= len(name) <= 48 or len(name.split('/')) > 8 or
+                    any(part in ('', '.', '..') or not re.fullmatch(r'[A-Za-z0-9._-]+', part)
+                        for part in name.split('/')) for name in names)):
+            raise ValueError('allow must name one or two distinct safe relative files')
+        if task is None or not task.strip() or len(task) > 128 or not all(32 <= ord(c) <= 126 for c in task):
+            raise ValueError('work task must be 1..128 printable ASCII characters, not only spaces')
     deadline = None
     if not args.id or not args.path:
         raise ValueError('id and path must be nonempty')
@@ -68,6 +83,8 @@ def prepare(args, stdin_tty, stdout_tty):
     cache.mkdir(mode=0o700, exist_ok=True)
     env = {key: value for key, value in os.environ.items() if not key.startswith('ETAS_HOST_')}
     env.update(NOMO_EDIT_WORKSPACE_DIR=str(workspace), NOMO_EDIT_STATE_DIR=str(state))
+    if read_root is not None:
+        env['NOMO_WORK_CONTEXT_DIR'] = str(read_root)
     if deadline is not None:
         env['NOMO_MODEL_REQUEST_DEADLINE_MS'] = str(deadline)
     overlay = {'0.2.2': 'config/etas-022-official-compose.yaml', '0.2.3': 'config/etas-023-official-compose.yaml', '0.2.4': 'config/etas-024-official-compose.yaml'}[version]
@@ -77,7 +94,12 @@ def prepare(args, stdin_tty, stdout_tty):
                '--file', str(ROOT / 'config/edit-operation-compose.yaml'),
                '--file', str(ROOT / 'config/nomo-edit-compose.yaml')]
     model_compose = compose + ['--file', str(ROOT / 'config/nomo-model-edit-compose.yaml')] if task is not None else compose
-    native = (['--flow', 'harness_edit', '--profile', 'harness-edit', '--allow-effects', '--args',
+    if read_root is not None:
+        model_compose += ['--file', str(ROOT / 'config/harness-work-compose.yaml')]
+    native = (['--flow', 'harness_work', '--profile', 'harness-work', '--allow-effects', '--args',
+               '--id', args.id, '--workspace', 'private-workspace', '--path', args.path, '--once', task, '--allow', allowed]
+              if read_root is not None else
+              ['--flow', 'harness_edit', '--profile', 'harness-edit', '--allow-effects', '--args',
                '--id', args.id, '--workspace', 'private-workspace', '--path', args.path, '--once', task]
               if task is not None else
               ['--flow', 'edit_apply', '--profile', 'edit-apply', '--allow-effects', '--args',
@@ -253,7 +275,7 @@ def edit_status_main(argv):
     return run_owned(command, env)
 
 
-def main(argv=None):
+def main(argv=None, work=False):
     parser = argparse.ArgumentParser(description='Edit one file in an exclusive private workspace with preview and confirmation.', epilog='Use an exclusive workspace without symlinks or concurrent writers. State must be a separate empty mode-0700 directory; preserve it after an uncertain result.')
     parser.add_argument('--root', required=True)
     parser.add_argument('--state', required=True, help='empty private directory for one durable operation')
@@ -262,6 +284,9 @@ def main(argv=None):
     parser.add_argument('--target')
     parser.add_argument('--replacement')
     parser.add_argument('--once', dest='task', help='model task; sends the selected file to the configured model')
+    if work:
+        parser.add_argument('--read-root', required=True, help='read-only context directory, separate from state')
+        parser.add_argument('--allow', required=True, help='one or two distinct relative context files')
     parser.add_argument('--check', nargs=argparse.REMAINDER, help='optional check command and arguments; put this option last')
     args = parser.parse_args(argv)
     if args.check == []:
@@ -272,6 +297,11 @@ def main(argv=None):
         print('Cannot start edit: ' + str(error), file=sys.stderr)
         return 64
     if args.task is not None:
+        if work:
+            print('Work may send the selected context, edit file and task to the model before write confirmation. '
+                  'The read root is mounted read-only; the allowlist is enforced by Nomo, not per-file mounts. '
+                  'Links and concurrent changes can affect what is read. One-shot only; no session resume.', flush=True)
+            print('Work allows up to 7 model calls and 47104 requested output tokens; actual usage may differ.', flush=True)
         print('Model requests have a ' + env.get('NOMO_MODEL_REQUEST_DEADLINE_MS', '120000') +
               '-millisecond deadline each; no automatic retries.', flush=True)
         print('A busy model service may queue requests; waiting counts toward each deadline.', flush=True)
@@ -288,7 +318,7 @@ def main(argv=None):
     print('Running the requested check in the edited workspace (60-second limit).', flush=True)
     check_env = {key: value for key, value in env.items() if key not in
                  ('NOMO_READ_MODEL_BASE_URL', 'NOMO_QWEN_SERVER_API_KEY', 'NOMO_READ_MODEL_NAME',
-                  'NOMO_MODEL_REQUEST_DEADLINE_MS')}
+                  'NOMO_MODEL_REQUEST_DEADLINE_MS', 'NOMO_WORK_CONTEXT_DIR')}
     checked = run_owned(check, check_env)
     if checked != 0:
         print('Check failed or could not be completed (exit ' + str(checked) + ').', file=sys.stderr, flush=True)
@@ -298,6 +328,8 @@ def main(argv=None):
 
 
 if __name__ == '__main__':
+    if sys.argv[1:2] == ['--work']:
+        raise SystemExit(main(sys.argv[2:], work=True))
     if sys.argv[1:2] == ['--check-only']:
         raise SystemExit(project_check_main(sys.argv[2:]))
     if sys.argv[1:2] == ['--status-only']:
