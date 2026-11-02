@@ -123,7 +123,7 @@ def prepare(args, stdin_tty, stdout_tty):
                'python3', '-B', '/workspace/scripts/nomo-verified-etas.py', 'run', '/workspace', *native]
     check = None
     if args.check:
-        check = [sys.executable, str(ROOT / 'scripts/terminal-transport.py'), *compose,
+        check = [sys.executable, str(ROOT / 'scripts/terminal-transport.py'), '--nomo-check-gate', *compose,
                  '--file', str(ROOT / 'config/nomo-check-compose.yaml'), 'run', '--rm', '--no-deps', '--pull', 'never', '--tty=false',
                  '--workdir', '/edit-fixture', 'dev', '/usr/bin/timeout',
                  '--signal=TERM', '--kill-after=2s', '60s', *args.check]
@@ -203,7 +203,7 @@ def prepare_project_check(root, check, version=None):
             'NOMO_MODEL_REQUEST_DEADLINE_MS')}
     env['NOMO_EDIT_WORKSPACE_DIR'] = str(workspace)
     env['NOMO_ETAS_VERSION'] = version
-    command = [sys.executable, str(ROOT / 'scripts/terminal-transport.py'),
+    command = [sys.executable, str(ROOT / 'scripts/terminal-transport.py'), '--nomo-check-gate',
                'docker', 'compose', '--env-file', '/dev/null', '--file', str(ROOT / 'compose.yaml'),
                '--file', str(ROOT / overlay), '--file', str(ROOT / 'config/nomo-project-check-compose.yaml'),
                'run', '--rm', '--no-deps', '--pull', 'never', '--tty=false',
@@ -224,7 +224,7 @@ def project_check_main(argv):
     except (OSError, ValueError) as error:
         print('Cannot start check: ' + str(error), file=sys.stderr)
         return 64
-    print('Running the requested check in the workspace (60-second limit).', flush=True)
+    print('Running the requested check in the workspace (60-second limit; stdin is closed).', flush=True)
     result = run_owned(command, env)
     if result:
         print('Check failed or could not be completed (exit ' + str(result) + ').', file=sys.stderr, flush=True)
@@ -332,7 +332,7 @@ def main(argv=None, work=False):
     if not check:
         print('Edit completed; no check was requested.', flush=True)
         return 0
-    print('Running the requested check in the edited workspace (60-second limit).', flush=True)
+    print('Running the requested check in the edited workspace (60-second limit; stdin is closed).', flush=True)
     check_env = {key: value for key, value in env.items() if key not in
                  ('NOMO_READ_MODEL_BASE_URL', 'NOMO_QWEN_SERVER_API_KEY', 'NOMO_READ_MODEL_NAME', 'MINIMAX_API_KEY',
                   'NOMO_MODEL_REQUEST_DEADLINE_MS', 'NOMO_WORK_CONTEXT_DIR')}

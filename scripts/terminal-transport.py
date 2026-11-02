@@ -15,10 +15,14 @@ STARTUP_OBSERVE_GRACE = 1.0
 STOP_GRACE = 2
 OP_TIMEOUT = 5.0
 CLEANUP_TIMEOUT = 12.0
+GATE_TIMEOUT = 15.0
 INSPECT = '{{.Id}}\n{{.Name}}\n{{index .Config.Labels "' + OWNER_LABEL + '"}}'
 
 
 def main(arguments):
+    gated = bool(arguments and arguments[0] == '--nomo-check-gate')
+    if gated:
+        arguments = arguments[1:]
     if len(arguments) < 5 or arguments[:2] != ['docker', 'compose'] or 'run' not in arguments:
         print('terminal transport requires the fixed Compose run command', file=sys.stderr)
         return 64
@@ -31,6 +35,15 @@ def main(arguments):
     owner = uuid.uuid4().hex
     name = 'nomo-terminal-' + owner
     command = arguments[:service_index] + ['--name', name, '--label', OWNER_LABEL + '=' + owner] + arguments[service_index:]
+    if gated:
+        # The check cannot start until this owner has observed the actual
+        # labelled container. Afterwards the check receives EOF on stdin.
+        service_index = command.index('dev', run_index + 1)
+        if service_index + 1 == len(command):
+            print('terminal transport gated check requires a command', file=sys.stderr)
+            return 64
+        wrapper = 'IFS= read -r permit && [ "$permit" = start ] || exit 125; exec "$@"'
+        command = command[:service_index + 1] + ['/bin/sh', '-c', wrapper, 'nomo-check-gate'] + command[service_index + 1:]
     requested = [0, 0.0]
     client = None
     observed_identifier = None
@@ -163,9 +176,11 @@ def main(arguments):
     try:
         # A private process group scopes forwarding to this client and its children.
         # Standard descriptors are inherited unchanged; this helper reads no task/consent.
-        client = subprocess.Popen(command, stdin=sys.stdin, stdout=sys.stdout,
+        client = subprocess.Popen(command, stdin=subprocess.PIPE if gated else sys.stdin, stdout=sys.stdout,
                                   stderr=sys.stderr, start_new_session=True)
         next_observation = 0.0
+        gate_deadline = time.monotonic() + GATE_TIMEOUT
+        released = False
         while client.poll() is None and not requested[0]:
             if observed_identifier is None and time.monotonic() >= next_observation:
                 try:
@@ -173,6 +188,17 @@ def main(arguments):
                 except (OSError, subprocess.TimeoutExpired, TimeoutError):
                     pass  # Final reconciliation must establish closure independently.
                 next_observation = time.monotonic() + 0.25
+            if gated and not released and observed_identifier is not None and not requested[0]:
+                try:
+                    client.stdin.write(b'start\n')
+                    client.stdin.flush()
+                    client.stdin.close()
+                    released = True
+                except (OSError, BrokenPipeError):
+                    break
+            if gated and not released and time.monotonic() >= gate_deadline:
+                print('terminal transport could not verify check ownership; check not started', file=sys.stderr)
+                break
             time.sleep(0.05)
         if requested[0]:
             if not forward(requested[0]):

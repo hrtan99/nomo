@@ -86,7 +86,7 @@ def main(argv=None):
                 return edit.run_owned(command_check,internal_env)
             if checkpoint('start'):
                 print('Check was not started; inspect recorded status.',file=sys.stderr,flush=True);return 1
-            print('Running the requested check offline in the edited workspace (60-second limit).',flush=True)
+            print('Running the requested check offline in the edited workspace (60-second limit; stdin is closed).',flush=True)
             code=edit.run_owned(check,check_env)
             if code<0 or code>=124:
                 print('Check outcome is uncertain; recorded running state is retained, without retry.',file=sys.stderr,flush=True);return code or 1

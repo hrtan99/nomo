@@ -10,6 +10,7 @@ Usage:
   nomo-read.sh chat --root ABSOLUTE_DIRECTORY --allow FILE[,FILE] [--turns 4]
   nomo-read.sh session-new|session-continue --root ABSOLUTE_DIRECTORY --state PRIVATE_DIRECTORY --allow FILE[,FILE] --once QUESTION
   nomo-read.sh session-status --state PRIVATE_DIRECTORY
+  nomo-read.sh session-work --read-root ABSOLUTE_DIRECTORY --allow FILE[,FILE] --root PRIVATE_DIRECTORY --state PRIVATE_DIRECTORY --id ID --path FILE --once TASK [--check COMMAND ARG ...]
   nomo-read.sh edit --root ABSOLUTE_DIRECTORY --state FRESH_PRIVATE_DIRECTORY --id ID --path FILE --target TEXT --replacement TEXT [--check COMMAND ARG ...]
   nomo-read.sh edit --root ABSOLUTE_DIRECTORY --state FRESH_PRIVATE_DIRECTORY --id ID --path FILE --once TASK [--check COMMAND ARG ...]
   nomo-read.sh work --read-root ABSOLUTE_DIRECTORY --allow FILE[,FILE] --root ABSOLUTE_DIRECTORY --state FRESH_PRIVATE_DIRECTORY --id ID --path FILE --once TASK [--check COMMAND ARG ...]

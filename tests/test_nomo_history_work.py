@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Host orchestration checks for durable offline-check intent and completion."""
-import contextlib,importlib.util,io,os,tempfile,unittest
+import contextlib,importlib.util,io,os,subprocess,tempfile,unittest
 from pathlib import Path
 from unittest.mock import patch
 ROOT=Path(__file__).resolve().parent.parent
@@ -17,6 +17,10 @@ class HistoryWorkLauncherTest(unittest.TestCase):
     def args(self):return ['--read-root',str(self.context),'--root',str(self.workspace),'--state',str(self.state),'--id','id1','--path','note.txt','--allow','context.txt','--once','change it','--check','/bin/true']
     def invoke(self):
         with patch.object(launcher.sys,'stdin',TTY()),contextlib.redirect_stdout(TTY()),contextlib.redirect_stderr(io.StringIO()):return launcher.main(self.args())
+    def test_help_lists_session_work_and_its_current_roots(self):
+        result=subprocess.run(['bash',str(ROOT/'scripts/nomo-read.sh'),'--help'],capture_output=True,text=True,check=True)
+        self.assertIn('session-work --read-root',result.stdout)
+        self.assertIn('--root PRIVATE_DIRECTORY --state PRIVATE_DIRECTORY --id ID',result.stdout)
     def test_fresh_cache_created_before_launch(self):
         self.assertFalse((self.project/'.etas').exists())
         def owned(command,env):
