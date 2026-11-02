@@ -59,6 +59,17 @@ with open(os.environ['NOMO_TEST_LOG'],'w') as f:
         self.assertIn('read_model_tools_chat', call['args'])
         self.assertEqual(call['args'][-3:], ['new', '--allow', 'a.txt,b.txt'])
 
+    def test_explicit_023_and_unknown_version(self):
+        env = dict(self.env, NOMO_ETAS_VERSION='0.2.3')
+        result = self.invoke('chat', '--root', self.read_root, '--allow', 'a.txt', env=env)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn(str(ROOT / 'config/etas-023-official-compose.yaml'), json.loads(self.log.read_text())['args'])
+        self.log.unlink()
+        env['NOMO_ETAS_VERSION'] = 'unsupported'
+        result = self.invoke('chat', '--root', self.read_root, '--allow', 'a.txt', env=env)
+        self.assertEqual(result.returncode, 64)
+        self.assertFalse(self.log.exists())
+
     def test_missing_configuration_and_bad_root_fail_before_docker(self):
         env = self.env.copy()
         del env['NOMO_QWEN_SERVER_API_KEY']

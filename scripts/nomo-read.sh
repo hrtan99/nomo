@@ -15,6 +15,7 @@ Select one or two relative files in the read-only directory. Set
 NOMO_READ_MODEL_BASE_URL to the reachable Qwen OpenAI-compatible endpoint and
 NOMO_QWEN_SERVER_API_KEY in the environment before starting. Set
 NOMO_READ_MODEL_NAME when the server uses a different model name.
+Set NOMO_ETAS_VERSION to 0.2.3 to select that verified installation; default 0.2.2.
 The endpoint is reached from the container: for a host-local forward, use
 http://host.docker.internal:PORT/v1 rather than 127.0.0.1.
 Chat supports two tasks in one process; it is not a durable session.
@@ -45,6 +46,11 @@ fi
 if [[ -z "${NOMO_READ_MODEL_BASE_URL:-}" || -z "${NOMO_QWEN_SERVER_API_KEY:-}" ]]; then
     echo 'Set NOMO_READ_MODEL_BASE_URL and NOMO_QWEN_SERVER_API_KEY before starting.' >&2; exit 64
 fi
+case "${NOMO_ETAS_VERSION:-0.2.2}" in
+    0.2.2) etas_overlay="$root/config/etas-022-official-compose.yaml" ;;
+    0.2.3) etas_overlay="$root/config/etas-023-official-compose.yaml" ;;
+    *) echo 'NOMO_ETAS_VERSION must be 0.2.2 or 0.2.3.' >&2; exit 64 ;;
+esac
 # Docker cannot create a tmpfs mountpoint inside the read-only source bind.
 # Create only this disposable, empty project cache directory before mounting.
 if [[ -L "$root/.etas" ]]; then echo 'Project .etas mountpoint must not be a symlink.' >&2; exit 64; fi
@@ -55,7 +61,7 @@ if [[ ! -d "$root/.etas" ]]; then
 fi
 export NOMO_READ_ROOT="$selected"
 compose=(docker compose --env-file /dev/null --file "$root/compose.yaml"
-    --file "$root/config/etas-022-official-compose.yaml"
+    --file "$etas_overlay"
     --file "$root/config/etas-runtime-cache-compose.yaml"
     --file "$root/config/local-tryout-compose.yaml"
     --file "$root/config/read-chat-compose.yaml")

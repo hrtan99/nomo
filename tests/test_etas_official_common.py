@@ -21,9 +21,10 @@ def load(label):
 
 class OfficialBootstrapSharing(unittest.TestCase):
     def test_each_import_keeps_its_own_graph(self):
-        old, new = load('012'), load('022')
+        old, new, latest = load('012'), load('022'), load('023')
         self.assertEqual(old._common.SELECTOR, 'latest012')
         self.assertEqual(new._common.SELECTOR, 'latest022')
+        self.assertEqual(latest._common.SELECTOR, 'latest023')
         self.assertNotEqual(old.ROOT, new.ROOT)
         self.assertNotEqual(old._common.BOOTSTRAP_SHA, new._common.BOOTSTRAP_SHA)
         self.assertEqual(old._common.SELECTOR, 'latest012')
@@ -47,7 +48,7 @@ class OfficialBootstrapSharing(unittest.TestCase):
                          folder / 'cli-origins.json': 'fixture-origins'}[path]), \
                      patch.object(common, 'read', side_effect=lambda args: 'fixture-rustc' if args[0]=='rustc' else 'fixture-cargo'), \
                      patch.object(common, 'graph_guard', return_value={}), patch.object(common, 'registry_guard') as registry:
-                    for value, expected in ((common.LEGACY_SHA, 'legacy-revalidated'), (common.BOOTSTRAP_SHA, 'shared-verified')):
+                    for value, expected in ((common.LEGACY_SHA, 'legacy-revalidated'), (common.BOOTSTRAP_SHA, 'shared-verified'), (common.PREVIOUS_SHARED, 'shared-verified')):
                         identity['bootstrap_sha256'] = value
                         (folder / 'identity.json').write_text(json.dumps(identity))
                         self.assertEqual(common.guard(read_only=True), expected)
@@ -55,8 +56,8 @@ class OfficialBootstrapSharing(unittest.TestCase):
                     (folder / 'identity.json').write_text(json.dumps(identity))
                     with self.assertRaisesRegex(RuntimeError, 'bootstrap drift'):
                         common.guard(read_only=True)
-                    self.assertEqual(git_guard.call_count, 2)
-                    self.assertEqual(registry.call_count, 2)
+                    self.assertEqual(git_guard.call_count, 3)
+                    self.assertEqual(registry.call_count, 3)
 
     def test_reviewed_bridge_rejects_shared_implementation_drift(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -83,6 +84,11 @@ class OfficialBootstrapSharing(unittest.TestCase):
             bridge_path.write_text(json.dumps(bridge))
             common.configure('022', wrapper)
             self.assertNotEqual(before, common.BOOTSTRAP_SHA)
+
+    def test_new_023_graph_has_no_legacy_or_previous_shared_provenance(self):
+        common = load('023')._common
+        self.assertIsNone(common.LEGACY_SHA)
+        self.assertIsNone(common.PREVIOUS_SHARED)
 
 
 if __name__ == '__main__':

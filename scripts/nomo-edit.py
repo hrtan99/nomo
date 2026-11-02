@@ -52,14 +52,18 @@ def prepare(args, stdin_tty, stdout_tty):
             raise ValueError('the selected file path must not contain symlinks')
     if not current.is_file():
         raise ValueError('the selected file must be an existing regular file')
+    version = os.environ.get('NOMO_ETAS_VERSION', '0.2.2')
+    if version not in ('0.2.2', '0.2.3'):
+        raise ValueError('NOMO_ETAS_VERSION must be 0.2.2 or 0.2.3')
     cache = ROOT / '.etas'
     if cache.is_symlink():
         raise ValueError('project .etas mountpoint must not be a symlink')
     cache.mkdir(mode=0o700, exist_ok=True)
     env = {key: value for key, value in os.environ.items() if not key.startswith('ETAS_HOST_')}
     env.update(NOMO_EDIT_WORKSPACE_DIR=str(workspace), NOMO_EDIT_STATE_DIR=str(state))
+    overlay = 'config/etas-022-official-compose.yaml' if version == '0.2.2' else 'config/etas-023-official-compose.yaml'
     compose = ['docker', 'compose', '--env-file', '/dev/null', '--file', str(ROOT / 'compose.yaml'),
-               '--file', str(ROOT / 'config/etas-022-official-compose.yaml'),
+               '--file', str(ROOT / overlay),
                '--file', str(ROOT / 'config/etas-runtime-cache-compose.yaml'),
                '--file', str(ROOT / 'config/edit-operation-compose.yaml'),
                '--file', str(ROOT / 'config/nomo-edit-compose.yaml')]

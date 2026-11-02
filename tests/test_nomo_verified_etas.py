@@ -56,6 +56,18 @@ class VerifiedEtas(unittest.TestCase):
         self.cli.symlink_to(target)
         self.assertFalse(self.verify())
 
+    def test_023_requires_its_matching_version_and_selector(self):
+        self.cli.write_text('#!/bin/sh\nprintf "etas 0.2.3\\n"\n')
+        self.write_config()
+        value = json.loads(self.config.read_text()); value['selector'] = 'latest023'
+        self.config.write_text(json.dumps(value))
+        self.assertTrue(self.verify('latest023'))
+        self.assertFalse(self.verify('latest022'))
+        target = self.root / 'actual'
+        self.cli.rename(target)
+        self.cli.symlink_to(target)
+        self.assertFalse(self.verify('latest023'))
+
     def test_invalid_configuration_never_executes_cli(self):
         self.config.write_text('{}')
         self.assertFalse(self.verify())

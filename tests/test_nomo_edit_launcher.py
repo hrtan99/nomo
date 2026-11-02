@@ -49,6 +49,15 @@ class EditLauncherTests(unittest.TestCase):
         self.assertEqual(check[check.index('--workdir') + 1], '/edit-fixture')
         self.assertEqual(check[-4:], ['60s', 'python3', '-m', 'unittest'])
 
+    def test_explicit_023_applies_to_edit_and_check(self):
+        self.args.check = ['true']
+        with patch.dict(os.environ, {'NOMO_ETAS_VERSION': '0.2.3'}):
+            command, check, _ = module.prepare(self.args, True, True)
+        overlay = str(self.project / 'config/etas-023-official-compose.yaml')
+        self.assertIn(overlay, command); self.assertIn(overlay, check)
+        with patch.dict(os.environ, {'NOMO_ETAS_VERSION': 'unsupported'}), self.assertRaisesRegex(ValueError, 'NOMO_ETAS_VERSION'):
+            module.prepare(self.args, True, True)
+
     def test_model_edit_uses_explicit_endpoint_and_keeps_check_offline(self):
         self.args.task = 'change old to new'
         self.args.target = self.args.replacement = None

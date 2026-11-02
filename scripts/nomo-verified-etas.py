@@ -10,6 +10,7 @@ import sys
 CLI = Path('/home/nomo/.cargo/bin/etas')
 SPEC = Path('/workspace/config/etas-022-official.json')
 LOCK = Path('/workspace/config/etas-022-official.Cargo.lock')
+VERSIONS = {'latest022': '0.2.2', 'latest023': '0.2.3'}
 
 
 def digest(path):
@@ -20,7 +21,7 @@ def digest(path):
 def verify(cli, spec_path, lock_path, selected):
     try:
         spec = json.loads(spec_path.read_text())
-        if selected != 'latest022' or spec['selector'] != selected:
+        if selected not in VERSIONS or spec['selector'] != selected:
             return False
         if cli.is_symlink() or not cli.is_file() or digest(cli) != spec['verified_seed_binary_sha256']:
             return False
@@ -28,14 +29,17 @@ def verify(cli, spec_path, lock_path, selected):
             return False
         version = subprocess.run([str(cli), '--version'], stdin=subprocess.DEVNULL,
                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=10)
-        return version.returncode == 0 and version.stdout == b'etas 0.2.2\n' and not version.stderr
+        return version.returncode == 0 and version.stdout == ('etas ' + VERSIONS[selected] + '\n').encode() and not version.stderr
     except (OSError, ValueError, KeyError, TypeError, subprocess.TimeoutExpired):
         return False
 
 
 def main():
-    if not verify(CLI, SPEC, LOCK, os.environ.get('NOMO_NORMAL_GRAPH')):
-        print('The ETAS 0.2.2 installation does not match the selected configuration; verify the installation.', file=sys.stderr)
+    selected = os.environ.get('NOMO_NORMAL_GRAPH')
+    spec = Path('/workspace/config/etas-023-official.json') if selected == 'latest023' else SPEC
+    lock = Path('/workspace/config/etas-023-official.Cargo.lock') if selected == 'latest023' else LOCK
+    if not verify(CLI, spec, lock, selected):
+        print('The ETAS installation does not match the selected configuration; verify the installation.', file=sys.stderr)
         return 1
     os.execv(str(CLI), [str(CLI), *sys.argv[1:]])
 
