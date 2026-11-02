@@ -1,0 +1,14 @@
+# MiniMax read-only entry; mount the selected directory without write access.
+services:
+  dev:
+    network_mode: bridge
+    environment:
+      ETAS_HOST_MODEL_API_KEY: "${MINIMAX_API_KEY:?set MINIMAX_API_KEY to the M Plan subscription key}"
+      ETAS_HOST_APPROVAL: "deny"
+    volumes:
+      - type: bind
+        source: "${NOMO_READ_ROOT:?select a read directory}"
+        target: /model-tool-fixture
+        read_only: true
+        bind:
+          create_host_path: false

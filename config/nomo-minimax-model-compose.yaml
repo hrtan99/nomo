@@ -1,0 +1,7 @@
+# MiniMax M Plan key is supplied by the caller; checks use the offline overlay.
+services:
+  dev:
+    network_mode: bridge
+    environment:
+      ETAS_HOST_MODEL_API_KEY: "${MINIMAX_API_KEY:?set MINIMAX_API_KEY to the M Plan subscription key}"
+      ETAS_HOST_MODEL_REQUEST_DEADLINE_MS: "${NOMO_MODEL_REQUEST_DEADLINE_MS:-120000}"

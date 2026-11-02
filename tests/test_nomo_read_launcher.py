@@ -32,7 +32,7 @@ with open(os.environ['NOMO_TEST_LOG'],'w') as f:
 ''')
         docker.chmod(0o755)
         self.env = {'PATH': str(bindir) + ':/usr/bin:/bin', 'HOME': str(self.base),
-                    'NOMO_TEST_LOG': str(self.log), 'NOMO_READ_MODEL_BASE_URL': 'http://synthetic:9999/v1',
+                    'NOMO_TEST_LOG': str(self.log), 'NOMO_MODEL_PROVIDER': 'qwen', 'NOMO_READ_MODEL_BASE_URL': 'http://synthetic:9999/v1',
                     'NOMO_QWEN_SERVER_API_KEY': 'SYNTHETIC_PRIVATE_TOKEN'}
 
     def invoke(self, *args, env=None):

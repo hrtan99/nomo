@@ -531,3 +531,98 @@ name = "nomo-chain-sessions"
 module = "nomo.main"
 flow = "chain_sessions"
 profile = "work-chain-show"
+
+[runtime.profiles.gateway-minimax-readonly]
+boundary_policy = "nomo-model-readonly"
+
+[runtime.profiles.gateway-minimax-readonly.model]
+adapter = "openai"
+model = "MiniMax-M3.1-Flash"
+base_url = "https://api.minimax.cn/v1"
+api_key_env = "MINIMAX_API_KEY"
+allow_private = false
+
+[runtime.profiles.gateway-minimax-readonly.model.timeout]
+request_deadline_ms = 120000
+connect_timeout_ms = 2000
+
+[runtime.profiles.gateway-minimax-readonly.model.retry]
+attempts = 1
+delay_ms = 0
+
+[runtime.profiles.gateway-minimax-readonly.filesystem.regions."nomo.tools.workspace.ReadOnlyRoot"]
+root = "/model-tool-fixture"
+read = true
+write = false
+
+[runtime.profiles.gateway-minimax-readonly.policy]
+mode = "local-static"
+rules = ["console=allow", "model=allow", "filesystem=allow"]
+
+[runtime.profiles.gateway-minimax-readonly.approval]
+mode = "deny"
+
+
+[runtime.profiles.harness-minimax-edit]
+boundary_policy = "nomo-harness-edit"
+[runtime.profiles.harness-minimax-edit.memory]
+backend = "sqlite"
+path = "edit.sqlite3"
+[runtime.profiles.harness-minimax-edit.model]
+adapter = "openai"
+model = "MiniMax-M3.1-Flash"
+base_url = "https://api.minimax.cn/v1"
+api_key_env = "MINIMAX_API_KEY"
+allow_private = false
+
+[runtime.profiles.harness-minimax-edit.model.timeout]
+request_deadline_ms = 120000
+connect_timeout_ms = 2000
+[runtime.profiles.harness-minimax-edit.model.retry]
+attempts = 1
+delay_ms = 0
+[runtime.profiles.harness-minimax-edit.filesystem.regions."nomo.tools.edit_file.EditableRoot"]
+root = "/edit-fixture"
+read = true
+write = true
+delete = false
+[runtime.profiles.harness-minimax-edit.policy]
+mode = "local-static"
+rules = ["console=allow", "memory=allow", "model=allow", "approval=allow", "filesystem:Fs.stat=allow", "filesystem:Fs.read=allow", "filesystem:Fs.atomic_replace=allow", "filesystem:Fs.write=deny", "filesystem:HostFilesystem.delete=deny"]
+[runtime.profiles.harness-minimax-edit.approval]
+mode = "prompt"
+
+
+[runtime.profiles.harness-minimax-work]
+boundary_policy = "nomo-harness-work"
+[runtime.profiles.harness-minimax-work.memory]
+backend = "sqlite"
+path = "edit.sqlite3"
+[runtime.profiles.harness-minimax-work.model]
+adapter = "openai"
+model = "MiniMax-M3.1-Flash"
+base_url = "https://api.minimax.cn/v1"
+api_key_env = "MINIMAX_API_KEY"
+allow_private = false
+
+[runtime.profiles.harness-minimax-work.model.timeout]
+request_deadline_ms = 120000
+connect_timeout_ms = 2000
+[runtime.profiles.harness-minimax-work.model.retry]
+attempts = 1
+delay_ms = 0
+[runtime.profiles.harness-minimax-work.filesystem.regions."nomo.tools.workspace.ReadOnlyRoot"]
+root = "/work-context"
+read = true
+write = false
+delete = false
+[runtime.profiles.harness-minimax-work.filesystem.regions."nomo.tools.edit_file.EditableRoot"]
+root = "/edit-fixture"
+read = true
+write = true
+delete = false
+[runtime.profiles.harness-minimax-work.policy]
+mode = "local-static"
+rules = ["console=allow", "memory=allow", "model=allow", "approval=allow", "filesystem:Fs.stat=allow", "filesystem:Fs.read=allow", "filesystem:Fs.atomic_replace=allow", "filesystem:Fs.write=deny", "filesystem:HostFilesystem.delete=deny"]
+[runtime.profiles.harness-minimax-work.approval]
+mode = "prompt"

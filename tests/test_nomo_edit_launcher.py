@@ -72,7 +72,7 @@ class EditLauncherTests(unittest.TestCase):
         self.args.task = 'change old to new'
         self.args.target = self.args.replacement = None
         self.args.check = ['true']
-        with patch.dict(os.environ, {'NOMO_READ_MODEL_BASE_URL': 'http://example.test/v1',
+        with patch.dict(os.environ, {'NOMO_MODEL_PROVIDER': 'qwen', 'NOMO_READ_MODEL_BASE_URL': 'http://example.test/v1',
                                     'NOMO_QWEN_SERVER_API_KEY': 'synthetic'}, clear=True):
             command, check, _ = module.prepare(self.args, True, True)
         overlay = str(self.project / 'config/nomo-model-edit-compose.yaml')
@@ -84,7 +84,7 @@ class EditLauncherTests(unittest.TestCase):
         self.assertNotIn('--target', command)
 
     def test_model_settings_are_not_inherited_by_post_edit_check(self):
-        values = {'NOMO_READ_MODEL_BASE_URL': 'http://example.test/v1',
+        values = {'NOMO_MODEL_PROVIDER': 'qwen', 'NOMO_READ_MODEL_BASE_URL': 'http://example.test/v1',
                   'NOMO_QWEN_SERVER_API_KEY': 'synthetic', 'NOMO_READ_MODEL_NAME': 'synthetic-model',
                   'NOMO_MODEL_REQUEST_DEADLINE_MS': '240000',
                   'NOMO_KEPT': 'kept'}
@@ -128,7 +128,7 @@ class EditLauncherTests(unittest.TestCase):
         self.args.task = 'change old to new'
         self.args.target = self.args.replacement = None
         for value in ('2000', '240000', '3600000'):
-            values = {'NOMO_READ_MODEL_BASE_URL': 'http://example.test/v1',
+            values = {'NOMO_MODEL_PROVIDER': 'qwen', 'NOMO_READ_MODEL_BASE_URL': 'http://example.test/v1',
                       'NOMO_QWEN_SERVER_API_KEY': 'synthetic', 'NOMO_MODEL_REQUEST_DEADLINE_MS': value}
             with self.subTest(value=value), patch.dict(os.environ, values, clear=True):
                 command, _, env = module.prepare(self.args, True, True)
@@ -140,7 +140,7 @@ class EditLauncherTests(unittest.TestCase):
         self.args.target = self.args.replacement = None
         for value in ('', '1999', '3600001', '-1', '12ms', '١٢٠٠٠٠', '9' * 100):
             with self.subTest(value=value), patch.dict(os.environ, {
-                'NOMO_READ_MODEL_BASE_URL': 'http://example.test/v1',
+                'NOMO_MODEL_PROVIDER': 'qwen', 'NOMO_READ_MODEL_BASE_URL': 'http://example.test/v1',
                 'NOMO_QWEN_SERVER_API_KEY': 'synthetic', 'NOMO_MODEL_REQUEST_DEADLINE_MS': value}, clear=True):
                 with self.assertRaisesRegex(ValueError, 'NOMO_MODEL_REQUEST_DEADLINE_MS'):
                     module.prepare(self.args, True, True)
@@ -151,7 +151,7 @@ class EditLauncherTests(unittest.TestCase):
         with patch.dict(os.environ, {}, clear=True), self.assertRaisesRegex(ValueError, 'either'):
             module.prepare(self.args, True, True)
         self.args.target = self.args.replacement = None
-        with patch.dict(os.environ, {}, clear=True), self.assertRaisesRegex(ValueError, 'NOMO_READ_MODEL_BASE_URL'):
+        with patch.dict(os.environ, {'NOMO_MODEL_PROVIDER':'qwen'}, clear=True), self.assertRaisesRegex(ValueError, 'NOMO_READ_MODEL_BASE_URL'):
             module.prepare(self.args, True, True)
         self.assertFalse((self.project / '.etas').exists())
 

@@ -15,12 +15,17 @@ Usage:
   nomo-read.sh edit-status --state PRIVATE_DIRECTORY --id ID --path FILE
   nomo-read.sh resume --id SESSION_ID  (not available yet)
 
-Select one or two relative files in the read-only directory. Set
-NOMO_READ_MODEL_BASE_URL to the reachable Qwen OpenAI-compatible endpoint and
-NOMO_QWEN_SERVER_API_KEY in the environment before starting. Set
-NOMO_READ_MODEL_NAME when the server uses a different model name.
-Set NOMO_ETAS_VERSION to 0.2.3 or 0.2.4 to select a verified installation; default 0.2.2.
-The endpoint is reached from the container: for a host-local forward, use
+Select one or two relative files in the read-only directory. The default model
+is MiniMax M Plan (China), MiniMax-M3.1-Flash at https://api.minimax.cn/v1.
+Provide its subscription key through MINIMAX_API_KEY in the environment.
+MiniMax thinking counts against output limits. The runtime does not expose
+the provider's finish reason; review the complete edit preview carefully.
+For the earlier Qwen route, explicitly set NOMO_MODEL_PROVIDER=qwen along with
+NOMO_READ_MODEL_BASE_URL and NOMO_QWEN_SERVER_API_KEY; NOMO_READ_MODEL_NAME
+can select a different Qwen model. These provider credentials are separate.
+MiniMax defaults to verified ETAS 0.2.4; the earlier Qwen route defaults to
+0.2.2. Set NOMO_ETAS_VERSION explicitly to select 0.2.2, 0.2.3 or 0.2.4.
+For Qwen, the endpoint is reached from the container: for a host-local forward, use
 http://host.docker.internal:PORT/v1 rather than 127.0.0.1.
 Chat supports two tasks by default, or four with --turns 4, in one process.
 Only the immediately preceding successful task/result/answer is carried forward;
@@ -72,10 +77,23 @@ else
     elif [[ $# -ne 0 ]]; then usage >&2; exit 64; fi
     if [[ -t 0 && -t 1 ]]; then tty=true; else tty=false; fi
 fi
-if [[ -z "${NOMO_READ_MODEL_BASE_URL:-}" || -z "${NOMO_QWEN_SERVER_API_KEY:-}" ]]; then
-    echo 'Set NOMO_READ_MODEL_BASE_URL and NOMO_QWEN_SERVER_API_KEY before starting.' >&2; exit 64
-fi
-case "${NOMO_ETAS_VERSION:-0.2.2}" in
+provider="${NOMO_MODEL_PROVIDER:-minimax}"
+case "$provider" in
+    minimax)
+        if [[ -z "${MINIMAX_API_KEY:-}" ]]; then echo 'Set MINIMAX_API_KEY to a MiniMax M Plan subscription key.' >&2; exit 64; fi
+        unset NOMO_QWEN_SERVER_API_KEY
+        model_overlay="$root/config/nomo-minimax-read-compose.yaml"; profile=gateway-minimax-readonly ;;
+    qwen)
+        if [[ -z "${NOMO_READ_MODEL_BASE_URL:-}" || -z "${NOMO_QWEN_SERVER_API_KEY:-}" ]]; then
+            echo 'Set NOMO_READ_MODEL_BASE_URL and NOMO_QWEN_SERVER_API_KEY before starting Qwen.' >&2; exit 64
+        fi
+        unset MINIMAX_API_KEY
+        model_overlay="$root/config/read-chat-compose.yaml"; profile=gateway-qwen-readonly ;;
+    *) echo 'NOMO_MODEL_PROVIDER must be minimax or qwen.' >&2; exit 64 ;;
+esac
+default_etas=0.2.2
+if [[ "$provider" == minimax ]]; then default_etas=0.2.4; fi
+case "${NOMO_ETAS_VERSION:-$default_etas}" in
     0.2.2) etas_overlay="$root/config/etas-022-official-compose.yaml" ;;
     0.2.3) etas_overlay="$root/config/etas-023-official-compose.yaml" ;;
     0.2.4) etas_overlay="$root/config/etas-024-official-compose.yaml" ;;
@@ -94,8 +112,11 @@ compose=(docker compose --env-file /dev/null --file "$root/compose.yaml"
     --file "$etas_overlay"
     --file "$root/config/etas-runtime-cache-compose.yaml"
     --file "$root/config/local-tryout-compose.yaml"
-    --file "$root/config/read-chat-compose.yaml")
+    --file "$model_overlay")
 run=(run --rm --no-deps --pull never --tty="$tty")
+if [[ "$provider" == minimax ]]; then
+    echo 'MiniMax M Plan (China): the selected context may be sent to MiniMax; thinking counts toward output limits.'
+fi
 exec python3 "$root/scripts/terminal-transport.py" "${compose[@]}" "${run[@]}" dev \
     python3 -B /workspace/scripts/nomo-verified-etas.py run /workspace --flow "$flow" \
-    --profile gateway-qwen-readonly --allow-effects --args "${native[@]}"
+    --profile "$profile" --allow-effects --args "${native[@]}"

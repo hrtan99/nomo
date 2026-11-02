@@ -24,7 +24,7 @@ class WorkLauncherTests(unittest.TestCase):
         (self.workspace/'note.txt').write_text('old\n')
         self.argv = ['--read-root', str(self.context), '--allow', 'context.txt', '--root', str(self.workspace),
                      '--state', str(self.state), '--id', 'one', '--path', 'note.txt', '--once', 'Update old']
-        self.env = {'NOMO_READ_MODEL_BASE_URL': 'http://synthetic.test/v1', 'NOMO_QWEN_SERVER_API_KEY': 'synthetic',
+        self.env = {'NOMO_MODEL_PROVIDER': 'qwen', 'NOMO_READ_MODEL_BASE_URL': 'http://synthetic.test/v1', 'NOMO_QWEN_SERVER_API_KEY': 'synthetic',
                     'NOMO_MODEL_REQUEST_DEADLINE_MS': '240000'}
         root_patch = patch.object(module, 'ROOT', self.base/'project'); root_patch.start(); self.addCleanup(root_patch.stop)
         (self.base/'project').mkdir()

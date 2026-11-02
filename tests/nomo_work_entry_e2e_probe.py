@@ -47,7 +47,7 @@ def main():
     (context/'context.txt').write_text('blue');(context/'context.txt').chmod(0o600)
     server=HTTPServer(('127.0.0.1',0),Fake);server.phases=[];server.failed=False
     thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start()
-    env=os.environ.copy();env.update(NOMO_READ_MODEL_BASE_URL='http://host.docker.internal:%d/v1'%server.server_port,
+    env=os.environ.copy();env.update(NOMO_MODEL_PROVIDER='qwen', NOMO_READ_MODEL_BASE_URL='http://host.docker.internal:%d/v1'%server.server_port,
                                      NOMO_QWEN_SERVER_API_KEY=TOKEN)
     cmd=[str(ROOT/'scripts/nomo-read.sh'),'work','--read-root',str(context),'--allow','context.txt',
          '--root',str(workspace),'--state',str(state),'--id','owned-edit','--path','note.txt','--once','Update old using context',

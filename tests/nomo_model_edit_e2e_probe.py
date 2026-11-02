@@ -66,7 +66,7 @@ def main():
     (workspace/'note.txt').write_text('before old\n'); (workspace/'note.txt').chmod(0o600)
     server = HTTPServer(('127.0.0.1', 0), Fake); server.phases = []; server.started = 0; server.failed = False; server.scenario = args.scenario
     thread = threading.Thread(target=server.serve_forever, daemon=True); thread.start()
-    env = os.environ.copy(); env.update(NOMO_READ_MODEL_BASE_URL='http://host.docker.internal:%d/v1' % server.server_port,
+    env = os.environ.copy(); env.update(NOMO_MODEL_PROVIDER='qwen', NOMO_READ_MODEL_BASE_URL='http://host.docker.internal:%d/v1' % server.server_port,
                                          NOMO_QWEN_SERVER_API_KEY=TOKEN)
     if args.scenario in ('plan_timeout', 'plan_delayed'):
         env['NOMO_MODEL_REQUEST_DEADLINE_MS'] = '2000' if args.scenario == 'plan_timeout' else '5000'

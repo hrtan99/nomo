@@ -34,6 +34,7 @@ def prepare(args, stdin_tty, stdout_tty):
     if info.st_uid != os.getuid() or stat.S_IMODE(info.st_mode) != 0o700 or any(state.iterdir()):
         raise ValueError('state must be an empty directory owned by you with mode 0700')
     task = getattr(args, 'task', None)
+    provider = os.environ.get('NOMO_MODEL_PROVIDER', 'minimax')
     read_root = getattr(args, 'read_root', None)
     allowed = getattr(args, 'allow', None)
     if read_root is not None:
@@ -54,8 +55,14 @@ def prepare(args, stdin_tty, stdout_tty):
     if task is not None:
         if not task or args.target is not None or args.replacement is not None:
             raise ValueError('provide either a nonempty task or target and replacement')
-        if not os.environ.get('NOMO_READ_MODEL_BASE_URL') or not os.environ.get('NOMO_QWEN_SERVER_API_KEY'):
-            raise ValueError('set NOMO_READ_MODEL_BASE_URL and NOMO_QWEN_SERVER_API_KEY for model editing')
+        if provider == 'minimax':
+            if not os.environ.get('MINIMAX_API_KEY'):
+                raise ValueError('set MINIMAX_API_KEY to a MiniMax M Plan subscription key')
+        elif provider == 'qwen':
+            if not os.environ.get('NOMO_READ_MODEL_BASE_URL') or not os.environ.get('NOMO_QWEN_SERVER_API_KEY'):
+                raise ValueError('set NOMO_READ_MODEL_BASE_URL and NOMO_QWEN_SERVER_API_KEY for Qwen')
+        else:
+            raise ValueError('NOMO_MODEL_PROVIDER must be minimax or qwen')
         raw_deadline = os.environ.get('NOMO_MODEL_REQUEST_DEADLINE_MS', '120000')
         if not raw_deadline.isascii() or not raw_deadline.isdigit() or len(raw_deadline) > 7:
             raise ValueError('NOMO_MODEL_REQUEST_DEADLINE_MS must be an integer from 2000 to 3600000')
@@ -74,7 +81,7 @@ def prepare(args, stdin_tty, stdout_tty):
             raise ValueError('the selected file path must not contain symlinks')
     if not current.is_file():
         raise ValueError('the selected file must be an existing regular file')
-    version = os.environ.get('NOMO_ETAS_VERSION', '0.2.2')
+    version = os.environ.get('NOMO_ETAS_VERSION', '0.2.4' if task is not None and provider == 'minimax' else '0.2.2')
     if version not in ('0.2.2', '0.2.3', '0.2.4'):
         raise ValueError('NOMO_ETAS_VERSION must be 0.2.2, 0.2.3 or 0.2.4')
     cache = ROOT / '.etas'
@@ -82,6 +89,11 @@ def prepare(args, stdin_tty, stdout_tty):
         raise ValueError('project .etas mountpoint must not be a symlink')
     cache.mkdir(mode=0o700, exist_ok=True)
     env = {key: value for key, value in os.environ.items() if not key.startswith('ETAS_HOST_')}
+    if task is not None:
+        env.pop('NOMO_QWEN_SERVER_API_KEY' if provider == 'minimax' else 'MINIMAX_API_KEY', None)
+    else:
+        env.pop('NOMO_QWEN_SERVER_API_KEY', None)
+        env.pop('MINIMAX_API_KEY', None)
     env.update(NOMO_EDIT_WORKSPACE_DIR=str(workspace), NOMO_EDIT_STATE_DIR=str(state))
     if read_root is not None:
         env['NOMO_WORK_CONTEXT_DIR'] = str(read_root)
@@ -93,13 +105,14 @@ def prepare(args, stdin_tty, stdout_tty):
                '--file', str(ROOT / 'config/etas-runtime-cache-compose.yaml'),
                '--file', str(ROOT / 'config/edit-operation-compose.yaml'),
                '--file', str(ROOT / 'config/nomo-edit-compose.yaml')]
-    model_compose = compose + ['--file', str(ROOT / 'config/nomo-model-edit-compose.yaml')] if task is not None else compose
+    overlay_name = 'config/nomo-minimax-model-compose.yaml' if provider == 'minimax' else 'config/nomo-model-edit-compose.yaml'
+    model_compose = compose + ['--file', str(ROOT / overlay_name)] if task is not None else compose
     if read_root is not None:
         model_compose += ['--file', str(ROOT / 'config/harness-work-compose.yaml')]
-    native = (['--flow', 'harness_work', '--profile', 'harness-work', '--allow-effects', '--args',
+    native = (['--flow', 'harness_work', '--profile', 'harness-minimax-work' if provider == 'minimax' else 'harness-work', '--allow-effects', '--args',
                '--id', args.id, '--workspace', 'private-workspace', '--path', args.path, '--once', task, '--allow', allowed]
               if read_root is not None else
-              ['--flow', 'harness_edit', '--profile', 'harness-edit', '--allow-effects', '--args',
+              ['--flow', 'harness_edit', '--profile', 'harness-minimax-edit' if provider == 'minimax' else 'harness-edit', '--allow-effects', '--args',
                '--id', args.id, '--workspace', 'private-workspace', '--path', args.path, '--once', task]
               if task is not None else
               ['--flow', 'edit_apply', '--profile', 'edit-apply', '--allow-effects', '--args',
@@ -186,7 +199,7 @@ def prepare_project_check(root, check):
     overlay = {'0.2.2': 'config/etas-022-official-compose.yaml', '0.2.3': 'config/etas-023-official-compose.yaml', '0.2.4': 'config/etas-024-official-compose.yaml'}[version]
     env = {key: value for key, value in os.environ.items()
            if not key.startswith('ETAS_HOST_') and key not in
-           ('NOMO_READ_MODEL_BASE_URL', 'NOMO_QWEN_SERVER_API_KEY', 'NOMO_READ_MODEL_NAME',
+           ('NOMO_READ_MODEL_BASE_URL', 'NOMO_QWEN_SERVER_API_KEY', 'NOMO_READ_MODEL_NAME', 'MINIMAX_API_KEY',
             'NOMO_MODEL_REQUEST_DEADLINE_MS')}
     env['NOMO_EDIT_WORKSPACE_DIR'] = str(workspace)
     command = [sys.executable, str(ROOT / 'scripts/terminal-transport.py'),
@@ -245,7 +258,7 @@ def prepare_edit_status(state_path, operation_id, path):
     cache.mkdir(mode=0o700, exist_ok=True)
     env = {key: value for key, value in os.environ.items()
            if not key.startswith('ETAS_HOST_') and key not in
-           ('NOMO_READ_MODEL_BASE_URL', 'NOMO_QWEN_SERVER_API_KEY', 'NOMO_READ_MODEL_NAME',
+           ('NOMO_READ_MODEL_BASE_URL', 'NOMO_QWEN_SERVER_API_KEY', 'NOMO_READ_MODEL_NAME', 'MINIMAX_API_KEY',
             'NOMO_MODEL_REQUEST_DEADLINE_MS')}
     env['NOMO_EDIT_STATE_DIR'] = str(state)
     overlay = {'0.2.2': 'config/etas-022-official-compose.yaml', '0.2.3': 'config/etas-023-official-compose.yaml', '0.2.4': 'config/etas-024-official-compose.yaml'}[version]
@@ -297,6 +310,9 @@ def main(argv=None, work=False):
         print('Cannot start edit: ' + str(error), file=sys.stderr)
         return 64
     if args.task is not None:
+        if os.environ.get('NOMO_MODEL_PROVIDER', 'minimax') == 'minimax':
+            print('MiniMax M Plan (China): MiniMax-M3.1-Flash; thinking is enabled and counts toward the output allowance. '
+                  'The provider finish reason is unavailable; review the complete edit preview carefully.', flush=True)
         if work:
             print('Work may send the selected context, edit file and task to the model before write confirmation. '
                   'The read root is mounted read-only; the allowlist is enforced by Nomo, not per-file mounts. '
@@ -317,7 +333,7 @@ def main(argv=None, work=False):
         return 0
     print('Running the requested check in the edited workspace (60-second limit).', flush=True)
     check_env = {key: value for key, value in env.items() if key not in
-                 ('NOMO_READ_MODEL_BASE_URL', 'NOMO_QWEN_SERVER_API_KEY', 'NOMO_READ_MODEL_NAME',
+                 ('NOMO_READ_MODEL_BASE_URL', 'NOMO_QWEN_SERVER_API_KEY', 'NOMO_READ_MODEL_NAME', 'MINIMAX_API_KEY',
                   'NOMO_MODEL_REQUEST_DEADLINE_MS', 'NOMO_WORK_CONTEXT_DIR')}
     checked = run_owned(check, check_env)
     if checked != 0:
