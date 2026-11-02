@@ -88,6 +88,13 @@ public flow read_unicode_text_probe(args: Array<string>) -> i32 {
         Ok(value) => { if value.operation != "read" { abort("read selection changed"); } }
         Err(_) => { abort("allowed read refused"); }
     }
+    match decode_child("[\n \"read\",\n \"sample.txt\"\n]", ["sample.txt"], false) {
+        Ok(value) => { if value.operation != "read" { abort("formatted read changed"); } }
+        Err(_) => { abort("formatted read refused"); }
+    }
+    match decode_child("[\"read\",\"sample" + split("\\/", "")[1] + "n.txt\"]", ["sample.txt"], false) {
+        Ok(_) => { abort("escaped newline in path accepted"); } Err(_) => {}
+    }
     match decode_child("[\"final\",\"内容是蓝色\"]", ["sample.txt"], true) {
         Ok(value) => { if value.text != "内容是蓝色" { abort("child answer changed"); } }
         Err(_) => { abort("Unicode child answer refused"); }

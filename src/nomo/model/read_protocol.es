@@ -67,7 +67,8 @@ public flow decode_child(raw: string, allowed: Array<string>, final_only: bool) 
         return Ok(Action { operation = "final", files = [], literal = "", text = values[1] });
     }
     if final_only { return Err("second response must be final"); }
-    if !safe(raw, 384) { return Err("tool action exceeds 384 UTF-8 bytes"); }
+    // fields already checked structural whitespace and string safety above.
+    if byte_count(utf8_encode(raw)) > 384 { return Err("tool action exceeds 384 UTF-8 bytes"); }
     var files: Array<string> = []; var literal = "";
     if values[0] == "read" && count(values) == 2 { files = [values[1]]; }
     else if values[0] == "search" && (count(values) == 3 || count(values) == 4) {
