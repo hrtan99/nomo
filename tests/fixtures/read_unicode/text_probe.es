@@ -8,7 +8,7 @@ import std.json.{parse, JsonValue};
 import std.agent.message.Message;
 import nomo.core.read_text.{safe, bounded};
 import nomo.cli.read_cli.{parse_args, parse_line};
-import nomo.model.read_protocol.{decode_plan, decode_child, answer};
+import nomo.model.read_protocol.{decode_plan, decode_child, compact_frame, answer};
 import nomo.tools.read_contract.outcome;
 import nomo.tools.read_display.display;
 import nomo.tools.read_contract.ReadTools;
@@ -91,6 +91,14 @@ public flow read_unicode_text_probe(args: Array<string>) -> i32 {
     match decode_child("[\n \"read\",\n \"sample.txt\"\n]", ["sample.txt"], false) {
         Ok(value) => { if value.operation != "read" { abort("formatted read changed"); } }
         Err(_) => { abort("formatted read refused"); }
+    }
+    if compact_frame("[\n \"search\", \"a b\", \"sample.txt\"\n]") != "[\"search\",\"a b\",\"sample.txt\"]" {
+        abort("compacted action lost string content");
+    }
+    let escaped_quote = split("\\/", "")[1] + "\"";
+    if compact_frame("[ \"search\", \"a" + escaped_quote + " b\", \"sample.txt\" ]") !=
+        "[\"search\",\"a" + escaped_quote + " b\",\"sample.txt\"]" {
+        abort("compacted action lost escaped quote");
     }
     match decode_child("[\"read\",\"sample" + split("\\/", "")[1] + "n.txt\"]", ["sample.txt"], false) {
         Ok(_) => { abort("escaped newline in path accepted"); } Err(_) => {}

@@ -45,6 +45,25 @@ flow fields(raw: string, maximum: usize) -> Result<Array<string>, string> {
     return match converted { Some(item) => Ok(item.body), None() => Err("expected string fields") };
 }
 
+// Call only after decoding a valid frame. Keep string bytes and escapes intact.
+public flow compact_frame(raw: string) -> string {
+    var result = ""; var quoted = false; var escaped = false;
+    let slash = split("\\/", "")[1];
+    for character in split(raw, "") limit Iterations(1154) {
+        if quoted {
+            result = result + character;
+            if escaped { escaped = false; }
+            else if character == slash { escaped = true; }
+            else if character == "\"" { quoted = false; }
+        } else if character == "\"" {
+            quoted = true; result = result + character;
+        } else if character != "" && character != " " && character != "\n" && character != "\r" && character != "\t" {
+            result = result + character;
+        }
+    }
+    return result;
+}
+
 public flow decode_plan(raw: string) -> Result<string, string> {
     let values = match fields(raw, 384) { Ok(item) => item, Err(error) => { return Err(error); } };
     if count(values) != 2 || values[0] != "delegate" || !bounded(values[1], 128) {

@@ -9,7 +9,7 @@ import nomo.agent.loop.{emit, failure};
 import nomo.model.model_tool_contract.{Session, Limits, Context, allowed_error, context_error, budget_error, charge_action};
 import nomo.tools.read_contract.{outcome, ReadTools};
 import nomo.tools.read_display.display;
-import nomo.model.read_protocol.{question_error, decode_child};
+import nomo.model.read_protocol.{question_error, decode_child, compact_frame};
 import nomo.context.selection.{EventPolicy, SelectionRefusal, select as select_context};
 import nomo.harness.legacy_string_stages.LegacyChildModel;
 public import nomo.model.model_tool_contract.LoopTurn;
@@ -104,7 +104,7 @@ public flow run_loop_controller(raw: string, allowed: Array<string>, limits: Lim
     // Selected request + bounded actual outcome, with a separate terminal reserve.
     let tool_full = capacity(session, 2, len(first_raw) + 284);
     if tool_full != "" { return failed(history(session, stop(session.history)), tool_full, 4); }
-    session = history(session, emit(session.history, "model", "request", action.operation, first_raw));
+    session = history(session, emit(session.history, "model", "request", action.operation, compact_frame(first_raw)));
     let exhausted = budget_error(session, limits, true);
     if exhausted != "" { return failed(session, exhausted, 4); }
     session = charge_action(session, true);
