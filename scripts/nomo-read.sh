@@ -10,6 +10,10 @@ Usage:
   nomo-read.sh chat --root ABSOLUTE_DIRECTORY --allow FILE[,FILE] [--turns 4]
   nomo-read.sh session-new|session-continue --root ABSOLUTE_DIRECTORY --state PRIVATE_DIRECTORY --allow FILE[,FILE] --once QUESTION
   nomo-read.sh session-status --state PRIVATE_DIRECTORY
+  nomo-read.sh session-id start --sessions-dir PRIVATE_DIRECTORY --root DIR --allow FILE[,FILE] --once QUESTION
+  nomo-read.sh session-id resume --sessions-dir PRIVATE_DIRECTORY --id SESSION_ID --root DIR --allow FILE[,FILE] --once QUESTION
+  nomo-read.sh session-id status --sessions-dir PRIVATE_DIRECTORY --id SESSION_ID
+  nomo-read.sh session-id work --sessions-dir PRIVATE_DIRECTORY --id SESSION_ID --read-root DIR --root PRIVATE_DIRECTORY --operation-id ID --path FILE --allow FILE[,FILE] --once TASK [--check COMMAND ARG ...]
   nomo-read.sh session-work --read-root ABSOLUTE_DIRECTORY --allow FILE[,FILE] --root PRIVATE_DIRECTORY --state PRIVATE_DIRECTORY --id ID --path FILE --once TASK [--check COMMAND ARG ...]
   nomo-read.sh edit --root ABSOLUTE_DIRECTORY --state FRESH_PRIVATE_DIRECTORY --id ID --path FILE --target TEXT --replacement TEXT [--check COMMAND ARG ...]
   nomo-read.sh edit --root ABSOLUTE_DIRECTORY --state FRESH_PRIVATE_DIRECTORY --id ID --path FILE --once TASK [--check COMMAND ARG ...]
@@ -54,6 +58,7 @@ HELP
 }
 if [[ $# -eq 0 || ( $# -eq 1 && ( "$1" == help || "$1" == --help ) ) ]]; then usage; exit 0; fi
 action="$1"; shift
+if [[ "$action" == session-id ]]; then exec python3 "$root/scripts/nomo-session-id.py" "$@"; fi
 if [[ "$action" == session-new || "$action" == session-continue || "$action" == session-status ]]; then
     if [[ "$action" == session-new ]]; then mode=new; elif [[ "$action" == session-continue ]]; then mode=continue; else mode=status; fi
     exec python3 "$root/scripts/nomo-read-session.py" "$mode" "$@"
