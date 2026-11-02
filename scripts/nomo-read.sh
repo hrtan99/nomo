@@ -8,6 +8,7 @@ usage() {
 Usage:
   nomo-read.sh ask  --root ABSOLUTE_DIRECTORY --allow FILE[,FILE] --once QUESTION
   nomo-read.sh chat --root ABSOLUTE_DIRECTORY --allow FILE[,FILE]
+  nomo-read.sh edit --root ABSOLUTE_DIRECTORY --state FRESH_PRIVATE_DIRECTORY --id ID --path FILE --target TEXT --replacement TEXT
 
 Select one or two relative files in the read-only directory. Set
 NOMO_READ_MODEL_BASE_URL to the reachable Qwen OpenAI-compatible endpoint and
@@ -22,6 +23,7 @@ HELP
 }
 if [[ $# -eq 0 || ( $# -eq 1 && ( "$1" == help || "$1" == --help ) ) ]]; then usage; exit 0; fi
 action="$1"; shift
+if [[ "$action" == edit ]]; then exec python3 "$root/scripts/nomo-edit.py" "$@"; fi
 if [[ "$action" != ask && "$action" != chat ]]; then usage >&2; exit 64; fi
 if [[ $# -lt 4 || "$1" != --root || "$3" != --allow ]]; then usage >&2; exit 64; fi
 selected="$2"; allowed="$4"; shift 4
