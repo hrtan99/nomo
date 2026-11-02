@@ -138,6 +138,53 @@ def run_owned(command, env):
             signal.signal(number, handler)
 
 
+
+def prepare_project_check(root, check):
+    """Prepare a user-selected check without opening an edit operation store."""
+    workspace = directory(root, 'workspace')
+    info = workspace.stat()
+    if info.st_uid != os.getuid() or stat.S_IMODE(info.st_mode) & 0o077:
+        raise ValueError('workspace must be owned by you and inaccessible to other users')
+    if not check or not check[0]:
+        raise ValueError('provide a check command')
+    version = os.environ.get('NOMO_ETAS_VERSION', '0.2.2')
+    if version not in ('0.2.2', '0.2.3'):
+        raise ValueError('NOMO_ETAS_VERSION must be 0.2.2 or 0.2.3')
+    overlay = 'config/etas-022-official-compose.yaml' if version == '0.2.2' else 'config/etas-023-official-compose.yaml'
+    env = {key: value for key, value in os.environ.items()
+           if not key.startswith('ETAS_HOST_') and key not in
+           ('NOMO_READ_MODEL_BASE_URL', 'NOMO_QWEN_SERVER_API_KEY', 'NOMO_READ_MODEL_NAME')}
+    env['NOMO_EDIT_WORKSPACE_DIR'] = str(workspace)
+    command = [sys.executable, str(ROOT / 'scripts/terminal-transport.py'),
+               'docker', 'compose', '--env-file', '/dev/null', '--file', str(ROOT / 'compose.yaml'),
+               '--file', str(ROOT / overlay), '--file', str(ROOT / 'config/nomo-project-check-compose.yaml'),
+               'run', '--rm', '--no-deps', '--pull', 'never', '--tty=false',
+               '--workdir', '/edit-fixture', 'dev', '/usr/bin/timeout',
+               '--signal=TERM', '--kill-after=2s', '60s', *check]
+    return command, env
+
+
+def project_check_main(argv):
+    parser = argparse.ArgumentParser(description='Run a selected offline check in a private workspace.',
+                                     epilog='Checks can modify the workspace. They do not establish an edit or session outcome.')
+    parser.add_argument('--root', required=True)
+    parser.add_argument('command', nargs=argparse.REMAINDER, help='check command and arguments after --')
+    args = parser.parse_args(argv)
+    check = args.command[1:] if args.command[:1] == ['--'] else args.command
+    try:
+        command, env = prepare_project_check(args.root, check)
+    except (OSError, ValueError) as error:
+        print('Cannot start check: ' + str(error), file=sys.stderr)
+        return 64
+    print('Running the requested check in the workspace (60-second limit).', flush=True)
+    result = run_owned(command, env)
+    if result:
+        print('Check failed or could not be completed (exit ' + str(result) + ').', file=sys.stderr, flush=True)
+        return result
+    print('Check passed.', flush=True)
+    return 0
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description='Edit one file in an exclusive private workspace with preview and confirmation.', epilog='Use an exclusive workspace without symlinks or concurrent writers. State must be a separate empty mode-0700 directory; preserve it after an uncertain result.')
     parser.add_argument('--root', required=True)
@@ -172,4 +219,4 @@ def main(argv=None):
 
 
 if __name__ == '__main__':
-    raise SystemExit(main())
+    raise SystemExit(project_check_main(sys.argv[2:]) if sys.argv[1:2] == ['--check-only'] else main())

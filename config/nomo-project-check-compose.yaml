@@ -1,0 +1,20 @@
+# Standalone checks get no operation store or model configuration.
+services:
+  dev:
+    network_mode: none
+    environment:
+      PYTHONDONTWRITEBYTECODE: "1"
+    volumes:
+      - type: bind
+        source: .
+        target: /workspace
+        read_only: true
+      - type: volume
+        source: cargo-cache
+        target: /home/nomo/.cargo
+        read_only: true
+      - type: bind
+        source: "${NOMO_EDIT_WORKSPACE_DIR:?explicit private workspace required}"
+        target: /edit-fixture
+        bind:
+          create_host_path: false
