@@ -2,10 +2,12 @@
 """Launch the existing confirmed edit flow for an exclusive private workspace."""
 import argparse
 import os
+import signal
 from pathlib import Path
 import stat
 import subprocess
 import sys
+import time
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -68,6 +70,58 @@ def prepare(args, stdin_tty, stdout_tty):
     return command, check, env
 
 
+def run_owned(command, env):
+    """Forward interruption and wait for the owned terminal helper's cleanup."""
+    requested = [0, 0.0]
+    child = None
+    forwarded = False
+    old = {}
+
+    def interrupted(number, _frame):
+        if not requested[0]:
+            requested[:] = [number, time.monotonic()]
+
+    try:
+        for number in (signal.SIGINT, signal.SIGTERM):
+            old[number] = signal.signal(number, interrupted)
+        if requested[0]:
+            return 128 + requested[0]
+        child = subprocess.Popen(command, env=env, start_new_session=True)
+        while child.poll() is None:
+            if requested[0] and not forwarded:
+                try:
+                    os.killpg(child.pid, requested[0])
+                except ProcessLookupError:
+                    pass
+                except OSError:
+                    print('Terminal cleanup is unconfirmed; inspect the operation before continuing.', file=sys.stderr, flush=True)
+                    return 125
+                forwarded = True
+            if requested[0] and time.monotonic() - requested[1] > 18:
+                try:
+                    os.killpg(child.pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+                except OSError:
+                    print('Terminal cleanup is unconfirmed; inspect the operation before continuing.', file=sys.stderr, flush=True)
+                    return 125
+                try:
+                    child.wait(timeout=3)
+                except subprocess.TimeoutExpired:
+                    pass
+                print('Terminal cleanup is unconfirmed; inspect the operation before continuing.', file=sys.stderr, flush=True)
+                return 125
+            time.sleep(.05)
+        code = child.returncode
+        if code == 125 or code < 0:
+            print('Terminal cleanup is unconfirmed; inspect the operation before continuing.', file=sys.stderr, flush=True)
+            return 125
+        return 128 + requested[0] if requested[0] else code
+    finally:
+        for number, handler in old.items():
+            signal.signal(number, handler)
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description='Edit one file in an exclusive private workspace with preview and confirmation.', epilog='Use an exclusive workspace without symlinks or concurrent writers. State must be a separate empty mode-0700 directory; preserve it after an uncertain result.')
     parser.add_argument('--root', required=True)
@@ -85,17 +139,17 @@ def main(argv=None):
     except (OSError, ValueError) as error:
         print('Cannot start edit: ' + str(error), file=sys.stderr)
         return 64
-    edited = subprocess.run(command, env=env, check=False)
-    if edited.returncode != 0:
-        return edited.returncode
+    edited = run_owned(command, env)
+    if edited != 0:
+        return edited
     if not check:
         print('Edit completed; no check was requested.', flush=True)
         return 0
     print('Running the requested check in the edited workspace (60-second limit).', flush=True)
-    checked = subprocess.run(check, env=env, check=False)
-    if checked.returncode != 0:
-        print('Check failed or could not be completed (exit ' + str(checked.returncode) + ').', file=sys.stderr, flush=True)
-        return checked.returncode if checked.returncode > 0 else 1
+    checked = run_owned(check, env)
+    if checked != 0:
+        print('Check failed or could not be completed (exit ' + str(checked) + ').', file=sys.stderr, flush=True)
+        return checked
     print('Check passed.', flush=True)
     return 0
 

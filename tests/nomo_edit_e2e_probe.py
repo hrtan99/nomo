@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parent.parent
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--evidence-dir', required=True, type=Path)
-    parser.add_argument('--scenario', choices=('applied', 'denied', 'changed', 'checkfail', 'state_immutable', 'checktimeout'), default='applied')
+    parser.add_argument('--scenario', choices=('applied', 'denied', 'changed', 'checkfail', 'state_immutable', 'checktimeout', 'cancel_preview', 'cancel_check'), default='applied')
     args = parser.parse_args()
     args.evidence_dir.mkdir(parents=True, exist_ok=True)
     out = Path(tempfile.mkdtemp(prefix='edit-entry-e2e-', dir=args.evidence_dir))
@@ -29,6 +29,7 @@ def main():
     check = ('echo tamper > /state/edit.sqlite3' if args.scenario == 'state_immutable' else
              'exit 7' if args.scenario == 'checkfail' else
              'sleep 80' if args.scenario == 'checktimeout' else
+             'touch check-started; sleep 80' if args.scenario == 'cancel_check' else
              'test "$(cat note.txt)" = "before new"')
     command = [str(ROOT / 'scripts/nomo-read.sh'), 'edit', '--root', str(workspace), '--state', str(state),
                '--id', 'owned-edit', '--path', 'note.txt', '--target', 'old', '--replacement', 'new',
@@ -61,7 +62,13 @@ def main():
                 gates.add('application')
                 if args.scenario == 'changed':
                     (workspace / 'note.txt').write_text('external change\n')
-                os.write(master, b'no\n' if args.scenario == 'denied' else b'yes\n')
+                if args.scenario == 'cancel_preview':
+                    proc.send_signal(signal.SIGTERM)
+                else:
+                    os.write(master, b'no\n' if args.scenario == 'denied' else b'yes\n')
+            if args.scenario == 'cancel_check' and (workspace / 'check-started').exists() and 'cancelled' not in gates:
+                gates.add('cancelled')
+                proc.send_signal(signal.SIGTERM)
         while select.select([master], [], [], 0)[0]:
             try:
                 chunk = os.read(master, 65536)
@@ -71,12 +78,19 @@ def main():
                 break
             output.extend(chunk)
         result.update(exit=proc.returncode, gates=sorted(gates), file=(workspace / 'note.txt').read_text())
-        assert gates == {'native', 'application'}
+        assert gates == ({'native', 'application', 'cancelled'} if args.scenario == 'cancel_check' else {'native', 'application'})
         assert b'PREVIEW ' in output and b'DIFF ' in output
         if args.scenario == 'applied':
             assert proc.returncode == 0
             assert b'INTENT durable owned-edit' in output and b'APPLIED owned-edit' in output
             assert result['file'] == 'before new\n' and b'Check passed.' in output
+        elif args.scenario == 'cancel_preview':
+            assert proc.returncode in (125, 143) and b'INTENT durable owned-edit' not in output
+            assert b'Running the requested check' not in output and result['file'] == 'before old\n'
+        elif args.scenario == 'cancel_check':
+            assert proc.returncode in (125, 143) and b'APPLIED owned-edit' in output
+            assert ('Check failed or could not be completed (exit ' + str(proc.returncode) + ').').encode() in output
+            assert result['file'] == 'before new\n'
         elif args.scenario == 'state_immutable':
             assert proc.returncode != 0 and b'APPLIED owned-edit' in output
             assert b'Check failed or could not be completed' in output
@@ -100,6 +114,20 @@ def main():
             assert b'Running the requested check' not in output
             assert proc.returncode != 0 and b'INTENT durable owned-edit' in output
             assert b'APPLIED owned-edit' not in output and result['file'] == 'external change\n'
+        if args.scenario in ('cancel_preview', 'cancel_check'):
+            result['cleanup_status'] = 'unconfirmed' if proc.returncode == 125 else 'helper-confirmed'
+            if proc.returncode == 125:
+                assert b'Terminal cleanup is unconfirmed' in output
+        listing = subprocess.run(['docker','ps','-aq','--filter','label=nomo.terminal.invocation'], capture_output=True, text=True, timeout=5, check=True)
+        for identifier in listing.stdout.split():
+            inspected = subprocess.run(['docker','inspect','--format','{{json .Mounts}}',identifier], capture_output=True, text=True, timeout=5)
+            if inspected.returncode != 0:
+                assert 'No such' in inspected.stderr
+                continue
+            mounts = {item['Destination']: item for item in json.loads(inspected.stdout)}
+            selected = mounts.get('/edit-fixture', {}).get('Source')
+            assert selected not in (str(workspace), '/host_mnt' + str(workspace)), 'owned edit container still exists'
+        result['matching_container_absent'] = True
         result['status'] = 'passed'
     except BaseException as error:
         result['failure_type'] = type(error).__name__
