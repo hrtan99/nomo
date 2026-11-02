@@ -185,6 +185,61 @@ def project_check_main(argv):
     return 0
 
 
+
+def prepare_edit_status(state_path, operation_id, path):
+    """Inspect an existing operation record without reopening the workspace."""
+    state = directory(state_path, 'state')
+    info = state.stat()
+    if info.st_uid != os.getuid() or stat.S_IMODE(info.st_mode) != 0o700:
+        raise ValueError('state must be owned by you with mode 0700')
+    if not operation_id or not path:
+        raise ValueError('id and path must be nonempty')
+    for suffix in ('', '-wal', '-shm', '-journal'):
+        entry = state / ('edit.sqlite3' + suffix)
+        if entry.is_symlink():
+            raise ValueError('state database and sidecars must not be symlinks')
+        if entry.exists() and (not entry.is_file() or entry.stat().st_nlink != 1):
+            raise ValueError('state database and sidecars must be regular files without hardlinks')
+    if not (state / 'edit.sqlite3').is_file():
+        raise ValueError('existing edit.sqlite3 required')
+    version = os.environ.get('NOMO_ETAS_VERSION', '0.2.2')
+    if version not in ('0.2.2', '0.2.3'):
+        raise ValueError('NOMO_ETAS_VERSION must be 0.2.2 or 0.2.3')
+    cache = ROOT / '.etas'
+    if cache.is_symlink():
+        raise ValueError('project .etas mountpoint must not be a symlink')
+    cache.mkdir(mode=0o700, exist_ok=True)
+    env = {key: value for key, value in os.environ.items()
+           if not key.startswith('ETAS_HOST_') and key not in
+           ('NOMO_READ_MODEL_BASE_URL', 'NOMO_QWEN_SERVER_API_KEY', 'NOMO_READ_MODEL_NAME')}
+    env['NOMO_EDIT_STATE_DIR'] = str(state)
+    overlay = 'config/etas-022-official-compose.yaml' if version == '0.2.2' else 'config/etas-023-official-compose.yaml'
+    command = [sys.executable, str(ROOT / 'scripts/terminal-transport.py'),
+               'docker', 'compose', '--env-file', '/dev/null', '--file', str(ROOT / 'compose.yaml'),
+               '--file', str(ROOT / overlay), '--file', str(ROOT / 'config/etas-runtime-cache-compose.yaml'),
+               '--file', str(ROOT / 'config/nomo-edit-status-compose.yaml'),
+               'run', '--rm', '--no-deps', '--pull', 'never', '--tty=false', 'dev',
+               'python3', '-B', '/workspace/scripts/nomo-verified-etas.py', 'run', '/workspace',
+               '--flow', 'edit_status', '--profile', 'edit-status', '--allow-effects', '--args',
+               '--id', operation_id, '--workspace', 'private-workspace', '--path', path]
+    return command, env
+
+
+def edit_status_main(argv):
+    parser = argparse.ArgumentParser(description='Show the recorded status of an edit in its private operation state.',
+                                     epilog='Use only when the operation is no longer running. SQLite opens the state read-write for bookkeeping. This does not inspect the current workspace file or retry an edit.')
+    parser.add_argument('--state', required=True)
+    parser.add_argument('--id', required=True)
+    parser.add_argument('--path', required=True)
+    args = parser.parse_args(argv)
+    try:
+        command, env = prepare_edit_status(args.state, args.id, args.path)
+    except (OSError, ValueError) as error:
+        print('Cannot show edit status: ' + str(error), file=sys.stderr)
+        return 64
+    return run_owned(command, env)
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description='Edit one file in an exclusive private workspace with preview and confirmation.', epilog='Use an exclusive workspace without symlinks or concurrent writers. State must be a separate empty mode-0700 directory; preserve it after an uncertain result.')
     parser.add_argument('--root', required=True)
@@ -219,4 +274,8 @@ def main(argv=None):
 
 
 if __name__ == '__main__':
-    raise SystemExit(project_check_main(sys.argv[2:]) if sys.argv[1:2] == ['--check-only'] else main())
+    if sys.argv[1:2] == ['--check-only']:
+        raise SystemExit(project_check_main(sys.argv[2:]))
+    if sys.argv[1:2] == ['--status-only']:
+        raise SystemExit(edit_status_main(sys.argv[2:]))
+    raise SystemExit(main())

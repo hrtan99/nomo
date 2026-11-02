@@ -1,0 +1,21 @@
+# The SQLite backend needs a writable operation directory even for Memory.read.
+services:
+  dev:
+    network_mode: none
+    working_dir: /state
+    environment:
+      PYTHONDONTWRITEBYTECODE: "1"
+    volumes:
+      - type: bind
+        source: .
+        target: /workspace
+        read_only: true
+      - type: volume
+        source: cargo-cache
+        target: /home/nomo/.cargo
+        read_only: true
+      - type: bind
+        source: "${NOMO_EDIT_STATE_DIR:?explicit private operation state required}"
+        target: /state
+        bind:
+          create_host_path: false

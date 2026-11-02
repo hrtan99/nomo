@@ -11,6 +11,7 @@ Usage:
   nomo-read.sh edit --root ABSOLUTE_DIRECTORY --state FRESH_PRIVATE_DIRECTORY --id ID --path FILE --target TEXT --replacement TEXT [--check COMMAND ARG ...]
   nomo-read.sh edit --root ABSOLUTE_DIRECTORY --state FRESH_PRIVATE_DIRECTORY --id ID --path FILE --once TASK [--check COMMAND ARG ...]
   nomo-read.sh check --root ABSOLUTE_DIRECTORY -- COMMAND [ARG ...]
+  nomo-read.sh edit-status --state PRIVATE_DIRECTORY --id ID --path FILE
   nomo-read.sh resume --id SESSION_ID  (not available yet)
 
 Select one or two relative files in the read-only directory. Set
@@ -25,6 +26,8 @@ Questions require 1..128 safe UTF-8 bytes; /help shows all bounds
 and /exit ends chat. Successful completion does not verify factual accuracy.
 Model editing sends the selected file and task to the configured model.
 Checks run offline and may modify the selected private workspace.
+Edit status is recorded data only; it does not inspect the current file.
+Use status only after the operation stops; SQLite may update state bookkeeping.
 HELP
 }
 if [[ $# -eq 0 || ( $# -eq 1 && ( "$1" == help || "$1" == --help ) ) ]]; then usage; exit 0; fi
@@ -33,6 +36,7 @@ if [[ "$action" == resume ]]; then
     echo 'Session resume is not available yet.' >&2
     exit 1
 fi
+if [[ "$action" == edit-status ]]; then exec python3 "$root/scripts/nomo-edit.py" --status-only "$@"; fi
 if [[ "$action" == check ]]; then exec python3 "$root/scripts/nomo-edit.py" --check-only "$@"; fi
 if [[ "$action" == edit ]]; then exec python3 "$root/scripts/nomo-edit.py" "$@"; fi
 if [[ "$action" != ask && "$action" != chat ]]; then usage >&2; exit 64; fi
