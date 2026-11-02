@@ -23,6 +23,7 @@ from normal_graph_identity import verify_cli
 ROOT = Path(__file__).resolve().parent.parent
 REGION = 'nomo.tools.edit_file.EditableRoot'
 PROMPT = b'CONFIRM Apply this exact preview? [y/N]'
+MODE_WARNING = b'WARNING File permissions, including executable bits, may change during this edit.\n'
 POLICY_ENV = ['ETAS_HOST_POLICY','ETAS_HOST_POLICY_RULES','ETAS_HOST_POLICY_URL','ETAS_HOST_POLICY_TOKEN',
               'ETAS_HOST_POLICY_PATH','ETAS_HOST_POLICY_ALLOW_PRIVATE','ETAS_HOST_POLICY_RETRY_ATTEMPTS',
               'ETAS_HOST_POLICY_RETRY_DELAY_MS','ETAS_HOST_BOUNDARY_POLICY','ETAS_HOST_APPROVAL',
@@ -104,6 +105,7 @@ def run_pty(argv, state, item, folder, binding, preview_check=None, failure_outp
                 if fd==master:out+=raw
                 else:err+=raw
             if b'Type `yes` to approve:' in err and not native:
+                assert MODE_WARNING in out, 'native prompt preceded file permission warning'
                 if preview_check is None:
                     assert expected(item)[1].encode() in out, 'native prompt preceded complete exact preview'
                 else:
@@ -196,6 +198,7 @@ def main():
             record=dict(name=name,status='observed',item=item,argv=argv,exit=code,stdout=out.decode(),stderr=err.decode(),milestones=milestones,effective_profile=effective)
             result['cases'].append(record);save()
             assert preview.encode() in out and all(32<=byte<=126 for byte in out.split(b'\n')[0]), 'preview not complete printable ASCII'
+            assert out.count(MODE_WARNING)==1 and out.index(preview.encode()) < out.index(MODE_WARNING), 'missing or misplaced file permission warning'
             success=name in ['applied','boundary','deletion'];current=(workspace/item['path']).read_bytes();journal=rows(state)
             assert (code==0)==success and (b'APPLIED '+item['id'].encode() in out)==success
             if success:assert current==item['after'].encode() and journal['operation']['value']==dict(format=1,phase='completed',binding=binding)

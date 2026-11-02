@@ -38,6 +38,7 @@ public flow confirm_current(selector: Selector, prepared: Prepared) -> Result<Bi
     let readable = match render(prepared.proposal.before, prepared.proposal.after) { Ok(value) => value, Err(error) => { return Err(error); } };
     println("PREVIEW " + shown);
     println("DIFF request=" + selected.request_digest + "\n" + readable);
+    println("WARNING File permissions, including executable bits, may change during this edit.");
     println("CONFIRM Native gate requires yes; then confirm this request with y/yes.");
     let approved = perform Approval.request("Nomo edit " + selector.id + " request=" + selected.request_digest);
     if !approved { return Err("native approval denied; no intent or File write"); }
