@@ -66,6 +66,44 @@ class SessionChatTest(unittest.TestCase):
             self.assertEqual(calls.call_count, 1)
             self.assertIn('inspect session status', err)
 
+    def test_status_and_explicit_work_with_check(self):
+        line = '/status\n/work op1 "/tmp/edit dir" file.txt "change this" --check python3 -m pytest\n/exit\n'
+        code, _, _, calls = self.run_chat(line, codes=(0, 0))
+        self.assertEqual(code, 0)
+        status, work = [c.args[0] for c in calls.call_args_list]
+        self.assertIn('status', status)
+        self.assertIn('work', work)
+        self.assertEqual(work[work.index('--root') + 1], '/tmp/edit dir')
+        self.assertIn('--operation-id=op1', work)
+        self.assertIn('--path=file.txt', work)
+        self.assertIn('--once=change this', work)
+        self.assertEqual(work[-4:], ['--check', 'python3', '-m', 'pytest'])
+
+    def test_bad_work_syntax_never_launches(self):
+        code, _, err, calls = self.run_chat('/work missing\n/work op /tmp f "unclosed\n/work op /tmp f task --check\n/exit\n')
+        self.assertEqual(code, 0)
+        self.assertIn('REFUSED', err)
+        calls.assert_not_called()
+
+    def test_work_failure_stops_and_once_is_not_command(self):
+        code, _, err, calls = self.run_chat('/work op /tmp f task\nsecond\n', codes=(1,))
+        self.assertEqual(code, 1)
+        self.assertIn('inspect session status', err)
+        self.assertEqual(calls.call_count, 1)
+        code, _, _, calls = self.run_chat('', tty=False, once='/work op /tmp f task')
+        self.assertEqual(code, 0)
+        self.assertIn('resume', calls.call_args.args[0])
+        self.assertNotIn('work', calls.call_args.args[0])
+
+    def test_option_like_allow_and_work_values_are_single_arguments(self):
+        self.args[-2:] = ['--allow=-context']
+        code, _, _, calls = self.run_chat('/work -n /tmp -file "task"\n/exit\n')
+        self.assertEqual(code, 0)
+        command = calls.call_args.args[0]
+        self.assertIn('--operation-id=-n', command)
+        self.assertIn('--path=-file', command)
+        self.assertIn('--allow=-context', command)
+
 
 if __name__ == '__main__':
     unittest.main()

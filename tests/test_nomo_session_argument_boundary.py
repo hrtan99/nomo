@@ -13,6 +13,34 @@ spec.loader.exec_module(module)
 
 
 class ArgumentBoundaryTest(unittest.TestCase):
+    def test_option_like_ids_paths_and_allowlists_reach_child_parsers(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            identifier = '2' * 32
+            (Path(tmp) / identifier).mkdir(mode=0o700)
+            for action in ('resume', 'work', 'decision'):
+                args = [action, '--sessions-dir', tmp, '--id', identifier]
+                if action == 'resume':
+                    args += ['--root', '/tmp', '--allow=-context', '--once=hello']
+                elif action == 'work':
+                    args += ['--read-root', '/tmp', '--root', '/tmp', '--allow=-context', '--operation-id=-n', '--path=-file', '--once=hello']
+                else:
+                    args += ['--operation-id=-n', '--target', 'work']
+                def launch(command, env):
+                    if action in ('resume', 'work'):
+                        self.assertIn('--allow=-context', command)
+                    if action in ('work', 'decision'):
+                        self.assertIn('--id=-n', command)
+                    if action == 'work':
+                        self.assertIn('--path=-file', command)
+                    result = subprocess.run(command, env=dict(env, MINIMAX_API_KEY='local-test-placeholder'),
+                                            text=True, capture_output=True, timeout=10)
+                    self.assertEqual(result.returncode, 1, result.stderr)
+                    self.assertIn('REFUSED', result.stdout + result.stderr)
+                    self.assertNotIn('usage:', result.stderr)
+                    return 0
+                with self.subTest(action=action), patch.object(module._edit, 'run_owned', side_effect=launch):
+                    self.assertEqual(module.main(args), 0)
+
     def test_child_parsers_receive_option_like_and_unicode_values(self):
         with tempfile.TemporaryDirectory() as tmp:
             base = Path(tmp)

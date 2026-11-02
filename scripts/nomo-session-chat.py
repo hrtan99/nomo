@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""A read-only terminal loop over an existing ID-addressed session."""
+"""A terminal loop over an existing ID-addressed session."""
 import argparse
 import importlib.util
 import os
@@ -27,13 +27,13 @@ def main(argv=None):
         return 64
     prefix = [sys.executable, str(ROOT / 'scripts/nomo-session-id.py'), 'resume',
               '--sessions-dir', args.sessions_dir, '--id', args.id, '--root', args.root,
-              '--allow', args.allow]
+              '--allow=' + args.allow]
     print('SESSION ID ' + args.id, flush=True)
-    print('Read-only session; editing and checks use separate commands.', flush=True)
+    print('Read turns and explicit one-shot work use this session; work requires fresh confirmations.', flush=True)
     print('Resume: nomo-read.sh session-id resume --sessions-dir ' + shlex.quote(args.sessions_dir)
           + ' --id ' + shlex.quote(args.id) + ' --root DIR --allow FILE --once QUESTION', flush=True)
     if tty and args.once is None:
-        print('Enter a question, /help or /exit.', flush=True)
+        print('Enter a question, /help, /status, /work or /exit.', flush=True)
     while True:
         if args.once is not None:
             question = args.once
@@ -49,7 +49,35 @@ def main(argv=None):
             if question == '/exit':
                 return 0
             if question == '/help':
-                print('Read-only turns use the selected root and allowlist. /exit leaves the session.')
+                print('Read turns use the selected root and allowlist. /status inspects recorded state.')
+                print('/work OP_ID EDIT_ROOT PATH "TASK" [--check COMMAND ARG ...] runs one explicitly confirmed work operation.')
+                print('Quote arguments containing spaces. No shell interprets the check arguments. /exit leaves the session.')
+                continue
+            if question == '/status':
+                command = [sys.executable, str(ROOT / 'scripts/nomo-session-id.py'), 'status',
+                           '--sessions-dir', args.sessions_dir, '--id', args.id]
+                code = edit.run_owned(command, dict(os.environ))
+                if code:
+                    print('Status failed; inspect session state before continuing.', file=sys.stderr, flush=True)
+                    return code
+                continue
+            if question == '/work' or question.startswith('/work '):
+                try:
+                    words = shlex.split(question)
+                    if len(words) < 5 or (len(words) > 5 and (words[5] != '--check' or len(words) == 6)):
+                        raise ValueError('expected /work OP_ID EDIT_ROOT PATH "TASK" [--check COMMAND ARG ...]')
+                    command = [sys.executable, str(ROOT / 'scripts/nomo-session-id.py'), 'work',
+                               '--sessions-dir', args.sessions_dir, '--id', args.id,
+                               '--read-root', args.root, '--root', words[2], '--operation-id=' + words[1],
+                               '--path=' + words[3], '--allow=' + args.allow, '--once=' + words[4], *words[5:]]
+                except ValueError as error:
+                    print('REFUSED ' + str(error), file=sys.stderr, flush=True)
+                    continue
+                print('Work uses the selected read root, explicit edit root, and new confirmations.', flush=True)
+                code = edit.run_owned(command, dict(os.environ))
+                if code:
+                    print('Work stopped; inspect session status before continuing.', file=sys.stderr, flush=True)
+                    return code
                 continue
         if not question.strip():
             print('Enter a non-empty question.', file=sys.stderr)
