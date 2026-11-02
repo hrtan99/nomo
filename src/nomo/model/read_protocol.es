@@ -3,6 +3,8 @@ module nomo.model.read_protocol;
 import std.text.{len, split};
 import std.collections.len as count;
 import std.json.parse;
+import std.codec.text.utf8_encode;
+import std.bytes.len as byte_count;
 import std.agent.message.Message;
 import nomo.core.read_text.{safe, bounded};
 import nomo.model.model_tool_contract.{Action, allowed_error, read_selection_error};
@@ -14,15 +16,16 @@ public flow question_error(raw: string) -> string {
 // This protocol is scoped to the new non-durable read-only entry. Limits are
 // UTF-8 bytes, including serialized JSON, rather than just scalar counts.
 flow frame(raw: string, maximum: usize) -> bool {
-    if raw == "" || !safe(raw, maximum) { return false; }
+    if raw == "" || maximum == 0 || maximum > 2048 || len(raw) > maximum || byte_count(utf8_encode(raw)) > maximum { return false; }
     var opened = false; var closed = false; var quoted = false; var escaped = false;
     var leaves: usize = 0; let slash = split("\\/", "")[1];
     for character in split(raw, "") limit Iterations(1154) {
         if quoted {
+            if character != "" && !safe(character, maximum) { return false; }
             if escaped { escaped = false; }
             else if character == slash { escaped = true; }
             else if character == "\"" { quoted = false; }
-        } else if character == "" || character == " " {
+        } else if character == "" || character == " " || character == "\n" || character == "\r" || character == "\t" {
         } else if character == "[" {
             if opened || closed { return false; } opened = true;
         } else if character == "]" {
@@ -36,7 +39,7 @@ flow frame(raw: string, maximum: usize) -> bool {
 }
 
 flow fields(raw: string, maximum: usize) -> Result<Array<string>, string> {
-    if !frame(raw, maximum) { return Err("expected bounded flat single-line JSON string array"); }
+    if !frame(raw, maximum) { return Err("expected bounded flat JSON string array"); }
     let value = match parse(raw) { Ok(item) => item, Err(_) => { return Err("invalid JSON"); } };
     let converted: Option<Message<Array<string>>> = Message.new(value).cast<Array<string>>();
     return match converted { Some(item) => Ok(item.body), None() => Err("expected string fields") };

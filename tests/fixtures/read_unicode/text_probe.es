@@ -92,6 +92,20 @@ public flow read_unicode_text_probe(args: Array<string>) -> i32 {
         Ok(value) => { if value.text != "内容是蓝色" { abort("child answer changed"); } }
         Err(_) => { abort("Unicode child answer refused"); }
     }
+    match decode_child("[\n \"final\",\n \"内容是蓝色\"\n]", ["sample.txt"], true) {
+        Ok(value) => { if value.text != "内容是蓝色" { abort("formatted child answer changed"); } }
+        Err(_) => { abort("formatted child answer refused"); }
+    }
+    match decode_plan("[\n \"delegate\",\t \"请读取文件\"\r\n]") {
+        Ok(value) => { if value != "请读取文件" { abort("formatted delegation changed"); } }
+        Err(_) => { abort("formatted delegation refused"); }
+    }
+    match decode_child("[\"final\",\"one\nline\"]", ["sample.txt"], true) {
+        Ok(_) => { abort("literal newline inside string accepted"); } Err(_) => {}
+    }
+    match decode_child("[\"final\",\"one" + split("\\/", "")[1] + "nline\"]", ["sample.txt"], true) {
+        Ok(_) => { abort("escaped newline in answer accepted"); } Err(_) => {}
+    }
     match decode_child("[\"read\",\"other.txt\"]", ["sample.txt"], false) {
         Ok(_) => { abort("unallowed path accepted"); } Err(_) => {}
     }

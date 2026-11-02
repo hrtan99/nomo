@@ -159,12 +159,14 @@ flow harness_model_tools_chat(args: Array<string>) -> i32 {
 
 flow read_model_tools_chat(args: Array<string>) -> i32 {
     let status = run_read_model_tools_chat(args);
-    return status;
+    if status != 0 { abort("Nomo read chat refused; see REFUSED or STOP output"); }
+    return 0;
 }
 
 flow read_model_tools(args: Array<string>) -> i32 {
     let status = run_read_model_tools(args);
-    return status;
+    if status != 0 { abort("Nomo read request refused; see REFUSED output"); }
+    return 0;
 }
 
 flow harness_model_tools(args: Array<string>) -> i32 {
