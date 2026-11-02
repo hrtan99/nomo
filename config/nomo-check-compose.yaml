@@ -1,0 +1,10 @@
+# Checks may inspect the operation record but cannot change it.
+services:
+  dev:
+    volumes:
+      - type: bind
+        source: "${NOMO_EDIT_STATE_DIR:?explicit operation store required}"
+        target: /state
+        read_only: true
+        bind:
+          create_host_path: false

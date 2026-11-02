@@ -44,6 +44,7 @@ class EditLauncherTests(unittest.TestCase):
     def test_requested_check_is_bounded_and_runs_in_selected_workspace(self):
         self.args.check = ['python3', '-m', 'unittest']
         _, check, _ = module.prepare(self.args, True, True)
+        self.assertIn(str(self.project / 'config/nomo-check-compose.yaml'), check)
         self.assertIn('--tty=false', check)
         self.assertEqual(check[check.index('--workdir') + 1], '/edit-fixture')
         self.assertEqual(check[-4:], ['60s', 'python3', '-m', 'unittest'])

@@ -62,7 +62,7 @@ def prepare(args, stdin_tty, stdout_tty):
     check = None
     if args.check:
         check = [sys.executable, str(ROOT / 'scripts/terminal-transport.py'), *compose,
-                 'run', '--rm', '--no-deps', '--pull', 'never', '--tty=false',
+                 '--file', str(ROOT / 'config/nomo-check-compose.yaml'), 'run', '--rm', '--no-deps', '--pull', 'never', '--tty=false',
                  '--workdir', '/edit-fixture', 'dev', '/usr/bin/timeout',
                  '--signal=TERM', '--kill-after=2s', '60s', *args.check]
     return command, check, env
