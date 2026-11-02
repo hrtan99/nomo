@@ -36,6 +36,10 @@ class Fake(BaseHTTPRequestHandler):
                 text = '["edit","missing","new"]' if self.server.scenario == 'invalid' else '["edit","old","new"]'
             else:
                 assert context['completed'] is True and context['after'] == 'before new\n'
+                if self.server.scenario == 'aggregate_failure':
+                    self.server.phases.append(phase)
+                    self.send_error(500)
+                    return
                 text = 'Edit completed.'
             self.server.phases.append(phase)
             body = json.dumps({'choices': [{'message': {'role': 'assistant', 'content': text}, 'finish_reason': 'stop'}],
@@ -48,7 +52,7 @@ class Fake(BaseHTTPRequestHandler):
 
 def main():
     parser = argparse.ArgumentParser(); parser.add_argument('--evidence-dir', required=True, type=Path)
-    parser.add_argument('--scenario', choices=('applied', 'denied', 'invalid'), default='applied')
+    parser.add_argument('--scenario', choices=('applied', 'denied', 'invalid', 'aggregate_failure'), default='applied')
     args = parser.parse_args(); args.evidence_dir.mkdir(parents=True, exist_ok=True)
     out = Path(tempfile.mkdtemp(prefix='model-edit-', dir=args.evidence_dir))
     workspace, state = out/'workspace', out/'state'
@@ -87,6 +91,24 @@ def main():
             assert proc.returncode == 0 and server.phases == ['plan', 'child', 'aggregate']
             assert gates == {'native', 'application'} and result['file'] == 'before new\n'
             assert b'APPLIED owned-edit' in output and b'FINAL ' in output and b'Check passed.' in output
+        elif args.scenario == 'aggregate_failure':
+            assert proc.returncode != 0 and server.phases == ['plan', 'child', 'aggregate']
+            assert gates == {'native', 'application'} and result['file'] == 'before new\n'
+            assert b'APPLIED owned-edit' in output and b'Running the requested check' not in output
+            import hashlib
+            def state_digest():
+                return {str(p.relative_to(state)): hashlib.sha256(p.read_bytes()).hexdigest()
+                        for p in state.rglob('*') if p.is_file()}
+            before_state = state_digest()
+            standalone = subprocess.run([str(ROOT/'scripts/nomo-read.sh'), 'check', '--root', str(workspace),
+                                         '--', '/bin/sh', '-c', 'test "$(cat note.txt)" = "before new"'],
+                                        stdin=subprocess.DEVNULL, capture_output=True, env=env, timeout=90)
+            (out/'standalone-check.stdout').write_bytes(standalone.stdout)
+            (out/'standalone-check.stderr').write_bytes(standalone.stderr)
+            assert standalone.returncode == 0 and b'Check passed.' in standalone.stdout
+            assert state_digest() == before_state and (workspace/'note.txt').read_text() == 'before new\n'
+            result['standalone_check_exit'] = standalone.returncode
+            result['state_bytes_unchanged_by_check'] = True
         else:
             assert proc.returncode != 0 and server.phases == ['plan', 'child'] and result['file'] == 'before old\n'
             assert b'APPLIED owned-edit' not in output and b'Running the requested check' not in output
