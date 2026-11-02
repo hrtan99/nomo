@@ -58,7 +58,7 @@ flow stage(turn: i32, phase: string, before: Ledger, local: Ledger) -> unit {
 
 // The invocation supplies cumulative usage and a validated successful selection.
 // Fresh local counters are a subledger of the already checked global reservation.
-flow execute(request: string, allowed: Array<string>, prior: Previous, before: Ledger, turn: i32, unicode: bool) -> LocalTurn {
+flow execute(request: string, allowed: Array<string>, prior: Previous, before: Ledger, turn: i32, unicode: bool, private_progress: bool) -> LocalTurn {
     var state = fresh();
     if turn < 1 || turn > 4 || (turn == 1 && prior.task != "") || (turn > 1 && prior.task == "") {
         return refused(state, "invalid turn selection", true);
@@ -74,7 +74,8 @@ flow execute(request: string, allowed: Array<string>, prior: Previous, before: L
     let decoded = if unicode { unicode_decode_plan(raw) } else { decode_plan(raw) };
     let task = match decoded { Ok(value) => value, Err(error) => { return refused(state, error, true); } };
     state = match bump(state, false) { Ok(value) => value, Err(error) => { return refused(state, error, true); } };
-    println("EVENT main -> child-1 request child-1: " + task);
+    if private_progress { println("EVENT main -> child-1 request child-1: [REDACTED]"); }
+    else { println("EVENT main -> child-1 request child-1: " + task); }
     stage(turn, "child", before, state);
     let child = perform LegacyChatStages.child(task, allowed, seed(request, prior));
     let inspected = if unicode { unicode_inspect_turn(child.state, child.status, request, task, allowed, prior) }
@@ -90,10 +91,15 @@ flow execute(request: string, allowed: Array<string>, prior: Previous, before: L
         " released_tools=" + to_string_i32(1 - state.tools) + " released_scan=" + to_string_i32(4096 - state.scan) + " unresolved=false");
     if child.status != 0 { return refused(state, "child returned failure; no aggregation", true); }
     if !(if unicode { unicode_bounded(observed.result, 256) } else { bounded(observed.result, 256) }) { return refused(state, "invalid bounded child result", true); }
-    println("EVENT child-1 -> main result child-1: " + observed.result);
+    if private_progress { println("EVENT child-1 -> main result child-1: [REDACTED]"); }
+    else { println("EVENT child-1 -> main result child-1: " + observed.result); }
     state = match bump(state, false) { Ok(value) => value, Err(error) => { return refused(state, error, true); } };
-    println("EVENT main -> main consume child-1: " + observed.result);
-    if observed.tool != "" { println("EVENT main -> main tool " + observed.tool + ": " + observed.outcome); }
+    if private_progress { println("EVENT main -> main consume child-1: [REDACTED]"); }
+    else { println("EVENT main -> main consume child-1: " + observed.result); }
+    if observed.tool != "" {
+        if private_progress { println("EVENT main -> main tool " + observed.tool + ": [REDACTED]"); }
+        else { println("EVENT main -> main tool " + observed.tool + ": " + observed.outcome); }
+    }
     let aggregate = Context { phase = "aggregate", request = request, task = task, result = observed.result,
         tool = observed.tool, outcome = observed.outcome, allowed = allowed, prior = prior };
     let invalid_aggregate = if unicode { unicode_context_error(aggregate) } else { context_error(aggregate) }; if invalid_aggregate != "" { return refused(state, invalid_aggregate, true); }
@@ -107,7 +113,7 @@ flow execute(request: string, allowed: Array<string>, prior: Previous, before: L
         completed = Some(completed(request, raw, selected, child.state.history)) };
 }
 
-public flow run_shared_turn(request: string, allowed: Array<string>, invocation: Invocation, unicode: bool) -> TurnResult {
+flow run_mode(request: string, allowed: Array<string>, invocation: Invocation, unicode: bool, private_progress: bool) -> TurnResult {
     let extended = unicode && is_extended(invocation.maximum);
     let invalid = if extended { extended_turn_error(invocation) } else { if unicode { unicode_turn_error(invocation) } else { turn_error(invocation) } };
     if invalid != "" { println("REFUSED " + invalid); return TurnResult { status = 1, state = invocation, resolved = true, completed = None() }; }
@@ -116,7 +122,7 @@ public flow run_shared_turn(request: string, allowed: Array<string>, invocation:
         println("REFUSED turn limit reached"); return TurnResult { status = 1, state = invocation, resolved = true, completed = None() };
     }
     let turn = invocation.admitted + 1;
-    let local = execute(request, allowed, invocation.prior, invocation.usage, turn, unicode);
+    let local = execute(request, allowed, invocation.prior, invocation.usage, turn, unicode, private_progress);
     if !local.resolved { return TurnResult { status = 1, state = invocation, resolved = false, completed = None() }; }
     let combined = if extended { extended_combine(invocation.usage, local.usage) } else { combine(invocation.usage, local.usage, invocation.maximum) };
     let usage = match combined {
@@ -124,4 +130,12 @@ public flow run_shared_turn(request: string, allowed: Array<string>, invocation:
     };
     let next = Invocation { usage = usage, maximum = invocation.maximum, admitted = turn, prior = local.selected };
     return TurnResult { status = local.status, state = next, resolved = true, completed = local.completed };
+}
+
+// User-facing final answers are unchanged; progress omits arbitrary tool/task text.
+public flow run_shared_turn(request: string, allowed: Array<string>, invocation: Invocation, unicode: bool) -> TurnResult {
+    return run_mode(request, allowed, invocation, unicode, false);
+}
+public flow run_private_turn(request: string, allowed: Array<string>, invocation: Invocation, unicode: bool) -> TurnResult {
+    return run_mode(request, allowed, invocation, unicode, true);
 }

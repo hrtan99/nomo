@@ -1,8 +1,8 @@
 module nomo.harness.read_tool_chat;
 
 import nomo.harness.harness_tool_chat_contract.{Context, Invocation, TurnResult};
-import nomo.harness.read_model_tools.child_turn;
-import nomo.harness.read_tool_chat_controller.run_turn_controller;
+import nomo.harness.read_model_tools.{child_turn, private_child_turn};
+import nomo.harness.read_tool_chat_controller.{run_turn_controller, run_private_turn_controller};
 import nomo.harness.legacy_chat_stages.{ChatMainStage, LegacyChatStages};
 
 // ETAS accounts input and output together; keep the requested output cap separate.
@@ -17,5 +17,12 @@ public flow run_turn(request: string, allowed: Array<string>, invocation: Invoca
     return run_turn_controller(request, allowed, invocation) with {
         LegacyChatStages.main(context) => { resume ChatMain.run(context); }
         LegacyChatStages.child(task, files, selected) => { resume child_turn(task, files, selected); }
+    };
+}
+
+public flow run_private_turn(request: string, allowed: Array<string>, invocation: Invocation) -> TurnResult {
+    return run_private_turn_controller(request, allowed, invocation) with {
+        LegacyChatStages.main(context) => { resume ChatMain.run(context); }
+        LegacyChatStages.child(task, files, selected) => { resume private_child_turn(task, files, selected); }
     };
 }

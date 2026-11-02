@@ -4,7 +4,7 @@ import std.io.println;
 import std.text.to_string_i32;
 import nomo.core.conversation.{Event, State, add};
 import nomo.model.model_tool_contract.{Session, fresh_loop, default_limits, allowed_error};
-import nomo.agent.read_tool.{LoopTurn, run_loop};
+import nomo.agent.read_tool.{LoopTurn, run_loop, run_private_loop};
 import nomo.core.read_text.bounded;
 import nomo.model.read_protocol.{question_error, decode_plan};
 import nomo.harness.read_tool_contract.{Context, Ledger, Observed, fresh, bump, settle, inspect, context_error};
@@ -61,6 +61,11 @@ flow unresolved(error: string) -> i32 {
 public flow child_turn(task: string, allowed: Array<string>, selected: State) -> LoopTurn ~ ChatChildStage<ReadOnlyRoot> {
     let seeded = Session { history = selected, calls = 0, tokens = 0, tools = 0, scan = 0 };
     return run_loop(task, allowed, default_limits(), seeded);
+}
+
+public flow private_child_turn(task: string, allowed: Array<string>, selected: State) -> LoopTurn ~ ChatChildStage<ReadOnlyRoot> {
+    let seeded = Session { history = selected, calls = 0, tokens = 0, tools = 0, scan = 0 };
+    return run_private_loop(task, allowed, default_limits(), seeded);
 }
 
 flow failed(state: Ledger, error: string, resolved: bool) -> Result<Report, Failure> {

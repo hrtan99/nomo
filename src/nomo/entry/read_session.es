@@ -9,7 +9,7 @@ import std.text.{len, split, to_string_i32};
 import std.collections.len as count;
 import nomo.model.model_tool_contract.allowed_error;
 import nomo.model.read_protocol.question_error;
-import nomo.harness.read_tool_chat.run_turn;
+import nomo.harness.read_tool_chat.run_private_turn as run_turn;
 import nomo.harness.history_continue_model.{WorkFacts, BudgetFacts, run_turn as run_after_work, run_after_followup};
 import nomo.session.chat_session_contract.{fresh, begin, complete};
 import nomo.session.chat_history.{load, save, save_completed};

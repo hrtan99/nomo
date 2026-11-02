@@ -6,6 +6,8 @@ import nomo.core.read_text.safe;
 import nomo.harness.model_plan_diagnostic.response_text;
 import nomo.core.conversation.{State, capacity_error, stop};
 import nomo.agent.loop.{emit, failure};
+import nomo.agent.conversation_events.emit as emit_event;
+import nomo.model.conversation_output.ConversationOutput;
 import nomo.model.model_tool_contract.{Session, Limits, Context, allowed_error, context_error, budget_error, charge_action};
 import nomo.tools.read_contract.{outcome, ReadTools};
 import nomo.tools.read_display.display;
@@ -14,6 +16,14 @@ import nomo.context.selection.{EventPolicy, SelectionRefusal, select as select_c
 import nomo.harness.legacy_string_stages.LegacyChildModel;
 public import nomo.model.model_tool_contract.LoopTurn;
 type ModelAttempt = { state: Session, context: Context };
+
+flow emit_mode(state: State, role: string, kind: string, name: string, text: string, private_progress: bool) -> State {
+    if !private_progress { return emit(state, role, kind, name, text); }
+    return emit_event(state, role, kind, name, text) with {
+        ConversationOutput.publish(event) => { println("CHILD EVENT " + role + " " + kind + " " + name + ": [REDACTED]"); resume (); }
+    };
+}
+
 
 flow history(session: Session, state: State) -> Session {
     return Session { history = state, calls = session.calls, tokens = session.tokens, tools = session.tools, scan = session.scan };
@@ -59,7 +69,7 @@ flow bounded_model_context(input: Context) -> Result<Context, string> {
 
 // Reserve the attempted model event and its largest final/action/error output.
 // The context includes all preceding events, never the not-yet-made request.
-flow model_attempt(previous: Session, allowed: Array<string>, limits: Limits, final_only: bool) -> Result<ModelAttempt, LoopTurn> {
+flow model_attempt(previous: Session, allowed: Array<string>, limits: Limits, final_only: bool, private_progress: bool) -> Result<ModelAttempt, LoopTurn> {
     var session = previous;
     let full = capacity(session, 2, 518);
     if full != "" {
@@ -75,20 +85,20 @@ flow model_attempt(previous: Session, allowed: Array<string>, limits: Limits, fi
         return Err(failed(session, error, 4));
     }
     session = charge_action(session, false);
-    session = history(session, emit(session.history, "model", "text", "qwen", ""));
+    session = history(session, emit_mode(session.history, "model", "text", "qwen", "", private_progress));
     return Ok(ModelAttempt { state = session, context = context });
 }
 
 // This same controller is used by scoped production and deterministic handlers.
-public flow run_loop_controller(raw: string, allowed: Array<string>, limits: Limits, previous: Session, work: bool, inspect_all: bool) -> LoopTurn {
+flow run_mode(raw: string, allowed: Array<string>, limits: Limits, previous: Session, work: bool, inspect_all: bool, private_progress: bool) -> LoopTurn {
     if previous.history.stopped { return LoopTurn { state = previous, status = 4 }; }
     let full = capacity(previous, 1, 128);
     if full != "" { return failed(history(previous, stop(previous.history)), full, 4); }
     var invalid = question_error(raw);
     if invalid == "" { invalid = allowed_error(allowed); }
     if invalid != "" { return failed(previous, invalid, 2); }
-    var session = history(previous, emit(previous.history, "user", "input", "", raw));
-    let first = match model_attempt(session, allowed, limits, false) { Ok(value) => value, Err(error) => { return error; } };
+    var session = history(previous, emit_mode(previous.history, "user", "input", "", raw, private_progress));
+    let first = match model_attempt(session, allowed, limits, false, private_progress) { Ok(value) => value, Err(error) => { return error; } };
     // Host failure aborts here, without a recoverable source error event.
     let first_raw = perform LegacyChildModel.infer(first.context);
     session = first.state;
@@ -99,12 +109,12 @@ public flow run_loop_controller(raw: string, allowed: Array<string>, limits: Lim
         Err(error) => { return failed(session, error, 3); }
     };
     if action.operation == "final" {
-        return LoopTurn { state = history(session, emit(session.history, "assistant", "final", "", action.text)), status = 0 };
+        return LoopTurn { state = history(session, emit_mode(session.history, "assistant", "final", "", action.text, private_progress)), status = 0 };
     }
     // Selected request + bounded actual outcome, with a separate terminal reserve.
     let tool_full = capacity(session, 2, len(first_raw) + 284);
     if tool_full != "" { return failed(history(session, stop(session.history)), tool_full, 4); }
-    session = history(session, emit(session.history, "model", "request", action.operation, compact_frame(first_raw)));
+    session = history(session, emit_mode(session.history, "model", "request", action.operation, compact_frame(first_raw), private_progress));
     let exhausted = budget_error(session, limits, true);
     if exhausted != "" { return failed(session, exhausted, 4); }
     session = charge_action(session, true);
@@ -115,10 +125,10 @@ public flow run_loop_controller(raw: string, allowed: Array<string>, limits: Lim
     if !safe(result.text, 256) { result = outcome("refused", "tool result exceeds 256 display characters", result.scanned); }
     let data = result.status + ": " + result.text;
     if result.status != "complete" {
-        return LoopTurn { state = history(session, emit(session.history, "tool", "error", action.operation, data)), status = 3 };
+        return LoopTurn { state = history(session, emit_mode(session.history, "tool", "error", action.operation, data, private_progress)), status = 3 };
     }
-    session = history(session, emit(session.history, "tool", "complete", action.operation, data));
-    let second = match model_attempt(session, allowed, limits, true) { Ok(value) => value, Err(error) => { return error; } };
+    session = history(session, emit_mode(session.history, "tool", "complete", action.operation, data, private_progress));
+    let second = match model_attempt(session, allowed, limits, true, private_progress) { Ok(value) => value, Err(error) => { return error; } };
     let second_raw = perform LegacyChildModel.infer(second.context);
     if inspect_all { println(response_text(second_raw, "read-child-final", "lab-qwen-", 1152)); }
     let decoded_final = decode_child(second_raw, allowed, true);
@@ -126,5 +136,12 @@ public flow run_loop_controller(raw: string, allowed: Array<string>, limits: Lim
         Ok(action) => action,
         Err(error) => { return failed(second.state, error, 3); }
     };
-    return LoopTurn { state = history(second.state, emit(second.state.history, "assistant", "final", "", final.text)), status = 0 };
+    return LoopTurn { state = history(second.state, emit_mode(second.state.history, "assistant", "final", "", final.text, private_progress)), status = 0 };
+}
+
+public flow run_loop_controller(raw: string, allowed: Array<string>, limits: Limits, previous: Session, work: bool, inspect_all: bool) -> LoopTurn {
+    return run_mode(raw, allowed, limits, previous, work, inspect_all, false);
+}
+public flow run_private_loop_controller(raw: string, allowed: Array<string>, limits: Limits, previous: Session) -> LoopTurn {
+    return run_mode(raw, allowed, limits, previous, false, false, true);
 }
