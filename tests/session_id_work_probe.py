@@ -4,36 +4,7 @@ import json,os,pty,re,select,shutil,signal,sqlite3,subprocess,tempfile,termios,t
 from http.server import BaseHTTPRequestHandler,HTTPServer
 from pathlib import Path
 ROOT=Path(__file__).resolve().parent.parent
-class Fake(BaseHTTPRequestHandler):
-    def log_message(self,*_):pass
-    def do_POST(self):
-        try:
-            assert self.path=='/v1/chat/completions' and self.headers.get('Authorization')=='Bearer SYNTHETIC_ONLY'
-            req=json.loads(self.rfile.read(int(self.headers['Content-Length'])));ctx=json.loads(req['messages'][1]['content']);i=len(self.server.phases)
-            assert i<11 and req['max_tokens']==[2048,2048,2048,2048,2048,2048,2048,2048,4096,32768,2048][i]
-            if i==0:value=['delegate','Read context.txt']
-            elif i==1:value=['read','context.txt']
-            elif i==2:value=['final','blue CEDAR42']
-            elif i==3:value='blue CEDAR42'
-            elif i==4:
-                assert ctx['previous']['answer']=='blue CEDAR42' and ctx['current']['phase']=='plan';value=['delegate','Read context.txt']
-            elif i==5:value=['read','context.txt']
-            elif i==6:value=['final','Seen: complete: green']
-            elif i==7:
-                assert ctx['previous']['answer']=='blue CEDAR42' and 'green' in ctx['current']['outcome'];value='Summary: complete: green'
-            elif i==8:
-                assert ctx['previous']['answer']=='blue CEDAR42' and ctx['current']['edit']['before']=='before old\n';value=['delegate','replace old with green']
-            elif i==9:value=['edit','old','green']
-            else:
-                assert ctx['current']['edit']['after']=='before green\n';value='Edit completed using current context.'
-            content=json.dumps(value,separators=(',',':')) if isinstance(value,list) else value
-            data=json.dumps({'choices':[{'message':{'role':'assistant','content':content},'finish_reason':'stop'}],
-                             'usage':{'prompt_tokens':100,'completion_tokens':20,'total_tokens':120}}).encode()
-            self.server.phases.append(i);self.send_response(200);self.send_header('Content-Length',str(len(data)));self.end_headers();self.wfile.write(data)
-        except Exception:
-            self.server.failed=True
-            try:self.send_error(500)
-            except OSError:pass
+from post_work_continuation_probe import Fake
 
 def main():
     out=Path(tempfile.mkdtemp(prefix='nomo-session-id-work-',dir='/private/tmp'));project=out/'project'
@@ -41,7 +12,7 @@ def main():
     context=out/'context';context.mkdir(mode=0o700);(context/'context.txt').write_text('blue\n')
     current=out/'current';current.mkdir(mode=0o700);(current/'context.txt').write_text('green')
     workspace=out/'workspace';workspace.mkdir(mode=0o700);(workspace/'note.txt').write_text('before old\n');(workspace/'note.txt').chmod(0o600)
-    sessions=out/'sessions';sessions.mkdir(mode=0o700);server=HTTPServer(('127.0.0.1',0),Fake);server.phases=[];server.failed=False
+    sessions=out/'sessions';sessions.mkdir(mode=0o700);server=HTTPServer(('127.0.0.1',0),Fake);server.phases=[];server.failed=False;server.expected_check='passed';server.expected_exit='0'
     thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start();proc=None;master=None
     try:
         manifest=project/'etas.toml';text=manifest.read_text()
@@ -86,13 +57,40 @@ def main():
         status=subprocess.run([str(project/'scripts/nomo-read.sh'),'session-id','status','--sessions-dir',str(sessions),'--id',session_id],env=env,capture_output=True,timeout=120)
         (out/'status.stdout').write_bytes(status.stdout);(out/'status.stderr').write_bytes(status.stderr)
         assert status.returncode==0 and b'WORK complete id=edit1 path=note.txt' in status.stdout and b'EDIT completed' in status.stdout and b'WORK BUDGET settled_calls=7 settled_generation=47104' in status.stdout and b'CHAT BUDGET used_calls=4 used_generation=8192' in status.stdout and b'CHECK complete result=passed exit=0' in status.stdout
-        rejected=subprocess.run([str(project/'scripts/nomo-read.sh'),'session-id','resume','--sessions-dir',str(sessions),'--id',session_id,'--root',str(context),'--allow','context.txt','--once','Next question'],env=env,capture_output=True,timeout=120)
-        (out/'rejected.stdout').write_bytes(rejected.stdout);(out/'rejected.stderr').write_bytes(rejected.stderr)
-        assert rejected.returncode!=0 and b'REFUSED' in rejected.stdout and server.phases==list(range(11))
-        with sqlite3.connect(state/'history.sqlite3') as c:assert list(c.iterdump())==before
-        result={'status':'passed','scope':'local fake ID-selected chat and approved edit/check; no root identity or real model','fake_requests':11,
-                'prior_answer_verified':True,'status_and_chat_refusal_checked':True,'native_and_application_approval':True,'exact_preview_checked':True,'file_changed':True,'offline_check_passed':True,'durable_edit_and_work_records':True}
-    except BaseException as error:result={'status':'failed','failure_type':type(error).__name__,'phases':server.phases,'work_exit':proc.poll() if proc else None}
+        # Preserve the committed work and edit rows across resumed chat.
+        with sqlite3.connect(state/'history.sqlite3') as c:
+            recorded=dict(c.execute("select region,value_json from memory_entries where region in ('nomo-history-work-v1','nomo-edit-operation-v1','nomo-history-check-v1')"))
+        for phase in ('running','unknown'):
+            registry=out/('sessions-'+phase);registry.mkdir(mode=0o700);variant=registry/session_id;variant.mkdir(mode=0o700);(variant/'.nomo-session.lock').touch(mode=0o600)
+            with sqlite3.connect(state/'history.sqlite3') as source, sqlite3.connect(variant/'history.sqlite3') as dest: source.backup(dest)
+            with sqlite3.connect(variant/'history.sqlite3') as c:
+                raw=c.execute("select value_json from memory_entries where region='nomo-history-check-v1'").fetchone()[0]
+                obj=json.loads(raw)
+                for field in obj['fields']:
+                    if field['name']=='phase':field['value']['value']=phase
+                    if field['name'] in ('outcome','exit_code'):field['value']['value']=''
+                c.execute("update memory_entries set value_json=? where region='nomo-history-check-v1'",(json.dumps(obj,separators=(',',':')),))
+                before_variant=list(c.iterdump())
+            server.phases=list(range(11))
+            trial=subprocess.run([str(project/'scripts/nomo-read.sh'),'session-id','resume','--sessions-dir',str(registry),'--id',session_id,'--root',str(context),'--allow','context.txt','--once','What happened to the edit?'],env=env,capture_output=True,timeout=120)
+            (out/('variant-'+phase+'.stdout')).write_bytes(trial.stdout);(out/('variant-'+phase+'.stderr')).write_bytes(trial.stderr)
+            assert trial.returncode!=0 and b'REFUSED' in trial.stdout and server.phases==list(range(11))
+            with sqlite3.connect(variant/'history.sqlite3') as c: assert list(c.iterdump())==before_variant
+        server.phases=list(range(11))
+        continued=subprocess.run([str(project/'scripts/nomo-read.sh'),'session-id','resume','--sessions-dir',str(sessions),'--id',session_id,'--root',str(context),'--allow','context.txt','--once','What happened to the edit?'],env=env,capture_output=True,timeout=120)
+        (out/'continue.stdout').write_bytes(continued.stdout);(out/'continue.stderr').write_bytes(continued.stderr)
+        assert continued.returncode==0 and b'Prior edit and check recorded.' in continued.stdout and server.phases==list(range(15)) and not server.failed
+        assert (workspace/'note.txt').read_text()=='before green\n'
+        with sqlite3.connect(state/'history.sqlite3') as c:
+            assert dict(c.execute("select region,value_json from memory_entries where region in ('nomo-history-work-v1','nomo-edit-operation-v1','nomo-history-check-v1')"))==recorded
+        after=subprocess.run([str(project/'scripts/nomo-read.sh'),'session-id','status','--sessions-dir',str(sessions),'--id',session_id],env=env,capture_output=True,timeout=120)
+        (out/'after.stdout').write_bytes(after.stdout);(out/'after.stderr').write_bytes(after.stderr)
+        assert after.returncode==0 and b'CHAT BUDGET used_calls=8 used_generation=16384' in after.stdout and b'WORK BUDGET settled_calls=7 settled_generation=47104' in after.stdout
+        again=subprocess.run([str(project/'scripts/nomo-read.sh'),'session-id','resume','--sessions-dir',str(sessions),'--id',session_id,'--root',str(context),'--allow','context.txt','--once','What happened to the edit?'],env=env,capture_output=True,timeout=120)
+        (out/'exhausted.stdout').write_bytes(again.stdout);(out/'exhausted.stderr').write_bytes(again.stderr)
+        assert again.returncode!=0 and b'REFUSED' in again.stdout and server.phases==list(range(15)) and (workspace/'note.txt').read_text()=='before green\n'
+        result={'status':'passed','scope':'local fake completed work/check and resumed read chat; no root identity or real model','fake_requests':15,'continued':True,'running_and_unknown_check_refused':True,'budget_preserved':True,'file_and_work_records_preserved':True}
+    except BaseException as error:result={'status':'failed','failure_type':type(error).__name__,'phases':server.phases,'work_exit':proc.poll() if proc else None,'error':str(error)}
     finally:
         if proc and proc.poll() is None:
             os.killpg(proc.pid,signal.SIGTERM)
