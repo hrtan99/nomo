@@ -12,6 +12,7 @@ import nomo.model.read_protocol.question_error;
 import nomo.harness.read_tool_chat.run_turn;
 import nomo.session.chat_session_contract.{fresh, begin, complete};
 import nomo.session.chat_history.{load, save};
+import nomo.session.event_history.{load as load_events, append_metadata};
 import nomo.session.history_work_guard.{chat_available, inspect as inspect_work};
 import nomo.session.edit_operation_store.inspect as inspect_edit;
 import nomo.session.history_check_guard.inspect as inspect_check;
@@ -35,6 +36,12 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyR
         match existing { None() => { println("REFUSED session missing"); return 1; } Some(_) => {} }
     }
     let current = match load() { Ok(Some(value)) => value, _ => { println("REFUSED session missing or invalid"); return 1; } };
+    let timeline = match load_events() { Ok(value) => value, Err(error) => { println("REFUSED " + error); return 1; } };
+    match timeline {
+        Some(value) => { if current.value.format != 2 || value.value.turns != current.value.invocation.admitted { println("REFUSED event history differs from committed chat; inspect without retry"); return 1; } }
+        None() => { if current.value.format == 2 && current.value.invocation.admitted > 0 { println("REFUSED event history missing; inspect without retry"); return 1; } }
+    }
+    let legacy = current.value.format == 1;
     let running = match begin(current.value, request) { Ok(value) => value, Err(error) => { println("REFUSED " + error); return 1; } };
     let version = match save(running, Some(current)) { Ok(value) => value, Err(error) => { println("REFUSED " + error); return 1; } };
     let reserved = match load() { Ok(Some(value)) => value, _ => { println("REFUSED reservation missing"); return 1; } };
@@ -44,6 +51,10 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyR
     let result = run_turn(request, allowed, running.invocation);
     if result.status != 0 || !result.resolved { println("REFUSED chat turn unresolved; inspect session, do not retry"); return 1; }
     let next = match complete(running, result) { Ok(value) => value, Err(error) => { println("REFUSED " + error); return 1; } };
+    if !legacy {
+        let done = match result.completed { Some(value) => value, None() => { println("REFUSED completed events missing"); return 1; } };
+        match append_metadata(next.invocation.admitted, done.records) { Ok(_) => {} Err(error) => { println("REFUSED event save failed; inspect without retry: " + error); return 1; } }
+    }
     match save(next, Some(reserved)) { Ok(_) => {} Err(error) => { println("REFUSED " + error); return 1; } }
     println("SAVED chat history; prior data is not a grant or workspace identity."); return 0;
 }
@@ -54,6 +65,21 @@ public flow status(args: Array<string>) -> i32 ![Console, Memory, Error<StorageE
     let entry = match load() { Ok(Some(value)) => value, Ok(None()) => { println("SESSION missing"); return 1; } Err(error) => { println("REFUSED " + error); return 1; } };
     let saved = entry.value;
     println("SESSION " + saved.phase + " turns=" + to_string_i32(saved.invocation.admitted));
+    let timeline = match load_events() { Ok(value) => value, Err(error) => { println("REFUSED " + error); return 1; } };
+    match timeline {
+        Some(value) => {
+            if saved.format != 2 { println("REFUSED unexpected events for legacy chat"); return 1; }
+            if value.value.turns != saved.invocation.admitted {
+                if saved.phase != "running" || value.value.turns != saved.invocation.admitted + 1 { println("REFUSED event history differs from committed chat"); return 1; }
+                println("EVENTS pending; chat turn not committed, do not retry");
+            } else { println("EVENTS recorded turns=" + to_string_i32(value.value.turns) + "; free text redacted"); }
+            for event in value.value.events limit Iterations(48) { println("EVENT " + event.role + " " + event.kind + " " + event.name + " " + event.text); }
+        }
+        None() => {
+            if saved.format == 2 && saved.invocation.admitted > 0 { println("REFUSED event history missing"); return 1; }
+            println("EVENTS unavailable for legacy or unfinished history");
+        }
+    }
     let pending_calls = if saved.phase == "running" { 4 } else { 0 };
     let pending_generation = if saved.phase == "running" { 8192 } else { 0 };
     println("CHAT BUDGET used_calls=" + to_string_i32(saved.invocation.usage.calls) + " used_generation=" +

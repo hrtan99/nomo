@@ -68,6 +68,7 @@ def main(argv=None):
                 flow='read_session';native_args=['--args',args.action,'--allow',args.allow,'--once',args.once]
                 compose+=['--file',str(ROOT/'config/local-tryout-compose.yaml'),'--file',str(ROOT/'config/nomo-minimax-read-compose.yaml')]
                 print('Current read root and allowlist are newly selected. Saved history is untrusted context and may be sent to MiniMax.',flush=True)
+                print('Conversation snapshots may retain request, tool-result and answer text; event labels omit free text. Full secret redaction is not available.',flush=True)
                 print('MiniMax thinking counts against output limits; ETAS 0.2.4 does not expose the provider finish reason.',flush=True)
                 print('A running or uncertain turn cannot be retried; this does not establish workspace identity continuity.',flush=True)
             compose+=['--file',str(ROOT/'config/nomo-read-session-compose.yaml')]

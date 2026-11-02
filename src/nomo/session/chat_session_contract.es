@@ -9,11 +9,11 @@ import nomo.model.read_protocol.question_error;
 public type Session = { format: i32, phase: string, invocation: Invocation, last_request: string, pending: string };
 
 public flow fresh() -> Session {
-    return Session { format = 1, phase = "ready", invocation = fresh_invocation(), last_request = "", pending = "" };
+    return Session { format = 2, phase = "ready", invocation = fresh_invocation(), last_request = "", pending = "" };
 }
 
 public flow invalid(value: Session) -> string {
-    if value.format != 1 || (value.phase != "ready" && value.phase != "running" && value.phase != "complete") {
+    if (value.format != 1 && value.format != 2) || (value.phase != "ready" && value.phase != "running" && value.phase != "complete") {
         return "invalid chat session format or phase";
     }
     let state = value.invocation; let used = state.usage; let standard = fresh_invocation();
@@ -45,7 +45,7 @@ public flow begin(value: Session, request: string) -> Result<Session, string> {
     let error = invalid(value); if error != "" { return Err(error); }
     if value.phase != "ready" { return Err("chat session is not ready; no automatic retry"); }
     if question_error(request) != "" { return Err("invalid pending request"); }
-    let next = Session { format = 1, phase = "running", invocation = value.invocation, last_request = value.last_request, pending = request };
+    let next = Session { format = value.format, phase = "running", invocation = value.invocation, last_request = value.last_request, pending = request };
     let problem = invalid(next); if problem != "" { return Err(problem); }
     return Ok(next);
 }
@@ -65,7 +65,7 @@ public flow complete(value: Session, result: TurnResult) -> Result<Session, stri
         next.usage.steps != previous.usage.steps + 5 + tools * 2 || next.usage.calls != previous.usage.calls + 3 + tools ||
         next.usage.tokens != previous.usage.tokens + (3 + tools) * 2048 || next.usage.tools != previous.usage.tools + tools ||
         next.usage.scan != previous.usage.scan + tools * 4096 { return Err("completed chat ledger changed"); }
-    let session = Session { format = 1, phase = if next.admitted == 2 { "complete" } else { "ready" },
+    let session = Session { format = value.format, phase = if next.admitted == 2 { "complete" } else { "ready" },
         invocation = next, last_request = value.pending, pending = "" };
     let problem = invalid(session); if problem != "" { return Err(problem); }
     return Ok(session);
