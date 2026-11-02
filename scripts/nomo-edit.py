@@ -274,6 +274,7 @@ def main(argv=None):
     if args.task is not None:
         print('Model requests have a ' + env.get('NOMO_MODEL_REQUEST_DEADLINE_MS', '120000') +
               '-millisecond deadline each; no automatic retries.', flush=True)
+        print('A busy model service may queue requests; waiting counts toward each deadline.', flush=True)
     edited = run_owned(command, env)
     if edited != 0:
         if args.task is not None:
