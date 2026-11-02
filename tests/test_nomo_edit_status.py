@@ -53,6 +53,12 @@ sys.exit(int(os.environ.get('NOMO_TEST_EXIT','0')))
         self.assertIn('--tty=false',call['args'])
         self.assertEqual(call['args'][-8:],['--allow-effects','--args','--id','owned-edit','--workspace','private-workspace','--path','note.txt'])
 
+    def test_024_status_uses_the_selected_overlay(self):
+        result = self.invoke('--state', self.state, '--id', 'owned-edit', '--path', 'note.txt',
+                             env=dict(self.env, NOMO_ETAS_VERSION='0.2.4'))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn(str(ROOT/'config/etas-024-official-compose.yaml'), json.loads(self.log.read_text())['args'])
+
     def test_missing_db_unsafe_state_and_sidecars_refuse_before_docker(self):
         db = self.state/'edit.sqlite3'
         db.unlink()

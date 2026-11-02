@@ -81,6 +81,12 @@ with open(os.environ['NOMO_TEST_LOG'],'w') as f:
         self.assertEqual(result.returncode, 64)
         self.assertFalse(self.log.exists())
 
+    def test_explicit_024_uses_its_own_verified_overlay(self):
+        env = dict(self.env, NOMO_ETAS_VERSION='0.2.4')
+        result = self.invoke('chat', '--root', self.read_root, '--allow', 'a.txt', env=env)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn(str(ROOT / 'config/etas-024-official-compose.yaml'), json.loads(self.log.read_text())['args'])
+
     def test_missing_configuration_and_bad_root_fail_before_docker(self):
         env = self.env.copy()
         del env['NOMO_QWEN_SERVER_API_KEY']

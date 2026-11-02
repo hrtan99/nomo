@@ -58,6 +58,13 @@ class EditLauncherTests(unittest.TestCase):
         with patch.dict(os.environ, {'NOMO_ETAS_VERSION': 'unsupported'}), self.assertRaisesRegex(ValueError, 'NOMO_ETAS_VERSION'):
             module.prepare(self.args, True, True)
 
+    def test_explicit_024_applies_to_edit_and_check(self):
+        self.args.check = ['true']
+        with patch.dict(os.environ, {'NOMO_ETAS_VERSION': '0.2.4'}):
+            command, check, _ = module.prepare(self.args, True, True)
+        overlay = str(self.project / 'config/etas-024-official-compose.yaml')
+        self.assertIn(overlay, command); self.assertIn(overlay, check)
+
     def test_model_edit_uses_explicit_endpoint_and_keeps_check_offline(self):
         self.args.task = 'change old to new'
         self.args.target = self.args.replacement = None

@@ -1,0 +1,57 @@
+{
+  "selector": "latest024",
+  "repositories": {
+    "cli": {
+      "repository": "etas",
+      "revision": "04b19cfbb9555b926f5f70f09b4b82cb73bb75e1",
+      "tree": "5c7e2894df08a0ceba03e99e9c59e1bec7b8ed9e",
+      "packages": [
+        "etas_cli",
+        "etas_driver",
+        "etas_package",
+        "etas_tests"
+      ]
+    },
+    "core": {
+      "repository": "etas-core",
+      "revision": "d338d3f77163ace17348a5bf420560ca75f62fce",
+      "tree": "b7651cbe305dba9ea16ed18a62ad6e88d1545639",
+      "packages": [
+        "etas_builtin",
+        "etas_cache",
+        "etas_code",
+        "etas_core",
+        "etas_host",
+        "etas_memory_derive",
+        "etas_package_metadata",
+        "etas_std",
+        "etas_utils"
+      ]
+    },
+    "frontend": {
+      "repository": "etas-frontend",
+      "revision": "b3922d796cc890b17cb5cfc90d8aa394191c2705",
+      "tree": "72a926451b4a20d0490e85295ade46c65063526f",
+      "packages": [
+        "etas_effects",
+        "etas_frontend",
+        "etas_hir",
+        "etas_hir_analysis",
+        "etas_syntax",
+        "etas_syntax_derive",
+        "etas_types"
+      ]
+    },
+    "interpreter": {
+      "repository": "etas-interpreter",
+      "revision": "d37ebe8eafb326d164ad9e2ad259331a395fdf2b",
+      "tree": "b4dd9050f9591a10c77bf07cf2779d8cbce511e2",
+      "packages": [
+        "etas_interpreter"
+      ]
+    }
+  },
+  "source": "Official CLI manifest dependency graph frozen 2026-11-02; release 0.2.4",
+  "cargo_lock_sha256": "8acf50303edf0fc9133802c80666e29095f992b23142fb16a9377d4439f0dc94",
+  "verified_seed_binary_sha256": "67802d5015aea771ab02d8e474ea18d8a83f4fdb8e06ef1a8fd9349ffadb2290"
+}

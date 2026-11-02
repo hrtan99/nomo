@@ -56,6 +56,11 @@ sys.exit(int(os.environ.get('NOMO_TEST_EXIT', '0')))
         self.assertEqual(call['args'][-7:], ['/usr/bin/timeout', '--signal=TERM', '--kill-after=2s', '60s', 'python3', '-c', 'print("ok")'])
         self.assertIn(b'Check passed.', result.stdout)
 
+    def test_024_check_uses_the_selected_overlay(self):
+        result = self.invoke('--root', self.workspace, '--', 'true', env=dict(self.env, NOMO_ETAS_VERSION='0.2.4'))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn(str(ROOT/'config/etas-024-official-compose.yaml'), json.loads(self.log.read_text())['args'])
+
     def test_failed_check_is_reported_and_exit_propagated(self):
         result = self.invoke('--root', self.workspace, '--', 'false', env=dict(self.env, NOMO_TEST_EXIT='7'))
         self.assertEqual(result.returncode, 7)

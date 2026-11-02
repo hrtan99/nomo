@@ -21,16 +21,17 @@ def load(label):
 
 class OfficialBootstrapSharing(unittest.TestCase):
     def test_each_import_keeps_its_own_graph(self):
-        old, new, latest = load('012'), load('022'), load('023')
+        old, new, latest, candidate = load('012'), load('022'), load('023'), load('024')
         self.assertEqual(old._common.SELECTOR, 'latest012')
         self.assertEqual(new._common.SELECTOR, 'latest022')
         self.assertEqual(latest._common.SELECTOR, 'latest023')
+        self.assertEqual(candidate._common.SELECTOR, 'latest024')
         self.assertNotEqual(old.ROOT, new.ROOT)
         self.assertNotEqual(old._common.BOOTSTRAP_SHA, new._common.BOOTSTRAP_SHA)
         self.assertEqual(old._common.SELECTOR, 'latest012')
 
     def test_known_legacy_and_composite_identity_are_revalidated(self):
-        for label in ('012', '022'):
+        for label in ('012', '022', '023'):
             with self.subTest(label=label), tempfile.TemporaryDirectory() as directory:
                 wrapper = load(label)
                 common = wrapper._common
@@ -48,7 +49,10 @@ class OfficialBootstrapSharing(unittest.TestCase):
                          folder / 'cli-origins.json': 'fixture-origins'}[path]), \
                      patch.object(common, 'read', side_effect=lambda args: 'fixture-rustc' if args[0]=='rustc' else 'fixture-cargo'), \
                      patch.object(common, 'graph_guard', return_value={}), patch.object(common, 'registry_guard') as registry:
-                    for value, expected in ((common.LEGACY_SHA, 'legacy-revalidated'), (common.BOOTSTRAP_SHA, 'shared-verified'), (common.PREVIOUS_SHARED, 'shared-verified')):
+                    values = [(common.BOOTSTRAP_SHA, 'shared-verified'), (common.PREVIOUS_BOOTSTRAP, 'shared-verified')]
+                    if common.LEGACY_SHA is not None: values.append((common.LEGACY_SHA, 'legacy-revalidated'))
+                    if common.PREVIOUS_SHARED is not None: values.append((common.PREVIOUS_SHARED, 'shared-verified'))
+                    for value, expected in values:
                         identity['bootstrap_sha256'] = value
                         (folder / 'identity.json').write_text(json.dumps(identity))
                         self.assertEqual(common.guard(read_only=True), expected)
@@ -56,8 +60,8 @@ class OfficialBootstrapSharing(unittest.TestCase):
                     (folder / 'identity.json').write_text(json.dumps(identity))
                     with self.assertRaisesRegex(RuntimeError, 'bootstrap drift'):
                         common.guard(read_only=True)
-                    self.assertEqual(git_guard.call_count, 3)
-                    self.assertEqual(registry.call_count, 3)
+                    self.assertEqual(git_guard.call_count, len(values))
+                    self.assertEqual(registry.call_count, len(values))
 
     def test_reviewed_bridge_rejects_shared_implementation_drift(self):
         with tempfile.TemporaryDirectory() as directory:

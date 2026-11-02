@@ -19,10 +19,11 @@ INSTALLED = CACHE / 'bin/etas'
 
 
 def configure(label, wrapper):
-    global LABEL, VERSION, SELECTOR, CONFIG, LOCK, SPEC, PINS, ROOT, SOURCE, BOOTSTRAP_SHA, LEGACY_SHA, PREVIOUS_SHARED, ADOPTED
+    global LABEL, VERSION, SELECTOR, CONFIG, LOCK, SPEC, PINS, ROOT, SOURCE, BOOTSTRAP_SHA, LEGACY_SHA, PREVIOUS_SHARED, PREVIOUS_BOOTSTRAP, ADOPTED
     versions = {'012': ('0.1.12', 'e13f4988826cef49555dfb7cbc5dfb968a517f8b8506d3ef36789d3ec8492b56'),
                 '022': ('0.2.2', 'b585d9bf44b1482eba4d733016fe1b1566a23393f844989e3bc1b42af4277846'),
-                '023': ('0.2.3', None)}
+                '023': ('0.2.3', None),
+                '024': ('0.2.4', None)}
     require(label in versions, 'unsupported official graph')
     LABEL = label
     VERSION, LEGACY_SHA = versions[label]
@@ -41,9 +42,15 @@ def configure(label, wrapper):
     require(entry['common_sha256'] == digest(__file__), 'shared bootstrap drift')
     previous = {'012': 'f51e2b184927c47f109fbf1e3778d804abe06be1ff5c9c87ec2e2468e5782b1d',
                 '022': '1abd68df1a97c80190f025b6f2330e130e924b3b299494c8e80ea6ca562adcbc',
-                '023': None}
+                '023': None,
+                '024': None}
     PREVIOUS_SHARED = previous[label]
     require(entry.get('previous_shared_sha256') == PREVIOUS_SHARED, 'previous shared provenance drift')
+    prior = {'012': '29663ca202861ccc54cf7df5fe1c2f278ae8192d8f2d7abd41dfd44aebc2e5c4',
+             '022': '5252858a71ac814ce1c15d5c0e5d8a291c0af69ed07d02c7d88343b5e8905f22',
+             '023': '0fd4152065d3ab56f4a3508ecb0686bf2eab253f0f5be5b2482dfc4f933184fc', '024': None}
+    PREVIOUS_BOOTSTRAP = prior[label]
+    require(entry.get('previous_bootstrap_sha256') == PREVIOUS_BOOTSTRAP, 'previous bootstrap provenance drift')
     # New installations bind the wrapper, shared implementation and reviewed bridge policy.
     identity_hash = hashlib.sha256(b'nomo.official-bootstrap.v2\0')
     identity_hash.update(Path(wrapper).read_bytes())
@@ -260,6 +267,7 @@ def guard(read_only=False):
     accepted = [BOOTSTRAP_SHA]
     if LEGACY_SHA is not None: accepted.append(LEGACY_SHA)
     if PREVIOUS_SHARED is not None: accepted.append(PREVIOUS_SHARED)
+    if PREVIOUS_BOOTSTRAP is not None: accepted.append(PREVIOUS_BOOTSTRAP)
     require(provenance in accepted, 'bootstrap drift')
     git_guard(SOURCE, 'cli', check_origin=True)
     require(digest(SOURCE / 'Cargo.lock') == digest(LOCK) == identity['lock_sha256'], 'CLI lock drift')

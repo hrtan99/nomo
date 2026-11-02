@@ -10,7 +10,7 @@ import sys
 CLI = Path('/home/nomo/.cargo/bin/etas')
 SPEC = Path('/workspace/config/etas-022-official.json')
 LOCK = Path('/workspace/config/etas-022-official.Cargo.lock')
-VERSIONS = {'latest022': '0.2.2', 'latest023': '0.2.3'}
+VERSIONS = {'latest022': '0.2.2', 'latest023': '0.2.3', 'latest024': '0.2.4'}
 
 
 def digest(path):
@@ -36,8 +36,9 @@ def verify(cli, spec_path, lock_path, selected):
 
 def main():
     selected = os.environ.get('NOMO_NORMAL_GRAPH')
-    spec = Path('/workspace/config/etas-023-official.json') if selected == 'latest023' else SPEC
-    lock = Path('/workspace/config/etas-023-official.Cargo.lock') if selected == 'latest023' else LOCK
+    suffix = {'latest022': '022', 'latest023': '023', 'latest024': '024'}.get(selected)
+    spec = Path('/workspace/config/etas-' + suffix + '-official.json') if suffix else SPEC
+    lock = Path('/workspace/config/etas-' + suffix + '-official.Cargo.lock') if suffix else LOCK
     if not verify(CLI, spec, lock, selected):
         print('The ETAS installation does not match the selected configuration; verify the installation.', file=sys.stderr)
         return 1

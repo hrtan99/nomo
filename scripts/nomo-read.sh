@@ -18,7 +18,7 @@ Select one or two relative files in the read-only directory. Set
 NOMO_READ_MODEL_BASE_URL to the reachable Qwen OpenAI-compatible endpoint and
 NOMO_QWEN_SERVER_API_KEY in the environment before starting. Set
 NOMO_READ_MODEL_NAME when the server uses a different model name.
-Set NOMO_ETAS_VERSION to 0.2.3 to select that verified installation; default 0.2.2.
+Set NOMO_ETAS_VERSION to 0.2.3 or 0.2.4 to select a verified installation; default 0.2.2.
 The endpoint is reached from the container: for a host-local forward, use
 http://host.docker.internal:PORT/v1 rather than 127.0.0.1.
 Chat supports two tasks by default, or four with --turns 4, in one process.
@@ -66,7 +66,8 @@ fi
 case "${NOMO_ETAS_VERSION:-0.2.2}" in
     0.2.2) etas_overlay="$root/config/etas-022-official-compose.yaml" ;;
     0.2.3) etas_overlay="$root/config/etas-023-official-compose.yaml" ;;
-    *) echo 'NOMO_ETAS_VERSION must be 0.2.2 or 0.2.3.' >&2; exit 64 ;;
+    0.2.4) etas_overlay="$root/config/etas-024-official-compose.yaml" ;;
+    *) echo 'NOMO_ETAS_VERSION must be 0.2.2, 0.2.3 or 0.2.4.' >&2; exit 64 ;;
 esac
 # Docker cannot create a tmpfs mountpoint inside the read-only source bind.
 # Create only this disposable, empty project cache directory before mounting.
