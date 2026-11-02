@@ -31,7 +31,7 @@ class Fake(BaseHTTPRequestHandler):
 
 def main():
     out=Path(tempfile.mkdtemp(prefix='nomo-session-vertical-',dir='/private/tmp'));project=out/'project'
-    shutil.copytree(ROOT,project,ignore=shutil.ignore_patterns('.etas','__pycache__'));(project/'.etas').mkdir(mode=0o700)
+    shutil.copytree(ROOT,project,ignore=shutil.ignore_patterns('.etas','__pycache__'));assert not (project/'.etas').exists()
     context=out/'context';context.mkdir(mode=0o700);(context/'context.txt').write_text('blue\n')
     context2=out/'context2';context2.mkdir(mode=0o700);(context2/'context.txt').write_text('green\n')
     state=out/'state';state.mkdir(mode=0o700)
@@ -51,6 +51,7 @@ def main():
         first=run('session-new','Read color and include CEDAR42')
         (out/'first.stdout').write_bytes(first.stdout);(out/'first.stderr').write_bytes(first.stderr)
         assert first.returncode==0 and [line for line in first.stdout.splitlines() if line.startswith(b'FINAL ')]==[b'FINAL blue CEDAR42'] and b'SAVED chat history' in first.stdout
+        assert (project/'.etas').is_dir() and not (project/'.etas').is_symlink() and (project/'.etas').stat().st_mode & 0o777==0o700
         assert server.phases==[0,1,2,3]
         second=run('session-continue','What tag was in the previous answer?',context2)
         (out/'second.stdout').write_bytes(second.stdout);(out/'second.stderr').write_bytes(second.stderr)

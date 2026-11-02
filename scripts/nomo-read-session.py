@@ -31,6 +31,10 @@ def main(argv=None):
             if not os.environ.get('MINIMAX_API_KEY'):raise ValueError('set MINIMAX_API_KEY before starting MiniMax')
         st=state.stat()
         if st.st_uid!=os.getuid() or stat.S_IMODE(st.st_mode)!=0o700:raise ValueError('state must be owned by you with mode 0700')
+        cache=ROOT/'.etas'
+        if cache.is_symlink():raise ValueError('project .etas mountpoint must not be a symlink')
+        cache.mkdir(mode=0o700,exist_ok=True)
+        if cache.is_symlink() or not cache.is_dir():raise ValueError('project .etas mountpoint must be a directory')
         flags=os.O_RDWR|os.O_NOFOLLOW|os.O_CLOEXEC
         if args.action=='new':flags|=os.O_CREAT
         fd=os.open(state/'.nomo-session.lock',flags,0o600)

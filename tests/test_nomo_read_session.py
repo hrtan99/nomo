@@ -11,6 +11,7 @@ class ReadSessionLauncherTest(unittest.TestCase):
     def setUp(self):
         self.tmp=tempfile.TemporaryDirectory();self.root=Path(self.tmp.name).resolve();self.context=self.root/'context';self.context.mkdir(mode=0o700)
         self.state=self.root/'state';self.state.mkdir(mode=0o700)
+        self.project=self.root/'project';self.project.mkdir(mode=0o700);self.root_patch=patch.object(launcher,'ROOT',self.project);self.root_patch.start();self.addCleanup(self.root_patch.stop)
         self.env=patch.dict(os.environ,{'MINIMAX_API_KEY':'SYNTHETIC_KEY','ETAS_HOST_MODEL_API_KEY':'SYNTHETIC_GATEWAY','NOMO_QWEN_SERVER_API_KEY':'SYNTHETIC_QWEN'})
         self.env.start();self.addCleanup(self.env.stop);self.addCleanup(self.tmp.cleanup)
     def invoke(self,args):
@@ -18,6 +19,22 @@ class ReadSessionLauncherTest(unittest.TestCase):
     def newargs(self):return ['new','--root',str(self.context),'--state',str(self.state),'--allow','context.txt','--once','read it']
     def existing(self):
         (self.state/'.nomo-session.lock').touch(mode=0o600);(self.state/'history.sqlite3').write_bytes(b'synthetic')
+    def test_first_session_creates_private_cache_before_start(self):
+        self.assertFalse((self.project/'.etas').exists())
+        def owned(command,env):
+            cache=self.project/'.etas';self.assertTrue(cache.is_dir());self.assertFalse(cache.is_symlink())
+            self.assertEqual(cache.stat().st_mode & 0o777,0o700);return 0
+        with patch.object(launcher,'run_owned',side_effect=owned) as run:
+            self.assertEqual(self.invoke(self.newargs()),0);run.assert_called_once()
+    def test_cache_symlink_refused_before_start(self):
+        (self.project/'.etas').symlink_to(self.context,target_is_directory=True)
+        with patch.object(launcher,'run_owned') as run:
+            self.assertNotEqual(self.invoke(self.newargs()),0);run.assert_not_called()
+    def test_cache_regular_file_refused_before_start(self):
+        (self.project/'.etas').write_text('not a directory')
+        with patch.object(launcher,'run_owned') as run:
+            self.assertNotEqual(self.invoke(self.newargs()),0);run.assert_not_called()
+
     def test_status_removes_model_credentials_and_network_overlay(self):
         self.existing()
         with patch.object(launcher,'run_owned',return_value=0) as run:
