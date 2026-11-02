@@ -78,6 +78,16 @@ class VerifiedEtas(unittest.TestCase):
         self.lock.write_text('different lock\n')
         self.assertFalse(self.verify('latest024'))
 
+    def test_025_requires_its_matching_version_and_selector(self):
+        self.cli.write_text('#!/bin/sh\nprintf "etas 0.2.5\\n"\n')
+        self.write_config()
+        value = json.loads(self.config.read_text()); value['selector'] = 'latest025'
+        self.config.write_text(json.dumps(value))
+        self.assertTrue(self.verify('latest025'))
+        self.assertFalse(self.verify('latest024'))
+        self.lock.write_text('different lock\n')
+        self.assertFalse(self.verify('latest025'))
+
     def test_invalid_configuration_never_executes_cli(self):
         self.config.write_text('{}')
         self.assertFalse(self.verify())

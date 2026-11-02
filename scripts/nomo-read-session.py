@@ -29,6 +29,8 @@ def main(argv=None):
             context=directory(args.root,'read root')
             if context==state or context in state.parents or state in context.parents:raise ValueError('read root and state must not overlap')
             if not os.environ.get('MINIMAX_API_KEY'):raise ValueError('set MINIMAX_API_KEY before starting MiniMax')
+        version=os.environ.get('NOMO_ETAS_VERSION','0.2.5')
+        if version not in ('0.2.4','0.2.5'):raise ValueError('read sessions require ETAS 0.2.4 or 0.2.5')
         st=state.stat()
         if st.st_uid!=os.getuid() or stat.S_IMODE(st.st_mode)!=0o700:raise ValueError('state must be owned by you with mode 0700')
         cache=ROOT/'.etas'
@@ -53,10 +55,10 @@ def main(argv=None):
                 if p.exists():
                     info=p.stat()
                     if not stat.S_ISREG(info.st_mode) or info.st_nlink!=1:raise ValueError('session database and sidecars must be regular files without hardlinks')
-            env=dict(os.environ,NOMO_SESSION_STATE=str(state),NOMO_ETAS_VERSION='0.2.4')
+            env=dict(os.environ,NOMO_SESSION_STATE=str(state),NOMO_ETAS_VERSION=version)
             env.pop('NOMO_QWEN_SERVER_API_KEY',None)
             compose=['docker','compose','--env-file','/dev/null','--file',str(ROOT/'compose.yaml'),
-                     '--file',str(ROOT/'config/etas-024-official-compose.yaml'),'--file',str(ROOT/'config/etas-runtime-cache-compose.yaml')]
+                     '--file',str(ROOT/('config/etas-025-official-compose.yaml' if version=='0.2.5' else 'config/etas-024-official-compose.yaml')),'--file',str(ROOT/'config/etas-runtime-cache-compose.yaml')]
             if status:
                 env.pop('MINIMAX_API_KEY',None);env.pop('ETAS_HOST_MODEL_API_KEY',None)
                 profile='nomo-read-session-status';flow='read_session_status';native_args=[]
@@ -66,7 +68,7 @@ def main(argv=None):
                 flow='read_session';native_args=['--args',args.action,'--allow',args.allow,'--once',args.once]
                 compose+=['--file',str(ROOT/'config/local-tryout-compose.yaml'),'--file',str(ROOT/'config/nomo-minimax-read-compose.yaml')]
                 print('Current read root and allowlist are newly selected. Saved history is untrusted context and may be sent to MiniMax.',flush=True)
-                print('MiniMax thinking counts against output limits; the runtime does not expose the provider finish reason.',flush=True)
+                print('MiniMax thinking counts against output limits; ETAS 0.2.4 does not expose the provider finish reason.',flush=True)
                 print('A running or uncertain turn cannot be retried; this does not establish workspace identity continuity.',flush=True)
             compose+=['--file',str(ROOT/'config/nomo-read-session-compose.yaml')]
             native=['python3','-B','/workspace/scripts/nomo-verified-etas.py','run','/workspace','--flow',flow,'--profile',profile,'--allow-effects',*native_args]

@@ -49,6 +49,7 @@ def main():
     parser=argparse.ArgumentParser();parser.add_argument('--evidence-dir',type=Path,required=True)
     parser.add_argument('--allow-source-snapshot',action='store_true',help='source is an owned, secret-free isolated snapshot')
     parser.add_argument('--scenario',choices=('success','empty','truncated-valid'),default='success')
+    parser.add_argument('--etas-version',choices=('0.2.4','0.2.5'),default='0.2.5')
     args=parser.parse_args()
     probe=subprocess.run(['git','-C',str(SOURCE_ROOT),'rev-parse','--show-toplevel'],capture_output=True,text=True)
     if probe.returncode==0 and Path(probe.stdout.strip()).resolve()==SOURCE_ROOT:
@@ -79,7 +80,7 @@ def main():
         segment=original[start:end].replace('https://api.minimax.cn/v1','http://host.docker.internal:%d/v1'%server.server_port).replace('allow_private = false','allow_private = true')
         original=original[:start]+segment+original[end:]
     manifest.write_text(original)
-    env={'PATH':os.environ['PATH'],'HOME':os.environ['HOME'],'MINIMAX_API_KEY':TOKEN,'NOMO_ETAS_VERSION':'0.2.4'}
+    env={'PATH':os.environ['PATH'],'HOME':os.environ['HOME'],'MINIMAX_API_KEY':TOKEN,'NOMO_ETAS_VERSION':args.etas_version}
     cmd=[str(ROOT/'scripts/nomo-read.sh'),'work','--read-root',str(context),'--allow','context.txt',
          '--root',str(workspace),'--state',str(state),'--id','owned-edit','--path','note.txt','--once','Update old using context',
          '--check','/bin/sh','-c','test "$(cat note.txt)" = "before blue"']
@@ -120,9 +121,10 @@ def main():
         else:
             assert proc.returncode!=0 and not native and not application
             assert (workspace/'note.txt').read_bytes()==b'before old\n' and b'Running the requested check' not in output
-            assert server.phases==([0] if args.scenario=='empty' else [0,1])
+            assert server.phases==([0] if args.scenario=='empty' or args.etas_version=='0.2.5' else [0,1])
             result.update(phases=server.phases,check_passed=False,
-                          valid_truncated_response_followed_by_second_request=args.scenario=='truncated-valid')
+                          valid_truncated_response_followed_by_second_request=args.scenario=='truncated-valid' and args.etas_version=='0.2.4',
+                          truncated_response_stopped_before_second_request=args.scenario=='truncated-valid' and args.etas_version=='0.2.5')
         listing=subprocess.run(['docker','ps','-aq','--filter','label=nomo.terminal.invocation'],capture_output=True,text=True,timeout=5,check=True)
         for ident in listing.stdout.split():
             inspected=subprocess.run(['docker','inspect','--format','{{json .Mounts}}',ident],capture_output=True,text=True,timeout=5)

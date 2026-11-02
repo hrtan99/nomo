@@ -81,9 +81,9 @@ def prepare(args, stdin_tty, stdout_tty):
             raise ValueError('the selected file path must not contain symlinks')
     if not current.is_file():
         raise ValueError('the selected file must be an existing regular file')
-    version = os.environ.get('NOMO_ETAS_VERSION', '0.2.4' if task is not None and provider == 'minimax' else '0.2.2')
-    if version not in ('0.2.2', '0.2.3', '0.2.4'):
-        raise ValueError('NOMO_ETAS_VERSION must be 0.2.2, 0.2.3 or 0.2.4')
+    version = os.environ.get('NOMO_ETAS_VERSION', '0.2.5' if task is not None and provider == 'minimax' else '0.2.2')
+    if version not in ('0.2.2', '0.2.3', '0.2.4', '0.2.5'):
+        raise ValueError('NOMO_ETAS_VERSION must be 0.2.2, 0.2.3, 0.2.4 or 0.2.5')
     cache = ROOT / '.etas'
     if cache.is_symlink():
         raise ValueError('project .etas mountpoint must not be a symlink')
@@ -99,7 +99,7 @@ def prepare(args, stdin_tty, stdout_tty):
         env['NOMO_WORK_CONTEXT_DIR'] = str(read_root)
     if deadline is not None:
         env['NOMO_MODEL_REQUEST_DEADLINE_MS'] = str(deadline)
-    overlay = {'0.2.2': 'config/etas-022-official-compose.yaml', '0.2.3': 'config/etas-023-official-compose.yaml', '0.2.4': 'config/etas-024-official-compose.yaml'}[version]
+    overlay = {'0.2.2': 'config/etas-022-official-compose.yaml', '0.2.3': 'config/etas-023-official-compose.yaml', '0.2.4': 'config/etas-024-official-compose.yaml', '0.2.5': 'config/etas-025-official-compose.yaml'}[version]
     compose = ['docker', 'compose', '--env-file', '/dev/null', '--file', str(ROOT / 'compose.yaml'),
                '--file', str(ROOT / overlay),
                '--file', str(ROOT / 'config/etas-runtime-cache-compose.yaml'),
@@ -194,9 +194,9 @@ def prepare_project_check(root, check):
     if not check or not check[0]:
         raise ValueError('provide a check command')
     version = os.environ.get('NOMO_ETAS_VERSION', '0.2.2')
-    if version not in ('0.2.2', '0.2.3', '0.2.4'):
-        raise ValueError('NOMO_ETAS_VERSION must be 0.2.2, 0.2.3 or 0.2.4')
-    overlay = {'0.2.2': 'config/etas-022-official-compose.yaml', '0.2.3': 'config/etas-023-official-compose.yaml', '0.2.4': 'config/etas-024-official-compose.yaml'}[version]
+    if version not in ('0.2.2', '0.2.3', '0.2.4', '0.2.5'):
+        raise ValueError('NOMO_ETAS_VERSION must be 0.2.2, 0.2.3, 0.2.4 or 0.2.5')
+    overlay = {'0.2.2': 'config/etas-022-official-compose.yaml', '0.2.3': 'config/etas-023-official-compose.yaml', '0.2.4': 'config/etas-024-official-compose.yaml', '0.2.5': 'config/etas-025-official-compose.yaml'}[version]
     env = {key: value for key, value in os.environ.items()
            if not key.startswith('ETAS_HOST_') and key not in
            ('NOMO_READ_MODEL_BASE_URL', 'NOMO_QWEN_SERVER_API_KEY', 'NOMO_READ_MODEL_NAME', 'MINIMAX_API_KEY',
@@ -250,8 +250,8 @@ def prepare_edit_status(state_path, operation_id, path):
     if not (state / 'edit.sqlite3').is_file():
         raise ValueError('existing edit.sqlite3 required')
     version = os.environ.get('NOMO_ETAS_VERSION', '0.2.2')
-    if version not in ('0.2.2', '0.2.3', '0.2.4'):
-        raise ValueError('NOMO_ETAS_VERSION must be 0.2.2, 0.2.3 or 0.2.4')
+    if version not in ('0.2.2', '0.2.3', '0.2.4', '0.2.5'):
+        raise ValueError('NOMO_ETAS_VERSION must be 0.2.2, 0.2.3, 0.2.4 or 0.2.5')
     cache = ROOT / '.etas'
     if cache.is_symlink():
         raise ValueError('project .etas mountpoint must not be a symlink')
@@ -261,7 +261,7 @@ def prepare_edit_status(state_path, operation_id, path):
            ('NOMO_READ_MODEL_BASE_URL', 'NOMO_QWEN_SERVER_API_KEY', 'NOMO_READ_MODEL_NAME', 'MINIMAX_API_KEY',
             'NOMO_MODEL_REQUEST_DEADLINE_MS')}
     env['NOMO_EDIT_STATE_DIR'] = str(state)
-    overlay = {'0.2.2': 'config/etas-022-official-compose.yaml', '0.2.3': 'config/etas-023-official-compose.yaml', '0.2.4': 'config/etas-024-official-compose.yaml'}[version]
+    overlay = {'0.2.2': 'config/etas-022-official-compose.yaml', '0.2.3': 'config/etas-023-official-compose.yaml', '0.2.4': 'config/etas-024-official-compose.yaml', '0.2.5': 'config/etas-025-official-compose.yaml'}[version]
     command = [sys.executable, str(ROOT / 'scripts/terminal-transport.py'),
                'docker', 'compose', '--env-file', '/dev/null', '--file', str(ROOT / 'compose.yaml'),
                '--file', str(ROOT / overlay), '--file', str(ROOT / 'config/etas-runtime-cache-compose.yaml'),
@@ -312,7 +312,7 @@ def main(argv=None, work=False):
     if args.task is not None:
         if os.environ.get('NOMO_MODEL_PROVIDER', 'minimax') == 'minimax':
             print('MiniMax M Plan (China): MiniMax-M3.1-Flash; thinking is enabled and counts toward the output allowance. '
-                  'The provider finish reason is unavailable; review the complete edit preview carefully.', flush=True)
+                  'Review the complete edit preview carefully; ETAS 0.2.4 does not expose the provider finish reason.', flush=True)
         if work:
             print('Work may send the selected context, edit file and task to the model before write confirmation. '
                   'The read root is mounted read-only; the allowlist is enforced by Nomo, not per-file mounts. '

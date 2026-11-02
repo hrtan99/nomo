@@ -42,6 +42,14 @@ class ReadSessionLauncherTest(unittest.TestCase):
         cmd=run.call_args.args[0];env=run.call_args.args[1]
         for key in ('MINIMAX_API_KEY','ETAS_HOST_MODEL_API_KEY','NOMO_QWEN_SERVER_API_KEY'):self.assertNotIn(key,env)
         self.assertFalse(any('nomo-minimax-read-compose.yaml' in value for value in cmd));self.assertIn('nomo-read-session-status',cmd)
+    def test_025_and_024_use_their_selected_overlays(self):
+        for version in ('0.2.5','0.2.4'):
+            with self.subTest(version=version), patch.dict(os.environ, {'NOMO_ETAS_VERSION':version}), patch.object(launcher,'run_owned',return_value=0) as run:
+                self.existing() if not (self.state/'history.sqlite3').exists() else None
+                self.assertEqual(self.invoke(['status','--state',str(self.state)]),0)
+                name='config/etas-'+version.replace('.','')+'-official-compose.yaml'
+                self.assertIn(str(self.project/name),run.call_args.args[0])
+
     def test_overlapping_or_nonprivate_state_refused_before_launch(self):
         with patch.object(launcher,'run_owned') as run:
             self.assertNotEqual(self.invoke(['new','--root',str(self.root),'--state',str(self.state),'--allow','x','--once','q']),0)

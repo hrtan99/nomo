@@ -21,12 +21,12 @@ Select one or two relative files in the read-only directory. The default model
 is MiniMax M Plan (China), MiniMax-M3.1-Flash at https://api.minimax.cn/v1.
 Provide its subscription key through MINIMAX_API_KEY in the environment.
 MiniMax thinking counts against output limits. The runtime does not expose
-the provider's finish reason; review the complete edit preview carefully.
+the provider's finish reason under 0.2.4; review the complete edit preview carefully.
 For the earlier Qwen route, explicitly set NOMO_MODEL_PROVIDER=qwen along with
 NOMO_READ_MODEL_BASE_URL and NOMO_QWEN_SERVER_API_KEY; NOMO_READ_MODEL_NAME
 can select a different Qwen model. These provider credentials are separate.
-MiniMax defaults to verified ETAS 0.2.4; the earlier Qwen route defaults to
-0.2.2. Set NOMO_ETAS_VERSION explicitly to select 0.2.2, 0.2.3 or 0.2.4.
+MiniMax defaults to verified ETAS 0.2.5; the earlier Qwen route defaults to
+0.2.2. Set NOMO_ETAS_VERSION explicitly to select 0.2.2, 0.2.3, 0.2.4 or 0.2.5.
 For Qwen, the endpoint is reached from the container: for a host-local forward, use
 http://host.docker.internal:PORT/v1 rather than 127.0.0.1.
 Chat supports two tasks by default, or four with --turns 4, in one process.
@@ -98,12 +98,13 @@ case "$provider" in
     *) echo 'NOMO_MODEL_PROVIDER must be minimax or qwen.' >&2; exit 64 ;;
 esac
 default_etas=0.2.2
-if [[ "$provider" == minimax ]]; then default_etas=0.2.4; fi
+if [[ "$provider" == minimax ]]; then default_etas=0.2.5; fi
 case "${NOMO_ETAS_VERSION:-$default_etas}" in
     0.2.2) etas_overlay="$root/config/etas-022-official-compose.yaml" ;;
     0.2.3) etas_overlay="$root/config/etas-023-official-compose.yaml" ;;
     0.2.4) etas_overlay="$root/config/etas-024-official-compose.yaml" ;;
-    *) echo 'NOMO_ETAS_VERSION must be 0.2.2, 0.2.3 or 0.2.4.' >&2; exit 64 ;;
+    0.2.5) etas_overlay="$root/config/etas-025-official-compose.yaml" ;;
+    *) echo 'NOMO_ETAS_VERSION must be 0.2.2, 0.2.3, 0.2.4 or 0.2.5.' >&2; exit 64 ;;
 esac
 # Docker cannot create a tmpfs mountpoint inside the read-only source bind.
 # Create only this disposable, empty project cache directory before mounting.
