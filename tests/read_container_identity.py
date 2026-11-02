@@ -13,7 +13,14 @@ LOCK_SHA = 'a0cf4e743c0f7c2c141431de98d1aabbc389ad7533c92f5e4a5245b1edd3570e'
 FMT = '{"id":{{json .Id}},"name":{{json .Name}},"owner":{{json (index .Config.Labels "nomo.terminal.invocation")}},"image":{{json .Image}},"network":{{json .HostConfig.NetworkMode}},"memory":{{.HostConfig.Memory}},"nano_cpus":{{.HostConfig.NanoCpus}},"pids":{{.HostConfig.PidsLimit}},"mounts":{{json .Mounts}}}'
 
 
-def inspect_launch(root, read_root):
+def inspect_launch(root, read_root, version='0.2.2'):
+    if version == '0.2.2':
+        volume, cli_sha, lock_sha, lock_file = VOLUME, CLI_SHA, LOCK_SHA, 'config/etas-022-official.Cargo.lock'
+    elif version == '0.2.3':
+        volume, cli_sha, lock_sha, lock_file = ('nomo-cargo-023-20261102-a', '82069afbdd100254dfc2f80dfcf049f6f5e46a3b7e533b56c546821db4cbdaab',
+                                                '6908d8f4c1068eef655cee2f2536a95fd7d4f573fb3da48eeefddaaccbc284de', 'config/etas-023-official.Cargo.lock')
+    else:
+        raise ValueError('unsupported ETAS version')
     ids = subprocess.run([DOCKER, 'ps', '-q', '--filter', 'label=' + LABEL], capture_output=True, check=True, timeout=10).stdout.decode().splitlines()
     found = []
     for identifier in ids:
@@ -28,13 +35,13 @@ def inspect_launch(root, read_root):
     assert value['image'] == IMAGE and value['network'] == 'bridge'
     assert value['memory'] == 4294967296 and value['nano_cpus'] == 4000000000 and value['pids'] == 256
     assert all(not mounts[name]['RW'] for name in ('/workspace', '/model-tool-fixture', '/home/nomo/.cargo'))
-    assert mounts['/home/nomo/.cargo']['Name'] == VOLUME
+    assert mounts['/home/nomo/.cargo']['Name'] == volume
     cli = subprocess.run([DOCKER, 'exec', value['id'], 'sha256sum', '/home/nomo/.cargo/bin/etas'], capture_output=True, check=True, timeout=10)
     actual = cli.stdout.split()[0].decode()
-    assert actual == CLI_SHA
-    assert hashlib.sha256((root / 'config/etas-022-official.Cargo.lock').read_bytes()).hexdigest() == LOCK_SHA
-    return {'container_id': value['id'], 'cli_sha256': actual, 'lock_sha256': LOCK_SHA,
-            'cargo_volume': VOLUME, 'readonly_mounts_verified': True, 'resource_limits_verified': True}
+    assert actual == cli_sha
+    assert hashlib.sha256((root / lock_file).read_bytes()).hexdigest() == lock_sha
+    return {'container_id': value['id'], 'cli_sha256': actual, 'lock_sha256': lock_sha,
+            'cargo_volume': volume, 'readonly_mounts_verified': True, 'resource_limits_verified': True}
 
 
 def container_absent(identifier):

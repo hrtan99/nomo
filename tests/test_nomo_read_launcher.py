@@ -60,6 +60,16 @@ with open(os.environ['NOMO_TEST_LOG'],'w') as f:
         self.assertIn('read_model_tools_chat', call['args'])
         self.assertEqual(call['args'][-3:], ['new', '--allow', 'a.txt,b.txt'])
 
+    def test_four_turns_opt_in_and_invalid_value(self):
+        result = self.invoke('chat', '--root', self.read_root, '--allow', 'a.txt', '--turns', '4')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        call = json.loads(self.log.read_text())
+        self.assertEqual(call['args'][-5:], ['new', '--allow', 'a.txt', '--turns', '4'])
+        self.log.unlink()
+        result = self.invoke('chat', '--root', self.read_root, '--allow', 'a.txt', '--turns', '3')
+        self.assertEqual(result.returncode, 64)
+        self.assertFalse(self.log.exists())
+
     def test_explicit_023_and_unknown_version(self):
         env = dict(self.env, NOMO_ETAS_VERSION='0.2.3')
         result = self.invoke('chat', '--root', self.read_root, '--allow', 'a.txt', env=env)
