@@ -32,6 +32,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--evidence-dir', type=Path, required=True)
     parser.add_argument('--scenario', choices=('four','mixed','exhaust','failure','interrupt','default'), required=True)
+    parser.add_argument('--etas-version', choices=('0.2.2','0.2.3'), default='0.2.3')
     args = parser.parse_args(); args.evidence_dir.mkdir(parents=True, exist_ok=True)
     out = Path(tempfile.mkdtemp(prefix='chat-four-'+args.scenario+'-', dir=args.evidence_dir))
     root = out/'read'; (root/'docs').mkdir(parents=True)
@@ -43,7 +44,7 @@ def main():
         def do_POST(self):
             try:
                 counts['started'] += 1
-                if counts['started'] == 1: identity.update(inspect_launch(ROOT, root, '0.2.3'))
+                if counts['started'] == 1: identity.update(inspect_launch(ROOT, root, args.etas_version))
                 assert self.path == '/v1/chat/completions' and self.headers.get('Authorization') == 'Bearer '+TOKEN
                 length = int(self.headers['Content-Length']); assert 0 < length <= 196608
                 body = json.loads(self.rfile.read(length)); context = json.loads(body['messages'][1]['content'])
@@ -91,11 +92,11 @@ def main():
                 except Exception:pass
     server = HTTPServer(('127.0.0.1',0),Handler)
     server_thread = threading.Thread(target=server.serve_forever,daemon=True); server_thread.start()
-    proc = None; result={'status':'failed','scope':'non-TTY actual launcher; synthetic data and local fake model only','scenario':args.scenario}
+    proc = None; result={'status':'failed','scope':'non-TTY actual launcher; synthetic data and local fake model only','scenario':args.scenario, 'etas_version':args.etas_version}
     before = fingerprint()
-    inputs = {str(p.relative_to(ROOT)):sha(p) for p in [ROOT/'scripts/nomo-read.sh',ROOT/'scripts/nomo-verified-etas.py',ROOT/'tests/read_container_identity.py',Path(__file__).resolve(),ROOT/'config/etas-023-official.Cargo.lock']}
+    inputs = {str(p.relative_to(ROOT)):sha(p) for p in [ROOT/'scripts/nomo-read.sh',ROOT/'scripts/nomo-verified-etas.py',ROOT/'tests/read_container_identity.py',Path(__file__).resolve(),ROOT/('config/etas-022-official.Cargo.lock' if args.etas_version == '0.2.2' else 'config/etas-023-official.Cargo.lock')]}
     try:
-        env = dict(os.environ,NOMO_ETAS_VERSION='0.2.3',NOMO_READ_MODEL_BASE_URL='http://host.docker.internal:%d/v1'%server.server_port,
+        env = dict(os.environ,NOMO_ETAS_VERSION=args.etas_version,NOMO_READ_MODEL_BASE_URL='http://host.docker.internal:%d/v1'%server.server_port,
                    NOMO_READ_MODEL_NAME='synthetic',NOMO_QWEN_SERVER_API_KEY=TOKEN)
         cmd=[str(ROOT/'scripts/nomo-read.sh'),'chat','--root',str(root),'--allow','docs/a.txt']
         if args.scenario != 'default':cmd += ['--turns','4']
