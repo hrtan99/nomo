@@ -19,6 +19,7 @@ import nomo.entry.read_model_tools_chat.run as run_read_model_tools_chat;
 import nomo.entry.read_session.run as run_read_session;
 import nomo.entry.history_work.run as run_history_work;
 import nomo.entry.history_check.run as run_history_check;
+import nomo.entry.recovery_decision.run as run_recovery_decision;
 import nomo.entry.read_session.status as read_session_status_run;
 import nomo.entry.harness_checkpoint_entry.run_init as checkpoint_init;
 import nomo.entry.harness_checkpoint_entry.run_save as checkpoint_save;
@@ -164,6 +165,12 @@ flow harness_model_tools_chat(args: Array<string>) -> i32 {
 flow read_session_status(args: Array<string>) -> i32 {
     let status = read_session_status_run(args);
     if status != 0 { abort("Nomo read session status refused"); }
+    return 0;
+}
+
+flow recovery_decision(args: Array<string>) -> i32 {
+    let status = run_recovery_decision(args);
+    if status != 0 { abort("Nomo recovery decision stopped; inspect recorded status"); }
     return 0;
 }
 

@@ -31,6 +31,11 @@ class SessionIDTest(unittest.TestCase):
    self.assertNotEqual(self.call(['work','--sessions-dir',str(self.base),'--id',self.identifier])[0],0)
    args=['work','--sessions-dir',str(self.base),'--id',self.identifier,'--read-root','/read','--root','/edit','--operation-id','op1','--path','note.txt','--allow','context.txt','--once','change','--check']
    self.assertNotEqual(self.call(args)[0],0);launch.assert_not_called()
+ def test_decision_routes_selected_state_and_operation(self):
+  (self.base/self.identifier).mkdir(mode=0o700)
+  args=['decision','--sessions-dir',str(self.base),'--id',self.identifier,'--operation-id','op1','--target','work']
+  with patch.object(module._edit,'run_owned',return_value=0) as launch:
+   code,_,_=self.call(args);self.assertEqual(code,0);cmd=launch.call_args.args[0];self.assertTrue(any(str(x).endswith('nomo-recovery-decision.py') for x in cmd));self.assertIn(str(self.base/self.identifier),cmd);self.assertEqual(cmd[-4:],['--id','op1','--target','work'])
  def test_invalid_id_and_latest_fail_without_launch(self):
   with patch.object(module._edit,'run_owned') as launch:
    for value in ('../x','latest','A'*32,'0'*31):

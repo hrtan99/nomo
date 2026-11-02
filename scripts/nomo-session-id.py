@@ -31,19 +31,23 @@ def session(registry_fd,base,identifier,create):
 
 def main(argv=None):
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action',choices=('start','resume','status','work'));parser.add_argument('--sessions-dir',required=True)
+    parser.add_argument('action',choices=('start','resume','status','work','decision'));parser.add_argument('--sessions-dir',required=True)
     parser.add_argument('--id');parser.add_argument('--root');parser.add_argument('--allow');parser.add_argument('--once')
-    parser.add_argument('--read-root');parser.add_argument('--operation-id');parser.add_argument('--path');parser.add_argument('--check',nargs=argparse.REMAINDER)
+    parser.add_argument('--read-root');parser.add_argument('--operation-id');parser.add_argument('--path');parser.add_argument('--target',choices=('work','check'));parser.add_argument('--check',nargs=argparse.REMAINDER)
     args=parser.parse_args(argv)
     try:
         if args.action=='start' and args.id is not None:raise ValueError('a new session ID is generated automatically')
         if args.action!='start' and args.id is None:raise ValueError('select an existing session ID')
         if args.id=='latest':raise ValueError('latest compatible session is unavailable: workspace identity continuity cannot yet be verified')
-        if args.action=='work':
+        if args.action=='decision':
+            if args.operation_id is None or args.target is None:raise ValueError('select an operation ID and recovery target')
+            if any(x is not None for x in (args.read_root,args.root,args.allow,args.once,args.path,args.check)):raise ValueError('decision accepts no work or read options')
+        elif args.action=='work':
+            if args.target is not None:raise ValueError('--target is only for a recovery decision')
             if any(x is None for x in (args.read_root,args.root,args.allow,args.once,args.operation_id,args.path)):raise ValueError('select current read/edit roots, operation ID, path, allowlist and task')
             if args.check==[]:raise ValueError('--check requires a command')
         else:
-            if any(x is not None for x in (args.read_root,args.operation_id,args.path,args.check)):raise ValueError('work options require the work action')
+            if any(x is not None for x in (args.read_root,args.operation_id,args.path,args.target,args.check)):raise ValueError('work or decision options require their action')
             if args.action=='status':
                 if any(x is not None for x in (args.root,args.allow,args.once)):raise ValueError('status accepts no root, allowlist or task')
             elif any(x is None for x in (args.root,args.allow,args.once)):raise ValueError('select a current root, allowlist and task for each turn')
@@ -54,8 +58,10 @@ def main(argv=None):
         finally:os.close(fd)
         print('SESSION ID '+identifier,flush=True)
         if args.action=='start':print('Resume: nomo-read.sh session-id resume --sessions-dir '+shlex.quote(str(base))+' --id '+identifier+' --root DIR --allow FILE --once QUESTION',flush=True)
-        if args.action!='status':print('Current root is newly selected; session ID does not prove workspace identity or reuse approval.',flush=True)
-        if args.action=='work':
+        if args.action in ('start','resume','work'):print('Current root is newly selected; session ID does not prove workspace identity or reuse approval.',flush=True)
+        if args.action=='decision':
+            command=[sys.executable,str(ROOT/'scripts/nomo-recovery-decision.py'),'--state',str(state),'--id',args.operation_id,'--target',args.target]
+        elif args.action=='work':
             command=[sys.executable,str(ROOT/'scripts/nomo-history-work.py'),'--state',str(state),'--read-root',args.read_root,'--root',args.root,'--id',args.operation_id,'--path',args.path,'--allow',args.allow,'--once',args.once]
             if args.check is not None:command+=['--check',*args.check]
         else:

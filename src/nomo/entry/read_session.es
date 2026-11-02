@@ -16,6 +16,7 @@ import nomo.session.event_history.{load as load_events, append_metadata};
 import nomo.session.history_work_guard.{chat_available, inspect as inspect_work};
 import nomo.session.edit_operation_store.inspect as inspect_edit;
 import nomo.session.history_check_guard.inspect as inspect_check;
+import nomo.session.recovery_decision.get as get_decision;
 
 // Each entry requires an independently selected current read root and grant.
 // Saved conversation is untrusted context; a running reservation never resumes.
@@ -104,6 +105,10 @@ public flow status(args: Array<string>) -> i32 ![Console, Memory, Error<StorageE
             else { println("CHECK " + value.phase + "; no automatic retry or inferred outcome"); }
         }
         None() => {}
+    }
+    for target in ["work", "check"] limit Iterations(2) {
+        let decision = match get_decision(target) { Ok(value) => value, Err(error) => { println("REFUSED " + error); return 1; } };
+        match decision { Some(value) => { println("DECISION " + value.target + " abandon id=" + value.id + "; outcome remains unknown, no retry authorized"); } None() => {} }
     }
     println("Recorded data only; this does not establish current workspace identity, authorization or a remote outcome.");
     return 0;
