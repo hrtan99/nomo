@@ -750,3 +750,15 @@ name = "nomo-history-check"
 module = "nomo.main"
 flow = "history_check"
 profile = "nomo-read-session-status"
+
+[[bin]]
+name = "nomo-history-followup"
+module = "nomo.main"
+flow = "history_followup"
+profile = "nomo-history-work"
+
+[[bin]]
+name = "nomo-history-followup-check"
+module = "nomo.main"
+flow = "history_followup_check"
+profile = "nomo-read-session-status"

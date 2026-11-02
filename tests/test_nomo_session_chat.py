@@ -79,6 +79,26 @@ class SessionChatTest(unittest.TestCase):
         self.assertIn('--once=change this', work)
         self.assertEqual(work[-4:], ['--check', 'python3', '-m', 'pytest'])
 
+    def test_followup_routes_with_fresh_inputs(self):
+        code, _, _, calls = self.run_chat('/followup op2 "/tmp/edit dir" file.txt "change again" --check python3 -m pytest\n/exit\n')
+        self.assertEqual(code, 0)
+        command = calls.call_args.args[0]
+        self.assertIn('followup', command)
+        self.assertIn('--operation-id=op2', command)
+        self.assertIn('--once=change again', command)
+        self.assertEqual(command[-4:], ['--check', 'python3', '-m', 'pytest'])
+
+    def test_followup_option_like_values_are_single_arguments(self):
+        self.args[-2:] = ['--allow=-context']
+        code, _, _, calls = self.run_chat('/followup -n /tmp -file "task" --check printf -- -x\n/exit\n')
+        self.assertEqual(code, 0)
+        command = calls.call_args.args[0]
+        self.assertIn('followup', command)
+        self.assertIn('--operation-id=-n', command)
+        self.assertIn('--path=-file', command)
+        self.assertIn('--allow=-context', command)
+        self.assertEqual(command[-4:], ['--check', 'printf', '--', '-x'])
+
     def test_bad_work_syntax_never_launches(self):
         code, _, err, calls = self.run_chat('/work missing\n/work op /tmp f "unclosed\n/work op /tmp f task --check\n/exit\n')
         self.assertEqual(code, 0)

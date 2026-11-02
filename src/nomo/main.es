@@ -18,6 +18,8 @@ import nomo.entry.harness_model_tools_chat.run as run_harness_model_tools_chat;
 import nomo.entry.read_model_tools_chat.run as run_read_model_tools_chat;
 import nomo.entry.read_session.run as run_read_session;
 import nomo.entry.history_work.run as run_history_work;
+import nomo.entry.history_followup.run as run_history_followup;
+import nomo.entry.history_followup_check.run as run_history_followup_check;
 import nomo.entry.history_check.run as run_history_check;
 import nomo.entry.recovery_decision.run as run_recovery_decision;
 import nomo.entry.read_session.status as read_session_status_run;
@@ -307,3 +309,15 @@ flow chain_observe_new(args: Array<string>) -> i32 { let status = chain_observed
 flow chain_observe_continue(args: Array<string>) -> i32 { let status = chain_observed_continue_run(args); if status != 0 { abort("Nomo observed fixture continuation refused; preserve state, no retry"); } return 0; }
 
 flow chain_sessions(args: Array<string>) -> i32 { let status = chain_sessions_run(args); if status != 0 { abort("Nomo session discovery refused; see REFUSED"); } return 0; }
+
+flow history_followup(args: Array<string>) -> i32 {
+    let status = run_history_followup(args);
+    if status != 0 { abort("Nomo followup stopped; inspect recorded status"); }
+    return 0;
+}
+
+flow history_followup_check(args: Array<string>) -> i32 {
+    let status = run_history_followup_check(args);
+    if status != 0 { abort("Nomo followup check stopped; inspect recorded status"); }
+    return 0;
+}

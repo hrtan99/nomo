@@ -31,7 +31,7 @@ def session(registry_fd,base,identifier,create):
 
 def main(argv=None):
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action',choices=('start','resume','status','work','decision'));parser.add_argument('--sessions-dir',required=True)
+    parser.add_argument('action',choices=('start','resume','status','work','followup','decision'));parser.add_argument('--sessions-dir',required=True)
     parser.add_argument('--id');parser.add_argument('--root');parser.add_argument('--allow');parser.add_argument('--once')
     parser.add_argument('--read-root');parser.add_argument('--operation-id');parser.add_argument('--path');parser.add_argument('--target',choices=('work','check'));parser.add_argument('--check',nargs=argparse.REMAINDER)
     args=parser.parse_args(argv)
@@ -42,7 +42,7 @@ def main(argv=None):
         if args.action=='decision':
             if args.operation_id is None or args.target is None:raise ValueError('select an operation ID and recovery target')
             if any(x is not None for x in (args.read_root,args.root,args.allow,args.once,args.path,args.check)):raise ValueError('decision accepts no work or read options')
-        elif args.action=='work':
+        elif args.action in ('work','followup'):
             if args.target is not None:raise ValueError('--target is only for a recovery decision')
             if any(x is None for x in (args.read_root,args.root,args.allow,args.once,args.operation_id,args.path)):raise ValueError('select current read/edit roots, operation ID, path, allowlist and task')
             if args.check==[]:raise ValueError('--check requires a command')
@@ -58,11 +58,11 @@ def main(argv=None):
         finally:os.close(fd)
         print('SESSION ID '+identifier,flush=True)
         if args.action=='start':print('Resume: nomo-read.sh session-id resume --sessions-dir '+shlex.quote(str(base))+' --id '+identifier+' --root DIR --allow FILE --once QUESTION',flush=True)
-        if args.action in ('start','resume','work'):print('Current root is newly selected; session ID does not prove workspace identity or reuse approval.',flush=True)
+        if args.action in ('start','resume','work','followup'):print('Current root is newly selected; session ID does not prove workspace identity or reuse approval.',flush=True)
         if args.action=='decision':
             command=[sys.executable,str(ROOT/'scripts/nomo-recovery-decision.py'),'--state',str(state),'--id='+args.operation_id,'--target',args.target]
-        elif args.action=='work':
-            command=[sys.executable,str(ROOT/'scripts/nomo-history-work.py'),'--state',str(state),'--read-root',args.read_root,'--root',args.root,'--id='+args.operation_id,'--path='+args.path,'--allow='+args.allow,'--once='+args.once]
+        elif args.action in ('work','followup'):
+            command=[sys.executable,str(ROOT/('scripts/nomo-history-followup.py' if args.action=='followup' else 'scripts/nomo-history-work.py')),'--state',str(state),'--read-root',args.read_root,'--root',args.root,'--id='+args.operation_id,'--path='+args.path,'--allow='+args.allow,'--once='+args.once]
             if args.check is not None:command+=['--check',*args.check]
         else:
             mode={'start':'new','resume':'continue','status':'status'}[args.action]

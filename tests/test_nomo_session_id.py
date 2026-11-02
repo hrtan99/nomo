@@ -25,6 +25,11 @@ class SessionIDTest(unittest.TestCase):
   args=['work','--sessions-dir',str(self.base),'--id',self.identifier,'--read-root','/read','--root','/edit','--operation-id','op1','--path','note.txt','--allow','context.txt','--once','change','--check','/bin/true']
   with patch.object(module._edit,'run_owned',return_value=0) as launch:
    code,out,_=self.call(args);self.assertEqual(code,0);cmd=launch.call_args.args[0];self.assertTrue(any(str(x).endswith('nomo-history-work.py') for x in cmd));self.assertIn(str(self.base/self.identifier),cmd);self.assertIn('--id=op1',cmd);self.assertEqual(cmd[-2:],['--check','/bin/true']);self.assertIn('SESSION ID '+self.identifier,out)
+ def test_followup_routes_to_separate_launcher(self):
+  (self.base/self.identifier).mkdir(mode=0o700)
+  args=['followup','--sessions-dir',str(self.base),'--id',self.identifier,'--read-root','/read','--root','/edit','--operation-id','op2','--path','note.txt','--allow','context.txt','--once','change again','--check','/bin/true']
+  with patch.object(module._edit,'run_owned',return_value=0) as launch:
+   code,out,_=self.call(args);self.assertEqual(code,0);cmd=launch.call_args.args[0];self.assertTrue(any(str(x).endswith('nomo-history-followup.py') for x in cmd));self.assertIn(str(self.base/self.identifier),cmd);self.assertIn('--id=op2',cmd);self.assertEqual(cmd[-2:],['--check','/bin/true']);self.assertIn('newly selected',out)
  def test_work_missing_options_and_empty_check_refused(self):
   (self.base/self.identifier).mkdir(mode=0o700)
   with patch.object(module._edit,'run_owned') as launch:

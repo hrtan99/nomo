@@ -29,11 +29,11 @@ def main(argv=None):
               '--sessions-dir', args.sessions_dir, '--id', args.id, '--root', args.root,
               '--allow=' + args.allow]
     print('SESSION ID ' + args.id, flush=True)
-    print('Read turns and explicit one-shot work use this session; work requires fresh confirmations.', flush=True)
+    print('Read turns and bounded work use this session; each edit requires fresh confirmations.', flush=True)
     print('Resume: nomo-read.sh session-id resume --sessions-dir ' + shlex.quote(args.sessions_dir)
           + ' --id ' + shlex.quote(args.id) + ' --root DIR --allow FILE --once QUESTION', flush=True)
     if tty and args.once is None:
-        print('Enter a question, /help, /status, /work or /exit.', flush=True)
+        print('Enter a question, /help, /status, /work, /followup or /exit.', flush=True)
     while True:
         if args.once is not None:
             question = args.once
@@ -51,6 +51,7 @@ def main(argv=None):
             if question == '/help':
                 print('Read turns use the selected root and allowlist. /status inspects recorded state.')
                 print('/work OP_ID EDIT_ROOT PATH "TASK" [--check COMMAND ARG ...] runs one explicitly confirmed work operation.')
+                print('/followup OP_ID EDIT_ROOT PATH "TASK" [--check COMMAND ARG ...] runs the second bounded work operation.')
                 print('Quote arguments containing spaces. No shell interprets the check arguments. /exit leaves the session.')
                 continue
             if question == '/status':
@@ -61,12 +62,13 @@ def main(argv=None):
                     print('Status failed; inspect session state before continuing.', file=sys.stderr, flush=True)
                     return code
                 continue
-            if question == '/work' or question.startswith('/work '):
+            if question == '/work' or question.startswith('/work ') or question == '/followup' or question.startswith('/followup '):
                 try:
                     words = shlex.split(question)
+                    action = words[0][1:]
                     if len(words) < 5 or (len(words) > 5 and (words[5] != '--check' or len(words) == 6)):
-                        raise ValueError('expected /work OP_ID EDIT_ROOT PATH "TASK" [--check COMMAND ARG ...]')
-                    command = [sys.executable, str(ROOT / 'scripts/nomo-session-id.py'), 'work',
+                        raise ValueError('expected /work or /followup OP_ID EDIT_ROOT PATH "TASK" [--check COMMAND ARG ...]')
+                    command = [sys.executable, str(ROOT / 'scripts/nomo-session-id.py'), action,
                                '--sessions-dir', args.sessions_dir, '--id', args.id,
                                '--read-root', args.root, '--root', words[2], '--operation-id=' + words[1],
                                '--path=' + words[3], '--allow=' + args.allow, '--once=' + words[4], *words[5:]]

@@ -10,13 +10,16 @@ import std.collections.len as count;
 import nomo.model.model_tool_contract.allowed_error;
 import nomo.model.read_protocol.question_error;
 import nomo.harness.read_tool_chat.run_turn;
-import nomo.harness.history_continue_model.{WorkFacts, run_turn as run_after_work};
+import nomo.harness.history_continue_model.{WorkFacts, BudgetFacts, run_turn as run_after_work, run_after_followup};
 import nomo.session.chat_session_contract.{fresh, begin, complete};
 import nomo.session.chat_history.{load, save, save_completed};
 import nomo.session.history_work_guard.{chat_available, inspect as inspect_work};
 import nomo.session.edit_operation_store.inspect as inspect_edit;
 import nomo.session.history_check_guard.inspect as inspect_check;
 import nomo.session.recovery_decision.get as get_decision;
+import nomo.session.history_followup_guard.inspect as inspect_followup;
+import nomo.session.history_followup_edit_store.{inspect as inspect_followup_edit, available as followup_edit_available};
+import nomo.session.history_followup_check_guard.inspect as inspect_followup_check;
 
 // Each entry requires an independently selected current read root and grant.
 // Saved conversation is untrusted context; a running reservation never resumes.
@@ -45,6 +48,32 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyR
             work_facts = Some(WorkFacts { id = work.id, summary = work.summary, check = outcome, exit_code = exit });
         }
     }
+    let following = match inspect_followup() { Ok(value) => value, Err(error) => { println("REFUSED " + error); return 1; } };
+    let following_check = match inspect_followup_check() { Ok(value) => value, Err(error) => { println("REFUSED " + error); return 1; } };
+    var followup_facts: Option<WorkFacts> = None();
+    var work_calls: i32 = 0; var work_generation: i32 = 0;
+    match following {
+        None() => {
+            match followup_edit_available() { Ok(_) => {} Err(error) => { println("REFUSED orphan followup edit: " + error); return 1; } }
+            match following_check { Some(_) => { println("REFUSED orphan followup check"); return 1; } None() => {} }
+        }
+        Some(item) => {
+            if item.phase != "complete" { println("REFUSED followup work is unresolved"); return 1; }
+            match work_facts { None() => { println("REFUSED first work facts missing"); return 1; } Some(_) => {} }
+            let edit = match inspect_followup_edit(item.id, item.workspace, item.path) { Ok(Some(value)) => value, _ => { println("REFUSED completed followup edit required"); return 1; } };
+            if edit.phase != "completed" { println("REFUSED followup edit outcome unresolved"); return 1; }
+            var outcome = "not requested"; var exit = "";
+            match following_check {
+                Some(value) => { if value.id != item.id || value.phase != "complete" { println("REFUSED followup check outcome unresolved"); return 1; } outcome = value.outcome; exit = value.exit_code; }
+                None() => {}
+            }
+            let first = match item.parent.work.settled { Some(value) => value, None() => { println("REFUSED first work ledger missing"); return 1; } };
+            let second = match item.settled { Some(value) => value, None() => { println("REFUSED followup ledger missing"); return 1; } };
+            work_calls = first.read.calls + first.edit.calls + second.read.calls + second.edit.calls;
+            work_generation = first.read.tokens + first.edit.tokens + second.read.tokens + second.edit.tokens;
+            followup_facts = Some(WorkFacts { id = item.id, summary = item.summary, check = outcome, exit_code = exit });
+        }
+    }
     let existing = match load() { Ok(value) => value, Err(error) => { println("REFUSED " + error); return 1; } };
     if args[0] == "new" {
         match existing { Some(_) => { println("REFUSED session already exists"); return 1; } None() => {} }
@@ -61,7 +90,17 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyR
     println("RESERVED chat turn; interruption leaves it unresolved and will not retry.");
     println("A final answer is provisional until SAVED confirms durable history.");
     let result = match work_facts {
-        Some(value) => run_after_work(request, allowed, running.invocation, value),
+        Some(value) => {
+            match followup_facts {
+                Some(second) => {
+                    let budget = BudgetFacts { work_calls = work_calls, work_generation = work_generation,
+                        chat_used_calls = running.invocation.usage.calls, chat_used_generation = running.invocation.usage.tokens,
+                        chat_reserved_calls = 4, chat_reserved_generation = 8192 };
+                    run_after_followup(request, allowed, running.invocation, value, second, budget)
+                }
+                None() => run_after_work(request, allowed, running.invocation, value),
+            }
+        }
         None() => run_turn(request, allowed, running.invocation),
     };
     if result.status != 0 || !result.resolved { println("REFUSED chat turn unresolved; inspect session, do not retry"); return 1; }
@@ -106,6 +145,25 @@ public flow status(args: Array<string>) -> i32 ![Console, Memory, Error<StorageE
         Some(value) => {
             if value.phase == "complete" { println("CHECK complete result=" + value.outcome + " exit=" + value.exit_code); }
             else { println("CHECK " + value.phase + "; no automatic retry or inferred outcome"); }
+        }
+        None() => {}
+    }
+    let followup = match inspect_followup() { Ok(value) => value, Err(error) => { println("REFUSED " + error); return 1; } };
+    match followup {
+        Some(value) => {
+            println("FOLLOWUP " + value.phase + " id=" + value.id + " path=" + value.path);
+            println("FOLLOWUP BUDGET reserved_calls=" + to_string_i32(value.reserved.calls) + " reserved_generation=" + to_string_i32(value.reserved.generation));
+            match value.settled { Some(spent) => { println("FOLLOWUP BUDGET settled_calls=" + to_string_i32(spent.read.calls + spent.edit.calls) + " settled_generation=" + to_string_i32(spent.read.tokens + spent.edit.tokens)); } None() => {} }
+            let operation = match inspect_followup_edit(value.id, value.workspace, value.path) { Ok(item) => item, Err(error) => { println("REFUSED " + error); return 1; } };
+            match operation { Some(item) => { println("FOLLOWUP EDIT " + item.phase); } None() => { println("FOLLOWUP EDIT no recorded intent; missing data does not prove no effect"); } }
+        }
+        None() => {}
+    }
+    let followup_check = match inspect_followup_check() { Ok(value) => value, Err(error) => { println("REFUSED " + error); return 1; } };
+    match followup_check {
+        Some(value) => {
+            if value.phase == "complete" { println("FOLLOWUP CHECK complete result=" + value.outcome + " exit=" + value.exit_code); }
+            else { println("FOLLOWUP CHECK " + value.phase + "; no automatic retry or inferred outcome"); }
         }
         None() => {}
     }
