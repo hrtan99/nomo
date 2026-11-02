@@ -1,7 +1,7 @@
 module app.chat_four_probe;
 import std.io.println;
 import nomo.harness.harness_tool_contract.Ledger;
-import nomo.harness.harness_tool_chat_contract.{Invocation, Previous, empty};
+import nomo.harness.harness_tool_chat_contract.{Invocation, Previous, empty, default_maximum, fresh_invocation, turn_error, admission_error, combine};
 import nomo.harness.read_tool_chat_contract.{extended_invocation, extended_maximum, extended_admission_error, extended_turn_error, extended_combine};
 
 flow ledger(steps: i32, calls: i32, tools: i32) -> Ledger {
@@ -14,6 +14,13 @@ flow invocation(usage: Ledger, turns: i32, selected: Previous) -> Invocation {
     return Invocation { usage = usage, maximum = extended_maximum(), admitted = turns, prior = selected };
 }
 flow checks() -> bool {
+    // Existing two-turn legacy accounting and admission remain bounded.
+    if turn_error(fresh_invocation()) != "" { return false; }
+    let legacy_one = Invocation { usage = ledger(7, 4, 1), maximum = default_maximum(), admitted = 1, prior = prior("read") };
+    if turn_error(legacy_one) != "" { return false; }
+    if admission_error(ledger(14, 8, 2), default_maximum()) == "" { return false; }
+    let legacy_full = match combine(ledger(7, 4, 1), ledger(7, 4, 1), default_maximum()) { Ok(value) => value, Err(_) => { return false; } };
+    if legacy_full != default_maximum() { return false; }
     if extended_turn_error(extended_invocation()) != "" { return false; }
     if extended_turn_error(invocation(ledger(7, 4, 1), 1, prior("read"))) != "" { return false; }
     // One tool and one direct completion; previous turn has no tool.
