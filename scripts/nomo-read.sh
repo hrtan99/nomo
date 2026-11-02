@@ -10,11 +10,11 @@ Usage:
   nomo-read.sh chat --root ABSOLUTE_DIRECTORY --allow FILE[,FILE] [--turns 4]
   nomo-read.sh session-new|session-continue --root ABSOLUTE_DIRECTORY --state PRIVATE_DIRECTORY --allow FILE[,FILE] --once QUESTION
   nomo-read.sh session-status --state PRIVATE_DIRECTORY
-  nomo-read.sh session-decision --state PRIVATE_DIRECTORY --id OPERATION_ID --target work|check
+  nomo-read.sh session-decision --state PRIVATE_DIRECTORY --id OPERATION_ID --target work|check|followup|followup-check
   nomo-read.sh session-id start --sessions-dir PRIVATE_DIRECTORY --root DIR --allow FILE[,FILE] --once QUESTION
   nomo-read.sh session-id resume --sessions-dir PRIVATE_DIRECTORY --id SESSION_ID --root DIR --allow FILE[,FILE] --once QUESTION
   nomo-read.sh session-id status --sessions-dir PRIVATE_DIRECTORY --id SESSION_ID
-  nomo-read.sh session-id decision --sessions-dir PRIVATE_DIRECTORY --id SESSION_ID --operation-id ID --target work|check
+  nomo-read.sh session-id decision --sessions-dir PRIVATE_DIRECTORY --id SESSION_ID --operation-id ID --target work|check|followup|followup-check
   nomo-read.sh session-chat --sessions-dir PRIVATE_DIRECTORY --id SESSION_ID --root DIR --allow FILE[,FILE] [--once QUESTION]
   nomo-read.sh session-id work --sessions-dir PRIVATE_DIRECTORY --id SESSION_ID --read-root DIR --root PRIVATE_DIRECTORY --operation-id ID --path FILE --allow FILE[,FILE] --once TASK [--check COMMAND ARG ...]
   nomo-read.sh session-followup --read-root ABSOLUTE_DIRECTORY --allow FILE[,FILE] --root PRIVATE_DIRECTORY --state PRIVATE_DIRECTORY --id ID --path FILE --once TASK [--check COMMAND ARG ...]

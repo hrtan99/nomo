@@ -167,7 +167,7 @@ public flow status(args: Array<string>) -> i32 ![Console, Memory, Error<StorageE
         }
         None() => {}
     }
-    for target in ["work", "check"] limit Iterations(2) {
+    for target in ["work", "check", "followup", "followup-check"] limit Iterations(4) {
         let decision = match get_decision(target) { Ok(value) => value, Err(error) => { println("REFUSED " + error); return 1; } };
         match decision { Some(value) => { println("DECISION " + value.target + " abandon id=" + value.id + "; outcome remains unknown, no retry authorized"); } None() => {} }
     }

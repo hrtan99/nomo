@@ -5,7 +5,7 @@ from pathlib import Path
 ROOT=Path(__file__).resolve().parent.parent
 spec=importlib.util.spec_from_file_location('edit_launcher',ROOT/'scripts/nomo-edit.py');edit=importlib.util.module_from_spec(spec);spec.loader.exec_module(edit)
 def main(argv=None):
- parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--state',required=True);parser.add_argument('--id',required=True);parser.add_argument('--target',choices=('work','check'),required=True);args=parser.parse_args(argv)
+ parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--state',required=True);parser.add_argument('--id',required=True);parser.add_argument('--target',choices=('work','check','followup','followup-check'),required=True);args=parser.parse_args(argv)
  try:
   if not sys.stdin.isatty() or not sys.stdout.isatty():raise ValueError('an interactive terminal is required for a recovery decision')
   if not args.id.strip() or len(args.id)>128 or not all(32<=ord(c)<=126 for c in args.id):raise ValueError('operation ID must be 1..128 printable ASCII characters')
