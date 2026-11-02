@@ -9,6 +9,7 @@ Usage:
   nomo-read.sh ask  --root ABSOLUTE_DIRECTORY --allow FILE[,FILE] --once QUESTION
   nomo-read.sh chat --root ABSOLUTE_DIRECTORY --allow FILE[,FILE]
   nomo-read.sh edit --root ABSOLUTE_DIRECTORY --state FRESH_PRIVATE_DIRECTORY --id ID --path FILE --target TEXT --replacement TEXT [--check COMMAND ARG ...]
+  nomo-read.sh edit --root ABSOLUTE_DIRECTORY --state FRESH_PRIVATE_DIRECTORY --id ID --path FILE --once TASK [--check COMMAND ARG ...]
 
 Select one or two relative files in the read-only directory. Set
 NOMO_READ_MODEL_BASE_URL to the reachable Qwen OpenAI-compatible endpoint and
@@ -19,6 +20,7 @@ http://host.docker.internal:PORT/v1 rather than 127.0.0.1.
 Chat supports two tasks in one process; it is not a durable session.
 Questions require 1..128 safe UTF-8 bytes; /help shows all bounds
 and /exit ends chat. Successful completion does not verify factual accuracy.
+Model editing sends the selected file and task to the configured model.
 HELP
 }
 if [[ $# -eq 0 || ( $# -eq 1 && ( "$1" == help || "$1" == --help ) ) ]]; then usage; exit 0; fi

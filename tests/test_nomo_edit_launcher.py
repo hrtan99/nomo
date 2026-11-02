@@ -49,6 +49,30 @@ class EditLauncherTests(unittest.TestCase):
         self.assertEqual(check[check.index('--workdir') + 1], '/edit-fixture')
         self.assertEqual(check[-4:], ['60s', 'python3', '-m', 'unittest'])
 
+    def test_model_edit_uses_explicit_endpoint_and_keeps_check_offline(self):
+        self.args.task = 'change old to new'
+        self.args.target = self.args.replacement = None
+        self.args.check = ['true']
+        with patch.dict(os.environ, {'NOMO_READ_MODEL_BASE_URL': 'http://example.test/v1',
+                                    'NOMO_QWEN_SERVER_API_KEY': 'synthetic'}, clear=True):
+            command, check, _ = module.prepare(self.args, True, True)
+        overlay = str(self.project / 'config/nomo-model-edit-compose.yaml')
+        self.assertIn(overlay, command)
+        self.assertNotIn(overlay, check)
+        self.assertIn(str(self.project / 'config/nomo-edit-compose.yaml'), check)
+        self.assertEqual(command[command.index('--flow') + 1], 'harness_edit')
+        self.assertEqual(command[command.index('--once') + 1], self.args.task)
+        self.assertNotIn('--target', command)
+
+    def test_model_edit_requires_explicit_endpoint_and_exclusive_arguments(self):
+        self.args.task = 'task'
+        with patch.dict(os.environ, {}, clear=True), self.assertRaisesRegex(ValueError, 'either'):
+            module.prepare(self.args, True, True)
+        self.args.target = self.args.replacement = None
+        with patch.dict(os.environ, {}, clear=True), self.assertRaisesRegex(ValueError, 'NOMO_READ_MODEL_BASE_URL'):
+            module.prepare(self.args, True, True)
+        self.assertFalse((self.project / '.etas').exists())
+
     def test_noninteractive_refused_before_creating_cache(self):
         with self.assertRaisesRegex(ValueError, 'interactive terminal'):
             module.prepare(self.args, False, False)

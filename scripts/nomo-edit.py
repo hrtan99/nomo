@@ -32,8 +32,16 @@ def prepare(args, stdin_tty, stdout_tty):
     info = state.stat()
     if info.st_uid != os.getuid() or stat.S_IMODE(info.st_mode) != 0o700 or any(state.iterdir()):
         raise ValueError('state must be an empty directory owned by you with mode 0700')
-    if not args.id or not args.path or not args.target:
-        raise ValueError('id, path and target must be nonempty')
+    task = getattr(args, 'task', None)
+    if not args.id or not args.path:
+        raise ValueError('id and path must be nonempty')
+    if task is not None:
+        if not task or args.target is not None or args.replacement is not None:
+            raise ValueError('provide either a nonempty task or target and replacement')
+        if not os.environ.get('NOMO_READ_MODEL_BASE_URL') or not os.environ.get('NOMO_QWEN_SERVER_API_KEY'):
+            raise ValueError('set NOMO_READ_MODEL_BASE_URL and NOMO_QWEN_SERVER_API_KEY for model editing')
+    elif not args.target or args.replacement is None:
+        raise ValueError('provide either a nonempty task or target and replacement')
     selected = Path(args.path)
     if selected.is_absolute() or '..' in selected.parts or '\\' in args.path or '\0' in args.path:
         raise ValueError('file must be a relative path inside the workspace')
@@ -55,12 +63,16 @@ def prepare(args, stdin_tty, stdout_tty):
                '--file', str(ROOT / 'config/etas-runtime-cache-compose.yaml'),
                '--file', str(ROOT / 'config/edit-operation-compose.yaml'),
                '--file', str(ROOT / 'config/nomo-edit-compose.yaml')]
-    command = [sys.executable, str(ROOT / 'scripts/terminal-transport.py'), *compose,
-               'run', '--rm', '--no-deps', '--pull', 'never', '--tty=true', 'dev',
-               'python3', '-B', '/workspace/scripts/nomo-verified-etas.py', 'run', '/workspace',
-               '--flow', 'edit_apply', '--profile', 'edit-apply', '--allow-effects', '--args',
+    model_compose = compose + ['--file', str(ROOT / 'config/nomo-model-edit-compose.yaml')] if task is not None else compose
+    native = (['--flow', 'harness_edit', '--profile', 'harness-edit', '--allow-effects', '--args',
+               '--id', args.id, '--workspace', 'private-workspace', '--path', args.path, '--once', task]
+              if task is not None else
+              ['--flow', 'edit_apply', '--profile', 'edit-apply', '--allow-effects', '--args',
                '--id', args.id, '--workspace', 'private-workspace', '--path', args.path,
-               '--target', args.target, '--replacement', args.replacement]
+               '--target', args.target, '--replacement', args.replacement])
+    command = [sys.executable, str(ROOT / 'scripts/terminal-transport.py'), *model_compose,
+               'run', '--rm', '--no-deps', '--pull', 'never', '--tty=true', 'dev',
+               'python3', '-B', '/workspace/scripts/nomo-verified-etas.py', 'run', '/workspace', *native]
     check = None
     if args.check:
         check = [sys.executable, str(ROOT / 'scripts/terminal-transport.py'), *compose,
@@ -128,8 +140,9 @@ def main(argv=None):
     parser.add_argument('--state', required=True, help='empty private directory for one durable operation')
     parser.add_argument('--id', required=True)
     parser.add_argument('--path', required=True)
-    parser.add_argument('--target', required=True)
-    parser.add_argument('--replacement', required=True)
+    parser.add_argument('--target')
+    parser.add_argument('--replacement')
+    parser.add_argument('--once', dest='task', help='model task; sends the selected file to the configured model')
     parser.add_argument('--check', nargs=argparse.REMAINDER, help='optional check command and arguments; put this option last')
     args = parser.parse_args(argv)
     if args.check == []:
