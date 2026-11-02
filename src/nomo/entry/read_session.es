@@ -12,6 +12,9 @@ import nomo.model.read_protocol.question_error;
 import nomo.harness.read_tool_chat.run_turn;
 import nomo.session.chat_session_contract.{fresh, begin, complete};
 import nomo.session.chat_history.{load, save};
+import nomo.session.history_work_guard.{chat_available, inspect as inspect_work};
+import nomo.session.edit_operation_store.inspect as inspect_edit;
+import nomo.session.history_check_guard.inspect as inspect_check;
 
 // Each entry requires an independently selected current read root and grant.
 // Saved conversation is untrusted context; a running reservation never resumes.
@@ -23,6 +26,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyR
     let allowed = split(args[2], ",");
     let paths = allowed_error(allowed); if paths != "" { println("REFUSED " + paths); return 1; }
     let request = args[4]; let question = question_error(request); if question != "" { println("REFUSED " + question); return 1; }
+    match chat_available() { Ok(_) => {} Err(error) => { println("REFUSED " + error); return 1; } }
     let existing = match load() { Ok(value) => value, Err(error) => { println("REFUSED " + error); return 1; } };
     if args[0] == "new" {
         match existing { Some(_) => { println("REFUSED session already exists"); return 1; } None() => {} }
@@ -50,6 +54,31 @@ public flow status(args: Array<string>) -> i32 ![Console, Memory, Error<StorageE
     let entry = match load() { Ok(Some(value)) => value, Ok(None()) => { println("SESSION missing"); return 1; } Err(error) => { println("REFUSED " + error); return 1; } };
     let saved = entry.value;
     println("SESSION " + saved.phase + " turns=" + to_string_i32(saved.invocation.admitted));
+    let pending_calls = if saved.phase == "running" { 4 } else { 0 };
+    let pending_generation = if saved.phase == "running" { 8192 } else { 0 };
+    println("CHAT BUDGET used_calls=" + to_string_i32(saved.invocation.usage.calls) + " used_generation=" +
+        to_string_i32(saved.invocation.usage.tokens) + " reserved_calls=" + to_string_i32(pending_calls) +
+        " reserved_generation=" + to_string_i32(pending_generation));
+    let work = match inspect_work() { Ok(value) => value, Err(error) => { println("REFUSED " + error); return 1; } };
+    match work {
+        Some(value) => {
+            println("WORK " + value.phase + " id=" + value.id + " path=" + value.path);
+            println("WORK BUDGET reserved_calls=" + to_string_i32(value.reserved.calls) + " reserved_generation=" + to_string_i32(value.reserved.generation));
+            match value.settled { Some(spent) => { println("WORK BUDGET settled_calls=" + to_string_i32(spent.read.calls + spent.edit.calls) +
+                " settled_generation=" + to_string_i32(spent.read.tokens + spent.edit.tokens)); } None() => {} }
+            let operation = match inspect_edit(value.id, value.workspace, value.path) { Ok(item) => item, Err(error) => { println("REFUSED " + error); return 1; } };
+            match operation { Some(item) => { println("EDIT " + item.phase); } None() => { println("EDIT no recorded intent; missing data does not prove no effect"); } }
+        }
+        None() => {}
+    }
+    let check = match inspect_check() { Ok(value) => value, Err(error) => { println("REFUSED " + error); return 1; } };
+    match check {
+        Some(value) => {
+            if value.phase == "complete" { println("CHECK complete result=" + value.outcome + " exit=" + value.exit_code); }
+            else { println("CHECK " + value.phase + "; no automatic retry or inferred outcome"); }
+        }
+        None() => {}
+    }
     println("Recorded data only; this does not establish current workspace identity, authorization or a remote outcome.");
     return 0;
 }

@@ -185,7 +185,7 @@ def run_owned(command, env):
 
 
 
-def prepare_project_check(root, check):
+def prepare_project_check(root, check, version=None):
     """Prepare a user-selected check without opening an edit operation store."""
     workspace = directory(root, 'workspace')
     info = workspace.stat()
@@ -193,7 +193,7 @@ def prepare_project_check(root, check):
         raise ValueError('workspace must be owned by you and inaccessible to other users')
     if not check or not check[0]:
         raise ValueError('provide a check command')
-    version = os.environ.get('NOMO_ETAS_VERSION', '0.2.2')
+    version = version if version is not None else os.environ.get('NOMO_ETAS_VERSION', '0.2.2')
     if version not in ('0.2.2', '0.2.3', '0.2.4', '0.2.5'):
         raise ValueError('NOMO_ETAS_VERSION must be 0.2.2, 0.2.3, 0.2.4 or 0.2.5')
     overlay = {'0.2.2': 'config/etas-022-official-compose.yaml', '0.2.3': 'config/etas-023-official-compose.yaml', '0.2.4': 'config/etas-024-official-compose.yaml', '0.2.5': 'config/etas-025-official-compose.yaml'}[version]
@@ -202,6 +202,7 @@ def prepare_project_check(root, check):
            ('NOMO_READ_MODEL_BASE_URL', 'NOMO_QWEN_SERVER_API_KEY', 'NOMO_READ_MODEL_NAME', 'MINIMAX_API_KEY',
             'NOMO_MODEL_REQUEST_DEADLINE_MS')}
     env['NOMO_EDIT_WORKSPACE_DIR'] = str(workspace)
+    env['NOMO_ETAS_VERSION'] = version
     command = [sys.executable, str(ROOT / 'scripts/terminal-transport.py'),
                'docker', 'compose', '--env-file', '/dev/null', '--file', str(ROOT / 'compose.yaml'),
                '--file', str(ROOT / overlay), '--file', str(ROOT / 'config/nomo-project-check-compose.yaml'),

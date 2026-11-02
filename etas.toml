@@ -703,3 +703,50 @@ name = "nomo-read-session-status"
 module = "nomo.main"
 flow = "read_session_status"
 profile = "nomo-read-session-status"
+
+[runtime.profiles.nomo-history-work]
+boundary_policy = "nomo-harness-work"
+[runtime.profiles.nomo-history-work.memory]
+backend = "sqlite"
+path = "file:history.sqlite3?mode=rw"
+[runtime.profiles.nomo-history-work.model]
+adapter = "openai"
+model = "MiniMax-M3.1-Flash"
+base_url = "https://api.minimax.cn/v1"
+api_key_env = "MINIMAX_API_KEY"
+allow_private = false
+
+[runtime.profiles.nomo-history-work.model.timeout]
+request_deadline_ms = 120000
+connect_timeout_ms = 2000
+[runtime.profiles.nomo-history-work.model.retry]
+attempts = 1
+delay_ms = 0
+[runtime.profiles.nomo-history-work.filesystem.regions."nomo.tools.workspace.ReadOnlyRoot"]
+root = "/work-context"
+read = true
+write = false
+delete = false
+[runtime.profiles.nomo-history-work.filesystem.regions."nomo.tools.edit_file.EditableRoot"]
+root = "/edit-fixture"
+read = true
+write = true
+delete = false
+[runtime.profiles.nomo-history-work.policy]
+mode = "local-static"
+rules = ["console=allow", "memory=allow", "model=allow", "approval=allow", "filesystem:Fs.stat=allow", "filesystem:Fs.read=allow", "filesystem:Fs.atomic_replace=allow", "filesystem:Fs.write=deny", "filesystem:HostFilesystem.delete=deny"]
+[runtime.profiles.nomo-history-work.approval]
+mode = "prompt"
+
+
+[[bin]]
+name = "nomo-history-work"
+module = "nomo.main"
+flow = "history_work"
+profile = "nomo-history-work"
+
+[[bin]]
+name = "nomo-history-check"
+module = "nomo.main"
+flow = "history_check"
+profile = "nomo-read-session-status"

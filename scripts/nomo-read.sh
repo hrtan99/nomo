@@ -57,6 +57,7 @@ if [[ "$action" == session-new || "$action" == session-continue || "$action" == 
     if [[ "$action" == session-new ]]; then mode=new; elif [[ "$action" == session-continue ]]; then mode=continue; else mode=status; fi
     exec python3 "$root/scripts/nomo-read-session.py" "$mode" "$@"
 fi
+if [[ "$action" == session-work ]]; then exec python3 "$root/scripts/nomo-history-work.py" "$@"; fi
 if [[ "$action" == resume ]]; then
     echo 'Session resume is not available yet.' >&2
     exit 1

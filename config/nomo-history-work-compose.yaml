@@ -1,0 +1,16 @@
+services:
+  dev:
+    environment:
+      ETAS_HOST_APPROVAL: "prompt"
+    volumes:
+      - type: bind
+        source: "${NOMO_EDIT_WORKSPACE_DIR:?select an edit workspace}"
+        target: /edit-fixture
+        bind:
+          create_host_path: false
+      - type: bind
+        source: "${NOMO_WORK_CONTEXT_DIR:?select a read context}"
+        target: /work-context
+        read_only: true
+        bind:
+          create_host_path: false
