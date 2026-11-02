@@ -265,7 +265,9 @@ def main(argv=None):
         print('Edit completed; no check was requested.', flush=True)
         return 0
     print('Running the requested check in the edited workspace (60-second limit).', flush=True)
-    checked = run_owned(check, env)
+    check_env = {key: value for key, value in env.items() if key not in
+                 ('NOMO_READ_MODEL_BASE_URL', 'NOMO_QWEN_SERVER_API_KEY', 'NOMO_READ_MODEL_NAME')}
+    checked = run_owned(check, check_env)
     if checked != 0:
         print('Check failed or could not be completed (exit ' + str(checked) + ').', file=sys.stderr, flush=True)
         return checked

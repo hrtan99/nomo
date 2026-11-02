@@ -80,6 +80,23 @@ class EditLauncherTests(unittest.TestCase):
         self.assertEqual(command[command.index('--once') + 1], self.args.task)
         self.assertNotIn('--target', command)
 
+    def test_model_settings_are_not_inherited_by_post_edit_check(self):
+        values = {'NOMO_READ_MODEL_BASE_URL': 'http://example.test/v1',
+                  'NOMO_QWEN_SERVER_API_KEY': 'synthetic', 'NOMO_READ_MODEL_NAME': 'synthetic-model',
+                  'NOMO_KEPT': 'kept'}
+        argv = ['--root', str(self.workspace), '--state', str(self.state), '--id', 'case',
+                '--path', 'a.txt', '--once', 'change old to new', '--check', 'true']
+        calls = []
+        with patch.dict(os.environ, values, clear=True), patch.object(module.sys.stdin, 'isatty', return_value=True), \
+             patch.object(module.sys.stdout, 'isatty', return_value=True), \
+             patch.object(module, 'run_owned', side_effect=lambda command, env: calls.append((command, env)) or 0):
+            self.assertEqual(module.main(argv), 0)
+        self.assertEqual(len(calls), 2)
+        for key in ('NOMO_READ_MODEL_BASE_URL', 'NOMO_QWEN_SERVER_API_KEY', 'NOMO_READ_MODEL_NAME'):
+            self.assertEqual(calls[0][1][key], values[key])
+            self.assertNotIn(key, calls[1][1])
+        self.assertEqual(calls[1][1]['NOMO_KEPT'], 'kept')
+
     def test_model_edit_requires_explicit_endpoint_and_exclusive_arguments(self):
         self.args.task = 'task'
         with patch.dict(os.environ, {}, clear=True), self.assertRaisesRegex(ValueError, 'either'):
