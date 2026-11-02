@@ -111,6 +111,24 @@ public flow read_unicode_text_probe(args: Array<string>) -> i32 {
         Ok(value) => { if value.text != "内容是蓝色" { abort("formatted child answer changed"); } }
         Err(_) => { abort("formatted child answer refused"); }
     }
+    match decode_child("[\"final\",\"x\",\"extra\"]", ["sample.txt"], true) {
+        Err(error) => { if error != "child final must contain exactly two fields" { abort("wrong final field diagnostic"); } }
+        Ok(_) => { abort("extra final field accepted"); }
+    }
+    match decode_child("[\"final\",\"   \"]", ["sample.txt"], true) {
+        Err(error) => { if error != "child final text is empty" { abort("wrong empty final diagnostic"); } }
+        Ok(_) => { abort("empty final accepted"); }
+    }
+    var long = ""; var i: i32 = 0;
+    while i < 257 limit Iterations(257) { long = long + "a"; i = i + 1; }
+    match decode_child("[\"final\",\"" + long + "\"]", ["sample.txt"], true) {
+        Err(error) => { if error != "child final exceeds 256 UTF-8 bytes" { abort("wrong final size diagnostic"); } }
+        Ok(_) => { abort("overlong final accepted"); }
+    }
+    match decode_child("[\"final\",\"one" + split("\\/", "")[1] + "nline\"]", ["sample.txt"], true) {
+        Err(error) => { if error != "child final contains unsupported control or formatting characters" { abort("wrong final control diagnostic"); } }
+        Ok(_) => { abort("escaped newline final accepted"); }
+    }
     match decode_plan("[\n \"delegate\",\t \"请读取文件\"\r\n]") {
         Ok(value) => { if value != "请读取文件" { abort("formatted delegation changed"); } }
         Err(_) => { abort("formatted delegation refused"); }

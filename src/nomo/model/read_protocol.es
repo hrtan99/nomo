@@ -1,6 +1,6 @@
 module nomo.model.read_protocol;
 
-import std.text.{len, split};
+import std.text.{len, split, trim};
 import std.collections.len as count;
 import std.json.parse;
 import std.codec.text.utf8_encode;
@@ -77,12 +77,21 @@ public flow answer(raw: string) -> Result<string, string> {
     return Ok(raw);
 }
 
+// Report only the violated constraint; never display the model's rejected text.
+flow child_final_error(text: string) -> string {
+    if text == "" || trim(text) == "" { return "child final text is empty"; }
+    if len(text) > 256 || byte_count(utf8_encode(text)) > 256 { return "child final exceeds 256 UTF-8 bytes"; }
+    if !safe(text, 256) { return "child final contains unsupported control or formatting characters"; }
+    return "";
+}
+
 public flow decode_child(raw: string, allowed: Array<string>, final_only: bool) -> Result<Action, string> {
     let invalid = allowed_error(allowed); if invalid != "" { return Err(invalid); }
     let values = match fields(raw, 1152) { Ok(item) => item, Err(error) => { return Err(error); } };
     if count(values) < 2 || count(values) > 4 { return Err("invalid action field count"); }
     if values[0] == "final" {
-        if count(values) != 2 || !bounded(values[1], 256) { return Err("invalid bounded child answer"); }
+        if count(values) != 2 { return Err("child final must contain exactly two fields"); }
+        let invalid = child_final_error(values[1]); if invalid != "" { return Err(invalid); }
         return Ok(Action { operation = "final", files = [], literal = "", text = values[1] });
     }
     if final_only { return Err("second response must be final"); }

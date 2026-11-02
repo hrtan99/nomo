@@ -19,6 +19,9 @@ def inspect_launch(root, read_root, version='0.2.2'):
     elif version == '0.2.3':
         volume, cli_sha, lock_sha, lock_file = ('nomo-cargo-023-20261102-a', '82069afbdd100254dfc2f80dfcf049f6f5e46a3b7e533b56c546821db4cbdaab',
                                                 '6908d8f4c1068eef655cee2f2536a95fd7d4f573fb3da48eeefddaaccbc284de', 'config/etas-023-official.Cargo.lock')
+    elif version == '0.2.4':
+        volume, cli_sha, lock_sha, lock_file = ('nomo-cargo-024-candidate-20261102-a', '67802d5015aea771ab02d8e474ea18d8a83f4fdb8e06ef1a8fd9349ffadb2290',
+                                                '8acf50303edf0fc9133802c80666e29095f992b23142fb16a9377d4439f0dc94', 'config/etas-024-official.Cargo.lock')
     else:
         raise ValueError('unsupported ETAS version')
     ids = subprocess.run([DOCKER, 'ps', '-q', '--filter', 'label=' + LABEL], capture_output=True, check=True, timeout=10).stdout.decode().splitlines()

@@ -37,7 +37,7 @@ class Fake(BaseHTTPRequestHandler):
             finish='length' if self.server.scenario in ('empty','truncated-valid') and i==0 else 'stop'
             self.server.phases.append(i)
             data=json.dumps({'choices':[{'message':{'role':'assistant','content':content,'reasoning_content':'SYNTHETIC_PRIVATE_REASONING'},'finish_reason':finish}],
-                             'usage':{'prompt_tokens':10,'completion_tokens':4,'total_tokens':14}}).encode()
+                             'usage':{'prompt_tokens':900,'completion_tokens':200,'total_tokens':1100}}).encode()
             self.send_response(200);self.send_header('Content-Length',str(len(data)));self.end_headers();self.wfile.write(data)
         except Exception:
             self.server.failed=True
