@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parent.parent
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--evidence-dir', required=True, type=Path)
-    parser.add_argument('--scenario', choices=('applied', 'denied', 'changed'), default='applied')
+    parser.add_argument('--scenario', choices=('applied', 'denied', 'changed', 'checkfail'), default='applied')
     args = parser.parse_args()
     args.evidence_dir.mkdir(parents=True, exist_ok=True)
     out = Path(tempfile.mkdtemp(prefix='edit-entry-e2e-', dir=args.evidence_dir))
@@ -27,7 +27,8 @@ def main():
     (workspace / 'note.txt').write_text('before old\n')
     os.chmod(workspace / 'note.txt', 0o600)
     command = [str(ROOT / 'scripts/nomo-read.sh'), 'edit', '--root', str(workspace), '--state', str(state),
-               '--id', 'owned-edit', '--path', 'note.txt', '--target', 'old', '--replacement', 'new']
+               '--id', 'owned-edit', '--path', 'note.txt', '--target', 'old', '--replacement', 'new',
+               '--check', '/bin/sh', '-c', 'exit 7' if args.scenario == 'checkfail' else 'test "$(cat note.txt)" = "before new"']
     master, slave = pty.openpty()
     settings = termios.tcgetattr(slave)
     settings[3] &= ~(termios.ECHO | termios.ECHONL)
@@ -71,11 +72,17 @@ def main():
         if args.scenario == 'applied':
             assert proc.returncode == 0
             assert b'INTENT durable owned-edit' in output and b'APPLIED owned-edit' in output
+            assert result['file'] == 'before new\n' and b'Check passed.' in output
+        elif args.scenario == 'checkfail':
+            assert proc.returncode == 7 and b'APPLIED owned-edit' in output
+            assert b'Check failed or could not be completed (exit 7).' in output
             assert result['file'] == 'before new\n'
         elif args.scenario == 'denied':
+            assert b'Running the requested check' not in output
             assert proc.returncode != 0 and b'APPLIED owned-edit' not in output
             assert b'INTENT durable owned-edit' not in output and result['file'] == 'before old\n'
         else:
+            assert b'Running the requested check' not in output
             assert proc.returncode != 0 and b'INTENT durable owned-edit' in output
             assert b'APPLIED owned-edit' not in output and result['file'] == 'external change\n'
         result['status'] = 'passed'

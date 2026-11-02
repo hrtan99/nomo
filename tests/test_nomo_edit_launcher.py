@@ -23,14 +23,15 @@ class EditLauncherTests(unittest.TestCase):
         for path in (self.project, self.workspace, self.state):
             path.mkdir(mode=0o700)
         (self.workspace / 'a.txt').write_text('old')
-        self.args = SimpleNamespace(root=str(self.workspace), state=str(self.state), id='case', path='a.txt', target='old', replacement='new')
+        self.args = SimpleNamespace(root=str(self.workspace), state=str(self.state), id='case', path='a.txt', target='old', replacement='new', check=None)
         self.root_patch = patch.object(module, 'ROOT', self.project)
         self.root_patch.start()
         self.addCleanup(self.root_patch.stop)
 
     def test_private_tty_launches_verified_existing_edit_flow(self):
         with patch.dict(os.environ, {'ETAS_HOST_POLICY': 'unsafe', 'NOMO_KEPT': 'value'}):
-            command, env = module.prepare(self.args, True, True)
+            command, check, env = module.prepare(self.args, True, True)
+        self.assertIsNone(check)
         self.assertNotIn('ETAS_HOST_POLICY', env)
         self.assertEqual(env['NOMO_KEPT'], 'value')
         self.assertEqual(env['NOMO_EDIT_WORKSPACE_DIR'], str(self.workspace.resolve()))
@@ -39,6 +40,13 @@ class EditLauncherTests(unittest.TestCase):
         self.assertEqual(command[command.index('--flow') + 1], 'edit_apply')
         self.assertEqual(command[command.index('--target') + 1], 'old')
         self.assertEqual(command[command.index('--replacement') + 1], 'new')
+
+    def test_requested_check_is_bounded_and_runs_in_selected_workspace(self):
+        self.args.check = ['python3', '-m', 'unittest']
+        _, check, _ = module.prepare(self.args, True, True)
+        self.assertIn('--tty=false', check)
+        self.assertEqual(check[check.index('--workdir') + 1], '/edit-fixture')
+        self.assertEqual(check[-4:], ['60s', 'python3', '-m', 'unittest'])
 
     def test_noninteractive_refused_before_creating_cache(self):
         with self.assertRaisesRegex(ValueError, 'interactive terminal'):

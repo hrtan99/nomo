@@ -4,6 +4,7 @@ import argparse
 import os
 from pathlib import Path
 import stat
+import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -58,7 +59,13 @@ def prepare(args, stdin_tty, stdout_tty):
                '--flow', 'edit_apply', '--profile', 'edit-apply', '--allow-effects', '--args',
                '--id', args.id, '--workspace', 'private-workspace', '--path', args.path,
                '--target', args.target, '--replacement', args.replacement]
-    return command, env
+    check = None
+    if args.check:
+        check = [sys.executable, str(ROOT / 'scripts/terminal-transport.py'), *compose,
+                 'run', '--rm', '--no-deps', '--pull', 'never', '--tty=false',
+                 '--workdir', '/edit-fixture', 'dev', '/usr/bin/timeout',
+                 '--signal=TERM', '--kill-after=2s', '60s', *args.check]
+    return command, check, env
 
 
 def main(argv=None):
@@ -69,13 +76,28 @@ def main(argv=None):
     parser.add_argument('--path', required=True)
     parser.add_argument('--target', required=True)
     parser.add_argument('--replacement', required=True)
+    parser.add_argument('--check', nargs=argparse.REMAINDER, help='optional check command and arguments; put this option last')
     args = parser.parse_args(argv)
+    if args.check == []:
+        parser.error('--check requires a command')
     try:
-        command, env = prepare(args, sys.stdin.isatty(), sys.stdout.isatty())
+        command, check, env = prepare(args, sys.stdin.isatty(), sys.stdout.isatty())
     except (OSError, ValueError) as error:
         print('Cannot start edit: ' + str(error), file=sys.stderr)
         return 64
-    os.execvpe(command[0], command, env)
+    edited = subprocess.run(command, env=env, check=False)
+    if edited.returncode != 0:
+        return edited.returncode
+    if not check:
+        print('Edit completed; no check was requested.', flush=True)
+        return 0
+    print('Running the requested check in the edited workspace (60-second limit).', flush=True)
+    checked = subprocess.run(check, env=env, check=False)
+    if checked.returncode != 0:
+        print('Check failed or could not be completed (exit ' + str(checked.returncode) + ').', file=sys.stderr, flush=True)
+        return checked.returncode if checked.returncode > 0 else 1
+    print('Check passed.', flush=True)
+    return 0
 
 
 if __name__ == '__main__':

@@ -8,7 +8,7 @@ usage() {
 Usage:
   nomo-read.sh ask  --root ABSOLUTE_DIRECTORY --allow FILE[,FILE] --once QUESTION
   nomo-read.sh chat --root ABSOLUTE_DIRECTORY --allow FILE[,FILE]
-  nomo-read.sh edit --root ABSOLUTE_DIRECTORY --state FRESH_PRIVATE_DIRECTORY --id ID --path FILE --target TEXT --replacement TEXT
+  nomo-read.sh edit --root ABSOLUTE_DIRECTORY --state FRESH_PRIVATE_DIRECTORY --id ID --path FILE --target TEXT --replacement TEXT [--check COMMAND ARG ...]
 
 Select one or two relative files in the read-only directory. Set
 NOMO_READ_MODEL_BASE_URL to the reachable Qwen OpenAI-compatible endpoint and
