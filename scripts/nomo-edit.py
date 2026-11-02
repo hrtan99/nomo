@@ -136,6 +136,8 @@ def run_owned(command, env):
     finally:
         for number, handler in old.items():
             signal.signal(number, handler)
+        if requested[0]:
+            print('Cancellation was requested.', file=sys.stderr, flush=True)
 
 
 
@@ -258,8 +260,14 @@ def main(argv=None):
     except (OSError, ValueError) as error:
         print('Cannot start edit: ' + str(error), file=sys.stderr)
         return 64
+    if args.task is not None:
+        print('Model requests have a 120-second deadline each; no automatic retries.', flush=True)
     edited = run_owned(command, env)
     if edited != 0:
+        if args.task is not None:
+            print('Model edit stopped; the launcher did not classify the cause. '
+                  'If a request was sent, its remote outcome may be unknown. '
+                  'Inspect the file and edit status before trying again.', file=sys.stderr, flush=True)
         return edited
     if not check:
         print('Edit completed; no check was requested.', flush=True)

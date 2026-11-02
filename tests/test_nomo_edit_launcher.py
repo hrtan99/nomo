@@ -1,10 +1,13 @@
 """Launcher guards for the existing private-workspace edit flow."""
 import importlib.util
+import io
 import os
 from pathlib import Path
 from types import SimpleNamespace
 import tempfile
+import tomllib
 import unittest
+from contextlib import redirect_stderr, redirect_stdout
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -96,6 +99,25 @@ class EditLauncherTests(unittest.TestCase):
             self.assertEqual(calls[0][1][key], values[key])
             self.assertNotIn(key, calls[1][1])
         self.assertEqual(calls[1][1]['NOMO_KEPT'], 'kept')
+
+    def test_failed_model_edit_reports_unknown_without_starting_check(self):
+        argv = ['--root', '/workspace', '--state', '/state', '--id', 'case', '--path', 'a.txt',
+                '--once', 'change old to new', '--check', 'true']
+        stdout, stderr = io.StringIO(), io.StringIO()
+        with patch.object(module, 'prepare', return_value=(['edit'], ['check'], {})), \
+             patch.object(module, 'run_owned', return_value=3) as run, \
+             redirect_stdout(stdout), redirect_stderr(stderr):
+            self.assertEqual(module.main(argv), 3)
+        self.assertEqual(run.call_count, 1)
+        self.assertIn('120-second deadline each; no automatic retries', stdout.getvalue())
+        self.assertIn('launcher did not classify the cause', stderr.getvalue())
+        self.assertIn('remote outcome may be unknown', stderr.getvalue())
+        self.assertIn('Inspect the file and edit status', stderr.getvalue())
+
+    def test_reported_deadline_matches_model_edit_profile(self):
+        profile = tomllib.loads((ROOT / 'etas.toml').read_text())['runtime']['profiles']['harness-edit']['model']
+        self.assertEqual(profile['timeout']['request_deadline_ms'], 120000)
+        self.assertEqual(profile['retry']['attempts'], 1)
 
     def test_model_edit_requires_explicit_endpoint_and_exclusive_arguments(self):
         self.args.task = 'task'

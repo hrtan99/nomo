@@ -1,5 +1,6 @@
 """Real subprocess checks for interruption of the two-phase edit launcher."""
 import importlib.util
+import io
 import os
 from pathlib import Path
 import signal
@@ -8,6 +9,7 @@ import sys
 import tempfile
 import time
 import unittest
+from contextlib import redirect_stderr
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -40,8 +42,9 @@ raise SystemExit(m.run_owned([sys.executable,'-c',sys.argv[2],sys.argv[3],sys.ar
                     time.sleep(.02)
                 self.assertTrue(ready.exists())
                 proc.send_signal(signal.SIGTERM)
-                proc.communicate(timeout=5)
+                _, stderr = proc.communicate(timeout=5)
                 self.assertEqual(proc.returncode, 143)
+                self.assertIn(b'Cancellation was requested.', stderr)
                 self.assertEqual(finished.read_text(), 'cleanup complete')
             finally:
                 if proc.poll() is None:
@@ -69,6 +72,13 @@ raise SystemExit(m.run_owned([sys.executable,'-c',sys.argv[2],sys.argv[3],sys.ar
     def test_unconfirmed_child_cleanup_returns_125(self):
         code = module.run_owned([sys.executable, '-c', 'raise SystemExit(125)'], dict(os.environ))
         self.assertEqual(code, 125)
+
+    def test_exit_130_alone_does_not_claim_cancellation(self):
+        stderr = io.StringIO()
+        with redirect_stderr(stderr):
+            code = module.run_owned([sys.executable, '-c', 'raise SystemExit(130)'], dict(os.environ))
+        self.assertEqual(code, 130)
+        self.assertNotIn('Cancellation was requested.', stderr.getvalue())
 
     def test_interrupted_edit_never_starts_check(self):
         argv = ['--root','/x','--state','/y','--id','i','--path','a','--target','old','--replacement','new', '--check','true']

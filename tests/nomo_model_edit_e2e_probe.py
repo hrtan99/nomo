@@ -95,6 +95,8 @@ def main():
             assert proc.returncode != 0 and server.phases == ['plan', 'child', 'aggregate']
             assert gates == {'native', 'application'} and result['file'] == 'before new\n'
             assert b'APPLIED owned-edit' in output and b'Running the requested check' not in output
+            assert b'launcher did not classify the cause' in output
+            assert b'remote outcome may be unknown' in output and b'Inspect the file and edit status' in output
             import hashlib
             def state_digest():
                 return {str(p.relative_to(state)): hashlib.sha256(p.read_bytes()).hexdigest()
