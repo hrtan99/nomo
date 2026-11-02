@@ -115,3 +115,56 @@ public flow turn_error(invocation: Invocation) -> string {
     } else { return "turn limit reached"; }
     return "";
 }
+
+// The opt-in four-turn budget is separate from the legacy two-turn contract.
+// Amounts are reservations in application accounting, not measured usage.
+public flow extended_maximum() -> Ledger {
+    return Ledger { steps = 28, calls = 16, tokens = 32768, tools = 4, scan = 16384 };
+}
+public flow extended_invocation() -> Invocation {
+    return Invocation { usage = fresh_ledger(), maximum = extended_maximum(), admitted = 0, prior = empty() };
+}
+public flow is_extended(maximum: Ledger) -> bool { return maximum == extended_maximum(); }
+
+flow extended_ledger_error(value: Ledger) -> string {
+    if value.steps < 0 || value.steps > 28 || value.calls < 0 || value.calls > 16 || value.tokens < 0 || value.tokens > 32768 ||
+        value.tools < 0 || value.tools > 4 || value.scan < 0 || value.scan > 16384 { return "invalid extended invocation ledger"; }
+    if value.steps < value.calls + value.tools || value.steps > value.calls + value.tools + 8 ||
+        value.tokens != value.calls * 2048 || value.scan != value.tools * 4096 { return "invalid extended invocation ledger"; }
+    return "";
+}
+public flow extended_admission_error(value: Ledger) -> string {
+    let invalid = extended_ledger_error(value); if invalid != "" { return invalid; }
+    if value.steps > 21 || value.calls > 12 || value.tokens > 24576 || value.tools > 3 || value.scan > 12288 {
+        return "invocation worst-case turn reservation exhausted";
+    }
+    return "";
+}
+public flow extended_turn_error(invocation: Invocation) -> string {
+    if !is_extended(invocation.maximum) { return "invalid extended invocation limits"; }
+    let capacity = extended_admission_error(invocation.usage); if capacity != "" { return capacity; }
+    let invalid = prior_error(invocation.prior); if invalid != "" { return invalid; }
+    let turns = invocation.admitted; let used = invocation.usage;
+    if turns < 0 || turns > 3 { return "turn limit reached"; }
+    if turns == 0 {
+        if invocation.prior.task != "" || used.steps != 0 || used.calls != 0 || used.tokens != 0 || used.tools != 0 || used.scan != 0 {
+            return "first turn must own an empty invocation";
+        }
+    } else {
+        let last_tool = if invocation.prior.tool == "" { 0 } else { 1 };
+        if invocation.prior.task == "" || used.tools < last_tool || used.tools - last_tool > turns - 1 ||
+            used.steps != turns * 5 + used.tools * 2 || used.calls != turns * 3 + used.tools ||
+            used.tokens != used.calls * 2048 || used.scan != used.tools * 4096 {
+            return "prior selection and invocation ledger disagree";
+        }
+    }
+    return "";
+}
+public flow extended_combine(previous: Ledger, local: Ledger) -> Result<Ledger, string> {
+    let invalid = extended_admission_error(previous); if invalid != "" { return Err(invalid); }
+    let bad_local = ledger_error(local); if bad_local != "" { return Err(bad_local); }
+    let value = Ledger { steps = previous.steps + local.steps, calls = previous.calls + local.calls,
+        tokens = previous.tokens + local.tokens, tools = previous.tools + local.tools, scan = previous.scan + local.scan };
+    let bad_total = extended_ledger_error(value); if bad_total != "" { return Err(bad_total); }
+    return Ok(value);
+}

@@ -7,7 +7,7 @@ usage() {
     cat <<'HELP'
 Usage:
   nomo-read.sh ask  --root ABSOLUTE_DIRECTORY --allow FILE[,FILE] --once QUESTION
-  nomo-read.sh chat --root ABSOLUTE_DIRECTORY --allow FILE[,FILE]
+  nomo-read.sh chat --root ABSOLUTE_DIRECTORY --allow FILE[,FILE] [--turns 4]
   nomo-read.sh edit --root ABSOLUTE_DIRECTORY --state FRESH_PRIVATE_DIRECTORY --id ID --path FILE --target TEXT --replacement TEXT [--check COMMAND ARG ...]
   nomo-read.sh edit --root ABSOLUTE_DIRECTORY --state FRESH_PRIVATE_DIRECTORY --id ID --path FILE --once TASK [--check COMMAND ARG ...]
   nomo-read.sh check --root ABSOLUTE_DIRECTORY -- COMMAND [ARG ...]
@@ -21,7 +21,10 @@ NOMO_READ_MODEL_NAME when the server uses a different model name.
 Set NOMO_ETAS_VERSION to 0.2.3 to select that verified installation; default 0.2.2.
 The endpoint is reached from the container: for a host-local forward, use
 http://host.docker.internal:PORT/v1 rather than 127.0.0.1.
-Chat supports two tasks in one process; it is not a durable session.
+Chat supports two tasks by default, or four with --turns 4, in one process.
+Only the immediately preceding successful task/result/answer is carried forward;
+this is not a durable session. Four-turn maximum: 16 model calls and 32,768
+output-token allowance; per-turn maximum: 4 calls and 8,192 output tokens.
 Questions require 1..128 safe UTF-8 bytes; /help shows all bounds
 and /exit ends chat. Successful completion does not verify factual accuracy.
 Model editing sends the selected file and task to the configured model.
@@ -51,8 +54,10 @@ if [[ "$action" == ask ]]; then
     if [[ $# -ne 2 || "$1" != --once || -z "$2" ]]; then usage >&2; exit 64; fi
     flow=read_model_tools; native=(new --allow "$allowed" --once "$2"); tty=false
 else
-    if [[ $# -ne 0 ]]; then usage >&2; exit 64; fi
     flow=read_model_tools_chat; native=(new --allow "$allowed")
+    if [[ $# -eq 2 && "$1" == --turns && "$2" == 4 ]]; then
+        native+=(--turns 4)
+    elif [[ $# -ne 0 ]]; then usage >&2; exit 64; fi
     if [[ -t 0 && -t 1 ]]; then tty=true; else tty=false; fi
 fi
 if [[ -z "${NOMO_READ_MODEL_BASE_URL:-}" || -z "${NOMO_QWEN_SERVER_API_KEY:-}" ]]; then
