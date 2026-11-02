@@ -2,7 +2,8 @@ module app.chat_history_probe;
 
 import std.io.println;
 import nomo.session.chat_session_contract.{Session, fresh, invalid, begin, complete};
-import nomo.session.chat_history.{load, save};
+import nomo.session.chat_history.{load, save, save_completed};
+import nomo.core.conversation.Event;
 import app.chat_session_contract_probe.outcome;
 
 public flow chat_history_probe(args: Array<string>) -> i32 ![Console, Memory, Error<StorageError>, Error<IndexError>, Error<IOError>] {
@@ -24,8 +25,8 @@ public flow chat_history_probe(args: Array<string>) -> i32 ![Console, Memory, Er
         let current = match load() { Ok(Some(value)) => value, _ => { abort("history missing"); } };
         match save(fresh(), Some(current)) { Ok(_) => { abort("running session reset accepted"); } Err(_) => {} }
         let next = match complete(current.value, outcome(1, "first question", "blue")) { Ok(value) => value, Err(_) => { abort("synthetic outcome refused"); } };
-        match save(next, Some(current)) { Ok(_) => {} Err(_) => { abort("history update failed"); } }
-        match save(next, Some(current)) { Ok(_) => { abort("stale version accepted"); } Err(_) => {} }
+        match save_completed(next, Some(current), [Event { role = "user", kind = "request", name = "", text = "first question" }]) { Ok(_) => {} Err(_) => { abort("history update failed"); } }
+        match save_completed(next, Some(current), [Event { role = "user", kind = "request", name = "", text = "first question" }]) { Ok(_) => { abort("stale version accepted"); } Err(_) => {} }
         let after = match load() { Ok(Some(value)) => value, _ => { abort("updated history missing"); } };
         if after.value != next || after.value.invocation.prior.answer != "blue" { abort("stale save altered history"); }
         println("STALE_REFUSED"); return 0;
@@ -47,7 +48,7 @@ public flow chat_history_probe(args: Array<string>) -> i32 ![Console, Memory, Er
     if args[0] == "second-complete" {
         let current = match load() { Ok(Some(value)) => value, _ => { abort("second reservation missing"); } };
         let next = match complete(current.value, outcome(2, "second question", "green")) { Ok(value) => value, Err(_) => { abort("second result refused"); } };
-        match save(next, Some(current)) { Ok(_) => {} Err(_) => { abort("second result not saved"); } }
+        match save_completed(next, Some(current), [Event { role = "user", kind = "request", name = "", text = "second question" }]) { Ok(_) => {} Err(_) => { abort("second result not saved"); } }
         println("SECOND_SAVED"); return 0;
     }
     if args[0] == "final" {

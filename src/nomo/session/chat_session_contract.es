@@ -9,11 +9,11 @@ import nomo.model.read_protocol.question_error;
 public type Session = { format: i32, phase: string, invocation: Invocation, last_request: string, pending: string };
 
 public flow fresh() -> Session {
-    return Session { format = 2, phase = "ready", invocation = fresh_invocation(), last_request = "", pending = "" };
+    return Session { format = 3, phase = "ready", invocation = fresh_invocation(), last_request = "", pending = "" };
 }
 
 public flow invalid(value: Session) -> string {
-    if (value.format != 1 && value.format != 2) || (value.phase != "ready" && value.phase != "running" && value.phase != "complete") {
+    if (value.format != 1 && value.format != 2 && value.format != 3) || (value.phase != "ready" && value.phase != "running" && value.phase != "complete") {
         return "invalid chat session format or phase";
     }
     let state = value.invocation; let used = state.usage; let standard = fresh_invocation();

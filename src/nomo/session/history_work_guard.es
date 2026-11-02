@@ -3,7 +3,7 @@ module nomo.session.history_work_guard;
 import std.memory.{get_entry, prepare_put, operation_ref, commit, WriteCondition, MemoryVersion, MemoryEntry,
     WriteOutcome, MemoryWriteChange, StorageDurability, Missing, Match};
 import nomo.session.chat_session_contract.Session;
-import nomo.session.chat_history.load as load_chat;
+import nomo.session.chat_history.{Entry, load as load_chat};
 import nomo.session.edit_operation.selector_error;
 import nomo.model.model_tool_contract.question_error;
 import nomo.harness.harness_edit_contract.text_error;
@@ -17,7 +17,7 @@ public type Record = { format: i32, phase: string, id: string, workspace: string
     request: string, history_version: string, reserved: Budget, settled: Option<Ledger>, summary: string };
 flow full() -> Budget { return Budget { steps = 13, calls = 7, generation = 47104, native_tokens = 196608 }; }
 flow zero() -> Budget { return Budget { steps = 0, calls = 0, generation = 0, native_tokens = 0 }; }
-public type Ticket = { record: Record, version: MemoryVersion, history: MemoryEntry<string, Session> };
+public type Ticket = { record: Record, version: MemoryVersion, history: Entry };
 alias Schema = MemoryRegion<{ Rows: Store<string, Record> }>;
 let Runs = std.memory.region<Schema>(stable_id = "nomo-history-work-v1", store = "history-work");
 flow read() -> Option<MemoryEntry<string, Record>> { return get_entry(Runs.Rows, "work"); }
@@ -36,7 +36,7 @@ flow invalid(value: Record) -> string {
     }
     return "";
 }
-flow history_error(history: MemoryEntry<string, Session>) -> string {
+flow history_error(history: Entry) -> string {
     if history.key != "latest" || history.value.invocation.admitted < 1 || history.value.phase == "running" || history.value.pending != "" {
         return "a completed prior chat turn is required";
     }
@@ -63,7 +63,7 @@ flow write(row: Record, condition: WriteCondition) -> Result<MemoryVersion, stri
     if after.key != "work" || after.value != row || after.version.opaque != version.opaque { return Err("history-work readback mismatch; no retry"); }
     return Ok(version);
 }
-public flow admit(id: string, workspace: string, path: string, request: string, history: MemoryEntry<string, Session>) -> Result<Ticket, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+public flow admit(id: string, workspace: string, path: string, request: string, history: Entry) -> Result<Ticket, string> ![Memory, Error<StorageError>, Error<IndexError>] {
     if read() != None() { return Err("history-work already admitted; no retry"); }
     let error = history_error(history); if error != "" { return Err(error); }
     let row = Record { format = 1, phase = "running", id = id, workspace = workspace, path = path,

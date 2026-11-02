@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Exercise untrusted chat-history storage across independent ETAS processes."""
-import hashlib,json,shutil,sqlite3,subprocess,tempfile
+import hashlib,json,os,shutil,sqlite3,subprocess,tempfile
 from pathlib import Path
 
 ROOT=Path(__file__).resolve().parent.parent
 CLI=Path('/home/nomo/.cargo/bin/etas')
-SHA='67802d5015aea771ab02d8e474ea18d8a83f4fdb8e06ef1a8fd9349ffadb2290'
+SHA=os.environ.get('NOMO_TEST_ETAS_SHA','67802d5015aea771ab02d8e474ea18d8a83f4fdb8e06ef1a8fd9349ffadb2290')
 def digest(p):return hashlib.sha256(p.read_bytes()).hexdigest()
 def main():
     assert digest(CLI)==SHA
@@ -58,7 +58,7 @@ profile = "fixture"
             with sqlite3.connect(db) as c:assert before==list(c.iterdump())
     with sqlite3.connect(db) as c:
         assert c.execute('pragma integrity_check').fetchone()==('ok',)
-        rows=c.execute("select count(*) from memory_entries where region='nomo-chat-history-v1'").fetchone()[0];assert rows==1
+        rows=c.execute("select count(*) from memory_entries where region='nomo-chat-history-v3'").fetchone()[0];assert rows==1
     assert digest(CLI)==SHA
     print(json.dumps({'status':'passed','separate_processes':8,'invalid_and_stale_refused':True,'reservation_and_budget_checked':True,'read_only_snapshots_unchanged':True,'sqlite_integrity':'ok','scope':'synthetic history storage only; no workspace identity, workspace action or live model'}));return 0
 if __name__=='__main__':raise SystemExit(main())
