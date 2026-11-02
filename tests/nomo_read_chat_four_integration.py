@@ -36,7 +36,7 @@ def main():
     out = Path(tempfile.mkdtemp(prefix='chat-four-'+args.scenario+'-', dir=args.evidence_dir))
     root = out/'read'; (root/'docs').mkdir(parents=True)
     file = root/'docs/a.txt'; file.write_text('synthetic blue\n')
-    counts = {'started':0,'completed':0,'turn':0,'valid':True}
+    counts = {'started':0,'completed':0,'turn':0,'valid':True,'max_tokens':[]}
     identity = {}; gate = threading.Event(); release = threading.Event()
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, *_): pass
@@ -47,6 +47,8 @@ def main():
                 assert self.path == '/v1/chat/completions' and self.headers.get('Authorization') == 'Bearer '+TOKEN
                 length = int(self.headers['Content-Length']); assert 0 < length <= 196608
                 body = json.loads(self.rfile.read(length)); context = json.loads(body['messages'][1]['content'])
+                assert body['max_tokens'] == 2048
+                counts['max_tokens'].append(body['max_tokens'])
                 if context.get('phase') == 'plan':
                     counts['turn'] += 1; turn = counts['turn']
                     assert context['request'] == 'question-'+str(turn)
@@ -56,6 +58,9 @@ def main():
                     else:
                         assert previous['task'] == 'delegated-'+str(turn-1)
                         assert previous['result'] == 'child-'+str(turn-1) and previous['answer'] == 'answer-'+str(turn-1)
+                        previous_direct = args.scenario == 'mixed' and turn-1 in (2,4)
+                        assert previous['tool'] == ('' if previous_direct else 'read')
+                        assert previous['outcome'] == ('' if previous_direct else 'complete: synthetic blue<LF>')
                     if args.scenario == 'interrupt' and turn == 2:
                         gate.set(); assert release.wait(45)
                     text = '["invalid"]' if args.scenario == 'failure' and turn == 2 else json.dumps(['delegate','delegated-'+str(turn)])
@@ -64,6 +69,10 @@ def main():
                     text = 'answer-'+str(turn)
                 else:
                     turn = counts['turn']; assert context['allowed'] == ['docs/a.txt']
+                    if turn > 1:
+                        prior_events = {x['name']:x['text'] for x in context['history'] if x['kind'] == 'context'}
+                        assert prior_events['task'] == 'delegated-'+str(turn-1)
+                        assert prior_events['result'] == 'child-'+str(turn-1) and prior_events['answer'] == 'answer-'+str(turn-1)
                     direct = args.scenario == 'mixed' and turn in (2,4)
                     if not context['final_only'] and not direct:
                         text = json.dumps(['read','docs/a.txt'])
