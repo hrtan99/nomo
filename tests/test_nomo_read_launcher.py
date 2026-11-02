@@ -2,6 +2,7 @@
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -86,6 +87,23 @@ with open(os.environ['NOMO_TEST_LOG'],'w') as f:
         result = self.invoke('--help', env={'PATH': '/usr/bin:/bin', 'HOME': str(self.base)})
         self.assertEqual(result.returncode, 0)
         self.assertIn(b'not a durable session', result.stdout)
+        self.assertIn(b'resume --id SESSION_ID  (not available yet)', result.stdout)
+        self.assertFalse(self.log.exists())
+
+    def test_resume_refuses_before_opening_state_or_launching_docker(self):
+        state = self.base / 'must-not-be-created'
+        isolated = self.base / 'project' / 'scripts' / 'nomo-read.sh'
+        isolated.parent.mkdir(parents=True)
+        shutil.copyfile(LAUNCHER, isolated)
+        env = {'PATH': self.env['PATH'], 'HOME': str(self.base), 'NOMO_TEST_LOG': str(self.log)}
+        result = subprocess.run(['bash', str(isolated), 'resume', '--id', 'synthetic-session',
+                                 '--state', str(state)], env=env, stdin=subprocess.DEVNULL,
+                                capture_output=True, timeout=15)
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(result.stdout, b'')
+        self.assertEqual(result.stderr, b'Session resume is not available yet.\n')
+        self.assertFalse(state.exists())
+        self.assertFalse((isolated.parent.parent / '.etas').exists())
         self.assertFalse(self.log.exists())
 
 
