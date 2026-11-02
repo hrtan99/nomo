@@ -626,3 +626,80 @@ mode = "local-static"
 rules = ["console=allow", "memory=allow", "model=allow", "approval=allow", "filesystem:Fs.stat=allow", "filesystem:Fs.read=allow", "filesystem:Fs.atomic_replace=allow", "filesystem:Fs.write=deny", "filesystem:HostFilesystem.delete=deny"]
 [runtime.profiles.harness-minimax-work.approval]
 mode = "prompt"
+
+[runtime.profiles.nomo-read-session-new]
+boundary_policy = "nomo-model-readonly"
+[runtime.profiles.nomo-read-session-new.memory]
+backend = "sqlite"
+path = "history.sqlite3"
+[runtime.profiles.nomo-read-session-new.model]
+adapter = "openai"
+model = "MiniMax-M3.1-Flash"
+base_url = "https://api.minimax.cn/v1"
+api_key_env = "MINIMAX_API_KEY"
+allow_private = false
+[runtime.profiles.nomo-read-session-new.model.timeout]
+request_deadline_ms = 120000
+connect_timeout_ms = 2000
+[runtime.profiles.nomo-read-session-new.model.retry]
+attempts = 1
+delay_ms = 0
+[runtime.profiles.nomo-read-session-new.filesystem.regions."nomo.tools.workspace.ReadOnlyRoot"]
+root = "/model-tool-fixture"
+read = true
+write = false
+[runtime.profiles.nomo-read-session-new.policy]
+mode = "local-static"
+rules = ["console=allow", "memory=allow", "model=allow", "filesystem=allow"]
+[runtime.profiles.nomo-read-session-new.approval]
+mode = "deny"
+
+[runtime.profiles.nomo-read-session-existing]
+boundary_policy = "nomo-model-readonly"
+[runtime.profiles.nomo-read-session-existing.memory]
+backend = "sqlite"
+path = "file:history.sqlite3?mode=rw"
+[runtime.profiles.nomo-read-session-existing.model]
+adapter = "openai"
+model = "MiniMax-M3.1-Flash"
+base_url = "https://api.minimax.cn/v1"
+api_key_env = "MINIMAX_API_KEY"
+allow_private = false
+[runtime.profiles.nomo-read-session-existing.model.timeout]
+request_deadline_ms = 120000
+connect_timeout_ms = 2000
+[runtime.profiles.nomo-read-session-existing.model.retry]
+attempts = 1
+delay_ms = 0
+[runtime.profiles.nomo-read-session-existing.filesystem.regions."nomo.tools.workspace.ReadOnlyRoot"]
+root = "/model-tool-fixture"
+read = true
+write = false
+[runtime.profiles.nomo-read-session-existing.policy]
+mode = "local-static"
+rules = ["console=allow", "memory=allow", "model=allow", "filesystem=allow"]
+[runtime.profiles.nomo-read-session-existing.approval]
+mode = "deny"
+
+[[bin]]
+name = "nomo-read-session"
+module = "nomo.main"
+flow = "read_session"
+profile = "nomo-read-session-new"
+
+[runtime.profiles.nomo-read-session-status]
+boundary_policy = "nomo-read-session-status"
+[runtime.profiles.nomo-read-session-status.memory]
+backend = "sqlite"
+path = "file:history.sqlite3?mode=rw"
+[runtime.profiles.nomo-read-session-status.policy]
+mode = "local-static"
+rules = ["console=allow", "memory=allow"]
+[runtime.profiles.nomo-read-session-status.approval]
+mode = "deny"
+
+[[bin]]
+name = "nomo-read-session-status"
+module = "nomo.main"
+flow = "read_session_status"
+profile = "nomo-read-session-status"

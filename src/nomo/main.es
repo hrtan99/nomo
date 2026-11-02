@@ -16,6 +16,8 @@ import nomo.entry.harness_model_tools_entry.run as run_harness_model_tools;
 import nomo.entry.read_model_tools_entry.run as run_read_model_tools;
 import nomo.entry.harness_model_tools_chat.run as run_harness_model_tools_chat;
 import nomo.entry.read_model_tools_chat.run as run_read_model_tools_chat;
+import nomo.entry.read_session.run as run_read_session;
+import nomo.entry.read_session.status as read_session_status_run;
 import nomo.entry.harness_checkpoint_entry.run_init as checkpoint_init;
 import nomo.entry.harness_checkpoint_entry.run_save as checkpoint_save;
 import nomo.entry.harness_checkpoint_entry.run_show as checkpoint_show;
@@ -154,6 +156,18 @@ flow harness_checkpoint_show(args: Array<string>) -> i32 {
 flow harness_model_tools_chat(args: Array<string>) -> i32 {
     let status = run_harness_model_tools_chat(args);
     if status != 0 { abort("Nomo model/tool harness chat refused; see REFUSED or STOP output"); }
+    return 0;
+}
+
+flow read_session_status(args: Array<string>) -> i32 {
+    let status = read_session_status_run(args);
+    if status != 0 { abort("Nomo read session status refused"); }
+    return 0;
+}
+
+flow read_session(args: Array<string>) -> i32 {
+    let status = run_read_session(args);
+    if status != 0 { abort("Nomo read session stopped; inspect the saved reservation"); }
     return 0;
 }
 

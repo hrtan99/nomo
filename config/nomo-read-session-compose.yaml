@@ -1,0 +1,8 @@
+services:
+  dev:
+    volumes:
+      - type: bind
+        source: "${NOMO_SESSION_STATE:?select a session state directory}"
+        target: /session-state
+        bind:
+          create_host_path: false
