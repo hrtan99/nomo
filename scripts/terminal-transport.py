@@ -46,8 +46,20 @@ def main(arguments):
         return min(OP_TIMEOUT, value)
 
     def docker(arguments, deadline):
-        return subprocess.run(['docker', *arguments], stdin=subprocess.DEVNULL,
-                              capture_output=True, text=True, timeout=remaining(deadline))
+        # A later group signal must not kill the ownership/cleanup inspection.
+        process = subprocess.Popen(['docker', *arguments], stdin=subprocess.DEVNULL,
+                                   stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                   text=True, start_new_session=True)
+        try:
+            stdout, stderr = process.communicate(timeout=remaining(deadline))
+        except (subprocess.TimeoutExpired, TimeoutError):
+            try:
+                os.killpg(process.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+            process.communicate(timeout=1)
+            raise
+        return subprocess.CompletedProcess(process.args, process.returncode, stdout, stderr)
 
     def inspect(identifier, deadline):
         nonlocal observed_identifier

@@ -59,6 +59,12 @@ if args and args[0]=='compose':
     raise SystemExit(int(os.environ.get('NOMO_TERMINAL_TEST_EXIT','0')))
 if args and args[0]=='inspect':
     value=state();target=args[-1];event({'kind':'inspect','target':target})
+    if os.environ.get('NOMO_TERMINAL_TEST_CLEANUP_INSPECT'):
+        history=list(map(json.loads,events_path.read_text().splitlines()))
+        marker=Path(os.environ['NOMO_TERMINAL_TEST_CLEANUP_INSPECT'])
+        if any(item['kind']=='signal' for item in history) and not marker.exists():
+            marker.write_text(str(os.getpid()))
+            time.sleep(.8)
     if not value['exists'] or target not in (value['id'],value['name'].lstrip('/')):
         # Simulate a daemon-side create committing just after this missing response.
         # The earlier helper inspected while its creator was live, then killed it
@@ -278,6 +284,66 @@ print(sys.argv[4])
 
     def test_SIGTERM_forwards_once_then_cleans_owned_work(self):
         self.cancellation(signal.SIGTERM)
+
+    def test_repeated_group_signal_does_not_interrupt_cleanup_inspection(self):
+        marker = self.directory / 'cleanup-inspect-ready'
+        env = self.environment_with({'NOMO_TERMINAL_TEST_WAIT':'1',
+                                     'NOMO_TERMINAL_TEST_RETAIN':'1',
+                                     'NOMO_TERMINAL_TEST_CLEANUP_INSPECT':str(marker)})
+        process = subprocess.Popen([str(LAUNCH),'terminal',str(self.fixture),*self.arguments],cwd=ROOT,
+                                   env=env,stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,
+                                   stderr=subprocess.PIPE,start_new_session=True)
+        try:
+            deadline = time.monotonic() + 8
+            while not self.ready.exists() or not any(e['kind']=='inspect' for e in self.recorded_events()):
+                self.assertIsNone(process.poll())
+                self.assertLess(time.monotonic(),deadline)
+                time.sleep(.02)
+            os.kill(process.pid,signal.SIGTERM)
+            while not marker.exists():
+                self.assertIsNone(process.poll())
+                self.assertLess(time.monotonic(),deadline)
+                time.sleep(.02)
+            os.killpg(process.pid,signal.SIGTERM)
+            out,err=process.communicate(timeout=15)
+            self.assertEqual(process.returncode,143,(out,err))
+            self.assert_owned_cleanup()
+        finally:
+            if process.poll() is None:
+                os.killpg(process.pid,signal.SIGKILL)
+                process.wait(timeout=3)
+
+    def test_timed_out_cleanup_inspection_is_killed_and_reaped(self):
+        marker = self.directory / 'cleanup-inspect-ready'
+        env = self.environment_with({'NOMO_TERMINAL_TEST_WAIT':'1',
+                                     'NOMO_TERMINAL_TEST_RETAIN':'1',
+                                     'NOMO_TERMINAL_TEST_CLEANUP_INSPECT':str(marker)})
+        driver = '''import importlib.util,sys
+s=importlib.util.spec_from_file_location('transport',sys.argv[1]);m=importlib.util.module_from_spec(s);s.loader.exec_module(m)
+m.OP_TIMEOUT=.2
+raise SystemExit(m.main(['docker','compose','--file','unused','run','dev']))
+'''
+        process = subprocess.Popen([sys.executable,'-B','-c',driver,str(HELPER)],cwd=ROOT,env=env,
+                                   stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,
+                                   start_new_session=True)
+        try:
+            deadline = time.monotonic() + 8
+            while not self.ready.exists() or not any(e['kind']=='inspect' for e in self.recorded_events()):
+                self.assertIsNone(process.poll())
+                self.assertLess(time.monotonic(),deadline)
+                time.sleep(.02)
+            os.kill(process.pid,signal.SIGTERM)
+            out,err=process.communicate(timeout=15)
+            self.assertEqual(process.returncode,125,(out,err))
+            self.assertTrue(marker.exists())
+            with self.assertRaises(ProcessLookupError):
+                os.kill(int(marker.read_text()),0)
+            self.assertTrue(json.loads(self.container.read_text())['exists'])
+            self.assertFalse(any(e['kind'] in ('stop','rm') for e in self.recorded_events()))
+        finally:
+            if process.poll() is None:
+                os.killpg(process.pid,signal.SIGKILL)
+                process.wait(timeout=3)
 
     def test_unresponsive_recording_client_is_bounded_and_reaped(self):
         self.cancellation(signal.SIGTERM,ignore=True)
