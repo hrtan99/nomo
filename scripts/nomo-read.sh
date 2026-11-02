@@ -15,6 +15,7 @@ Usage:
   nomo-read.sh session-id resume --sessions-dir PRIVATE_DIRECTORY --id SESSION_ID --root DIR --allow FILE[,FILE] --once QUESTION
   nomo-read.sh session-id status --sessions-dir PRIVATE_DIRECTORY --id SESSION_ID
   nomo-read.sh session-id decision --sessions-dir PRIVATE_DIRECTORY --id SESSION_ID --operation-id ID --target work|check
+  nomo-read.sh session-chat --sessions-dir PRIVATE_DIRECTORY --id SESSION_ID --root DIR --allow FILE[,FILE] [--once QUESTION]
   nomo-read.sh session-id work --sessions-dir PRIVATE_DIRECTORY --id SESSION_ID --read-root DIR --root PRIVATE_DIRECTORY --operation-id ID --path FILE --allow FILE[,FILE] --once TASK [--check COMMAND ARG ...]
   nomo-read.sh session-work --read-root ABSOLUTE_DIRECTORY --allow FILE[,FILE] --root PRIVATE_DIRECTORY --state PRIVATE_DIRECTORY --id ID --path FILE --once TASK [--check COMMAND ARG ...]
   nomo-read.sh edit --root ABSOLUTE_DIRECTORY --state FRESH_PRIVATE_DIRECTORY --id ID --path FILE --target TEXT --replacement TEXT [--check COMMAND ARG ...]
@@ -60,6 +61,7 @@ HELP
 }
 if [[ $# -eq 0 || ( $# -eq 1 && ( "$1" == help || "$1" == --help ) ) ]]; then usage; exit 0; fi
 action="$1"; shift
+if [[ "$action" == session-chat ]]; then exec python3 "$root/scripts/nomo-session-chat.py" "$@"; fi
 if [[ "$action" == session-decision ]]; then exec python3 "$root/scripts/nomo-recovery-decision.py" "$@"; fi
 if [[ "$action" == session-id ]]; then exec python3 "$root/scripts/nomo-session-id.py" "$@"; fi
 if [[ "$action" == session-new || "$action" == session-continue || "$action" == session-status ]]; then

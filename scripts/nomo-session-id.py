@@ -62,12 +62,12 @@ def main(argv=None):
         if args.action=='decision':
             command=[sys.executable,str(ROOT/'scripts/nomo-recovery-decision.py'),'--state',str(state),'--id',args.operation_id,'--target',args.target]
         elif args.action=='work':
-            command=[sys.executable,str(ROOT/'scripts/nomo-history-work.py'),'--state',str(state),'--read-root',args.read_root,'--root',args.root,'--id',args.operation_id,'--path',args.path,'--allow',args.allow,'--once',args.once]
+            command=[sys.executable,str(ROOT/'scripts/nomo-history-work.py'),'--state',str(state),'--read-root',args.read_root,'--root',args.root,'--id',args.operation_id,'--path',args.path,'--allow',args.allow,'--once='+args.once]
             if args.check is not None:command+=['--check',*args.check]
         else:
             mode={'start':'new','resume':'continue','status':'status'}[args.action]
             command=[sys.executable,str(ROOT/'scripts/nomo-read-session.py'),mode,'--state',str(state)]
-            if mode!='status':command+=['--root',args.root,'--allow',args.allow,'--once',args.once]
+            if mode!='status':command+=['--root',args.root,'--allow',args.allow,'--once='+args.once]
         code=_edit.run_owned(command,dict(os.environ))
         if code:print('Session state is retained; inspect it before another action.',file=sys.stderr,flush=True)
         return code
