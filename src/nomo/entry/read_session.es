@@ -10,6 +10,7 @@ import std.collections.len as count;
 import nomo.model.model_tool_contract.allowed_error;
 import nomo.model.read_protocol.question_error;
 import nomo.harness.read_tool_chat.run_turn;
+import nomo.harness.history_continue_model.{WorkFacts, run_turn as run_after_work};
 import nomo.session.chat_session_contract.{fresh, begin, complete};
 import nomo.session.chat_history.{load, save, save_completed};
 import nomo.session.history_work_guard.{chat_available, inspect as inspect_work};
@@ -27,7 +28,23 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyR
     let allowed = split(args[2], ",");
     let paths = allowed_error(allowed); if paths != "" { println("REFUSED " + paths); return 1; }
     let request = args[4]; let question = question_error(request); if question != "" { println("REFUSED " + question); return 1; }
-    match chat_available() { Ok(_) => {} Err(error) => { println("REFUSED " + error); return 1; } }
+    let past_work = match inspect_work() { Ok(value) => value, Err(error) => { println("REFUSED " + error); return 1; } };
+    var work_facts: Option<WorkFacts> = None();
+    match past_work {
+        None() => { match chat_available() { Ok(_) => {} Err(error) => { println("REFUSED " + error); return 1; } } }
+        Some(work) => {
+            if work.phase != "complete" { println("REFUSED work is not complete; inspect before continuing"); return 1; }
+            let edit = match inspect_edit(work.id, work.workspace, work.path) { Ok(Some(value)) => value, _ => { println("REFUSED completed edit record required"); return 1; } };
+            if edit.phase != "completed" { println("REFUSED edit outcome unresolved"); return 1; }
+            let check = match inspect_check() { Ok(value) => value, Err(error) => { println("REFUSED " + error); return 1; } };
+            var outcome = "not requested"; var exit = "";
+            match check {
+                Some(value) => { if value.id != work.id { println("REFUSED check work identity differs"); return 1; } if value.phase != "complete" { println("REFUSED check outcome unresolved"); return 1; } outcome = value.outcome; exit = value.exit_code; }
+                None() => {}
+            }
+            work_facts = Some(WorkFacts { id = work.id, summary = work.summary, check = outcome, exit_code = exit });
+        }
+    }
     let existing = match load() { Ok(value) => value, Err(error) => { println("REFUSED " + error); return 1; } };
     if args[0] == "new" {
         match existing { Some(_) => { println("REFUSED session already exists"); return 1; } None() => {} }
@@ -43,7 +60,10 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyR
     if reserved.value != running || reserved.version.opaque != version.opaque { println("REFUSED reservation changed"); return 1; }
     println("RESERVED chat turn; interruption leaves it unresolved and will not retry.");
     println("A final answer is provisional until SAVED confirms durable history.");
-    let result = run_turn(request, allowed, running.invocation);
+    let result = match work_facts {
+        Some(value) => run_after_work(request, allowed, running.invocation, value),
+        None() => run_turn(request, allowed, running.invocation),
+    };
     if result.status != 0 || !result.resolved { println("REFUSED chat turn unresolved; inspect session, do not retry"); return 1; }
     let next = match complete(running, result) { Ok(value) => value, Err(error) => { println("REFUSED " + error); return 1; } };
     let completed = match result.completed { Some(item) => item, None() => { println("REFUSED completed event batch missing"); return 1; } };
