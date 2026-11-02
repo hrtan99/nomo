@@ -86,16 +86,21 @@ class EditLauncherTests(unittest.TestCase):
     def test_model_settings_are_not_inherited_by_post_edit_check(self):
         values = {'NOMO_READ_MODEL_BASE_URL': 'http://example.test/v1',
                   'NOMO_QWEN_SERVER_API_KEY': 'synthetic', 'NOMO_READ_MODEL_NAME': 'synthetic-model',
+                  'NOMO_MODEL_REQUEST_DEADLINE_MS': '240000',
                   'NOMO_KEPT': 'kept'}
         argv = ['--root', str(self.workspace), '--state', str(self.state), '--id', 'case',
                 '--path', 'a.txt', '--once', 'change old to new', '--check', 'true']
         calls = []
-        with patch.dict(os.environ, values, clear=True), patch.object(module.sys.stdin, 'isatty', return_value=True), \
+        stdout = io.StringIO()
+        with patch.dict(os.environ, values, clear=True), redirect_stdout(stdout), \
+             patch.object(module.sys.stdin, 'isatty', return_value=True), \
              patch.object(module.sys.stdout, 'isatty', return_value=True), \
              patch.object(module, 'run_owned', side_effect=lambda command, env: calls.append((command, env)) or 0):
             self.assertEqual(module.main(argv), 0)
         self.assertEqual(len(calls), 2)
-        for key in ('NOMO_READ_MODEL_BASE_URL', 'NOMO_QWEN_SERVER_API_KEY', 'NOMO_READ_MODEL_NAME'):
+        self.assertIn('240000-millisecond deadline each; no automatic retries', stdout.getvalue())
+        for key in ('NOMO_READ_MODEL_BASE_URL', 'NOMO_QWEN_SERVER_API_KEY', 'NOMO_READ_MODEL_NAME',
+                    'NOMO_MODEL_REQUEST_DEADLINE_MS'):
             self.assertEqual(calls[0][1][key], values[key])
             self.assertNotIn(key, calls[1][1])
         self.assertEqual(calls[1][1]['NOMO_KEPT'], 'kept')
@@ -109,7 +114,7 @@ class EditLauncherTests(unittest.TestCase):
              redirect_stdout(stdout), redirect_stderr(stderr):
             self.assertEqual(module.main(argv), 3)
         self.assertEqual(run.call_count, 1)
-        self.assertIn('120-second deadline each; no automatic retries', stdout.getvalue())
+        self.assertIn('120000-millisecond deadline each; no automatic retries', stdout.getvalue())
         self.assertIn('launcher did not classify the cause', stderr.getvalue())
         self.assertIn('remote outcome may be unknown', stderr.getvalue())
         self.assertIn('Inspect the file and edit status', stderr.getvalue())
@@ -118,6 +123,28 @@ class EditLauncherTests(unittest.TestCase):
         profile = tomllib.loads((ROOT / 'etas.toml').read_text())['runtime']['profiles']['harness-edit']['model']
         self.assertEqual(profile['timeout']['request_deadline_ms'], 120000)
         self.assertEqual(profile['retry']['attempts'], 1)
+
+    def test_model_edit_accepts_bounded_request_deadline(self):
+        self.args.task = 'change old to new'
+        self.args.target = self.args.replacement = None
+        for value in ('2000', '240000', '3600000'):
+            values = {'NOMO_READ_MODEL_BASE_URL': 'http://example.test/v1',
+                      'NOMO_QWEN_SERVER_API_KEY': 'synthetic', 'NOMO_MODEL_REQUEST_DEADLINE_MS': value}
+            with self.subTest(value=value), patch.dict(os.environ, values, clear=True):
+                command, _, env = module.prepare(self.args, True, True)
+            self.assertEqual(env['NOMO_MODEL_REQUEST_DEADLINE_MS'], value)
+            self.assertIn(str(self.project / 'config/nomo-model-edit-compose.yaml'), command)
+
+    def test_model_edit_refuses_invalid_deadline_before_launch(self):
+        self.args.task = 'change old to new'
+        self.args.target = self.args.replacement = None
+        for value in ('', '1999', '3600001', '-1', '12ms', '١٢٠٠٠٠', '9' * 100):
+            with self.subTest(value=value), patch.dict(os.environ, {
+                'NOMO_READ_MODEL_BASE_URL': 'http://example.test/v1',
+                'NOMO_QWEN_SERVER_API_KEY': 'synthetic', 'NOMO_MODEL_REQUEST_DEADLINE_MS': value}, clear=True):
+                with self.assertRaisesRegex(ValueError, 'NOMO_MODEL_REQUEST_DEADLINE_MS'):
+                    module.prepare(self.args, True, True)
+        self.assertFalse((self.project / '.etas').exists())
 
     def test_model_edit_requires_explicit_endpoint_and_exclusive_arguments(self):
         self.args.task = 'task'

@@ -29,12 +29,14 @@ with open(os.environ['NOMO_TEST_LOG'], 'w') as f:
     json.dump({'args':sys.argv[1:], 'state':os.environ.get('NOMO_EDIT_STATE_DIR'),
                'key':'NOMO_QWEN_SERVER_API_KEY' in os.environ,
                'url':'NOMO_READ_MODEL_BASE_URL' in os.environ,
+               'deadline':'NOMO_MODEL_REQUEST_DEADLINE_MS' in os.environ,
                'host':'ETAS_HOST_POLICY' in os.environ},f)
 sys.exit(int(os.environ.get('NOMO_TEST_EXIT','0')))
 ''')
         docker.chmod(0o755)
         self.env = {'PATH':str(self.bin)+':/usr/bin:/bin','HOME':str(base), 'NOMO_TEST_LOG':str(self.log),
                     'NOMO_ETAS_VERSION':'0.2.3','NOMO_QWEN_SERVER_API_KEY':'synthetic',
+                    'NOMO_MODEL_REQUEST_DEADLINE_MS':'240000',
                     'NOMO_READ_MODEL_BASE_URL':'http://synthetic','ETAS_HOST_POLICY':'unsafe'}
 
     def invoke(self, *args, env=None):
@@ -46,7 +48,7 @@ sys.exit(int(os.environ.get('NOMO_TEST_EXIT','0')))
         self.assertEqual(result.returncode,0,result.stderr)
         call = json.loads(self.log.read_text())
         self.assertEqual(call['state'],str(self.state.resolve()))
-        self.assertFalse(call['key'] or call['url'] or call['host'])
+        self.assertFalse(call['key'] or call['url'] or call['deadline'] or call['host'])
         self.assertIn(str(ROOT/'config/nomo-edit-status-compose.yaml'),call['args'])
         self.assertNotIn(str(ROOT/'config/nomo-model-edit-compose.yaml'),call['args'])
         self.assertNotIn(str(ROOT/'config/edit-operation-compose.yaml'),call['args'])

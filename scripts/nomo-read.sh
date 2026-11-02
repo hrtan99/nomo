@@ -28,6 +28,8 @@ output-token allowance; per-turn maximum: 4 calls and 8,192 output tokens.
 Questions require 1..128 safe UTF-8 bytes; /help shows all bounds
 and /exit ends chat. Successful completion does not verify factual accuracy.
 Model editing sends the selected file and task to the configured model.
+For model editing, NOMO_MODEL_REQUEST_DEADLINE_MS sets each request deadline
+from 2000 to 3600000 milliseconds (default 120000); there are no automatic retries.
 Checks run offline and may modify the selected private workspace.
 Edit status is recorded data only; it does not inspect the current file.
 Use status only after the operation stops; SQLite may update state bookkeeping.

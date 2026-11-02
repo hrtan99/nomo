@@ -22,12 +22,15 @@ class Fake(BaseHTTPRequestHandler):
         pass
     def do_POST(self):
         try:
+            self.server.started += 1
             length = int(self.headers['Content-Length'])
             assert 0 < length <= 131072 and self.path == '/v1/chat/completions'
             assert self.headers.get('Authorization') == 'Bearer ' + TOKEN
             request = json.loads(self.rfile.read(length))
             context = json.loads(request['messages'][1]['content'])
             phase = ['plan', 'child', 'aggregate'][len(self.server.phases)]
+            if phase == 'plan' and self.server.scenario in ('plan_timeout', 'plan_delayed'):
+                time.sleep(3)
             assert context['phase'] == phase and context['path'] == 'note.txt'
             assert context['request'] == 'change old to new' and context['before'] == 'before old\n'
             if phase == 'plan': text = '["delegate","change old to new"]'
@@ -46,22 +49,27 @@ class Fake(BaseHTTPRequestHandler):
                                'usage': {'prompt_tokens': 10, 'completion_tokens': 4, 'total_tokens': 14}}).encode()
             self.send_response(200); self.send_header('Content-Type', 'application/json')
             self.send_header('Content-Length', str(len(body))); self.end_headers(); self.wfile.write(body)
+        except (BrokenPipeError, ConnectionResetError):
+            if self.server.scenario != 'plan_timeout':
+                self.server.failed = True
         except Exception:
             self.server.failed = True
             self.send_error(500)
 
 def main():
     parser = argparse.ArgumentParser(); parser.add_argument('--evidence-dir', required=True, type=Path)
-    parser.add_argument('--scenario', choices=('applied', 'denied', 'invalid', 'aggregate_failure'), default='applied')
+    parser.add_argument('--scenario', choices=('applied', 'denied', 'invalid', 'aggregate_failure', 'plan_timeout', 'plan_delayed'), default='applied')
     args = parser.parse_args(); args.evidence_dir.mkdir(parents=True, exist_ok=True)
     out = Path(tempfile.mkdtemp(prefix='model-edit-', dir=args.evidence_dir))
     workspace, state = out/'workspace', out/'state'
     workspace.mkdir(mode=0o700); state.mkdir(mode=0o700)
     (workspace/'note.txt').write_text('before old\n'); (workspace/'note.txt').chmod(0o600)
-    server = HTTPServer(('127.0.0.1', 0), Fake); server.phases = []; server.failed = False; server.scenario = args.scenario
+    server = HTTPServer(('127.0.0.1', 0), Fake); server.phases = []; server.started = 0; server.failed = False; server.scenario = args.scenario
     thread = threading.Thread(target=server.serve_forever, daemon=True); thread.start()
     env = os.environ.copy(); env.update(NOMO_READ_MODEL_BASE_URL='http://host.docker.internal:%d/v1' % server.server_port,
                                          NOMO_QWEN_SERVER_API_KEY=TOKEN)
+    if args.scenario in ('plan_timeout', 'plan_delayed'):
+        env['NOMO_MODEL_REQUEST_DEADLINE_MS'] = '2000' if args.scenario == 'plan_timeout' else '5000'
     cmd = [str(ROOT/'scripts/nomo-read.sh'), 'edit', '--root', str(workspace), '--state', str(state),
            '--id', 'owned-edit', '--path', 'note.txt', '--once', 'change old to new',
            '--check', '/bin/sh', '-c', 'test "$(cat note.txt)" = "before new"']
@@ -85,12 +93,20 @@ def main():
             except OSError: break
             if not chunk: break
             output.extend(chunk)
-        result.update(exit=proc.returncode, phases=server.phases, gates=sorted(gates), file=(workspace/'note.txt').read_text())
+        result.update(exit=proc.returncode, phases=list(server.phases), requests_started=server.started,
+                      gates=sorted(gates), file=(workspace/'note.txt').read_text())
         assert not server.failed
-        if args.scenario == 'applied':
+        if args.scenario in ('applied', 'plan_delayed'):
             assert proc.returncode == 0 and server.phases == ['plan', 'child', 'aggregate']
             assert gates == {'native', 'application'} and result['file'] == 'before new\n'
             assert b'APPLIED owned-edit' in output and b'FINAL ' in output and b'Check passed.' in output
+            if args.scenario == 'plan_delayed':
+                assert b'5000-millisecond deadline each; no automatic retries' in output
+        elif args.scenario == 'plan_timeout':
+            assert proc.returncode != 0 and server.started == 1 and not gates and result['file'] == 'before old\n'
+            assert b'2000-millisecond deadline each; no automatic retries' in output
+            assert b'HTTP transport request deadline exceeded' in output
+            assert b'launcher did not classify the cause' in output and b'Running the requested check' not in output
         elif args.scenario == 'aggregate_failure':
             assert proc.returncode != 0 and server.phases == ['plan', 'child', 'aggregate']
             assert gates == {'native', 'application'} and result['file'] == 'before new\n'
@@ -135,6 +151,8 @@ def main():
             try: proc.wait(timeout=20)
             except subprocess.TimeoutExpired: os.killpg(proc.pid, signal.SIGKILL); proc.wait(timeout=3)
         os.close(master); server.shutdown(); server.server_close(); thread.join(timeout=5)
+        if server.failed or thread.is_alive():
+            result.update(status='failed', failure_type='synthetic-server-cleanup')
         (out/'output.bin').write_bytes(output); (out/'result.json').write_text(json.dumps(result, indent=2)+'\n')
     print(json.dumps({'status': result['status'], 'evidence': str(out)}))
     return 0 if result['status'] == 'passed' else 1

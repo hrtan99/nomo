@@ -29,6 +29,7 @@ with open(os.environ['NOMO_TEST_LOG'], 'w') as f:
     json.dump({'args': sys.argv[1:], 'workspace': os.environ.get('NOMO_EDIT_WORKSPACE_DIR'),
                'model_key': 'NOMO_QWEN_SERVER_API_KEY' in os.environ,
                'model_url': 'NOMO_READ_MODEL_BASE_URL' in os.environ,
+               'model_deadline': 'NOMO_MODEL_REQUEST_DEADLINE_MS' in os.environ,
                'host_override': 'ETAS_HOST_POLICY' in os.environ}, f)
 sys.exit(int(os.environ.get('NOMO_TEST_EXIT', '0')))
 ''')
@@ -36,6 +37,7 @@ sys.exit(int(os.environ.get('NOMO_TEST_EXIT', '0')))
         self.env = {'PATH': str(self.bin) + ':/usr/bin:/bin', 'HOME': str(base),
                     'NOMO_TEST_LOG': str(self.log), 'NOMO_ETAS_VERSION': '0.2.3',
                     'NOMO_QWEN_SERVER_API_KEY': 'synthetic', 'NOMO_READ_MODEL_BASE_URL': 'http://synthetic',
+                    'NOMO_MODEL_REQUEST_DEADLINE_MS': '240000',
                     'ETAS_HOST_POLICY': 'unsafe'}
 
     def invoke(self, *args, env=None):
@@ -47,7 +49,7 @@ sys.exit(int(os.environ.get('NOMO_TEST_EXIT', '0')))
         self.assertEqual(result.returncode, 0, result.stderr)
         call = json.loads(self.log.read_text())
         self.assertEqual(call['workspace'], str(self.workspace.resolve()))
-        self.assertFalse(call['model_key'] or call['model_url'] or call['host_override'])
+        self.assertFalse(call['model_key'] or call['model_url'] or call['model_deadline'] or call['host_override'])
         self.assertIn(str(ROOT / 'config/etas-023-official-compose.yaml'), call['args'])
         self.assertIn(str(ROOT / 'config/nomo-project-check-compose.yaml'), call['args'])
         self.assertNotIn(str(ROOT / 'config/nomo-model-edit-compose.yaml'), call['args'])

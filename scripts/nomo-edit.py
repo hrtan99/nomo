@@ -33,6 +33,7 @@ def prepare(args, stdin_tty, stdout_tty):
     if info.st_uid != os.getuid() or stat.S_IMODE(info.st_mode) != 0o700 or any(state.iterdir()):
         raise ValueError('state must be an empty directory owned by you with mode 0700')
     task = getattr(args, 'task', None)
+    deadline = None
     if not args.id or not args.path:
         raise ValueError('id and path must be nonempty')
     if task is not None:
@@ -40,6 +41,12 @@ def prepare(args, stdin_tty, stdout_tty):
             raise ValueError('provide either a nonempty task or target and replacement')
         if not os.environ.get('NOMO_READ_MODEL_BASE_URL') or not os.environ.get('NOMO_QWEN_SERVER_API_KEY'):
             raise ValueError('set NOMO_READ_MODEL_BASE_URL and NOMO_QWEN_SERVER_API_KEY for model editing')
+        raw_deadline = os.environ.get('NOMO_MODEL_REQUEST_DEADLINE_MS', '120000')
+        if not raw_deadline.isascii() or not raw_deadline.isdigit() or len(raw_deadline) > 7:
+            raise ValueError('NOMO_MODEL_REQUEST_DEADLINE_MS must be an integer from 2000 to 3600000')
+        deadline = int(raw_deadline)
+        if not 2000 <= deadline <= 3600000:
+            raise ValueError('NOMO_MODEL_REQUEST_DEADLINE_MS must be an integer from 2000 to 3600000')
     elif not args.target or args.replacement is None:
         raise ValueError('provide either a nonempty task or target and replacement')
     selected = Path(args.path)
@@ -61,6 +68,8 @@ def prepare(args, stdin_tty, stdout_tty):
     cache.mkdir(mode=0o700, exist_ok=True)
     env = {key: value for key, value in os.environ.items() if not key.startswith('ETAS_HOST_')}
     env.update(NOMO_EDIT_WORKSPACE_DIR=str(workspace), NOMO_EDIT_STATE_DIR=str(state))
+    if deadline is not None:
+        env['NOMO_MODEL_REQUEST_DEADLINE_MS'] = str(deadline)
     overlay = {'0.2.2': 'config/etas-022-official-compose.yaml', '0.2.3': 'config/etas-023-official-compose.yaml', '0.2.4': 'config/etas-024-official-compose.yaml'}[version]
     compose = ['docker', 'compose', '--env-file', '/dev/null', '--file', str(ROOT / 'compose.yaml'),
                '--file', str(ROOT / overlay),
@@ -155,7 +164,8 @@ def prepare_project_check(root, check):
     overlay = {'0.2.2': 'config/etas-022-official-compose.yaml', '0.2.3': 'config/etas-023-official-compose.yaml', '0.2.4': 'config/etas-024-official-compose.yaml'}[version]
     env = {key: value for key, value in os.environ.items()
            if not key.startswith('ETAS_HOST_') and key not in
-           ('NOMO_READ_MODEL_BASE_URL', 'NOMO_QWEN_SERVER_API_KEY', 'NOMO_READ_MODEL_NAME')}
+           ('NOMO_READ_MODEL_BASE_URL', 'NOMO_QWEN_SERVER_API_KEY', 'NOMO_READ_MODEL_NAME',
+            'NOMO_MODEL_REQUEST_DEADLINE_MS')}
     env['NOMO_EDIT_WORKSPACE_DIR'] = str(workspace)
     command = [sys.executable, str(ROOT / 'scripts/terminal-transport.py'),
                'docker', 'compose', '--env-file', '/dev/null', '--file', str(ROOT / 'compose.yaml'),
@@ -213,7 +223,8 @@ def prepare_edit_status(state_path, operation_id, path):
     cache.mkdir(mode=0o700, exist_ok=True)
     env = {key: value for key, value in os.environ.items()
            if not key.startswith('ETAS_HOST_') and key not in
-           ('NOMO_READ_MODEL_BASE_URL', 'NOMO_QWEN_SERVER_API_KEY', 'NOMO_READ_MODEL_NAME')}
+           ('NOMO_READ_MODEL_BASE_URL', 'NOMO_QWEN_SERVER_API_KEY', 'NOMO_READ_MODEL_NAME',
+            'NOMO_MODEL_REQUEST_DEADLINE_MS')}
     env['NOMO_EDIT_STATE_DIR'] = str(state)
     overlay = {'0.2.2': 'config/etas-022-official-compose.yaml', '0.2.3': 'config/etas-023-official-compose.yaml', '0.2.4': 'config/etas-024-official-compose.yaml'}[version]
     command = [sys.executable, str(ROOT / 'scripts/terminal-transport.py'),
@@ -261,7 +272,8 @@ def main(argv=None):
         print('Cannot start edit: ' + str(error), file=sys.stderr)
         return 64
     if args.task is not None:
-        print('Model requests have a 120-second deadline each; no automatic retries.', flush=True)
+        print('Model requests have a ' + env.get('NOMO_MODEL_REQUEST_DEADLINE_MS', '120000') +
+              '-millisecond deadline each; no automatic retries.', flush=True)
     edited = run_owned(command, env)
     if edited != 0:
         if args.task is not None:
@@ -274,7 +286,8 @@ def main(argv=None):
         return 0
     print('Running the requested check in the edited workspace (60-second limit).', flush=True)
     check_env = {key: value for key, value in env.items() if key not in
-                 ('NOMO_READ_MODEL_BASE_URL', 'NOMO_QWEN_SERVER_API_KEY', 'NOMO_READ_MODEL_NAME')}
+                 ('NOMO_READ_MODEL_BASE_URL', 'NOMO_QWEN_SERVER_API_KEY', 'NOMO_READ_MODEL_NAME',
+                  'NOMO_MODEL_REQUEST_DEADLINE_MS')}
     checked = run_owned(check, check_env)
     if checked != 0:
         print('Check failed or could not be completed (exit ' + str(checked) + ').', file=sys.stderr, flush=True)
