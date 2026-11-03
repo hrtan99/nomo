@@ -75,12 +75,12 @@ def event_lines(raw):
 
 def main(argv=None):
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action',choices=('new','continue','status'));parser.add_argument('--state',required=True)
+    parser.add_argument('action',choices=('new','continue','status','init'));parser.add_argument('--state',required=True)
     parser.add_argument('--root');parser.add_argument('--allow');parser.add_argument('--once');parser.add_argument('--outputs',action='store_true');parser.add_argument('--events',action='store_true');parser.add_argument('--events-policy-dir');parser.add_argument('--natural-work',action='store_true')
     args=parser.parse_args(argv)
     try:
-        if args.natural_work and args.action=='status':raise ValueError('natural work routing requires a read turn')
-        status=args.action=='status';state=_edit_launcher.private_state(args.state);context=None
+        if args.natural_work and args.action in ('status','init'):raise ValueError('natural work routing requires a read turn')
+        status=args.action in ('status','init');creating=args.action in ('new','init');state=_edit_launcher.private_state(args.state);context=None
         if status:
             if args.root is not None or args.allow is not None or args.once is not None:raise ValueError('status accepts only --state')
         else:
@@ -94,22 +94,21 @@ def main(argv=None):
             if args.outputs:raise ValueError('--outputs is unavailable for event-recording sessions')
             policy,policy_bytes,policy_binding=_policy.read_private(args.events_policy_dir)
             if policy==state or policy in state.parents or state in policy.parents or (context is not None and (policy==context or policy in context.parents or context in policy.parents)):raise ValueError('event policy directory must not overlap state or workspace')
+        if args.action=='init' and (policy is None or args.outputs or args.events):raise ValueError('initialization requires an event policy and no status options')
         if args.events and policy is None:raise ValueError('--events requires event-recording mode and its policy')
         if args.events and args.outputs:raise ValueError('--events and --outputs cannot be combined')
-        version=os.environ.get('NOMO_ETAS_VERSION','0.2.6')
-        if version!='0.2.6':raise ValueError('this Nomo revision requires ETAS 0.2.6; use an earlier Nomo revision for older ETAS')
-        if policy is not None and version not in ('0.2.5','0.2.6'):raise ValueError('event-recording sessions require ETAS 0.2.5')
+        version=_edit_launcher.etas_version()
         _edit_launcher.ensure_cache(ROOT)
         flags=os.O_RDWR|os.O_NOFOLLOW|os.O_CLOEXEC
-        if args.action=='new':flags|=os.O_CREAT
+        if creating:flags|=os.O_CREAT
         fd=os.open(state/'.nomo-session.lock',flags,0o600)
         try:
             _edit_launcher.check_history_lock(fd,verify=False)
             names={p.name for p in state.iterdir()}
-            if args.action=='new' and names!={'.nomo-session.lock'}:raise ValueError('new session state must otherwise be empty')
-            if args.action!='new' and 'history.sqlite3' not in names:raise ValueError('existing session history is missing')
-            _edit_launcher.session_graph(fd,create=args.action=='new')
-            _storage.prepare(state,create=args.action=='new')
+            if creating and names!={'.nomo-session.lock'}:raise ValueError('new session state must otherwise be empty')
+            if not creating and 'history.sqlite3' not in names:raise ValueError('existing session history is missing')
+            _edit_launcher.session_graph(fd,create=creating)
+            _storage.prepare(state,create=creating)
             env=dict(os.environ,NOMO_SESSION_STATE=str(state),NOMO_ETAS_VERSION=version)
             env.pop('NOMO_QWEN_SERVER_API_KEY',None)
             compose=['docker','compose','--env-file','/dev/null','--file',str(ROOT/'compose.yaml'),
@@ -117,7 +116,7 @@ def main(argv=None):
             if status:
                 env.pop('MINIMAX_API_KEY',None);env.pop('ETAS_HOST_MODEL_API_KEY',None)
                 profile='nomo-read-session-status';flow='read_session_status';native_args=['--args','--outputs'] if args.outputs else []
-                print('Inspecting recorded status offline; SQLite may update bookkeeping.',flush=True)
+                print('Initializing a session offline.' if creating else 'Inspecting recorded status offline; SQLite may update bookkeeping.',flush=True)
             else:
                 env['NOMO_READ_ROOT']=str(context);profile='nomo-read-session-new' if args.action=='new' else 'nomo-read-session-existing'
                 flow='read_session';native_args=['--args',args.action,'--allow',args.allow,'--once',args.once]
@@ -130,7 +129,7 @@ def main(argv=None):
             if policy is not None:
                 profile='nomo-read-events-status' if status else ('nomo-read-events-new' if args.action=='new' else 'nomo-read-events-existing')
                 flow='recoverable_read_status' if status else 'recoverable_read_session'
-                if status:native_args=['--args','--policy-binding',policy_binding]
+                if status:native_args=['--args','--policy-binding',policy_binding,*(['--initialize'] if creating else [])]
                 else:native_args+=['--policy-binding',policy_binding]
                 print('Event recording is opt-in; policy filters only supplied exact literals. Unknown secrets may remain. Keep the same private policy and binding key; workspace identity is not established.',flush=True)
             if args.natural_work:native_args+=['--natural-work']
@@ -148,11 +147,9 @@ def main(argv=None):
                     if not any(line.startswith(('CHAT ','WORK ','FOLLOWUP ')) for line in rendered):print('No committed events.',flush=True)
                     for line in rendered:print(line,flush=True)
                     return 0
-                if policy is not None:return run_owned(command,env,input_data=policy_bytes)
-                return run_owned(command,env)
+                return run_owned(command,env,input_data=policy_bytes)
             diagnostic=_edit_launcher.RuntimeDiagnostic()
-            if policy is not None:code=run_owned(command,env,diagnostic=diagnostic,input_data=policy_bytes)
-            else:code=run_owned(command,env,diagnostic=diagnostic)
+            code=run_owned(command,env,diagnostic=diagnostic,input_data=policy_bytes)
             if code:diagnostic.report(code)
             return code
         finally:os.close(fd)

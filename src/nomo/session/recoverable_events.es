@@ -33,9 +33,9 @@ public flow invalid(frame: Frame, policy: Policy) -> string {
     let policy_problem = policy_error(policy); if policy_problem != "" { return policy_problem; }
     let n = count(frame.events);
     if (frame.format != 1 && frame.format != 2) || frame.turns < 0 || frame.turns > 32 || n > 768 { return "invalid recoverable event frame"; }
-    if frame.turns == 0 && (n != 0 || frame.first_count != 0) { return "invalid empty event frame"; }
-    if frame.turns == 1 && (frame.first_count == 0 || frame.first_count > 24 || frame.first_count > n || (frame.format == 1 && frame.first_count != n)) { return "invalid first event boundary"; }
-    if frame.turns >= 2 && (frame.first_count == 0 || frame.first_count > 24 || frame.first_count >= n) {
+    if frame.turns == 0 && (frame.first_count != 0 || (frame.format == 1 && n != 0)) { return "invalid empty event frame"; }
+    if frame.turns == 1 && (frame.first_count == 0 || frame.first_count > (if frame.format == 2 { 768 } else { 24 }) || frame.first_count > n || (frame.format == 1 && frame.first_count != n)) { return "invalid first event boundary"; }
+    if frame.turns >= 2 && (frame.first_count == 0 || frame.first_count > (if frame.format == 2 { 768 } else { 24 }) || frame.first_count >= n) {
         return "invalid later event boundary";
     }
     var bytes: usize = 0;

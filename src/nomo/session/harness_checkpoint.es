@@ -10,7 +10,7 @@ import nomo.core.text.printable;
 import nomo.core.conversation.{Event, State};
 import nomo.model.model_tool_contract.{Session, allowed_error};
 import nomo.harness.harness_model_contract.{bounded, decode_plan};
-import nomo.harness.harness_tool_contract.{Ledger, inspect};
+import nomo.harness.harness_tool_contract.{Ledger, inspect, same};
 import nomo.harness.harness_tool_chat_contract.{Previous, TurnResult, prior_error};
 
 public type Identity = { id: string, workspace: string, allowed: Array<string> };
@@ -22,10 +22,6 @@ public flow identity_error(identity: Identity) -> string {
     if !bounded(identity.id, 128) || !bounded(identity.workspace, 128) { return "invalid checkpoint identity"; }
     if count(identity.allowed) > 2 { return "legacy checkpoint supports at most two allowed files"; }
     return allowed_error(identity.allowed);
-}
-
-flow same(event: Event, role: string, kind: string, name: string, text: string) -> bool {
-    return event.role == role && event.kind == kind && event.name == name && event.text == text;
 }
 
 // This is a completed first boundary, not admission to another turn.

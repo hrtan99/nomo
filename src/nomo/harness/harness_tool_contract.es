@@ -102,7 +102,7 @@ public flow context_error(context: Context) -> string {
     return context_json_error(message.cast<JsonValue>(), 2048, false, "model context exceeds 2048 serialized characters");
 }
 
-flow same(event: Event, role: string, kind: string, name: string, text: string) -> bool {
+public flow same(event: Event, role: string, kind: string, name: string, text: string) -> bool {
     return event.role == role && event.kind == kind && event.name == name && event.text == text;
 }
 

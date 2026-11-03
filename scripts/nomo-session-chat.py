@@ -171,9 +171,9 @@ def offer_recovery(args, operation_id, action):
         return False
 
 def chat_turn(args, question, starting, natural, tty):
-    command = [sys.executable, str(ROOT / 'scripts/nomo-session-id.py'), 'start' if starting else 'resume', '--sessions-dir', args.sessions_dir]
+    command = [sys.executable, str(ROOT / 'scripts/nomo-session-id.py'), 'init' if question is None else 'start' if starting else 'resume', '--sessions-dir', args.sessions_dir]
     if not starting: command += ['--id', args.id]
-    command += ['--root', args.root, '--allow=' + args.allow, '--once=' + question]
+    if question is not None: command += ['--root', args.root, '--allow=' + args.allow, '--once=' + question]
     if args.events_policy_dir is not None: command += ['--events-policy-dir', args.events_policy_dir]
     if natural: command += ['--natural-work']
     observer = NaturalObserver(['*'] if args.discover else args.allow.split(','))
@@ -326,6 +326,11 @@ def main(argv=None):
                     if action == 'check':
                         if words[1:] == ['--run']:
                             if not args.check: raise ValueError('configure a check before running it')
+                            if args.id is None and args.events_policy_dir is not None:
+                                code, observer = chat_turn(args, None, True, False, tty)
+                                if code or observer.identifier is None:
+                                    show_status_hint(args, observer.identifier); return code or 1
+                                args.id = observer.identifier; show_resume(args, show_id=False)
                             if args.id is not None and args.events_policy_dir is not None:
                                 state = session_state(args)
                                 command = [sys.executable, str(ROOT/'scripts/nomo-history-work.py'), '--independent-check', '--state', str(state), '--root', args.root,

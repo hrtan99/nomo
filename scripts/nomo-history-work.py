@@ -59,7 +59,6 @@ def main(argv=None):
                 if policy is not None:print('Selected work and check facts are recorded; only supplied exact literals are filtered. Unknown secrets and live terminal output may remain.',flush=True)
                 if args.event_followup:print('Followup reserves up to 7 calls and 61440 output tokens in addition to first work and chat (older sessions retain their original allowance).',flush=True)
                 if args.legacy_followup:print('Additional reservation: up to 7 model calls and 47104 output tokens; together both work rounds reserve up to 14 calls and 94208 output tokens, plus chat.',flush=True)
-                if version=='0.2.4':print('ETAS 0.2.4 does not expose the provider finish reason.',flush=True)
                 diagnostic=edit.RuntimeDiagnostic()
                 code=edit.run_owned(command,env,diagnostic=diagnostic)
                 if code!=0:

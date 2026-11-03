@@ -113,7 +113,7 @@ public flow finish(expected: MemoryEntry<string, Frame>, result: TurnResult, pol
 public flow record_check(id: string, digest: string, outcome: string, exit_code: string, stdout: string, stderr: string, out_truncated: bool, err_truncated: bool, policy: Policy, binding: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
     let bad = invalid_values(1, "complete", id, digest, outcome, exit_code, false); if bad != "" { return Err(bad); }
     let before = match load(policy, binding) { Ok(Some(value)) => value, _ => { return Err("existing recoverable session required"); } };
-    if before.value.chat.phase == "running" || before.value.chat.invocation.admitted == 0 { return Err("completed chat required"); }
+    if before.value.chat.phase == "running" { return Err("chat turn unresolved"); }
     let out = match encode_prefix(stdout, out_truncated, policy) { Ok(item) => item, Err(error) => { return Err(error); } };
     let err = match encode_prefix(stderr, err_truncated, policy) { Ok(item) => item, Err(error) => { return Err(error); } };
     let plain_out = match decode(out.value, policy) { Ok(item) => item, Err(error) => { return Err(error); } };

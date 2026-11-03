@@ -12,7 +12,7 @@ import nomo.model.model_tool_contract.Session;
 import nomo.model.model_tool_contract.Context as ChildContext;
 import nomo.model.model_tool_contract.context_error as child_context_error;
 import nomo.harness.harness_model_contract.{bounded, decode_plan};
-import nomo.harness.harness_tool_contract.Ledger;
+import nomo.harness.harness_tool_contract.{Ledger, same};
 import nomo.harness.harness_tool_chat_contract.{Previous, Context, Invocation, TurnResult, prior_error, turn_error, context_error, inspect_turn};
 import nomo.session.harness_checkpoint.{Identity, Checkpoint, identity_error, read_ledger};
 import nomo.session.harness_checkpoint.validate as validate_first;
@@ -33,10 +33,6 @@ public flow restore(saved: Checkpoint) -> Result<Invocation, string> {
     let invocation = Invocation { usage = saved.usage, maximum = saved.maximum, admitted = saved.admitted, prior = previous(saved) };
     let invalid = turn_error(invocation); if invalid != "" { return Err(invalid); }
     return Ok(invocation);
-}
-
-flow same(event: Event, role: string, kind: string, name: string, text: string) -> bool {
-    return event.role == role && event.kind == kind && event.name == name && event.text == text;
 }
 
 public flow validate(saved: Successor, requested: Identity, predecessor_identity: Identity) -> Result<Successor, string> {

@@ -86,6 +86,12 @@ def ensure_cache(project_root):
     if cache.is_symlink() or not cache.is_dir():raise ValueError('project .etas mountpoint must be a directory')
 
 
+def etas_version():
+    version = os.environ.get('NOMO_ETAS_VERSION', '0.2.6')
+    if version != '0.2.6': raise ValueError('this Nomo revision requires ETAS 0.2.6; use an earlier Nomo revision for older ETAS')
+    return version
+
+
 def history_work_roots(args, project_root):
     if not sys.stdin.isatty() or not sys.stdout.isatty():raise ValueError('editing requires an interactive terminal for both confirmations')
     if args.check==[]:raise ValueError('--check requires a command')
@@ -93,8 +99,7 @@ def history_work_roots(args, project_root):
     for item in (context,workspace):
         if item==state or item in state.parents or state in item.parents:raise ValueError('state must not overlap read or edit roots')
     ensure_cache(project_root)
-    version=os.environ.get('NOMO_ETAS_VERSION','0.2.6')
-    if version!='0.2.6':raise ValueError('this Nomo revision requires ETAS 0.2.6; use an earlier Nomo revision for older ETAS')
+    version=etas_version()
     return context, workspace, state, version
 
 
@@ -200,9 +205,7 @@ def prepare(args, stdin_tty, stdout_tty):
             raise ValueError('the selected file path must not contain symlinks')
     if not current.is_file():
         raise ValueError('the selected file must be an existing regular file')
-    version = os.environ.get('NOMO_ETAS_VERSION', '0.2.6')
-    if version != '0.2.6':
-        raise ValueError('this Nomo revision requires ETAS 0.2.6; use an earlier Nomo revision for older ETAS')
+    version = etas_version()
     ensure_cache(ROOT)
     env = {key: value for key, value in os.environ.items() if not key.startswith('ETAS_HOST_')}
     if task is not None:
@@ -556,9 +559,7 @@ def prepare_edit_status(state_path, operation_id, path):
             raise ValueError('state database and sidecars must be regular files without hardlinks')
     if not (state / 'edit.sqlite3').is_file():
         raise ValueError('existing edit.sqlite3 required')
-    version = os.environ.get('NOMO_ETAS_VERSION', '0.2.6')
-    if version != '0.2.6':
-        raise ValueError('this Nomo revision requires ETAS 0.2.6; use an earlier Nomo revision for older ETAS')
+    version = etas_version()
     ensure_cache(ROOT)
     env = without_model(os.environ)
     env['NOMO_EDIT_STATE_DIR'] = str(state)

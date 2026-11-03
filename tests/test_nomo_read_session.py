@@ -87,6 +87,30 @@ class ReadSessionLauncherTest(unittest.TestCase):
             cmd,env=run.call_args.args[:2];self.assertIn('recoverable_read_status',cmd);self.assertNotIn('MINIMAX_API_KEY',env)
             run.reset_mock();self.assertNotEqual(self.invoke(['status','--state',str(self.state),'--events-policy-dir',str(self.state)]),0);run.assert_not_called()
 
+    def test_init_creates_offline_event_session_without_model_credentials(self):
+        policy=self.root/'policy';policy.mkdir(mode=0o700)
+        file=policy/'policy.json';file.write_text('{"format":1,"literals":["SYNTHETIC_SECRET"]}');file.chmod(0o600)
+        key=policy/'binding.key';key.write_bytes(b'K'*32);key.chmod(0o600)
+        with patch.object(launcher,'run_owned',return_value=0) as run:
+            self.assertEqual(self.invoke(['init','--state',str(self.state),'--events-policy-dir',str(policy)]),0)
+        cmd,env=run.call_args.args[:2]
+        self.assertIn('recoverable_read_status',cmd);self.assertIn('--initialize',cmd)
+        self.assertFalse(any('nomo-minimax-read-compose.yaml' in value for value in cmd))
+        for name in ('MINIMAX_API_KEY','ETAS_HOST_MODEL_API_KEY','NOMO_QWEN_SERVER_API_KEY'):self.assertNotIn(name,env)
+        self.assertEqual(run.call_args.kwargs['input_data'],file.read_bytes())
+        self.assertTrue((self.state/'history.sqlite3').is_file())
+
+    def test_init_rejects_missing_policy_and_status_options(self):
+        policy=self.root/'policy';policy.mkdir(mode=0o700)
+        file=policy/'policy.json';file.write_text('{}');file.chmod(0o600)
+        key=policy/'binding.key';key.write_bytes(b'K'*32);key.chmod(0o600)
+        with patch.object(launcher,'run_owned') as run:
+            base=['init','--state',str(self.state)]
+            self.assertNotEqual(self.invoke(base),0)
+            for option in ('--events','--outputs','--natural-work'):
+                self.assertNotEqual(self.invoke(base+['--events-policy-dir',str(policy),option]),0)
+            run.assert_not_called()
+
     def test_event_recording_rejects_unverified_024(self):
         policy=self.root/'policy';policy.mkdir(mode=0o700);file=policy/'policy.json';file.write_text('{}');file.chmod(0o600);key=policy/'binding.key';key.write_bytes(b'K'*32);key.chmod(0o600)
         with patch.dict(os.environ,{'NOMO_ETAS_VERSION':'0.2.4'}),patch.object(launcher,'run_owned') as run:

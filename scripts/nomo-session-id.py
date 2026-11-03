@@ -31,7 +31,7 @@ def session(registry_fd,base,identifier,create):
 
 def main(argv=None):
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action',choices=('start','resume','status','work','followup','decision'));parser.add_argument('--sessions-dir',required=True)
+    parser.add_argument('action',choices=('start','resume','status','work','followup','decision','init'));parser.add_argument('--sessions-dir',required=True)
     parser.add_argument('--id');parser.add_argument('--root');parser.add_argument('--allow');parser.add_argument('--once')
     parser.add_argument('--outputs',action='store_true')
     parser.add_argument('--events',action='store_true')
@@ -41,12 +41,12 @@ def main(argv=None):
     try:
         if args.natural_work and args.action not in ('start','resume'):raise ValueError('natural work routing requires a read turn')
         if args.interactive_check and args.action not in ('work','followup'):raise ValueError('interactive check requires a work action')
-        if args.action=='start' and args.id is not None:raise ValueError('a new session ID is generated automatically')
-        if args.action!='start' and args.id is None:raise ValueError('select an existing session ID')
+        if args.action in ('start','init') and args.id is not None:raise ValueError('a new session ID is generated automatically')
+        if args.action not in ('start','init') and args.id is None:raise ValueError('select an existing session ID')
         if (args.outputs or args.events) and args.action!='status':raise ValueError('--outputs and --events are only available for status')
         if args.events and args.events_policy_dir is None:raise ValueError('--events requires event-recording mode and its policy')
         if args.events and args.outputs:raise ValueError('--events and --outputs cannot be combined')
-        if args.events_policy_dir is not None and args.action not in ('start','resume','status','work','followup'):raise ValueError('event-recording sessions do not yet support decisions')
+        if args.events_policy_dir is not None and args.action not in ('start','resume','status','work','followup','init'):raise ValueError('event-recording sessions do not yet support decisions')
         if args.events_policy_dir is not None and args.outputs:raise ValueError('--outputs is unavailable for event-recording sessions')
         if args.id=='latest':raise ValueError('latest compatible session is unavailable: workspace identity continuity cannot yet be verified')
         if args.action=='decision':
@@ -58,13 +58,14 @@ def main(argv=None):
             if args.check==[]:raise ValueError('--check requires a command')
         else:
             if any(x is not None for x in (args.read_root,args.operation_id,args.path,args.target,args.check)):raise ValueError('work or decision options require their action')
-            if args.action=='status':
-                if any(x is not None for x in (args.root,args.allow,args.once)):raise ValueError('status accepts no root, allowlist or task')
+            if args.action in ('status','init'):
+                if any(x is not None for x in (args.root,args.allow,args.once)):raise ValueError('status or init accepts no root, allowlist or task')
+                if args.action=='init' and args.events_policy_dir is None:raise ValueError('init requires an event policy')
             elif any(x is None for x in (args.root,args.allow,args.once)):raise ValueError('select a current root, allowlist and task for each turn')
         base,fd=registry(args.sessions_dir)
         try:
-            identifier=secrets.token_hex(16) if args.action=='start' else args.id
-            state=session(fd,base,identifier,args.action=='start')
+            identifier=secrets.token_hex(16) if args.action in ('start','init') else args.id
+            state=session(fd,base,identifier,args.action in ('start','init'))
         finally:os.close(fd)
         print('SESSION ID '+identifier,flush=True)
         if args.action=='start':print('Resume: nomo-read.sh session-id resume --sessions-dir '+shlex.quote(str(base))+' --id '+identifier+' --root DIR --allow FILE --once QUESTION'+(' --events-policy-dir '+shlex.quote(args.events_policy_dir) if args.events_policy_dir is not None else ''),flush=True)
@@ -77,9 +78,9 @@ def main(argv=None):
             if args.interactive_check:command+=['--interactive-check']
             if args.check is not None:command+=['--check',*args.check]
         else:
-            mode={'start':'new','resume':'continue','status':'status'}[args.action]
+            mode={'start':'new','resume':'continue','status':'status','init':'init'}[args.action]
             command=[sys.executable,str(ROOT/'scripts/nomo-read-session.py'),mode,'--state',str(state)]
-            if mode!='status':command+=['--root',args.root,'--allow='+args.allow,'--once='+args.once]
+            if mode in ('new','continue'):command+=['--root',args.root,'--allow='+args.allow,'--once='+args.once]
             elif args.outputs:command+=['--outputs']
             elif args.events:command+=['--events']
             if args.events_policy_dir is not None:command+=['--events-policy-dir',args.events_policy_dir]

@@ -16,6 +16,12 @@ class SessionIDTest(unittest.TestCase):
   with patch.object(module.secrets,'token_hex',return_value=self.identifier),patch.object(module._edit,'run_owned',return_value=0) as call:
    code,out,_=self.call(start);self.assertEqual(code,0);self.assertIn('SESSION ID '+self.identifier,out);self.assertIn('Resume: nomo-read.sh session-id resume',out);self.assertTrue((self.base/self.identifier).is_dir());self.assertIn(str(self.base/self.identifier),call.call_args.args[0])
    code,out,_=self.call(['resume','--sessions-dir',str(self.base),'--id',self.identifier,'--root','/root2','--allow','context.txt','--once','again']);self.assertEqual(code,0);self.assertIn('newly selected',out);self.assertIn(str(self.base/self.identifier),call.call_args.args[0])
+ def test_init_creates_random_session_without_question_or_workspace(self):
+  args=['init','--sessions-dir',str(self.base),'--events-policy-dir','/policy']
+  with patch.object(module.secrets,'token_hex',return_value=self.identifier),patch.object(module._edit,'run_owned',return_value=0) as launch:
+   code,out,_=self.call(args);self.assertEqual(code,0);self.assertIn('SESSION ID '+self.identifier,out)
+   command=launch.call_args.args[0];self.assertIn('init',command);self.assertIn(str(self.base/self.identifier),command)
+   self.assertNotIn('--once',command);self.assertNotIn('--root',command);self.assertTrue((self.base/self.identifier).is_dir())
  def test_status_and_failure_retains_state(self):
   (self.base/self.identifier).mkdir(mode=0o700)
   with patch.object(module._edit,'run_owned',return_value=125):

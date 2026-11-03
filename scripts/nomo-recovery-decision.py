@@ -11,8 +11,7 @@ def main(argv=None):
   if not sys.stdin.isatty() or not sys.stdout.isatty():raise ValueError('an interactive terminal is required for a recovery decision')
   if not args.id.strip() or len(args.id)>128 or not all(32<=ord(c)<=126 for c in args.id):raise ValueError('operation ID must be 1..128 printable ASCII characters')
   state=edit.private_state(args.state)
-  version=os.environ.get('NOMO_ETAS_VERSION','0.2.6')
-  if version!='0.2.6':raise ValueError('this Nomo revision requires ETAS 0.2.6; use an earlier Nomo revision for older ETAS')
+  version=edit.etas_version()
   fd=os.open(state/'.nomo-session.lock',os.O_RDWR|os.O_NOFOLLOW|os.O_CLOEXEC)
   try:
    edit.check_history_lock(fd)
