@@ -28,6 +28,8 @@ class Fake(BaseHTTPRequestHandler):
             assert self.path=='/v1/chat/completions' and self.headers.get('Authorization')=='Bearer SYNTHETIC_ONLY'
             req=json.loads(self.rfile.read(int(self.headers['Content-Length'])));ctx=json.loads(req['messages'][1]['content']);i=len(self.server.phases)
             assert req['max_tokens']==[2048,2048,2048,2048,2048,2048,2048,2048,4096,32768,2048,2048,2048,2048,2048,4096,32768,2048,2048,2048,2048,2048][i]
+            if (MODE=='resume-action' and i==19) or (MODE=='resume-final' and i==20):
+                self.server.phases.append(i);self.send_error(503);return
             if i==0:value=['delegate',INITIAL_TASK]
             elif i==1:value=['read','context.txt']
             elif i==2:value=['final',INITIAL_RESULT]
@@ -132,6 +134,17 @@ def main():
         assert any(json.loads(event['text'])==FIRST_SUMMARY and event['role']==('system' if MODE=='fallback' else 'assistant') and event['kind']==('notice' if MODE=='fallback' else 'answer') for event in view['work_events'])
         with sqlite3.connect(state/'history.sqlite3') as db:assert db.execute('pragma integrity_check').fetchone()==('ok',)
         resumed=subprocess.run([str(project/'scripts/nomo-read.sh'),'session-continue','--root',str(current),'--state',str(state),'--allow','context.txt','--once','解释两次结果','--events-policy-dir',str(policy)],env=env,capture_output=True,timeout=120)
+        if MODE in ('resume-action','resume-final'):
+            expected='chat-child-action' if MODE=='resume-action' else 'chat-child-final'
+            output=resumed.stdout+b'\n'+resumed.stderr
+            assert resumed.returncode==3 and not server.failed
+            assert ('last_stage_text='+expected+' text_marker=provider_http_503').encode() in output
+            assert server.phases==list(range(20 if MODE=='resume-action' else 21)) and (workspace/'note.txt').read_text()=='before gold\n'
+            after=subprocess.run([str(project/'scripts/nomo-read.sh'),'session-status','--state',str(state),'--events-policy-dir',str(policy)],env=env,capture_output=True,timeout=120)
+            items=[json.loads(line.removeprefix(b'EVENT VIEW ')) for line in after.stdout.splitlines() if line.startswith(b'EVENT VIEW {')]
+            assert after.returncode==0 and len(items)==1 and items[0]['phase']=='running' and items[0]['reserved_calls']==4
+            assert items[0]['work_phase']=='complete' and items[0]['followup_phase']=='complete'
+            print(json.dumps({'status':'passed','scope':'synthetic resume child failure; no retry or real provider','stage':expected,'fake_requests':len(server.phases)}));return
         if resumed.returncode:
             markers=[line.decode('utf-8','replace') for line in (resumed.stdout+resumed.stderr).splitlines() if line.startswith((b'REFUSED ',b'error[',b'Runtime diagnostic'))]
             raise AssertionError('synthetic continuation exit='+str(resumed.returncode)+' phases='+str(server.phases)+' markers='+str(markers[-4:]))

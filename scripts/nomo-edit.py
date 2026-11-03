@@ -208,6 +208,9 @@ class RuntimeDiagnostic:
         chat = re.fullmatch(rb'TURN [1-9][0-9]* STAGE (plan|child|aggregate) steps=[0-9]+ calls=[0-9]+ tokens=[0-9]+ tools=[0-9]+ scan=[0-9]+ reserved_steps=[0-9]+ reserved_calls=[0-9]+ reserved_tokens=[0-9]+ reserved_tools=[0-9]+ reserved_scan=[0-9]+', line)
         if chat:
             self.stage = 'chat-' + chat.group(1).decode('ascii')
+        if self.stage in ('chat-child','chat-child-action','chat-child-tool','chat-child-final'):
+            child_stages = {b'CHILD STAGE model-action':'chat-child-action', b'CHILD STAGE tool':'chat-child-tool', b'CHILD STAGE model-final':'chat-child-final'}
+            if line in child_stages:self.stage = child_stages[line]
         for stage in self._stages:
             if line == b'STAGE ' + stage or line.startswith(b'STAGE ' + stage + b' child-1 '):
                 self.stage = stage.decode('ascii')

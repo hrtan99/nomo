@@ -100,6 +100,7 @@ flow run_mode(raw: string, allowed: Array<string>, limits: Limits, previous: Ses
     var session = history(previous, emit_mode(previous.history, "user", "input", "", raw, private_progress));
     let first = match model_attempt(session, allowed, limits, false, private_progress) { Ok(value) => value, Err(error) => { return error; } };
     // Host failure aborts here, without a recoverable source error event.
+    if private_progress { println("CHILD STAGE model-action"); }
     let first_raw = perform LegacyChildModel.infer(first.context);
     session = first.state;
     if inspect_all { println(response_text(first_raw, "read-child-action", "lab-qwen-", 384)); }
@@ -119,6 +120,7 @@ flow run_mode(raw: string, allowed: Array<string>, limits: Limits, previous: Ses
     if exhausted != "" { return failed(session, exhausted, 4); }
     session = charge_action(session, true);
     var result = outcome("refused", "unsupported operation", 0);
+    if private_progress { println("CHILD STAGE tool"); }
     if action.operation == "read" { result = display(perform ReadTools.read(action.files[0])); }
     else if action.operation == "search" { result = display(perform ReadTools.search(action.files, action.literal)); }
     // Smaller admission than scripted tools: retain the full result or refuse.
@@ -129,6 +131,7 @@ flow run_mode(raw: string, allowed: Array<string>, limits: Limits, previous: Ses
     }
     session = history(session, emit_mode(session.history, "tool", "complete", action.operation, data, private_progress));
     let second = match model_attempt(session, allowed, limits, true, private_progress) { Ok(value) => value, Err(error) => { return error; } };
+    if private_progress { println("CHILD STAGE model-final"); }
     let second_raw = perform LegacyChildModel.infer(second.context);
     if inspect_all { println(response_text(second_raw, "read-child-final", "lab-qwen-", 1152)); }
     let decoded_final = decode_child(second_raw, allowed, true);

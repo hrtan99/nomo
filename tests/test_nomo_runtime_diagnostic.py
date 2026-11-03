@@ -46,6 +46,17 @@ class DiagnosticTests(unittest.TestCase):
         observer.feed('stdout', b'TURN 1 STAGE child steps=2 calls=1 tokens=2048 tools=0 scan=0 reserved_steps=5 reserved_calls=3 reserved_tokens=6144 reserved_tools=1 reserved_scan=4096\n' + observer._length + b'\n')
         self.assertIn('last_stage_text=chat-child text_marker=incomplete_response_length', self.report(observer))
 
+    def test_chat_child_substages_are_fixed_bounded_observations(self):
+        prefix=b'TURN 2 STAGE child steps=2 calls=1 tokens=2048 tools=0 scan=0 reserved_steps=5 reserved_calls=3 reserved_tokens=6144 reserved_tools=1 reserved_scan=4096\n'
+        for marker,stage in ((b'model-action','chat-child-action'),(b'tool','chat-child-tool'),(b'model-final','chat-child-final')):
+            observer=edit.RuntimeDiagnostic();observer.feed('stdout',prefix+b'CHILD STAGE '+marker+b'\n')
+            self.assertIn('last_stage_text='+stage+' text_marker=unknown',self.report(observer))
+            self.assertIn('untrusted',self.report(observer))
+        observer=edit.RuntimeDiagnostic();observer.feed('stdout',b'STAGE read-child\nCHILD STAGE model-final\n')
+        self.assertIn('last_stage_text=read-child',self.report(observer))
+        observer=edit.RuntimeDiagnostic();observer.feed('stdout',prefix+b'CHILD STAGE model-final extra\n')
+        self.assertIn('last_stage_text=chat-child ',self.report(observer))
+
     def test_post_edit_marker_is_bounded_and_advisory(self):
         observer=edit.RuntimeDiagnostic()
         for chunk in (b'POST_EDIT con',b'text\nPOST_EDIT aggre',b'gate\nPOST_EDIT persist extra\n'):
