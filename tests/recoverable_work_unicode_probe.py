@@ -5,17 +5,21 @@ from http.server import BaseHTTPRequestHandler,HTTPServer
 from pathlib import Path
 
 ROOT=Path(__file__).resolve().parent.parent
-FIRST_TASK='请将 old 替换为 green'
-SECOND_TASK='Change green to gold using context'
+MODE=os.environ.get('SYNTHETIC_SUMMARY_MODE','full')
+FIRST_TASK=('Change old to green '+ '\\'*108) if MODE=='escaped' else '请将 old 替换为 green'
+SECOND_TASK=('Change green to gold '+ '\\'*107) if MODE=='escaped' else 'Change green to gold using context'
 DELEGATE='读取 context.txt 中的颜色；'+'确认颜色并保留相关上下文。'*5
 CHILD='当前颜色是绿色'
 READ_SUMMARY='文件内容是绿色'
 FALLBACK='Edit applied; model summary unavailable (blank or over limit).'
-MODE=os.environ.get('SYNTHETIC_SUMMARY_MODE','full')
-FIRST_SUMMARY=FALLBACK if MODE=='fallback' else '界'*341+'a'
+FIRST_SUMMARY=FALLBACK if MODE=='fallback' else (chr(1)*1023+'X' if MODE=='escaped' else '界'*341+'a')
 MODEL_FIRST_SUMMARY='X'*1025 if MODE=='fallback' else FIRST_SUMMARY
 FIRST_SOURCE='system' if MODE=='fallback' else 'model'
 SECOND_SUMMARY='界'*341+'a'
+INITIAL_QUESTION='\\'*128 if MODE=='escaped' else '读取初始颜色'
+INITIAL_TASK='\\'*128 if MODE=='escaped' else '读取 context.txt'
+INITIAL_RESULT='\\'*160 if MODE=='escaped' else '初始颜色为蓝色'
+INITIAL_ANSWER='\\'*250 if MODE=='escaped' else '初始颜色为蓝色'
 
 class Fake(BaseHTTPRequestHandler):
     def log_message(self,*_):pass
@@ -24,12 +28,12 @@ class Fake(BaseHTTPRequestHandler):
             assert self.path=='/v1/chat/completions' and self.headers.get('Authorization')=='Bearer SYNTHETIC_ONLY'
             req=json.loads(self.rfile.read(int(self.headers['Content-Length'])));ctx=json.loads(req['messages'][1]['content']);i=len(self.server.phases)
             assert req['max_tokens']==[2048,2048,2048,2048,2048,2048,2048,2048,4096,32768,2048,2048,2048,2048,2048,4096,32768,2048,2048,2048,2048,2048][i]
-            if i==0:value=['delegate','读取 context.txt']
+            if i==0:value=['delegate',INITIAL_TASK]
             elif i==1:value=['read','context.txt']
-            elif i==2:value=['final','初始颜色为蓝色']
-            elif i==3:value='初始颜色为蓝色'
+            elif i==2:value=['final',INITIAL_RESULT]
+            elif i==3:value=INITIAL_ANSWER
             elif i==4:
-                assert ctx['current']['request']==FIRST_TASK and ctx['previous']['answer']=='初始颜色为蓝色';value=['delegate',DELEGATE]
+                assert ctx['current']['request']==FIRST_TASK and ctx['previous']['answer']==INITIAL_ANSWER;value=['delegate',DELEGATE]
             elif i==5:value=['read','context.txt']
             elif i==6:value=['final',CHILD]
             elif i==7:
@@ -41,6 +45,8 @@ class Fake(BaseHTTPRequestHandler):
             elif i==10:
                 assert ctx['current']['edit']['after']=='before green\n';value=MODEL_FIRST_SUMMARY
             elif i==11:
+                self.server.read_context_bytes=len(req['messages'][1]['content'].encode('utf-8'))
+                if MODE=='escaped':assert 8192 < self.server.read_context_bytes <= 16384
                 assert ctx['current']['request']==SECOND_TASK and ctx['prior_work']['summary']==FIRST_SUMMARY and ctx['prior_work']['summary_source']==FIRST_SOURCE;value=['delegate','Read context.txt for the color']
             elif i==12:value=['read','context.txt']
             elif i==13:value=['final',CHILD]
@@ -95,7 +101,7 @@ def work(command,env,before,after):
 def main():
     out=Path(tempfile.mkdtemp(prefix='nomo-work-unicode-'));project=out/'project'
     shutil.copytree(ROOT,project,ignore=shutil.ignore_patterns('.git','.etas','tmp','__pycache__','.pytest_cache'));(project/'.etas').mkdir(mode=0o700)
-    context=out/'context';context.mkdir(mode=0o700);(context/'context.txt').write_text('蓝色 blue\n')
+    context=out/'context';context.mkdir(mode=0o700);(context/'context.txt').write_text('\\'*120 if MODE=='escaped' else '蓝色 blue\n')
     current=out/'current';current.mkdir(mode=0o700);(current/'context.txt').write_text('绿色 green\n')
     workspace=out/'workspace';workspace.mkdir(mode=0o700);(workspace/'note.txt').write_text('before old\n')
     state=out/'state';state.mkdir(mode=0o700);policy=out/'policy';policy.mkdir(mode=0o700)
@@ -109,7 +115,7 @@ def main():
             start=text.index('[runtime.profiles.'+name+'.model]');end=text.index('[runtime.profiles.'+name+'.model.timeout]',start)
             part=text[start:end].replace('https://api.minimax.cn/v1','http://host.docker.internal:%d/v1'%server.server_port).replace('allow_private = false','allow_private = true');text=text[:start]+part+text[end:]
         manifest.write_text(text);env={'PATH':os.environ['PATH'],'HOME':os.environ['HOME'],'MINIMAX_API_KEY':'SYNTHETIC_ONLY','NOMO_ETAS_VERSION':'0.2.5'}
-        first=subprocess.run([str(project/'scripts/nomo-read.sh'),'session-new','--root',str(context),'--state',str(state),'--allow','context.txt','--once','读取初始颜色','--events-policy-dir',str(policy)],env=env,capture_output=True,timeout=120)
+        first=subprocess.run([str(project/'scripts/nomo-read.sh'),'session-new','--root',str(context),'--state',str(state),'--allow','context.txt','--once',INITIAL_QUESTION,'--events-policy-dir',str(policy)],env=env,capture_output=True,timeout=120)
         if first.returncode:raise AssertionError('synthetic initial chat failed: '+first.stderr.decode('utf-8','replace')[-2000:])
         assert server.phases==list(range(4)) and not server.failed
         for action,identifier,before,after,task in [('session-work','edit1','old','green',FIRST_TASK),('session-followup','edit2','green','gold',SECOND_TASK)]:
@@ -126,8 +132,11 @@ def main():
         assert any(json.loads(event['text'])==FIRST_SUMMARY and event['role']==('system' if MODE=='fallback' else 'assistant') and event['kind']==('notice' if MODE=='fallback' else 'answer') for event in view['work_events'])
         with sqlite3.connect(state/'history.sqlite3') as db:assert db.execute('pragma integrity_check').fetchone()==('ok',)
         resumed=subprocess.run([str(project/'scripts/nomo-read.sh'),'session-continue','--root',str(current),'--state',str(state),'--allow','context.txt','--once','解释两次结果','--events-policy-dir',str(policy)],env=env,capture_output=True,timeout=120)
+        if resumed.returncode:
+            markers=[line.decode('utf-8','replace') for line in (resumed.stdout+resumed.stderr).splitlines() if line.startswith((b'REFUSED ',b'error[',b'Runtime diagnostic'))]
+            raise AssertionError('synthetic continuation exit='+str(resumed.returncode)+' phases='+str(server.phases)+' markers='+str(markers[-4:]))
         assert resumed.returncode==0 and server.phases==list(range(22)) and not server.failed
-        print(json.dumps({'status':'passed','scope':'synthetic UTF-8 chat, work, followup and continuation','fake_requests':22,'fresh_confirmations':2,'workspace':'before gold','checks':'passed'}))
+        print(json.dumps({'status':'passed','scope':'synthetic UTF-8 chat, work, followup and continuation','fake_requests':22,'fresh_confirmations':2,'workspace':'before gold','checks':'passed','followup_context_bytes':server.read_context_bytes}))
     finally:server.shutdown();server.server_close();thread.join(timeout=5);shutil.rmtree(out)
 
 if __name__=='__main__':main()
