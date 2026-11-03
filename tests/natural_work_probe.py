@@ -7,6 +7,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 FILES = ['context.txt', 'second.txt', 'third.txt', 'note.txt']
 TASK = '请把 note.txt 中的 old 改为 green'
+BEFORE = ''.join('line %03d: unchanged marker content\n' % n for n in range(180)) + 'before old\n'
+AFTER = BEFORE.replace('before old\n', 'before green\n')
 
 class Fake(BaseHTTPRequestHandler):
     def log_message(self, *_): pass
@@ -18,14 +20,16 @@ class Fake(BaseHTTPRequestHandler):
                 assert ctx['current']['request'] == TASK and ctx['current']['allowed'] == FILES
                 value = ['delegate', 'Read note.txt to identify the requested edit']
             elif i in (1, 5, 12): value = ['read', 'note.txt']
-            elif i in (2, 6, 13): value = ['final', 'note.txt contains the relevant color']
+            elif i in (2, 6, 13):
+                data = json.dumps(ctx, ensure_ascii=False);assert 'line 000: unchanged marker content' in data and 'line 179: unchanged marker content' in data
+                value = ['final', 'note.txt contains the relevant color']
             elif i == 3: value = 'EDIT note.txt'
             elif i == 4:
                 assert ctx['current']['request'] == TASK and ctx['previous']['answer'] == 'EDIT note.txt'
                 value = ['delegate', 'Read note.txt before editing']
             elif i == 7: value = 'note.txt contains before old'
             elif i == 8:
-                assert ctx['current']['edit']['path'] == 'note.txt'
+                assert ctx['current']['edit']['path'] == 'note.txt' and ctx['current']['edit']['before'] == BEFORE
                 value = ['delegate', 'Replace old with green']
             elif i == 9: value = ['edit', 'old', 'green']
             elif i == 10: value = '已将 old 改为 green'
@@ -54,7 +58,7 @@ def interactive(command, env, question, editing):
             if not asked and b'nomo> ' in text: os.write(master, question.encode()+b'\n');asked = True
             if editing and not native and b'Type `yes` to approve:' in text:
                 previews = [line.removeprefix(b'PREVIEW ') for line in text.splitlines() if line.startswith(b'PREVIEW ')]
-                assert len(previews)==1; preview=json.loads(previews[0]);assert preview['path']=='note.txt' and preview['before']=='before old\n' and preview['after']=='before green\n'
+                assert len(previews)==1; preview=json.loads(previews[0]);assert preview['path']=='note.txt' and preview['before']==BEFORE and preview['after']==AFTER
                 os.write(master,b'yes\n');native=True
             if editing and not application and b'CONFIRM Apply this exact preview? [y/N]' in text:
                 assert native;os.write(master,b'yes\n');application=True
@@ -79,7 +83,7 @@ def main():
     try: workspace.mkdir(mode=0o755)
     finally: os.umask(mask)
     assert stat.S_IMODE(workspace.stat().st_mode)==0o755
-    for name in FILES:(workspace/name).write_text('before old\n' if name=='note.txt' else 'unrelated context\n')
+    for name in FILES:(workspace/name).write_text(BEFORE if name=='note.txt' else 'unrelated context\n')
     sessions=out/'sessions';sessions.mkdir(mode=0o700);policy=out/'policy';policy.mkdir(mode=0o700)
     (policy/'policy.json').write_text(json.dumps({'format':1,'literals':['SYNTHETIC_NEVER_PRESENT']}));(policy/'policy.json').chmod(0o600)
     (policy/'binding.key').write_bytes(b'K'*32);(policy/'binding.key').chmod(0o600)
@@ -92,14 +96,16 @@ def main():
             part=text[start:end].replace('https://api.minimax.cn/v1','http://host.docker.internal:%d/v1'%server.server_port).replace('allow_private = false','allow_private = true');text=text[:start]+part+text[end:]
         manifest.write_text(text)
         env={'PATH':os.environ['PATH'],'HOME':os.environ['HOME'],'MINIMAX_API_KEY':'SYNTHETIC_ONLY','NOMO_ETAS_VERSION':'0.2.5'}
-        command=[str(project/'scripts/nomo-read.sh'),'session-chat','--sessions-dir',str(sessions),'--new','--root',str(workspace),'--allow',','.join(FILES),'--events-policy-dir',str(policy),'--check','/bin/sh','-c','test "$(cat note.txt)" = "before green"']
+        command=[str(project/'scripts/nomo-read.sh'),'session-chat','--sessions-dir',str(sessions),'--new','--root',str(workspace),'--allow',','.join(FILES),'--events-policy-dir',str(policy),'--check','/bin/sh','-c','grep -qx "before green" note.txt']
         first=interactive(command,env,TASK,True);match=re.search(rb'SESSION ID ([0-9a-f]{32})',first);assert match
-        assert (workspace/'note.txt').read_text()=='before green\n' and all((workspace/f).read_text()=='unrelated context\n' for f in FILES[:-1])
+        assert (workspace/'note.txt').read_text()==AFTER and all((workspace/f).read_text()=='unrelated context\n' for f in FILES[:-1])
         assert stat.S_IMODE(workspace.stat().st_mode)==0o755
         command=[str(project/'scripts/nomo-read.sh'),'session-chat','--sessions-dir',str(sessions),'--id',match.group(1).decode(),'--root',str(workspace),'--allow',','.join(FILES),'--events-policy-dir',str(policy)]
         second=interactive(command,env,'现在文件的颜色是什么？',False)
         assert not server.failure and server.phases==list(range(15));assert '当前内容是 before green'.encode() in second
-        print(json.dumps({'status':'passed','scope':'interactive natural-language selected-file edit, check, same-ID new-process continuation','fake_requests':len(server.phases),'confirmations':2,'selected_file':'note.txt','unchanged_other_files':3}))
+        status=subprocess.run([str(project/'scripts/nomo-read.sh'),'session-id','status','--sessions-dir',str(sessions),'--id',match.group(1).decode(),'--events','--events-policy-dir',str(policy)],env=env,capture_output=True,timeout=120)
+        assert status.returncode==0 and b'line 000: unchanged marker content' in status.stdout and b'line 179: unchanged marker content' in status.stdout
+        print(json.dumps({'status':'passed','scope':'large-file natural-language edit, check, same-ID new-process continuation','file_bytes':len(BEFORE.encode()),'fake_requests':len(server.phases),'confirmations':2,'selected_file':'note.txt','unchanged_other_files':3}))
     finally:server.shutdown();server.server_close();thread.join(timeout=5);shutil.rmtree(out)
 
 if __name__=='__main__':main()

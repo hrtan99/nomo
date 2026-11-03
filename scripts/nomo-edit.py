@@ -243,7 +243,7 @@ def run_owned(command, env, capture=None, input_data=None, diagnostic=None, *, c
     input_errors = []
     forwarded = False
     old = {}
-    if not isinstance(capture_limit,int) or not 1 <= capture_limit <= 4194304:
+    if not isinstance(capture_limit,int) or not 1 <= capture_limit <= 67108864:
         raise ValueError('invalid capture limit')
 
     def interrupted(number, _frame):

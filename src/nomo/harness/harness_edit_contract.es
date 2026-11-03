@@ -167,6 +167,6 @@ public flow context_error(context: Context) -> string {
     let conversion: Option<Message<JsonValue>> = message.cast<JsonValue>();
     let json = match conversion { Some(value) => value.body, None() => { return "edit context conversion refused"; } };
     let encoded = match stringify(json) { Ok(value) => value, Err(_) => { return "edit context JSON refused"; } };
-    if byte_count(utf8_encode(encoded)) > 65536 { return "edit context exceeds 65536 serialized UTF-8 bytes"; }
+    if byte_count(utf8_encode(encoded)) > 524288 { return "edit context exceeds 524288 serialized UTF-8 bytes"; }
     return "";
 }

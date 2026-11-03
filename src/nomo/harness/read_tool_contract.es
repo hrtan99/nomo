@@ -16,11 +16,11 @@ import std.bytes.len as byte_count;
 public import nomo.harness.harness_tool_contract.{Context, Ledger, Observed, numbers, fresh, ledger_error, bump, settle};
 flow child_ledger_error(child: Session, work: bool) -> string {
     if child.history.spent < 1 || child.history.spent > 3 || child.calls < 1 || child.calls > 2 ||
-        child.tokens > (if work { 8192 } else { 4096 }) || child.tools > 1 || child.scan > 4096 { return "invalid child ledger"; }
+        child.tokens > (if work { 8192 } else { 4096 }) || child.tools > 1 || child.scan > 16384 { return "invalid child ledger"; }
     let calls: i32 = if child.calls == 2 { 2 } else { 1 };
     let tools: i32 = if child.tools == 1 { 1 } else { 0 };
     if child.history.spent != calls + tools || (child.tokens != child.calls * 2048 && !(work && child.tokens == child.calls * 4096)) ||
-        child.scan != child.tools * 4096 || (child.calls == 2 && child.tools != 1) { return "invalid child ledger"; }
+        (child.scan != child.tools * 4096 && child.scan != child.tools * 16384) || (child.calls == 2 && child.tools != 1) { return "invalid child ledger"; }
     return "";
 }
 
@@ -29,7 +29,7 @@ public flow context_error(context: Context) -> string {
     let conversion: Option<Message<JsonValue>> = message.cast<JsonValue>();
     let json = match conversion { Some(value) => value.body, None() => { return "context conversion refused"; } };
     let encoded = match stringify(json) { Ok(value) => value, Err(_) => { return "context JSON refused"; } };
-    if byte_count(utf8_encode(encoded)) > 2048 { return "model context exceeds 2048 serialized characters"; }
+    if byte_count(utf8_encode(encoded)) > 262144 { return "model context exceeds 262144 serialized characters"; }
     return "";
 }
 
@@ -44,10 +44,10 @@ flow inspect_mode(child: Session, status: i32, request: string, task: string, al
     if !bounded(request, 128) || !bounded(task, if work { 512 } else { 128 }) || allowed_error(allowed) != "" { return Err("invalid selected child context"); }
     let events = child.history.events;
     let size = count(events);
-    if size < 4 || size > 7 || child.history.stopped || child.history.characters > 8192 { return Err("invalid child history"); }
+    if size < 4 || size > 7 || child.history.stopped || child.history.characters > 262144 { return Err("invalid child history"); }
     var characters: usize = 0;
     for event in events limit Iterations(7) {
-        if len(event.name) > 8 || len(event.text) > 512 || !printable(event.name) || !safe(event.text, 512) {
+        if len(event.name) > 8 || len(event.text) > 65546 || !printable(event.name) || !safe(event.text, 65546) {
             return Err("invalid child event data");
         }
         characters = characters + len(event.name) + len(event.text);
@@ -69,7 +69,7 @@ flow inspect_mode(child: Session, status: i32, request: string, task: string, al
                 return Err("invalid failed tool shape");
             }
         } else {
-            if events[4].kind != "complete" || !bounded(events[4].text, 266) || !starts_with(events[4].text, "complete: ") {
+            if events[4].kind != "complete" || !bounded(events[4].text, 65546) || !starts_with(events[4].text, "complete: ") {
                 return Err("invalid completed tool outcome");
             }
             if size == 6 {

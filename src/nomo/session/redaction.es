@@ -35,12 +35,12 @@ public flow policy_error(policy: Policy) -> string {
 
 public flow text(value: string, policy: Policy) -> Result<Text, string> {
     let policy_problem = policy_error(policy); if policy_problem != "" { return Err(policy_problem); }
-    if byte_count(utf8_encode(value)) > 8192 { return Err("redaction input exceeds bound"); }
+    if byte_count(utf8_encode(value)) > 262144 { return Err("redaction input exceeds bound"); }
     var output = value; var replacements: usize = 0;
     for literal in policy.literals limit Iterations(8) {
         let parts = split(output, literal); let pieces = count(parts);
         if pieces > 1 { replacements = replacements + pieces - 1; output = join(parts, "[REDACTED]"); }
-        if byte_count(utf8_encode(output)) > 10240 { return Err("redaction output exceeds bound"); }
+        if byte_count(utf8_encode(output)) > 262144 { return Err("redaction output exceeds bound"); }
     }
     for literal in policy.literals limit Iterations(8) {
         if contains(output, literal) { return Err("redaction result still contains sensitive literal"); }

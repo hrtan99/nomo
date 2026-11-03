@@ -40,12 +40,17 @@ flow read_bounded(name: string, bound: usize) -> Outcome ![Fs.read<ReadOnlyRoot>
     } with {
         Error<ReadLimitError>.raise(ReadLimitError.LimitExceeded(maximum)) => {
             if maximum != bound { abort("unexpected workspace read limit"); }
-            finish outcome("refused", if bound == 2048 { "file exceeds 2048 bytes" } else { "file exceeds remaining scan allowance" }, 0);
+            finish outcome("refused", if bound == 16384 { "file exceeds 16384 bytes" } else { if bound == 2048 { "file exceeds 2048 bytes" } else { "file exceeds remaining scan allowance" } }, 0);
         }
     };
 }
 
 public flow read_file(name: string) -> Outcome ![Fs.read<ReadOnlyRoot>, Error<FileError>, Error<IndexError>] ~ NomoRead<ReadOnlyRoot> {
+    return read_bounded(name, 16384);
+}
+
+// Legacy scripted callers retain their original 2 KiB per-file scan reservation.
+public flow read_legacy(name: string) -> Outcome ![Fs.read<ReadOnlyRoot>, Error<FileError>, Error<IndexError>] ~ NomoRead<ReadOnlyRoot> {
     return read_bounded(name, 2048);
 }
 
@@ -59,9 +64,9 @@ public flow list_directory(name: string) -> Outcome {
 }
 
 // Search explicit files, never recurse or discover ambient paths. At most four
-// files and 4096 delivered bytes total, with 128 lines/file and 8 matches.
+// files and 16384 delivered bytes total, with 16384 lines/file and 8 matches.
 // A Host overflow check may probe one additional byte, never return a prefix.
-public flow search_files(names: Array<string>, literal: string) -> Outcome ![Fs.read<ReadOnlyRoot>, Error<FileError>, Error<IndexError>] ~ NomoSearch<ReadOnlyRoot> {
+flow search_with(names: Array<string>, literal: string, maximum: usize) -> Outcome ![Fs.read<ReadOnlyRoot>, Error<FileError>, Error<IndexError>] {
     if count(names) == 0 || count(names) > 4 { return outcome("refused", "search requires 1..4 explicit files", 0); }
     if len(literal) == 0 || len(literal) > 64 || !printable(literal) { return outcome("refused", "literal must be 1..64 printable ASCII characters", 0); }
     for name in names limit Iterations(4) {
@@ -80,15 +85,17 @@ public flow search_files(names: Array<string>, literal: string) -> Outcome ![Fs.
     var scanned: usize = 0;
     var matches: usize = 0;
     for name in names limit Iterations(4) {
-        let remaining = 4096 - scanned;
-        let bound = if remaining < 2048 { remaining } else { 2048 };
+        let remaining = maximum - scanned;
+        let per_file = if maximum == 4096 { 2048 } else { 16384 };
+        let bound = if remaining < per_file { remaining } else { per_file };
         let file = read_bounded(name, bound);
         if file.status != "complete" { return outcome(file.status, name + ": " + file.text, scanned); }
         let lines = split(file.text, "\n");
-        if count(lines) > 128 { return outcome("refused", "file exceeds 128 lines", scanned); }
+        let line_limit = if maximum == 4096 { 128 } else { 16385 };
+        if count(lines) > line_limit { return outcome("refused", "file exceeds line limit", scanned); }
         scanned = scanned + file.scanned;
         var line: usize = 0;
-        for text in lines limit Iterations(128) {
+        for text in lines limit Iterations(16385) {
             line = line + 1;
             if contains(text, literal) {
                 let entry = name + ":" + to_string_usize(line) + "\n";
@@ -99,4 +106,11 @@ public flow search_files(names: Array<string>, literal: string) -> Outcome ![Fs.
         }
     }
     return outcome("complete", output, scanned);
+}
+
+public flow search_files(names: Array<string>, literal: string) -> Outcome ![Fs.read<ReadOnlyRoot>, Error<FileError>, Error<IndexError>] ~ NomoSearch<ReadOnlyRoot> {
+    return search_with(names, literal, 16384);
+}
+public flow search_legacy(names: Array<string>, literal: string) -> Outcome ![Fs.read<ReadOnlyRoot>, Error<FileError>, Error<IndexError>] ~ NomoSearch<ReadOnlyRoot> {
+    return search_with(names, literal, 4096);
 }

@@ -217,11 +217,11 @@ public flow status(args: Array<string>) -> i32 ![Console, Memory, Fs.read<Policy
     let converted: Option<Message<JsonValue>> = Message.new(view).cast<JsonValue>();
     let value = match converted { Some(item) => item.body, None() => { println("REFUSED event view conversion"); return 1; } };
     let raw = match stringify(value) { Ok(item) => item, Err(_) => { println("REFUSED event view encoding"); return 1; } };
-    if len(raw) > 524288 || byte_count(utf8_encode(raw)) > 524288 { println("REFUSED event view exceeds bound"); return 1; }
+    if len(raw) > 16777216 || byte_count(utf8_encode(raw)) > 16777216 { println("REFUSED event view exceeds bound"); return 1; }
     var output = ""; var size: usize = 0;
-    for character in split(raw, "") limit Iterations(524290) {
+    for character in split(raw, "") limit Iterations(16777218) {
         let part = escaped(character); size = size + len(part);
-        if size > 2097152 { println("REFUSED event view exceeds display bound"); return 1; }
+        if size > 67108864 { println("REFUSED event view exceeds display bound"); return 1; }
         output = output + part;
     }
     println("EVENT VIEW untrusted; known literal filtering is incomplete. Text values are JSON strings encoded within the outer JSON.");

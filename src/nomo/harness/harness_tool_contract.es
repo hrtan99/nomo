@@ -22,11 +22,11 @@ public flow fresh() -> Ledger { return Ledger { steps = 0, calls = 0, tokens = 0
 
 public flow ledger_error(state: Ledger) -> string {
     if state.steps < 0 || state.steps > 7 || state.calls < 0 || state.calls > 4 || state.tokens < 0 ||
-        state.tokens > 8192 || state.tools < 0 || state.tools > 1 || state.scan < 0 || state.scan > 4096 {
+        state.tokens > 8192 || state.tools < 0 || state.tools > 1 || state.scan < 0 || state.scan > 16384 {
         return "invalid shared tool ledger";
     }
     if state.steps < state.calls + state.tools || state.steps > state.calls + state.tools + 2 ||
-        state.tokens != state.calls * 2048 || state.scan != state.tools * 4096 { return "invalid shared tool ledger"; }
+        state.tokens != state.calls * 2048 || (state.scan != state.tools * 4096 && state.scan != state.tools * 16384) { return "invalid shared tool ledger"; }
     return "";
 }
 
@@ -40,11 +40,11 @@ public flow bump(state: Ledger, call: bool) -> Result<Ledger, string> {
 
 flow child_ledger_error(child: Session) -> string {
     if child.history.spent < 1 || child.history.spent > 3 || child.calls < 1 || child.calls > 2 ||
-        child.tokens > 4096 || child.tools > 1 || child.scan > 4096 { return "invalid child ledger"; }
+        child.tokens > 4096 || child.tools > 1 || child.scan > 16384 { return "invalid child ledger"; }
     let calls: i32 = if child.calls == 2 { 2 } else { 1 };
     let tools: i32 = if child.tools == 1 { 1 } else { 0 };
     if child.history.spent != calls + tools || child.tokens != child.calls * 2048 ||
-        child.scan != child.tools * 4096 || (child.calls == 2 && child.tools != 1) { return "invalid child ledger"; }
+        (child.scan != child.tools * 4096 && child.scan != child.tools * 16384) || (child.calls == 2 && child.tools != 1) { return "invalid child ledger"; }
     return "";
 }
 
@@ -57,7 +57,7 @@ public flow settle(state: Ledger, child: Session) -> Result<Ledger, string> {
     let calls: i32 = if child.calls == 2 { 2 } else { 1 };
     let tools: i32 = if child.tools == 1 { 1 } else { 0 };
     return Ok(Ledger { steps = 2 + child.history.spent, calls = 1 + calls, tokens = (1 + calls) * 2048,
-        tools = tools, scan = tools * 4096 });
+        tools = tools, scan = if child.scan == 16384 { 16384 } else { tools * 4096 } });
 }
 
 // Expanded work has one 2048-token parent plan, two 4096-token child
@@ -65,7 +65,7 @@ public flow settle(state: Ledger, child: Session) -> Result<Ledger, string> {
 public flow work_error(state: Ledger) -> string {
     if ledger_error(state) == "" { return ""; }
     if state.steps < 0 || state.steps > 7 || state.calls < 2 || state.calls > 4 ||
-        state.tools < 0 || state.tools > 1 || state.scan != state.tools * 4096 ||
+        state.tools < 0 || state.tools > 1 || (state.scan != state.tools * 4096 && state.scan != state.tools * 16384) ||
         state.steps < state.calls + state.tools || state.steps > state.calls + state.tools + 2 { return "invalid expanded work read ledger"; }
     let expected = if state.calls == 2 { 6144 } else { if state.calls == 3 { 10240 } else { 12288 } };
     return if state.tokens == expected { "" } else { "invalid expanded work read ledger" };
@@ -82,10 +82,10 @@ public flow work_settle(state: Ledger, child: Session) -> Result<Ledger, string>
     let expected = Ledger { steps = 2, calls = 1, tokens = 2048, tools = 0, scan = 0 };
     if state != expected ||
         child.calls < 1 || child.calls > 2 || child.tokens != child.calls * 4096 || child.tools > 1 ||
-        child.scan != child.tools * 4096 || child.history.spent != (if child.calls == 2 { 2 } else { 1 }) + (if child.tools == 1 { 1 } else { 0 }) ||
+        (child.scan != child.tools * 4096 && child.scan != child.tools * 16384) || child.history.spent != (if child.calls == 2 { 2 } else { 1 }) + (if child.tools == 1 { 1 } else { 0 }) ||
         (child.calls == 2 && child.tools != 1) { return Err("invalid expanded child ledger"); }
     let calls = if child.calls == 2 { 2 } else { 1 }; let tools = if child.tools == 1 { 1 } else { 0 };
-    let value = Ledger { steps = 2 + child.history.spent, calls = 1 + calls, tokens = 2048 + calls * 4096, tools = tools, scan = tools * 4096 };
+    let value = Ledger { steps = 2 + child.history.spent, calls = 1 + calls, tokens = 2048 + calls * 4096, tools = tools, scan = if child.scan == 16384 { 16384 } else { tools * 4096 } };
     let error = work_error(value); if error != "" { return Err(error); } return Ok(value);
 }
 

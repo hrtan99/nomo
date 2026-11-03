@@ -15,7 +15,7 @@ import nomo.harness.read_tool_chat.run_turn;
 flow help() -> unit {
     println("Nomo model/tool harness chat: new --allow FILE[,FILE...] [--turns 4]; /help, /exit, EOF.");
     println("Limits: 2 admitted tasks by default, or 4 with --turns 4; 8 raw reads including EOF; payload <=128 before trim, <=130 with LF/CRLF; child 1..256, parent 1..512, complete model contexts <=2048.");
-    println("Default maximum: 14 steps / 8 calls / 16384 output-token allowance / 2 tools / 8192 scan; --turns 4: 28 / 16 / 32768 / 4 / 16384. Allowances are not measured usage.");
+    println("Default maximum: 14 steps / 8 calls / 16384 output-token allowance / 2 tools / 32768 scan; --turns 4: 28 / 16 / 32768 / 4 / 65536. Allowances are not measured usage.");
     println("Each turn reserves 7/4/8192/1/4096 before work. Only the immediately preceding successful task, child/tool result and answer are carried forward, as data, never replayed actions.");
     println("Read size is checked after reading. One serial depth-one child per turn; fresh in-memory only. No resume, writes, commands, recursion or live setup. Host aborts may leave reservations unresolved.");
 }

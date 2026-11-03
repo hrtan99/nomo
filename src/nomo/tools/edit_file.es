@@ -29,15 +29,15 @@ flow read_existing(name: string) -> Result<bytes, string> {
     let conversion: Option<Message<FileInfo>> = message.cast<FileInfo>();
     let info = match conversion { Some(value) => value.body, None() => { return Err("edit stat projection refused"); } };
     if !info.is_file || info.is_dir { return Err("edit requires an existing regular file"); }
-    if info.len > 2048 { return Err("edit file exceeds 2048 bytes"); }
+    if info.len > 16384 { return Err("edit file exceeds 16384 bytes"); }
     return handle {
-        let bytes = read_bytes_limited(target, 2048);
-        if byte_count(bytes) > 2048 { return Err("edit file exceeds 2048 bytes after read"); }
+        let bytes = read_bytes_limited(target, 16384);
+        if byte_count(bytes) > 16384 { return Err("edit file exceeds 16384 bytes after read"); }
         Ok(bytes)
     } with {
         Error<ReadLimitError>.raise(ReadLimitError.LimitExceeded(maximum)) => {
-            if maximum != 2048 { abort("unexpected edit read limit"); }
-            finish Err("edit file exceeds 2048 bytes after read");
+            if maximum != 16384 { abort("unexpected edit read limit"); }
+            finish Err("edit file exceeds 16384 bytes after read");
         }
     };
 }

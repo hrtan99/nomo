@@ -3,7 +3,7 @@ module nomo.harness.harness_model_tools;
 import std.io.println;
 import std.text.to_string_i32;
 import nomo.core.conversation.{Event, State, add};
-import nomo.model.model_tool_contract.{Session, fresh_loop, default_limits, question_error, allowed_error};
+import nomo.model.model_tool_contract.{Session, Limits, fresh_loop, question_error, allowed_error};
 import nomo.agent.model_tool.{LoopTurn, run_loop, run_work_loop, run_chain_work_loop};
 import nomo.harness.harness_model_contract.{bounded, decode_plan, decode_read_plan, read_aggregate_error};
 import nomo.harness.harness_tool_contract.{Context, Ledger, Observed, fresh, bump, settle, inspect, context_error};
@@ -54,21 +54,23 @@ flow unresolved(error: string) -> i32 {
     println("REFUSED " + error); println("RESERVATION child-1 unresolved=true; returned child metadata refused"); return 1;
 }
 
+flow legacy_limits() -> Limits { return Limits { steps = 3, calls = 2, tokens = 4096, scan = 4096 }; }
+
 // Both entries seed explicitly selected data; local counters are charged only
 // under their owner's prior reservation. No previous tool is dispatched here.
 public flow child_turn(task: string, allowed: Array<string>, selected: State) -> LoopTurn ~ ChatChildStage<ReadOnlyRoot> {
     let seeded = Session { history = selected, calls = 0, tokens = 0, tools = 0, scan = 0 };
-    return run_loop(task, allowed, default_limits(), seeded);
+    return run_loop(task, allowed, legacy_limits(), seeded);
 }
 
 public flow work_child_turn(task: string, allowed: Array<string>, selected: State) -> LoopTurn {
     let seeded = Session { history = selected, calls = 0, tokens = 0, tools = 0, scan = 0 };
-    return run_work_loop(task, allowed, default_limits(), seeded);
+    return run_work_loop(task, allowed, legacy_limits(), seeded);
 }
 
 public flow chain_child_turn(task: string, allowed: Array<string>, selected: State, inspect_all: bool) -> LoopTurn {
     let seeded = Session { history = selected, calls = 0, tokens = 0, tools = 0, scan = 0 };
-    return run_chain_work_loop(task, allowed, default_limits(), seeded, inspect_all);
+    return run_chain_work_loop(task, allowed, legacy_limits(), seeded, inspect_all);
 }
 
 flow failed(state: Ledger, error: string, resolved: bool) -> Result<Report, Failure> {

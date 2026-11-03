@@ -31,7 +31,7 @@ public flow prior_error(prior: Previous) -> string {
     }
     if prior.tool == "" {
         if prior.outcome != "" { return "prior outcome without tool"; }
-    } else if (prior.tool != "read" && prior.tool != "search") || !bounded(prior.outcome, 266) || !starts_with(prior.outcome, "complete: ") {
+    } else if (prior.tool != "read" && prior.tool != "search") || !bounded(prior.outcome, 65546) || !starts_with(prior.outcome, "complete: ") {
         return "invalid selected prior tool";
     }
     return "";
@@ -42,7 +42,7 @@ public flow context_error(context: Context) -> string {
     let conversion: Option<Message<JsonValue>> = message.cast<JsonValue>();
     let json = match conversion { Some(value) => value.body, None() => { return "context conversion refused"; } };
     let encoded = match stringify(json) { Ok(value) => value, Err(_) => { return "context JSON refused"; } };
-    if byte_count(utf8_encode(encoded)) > 8192 { return "model context exceeds 8192 serialized bytes"; }
+    if byte_count(utf8_encode(encoded)) > 262144 { return "model context exceeds 262144 serialized bytes"; }
     return "";
 }
 
@@ -66,7 +66,7 @@ public flow inspect_turn(child: Session, status: i32, request: string, task: str
     var input = fresh();
     var characters: usize = 0;
     for event in child.history.events limit Iterations(12) {
-        if len(event.name) > 8 || len(event.text) > 512 || !printable(event.name) || !safe(event.text, 512) {
+        if len(event.name) > 8 || len(event.text) > 65546 || !printable(event.name) || !safe(event.text, 65546) {
             return Err("invalid selected history data");
         }
         characters = characters + len(event.name) + len(event.text);
@@ -82,7 +82,7 @@ public flow inspect_turn(child: Session, status: i32, request: string, task: str
         if count(events) != 3 || status != 4 || child.history.spent != 0 || child.tokens != 0 || child.tools != 0 || child.scan != 0 ||
             !same(events[1], expected_input) ||
             events[2].role != "error" || events[2].kind != "error" || events[2].name != "" ||
-            events[2].text != "model context exceeds 2048 serialized characters" {
+            events[2].text != "model context exceeds 262144 serialized characters" {
             return Err("invalid unattempted child context refusal");
         }
         let context = ChildContext { history = input.events, allowed = allowed, final_only = false };
@@ -109,7 +109,7 @@ public flow turn_error(invocation: Invocation) -> string {
     } else if invocation.admitted == 1 {
         let tools = if invocation.prior.tool == "" { 0 } else { 1 };
         if invocation.prior.task == "" || used.steps != 5 + tools * 2 || used.calls != 3 + tools ||
-            used.tokens != (3 + tools) * 2048 || used.tools != tools || used.scan != tools * 4096 {
+            used.tokens != (3 + tools) * 2048 || used.tools != tools || (used.scan != tools * 4096 && used.scan != tools * 16384) {
             return "prior selection and invocation ledger disagree";
         }
     } else { return "turn limit reached"; }
@@ -119,7 +119,7 @@ public flow turn_error(invocation: Invocation) -> string {
 // The opt-in four-turn budget is separate from the legacy two-turn contract.
 // Amounts are reservations in application accounting, not measured usage.
 public flow extended_maximum() -> Ledger {
-    return Ledger { steps = 28, calls = 16, tokens = 32768, tools = 4, scan = 16384 };
+    return Ledger { steps = 28, calls = 16, tokens = 32768, tools = 4, scan = 65536 };
 }
 public flow extended_invocation() -> Invocation {
     return Invocation { usage = fresh_ledger(), maximum = extended_maximum(), admitted = 0, prior = empty() };
@@ -128,14 +128,14 @@ public flow is_extended(maximum: Ledger) -> bool { return maximum == extended_ma
 
 flow extended_ledger_error(value: Ledger) -> string {
     if value.steps < 0 || value.steps > 28 || value.calls < 0 || value.calls > 16 || value.tokens < 0 || value.tokens > 32768 ||
-        value.tools < 0 || value.tools > 4 || value.scan < 0 || value.scan > 16384 { return "invalid extended invocation ledger"; }
+        value.tools < 0 || value.tools > 4 || value.scan < 0 || value.scan > 65536 { return "invalid extended invocation ledger"; }
     if value.steps < value.calls + value.tools || value.steps > value.calls + value.tools + 8 ||
-        value.tokens != value.calls * 2048 || value.scan != value.tools * 4096 { return "invalid extended invocation ledger"; }
+        value.tokens != value.calls * 2048 || (value.scan < value.tools * 4096 || value.scan > value.tools * 16384 || value.scan % 4096 != 0) { return "invalid extended invocation ledger"; }
     return "";
 }
 public flow extended_admission_error(value: Ledger) -> string {
     let invalid = extended_ledger_error(value); if invalid != "" { return invalid; }
-    if value.steps > 21 || value.calls > 12 || value.tokens > 24576 || value.tools > 3 || value.scan > 12288 {
+    if value.steps > 21 || value.calls > 12 || value.tokens > 24576 || value.tools > 3 || value.scan > 49152 {
         return "invocation worst-case turn reservation exhausted";
     }
     return "";
@@ -154,7 +154,7 @@ public flow extended_turn_error(invocation: Invocation) -> string {
         let last_tool = if invocation.prior.tool == "" { 0 } else { 1 };
         if invocation.prior.task == "" || used.tools < last_tool || used.tools - last_tool > turns - 1 ||
             used.steps != turns * 5 + used.tools * 2 || used.calls != turns * 3 + used.tools ||
-            used.tokens != used.calls * 2048 || used.scan != used.tools * 4096 {
+            used.tokens != used.calls * 2048 || (used.scan < used.tools * 4096 || used.scan > used.tools * 16384 || used.scan % 4096 != 0) {
             return "prior selection and invocation ledger disagree";
         }
     }
@@ -171,13 +171,13 @@ public flow extended_combine(previous: Ledger, local: Ledger) -> Result<Ledger, 
 
 // Persistent event sessions reserve a bounded series of turns without
 // resetting any already charged usage.
-public flow session_maximum() -> Ledger { return Ledger { steps = 224, calls = 128, tokens = 262144, tools = 32, scan = 131072 }; }
+public flow session_maximum() -> Ledger { return Ledger { steps = 224, calls = 128, tokens = 262144, tools = 32, scan = 524288 }; }
 public flow session_invocation() -> Invocation { return Invocation { usage = fresh_ledger(), maximum = session_maximum(), admitted = 0, prior = empty() }; }
 public flow session_turn_error(value: Invocation) -> string {
     if value.maximum != session_maximum() || value.admitted < 0 || value.admitted > 31 { return "session turn limit reached"; }
     let used = value.usage; let turns = value.admitted;
     if used.tools < 0 || used.tools > turns || used.steps != turns * 5 + used.tools * 2 ||
-        used.calls != turns * 3 + used.tools || used.tokens != used.calls * 2048 || used.scan != used.tools * 4096 { return "invalid session ledger"; }
+        used.calls != turns * 3 + used.tools || used.tokens != used.calls * 2048 || (used.scan < used.tools * 4096 || used.scan > used.tools * 16384 || used.scan % 4096 != 0) { return "invalid session ledger"; }
     let problem = prior_error(value.prior); if problem != "" { return problem; }
     if (turns == 0 && value.prior.task != "") || (turns > 0 && value.prior.task == "") { return "invalid session prior"; }
     let last_tool = if value.prior.tool == "" { 0 } else { 1 };
@@ -188,6 +188,6 @@ public flow session_combine(previous: Ledger, local: Ledger) -> Result<Ledger, s
     let error = ledger_error(local); if error != "" { return Err(error); }
     let value = Ledger { steps = previous.steps + local.steps, calls = previous.calls + local.calls,
         tokens = previous.tokens + local.tokens, tools = previous.tools + local.tools, scan = previous.scan + local.scan };
-    if value.steps > 224 || value.calls > 128 || value.tokens > 262144 || value.tools > 32 || value.scan > 131072 { return Err("session allowance exhausted"); }
+    if value.steps > 224 || value.calls > 128 || value.tokens > 262144 || value.tools > 32 || value.scan > 524288 { return Err("session allowance exhausted"); }
     return Ok(value);
 }

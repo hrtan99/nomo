@@ -19,7 +19,7 @@ public flow fresh_loop() -> Session {
     return Session { history = fresh(), calls = 0, tokens = 0, tools = 0, scan = 0 };
 }
 
-public flow default_limits() -> Limits { return Limits { steps = 3, calls = 2, tokens = 4096, scan = 4096 }; }
+public flow default_limits() -> Limits { return Limits { steps = 3, calls = 2, tokens = 4096, scan = 16384 }; }
 
 public flow question_error(raw: string) -> string {
     if len(raw) == 0 || len(raw) > 128 || !printable(raw) || trim(raw) == "" {
@@ -157,7 +157,7 @@ public flow context_error(context: Context) -> string {
     let conversion: Option<Message<JsonValue>> = message.cast<JsonValue>();
     let json = match conversion { Some(value) => value.body, None() => { return "context conversion refused"; } };
     let encoded = match stringify(json) { Ok(value) => value, Err(_) => { return "context JSON refused"; } };
-    if len(encoded) > 2048 { return "model context exceeds 2048 serialized characters"; }
+    if len(encoded) > 262144 { return "model context exceeds 262144 serialized characters"; }
     return "";
 }
 
@@ -168,7 +168,7 @@ public flow budget_error(state: Session, limits: Limits, tool: bool) -> string {
     if state.history.spent < 0 || state.history.spent >= 3 || state.history.spent >= limits.steps {
         return "total step reservation exhausted";
     }
-    if state.calls > 2 || state.tokens > 4096 || state.tools > 1 || state.scan > 4096 {
+    if state.calls > 2 || state.tokens > 4096 || state.tools > 1 || state.scan > 16384 {
         return "invalid action ledgers";
     }
     if tool {
@@ -181,8 +181,8 @@ public flow budget_error(state: Session, limits: Limits, tool: bool) -> string {
     return "";
 }
 
-public flow charge_action(state: Session, tool: bool) -> Session {
+public flow charge_action(state: Session, tool: bool, limits: Limits) -> Session {
     return Session { history = charge(state.history), calls = state.calls + if tool { 0 } else { 1 },
         tokens = state.tokens + if tool { 0 } else { 2048 }, tools = state.tools + if tool { 1 } else { 0 },
-        scan = state.scan + if tool { 4096 } else { 0 } };
+        scan = state.scan + if tool { if limits.scan >= 16384 { 16384 } else { 4096 } } else { 0 } };
 }

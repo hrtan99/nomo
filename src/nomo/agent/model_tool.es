@@ -1,7 +1,7 @@
 module nomo.agent.model_tool;
 
 import nomo.model.model_tool_contract.{Session, Limits, Context};
-import nomo.tools.workspace.{read_file, search_files};
+import nomo.tools.workspace.{read_legacy as read_file, search_legacy as search_files};
 import nomo.tools.read_contract.ReadTools;
 import nomo.agent.model_tool_controller.run_loop_controller;
 import nomo.harness.legacy_string_stages.LegacyChildModel;

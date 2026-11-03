@@ -43,7 +43,7 @@ public flow measure_context(context: Context, maximum_bytes: usize) -> Result<Me
 // estimate of encoded size or Provider tokens; escaping/UTF-8 are measured below.
 public flow measure_text(text: string, maximum_bytes: usize) -> Result<Measurement, Refusal> {
     if maximum_bytes > 262144 { return Err(Refusal.InvalidLimit); }
-    if len(text) > 8192 { return Err(Refusal.InvalidText); }
+    if len(text) > 262144 { return Err(Refusal.InvalidText); }
     let message = Message.new(text);
     let conversion: Option<Message<JsonValue>> = message.cast<JsonValue>();
     let json = match conversion {

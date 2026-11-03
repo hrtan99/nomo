@@ -19,7 +19,7 @@ flow refused(error: string) -> i32 { println("REFUSED " + error); return 1; }
 flow help() -> unit {
     println("Owned disposable edit: etas run PROJECT --flow edit_apply --allow-effects --args --id ID --workspace BIND --path FILE --target TEXT --replacement TEXT");
     println("Recorded status: --flow edit_status with --id ID --workspace BIND --path FILE. Help: --flow edit_help.");
-    println("One existing regular NUL-free UTF-8 file, at most 2048 bytes before and after, in an exclusive owned workspace without symlinks or other writers.");
+    println("One existing regular NUL-free UTF-8 file, at most 16384 bytes before and after, in an exclusive owned workspace without symlinks or other writers.");
     println("Two current prompts: native Prompt requires yes on a TTY; Nomo then accepts trimmed y/yes. Denial, blank or EOF does not apply.");
     println("One fixed journal slot per fresh private store; interrupted/uncertain work cannot replay. Status is data-only, not current-file verification.");
 }

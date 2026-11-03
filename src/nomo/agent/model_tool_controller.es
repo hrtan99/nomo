@@ -71,7 +71,7 @@ flow model_attempt(previous: Session, allowed: Array<string>, limits: Limits, fi
     if error != "" {
         return Err(failed(session, error, 4));
     }
-    session = charge_action(session, false);
+    session = charge_action(session, false, limits);
     session = history(session, emit(session.history, "model", "text", "qwen", ""));
     return Ok(ModelAttempt { state = session, context = context });
 }
@@ -104,7 +104,7 @@ public flow run_loop_controller(raw: string, allowed: Array<string>, limits: Lim
     session = history(session, emit(session.history, "model", "request", action.operation, first_raw));
     let exhausted = budget_error(session, limits, true);
     if exhausted != "" { return failed(session, exhausted, 4); }
-    session = charge_action(session, true);
+    session = charge_action(session, true, limits);
     var result = outcome("refused", "unsupported operation", 0);
     if action.operation == "read" { result = display(perform ReadTools.read(action.files[0])); }
     else if action.operation == "search" { result = display(perform ReadTools.search(action.files, action.literal)); }

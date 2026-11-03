@@ -58,7 +58,7 @@ flow quoted(value: string) -> Result<string, string> {
         if character != "" {
             let escaped = match scalar(character) { Ok(item) => item, Err(error) => { return Err(error); } };
             output = output + escaped;
-            if len(output) > 65534 { return Err("edit JSON output exceeds bound"); }
+            if len(output) > 524286 { return Err("edit JSON output exceeds bound"); }
         }
     }
     return Ok(output + "\"");
@@ -71,10 +71,10 @@ public flow json(values: Array<string>) -> Result<string, string> {
         let encoded = match quoted(value) { Ok(item) => item, Err(error) => { return Err(error); } };
         if !first { output = output + ","; } first = false;
         output = output + encoded;
-        if len(output) > 65535 { return Err("edit JSON output exceeds bound"); }
+        if len(output) > 524287 { return Err("edit JSON output exceeds bound"); }
     }
     output = output + "]";
-    if len(output) > 65536 { return Err("edit JSON output exceeds bound"); }
+    if len(output) > 524288 { return Err("edit JSON output exceeds bound"); }
     return Ok(output);
 }
 
@@ -88,7 +88,7 @@ public flow object(keys: Array<string>, values: Array<string>) -> Result<string,
         let value = match quoted(values[index]) { Ok(item) => item, Err(error) => { return Err(error); } };
         if index != 0 { output = output + ","; }
         output = output + key + ":" + value;
-        if len(output) > 65535 { return Err("edit JSON output exceeds bound"); }
+        if len(output) > 524287 { return Err("edit JSON output exceeds bound"); }
         index = index + 1;
     }
     return Ok(output + "}");

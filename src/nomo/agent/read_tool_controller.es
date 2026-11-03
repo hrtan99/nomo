@@ -56,7 +56,7 @@ flow bounded_model_context(input: Context, maximum: usize) -> Result<Context, st
                 SelectionRefusal.InvalidContext => "invalid bounded model context",
                 SelectionRefusal.InvalidLimit => "invalid model context byte limit",
                 SelectionRefusal.Encoding => "model context encoding refused",
-                SelectionRefusal.RequiredTooLarge => if maximum == 2048 { "required model context exceeds 2048 encoded UTF-8 bytes" } else { "required model context exceeds 8192 encoded UTF-8 bytes" },
+                SelectionRefusal.RequiredTooLarge => "required model context exceeds 262144 encoded UTF-8 bytes",
             };
             return Err(message);
         },
@@ -76,20 +76,20 @@ flow model_attempt(previous: Session, allowed: Array<string>, limits: Limits, fi
         return Err(failed(history(session, stop(session.history)), full, 4));
     }
     let original = Context { history = session.history.events, allowed = allowed, final_only = final_only };
-    let context = match bounded_model_context(original, if chat { 8192 } else { 2048 }) {
+    let context = match bounded_model_context(original, 262144) {
         Ok(value) => value, Err(error) => { return Err(failed(session, error, 4)); }
     };
     var error = if chat { "" } else { context_error(context) };
     if error == "" {
         if expanded {
-            if session.history.spent >= 3 || session.calls >= 2 || session.tokens != session.calls * 4096 || session.tools > 1 || session.scan > 4096 { error = "expanded work model reservation exhausted"; }
+            if session.history.spent >= 3 || session.calls >= 2 || session.tokens != session.calls * 4096 || session.tools > 1 || session.scan > 16384 { error = "expanded work model reservation exhausted"; }
         } else { error = budget_error(session, limits, false); }
     }
     if error != "" {
         return Err(failed(session, error, 4));
     }
     if expanded { session = Session { history = charge(session.history), calls = session.calls + 1, tokens = session.tokens + 4096, tools = session.tools, scan = session.scan }; }
-    else { session = charge_action(session, false); }
+    else { session = charge_action(session, false, limits); }
     session = history(session, emit_mode(session.history, "model", "text", "qwen", "", private_progress));
     return Ok(ModelAttempt { state = session, context = context });
 }
@@ -118,18 +118,18 @@ flow run_mode(raw: string, allowed: Array<string>, limits: Limits, previous: Ses
         return LoopTurn { state = history(session, emit_mode(session.history, "assistant", "final", "", action.text, private_progress)), status = 0 };
     }
     // Selected request + bounded actual outcome, with a separate terminal reserve.
-    let tool_full = capacity(session, 2, len(first_raw) + 284);
+    let tool_full = capacity(session, 2, len(first_raw) + 65556);
     if tool_full != "" { return failed(history(session, stop(session.history)), tool_full, 4); }
     session = history(session, emit_mode(session.history, "model", "request", action.operation, compact_frame(first_raw), private_progress));
     let exhausted = if expanded { if session.tools != 0 || session.scan != 0 || session.history.spent >= 3 { "expanded work tool reservation exhausted" } else { "" } } else { budget_error(session, limits, true) };
     if exhausted != "" { return failed(session, exhausted, 4); }
-    session = charge_action(session, true);
+    session = charge_action(session, true, limits);
     var result = outcome("refused", "unsupported operation", 0);
     if private_progress { println("CHILD STAGE tool"); }
     if action.operation == "read" { result = display(perform ReadTools.read(action.files[0])); }
     else if action.operation == "search" { result = display(perform ReadTools.search(action.files, action.literal)); }
     // Smaller admission than scripted tools: retain the full result or refuse.
-    if !safe(result.text, 256) { result = outcome("refused", "tool result exceeds 256 display characters", result.scanned); }
+    if !safe(result.text, 65536) { result = outcome("refused", "tool result exceeds 65536 display bytes", result.scanned); }
     let data = result.status + ": " + result.text;
     if result.status != "complete" {
         return LoopTurn { state = history(session, emit_mode(session.history, "tool", "error", action.operation, data, private_progress)), status = 3 };

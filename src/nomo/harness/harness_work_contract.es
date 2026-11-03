@@ -31,7 +31,7 @@ public type Ledger = { read: ReadLedger, edit: EditLedger };
 public flow fresh() -> Ledger { return Ledger { read = read_fresh(), edit = edit_fresh() }; }
 
 flow read_complete(value: ReadLedger) -> bool {
-    return value.steps == 7 && value.calls == 4 && (value.tokens == 8192 || value.tokens == 12288) && value.tools == 1 && value.scan == 4096;
+    return value.steps == 7 && value.calls == 4 && (value.tokens == 8192 || value.tokens == 12288) && value.tools == 1 && (value.scan == 4096 || value.scan == 16384);
 }
 
 // This is a configured cumulative ceiling, never measured provider usage.
@@ -62,7 +62,7 @@ public flow bump_edit(state: Ledger, call: bool) -> Result<Ledger, string> {
 
 flow selected_error(value: Evidence, complete: bool) -> string {
     if !bounded(value.request, 128) || !bounded(value.task, 512) || !bounded(value.result, 256) ||
-        !bounded(value.outcome, 266) || !starts_with(value.outcome, "complete: ") { return "invalid read evidence text"; }
+        !bounded(value.outcome, 65546) || !starts_with(value.outcome, "complete: ") { return "invalid read evidence text"; }
     let allowed = allowed_error(value.allowed); if allowed != "" { return allowed; }
     let files = allowed_error(value.files); if files != "" { return files; }
     var fields: Array<string> = [];
@@ -79,7 +79,7 @@ flow selected_error(value: Evidence, complete: bool) -> string {
     if complete {
         if !read_complete(value.ledger) || !bounded(value.summary, 512) { return "read evidence is not settled"; }
     } else if value.summary != "" || value.ledger.steps != 5 || value.ledger.calls != 3 || (value.ledger.tokens != 6144 && value.ledger.tokens != 10240) ||
-        value.ledger.tools != 1 || value.ledger.scan != 4096 { return "invalid pending read evidence"; }
+        value.ledger.tools != 1 || (value.ledger.scan != 4096 && value.ledger.scan != 16384) { return "invalid pending read evidence"; }
     return "";
 }
 
@@ -119,6 +119,6 @@ public flow context_error(value: Context) -> string {
     let conversion: Option<Message<JsonValue>> = message.cast<JsonValue>();
     let data = match conversion { Some(item) => item.body, None() => { return "work context conversion refused"; } };
     let encoded = match stringify(data) { Ok(item) => item, Err(_) => { return "work context JSON refused"; } };
-    if byte_count(utf8_encode(encoded)) > 65536 { return "work context exceeds 65536 serialized UTF-8 bytes"; }
+    if byte_count(utf8_encode(encoded)) > 524288 { return "work context exceeds 524288 serialized UTF-8 bytes"; }
     return "";
 }

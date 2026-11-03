@@ -34,7 +34,7 @@ def display_json_string(value, encoding):
 
 def event_lines(raw):
     """Decode the bounded status view without trusting text as terminal control."""
-    if len(raw)>4194304:raise ValueError('event view exceeds display bound')
+    if len(raw)>67108864:raise ValueError('event view exceeds display bound')
     lines=[line[len(b'EVENT VIEW '):] for line in raw.splitlines() if line.startswith(b'EVENT VIEW {')]
     if len(lines)!=1:raise ValueError('event view missing or ambiguous')
     try:view=json.loads(lines[0])
@@ -68,7 +68,7 @@ def event_lines(raw):
             if any(not isinstance(value,str) for value in fields):raise ValueError('invalid event fields')
             try:text=json.loads(fields[3])
             except ValueError as error:raise ValueError('invalid event text encoding') from error
-            if not isinstance(text,str) or len(text.encode('utf-8'))>4096 or any(len(value)>128 for value in fields[:3]):raise ValueError('event text or metadata exceeds bound')
+            if not isinstance(text,str) or len(text.encode('utf-8'))>65546 or any(len(value)>128 for value in fields[:3]):raise ValueError('event text or metadata exceeds bound')
             encoding=getattr(sys.stdout,'encoding',None) or 'utf-8'
             values=[display_json_string(value,encoding) for value in (*fields[:3],text)]
             rendered.append(label+' '+str(index)+' role='+values[0]+' kind='+values[1]+' name='+values[2]+' text='+values[3])
@@ -154,7 +154,7 @@ def main(argv=None):
             command=[sys.executable,str(ROOT/'scripts/terminal-transport.py'),*compose,'run','--rm','--no-deps','--pull','never','--tty=false','--workdir','/session-state','dev',*native]
             if status:
                 if args.events:
-                    captured={};code=run_owned(command,env,captured,input_data=policy_bytes,capture_limit=4194304,forward_output=False)
+                    captured={};code=run_owned(command,env,captured,input_data=policy_bytes,capture_limit=67108864,forward_output=False)
                     if code:return code
                     if any(item.get('truncated') for item in captured.values()):raise ValueError('event output was truncated')
                     rendered=event_lines(bytes(captured.get('stdout',{}).get('data',b'')))

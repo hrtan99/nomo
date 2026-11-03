@@ -7,7 +7,7 @@ import nomo.cli.config.load_for;
 import nomo.core.conversation.{State, fresh, capacity_error, charge, stop};
 import nomo.agent.loop.{Turn, emit, failure, reject};
 import nomo.core.text.{input_error, printable};
-import nomo.tools.workspace.{Outcome, outcome, read_file, list_directory, search_files, display};
+import nomo.tools.workspace.{Outcome, outcome, read_legacy as read_file, list_directory, search_legacy as search_files, display};
 
 public type Request = { operation: string, files: Array<string>, literal: string };
 public type Session = { history: State, reserved: usize };

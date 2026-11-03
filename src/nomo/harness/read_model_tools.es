@@ -39,16 +39,16 @@ flow stage(phase: string, state: Ledger, prefix: string, expanded: bool) -> unit
     let tools = if phase == "aggregate" { 0 } else { 1 };
     perform HarnessProgress.write("STAGE " + prefix + phase + " child-1 " + numbers(state) + " reserved_steps=" + to_string_i32(steps) +
         " reserved_calls=" + to_string_i32(calls) + " reserved_tokens=" + to_string_i32(if expanded && phase != "aggregate" { 10240 } else { calls * 2048 }) +
-        " reserved_tools=" + to_string_i32(tools) + " reserved_scan=" + to_string_i32(tools * 4096));
+        " reserved_tools=" + to_string_i32(tools) + " reserved_scan=" + to_string_i32(tools * 16384));
     if phase == "child" {
-        perform HarnessProgress.write(if expanded { "RESERVATION child-1 steps=3 calls=2 tokens=8192 tools=1 scan=4096 tail_steps=2 tail_calls=1 tail_tokens=2048 unresolved=true" } else { "RESERVATION child-1 steps=3 calls=2 tokens=4096 tools=1 scan=4096 tail_steps=2 tail_calls=1 tail_tokens=2048 unresolved=true" });
+        perform HarnessProgress.write(if expanded { "RESERVATION child-1 steps=3 calls=2 tokens=8192 tools=1 scan=16384 tail_steps=2 tail_calls=1 tail_tokens=2048 unresolved=true" } else { "RESERVATION child-1 steps=3 calls=2 tokens=4096 tools=1 scan=16384 tail_steps=2 tail_calls=1 tail_tokens=2048 unresolved=true" });
     }
 }
 
 flow finished(state: Ledger) -> unit {
     println("LEDGER steps=" + to_string_i32(state.steps) + "/7 calls=" + to_string_i32(state.calls) + "/4 tokens=" +
         to_string_i32(state.tokens) + "/8192 tools=" + to_string_i32(state.tools) + "/1 scan=" + to_string_i32(state.scan) +
-        "/4096 reserved_steps=0 reserved_calls=0 reserved_tokens=0 reserved_tools=0 reserved_scan=0");
+        "/16384 reserved_steps=0 reserved_calls=0 reserved_tokens=0 reserved_tools=0 reserved_scan=0");
 }
 
 public flow refused(state: Ledger, error: string) -> i32 { println("REFUSED " + error); finished(state); return 1; }
@@ -127,7 +127,7 @@ flow run_context_mode(request: string, allowed: Array<string>, initial: Ledger,
     state = match if expanded { work_settle(state, child.state) } else { settle(state, child.state) } { Ok(value) => value, Err(error) => { return failed(state, error, false); } };
     perform HarnessProgress.write("SETTLED child-1 " + numbers(state) + " released_steps=" + to_string_i32(5 - state.steps) +
         " released_calls=" + to_string_i32(3 - state.calls) + " released_tokens=" + to_string_i32((if expanded { 10240 } else { 6144 }) - state.tokens) +
-        " released_tools=" + to_string_i32(1 - state.tools) + " released_scan=" + to_string_i32(4096 - state.scan) + " unresolved=false");
+        " released_tools=" + to_string_i32(1 - state.tools) + " released_scan=" + to_string_i32(16384 - state.scan) + " unresolved=false");
     if child.status != 0 { return failed(state, "child returned failure; no aggregation", true); }
     if require_tool && child.state.tools != 1 { return failed(state, "work requires a successful read or search child", true); }
     if !bounded(observed.result, 256) { return failed(state, "invalid bounded child result", true); }

@@ -23,7 +23,7 @@ public type Completed = { request: string, task: string, result: string, tool: s
 public type LocalTurn = { status: i32, usage: Ledger, selected: Previous, resolved: bool, completed: Option<Completed> };
 public type TurnResult = { status: i32, state: Invocation, resolved: bool, completed: Option<Completed> };
 
-public flow default_maximum() -> Ledger { return Ledger { steps = 14, calls = 8, tokens = 16384, tools = 2, scan = 8192 }; }
+public flow default_maximum() -> Ledger { return Ledger { steps = 14, calls = 8, tokens = 16384, tools = 2, scan = 32768 }; }
 public flow fresh_invocation() -> Invocation {
     return Invocation { usage = fresh_ledger(), maximum = default_maximum(), admitted = 0, prior = empty() };
 }
@@ -125,18 +125,18 @@ public flow inspect_turn(child: Session, status: i32, request: string, task: str
 
 public flow invocation_error(state: Ledger) -> string {
     if state.steps < 0 || state.steps > 14 || state.calls < 0 || state.calls > 8 || state.tokens < 0 || state.tokens > 16384 ||
-        state.tools < 0 || state.tools > 2 || state.scan < 0 || state.scan > 8192 { return "invalid invocation ledger"; }
+        state.tools < 0 || state.tools > 2 || state.scan < 0 || state.scan > 32768 { return "invalid invocation ledger"; }
     if state.steps < state.calls + state.tools || state.steps > state.calls + state.tools + 4 ||
-        state.tokens != state.calls * 2048 || state.scan != state.tools * 4096 { return "invalid invocation ledger"; }
+        state.tokens != state.calls * 2048 || (state.scan < state.tools * 4096 || state.scan > state.tools * 16384 || state.scan % 4096 != 0) { return "invalid invocation ledger"; }
     return "";
 }
 
 public flow admission_error(state: Ledger, maximum: Ledger) -> string {
     let invalid = invocation_error(state); if invalid != "" { return invalid; }
     if maximum.steps < 0 || maximum.steps > 14 || maximum.calls < 0 || maximum.calls > 8 || maximum.tokens < 0 || maximum.tokens > 16384 ||
-        maximum.tools < 0 || maximum.tools > 2 || maximum.scan < 0 || maximum.scan > 8192 { return "invalid invocation limits"; }
+        maximum.tools < 0 || maximum.tools > 2 || maximum.scan < 0 || maximum.scan > 32768 { return "invalid invocation limits"; }
     if state.steps > maximum.steps - 7 || state.calls > maximum.calls - 4 || state.tokens > maximum.tokens - 8192 ||
-        state.tools > maximum.tools - 1 || state.scan > maximum.scan - 4096 {
+        state.tools > maximum.tools - 1 || state.scan > maximum.scan - 16384 {
         return "invocation worst-case turn reservation exhausted";
     }
     return "";
@@ -153,7 +153,7 @@ public flow turn_error(invocation: Invocation) -> string {
     } else if invocation.admitted == 1 {
         let tools = if invocation.prior.tool == "" { 0 } else { 1 };
         if invocation.prior.task == "" || used.steps != 5 + tools * 2 || used.calls != 3 + tools ||
-            used.tokens != (3 + tools) * 2048 || used.tools != tools || used.scan != tools * 4096 {
+            used.tokens != (3 + tools) * 2048 || used.tools != tools || (used.scan != tools * 4096 && used.scan != tools * 16384) {
             return "prior selection and invocation ledger disagree";
         }
     } else { return "turn limit reached"; }

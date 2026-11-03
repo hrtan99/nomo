@@ -30,7 +30,7 @@ public flow bounded_context_error(value: Context) -> string {
     let invalid = allowed_error(value.allowed); if invalid != "" { return invalid; }
     if count(value.history) > 32 { return "context history exceeds 32 events"; }
     for event in value.history limit Iterations(32) {
-        if len(event.role) > 128 || len(event.kind) > 128 || len(event.name) > 128 || len(event.text) > 8192 {
+        if len(event.role) > 128 || len(event.kind) > 128 || len(event.name) > 128 || len(event.text) > 65546 {
             return "context event exceeds bounded input";
         }
     }
