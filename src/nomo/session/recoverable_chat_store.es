@@ -6,10 +6,11 @@ import nomo.session.chat_session_contract.{Session, fresh_events, invalid as inv
 import nomo.harness.harness_tool_chat_contract.TurnResult;
 import nomo.session.redaction.{Policy, policy_error, text as redact};
 import nomo.session.recoverable_events.{Frame as EventFrame, empty as empty_events, invalid as invalid_events, append};
-import nomo.session.event_text_codec.{encode, decode};
+import nomo.session.event_text_codec.{encode, decode, encode_prefix};
+import nomo.session.history_check_guard.invalid_values;
 import nomo.core.conversation.Event;
 import std.collections.len as count;
-import std.text.{len, split};
+import nomo.core.text.hex_digest;
 
 // The opt-in read-only path joins the chat reservation and filtered event batch
 // in one CAS record. Each access must supply the same bound trusted policy.
@@ -19,13 +20,7 @@ public type Frame = { format: i32, encoding: string, policy_binding: string, cha
 alias Schema = MemoryRegion<{ Rows: Store<string, Frame> }>;
 let Frames = std.memory.region<Schema>(stable_id = "nomo-recoverable-chat-v1", store = "recoverable-chat");
 
-flow binding_error(binding: string) -> string {
-    if len(binding) != 64 { return "invalid event policy binding"; }
-    for c in split(binding, "") limit Iterations(66) {
-        if c != "" && c != "0" && c != "1" && c != "2" && c != "3" && c != "4" && c != "5" && c != "6" && c != "7" && c != "8" && c != "9" && c != "a" && c != "b" && c != "c" && c != "d" && c != "e" && c != "f" { return "invalid event policy binding"; }
-    }
-    return "";
-}
+flow binding_error(binding: string) -> string { return if hex_digest(binding) { "" } else { "invalid event policy binding" }; }
 
 flow frame_error(value: Frame, policy: Policy, binding: string) -> string {
     let bound = binding_error(binding); if bound != "" { return bound; }
@@ -112,4 +107,21 @@ public flow finish(expected: MemoryEntry<string, Frame>, result: TurnResult, pol
         Ok(item) => item.frame, Err(problem) => { return Err(problem); }
     };
     return write(Frame { format = 1, encoding = "json-string-v1", policy_binding = binding, chat = chat, events = events }, Some(expected), policy, binding);
+}
+
+// Record a completed independent check as its own event, without a work/edit row.
+public flow record_check(id: string, digest: string, outcome: string, exit_code: string, stdout: string, stderr: string, out_truncated: bool, err_truncated: bool, policy: Policy, binding: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+    let bad = invalid_values(1, "complete", id, digest, outcome, exit_code, false); if bad != "" { return Err(bad); }
+    let before = match load(policy, binding) { Ok(Some(value)) => value, _ => { return Err("existing recoverable session required"); } };
+    if before.value.chat.phase == "running" || before.value.chat.invocation.admitted == 0 { return Err("completed chat required"); }
+    let out = match encode_prefix(stdout, out_truncated, policy) { Ok(item) => item, Err(error) => { return Err(error); } };
+    let err = match encode_prefix(stderr, err_truncated, policy) { Ok(item) => item, Err(error) => { return Err(error); } };
+    let plain_out = match decode(out.value, policy) { Ok(item) => item, Err(error) => { return Err(error); } };
+    let plain_err = match decode(err.value, policy) { Ok(item) => item, Err(error) => { return Err(error); } };
+    let text = "Recorded independent check " + id + " (command digest " + digest + "); workspace may have changed since. Outcome " + outcome + ". Exit " + exit_code + "\nstdout: " + plain_out + "\nstderr: " + plain_err + "\nSome output may be omitted or truncated: " + if out.truncated || err.truncated { "yes" } else { "no" };
+    let encoded = match encode(text, policy) { Ok(item) => item.value, Err(error) => { return Err(error); } };
+    let previous = before.value.events;
+    let events = EventFrame { format = 2, turns = previous.turns, first_count = previous.first_count, events = previous.events.push(Event { role = "tool", kind = "check", name = "independent-check", text = encoded }) };
+    let frame = Frame { format = before.value.format, encoding = before.value.encoding, policy_binding = before.value.policy_binding, chat = before.value.chat, events = events };
+    return match write(frame, Some(before), policy, binding) { Ok(_) => Ok(true), Err(error) => Err(error) };
 }

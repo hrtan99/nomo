@@ -64,6 +64,13 @@ def directory(raw, name):
     return path.resolve(strict=True)
 
 
+def private_state(raw):
+    state = directory(raw, 'state')
+    info = state.stat()
+    if info.st_uid != os.getuid() or stat.S_IMODE(info.st_mode) != 0o700: raise ValueError('state must be owned by you with mode 0700')
+    return state
+
+
 def owned_workspace(raw):
     workspace = directory(raw, 'workspace')
     info = workspace.stat()
@@ -82,11 +89,9 @@ def ensure_cache(project_root):
 def history_work_roots(args, project_root):
     if not sys.stdin.isatty() or not sys.stdout.isatty():raise ValueError('editing requires an interactive terminal for both confirmations')
     if args.check==[]:raise ValueError('--check requires a command')
-    context=directory(args.read_root,'read root');workspace=owned_workspace(args.root);state=directory(args.state,'state')
+    context=directory(args.read_root,'read root');workspace=owned_workspace(args.root);state=private_state(args.state)
     for item in (context,workspace):
         if item==state or item in state.parents or state in item.parents:raise ValueError('state must not overlap read or edit roots')
-    info=state.stat()
-    if info.st_uid!=os.getuid() or stat.S_IMODE(info.st_mode)!=0o700:raise ValueError('state must be owned by you with mode 0700')
     ensure_cache(project_root)
     version=os.environ.get('NOMO_ETAS_VERSION','0.2.6')
     if version!='0.2.6':raise ValueError('this Nomo revision requires ETAS 0.2.6; use an earlier Nomo revision for older ETAS')
@@ -144,11 +149,10 @@ def prepare(args, stdin_tty, stdout_tty):
     if not stdin_tty or not stdout_tty:
         raise ValueError('editing requires an interactive terminal for both confirmation prompts')
     workspace = owned_workspace(args.root)
-    state = directory(args.state, 'state')
+    state = private_state(args.state)
     if workspace == state or workspace in state.parents or state in workspace.parents:
         raise ValueError('state and workspace must be separate, non-overlapping directories')
-    info = state.stat()
-    if info.st_uid != os.getuid() or stat.S_IMODE(info.st_mode) != 0o700 or any(state.iterdir()):
+    if any(state.iterdir()):
         raise ValueError('state must be an empty directory owned by you with mode 0700')
     task = getattr(args, 'task', None)
     provider = os.environ.get('NOMO_MODEL_PROVIDER', 'minimax')
@@ -199,10 +203,7 @@ def prepare(args, stdin_tty, stdout_tty):
     version = os.environ.get('NOMO_ETAS_VERSION', '0.2.6')
     if version != '0.2.6':
         raise ValueError('this Nomo revision requires ETAS 0.2.6; use an earlier Nomo revision for older ETAS')
-    cache = ROOT / '.etas'
-    if cache.is_symlink():
-        raise ValueError('project .etas mountpoint must not be a symlink')
-    cache.mkdir(mode=0o700, exist_ok=True)
+    ensure_cache(ROOT)
     env = {key: value for key, value in os.environ.items() if not key.startswith('ETAS_HOST_')}
     if task is not None:
         env.pop('NOMO_QWEN_SERVER_API_KEY' if provider == 'minimax' else 'MINIMAX_API_KEY', None)
@@ -492,6 +493,12 @@ def run_owned(command, env, capture=None, input_data=None, diagnostic=None, *, c
 
 
 
+def without_model(env):
+    return {key: value for key, value in env.items()
+            if not key.startswith('ETAS_HOST_') and key not in
+            ('NOMO_READ_MODEL_BASE_URL', 'NOMO_QWEN_SERVER_API_KEY', 'NOMO_READ_MODEL_NAME', 'MINIMAX_API_KEY', 'NOMO_MODEL_REQUEST_DEADLINE_MS')}
+
+
 def prepare_project_check(root, check, version=None, long_capture=False):
     """Prepare a user-selected check without opening an edit operation store."""
     workspace = owned_workspace(root)
@@ -501,10 +508,7 @@ def prepare_project_check(root, check, version=None, long_capture=False):
     if version not in ('0.2.2', '0.2.3', '0.2.4', '0.2.5', '0.2.6'):
         raise ValueError('NOMO_ETAS_VERSION must be 0.2.2, 0.2.3, 0.2.4, 0.2.5 or 0.2.6')
     overlay = {'0.2.2': 'config/etas-022-official-compose.yaml', '0.2.3': 'config/etas-023-official-compose.yaml', '0.2.4': 'config/etas-024-official-compose.yaml', '0.2.5': 'config/etas-025-official-compose.yaml', '0.2.6': 'config/etas-026-official-compose.yaml'}[version]
-    env = {key: value for key, value in os.environ.items()
-           if not key.startswith('ETAS_HOST_') and key not in
-           ('NOMO_READ_MODEL_BASE_URL', 'NOMO_QWEN_SERVER_API_KEY', 'NOMO_READ_MODEL_NAME', 'MINIMAX_API_KEY',
-            'NOMO_MODEL_REQUEST_DEADLINE_MS')}
+    env = without_model(os.environ)
     env['NOMO_EDIT_WORKSPACE_DIR'] = str(workspace)
     env['NOMO_ETAS_VERSION'] = version
     command = [sys.executable, str(ROOT / 'scripts/terminal-transport.py'), '--nomo-check-gate',
@@ -541,10 +545,7 @@ def project_check_main(argv):
 
 def prepare_edit_status(state_path, operation_id, path):
     """Inspect an existing operation record without reopening the workspace."""
-    state = directory(state_path, 'state')
-    info = state.stat()
-    if info.st_uid != os.getuid() or stat.S_IMODE(info.st_mode) != 0o700:
-        raise ValueError('state must be owned by you with mode 0700')
+    state = private_state(state_path)
     if not operation_id or not path:
         raise ValueError('id and path must be nonempty')
     for suffix in ('', '-wal', '-shm', '-journal'):
@@ -558,14 +559,8 @@ def prepare_edit_status(state_path, operation_id, path):
     version = os.environ.get('NOMO_ETAS_VERSION', '0.2.6')
     if version != '0.2.6':
         raise ValueError('this Nomo revision requires ETAS 0.2.6; use an earlier Nomo revision for older ETAS')
-    cache = ROOT / '.etas'
-    if cache.is_symlink():
-        raise ValueError('project .etas mountpoint must not be a symlink')
-    cache.mkdir(mode=0o700, exist_ok=True)
-    env = {key: value for key, value in os.environ.items()
-           if not key.startswith('ETAS_HOST_') and key not in
-           ('NOMO_READ_MODEL_BASE_URL', 'NOMO_QWEN_SERVER_API_KEY', 'NOMO_READ_MODEL_NAME', 'MINIMAX_API_KEY',
-            'NOMO_MODEL_REQUEST_DEADLINE_MS')}
+    ensure_cache(ROOT)
+    env = without_model(os.environ)
     env['NOMO_EDIT_STATE_DIR'] = str(state)
     overlay = {'0.2.2': 'config/etas-022-official-compose.yaml', '0.2.3': 'config/etas-023-official-compose.yaml', '0.2.4': 'config/etas-024-official-compose.yaml', '0.2.5': 'config/etas-025-official-compose.yaml', '0.2.6': 'config/etas-026-official-compose.yaml'}[version]
     command = [sys.executable, str(ROOT / 'scripts/terminal-transport.py'),

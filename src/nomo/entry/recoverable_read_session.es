@@ -47,6 +47,7 @@ flow conversation(frame: EventFrame, policy: Policy) -> Result<Array<Event>, str
     for event in frame.events limit Iterations(768) {
         if (event.role == "user" && event.kind == "request") ||
             (event.role == "model" && event.kind == "request") ||
+            (event.role == "tool" && event.kind == "check" && event.name == "independent-check") ||
             (event.role == "main" && (event.kind == "consume" || event.kind == "tool" || event.kind == "answer")) {
             let value = match decode(event.text, policy) { Ok(item) => item, Err(error) => { return Err(error); } };
             selected = selected.push(Event { role = event.role, kind = event.kind, name = event.name, text = value });
@@ -93,7 +94,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyR
             }
             None() => run_after_work(args[4], allowed, running.value.chat.invocation, first, history),
         } }
-        None() => if running.value.chat.invocation.admitted >= 2 { run_with_history(args[4], allowed, running.value.chat.invocation, history) }
+        None() => if running.value.chat.invocation.admitted >= 2 || current.value.events.format == 2 { run_with_history(args[4], allowed, running.value.chat.invocation, history) }
             else { run_private_turn(args[4], allowed, running.value.chat.invocation) },
     } };
     if result.status != 0 || !result.resolved { println("REFUSED chat turn unresolved; inspect without retry"); return 1; }

@@ -53,3 +53,12 @@ public flow flat_string_frame(raw: string, maximum: usize, exact: bool) -> bool 
     }
     return opened && closed && !quoted && (!exact || leaves == maximum);
 }
+
+
+public flow hex_digest(value: string) -> bool {
+    if len(value) != 64 { return false; }
+    for character in split(value, "") limit Iterations(66) {
+        if character != "" && !contains("0123456789abcdef", character) { return false; }
+    }
+    return true;
+}

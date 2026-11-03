@@ -3,6 +3,7 @@ module nomo.session.history_check_guard;
 import std.memory.{get_entry, prepare_put, operation_ref, commit, WriteCondition, MemoryVersion, MemoryEntry,
     WriteOutcome, MemoryWriteChange, StorageDurability, Missing, Match};
 import std.text.{len, split, starts_with};
+import nomo.core.text.hex_digest;
 import nomo.session.history_work_guard.{Ticket, claim, inspect as inspect_work};
 import nomo.session.edit_operation_store.inspect as inspect_edit;
 
@@ -12,13 +13,7 @@ public type Record = { format: i32, phase: string, id: string, digest: string, o
 alias Schema = MemoryRegion<{ Rows: Store<string, Record> }>;
 let Checks = std.memory.region<Schema>(stable_id = "nomo-history-check-v1", store = "history-check");
 flow read() -> Option<MemoryEntry<string, Record>> { return get_entry(Checks.Rows, "check"); }
-flow hex_digest(value: string) -> bool {
-    if len(value) != 64 { return false; }
-    for c in split(value, "") limit Iterations(66) {
-        if c != "" && c != "0" && c != "1" && c != "2" && c != "3" && c != "4" && c != "5" && c != "6" && c != "7" && c != "8" && c != "9" && c != "a" && c != "b" && c != "c" && c != "d" && c != "e" && c != "f" { return false; }
-    }
-    return true;
-}
+
 flow valid_failure_code(value: string) -> bool {
     if len(value) < 1 || len(value) > 3 { return false; }
     if len(value) > 1 && starts_with(value, "0") { return false; }

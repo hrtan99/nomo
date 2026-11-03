@@ -1,7 +1,7 @@
 module nomo.session.edit_operation;
 
-import std.text.{len, split, trim, contains};
-import nomo.core.text.printable;
+import std.text.{len, trim};
+import nomo.core.text.{printable, hex_digest};
 import nomo.tools.path_policy.valid_path;
 
 public type Binding = { id: string, workspace: string, region: string, path: string,
@@ -19,19 +19,13 @@ public flow selector_error(id: string, workspace: string, path: string) -> strin
     return "";
 }
 
-flow digest(value: string) -> bool {
-    if len(value) != 64 { return false; }
-    for character in split(value, "") limit Iterations(66) {
-        if character != "" && !contains("0123456789abcdef", character) { return false; }
-    }
-    return true;
-}
+
 
 public flow binding_error(value: Binding) -> string {
     let invalid = selector_error(value.id, value.workspace, value.path);
     if invalid != "" { return invalid; }
     if value.region != "nomo.tools.edit_file.EditableRoot" { return "edit region binding mismatch"; }
-    if !digest(value.request_digest) || !digest(value.before_digest) || !digest(value.after_digest) {
+    if !hex_digest(value.request_digest) || !hex_digest(value.before_digest) || !hex_digest(value.after_digest) {
         return "invalid edit SHA-256 digest";
     }
     if value.before_bytes == 0 || value.before_bytes > 16384 || value.after_bytes > 16384 {

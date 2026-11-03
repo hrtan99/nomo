@@ -12,7 +12,6 @@ _storage=importlib.util.module_from_spec(_storage_spec);_storage_spec.loader.exe
 _policy_spec=importlib.util.spec_from_file_location('nomo_event_policy',ROOT/'scripts/nomo-event-policy.py')
 _policy=importlib.util.module_from_spec(_policy_spec);_policy_spec.loader.exec_module(_policy)
 
-directory=_edit_launcher.directory
 
 def display_json_string(value, encoding):
     """Keep readable Unicode while escaping controls and unencodable characters."""
@@ -81,13 +80,13 @@ def main(argv=None):
     args=parser.parse_args(argv)
     try:
         if args.natural_work and args.action=='status':raise ValueError('natural work routing requires a read turn')
-        status=args.action=='status';state=directory(args.state,'state');context=None
+        status=args.action=='status';state=_edit_launcher.private_state(args.state);context=None
         if status:
             if args.root is not None or args.allow is not None or args.once is not None:raise ValueError('status accepts only --state')
         else:
             if args.outputs or args.events:raise ValueError('--outputs and --events are only available for status')
             if args.root is None or args.allow is None or args.once is None:raise ValueError('select --root, --allow and --once for each turn')
-            context=directory(args.root,'read root')
+            context=_edit_launcher.directory(args.root,'read root')
             if context==state or context in state.parents or state in context.parents:raise ValueError('read root and state must not overlap')
             if not os.environ.get('MINIMAX_API_KEY'):raise ValueError('set MINIMAX_API_KEY before starting MiniMax')
         policy=None;policy_bytes=None;policy_binding=None
@@ -100,8 +99,6 @@ def main(argv=None):
         version=os.environ.get('NOMO_ETAS_VERSION','0.2.6')
         if version!='0.2.6':raise ValueError('this Nomo revision requires ETAS 0.2.6; use an earlier Nomo revision for older ETAS')
         if policy is not None and version not in ('0.2.5','0.2.6'):raise ValueError('event-recording sessions require ETAS 0.2.5')
-        st=state.stat()
-        if st.st_uid!=os.getuid() or stat.S_IMODE(st.st_mode)!=0o700:raise ValueError('state must be owned by you with mode 0700')
         _edit_launcher.ensure_cache(ROOT)
         flags=os.O_RDWR|os.O_NOFOLLOW|os.O_CLOEXEC
         if args.action=='new':flags|=os.O_CREAT

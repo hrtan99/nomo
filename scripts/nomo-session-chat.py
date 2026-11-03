@@ -130,15 +130,19 @@ def show_status_hint(args, identifier):
         command.append('--events-policy-dir=' + args.events_policy_dir)
     print('Inspect status: ' + shlex.join(command), file=sys.stderr, flush=True)
 
+def session_state(args):
+    spec = importlib.util.spec_from_file_location('session_id', ROOT / 'scripts/nomo-session-id.py')
+    registry = importlib.util.module_from_spec(spec); spec.loader.exec_module(registry)
+    base, root_fd = registry.registry(args.sessions_dir)
+    try: return registry.session(root_fd, base, args.id, False)
+    finally: os.close(root_fd)
+
+
 def abandon_stopped_work(args, operation_id, action):
     # Called only by the live owner after the matching transport returned 130.
-    registry_spec = importlib.util.spec_from_file_location('session_id', ROOT / 'scripts/nomo-session-id.py')
-    registry = importlib.util.module_from_spec(registry_spec); registry_spec.loader.exec_module(registry)
+    state = session_state(args)
     policy_spec = importlib.util.spec_from_file_location('event_policy', ROOT / 'scripts/nomo-event-policy.py')
     policy = importlib.util.module_from_spec(policy_spec); policy_spec.loader.exec_module(policy)
-    base, root_fd = registry.registry(args.sessions_dir)
-    try: state = registry.session(root_fd, base, args.id, False)
-    finally: os.close(root_fd)
     policy_dir, _, binding = policy.read_private(args.events_policy_dir)
     fd = os.open(state / '.nomo-session.lock', os.O_RDWR | os.O_NOFOLLOW | os.O_CLOEXEC)
     try:
@@ -283,7 +287,7 @@ def main(argv=None):
                     print('Selected discovery page ' + choice + '; the next request uses a fresh traversal.', flush=True)
                 continue
             if question == '/help':
-                print('Read turns use the selected root and allowlist. /scope shows it; /allow FILES selects up to four files; /discover [N] enables bounded discovery. /status inspects recorded state. /check [COMMAND ARG ... | --clear] shows, sets or clears the automatic check; /check --run runs it now without saving the result to the session.')
+                print('Read turns use the selected root and allowlist. /scope shows it; /allow FILES selects up to four files; /discover [N] enables bounded discovery. /status inspects recorded state. /check [COMMAND ARG ... | --clear] shows, sets or clears the automatic check; /check --run runs it now; event sessions save filtered output for later model context.')
                 print('Natural-language edits target selected files in the current root; each requires preview and fresh confirmation. The root must be owned by you and not writable by group or others.')
                 if args.events_policy_dir is not None:print('/events displays committed events grouped by chat, work and followup; /status shows bounded check output.')
                 else:print('/outputs shows recorded check output.')
@@ -322,9 +326,16 @@ def main(argv=None):
                     if action == 'check':
                         if words[1:] == ['--run']:
                             if not args.check: raise ValueError('configure a check before running it')
-                            print('Running the configured check now; its output is not saved in session history or sent to the model.', flush=True)
-                            code = edit.run_owned([sys.executable, str(ROOT/'scripts/nomo-edit.py'), '--check-only', '--root', args.root, '--', *args.check], dict(os.environ))
-                            if code == 130: return 130
+                            if args.id is not None and args.events_policy_dir is not None:
+                                state = session_state(args)
+                                command = [sys.executable, str(ROOT/'scripts/nomo-history-work.py'), '--independent-check', '--state', str(state), '--root', args.root,
+                                           '--id', 'check-' + secrets.token_hex(16), '--events-policy-dir', args.events_policy_dir, '--check', *args.check]
+                                code = edit.run_owned(command, dict(os.environ))
+                                if code: return code
+                            else:
+                                print('Running the configured check now; its output is not saved in session history or sent to the model.', flush=True)
+                                code = edit.run_owned([sys.executable, str(ROOT/'scripts/nomo-edit.py'), '--check-only', '--root', args.root, '--', *args.check], dict(os.environ))
+                                if code == 130: return 130
                             continue
                         if words[1:] == ['--clear']: args.check = None
                         elif len(words) > 1:

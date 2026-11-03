@@ -32,9 +32,9 @@ flow event_error(item: Event, policy: Policy) -> string {
 public flow invalid(frame: Frame, policy: Policy) -> string {
     let policy_problem = policy_error(policy); if policy_problem != "" { return policy_problem; }
     let n = count(frame.events);
-    if frame.format != 1 || frame.turns < 0 || frame.turns > 32 || n > 768 { return "invalid recoverable event frame"; }
+    if (frame.format != 1 && frame.format != 2) || frame.turns < 0 || frame.turns > 32 || n > 768 { return "invalid recoverable event frame"; }
     if frame.turns == 0 && (n != 0 || frame.first_count != 0) { return "invalid empty event frame"; }
-    if frame.turns == 1 && (n == 0 || n > 24 || frame.first_count != n) { return "invalid first event boundary"; }
+    if frame.turns == 1 && (frame.first_count == 0 || frame.first_count > 24 || frame.first_count > n || (frame.format == 1 && frame.first_count != n)) { return "invalid first event boundary"; }
     if frame.turns >= 2 && (frame.first_count == 0 || frame.first_count > 24 || frame.first_count >= n) {
         return "invalid later event boundary";
     }
@@ -64,7 +64,7 @@ public flow append(before: Frame, turn: i32, input: Array<Event>, policy: Policy
         records = records.push(Event { role = item.role, kind = item.kind, name = item.name, text = clean.value });
     }
     let first = if turn == 1 { count(records) } else { before.first_count };
-    let next = Frame { format = 1, turns = turn, first_count = first, events = records };
+    let next = Frame { format = before.format, turns = turn, first_count = first, events = records };
     let problem = invalid(next, policy); if problem != "" { return Err(problem); }
     return Ok(Advance { frame = next, replacements = replacements });
 }

@@ -71,6 +71,16 @@ class SessionChatTest(unittest.TestCase):
         self.assertIn('not saved in session history or sent to the model', out)
         self.assertEqual(out.count('Automatic check for future natural edits: python3 -m unittest'), 2)
 
+    def test_event_session_records_independent_check_via_existing_work_launcher(self):
+        self.args += ['--events-policy-dir', '/private-policy']
+        with patch.object(module, 'session_state', return_value=Path('/private-session')):
+            code, _, error, calls = self.run_chat('/check python3 test.py\n/check --run\n/exit\n', codes=(0,))
+        self.assertEqual(code, 0); self.assertEqual(error, '')
+        command = calls.call_args.args[0]
+        self.assertIn('--independent-check', command); self.assertIn('/private-session', command)
+        self.assertEqual(command[-3:], ['--check', 'python3', 'test.py'])
+        self.assertIn('/private-policy', command)
+
     def test_running_missing_check_refuses_without_dispatch(self):
         code, _, error, calls = self.run_chat('/check --run\n/exit\n')
         self.assertEqual(code, 0); self.assertIn('configure a check', error); calls.assert_not_called()
