@@ -30,20 +30,19 @@ def main(argv=None):
         if cache.is_symlink():raise ValueError('project .etas mountpoint must not be a symlink')
         cache.mkdir(mode=0o700,exist_ok=True)
         if cache.is_symlink() or not cache.is_dir():raise ValueError('project .etas mountpoint must be a directory')
-        version=os.environ.get('NOMO_ETAS_VERSION','0.2.5')
-        if version not in ('0.2.4','0.2.5'):raise ValueError('history work requires ETAS 0.2.4 or 0.2.5')
+        version=os.environ.get('NOMO_ETAS_VERSION','0.2.6')
+        if version!='0.2.6':raise ValueError('this Nomo revision requires ETAS 0.2.6; use an earlier Nomo revision for older ETAS')
         policy=None;binding=None
         if args.events_policy_dir is not None:
-            if version!='0.2.5':raise ValueError('event work requires ETAS 0.2.5')
             policy,_,binding=policy_module.read_private(args.events_policy_dir)
             for item in (context,workspace,state):
                 if policy==item or policy in item.parents or item in policy.parents:raise ValueError('event policy directory must not overlap state or workspace')
-        overlay='config/etas-025-official-compose.yaml' if version=='0.2.5' else 'config/etas-024-official-compose.yaml'
+        overlay='config/etas-'+version.replace('.','')+'-official-compose.yaml'
         if not os.environ.get('MINIMAX_API_KEY'):raise ValueError('set MINIMAX_API_KEY to the M Plan key')
         deadline=os.environ.get('NOMO_MODEL_REQUEST_DEADLINE_MS','120000')
         if not deadline.isascii() or not deadline.isdigit() or len(deadline)>7 or not 2000<=int(deadline)<=3600000:raise ValueError('model request deadline must be an integer from 2000 to 3600000')
         names=args.allow.split(',')
-        if not 1<=len(names)<=4 or len(set(names))!=len(names) or any(not 1<=len(n)<=48 or len(n.split('/'))>8 or any(p in ('','.','..') or not re.fullmatch(r'[A-Za-z0-9._-]+',p) for p in n.split('/')) for n in names):raise ValueError('allow must name one to four distinct safe relative files')
+        if not 1<=len(names)<=4 or len(set(names))!=len(names) or any(not 1<=len(n)<=128 or len(n.split('/'))>8 or any(p in ('','.','..') or not re.fullmatch(r'[A-Za-z0-9._-]+',p) for p in n.split('/')) for n in names):raise ValueError('allow must name one to four distinct safe relative files')
         if not edit.safe_read_question(args.once):raise ValueError('work task must be 1..128 safe nonblank UTF-8 bytes')
         selected=Path(args.path)
         if not args.id or not args.path or selected.is_absolute() or '..' in selected.parts or '\\' in args.path or '\0' in args.path:raise ValueError('select an ID and relative workspace file')

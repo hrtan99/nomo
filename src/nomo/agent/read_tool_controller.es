@@ -8,7 +8,7 @@ import nomo.core.conversation.{State, capacity_error, stop, charge};
 import nomo.agent.loop.{emit, failure};
 import nomo.agent.conversation_events.emit as emit_event;
 import nomo.model.conversation_output.ConversationOutput;
-import nomo.model.model_tool_contract.{Session, Limits, Context, allowed_error, context_error, budget_error, charge_action, default_limits};
+import nomo.model.model_tool_contract.{Session, Limits, Context, candidate_error, context_error, budget_error, charge_action, default_limits};
 import nomo.tools.read_contract.{outcome, ReadTools};
 import nomo.tools.read_display.display;
 import nomo.model.read_protocol.{question_error, decode_child, compact_frame};
@@ -100,7 +100,7 @@ flow run_mode(raw: string, allowed: Array<string>, limits: Limits, previous: Ses
     let full = capacity(previous, 1, if work { 512 } else { 128 });
     if full != "" { return failed(history(previous, stop(previous.history)), full, 4); }
     var invalid = if work && !bounded(raw, 512) { "work delegation requires 1..512 safe UTF-8 bytes" } else { if work { "" } else { question_error(raw) } };
-    if invalid == "" { invalid = allowed_error(allowed); }
+    if invalid == "" { invalid = candidate_error(allowed); }
     if invalid != "" { return failed(previous, invalid, 2); }
     var session = history(previous, emit_mode(previous.history, "user", "input", "", raw, private_progress));
     let first = match model_attempt(session, allowed, limits, false, private_progress, chat, expanded) { Ok(value) => value, Err(error) => { return error; } };

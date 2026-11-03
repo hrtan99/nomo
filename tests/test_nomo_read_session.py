@@ -42,13 +42,14 @@ class ReadSessionLauncherTest(unittest.TestCase):
         cmd=run.call_args.args[0];env=run.call_args.args[1]
         for key in ('MINIMAX_API_KEY','ETAS_HOST_MODEL_API_KEY','NOMO_QWEN_SERVER_API_KEY'):self.assertNotIn(key,env)
         self.assertFalse(any('nomo-minimax-read-compose.yaml' in value for value in cmd));self.assertIn('nomo-read-session-status',cmd)
-    def test_025_and_024_use_their_selected_overlays(self):
-        for version in ('0.2.5','0.2.4'):
-            with self.subTest(version=version), patch.dict(os.environ, {'NOMO_ETAS_VERSION':version}), patch.object(launcher,'run_owned',return_value=0) as run:
-                self.existing() if not (self.state/'history.sqlite3').exists() else None
-                self.assertEqual(self.invoke(['status','--state',str(self.state)]),0)
-                name='config/etas-'+version.replace('.','')+'-official-compose.yaml'
-                self.assertIn(str(self.project/name),run.call_args.args[0])
+    def test_026_overlay_and_older_versions_rejected(self):
+        self.existing()
+        with patch.dict(os.environ, {'NOMO_ETAS_VERSION':'0.2.6'}), patch.object(launcher,'run_owned',return_value=0) as run:
+            self.assertEqual(self.invoke(['status','--state',str(self.state)]),0)
+            self.assertIn(str(self.project/'config/etas-026-official-compose.yaml'),run.call_args.args[0])
+        for version in ('0.2.4','0.2.5'):
+            with self.subTest(version=version), patch.dict(os.environ, {'NOMO_ETAS_VERSION':version}), patch.object(launcher,'run_owned') as run:
+                self.assertNotEqual(self.invoke(['status','--state',str(self.state)]),0);run.assert_not_called()
 
     def test_event_policy_routes_read_only_flow_without_exposing_literal_in_arguments(self):
         policy=self.root/'policy';policy.mkdir(mode=0o700);file=policy/'policy.json';file.write_text('{"format":1,"literals":["SYNTHETIC_SECRET"]}');file.chmod(0o600);key=policy/'binding.key';key.write_bytes(b'K'*32);key.chmod(0o600)

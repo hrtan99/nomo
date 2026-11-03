@@ -5,10 +5,10 @@ import std.io.println;
 import std.io.IOError as ConsoleError;
 import std.fs.IOError as FileError;
 import std.effects.Fs;
-import nomo.tools.workspace.ReadOnlyRoot;
+import nomo.tools.workspace.{ReadOnlyRoot, discover};
 import std.text.{len, split, to_string_i32};
 import std.collections.len as count;
-import nomo.model.model_tool_contract.allowed_error;
+import nomo.model.model_tool_contract.candidate_error;
 import nomo.model.read_protocol.question_error;
 import nomo.harness.read_tool_chat.run_private_turn as run_turn;
 import nomo.harness.natural_work_chat.{run as run_natural, route as natural_route};
@@ -27,14 +27,15 @@ import nomo.session.history_followup_check_guard.inspect as inspect_followup_che
 
 // Each entry requires an independently selected current read root and grant.
 // Saved conversation is untrusted context; a running reservation never resumes.
-public flow run(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {
+public flow run(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyRoot>, Fs.list<ReadOnlyRoot>, Fs.stat<ReadOnlyRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {
     let natural = count(args) == 6 && args[5] == "--natural-work";
     if (count(args) != 5 && !natural) || (args[0] != "new" && args[0] != "continue") || args[1] != "--allow" || args[3] != "--once" {
         println("REFUSED expected new|continue --allow FILE[,FILE...] --once QUESTION"); return 1;
     }
     if len(args[2]) > 195 { println("REFUSED allowlist too long"); return 1; }
-    let allowed = split(args[2], ",");
-    let paths = allowed_error(allowed); if paths != "" { println("REFUSED " + paths); return 1; }
+    let allowed = if args[2] == "*" { match discover() { Ok(value) => value, Err(error) => { println("REFUSED " + error); return 1; } } } else { split(args[2], ",") };
+    if args[2] != "*" && count(allowed) > 4 { println("REFUSED explicit selection supports up to four files"); return 1; }
+    let paths = candidate_error(allowed); if paths != "" { println("REFUSED " + paths); return 1; }
     let request = args[4]; let question = question_error(request); if question != "" { println("REFUSED " + question); return 1; }
     let past_work = match inspect_work() { Ok(value) => value, Err(error) => { println("REFUSED " + error); return 1; } };
     var work_facts: Option<WorkFacts> = None();

@@ -7,7 +7,7 @@ import std.json.{JsonValue, stringify};
 import std.agent.message.Message;
 import nomo.core.text.printable;
 import nomo.core.conversation.Event;
-import nomo.model.model_tool_contract.{Session, allowed_error};
+import nomo.model.model_tool_contract.{Session, candidate_error};
 import nomo.core.read_text.{bounded, safe};
 import nomo.model.read_protocol.decode_child;
 import std.codec.text.utf8_encode;
@@ -41,7 +41,7 @@ flow same(event: Event, role: string, kind: string, name: string, text: string) 
 // Host aborts never reach this function and cannot be represented as settled returns.
 flow inspect_mode(child: Session, status: i32, request: string, task: string, allowed: Array<string>, work: bool) -> Result<Observed, string> {
     let invalid = child_ledger_error(child, work); if invalid != "" { return Err(invalid); }
-    if !bounded(request, 128) || !bounded(task, if work { 512 } else { 128 }) || allowed_error(allowed) != "" { return Err("invalid selected child context"); }
+    if !bounded(request, 128) || !bounded(task, if work { 512 } else { 128 }) || candidate_error(allowed) != "" { return Err("invalid selected child context"); }
     let events = child.history.events;
     let size = count(events);
     if size < 4 || size > 7 || child.history.stopped || child.history.characters > 262144 { return Err("invalid child history"); }

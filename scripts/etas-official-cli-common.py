@@ -24,7 +24,7 @@ def configure(label, wrapper):
                 '022': ('0.2.2', 'b585d9bf44b1482eba4d733016fe1b1566a23393f844989e3bc1b42af4277846'),
                 '023': ('0.2.3', None),
                 '024': ('0.2.4', None),
-                '025': ('0.2.5', None)}
+                '025': ('0.2.5', None), '026': ('0.2.6', None)}
     require(label in versions, 'unsupported official graph')
     LABEL = label
     VERSION, LEGACY_SHA = versions[label]
@@ -33,9 +33,9 @@ def configure(label, wrapper):
     LOCK = REPO / ('config/etas-' + label + '-official.Cargo.lock')
     SPEC = json.loads(CONFIG.read_text())
     PINS = SPEC['repositories']
-    ROOT = CACHE / ('etas-025' if label == '025' else 'etas-p0-' + label)
-    SOURCE = ROOT / ('src' if label == '025' else 'src/cli')
-    TARGET = ROOT / 'target' if label == '025' else CACHE / 'etas-latest/target'
+    ROOT = CACHE / ('etas-' + label if label in ('025', '026') else 'etas-p0-' + label)
+    SOURCE = ROOT / ('src' if label in ('025', '026') else 'src/cli')
+    TARGET = ROOT / 'target' if label in ('025', '026') else CACHE / 'etas-latest/target'
     bridge_path = REPO / 'config/etas-official-legacy-bridge.json'
     bridge = json.loads(bridge_path.read_text())
     entry = bridge[label]
@@ -45,18 +45,18 @@ def configure(label, wrapper):
     previous = {'012': 'f51e2b184927c47f109fbf1e3778d804abe06be1ff5c9c87ec2e2468e5782b1d',
                 '022': '1abd68df1a97c80190f025b6f2330e130e924b3b299494c8e80ea6ca562adcbc',
                 '023': None,
-                '024': None, '025': None}
+                '024': None, '025': None, '026': None}
     PREVIOUS_SHARED = previous[label]
     require(entry.get('previous_shared_sha256') == PREVIOUS_SHARED, 'previous shared provenance drift')
     prior = {'012': '29663ca202861ccc54cf7df5fe1c2f278ae8192d8f2d7abd41dfd44aebc2e5c4',
              '022': '5252858a71ac814ce1c15d5c0e5d8a291c0af69ed07d02c7d88343b5e8905f22',
-             '023': '0fd4152065d3ab56f4a3508ecb0686bf2eab253f0f5be5b2482dfc4f933184fc', '024': None, '025': None}
+             '023': '0fd4152065d3ab56f4a3508ecb0686bf2eab253f0f5be5b2482dfc4f933184fc', '024': None, '025': None, '026': None}
     PREVIOUS_BOOTSTRAP = prior[label]
     require(entry.get('previous_bootstrap_sha256') == PREVIOUS_BOOTSTRAP, 'previous bootstrap provenance drift')
     previous_current = {'012': 'd9136e020ec5cbe83457cabef11c993d1c9eb93d2406dfc68fce0f727f207d61',
                         '022': 'cb5feaeefdbad42b3b1253755e0167e9023664f6b1b38ef2b814aa118638b9bf',
                         '023': '90cb9bba2e7d7a52a688cac3faa4c5b74b144f2f8e87ba36c1f083810288c170',
-                        '024': '89c11a09f408387c5d1e1a801bb9770517c6a30b9b95d366f2d43aa5f3c75274', '025': None}
+                        '024': '89c11a09f408387c5d1e1a801bb9770517c6a30b9b95d366f2d43aa5f3c75274', '025': None, '026': None}
     PREVIOUS_CURRENT = previous_current[label]
     require(entry.get('previous_current_sha256') == PREVIOUS_CURRENT, 'previous current bootstrap provenance drift')
     # New installations bind the wrapper, shared implementation and reviewed bridge policy.
@@ -67,7 +67,7 @@ def configure(label, wrapper):
     identity_hash.update(b'\0')
     identity_hash.update(bridge_path.read_bytes())
     BOOTSTRAP_SHA = identity_hash.hexdigest()
-    ADOPTED = 'source-lock-registry-validated-owner-built-025' if label == '025' else 'adopted-independently-verified-' + label + '-build'
+    ADOPTED = 'source-lock-registry-validated-owner-built-' + label if label in ('025', '026') else 'adopted-independently-verified-' + label + '-build'
 
 
 def require(ok, message):
@@ -273,6 +273,8 @@ def guard(read_only=False):
     # still run the full source, lock, toolchain and registry checks below.
     provenance = identity['bootstrap_sha256']
     accepted = [BOOTSTRAP_SHA]
+    previous_refactor = {'012': '39b0277800140388d34d678bc3f07dbf10d240888fb31956d09cb999dc7a503c', '022': '9bc1745be5eb056eca102314930db86901f1c81c0dae957b84d6d96d2a93b176', '023': '96ff100859d8eb9000d190888515eb05056da32555c81e0a5b5a0d81cb3db63d', '024': '3ffddeb87a4deb59304825e7bc6103b7f6bcfb889df5c764eb4801c9be21dd46', '025': 'a9c166409d8bacc39a1e4af3e83451241da6efe33d35082077a36298cb3da458'}
+    if LABEL in previous_refactor: accepted.append(previous_refactor[LABEL])
     if LEGACY_SHA is not None: accepted.append(LEGACY_SHA)
     if PREVIOUS_SHARED is not None: accepted.append(PREVIOUS_SHARED)
     if PREVIOUS_BOOTSTRAP is not None: accepted.append(PREVIOUS_BOOTSTRAP)

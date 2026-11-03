@@ -15,7 +15,7 @@ Usage:
   nomo-read.sh session-id resume --sessions-dir PRIVATE_DIRECTORY --id SESSION_ID --root DIR --allow FILE[,FILE...] --once QUESTION
   nomo-read.sh session-id status --sessions-dir PRIVATE_DIRECTORY --id SESSION_ID [--outputs | --events --events-policy-dir PRIVATE_DIRECTORY]
   nomo-read.sh session-id decision --sessions-dir PRIVATE_DIRECTORY --id SESSION_ID --operation-id ID --target work|check|followup|followup-check
-  nomo-read.sh session-chat --sessions-dir PRIVATE_DIRECTORY (--new | --id SESSION_ID) --root DIR --allow FILE[,FILE...] [--events-policy-dir PRIVATE_DIRECTORY] [--once QUESTION] [--check COMMAND ARG ...]
+  nomo-read.sh session-chat --sessions-dir PRIVATE_DIRECTORY (--new | --id SESSION_ID) --root DIR (--allow FILE[,FILE...] | --discover) [--events-policy-dir PRIVATE_DIRECTORY] [--once QUESTION] [--check COMMAND ARG ...]
   Event-recording sessions accept --events-policy-dir PRIVATE_DIRECTORY on start, resume, status, work and session-chat.
   Event sessions support up to 32 saved read turns, with prior usage retained.
   This mode supports two work operations plus up to 32 additional followups, each freshly confirmed with an optional offline check.
@@ -38,8 +38,8 @@ the provider's finish reason under 0.2.4; review the complete edit preview caref
 For the earlier Qwen route, explicitly set NOMO_MODEL_PROVIDER=qwen along with
 NOMO_READ_MODEL_BASE_URL and NOMO_QWEN_SERVER_API_KEY; NOMO_READ_MODEL_NAME
 can select a different Qwen model. These provider credentials are separate.
-MiniMax defaults to verified ETAS 0.2.5; the earlier Qwen route defaults to
-0.2.2. Set NOMO_ETAS_VERSION explicitly to select 0.2.2, 0.2.3, 0.2.4 or 0.2.5.
+This Nomo revision requires verified ETAS 0.2.6. Use an earlier Nomo revision
+for older ETAS versions. Session-chat --discover searches bounded workspace files.
 For Qwen, the endpoint is reached from the container: for a host-local forward, use
 http://host.docker.internal:PORT/v1 rather than 127.0.0.1.
 Session-chat accepts one piped UTF-8 question (at most 128 bytes); the input
@@ -131,15 +131,10 @@ case "$provider" in
         model_overlay="$root/config/read-chat-compose.yaml"; profile=gateway-qwen-readonly ;;
     *) echo 'NOMO_MODEL_PROVIDER must be minimax or qwen.' >&2; exit 64 ;;
 esac
-default_etas=0.2.2
-if [[ "$provider" == minimax ]]; then default_etas=0.2.5; fi
-case "${NOMO_ETAS_VERSION:-$default_etas}" in
-    0.2.2) etas_overlay="$root/config/etas-022-official-compose.yaml" ;;
-    0.2.3) etas_overlay="$root/config/etas-023-official-compose.yaml" ;;
-    0.2.4) etas_overlay="$root/config/etas-024-official-compose.yaml" ;;
-    0.2.5) etas_overlay="$root/config/etas-025-official-compose.yaml" ;;
-    *) echo 'NOMO_ETAS_VERSION must be 0.2.2, 0.2.3, 0.2.4 or 0.2.5.' >&2; exit 64 ;;
-esac
+if [[ "${NOMO_ETAS_VERSION:-0.2.6}" != 0.2.6 ]]; then
+    echo 'this Nomo revision requires ETAS 0.2.6; use an earlier Nomo revision for older ETAS' >&2; exit 64
+fi
+etas_overlay="$root/config/etas-026-official-compose.yaml"
 # Docker cannot create a tmpfs mountpoint inside the read-only source bind.
 # Create only this disposable, empty project cache directory before mounting.
 if [[ -L "$root/.etas" ]]; then echo 'Project .etas mountpoint must not be a symlink.' >&2; exit 64; fi

@@ -7,7 +7,7 @@ import std.agent.message.Message;
 import nomo.core.text.printable;
 import nomo.harness.model_plan_diagnostic.response_error;
 import nomo.tools.path_policy.valid_path;
-public import nomo.model.tool_context.{Context, allowed_error};
+public import nomo.model.tool_context.{Context, allowed_error, candidate_error};
 import nomo.core.conversation.{Event, State, fresh, charge};
 
 public type Action = { operation: string, files: Array<string>, literal: string, text: string };
@@ -29,11 +29,12 @@ public flow question_error(raw: string) -> string {
 }
 
 flow selected_error(names: Array<string>, allowed: Array<string>) -> string {
+    if count(names) > 4 { return "at most four selected files"; }
     let invalid = allowed_error(names);
     if invalid != "" { return invalid; }
     for name in names limit Iterations(4) {
         var permitted = false;
-        for admitted in allowed limit Iterations(4) {
+        for admitted in allowed limit Iterations(256) {
             if name == admitted { permitted = true; }
         }
         if !permitted { return "selected file is not allowed"; }
@@ -43,7 +44,7 @@ flow selected_error(names: Array<string>, allowed: Array<string>) -> string {
 
 // Shared semantic selection guard for legacy wire decoding and native records.
 public flow read_selection_error(operation: string, files: Array<string>, literal: string, allowed: Array<string>) -> string {
-    let invalid = allowed_error(allowed); if invalid != "" { return invalid; }
+    let invalid = candidate_error(allowed); if invalid != "" { return invalid; }
     if operation == "read" {
         if count(files) != 1 { return "unsupported action or arity"; }
         if literal != "" { return "read action requires an empty literal"; }

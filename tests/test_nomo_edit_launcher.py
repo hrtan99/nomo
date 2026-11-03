@@ -52,21 +52,11 @@ class EditLauncherTests(unittest.TestCase):
         self.assertEqual(check[check.index('--workdir') + 1], '/edit-fixture')
         self.assertEqual(check[-7:], ['60s', 'python3', '-B', '/workspace/scripts/nomo-bounded-check.py', 'python3', '-m', 'unittest'])
 
-    def test_explicit_023_applies_to_edit_and_check(self):
+    def test_older_versions_are_rejected_for_edit(self):
         self.args.check = ['true']
-        with patch.dict(os.environ, {'NOMO_ETAS_VERSION': '0.2.3'}):
-            command, check, _ = module.prepare(self.args, True, True)
-        overlay = str(self.project / 'config/etas-023-official-compose.yaml')
-        self.assertIn(overlay, command); self.assertIn(overlay, check)
-        with patch.dict(os.environ, {'NOMO_ETAS_VERSION': 'unsupported'}), self.assertRaisesRegex(ValueError, 'NOMO_ETAS_VERSION'):
-            module.prepare(self.args, True, True)
-
-    def test_explicit_024_applies_to_edit_and_check(self):
-        self.args.check = ['true']
-        with patch.dict(os.environ, {'NOMO_ETAS_VERSION': '0.2.4'}):
-            command, check, _ = module.prepare(self.args, True, True)
-        overlay = str(self.project / 'config/etas-024-official-compose.yaml')
-        self.assertIn(overlay, command); self.assertIn(overlay, check)
+        for version in ('0.2.3', '0.2.4', '0.2.5', 'unsupported'):
+            with self.subTest(version=version), patch.dict(os.environ, {'NOMO_ETAS_VERSION': version}), self.assertRaisesRegex(ValueError, 'requires ETAS 0.2.6'):
+                module.prepare(self.args, True, True)
 
     def test_model_edit_uses_explicit_endpoint_and_keeps_check_offline(self):
         self.args.task = 'change old to new'
@@ -179,8 +169,8 @@ class EditLauncherTests(unittest.TestCase):
             module.prepare(self.args, True, True)
 
     def test_reject_shared_workspace_and_symlink_state(self):
-        self.workspace.chmod(0o755)
-        with self.assertRaisesRegex(ValueError, 'inaccessible'):
+        self.workspace.chmod(0o777)
+        with self.assertRaisesRegex(ValueError, 'not writable by group or others'):
             module.prepare(self.args, True, True)
         self.workspace.chmod(0o700)
         link = self.workspace.parent / 'state-link'

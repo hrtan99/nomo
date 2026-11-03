@@ -3,7 +3,7 @@ module nomo.harness.shared_chat_controller;
 import std.io.println;
 import std.text.to_string_i32;
 import nomo.core.conversation.{Event, State};
-import nomo.model.model_tool_contract.{question_error, allowed_error};
+import nomo.model.model_tool_contract.{question_error, allowed_error, candidate_error};
 import nomo.harness.harness_model_contract.{bounded, decode_plan};
 import nomo.harness.harness_tool_contract.{Ledger, fresh, bump, settle, numbers};
 import nomo.harness.harness_tool_chat_contract.{Previous, Context, Invocation, LocalTurn, TurnResult, Completed, empty, prior_error,
@@ -65,7 +65,7 @@ flow execute(request: string, allowed: Array<string>, prior: Previous, before: L
         return refused(state, "invalid turn selection", true);
     }
     let invalid = if unicode { unicode_question_error(request) } else { question_error(request) }; if invalid != "" { return refused(state, invalid, true); }
-    let paths = allowed_error(allowed); if paths != "" { return refused(state, paths, true); }
+    let paths = if unicode { candidate_error(allowed) } else { allowed_error(allowed) }; if paths != "" { return refused(state, paths, true); }
     let previous = if unicode { unicode_prior_error(prior) } else { prior_error(prior) }; if previous != "" { return refused(state, previous, true); }
     let plan = Context { phase = "plan", request = request, task = "", result = "", tool = "", outcome = "", allowed = allowed, prior = prior };
     let invalid_plan = if unicode { unicode_context_error(plan) } else { context_error(plan) }; if invalid_plan != "" { return refused(state, invalid_plan, true); }

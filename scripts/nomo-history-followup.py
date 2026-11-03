@@ -32,9 +32,9 @@ def main(argv=None):
         if cache.is_symlink():raise ValueError('project .etas mountpoint must not be a symlink')
         cache.mkdir(mode=0o700,exist_ok=True)
         if cache.is_symlink() or not cache.is_dir():raise ValueError('project .etas mountpoint must be a directory')
-        version=os.environ.get('NOMO_ETAS_VERSION','0.2.5')
-        if version not in ('0.2.4','0.2.5'):raise ValueError('history work requires ETAS 0.2.4 or 0.2.5')
-        overlay='config/etas-025-official-compose.yaml' if version=='0.2.5' else 'config/etas-024-official-compose.yaml'
+        version=os.environ.get('NOMO_ETAS_VERSION','0.2.6')
+        if version!='0.2.6':raise ValueError('this Nomo revision requires ETAS 0.2.6; use an earlier Nomo revision for older ETAS')
+        overlay='config/etas-'+version.replace('.','')+'-official-compose.yaml'
         if not os.environ.get('MINIMAX_API_KEY'):raise ValueError('set MINIMAX_API_KEY to the M Plan key')
         deadline=os.environ.get('NOMO_MODEL_REQUEST_DEADLINE_MS','120000')
         if not deadline.isascii() or not deadline.isdigit() or len(deadline)>7 or not 2000<=int(deadline)<=3600000:raise ValueError('model request deadline must be an integer from 2000 to 3600000')

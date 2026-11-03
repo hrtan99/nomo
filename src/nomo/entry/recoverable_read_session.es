@@ -7,7 +7,7 @@ import std.codec.text.utf8_encode;
 import std.agent.message.Message;
 import std.json.{JsonValue, stringify};
 import std.collections.len as count;
-import nomo.model.model_tool_contract.allowed_error;
+import nomo.model.model_tool_contract.candidate_error;
 import nomo.model.read_protocol.question_error;
 import nomo.harness.read_tool_chat.{run_private_turn, run_with_history};
 import nomo.harness.natural_work_chat.{run as run_natural, route as natural_route};
@@ -38,7 +38,7 @@ import nomo.core.conversation.Event;
 import std.io.IOError as ConsoleError;
 import std.fs.IOError as FileError;
 import std.effects.Fs;
-import nomo.tools.workspace.ReadOnlyRoot;
+import nomo.tools.workspace.{ReadOnlyRoot, discover};
 import nomo.session.event_policy.PolicyRoot;
 
 // Explicit opt-in path. It does not silently migrate v1-v3, establish a
@@ -55,13 +55,15 @@ flow conversation(frame: EventFrame, policy: Policy) -> Result<Array<Event>, str
     }
     return Ok(selected);
 }
-public flow run(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyRoot>, Fs.read<PolicyRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {
+public flow run(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyRoot>, Fs.list<ReadOnlyRoot>, Fs.stat<ReadOnlyRoot>, Fs.read<PolicyRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {
     let natural = count(args) == 8 && args[7] == "--natural-work";
     if (count(args) != 7 && !natural) || (args[0] != "new" && args[0] != "continue") || args[1] != "--allow" || args[3] != "--once" || args[5] != "--policy-binding" {
         println("REFUSED expected new|continue --allow FILE[,FILE...] --once QUESTION"); return 1;
     }
     if len(args[2]) > 195 { println("REFUSED allowlist too long"); return 1; }
-    let allowed = split(args[2], ","); let invalid = allowed_error(allowed);
+    let allowed = if args[2] == "*" { match discover() { Ok(value) => value, Err(error) => { println("REFUSED " + error); return 1; } } } else { split(args[2], ",") };
+    if args[2] != "*" && count(allowed) > 4 { println("REFUSED explicit selection supports up to four files"); return 1; }
+    let invalid = candidate_error(allowed);
     if invalid != "" || question_error(args[4]) != "" { println("REFUSED invalid read request"); return 1; }
     let policy = match load_policy() { Ok(item) => item, Err(error) => { println("REFUSED " + error); return 1; } };
     match load_legacy() { Ok(None()) => {} Ok(Some(_)) => { println("REFUSED legacy session cannot be migrated automatically"); return 1; } Err(error) => { println("REFUSED " + error); return 1; } }

@@ -5,7 +5,7 @@ import std.collections.len as count;
 import std.json.{JsonValue, stringify};
 import std.agent.message.Message;
 import nomo.core.conversation.{Event, State, add, fresh};
-import nomo.model.model_tool_contract.{Session, allowed_error};
+import nomo.model.model_tool_contract.{Session, candidate_error};
 import nomo.model.model_tool_contract.Context as ChildContext;
 import nomo.model.model_tool_contract.context_error as child_context_error;
 import nomo.core.text.printable;
@@ -55,7 +55,7 @@ flow same(left: Event, right: Event) -> bool {
 public flow inspect_turn(child: Session, status: i32, request: string, task: string,
     allowed: Array<string>, prior: Previous) -> Result<Observed, string> {
     let invalid = prior_error(prior); if invalid != "" { return Err(invalid); }
-    let paths = allowed_error(allowed); if paths != "" { return Err(paths); }
+    let paths = candidate_error(allowed); if paths != "" { return Err(paths); }
     let expected = seed(request, prior);
     let size = count(expected.events);
     if count(child.history.events) < size + 2 || count(child.history.events) > size + 6 || child.history.stopped {

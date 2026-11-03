@@ -94,7 +94,7 @@ class NaturalObserver(StartIdObserver):
         while b'\n' in self.buffer:
             line, _, remainder = self.buffer.partition(b'\n');self.buffer = bytearray(remainder)
             fields = line.decode('utf-8', 'replace').rstrip('\r').split(' ')
-            if len(fields)==4 and fields[:2]==['NATURAL','WORK'] and fields[2] in ('work','followup') and fields[3] in self.allowed:
+            if len(fields)==4 and fields[:2]==['NATURAL','WORK'] and fields[2] in ('work','followup') and (fields[3] in self.allowed or ('*' in self.allowed and len(fields[3]) <= 128 and re.fullmatch(r'[A-Za-z0-9._/-]+', fields[3]) and all(part not in ('', '.', '..') for part in fields[3].split('/')))):
                 self.route = (fields[2], fields[3])
             elif fields == ['NATURAL','DELEGATE']:self.deferred = 'read'
             elif fields == ['NATURAL','DELEGATE','LIMIT']:self.deferred = 'limit'
@@ -111,7 +111,7 @@ def show_resume(args, *, show_id):
     print('Resume: nomo-read.sh session-id resume --sessions-dir ' + shlex.quote(args.sessions_dir)
           + ' --id ' + shlex.quote(args.id) + ' --root DIR --allow FILE' + policy + ' --once QUESTION', flush=True)
     interactive = [str(ROOT / 'scripts/nomo-read.sh'), 'session-chat', '--sessions-dir=' + args.sessions_dir,
-                   '--id=' + args.id, '--root=' + args.root, '--allow=' + args.allow]
+                   '--id=' + args.id, '--root=' + args.root, '--discover' if args.discover else '--allow=' + args.allow]
     if args.events_policy_dir is not None:
         interactive.append('--events-policy-dir=' + args.events_policy_dir)
     if args.check is not None:
@@ -144,9 +144,9 @@ def abandon_stopped_work(args, operation_id, action):
         if not stat.S_ISREG(st.st_mode) or st.st_uid != os.getuid() or st.st_nlink != 1 or stat.S_IMODE(st.st_mode) != 0o600: raise ValueError('invalid session lock')
         fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
         env = {k:v for k,v in os.environ.items() if not k.startswith('ETAS_HOST_') and k not in ('MINIMAX_API_KEY', 'NOMO_QWEN_SERVER_API_KEY')}
-        env.update(NOMO_SESSION_STATE=str(state), NOMO_EVENT_POLICY_DIR=str(policy_dir), NOMO_ETAS_VERSION='0.2.5')
+        env.update(NOMO_SESSION_STATE=str(state), NOMO_EVENT_POLICY_DIR=str(policy_dir), NOMO_ETAS_VERSION=os.environ.get('NOMO_ETAS_VERSION', '0.2.6'))
         compose = ['docker', 'compose', '--env-file', '/dev/null']
-        for name in ('compose.yaml', 'config/etas-025-official-compose.yaml', 'config/etas-runtime-cache-compose.yaml', 'config/nomo-read-session-compose.yaml', 'config/nomo-event-policy-work-compose.yaml'):
+        for name in ('compose.yaml', 'config/etas-' + env['NOMO_ETAS_VERSION'].replace('.', '') + '-official-compose.yaml', 'config/etas-runtime-cache-compose.yaml', 'config/nomo-read-session-compose.yaml', 'config/nomo-event-policy-work-compose.yaml'):
             compose += ['--file', str(ROOT / name)]
         native = ['python3', '-B', '/workspace/scripts/nomo-event-policy-mount-bootstrap.py', binding, 'run', '/workspace', '--flow', 'recoverable_work_abandon' if action == 'work' else 'recoverable_followup_abandon', '--profile', 'nomo-read-events-status', '--allow-effects', '--args', binding, operation_id]
         command = [sys.executable, str(ROOT / 'scripts/terminal-transport.py'), *compose, 'run', '--rm', '--no-deps', '--pull', 'never', '--tty=false', '--workdir', '/session-state', 'dev', *native]
@@ -173,12 +173,15 @@ def main(argv=None):
     selection.add_argument('--id')
     selection.add_argument('--new', action='store_true', help='create a session on the first read turn')
     parser.add_argument('--root', required=True)
-    parser.add_argument('--allow', required=True)
+    files = parser.add_mutually_exclusive_group(required=True)
+    files.add_argument('--allow')
+    files.add_argument('--discover', action='store_true')
     parser.add_argument('--events-policy-dir')
     parser.add_argument('--once', help='run exactly one read-only turn')
     parser.add_argument('--check', nargs=argparse.REMAINDER, help='optional command after each natural-language edit')
     args = parser.parse_args(argv)
     if args.check == []:parser.error('--check requires a command')
+    if args.discover: args.allow = '*'
     stdin_tty = sys.stdin.isatty()
     tty = stdin_tty and sys.stdout.isatty()
     if args.once is None and not tty:
@@ -193,6 +196,7 @@ def main(argv=None):
         except KeyboardInterrupt:
             print('Input cancelled.', file=sys.stderr)
             return 130
+    if args.discover: print('Discovery searches up to four directory levels, 64 directories and 256 files; hidden paths, unsupported names and common dependency/build directories are excluded.', flush=True)
     if args.id is not None:
         show_resume(args, show_id=True)
     else:
@@ -263,7 +267,7 @@ def main(argv=None):
                     command = [sys.executable, str(ROOT / 'scripts/nomo-session-id.py'), action,
                                '--sessions-dir', args.sessions_dir, '--id', args.id,
                                '--read-root', args.root, '--root', words[2], '--operation-id=' + words[1],
-                               '--path=' + words[3], '--allow=' + args.allow, '--once=' + words[4]]
+                               '--path=' + words[3], '--allow=' + (words[3] if args.discover else args.allow), '--once=' + words[4]]
                     if args.events_policy_dir is not None:command += ['--events-policy-dir',args.events_policy_dir]
                     command += ['--interactive-check', *words[5:]]
                 except ValueError as error:
@@ -326,7 +330,7 @@ def main(argv=None):
             command = [sys.executable, str(ROOT / 'scripts/nomo-session-id.py'), action,
                        '--sessions-dir', args.sessions_dir, '--id', args.id, '--read-root', args.root,
                        '--root', args.root, '--operation-id=' + operation_id,
-                       '--path=' + path, '--allow=' + args.allow, '--once=' + question]
+                       '--path=' + path, '--allow=' + (path if args.discover else args.allow), '--once=' + question]
             if args.events_policy_dir is not None:command += ['--events-policy-dir', args.events_policy_dir]
             command += ['--interactive-check']
             if args.check is not None:command += ['--check', *args.check]

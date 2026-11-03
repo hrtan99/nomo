@@ -7,7 +7,7 @@ import std.codec.text.utf8_encode;
 import std.bytes.len as byte_count;
 import std.agent.message.Message;
 import nomo.core.read_text.{safe, bounded};
-import nomo.model.model_tool_contract.{Action, allowed_error, read_selection_error};
+import nomo.model.model_tool_contract.{Action, candidate_error, read_selection_error};
 
 public flow question_error(raw: string) -> string {
     return if bounded(raw, 128) { "" } else { "question requires 1..128 safe UTF-8 bytes, not only spaces" };
@@ -106,7 +106,7 @@ flow child_final_error(text: string) -> string {
 }
 
 public flow decode_child(raw: string, allowed: Array<string>, final_only: bool) -> Result<Action, string> {
-    let invalid = allowed_error(allowed); if invalid != "" { return Err(invalid); }
+    let invalid = candidate_error(allowed); if invalid != "" { return Err(invalid); }
     let values = match fields(raw, 1152) { Ok(item) => item, Err(error) => { return Err(error); } };
     if count(values) < 2 || count(values) > 6 { return Err("invalid action field count"); }
     if values[0] == "final" {

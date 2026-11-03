@@ -1,9 +1,10 @@
 module nomo.tools.workspace;
 
-import std.fs.{Region, WorkspacePath, IOError, ReadLimitError, path, read_bytes_limited, list};
+import std.fs.{Region, WorkspacePath, IOError, ReadLimitError, ListLimitError, path, root, relative_name, list_limited, stat, read_bytes_limited, list};
 import std.bytes.len as byte_len;
 import std.codec.text.{utf8_decode, Strict};
-import std.text.{len, split, contains, to_string_usize};
+import std.text.{len, split, contains, starts_with, to_string_usize};
+import std.agent.message.Message;
 import std.collections.len as count;
 import nomo.core.text.printable;
 import nomo.tools.path_policy.valid_path as canonical_path;
@@ -25,6 +26,34 @@ flow target(name: string) -> WorkspacePath<ReadOnlyRoot> {
         Ok(value) => value,
         Err(_) => abort("read-only path construction refused"),
     };
+}
+
+// Discovery is bounded and rooted in the currently selected read-only region.
+type DiscoveredFileInfo = { is_file: bool, is_dir: bool, len: u64 };
+flow excluded(name: string) -> bool {
+    for part in split(name, "/") limit Iterations(8) {
+        if starts_with(part, ".") || part == "node_modules" || part == "target" || part == "build" || part == "dist" || part == "vendor" { return true; }
+    }
+    return false;
+}
+public flow discover() -> Result<Array<string>, string> ![Fs.list<ReadOnlyRoot>, Fs.stat<ReadOnlyRoot>, Error<FileError>, Error<IndexError>] {
+    return handle {
+        var dirs: Array<WorkspacePath<ReadOnlyRoot>> = [root<ReadOnlyRoot>()]; var depths: Array<usize> = [0]; var files: Array<string> = []; var i: usize = 0;
+        while i < count(dirs) limit Iterations(64) {
+            let entries = list_limited(dirs[i], 256, 32768);
+            for entry in entries limit Iterations(256) {
+                let name = relative_name(entry);
+                if !excluded(name) && valid_path(name) {
+                    let projected: Option<Message<DiscoveredFileInfo>> = Message.new(stat(entry)).cast<DiscoveredFileInfo>();
+                    let info = match projected { Some(value) => value.body, None() => { return Err("file metadata unavailable"); } };
+                    if info.is_file { if count(files) >= 256 { return Err("discovery exceeds 256 files; select a narrower root"); } files = files.push(name); }
+                    else if info.is_dir && depths[i] < 4 { if count(dirs) >= 64 { return Err("discovery exceeds 64 directories; select a narrower root"); } dirs = dirs.push(entry); depths = depths.push(depths[i] + 1); }
+                }
+            }
+            i = i + 1;
+        }
+        return Ok(files);
+    } with { Error<ListLimitError>.raise(_) => { finish Err("directory exceeds discovery limit; select a narrower root"); } };
 }
 
 // The Host enforces the byte cap while reading; overflow never returns a prefix.

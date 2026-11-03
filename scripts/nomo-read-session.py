@@ -102,9 +102,9 @@ def main(argv=None):
             if policy==state or policy in state.parents or state in policy.parents or (context is not None and (policy==context or policy in context.parents or context in policy.parents)):raise ValueError('event policy directory must not overlap state or workspace')
         if args.events and policy is None:raise ValueError('--events requires event-recording mode and its policy')
         if args.events and args.outputs:raise ValueError('--events and --outputs cannot be combined')
-        version=os.environ.get('NOMO_ETAS_VERSION','0.2.5')
-        if version not in ('0.2.4','0.2.5'):raise ValueError('read sessions require ETAS 0.2.4 or 0.2.5')
-        if policy is not None and version!='0.2.5':raise ValueError('event-recording sessions require ETAS 0.2.5')
+        version=os.environ.get('NOMO_ETAS_VERSION','0.2.6')
+        if version!='0.2.6':raise ValueError('this Nomo revision requires ETAS 0.2.6; use an earlier Nomo revision for older ETAS')
+        if policy is not None and version not in ('0.2.5','0.2.6'):raise ValueError('event-recording sessions require ETAS 0.2.5')
         st=state.stat()
         if st.st_uid!=os.getuid() or stat.S_IMODE(st.st_mode)!=0o700:raise ValueError('state must be owned by you with mode 0700')
         cache=ROOT/'.etas'
@@ -127,7 +127,7 @@ def main(argv=None):
             env=dict(os.environ,NOMO_SESSION_STATE=str(state),NOMO_ETAS_VERSION=version)
             env.pop('NOMO_QWEN_SERVER_API_KEY',None)
             compose=['docker','compose','--env-file','/dev/null','--file',str(ROOT/'compose.yaml'),
-                     '--file',str(ROOT/('config/etas-025-official-compose.yaml' if version=='0.2.5' else 'config/etas-024-official-compose.yaml')),'--file',str(ROOT/'config/etas-runtime-cache-compose.yaml')]
+                     '--file',str(ROOT/('config/etas-'+version.replace('.','')+'-official-compose.yaml')),'--file',str(ROOT/'config/etas-runtime-cache-compose.yaml')]
             if status:
                 env.pop('MINIMAX_API_KEY',None);env.pop('ETAS_HOST_MODEL_API_KEY',None)
                 profile='nomo-read-session-status';flow='read_session_status';native_args=['--args','--outputs'] if args.outputs else []

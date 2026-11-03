@@ -24,7 +24,7 @@ public flow run(request: string, allowed: Array<string>, invocation: Invocation,
 public flow target(answer: string, allowed: Array<string>) -> Option<string> {
     let parts = split(answer, " ");
     if count(parts) != 2 || parts[0] != "EDIT" { return None(); }
-    for path in allowed limit Iterations(4) { if parts[1] == path { return Some(path); } }
+    for path in allowed limit Iterations(256) { if parts[1] == path { return Some(path); } }
     return None();
 }
 
