@@ -30,3 +30,26 @@ public flow context_json_error(value: Option<Message<JsonValue>>, maximum: usize
     if (if bytes { byte_count(utf8_encode(encoded)) } else { len(encoded) }) > maximum { return overflow; }
     return "";
 }
+
+// Bound a flat JSON string array before its caller invokes the JSON parser.
+public flow flat_string_frame(raw: string, maximum: usize, exact: bool) -> bool {
+    if len(raw) > 65536 || byte_count(utf8_encode(raw)) > 65536 { return false; }
+    var opened = false; var closed = false; var quoted = false; var escaped = false;
+    var leaves: usize = 0; let slash = split("\\/", "")[1];
+    for character in split(raw, "") limit Iterations(65538) {
+        if quoted {
+            if escaped { escaped = false; }
+            else if character == slash { escaped = true; }
+            else if character == "\"" { quoted = false; }
+        } else if character == "" || character == " " || character == "\t" || character == "\r" || character == "\n" {
+        } else if character == "[" {
+            if opened || closed { return false; } opened = true;
+        } else if character == "]" {
+            if !opened || closed { return false; } closed = true;
+        } else if character == "\"" {
+            if !opened || closed { return false; }
+            leaves = leaves + 1; if leaves > maximum { return false; } quoted = true;
+        } else if character != "," || !opened || closed { return false; }
+    }
+    return opened && closed && !quoted && (!exact || leaves == maximum);
+}

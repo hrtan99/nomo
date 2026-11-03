@@ -1,47 +1,17 @@
 module nomo.session.bundle_codec;
 
 import std.collections.len as count;
-import std.text.{len, split};
-import std.bytes.len as byte_count;
-import std.codec.text.utf8_encode;
+import std.text.len;
 import std.json.{JsonValue, parse, stringify};
 import std.agent.message.Message;
-import nomo.core.text.printable;
+import nomo.core.text.{printable, flat_string_frame};
 
 public type Bundle = { format: i32, session_id: string, save_id: string, bodies: Array<string> };
 
 // One array root plus at most 35 string leaves. No recursive decoder or generic
 // object projection: field positions are marker, session ID, save ID, then bodies.
 // Check encoded bytes and shape before allocating a parsed JSON tree/cast result.
-flow framed(json: string) -> bool {
-    if len(json) > 65536 || byte_count(utf8_encode(json)) > 65536 { return false; }
-    var opened = false;
-    var closed = false;
-    var quoted = false;
-    var escaped = false;
-    var leaves: usize = 0;
-    let slash = split("\\/", "")[1];
-    for character in split(json, "") limit Iterations(65538) {
-        if quoted {
-            if escaped { escaped = false; }
-            else if character == slash { escaped = true; }
-            else if character == "\"" { quoted = false; }
-        } else if character == "" || character == " " || character == "\n" || character == "\r" || character == "\t" {
-        } else if character == "[" {
-            if opened || closed { return false; }
-            opened = true;
-        } else if character == "]" {
-            if !opened || closed { return false; }
-            closed = true;
-        } else if character == "\"" {
-            if !opened || closed { return false; }
-            leaves = leaves + 1;
-            if leaves > 35 { return false; }
-            quoted = true;
-        } else if character != "," || !opened || closed { return false; }
-    }
-    return opened && closed && !quoted;
-}
+flow framed(json: string) -> bool { return flat_string_frame(json, 35, false); }
 
 flow bundle_error(bundle: Bundle) -> string {
     if bundle.format != 1 { return "unsupported bundle format"; }

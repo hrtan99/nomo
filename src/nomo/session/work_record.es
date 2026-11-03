@@ -6,6 +6,7 @@ import std.bytes.len as byte_count;
 import std.codec.text.utf8_encode;
 import std.json.{JsonValue, parse, stringify};
 import std.agent.message.Message;
+import nomo.core.text.flat_string_frame;
 import nomo.session.edit_operation.{Binding, binding_error, same_binding};
 import nomo.harness.harness_work_contract.{Evidence, Ledger, evidence_error};
 import nomo.harness.harness_tool_contract.Ledger as ReadLedger;
@@ -26,27 +27,7 @@ flow stage(confirmed: bool, read: ReadLedger) -> Ledger {
 
 // This frame admits quoted Unicode. The native parser subsequently checks
 // separators and escapes; no nested or non-string leaf reaches decoding.
-flow framed(raw: string) -> bool {
-    if len(raw) == 0 || len(raw) > 65536 || byte_count(utf8_encode(raw)) > 65536 { return false; }
-    var opened = false; var closed = false; var quoted = false; var escaped = false;
-    var leaves: usize = 0; let slash = split("\\/", "")[1];
-    for character in split(raw, "") limit Iterations(65538) {
-        if quoted {
-            if escaped { escaped = false; }
-            else if character == slash { escaped = true; }
-            else if character == "\"" { quoted = false; }
-        } else if character == "" || character == " " || character == "\t" || character == "\r" || character == "\n" {
-        } else if character == "[" {
-            if opened || closed { return false; } opened = true;
-        } else if character == "]" {
-            if !opened || closed { return false; } closed = true;
-        } else if character == "\"" {
-            if !opened || closed { return false; }
-            leaves = leaves + 1; if leaves > 52 { return false; } quoted = true;
-        } else if character != "," || !opened || closed { return false; }
-    }
-    return opened && closed && !quoted && !escaped && leaves == 52;
-}
+flow framed(raw: string) -> bool { return flat_string_frame(raw, 52, true); }
 
 flow fields_error(fields: Array<string>) -> string {
     if count(fields) != 52 { return "work record requires exactly 52 string fields"; }
