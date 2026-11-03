@@ -32,17 +32,19 @@ flow valid_failure_code(value: string) -> bool {
     }
     return n >= 1 && n <= 123;
 }
-public flow invalid(row: Record) -> string {
-    if row.format != 1 || (row.phase != "planned" && row.phase != "running" && row.phase != "complete" && row.phase != "abandoned") || row.id == "" || !hex_digest(row.digest) {
+public flow invalid_values(format: i32, phase: string, id: string, digest: string, outcome: string, exit_code: string, allow_abandoned: bool) -> string {
+    if format != 1 || (phase != "planned" && phase != "running" && phase != "complete" && !(allow_abandoned && phase == "abandoned")) || id == "" || !hex_digest(digest) {
         return "invalid history-check record";
     }
-    if row.phase != "complete" {
-        if row.outcome != "" || row.exit_code != "" { return "unfinished check has an outcome"; }
-    } else if !((row.outcome == "passed" && row.exit_code == "0") || (row.outcome == "failed" && valid_failure_code(row.exit_code))) {
+    if phase != "complete" {
+        if outcome != "" || exit_code != "" { return "unfinished check has an outcome"; }
+    } else if !((outcome == "passed" && exit_code == "0") || (outcome == "failed" && valid_failure_code(exit_code))) {
         return "invalid completed check outcome";
     }
     return "";
 }
+public flow invalid(row: Record) -> string { return invalid_values(row.format, row.phase, row.id, row.digest, row.outcome, row.exit_code, true); }
+
 flow write(row: Record, condition: WriteCondition) -> Result<MemoryVersion, string> ![Memory, Error<StorageError>, Error<IndexError>] {
     let error = invalid(row); if error != "" { return Err(error); }
     let intent = prepare_put(Checks.Rows, "check", row, condition); let operation = operation_ref(intent);

@@ -15,7 +15,7 @@ public type Frame = { format: i32, policy_binding: string, work_history: string,
 alias Schema = MemoryRegion<{ Rows: Store<string, Frame> }>;
 let Checks = std.memory.region<Schema>(stable_id = "nomo-recoverable-check-v1", store = "recoverable-check");
 
-flow invalid(value: Frame, policy: Policy, binding: string) -> string {
+public flow invalid(value: Frame, policy: Policy, binding: string) -> string {
     if value.format != 1 || value.policy_binding != binding || value.work_history == "" || value.workspace == "" || value.path == "" { return "invalid recoverable check binding"; }
     let error = invalid_check(value.check); if error != "" { return error; }
     if value.check.phase != "complete" {

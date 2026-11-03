@@ -2,7 +2,7 @@ module nomo.session.history_followup_check_guard;
 
 import std.memory.{get_entry, prepare_put, operation_ref, commit, WriteCondition, MemoryVersion, MemoryEntry,
     WriteOutcome, MemoryWriteChange, StorageDurability, Missing, Match};
-import std.text.{len, split, starts_with};
+import nomo.session.history_check_guard.invalid_values;
 import nomo.session.history_followup_guard.{Ticket, claim, inspect as inspect_work};
 import nomo.session.history_followup_edit_store.inspect as inspect_edit;
 
@@ -12,37 +12,7 @@ public type Record = { format: i32, phase: string, id: string, digest: string, o
 alias Schema = MemoryRegion<{ Rows: Store<string, Record> }>;
 let Checks = std.memory.region<Schema>(stable_id = "nomo-followup-check-v1", store = "followup-check");
 flow read() -> Option<MemoryEntry<string, Record>> { return get_entry(Checks.Rows, "check"); }
-flow hex_digest(value: string) -> bool {
-    if len(value) != 64 { return false; }
-    for c in split(value, "") limit Iterations(66) {
-        if c != "" && c != "0" && c != "1" && c != "2" && c != "3" && c != "4" && c != "5" && c != "6" && c != "7" && c != "8" && c != "9" && c != "a" && c != "b" && c != "c" && c != "d" && c != "e" && c != "f" { return false; }
-    }
-    return true;
-}
-flow valid_failure_code(value: string) -> bool {
-    if len(value) < 1 || len(value) > 3 { return false; }
-    if len(value) > 1 && starts_with(value, "0") { return false; }
-    var n: i32 = 0;
-    for c in split(value, "") limit Iterations(5) {
-        if c != "" {
-            let digit: i32 = match c { "0" => 0, "1" => 1, "2" => 2, "3" => 3, "4" => 4, "5" => 5,
-                "6" => 6, "7" => 7, "8" => 8, "9" => 9, _ => { return false; } };
-            n = n * 10 + digit;
-        }
-    }
-    return n >= 1 && n <= 123;
-}
-flow invalid(row: Record) -> string {
-    if row.format != 1 || (row.phase != "planned" && row.phase != "running" && row.phase != "complete") || row.id == "" || !hex_digest(row.digest) {
-        return "invalid history-check record";
-    }
-    if row.phase != "complete" {
-        if row.outcome != "" || row.exit_code != "" { return "unfinished check has an outcome"; }
-    } else if !((row.outcome == "passed" && row.exit_code == "0") || (row.outcome == "failed" && valid_failure_code(row.exit_code))) {
-        return "invalid completed check outcome";
-    }
-    return "";
-}
+flow invalid(row: Record) -> string { return invalid_values(row.format, row.phase, row.id, row.digest, row.outcome, row.exit_code, false); }
 flow write(row: Record, condition: WriteCondition) -> Result<MemoryVersion, string> ![Memory, Error<StorageError>, Error<IndexError>] {
     let error = invalid(row); if error != "" { return Err(error); }
     let intent = prepare_put(Checks.Rows, "check", row, condition); let operation = operation_ref(intent);
