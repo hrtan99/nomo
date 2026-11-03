@@ -28,18 +28,9 @@ def main(argv=None):
         edit.validate_history_work(args,workspace,128)
         fd=os.open(state/'.nomo-session.lock',os.O_RDWR|os.O_NOFOLLOW|os.O_CLOEXEC)
         try:
-            lock=os.fstat(fd)
-            if not stat.S_ISREG(lock.st_mode) or lock.st_uid!=os.getuid() or lock.st_nlink!=1 or stat.S_IMODE(lock.st_mode)!=0o600:raise ValueError('session lock must be a private regular file')
-            try:fcntl.flock(fd,fcntl.LOCK_EX|fcntl.LOCK_NB)
-            except BlockingIOError:raise ValueError('session already in use')
+            edit.check_history_lock(fd)
             storage.prepare(state)
-            env={k:v for k,v in os.environ.items() if not k.startswith('ETAS_HOST_')}
-            env.pop('NOMO_QWEN_SERVER_API_KEY',None)
-            env.update(NOMO_SESSION_STATE=str(state),NOMO_EDIT_WORKSPACE_DIR=str(workspace),NOMO_WORK_CONTEXT_DIR=str(context),NOMO_ETAS_VERSION=version)
-            compose=['docker','compose','--env-file','/dev/null','--file',str(ROOT/'compose.yaml'),
-                '--file',str(ROOT/overlay),'--file',str(ROOT/'config/etas-runtime-cache-compose.yaml'),
-                '--file',str(ROOT/'config/nomo-minimax-model-compose.yaml'),'--file',str(ROOT/'config/nomo-read-session-compose.yaml'),
-                '--file',str(ROOT/'config/nomo-history-work-compose.yaml')]
+            env,compose=edit.history_environment(state,workspace,context,version,ROOT,overlay)
             runner=['python3','-B','/workspace/scripts/nomo-verified-etas.py'];flow='history_work';profile='nomo-history-work'
             if policy is not None:
                 env['NOMO_EVENT_POLICY_DIR']=str(policy)

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Launch the existing confirmed edit flow for an exclusive workspace."""
 import argparse
+import fcntl
 import io
 import os
 import re
@@ -74,6 +75,24 @@ def history_work_roots(args, project_root):
     version=os.environ.get('NOMO_ETAS_VERSION','0.2.6')
     if version!='0.2.6':raise ValueError('this Nomo revision requires ETAS 0.2.6; use an earlier Nomo revision for older ETAS')
     return context, workspace, state, version
+
+
+def history_environment(state, workspace, context, version, root, overlay):
+    env={k:v for k,v in os.environ.items() if not k.startswith('ETAS_HOST_')}
+    env.pop('NOMO_QWEN_SERVER_API_KEY',None)
+    env.update(NOMO_SESSION_STATE=str(state),NOMO_EDIT_WORKSPACE_DIR=str(workspace),NOMO_WORK_CONTEXT_DIR=str(context),NOMO_ETAS_VERSION=version)
+    compose=['docker','compose','--env-file','/dev/null','--file',str(root/'compose.yaml'),
+        '--file',str(root/overlay),'--file',str(root/'config/etas-runtime-cache-compose.yaml'),
+        '--file',str(root/'config/nomo-minimax-model-compose.yaml'),'--file',str(root/'config/nomo-read-session-compose.yaml'),
+        '--file',str(root/'config/nomo-history-work-compose.yaml')]
+    return env, compose
+
+
+def check_history_lock(fd):
+    lock = os.fstat(fd)
+    if not stat.S_ISREG(lock.st_mode) or lock.st_uid != os.getuid() or lock.st_nlink != 1 or stat.S_IMODE(lock.st_mode) != 0o600: raise ValueError('session lock must be a private regular file')
+    try: fcntl.flock(fd, fcntl.LOCK_EX|fcntl.LOCK_NB)
+    except BlockingIOError: raise ValueError('session already in use')
 
 
 def validate_history_work(args, workspace, path_maximum):

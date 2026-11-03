@@ -40,7 +40,7 @@ public flow discover(page: usize) -> Result<Discovery, string> ![Console, Fs.lis
     return handle {
         var dirs: Array<WorkspacePath<ReadOnlyRoot>> = [root<ReadOnlyRoot>()]; var depths: Array<usize> = [0]; var files: Array<string> = []; var i: usize = 0;
         var deep = false; var unsupported = false; var seen: usize = 0; var more = false;
-        while i < count(dirs) && !more limit Iterations(64) {
+        while i < count(dirs) && !more limit Iterations(256) {
             let entries = list_limited(dirs[i], 1024, 131072);
             for entry in entries limit Iterations(1024) {
                 let name = relative_name(entry);
@@ -53,7 +53,7 @@ public flow discover(page: usize) -> Result<Discovery, string> ![Console, Fs.lis
                             if seen >= page * 256 { if count(files) == 256 { more = true; break; } files = files.push(name); }
                             seen = seen + 1;
                         }
-                        else if info.is_dir && depths[i] < 4 { if count(dirs) >= 64 { return Err("discovery exceeds 64 directories; select a narrower root"); } dirs = dirs.push(entry); depths = depths.push(depths[i] + 1); }
+                        else if info.is_dir && depths[i] < 4 { if count(dirs) >= 256 { return Err("discovery exceeds 256 directories; select a narrower root"); } dirs = dirs.push(entry); depths = depths.push(depths[i] + 1); }
                         else if info.is_dir { deep = true; } else { unsupported = true; }
                     }
                 }
