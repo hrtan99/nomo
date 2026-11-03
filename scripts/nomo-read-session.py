@@ -20,13 +20,14 @@ def directory(value,label):
 def main(argv=None):
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('action',choices=('new','continue','status'));parser.add_argument('--state',required=True)
-    parser.add_argument('--root');parser.add_argument('--allow');parser.add_argument('--once')
+    parser.add_argument('--root');parser.add_argument('--allow');parser.add_argument('--once');parser.add_argument('--outputs',action='store_true')
     args=parser.parse_args(argv)
     try:
         status=args.action=='status';state=directory(args.state,'state');context=None
         if status:
             if args.root is not None or args.allow is not None or args.once is not None:raise ValueError('status accepts only --state')
         else:
+            if args.outputs:raise ValueError('--outputs is only available for status')
             if args.root is None or args.allow is None or args.once is None:raise ValueError('select --root, --allow and --once for each turn')
             context=directory(args.root,'read root')
             if context==state or context in state.parents or state in context.parents:raise ValueError('read root and state must not overlap')
@@ -58,7 +59,7 @@ def main(argv=None):
                      '--file',str(ROOT/('config/etas-025-official-compose.yaml' if version=='0.2.5' else 'config/etas-024-official-compose.yaml')),'--file',str(ROOT/'config/etas-runtime-cache-compose.yaml')]
             if status:
                 env.pop('MINIMAX_API_KEY',None);env.pop('ETAS_HOST_MODEL_API_KEY',None)
-                profile='nomo-read-session-status';flow='read_session_status';native_args=[]
+                profile='nomo-read-session-status';flow='read_session_status';native_args=['--args','--outputs'] if args.outputs else []
                 print('Inspecting recorded status offline; SQLite may update bookkeeping.',flush=True)
             else:
                 env['NOMO_READ_ROOT']=str(context);profile='nomo-read-session-new' if args.action=='new' else 'nomo-read-session-existing'

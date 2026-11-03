@@ -79,6 +79,13 @@ class SessionChatTest(unittest.TestCase):
         self.assertIn('--once=change this', work)
         self.assertEqual(work[-4:], ['--check', 'python3', '-m', 'pytest'])
 
+    def test_outputs_uses_offline_status(self):
+        code, _, _, calls = self.run_chat('/outputs\n/exit\n', codes=(0,))
+        self.assertEqual(code, 0)
+        command = calls.call_args.args[0]
+        self.assertIn('status', command)
+        self.assertIn('--outputs', command)
+
     def test_followup_routes_with_fresh_inputs(self):
         code, _, _, calls = self.run_chat('/followup op2 "/tmp/edit dir" file.txt "change again" --check python3 -m pytest\n/exit\n')
         self.assertEqual(code, 0)

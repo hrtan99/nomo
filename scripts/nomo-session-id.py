@@ -33,11 +33,13 @@ def main(argv=None):
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('action',choices=('start','resume','status','work','followup','decision'));parser.add_argument('--sessions-dir',required=True)
     parser.add_argument('--id');parser.add_argument('--root');parser.add_argument('--allow');parser.add_argument('--once')
+    parser.add_argument('--outputs',action='store_true')
     parser.add_argument('--read-root');parser.add_argument('--operation-id');parser.add_argument('--path');parser.add_argument('--target',choices=('work','check','followup','followup-check'));parser.add_argument('--check',nargs=argparse.REMAINDER)
     args=parser.parse_args(argv)
     try:
         if args.action=='start' and args.id is not None:raise ValueError('a new session ID is generated automatically')
         if args.action!='start' and args.id is None:raise ValueError('select an existing session ID')
+        if args.outputs and args.action!='status':raise ValueError('--outputs is only available for status')
         if args.id=='latest':raise ValueError('latest compatible session is unavailable: workspace identity continuity cannot yet be verified')
         if args.action=='decision':
             if args.operation_id is None or args.target is None:raise ValueError('select an operation ID and recovery target')
@@ -68,6 +70,7 @@ def main(argv=None):
             mode={'start':'new','resume':'continue','status':'status'}[args.action]
             command=[sys.executable,str(ROOT/'scripts/nomo-read-session.py'),mode,'--state',str(state)]
             if mode!='status':command+=['--root',args.root,'--allow='+args.allow,'--once='+args.once]
+            elif args.outputs:command+=['--outputs']
         code=_edit.run_owned(command,dict(os.environ))
         if code:print('Session state is retained; inspect it before another action.',file=sys.stderr,flush=True)
         return code

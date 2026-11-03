@@ -11,7 +11,7 @@ flow hex(value: u8) -> string { return split("0123456789abcdef", "")[value + 1];
 
 // utf8_encode yields valid scalar encodings. Nibble arithmetic stays in u8;
 // four-byte scalars become the exact JSON UTF-16 surrogate pair, not UTF-8 bytes.
-flow escaped(character: string) -> string {
+public flow escaped(character: string) -> string {
     let bytes = utf8_encode(character);
     let size = byte_count(bytes);
     let slash = split("\\/", "")[1];

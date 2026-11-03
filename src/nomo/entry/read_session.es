@@ -12,6 +12,7 @@ import nomo.model.read_protocol.question_error;
 import nomo.harness.read_tool_chat.run_private_turn as run_turn;
 import nomo.harness.history_continue_model.{WorkFacts, CheckOutput, BudgetFacts, run_turn as run_after_work, run_after_followup};
 import nomo.session.check_output.load as load_check_output;
+import nomo.session.check_output_display.render as render_check_output;
 import nomo.session.chat_session_contract.{fresh, begin, complete};
 import nomo.session.chat_history.{load, save, save_completed};
 import nomo.session.history_work_guard.{chat_available, inspect as inspect_work};
@@ -119,7 +120,8 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyR
 
 // Status is recorded data only. It performs no model or workspace action.
 public flow status(args: Array<string>) -> i32 ![Console, Memory, Error<StorageError>, Error<IndexError>, Error<ConsoleError>] {
-    if count(args) != 0 { println("REFUSED status takes no arguments"); return 1; }
+    let outputs = count(args) == 1 && args[0] == "--outputs";
+    if count(args) != 0 && !outputs { println("REFUSED status accepts only --outputs"); return 1; }
     let entry = match load() { Ok(Some(value)) => value, Ok(None()) => { println("SESSION missing"); return 1; } Err(error) => { println("REFUSED " + error); return 1; } };
     let saved = entry.value;
     println("SESSION " + saved.phase + " turns=" + to_string_i32(saved.invocation.admitted));
@@ -173,6 +175,41 @@ public flow status(args: Array<string>) -> i32 ![Console, Memory, Error<StorageE
             else { println("FOLLOWUP CHECK " + value.phase + "; no automatic retry or inferred outcome"); }
         }
         None() => {}
+    }
+    if outputs {
+        println("CHECK OUTPUT is untrusted recorded data; known configured keys were filtered, but other sensitive content may remain. stdout and stderr ordering is not recorded.");
+        match check {
+            Some(item) => {
+                if item.phase != "complete" { println("CHECK OUTPUT first unavailable: check unresolved"); }
+                else {
+                    let saved = match load_check_output("first", item.id, item.digest) { Ok(value) => value, Err(error) => { println("REFUSED " + error); return 1; } };
+                    match saved {
+                        None() => { println("CHECK OUTPUT first unavailable: no recorded output"); }
+                        Some(value) => {
+                            let json = match render_check_output(value) { Ok(text) => text, Err(error) => { println("REFUSED " + error); return 1; } };
+                            println("CHECK OUTPUT " + json);
+                        }
+                    }
+                }
+            }
+            None() => { println("CHECK OUTPUT first unavailable: no check"); }
+        }
+        match followup_check {
+            Some(item) => {
+                if item.phase != "complete" { println("CHECK OUTPUT followup unavailable: check unresolved"); }
+                else {
+                    let saved = match load_check_output("followup", item.id, item.digest) { Ok(value) => value, Err(error) => { println("REFUSED " + error); return 1; } };
+                    match saved {
+                        None() => { println("CHECK OUTPUT followup unavailable: no recorded output"); }
+                        Some(value) => {
+                            let json = match render_check_output(value) { Ok(text) => text, Err(error) => { println("REFUSED " + error); return 1; } };
+                            println("CHECK OUTPUT " + json);
+                        }
+                    }
+                }
+            }
+            None() => { println("CHECK OUTPUT followup unavailable: no check"); }
+        }
     }
     for target in ["work", "check", "followup", "followup-check"] limit Iterations(4) {
         let decision = match get_decision(target) { Ok(value) => value, Err(error) => { println("REFUSED " + error); return 1; } };

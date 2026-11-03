@@ -50,6 +50,15 @@ class ReadSessionLauncherTest(unittest.TestCase):
                 name='config/etas-'+version.replace('.','')+'-official-compose.yaml'
                 self.assertIn(str(self.project/name),run.call_args.args[0])
 
+    def test_status_outputs_stays_offline_and_is_explicit(self):
+        self.existing()
+        with patch.object(launcher,'run_owned',return_value=0) as run:
+            self.assertEqual(self.invoke(['status','--state',str(self.state),'--outputs']),0)
+        cmd,env=run.call_args.args[:2]
+        self.assertEqual(cmd[-2:],['--args','--outputs'])
+        self.assertNotIn('MINIMAX_API_KEY',env)
+        self.assertFalse(any('nomo-minimax-read-compose.yaml' in value for value in cmd))
+
     def test_overlapping_or_nonprivate_state_refused_before_launch(self):
         with patch.object(launcher,'run_owned') as run:
             self.assertNotEqual(self.invoke(['new','--root',str(self.root),'--state',str(self.state),'--allow','x','--once','q']),0)

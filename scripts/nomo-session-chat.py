@@ -33,7 +33,7 @@ def main(argv=None):
     print('Resume: nomo-read.sh session-id resume --sessions-dir ' + shlex.quote(args.sessions_dir)
           + ' --id ' + shlex.quote(args.id) + ' --root DIR --allow FILE --once QUESTION', flush=True)
     if tty and args.once is None:
-        print('Enter a question, /help, /status, /work, /followup or /exit.', flush=True)
+        print('Enter a question, /help, /status, /outputs, /work, /followup or /exit.', flush=True)
     while True:
         if args.once is not None:
             question = args.once
@@ -49,14 +49,15 @@ def main(argv=None):
             if question == '/exit':
                 return 0
             if question == '/help':
-                print('Read turns use the selected root and allowlist. /status inspects recorded state.')
+                print('Read turns use the selected root and allowlist. /status inspects recorded state; /outputs shows recorded check output.')
                 print('/work OP_ID EDIT_ROOT PATH "TASK" [--check COMMAND ARG ...] runs one explicitly confirmed work operation.')
                 print('/followup OP_ID EDIT_ROOT PATH "TASK" [--check COMMAND ARG ...] runs the second bounded work operation.')
                 print('Quote arguments containing spaces. No shell interprets the check arguments. /exit leaves the session.')
                 continue
-            if question == '/status':
+            if question == '/status' or question == '/outputs':
                 command = [sys.executable, str(ROOT / 'scripts/nomo-session-id.py'), 'status',
                            '--sessions-dir', args.sessions_dir, '--id', args.id]
+                if question == '/outputs':command += ['--outputs']
                 code = edit.run_owned(command, dict(os.environ))
                 if code:
                     print('Status failed; inspect session state before continuing.', file=sys.stderr, flush=True)
