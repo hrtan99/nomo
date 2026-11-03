@@ -1,5 +1,7 @@
 module nomo.session.recoverable_work_facts;
 
+import nomo.session.work_fact_events.summary_source;
+
 import nomo.session.redaction.Policy;
 import nomo.session.event_text_codec.decode;
 import nomo.harness.history_continue_model.{WorkFacts, CheckOutput};
@@ -42,7 +44,8 @@ public flow snapshot(policy: Policy, binding: string) -> Result<Facts, string> {
                 outcome = value.value.check.outcome; exit = value.value.check.exit_code;
                 output = Some(match check_values(Some(value.value), policy) { Ok(item) => item, Err(error) => { return Err(error); } });
             } None() => {} }
-            first_facts = Some(WorkFacts { id = work.id, summary = work.summary, check = outcome, exit_code = exit, output = output });
+            let origin = match summary_source(item.value.events, work.summary, policy) { Ok(value) => value, Err(error) => { return Err(error); } };
+            first_facts = Some(WorkFacts { id = work.id, summary = work.summary, summary_source = origin, check = outcome, exit_code = exit, output = output });
         }
     }
     match followup {
@@ -66,7 +69,8 @@ public flow snapshot(policy: Policy, binding: string) -> Result<Facts, string> {
                 let err = match decode(value.value.stderr, policy) { Ok(item) => item, Err(error) => { return Err(error); } };
                 output = Some(CheckOutput { stdout = out, stderr = err, stdout_truncated = value.value.stdout_truncated, stderr_truncated = value.value.stderr_truncated });
             } None() => {} }
-            second_facts = Some(WorkFacts { id = work.id, summary = work.summary, check = outcome, exit_code = exit, output = output });
+            let origin = match summary_source(item.value.events, work.summary, policy) { Ok(value) => value, Err(error) => { return Err(error); } };
+            second_facts = Some(WorkFacts { id = work.id, summary = work.summary, summary_source = origin, check = outcome, exit_code = exit, output = output });
         }
     }
     return Ok(Facts { first = first_facts, followup = second_facts, calls = calls, generation = generation });

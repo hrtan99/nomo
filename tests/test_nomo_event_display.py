@@ -18,7 +18,7 @@ class EventDisplayTest(unittest.TestCase):
   with tempfile.TemporaryDirectory() as tmp:
    root=Path(tmp).resolve();state=root/'state';state.mkdir(mode=0o700);(state/'.nomo-session.lock').touch(mode=0o600);(state/'history.sqlite3').write_bytes(b'synthetic');policy=root/'policy';policy.mkdir(mode=0o700);(policy/'policy.json').write_text('{"format":1,"literals":["SYNTHETIC_SECRET"]}');(policy/'policy.json').chmod(0o600);(policy/'binding.key').write_bytes(b'K'*32);(policy/'binding.key').chmod(0o600);project=root/'project';project.mkdir(mode=0o700)
    def owned(command,env,capture,**kwargs):
-    self.assertIn('recoverable_read_status',command);self.assertNotIn('MINIMAX_API_KEY',env);self.assertEqual(kwargs['capture_limit'],524288);self.assertFalse(kwargs['forward_output']);capture['stdout']={'data':bytearray(raw_view()),'truncated':False};capture['stderr']={'data':bytearray(),'truncated':False};return 0
+    self.assertIn('recoverable_read_status',command);self.assertNotIn('MINIMAX_API_KEY',env);self.assertEqual(kwargs['capture_limit'],4194304);self.assertFalse(kwargs['forward_output']);capture['stdout']={'data':bytearray(raw_view()),'truncated':False};capture['stderr']={'data':bytearray(),'truncated':False};return 0
    out=io.StringIO()
    with patch.object(launcher,'ROOT',project),patch.object(launcher,'run_owned',side_effect=owned),patch.dict(os.environ,{'MINIMAX_API_KEY':'SYNTHETIC_KEY'}),contextlib.redirect_stdout(out),contextlib.redirect_stderr(io.StringIO()):
     code=launcher.main(['status','--state',str(state),'--events','--events-policy-dir',str(policy)])

@@ -1,5 +1,6 @@
 module nomo.entry.history_followup;
 
+
 import std.io.println;
 import std.collections.len as count;
 import std.io.IOError as ConsoleError;
@@ -15,7 +16,7 @@ import nomo.harness.history_continue_model.CheckOutput;
 import nomo.session.history_check_guard.inspect as inspect_first_check;
 import nomo.session.check_output.load as load_check_output;
 import nomo.harness.harness_tool_chat_contract.Previous;
-import nomo.entry.harness_work_entry.{prepare_unicode, finish_edit, finish_summary, ledger, Pending, Failure, Completed, Summary};
+import nomo.entry.harness_work_entry.{prepare_unicode, finish_edit, finish_history_summary, ledger, Pending, Failure, Completed, Summary};
 import nomo.session.chat_history.load as load_chat;
 import nomo.session.history_followup_guard.{admit, claim, finish};
 import nomo.session.history_followup_check_guard.plan as plan_check;
@@ -39,7 +40,7 @@ flow prepare_history(input: Work, prior_request: string, previous: Previous, pri
 }
 flow summarize_history(value: Completed, prior_request: string, previous: Previous, prior_work: PriorWork) -> Result<Summary, Failure> {
     let log = (name: string, state: Ledger) => stage(name, state);
-    return finish_summary(value, log, false, false) with {
+    return finish_history_summary(value, log) with {
         LegacyEditStages.plan(item) => { resume plan(item, prior_request, previous, prior_work); }
         LegacyEditStages.child(item) => { resume child(item, prior_request, previous, prior_work); }
         LegacyEditStages.aggregate(item) => { resume aggregate(item, prior_request, previous, prior_work); }
@@ -80,7 +81,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
     let prior_request = history.value.last_request; let previous = history.value.invocation.prior;
     let checked = match ticket.record.parent.check { Some(value) => value.outcome, None() => "not requested" };
     let exit = match ticket.record.parent.check { Some(value) => value.exit_code, None() => "" };
-    let prior_work = PriorWork { request = ticket.record.parent.work.request, summary = ticket.record.parent.work.summary, check = checked, exit_code = exit, output = first_output };
+    let prior_work = PriorWork { request = ticket.record.parent.work.request, summary = ticket.record.parent.work.summary, summary_source = "unknown", check = checked, exit_code = exit, output = first_output };
     let pending = match prepare_history(input, prior_request, previous, prior_work) { Ok(value) => value, Err(failure) => { ledger(failure.state); return refused(failure.error); } };
     let selected = match confirm_current(pending.selected, pending.prepared) { Ok(value) => value, Err(error) => { return refused(error); } };
     match claim(ticket) { Ok(_) => {} Err(error) => { return refused(error); } }

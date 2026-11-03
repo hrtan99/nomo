@@ -167,6 +167,7 @@ class RuntimeDiagnostic:
     _length = b'error[analysis::UnhandledRuntimeError]: model generation failed: IncompleteResponse: OpenAI-compatible generation is incomplete (finish_reason=length)'
     _provider_503 = b'error[analysis::UnhandledRuntimeError]: model host boundary failed: OpenAI-compatible endpoint returned an error status (status=503)'
     _summary_bound = b'REFUSED edit completed; final answer requires 1..512 nonblank UTF-8 bytes'
+    _history_summary_bound = b'REFUSED edit completed; final answer requires 1..1024 nonblank UTF-8 bytes'
     _read_refusals = {
         b'REFUSED expected bounded flat JSON string array': 'bounded_json_frame_refused',
         b'REFUSED invalid JSON': 'invalid_json_refused',
@@ -214,7 +215,7 @@ class RuntimeDiagnostic:
             self.categories.add('incomplete_response_length')
         elif line == self._provider_503:
             self.categories.add('provider_http_503')
-        elif line == self._summary_bound:
+        elif line in (self._summary_bound, self._history_summary_bound):
             self.categories.add('summary_blank_or_over_limit')
         elif line in self._read_refusals:
             self.categories.add(self._read_refusals[line])
@@ -239,7 +240,7 @@ def run_owned(command, env, capture=None, input_data=None, diagnostic=None, *, c
     input_errors = []
     forwarded = False
     old = {}
-    if not isinstance(capture_limit,int) or not 1 <= capture_limit <= 524288:
+    if not isinstance(capture_limit,int) or not 1 <= capture_limit <= 4194304:
         raise ValueError('invalid capture limit')
 
     def interrupted(number, _frame):

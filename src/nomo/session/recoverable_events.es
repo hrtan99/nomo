@@ -18,7 +18,7 @@ public flow empty() -> Frame {
 }
 
 flow event_error(item: Event, policy: Policy) -> string {
-    if !safe(item.role, 128) || !safe(item.kind, 128) || !safe(item.name, 128) || !safe(item.text, 2048) {
+    if !safe(item.role, 128) || !safe(item.kind, 128) || !safe(item.name, 128) || !safe(item.text, 8192) {
         return "invalid recoverable event content";
     }
     for field in [item.role, item.kind, item.name, item.text] limit Iterations(4) {
@@ -58,7 +58,7 @@ public flow append(before: Frame, turn: i32, input: Array<Event>, policy: Policy
             if checked.replacements != 0 { return Err("sensitive literal in event metadata"); }
         }
         let clean = match redact(item.text, policy) { Ok(value) => value, Err(problem) => { return Err(problem); } };
-        if !safe(clean.value, 2048) { return Err("recoverable event text exceeds limits or is unsafe"); }
+        if !safe(clean.value, 8192) { return Err("recoverable event text exceeds limits or is unsafe"); }
         replacements = replacements + clean.replacements;
         records = records.push(Event { role = item.role, kind = item.kind, name = item.name, text = clean.value });
     }

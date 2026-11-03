@@ -1,5 +1,7 @@
 module nomo.entry.recoverable_history_followup;
 
+import nomo.session.work_fact_events.summary_source;
+
 import std.io.println;
 import std.collections.len as count;
 import std.io.IOError as ConsoleError;
@@ -18,7 +20,7 @@ import nomo.session.recoverable_work_store.load as inspect_first_work;
 import nomo.session.event_text_codec.decode;
 
 import nomo.harness.harness_tool_chat_contract.Previous;
-import nomo.entry.harness_work_entry.{prepare_unicode, finish_edit, finish_summary, ledger, Pending, Failure, Completed, Summary};
+import nomo.entry.harness_work_entry.{prepare_unicode, finish_edit, finish_history_summary, ledger, Pending, Failure, Completed, Summary};
 import nomo.session.recoverable_chat_store.load as load_chat;
 import nomo.session.recoverable_followup_store.{admit, claim, finish};
 import nomo.session.recoverable_followup_check_store.{plan as plan_check, load as load_followup_check};
@@ -43,7 +45,7 @@ flow prepare_history(input: Work, prior_request: string, previous: Previous, pri
 }
 flow summarize_history(value: Completed, prior_request: string, previous: Previous, prior_work: PriorWork) -> Result<Summary, Failure> {
     let log = (name: string, state: Ledger) => stage(name, state);
-    return finish_summary(value, log, false, false) with {
+    return finish_history_summary(value, log) with {
         LegacyEditStages.plan(item) => { resume plan(item, prior_request, previous, prior_work); }
         LegacyEditStages.child(item) => { resume child(item, prior_request, previous, prior_work); }
         LegacyEditStages.aggregate(item) => { resume aggregate(item, prior_request, previous, prior_work); }
@@ -82,6 +84,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
         None() => {}
     }
     match load_followup_check(policy, binding) { Ok(None()) => {} _ => { return refused("followup check exists or is invalid"); } }
+    let origin = match summary_source(first_work.value.events, first_work.value.work.summary, policy) { Ok(value) => value, Err(error) => { return refused(error); } };
     let ticket = match admit(input.edit.id, input.edit.workspace, input.edit.path, input.edit.request, history, policy, binding) {
         Ok(value) => value, Err(error) => { return refused(error); }
     };
@@ -91,7 +94,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
     if has_check { match plan_check(ticket, check_digest, policy, binding) { Ok(_) => {} Err(error) => { return refused(error); } } }
     println("RESERVED event followup; interruption or uncertain effects cannot be retried automatically.");
     let prior_request = history.value.chat.last_request; let previous = history.value.chat.invocation.prior;
-    let prior_work = PriorWork { request = first_work.value.work.request, summary = first_work.value.work.summary, check = checked, exit_code = exit, output = first_output };
+    let prior_work = PriorWork { request = first_work.value.work.request, summary = first_work.value.work.summary, summary_source = origin, check = checked, exit_code = exit, output = first_output };
     let pending = match prepare_history(input, prior_request, previous, prior_work) { Ok(value) => value, Err(failure) => { ledger(failure.state); return refused(failure.error); } };
     let selected = match confirm_current(pending.selected, pending.prepared) { Ok(value) => value, Err(error) => { return refused(error); } };
     match claim(ticket, policy, binding) { Ok(_) => {} Err(error) => { return refused(error); } }

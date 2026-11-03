@@ -12,7 +12,7 @@ import nomo.harness.read_model_tools.work_child_turn;
 import nomo.harness.legacy_string_stages.{LegacyStringStages, LegacyEditStages};
 import nomo.harness.history_work_model.{read_main, plan, child, aggregate};
 import nomo.harness.harness_tool_chat_contract.Previous;
-import nomo.entry.harness_work_entry.{prepare_unicode, finish_edit, finish_summary, ledger, Pending, Failure, Completed, Summary};
+import nomo.entry.harness_work_entry.{prepare_unicode, finish_edit, finish_history_summary, ledger, Pending, Failure, Completed, Summary};
 import nomo.session.chat_history.load as load_chat;
 import nomo.session.history_work_guard.{admit, claim, finish};
 import nomo.session.history_check_guard.plan as plan_check;
@@ -36,7 +36,7 @@ flow prepare_history(input: Work, prior_request: string, previous: Previous) -> 
 }
 flow summarize_history(value: Completed, prior_request: string, previous: Previous) -> Result<Summary, Failure> {
     let log = (name: string, state: Ledger) => stage(name, state);
-    return finish_summary(value, log, false, false) with {
+    return finish_history_summary(value, log) with {
         LegacyEditStages.plan(item) => { resume plan(item, prior_request, previous); }
         LegacyEditStages.child(item) => { resume child(item, prior_request, previous); }
         LegacyEditStages.aggregate(item) => { resume aggregate(item, prior_request, previous); }

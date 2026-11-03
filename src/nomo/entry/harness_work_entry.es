@@ -16,7 +16,7 @@ import nomo.harness.edit_original.EditOriginal;
 import nomo.harness.harness_work_model.{read_main, edit_plan, edit_child, aggregate};
 import nomo.harness.work_chain_context.ParentFacts;
 import nomo.harness.work_chain_model.{plan as chain_plan, child as chain_child, aggregate as chain_aggregate};
-import nomo.harness.harness_edit_contract.{decode_plan, decode_edit, text_error, decode_work_plan, decode_work_edit, work_summary_error};
+import nomo.harness.harness_edit_contract.{decode_plan, decode_edit, text_error, history_summary_error, history_fallback_summary, decode_work_plan, decode_work_edit, work_summary_error};
 import nomo.tools.workspace.ReadOnlyRoot;
 import nomo.tools.edit_file.{EditableRoot, Prepared, read_original, prepare_original};
 import nomo.session.edit_operation_store.available;
@@ -50,7 +50,7 @@ flow help() -> unit {
 public type Failure = { state: Ledger, error: string };
 public type Pending = { selected: Selector, prepared: Prepared, evidence: Evidence, request: string, task: string, state: Ledger };
 public type Completed = { context: Context, state: Ledger };
-public type Summary = { answer: string, state: Ledger };
+public type Summary = { answer: string, state: Ledger, model_generated: bool };
 flow failed(state: Ledger, error: string) -> Result<Pending, Failure> { return Err(Failure { state = state, error = error }); }
 
 flow unicode_read(request: string, allowed: Array<string>, state: ReadLedger) -> Result<ReadReport, ReadFailure> {
@@ -168,14 +168,25 @@ public flow finish_edit(pending: Pending, outcome: Confirmed) -> Result<Complete
     recorded(pending.selected); return completed_context_work(pending, outcome);
 }
 
-public flow finish_summary(completed: Completed, stage_log: (string, Ledger) -> unit, work: bool, inspect_all: bool) -> Result<Summary, Failure> {
+flow finish_summary_mode(completed: Completed, stage_log: (string, Ledger) -> unit, work: bool, inspect_all: bool, history: bool) -> Result<Summary, Failure> {
     let state = match bump_edit(completed.state, true) { Ok(value) => value,
         Err(error) => { return Err(Failure { state = completed.state, error = "edit completed; " + error }); } };
     stage_log("edit-aggregate", state);
     let answer = perform LegacyEditStages.aggregate(completed.context);
     if inspect_all { println(response_text(answer, "edit-aggregate", "lab-qwen-", 512)); }
-    let error = if work { work_summary_error(answer) } else { text_error(answer, "final answer") }; if error != "" { return Err(Failure { state = state, error = "edit completed; " + error }); }
-    return Ok(Summary { answer = answer, state = state });
+    let error = if history { history_summary_error(answer, "final answer") } else { if work { work_summary_error(answer) } else { text_error(answer, "final answer") } };
+    if history && error == "final answer requires 1..1024 nonblank UTF-8 bytes" {
+        println("MODEL SUMMARY unavailable: blank or over limit; the edit was already confirmed. A factual fallback will be recorded.");
+        return Ok(Summary { answer = history_fallback_summary(), state = state, model_generated = false });
+    }
+    if error != "" { return Err(Failure { state = state, error = "edit completed; " + error }); }
+    return Ok(Summary { answer = answer, state = state, model_generated = true });
+}
+public flow finish_summary(completed: Completed, stage_log: (string, Ledger) -> unit, work: bool, inspect_all: bool) -> Result<Summary, Failure> {
+    return finish_summary_mode(completed, stage_log, work, inspect_all, false);
+}
+public flow finish_history_summary(completed: Completed, stage_log: (string, Ledger) -> unit) -> Result<Summary, Failure> {
+    return finish_summary_mode(completed, stage_log, false, false, true);
 }
 
 public flow summarize(completed: Completed) -> Result<Summary, Failure> {

@@ -43,7 +43,7 @@ class Fake(BaseHTTPRequestHandler):
                 assert ctx['current']['edit']['after']=='before gold\n';value='Second edit completed using current context.'
             elif i==18:
                 for key,identifier,summary,stdout in [('work','edit1','Edit completed using current context.','FIRST_CHECK_OK'),('followup','edit2','Second edit completed using current context.','SECOND_CHECK_OK')]:
-                    item=ctx[key];assert item['id']==identifier and item['summary']==summary and item['check']=='passed' and item['exit_code']=='0'
+                    item=ctx[key];assert item['id']==identifier and item['summary']==summary and item['summary_source']=='model' and item['check']=='passed' and item['exit_code']=='0'
                     data=item['output']['fields'][0];assert data['stderr'] in ('','\n') and not data['stderr_truncated']
                     if self.server.omitted and key=='work':assert data['stdout']=='' and data['stdout_truncated'] and 'was omitted and is not evidence of empty output' in req['messages'][0]['content']
                     else:assert data['stdout']==stdout and not data['stdout_truncated']

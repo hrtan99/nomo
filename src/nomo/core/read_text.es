@@ -8,9 +8,9 @@ import std.bytes.len as bytes_len;
 // Reject C0/C1 controls, terminal escape, Unicode line separators and common
 // invisible bidirectional formatting controls before any terminal output.
 public flow safe(text: string, maximum: usize) -> bool {
-    if maximum == 0 || maximum > 2048 || len(text) > maximum { return false; }
+    if maximum == 0 || maximum > 8192 || len(text) > maximum { return false; }
     if bytes_len(utf8_encode(text)) > maximum { return false; }
-    for character in split(text, "") limit Iterations(2050) {
+    for character in split(text, "") limit Iterations(8194) {
         if character != "" {
             let bytes = utf8_encode(character); let size = bytes_len(bytes);
             if size == 1 && (bytes[0] < 32 || bytes[0] == 127) { return false; }

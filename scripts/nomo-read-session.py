@@ -21,7 +21,7 @@ def directory(value,label):
 
 def event_lines(raw):
     """Decode the bounded status view without trusting text as terminal control."""
-    if len(raw)>524288:raise ValueError('event view exceeds display bound')
+    if len(raw)>4194304:raise ValueError('event view exceeds display bound')
     lines=[line[len(b'EVENT VIEW '):] for line in raw.splitlines() if line.startswith(b'EVENT VIEW {')]
     if len(lines)!=1:raise ValueError('event view missing or ambiguous')
     try:view=json.loads(lines[0])
@@ -115,7 +115,7 @@ def main(argv=None):
             command=[sys.executable,str(ROOT/'scripts/terminal-transport.py'),*compose,'run','--rm','--no-deps','--pull','never','--tty=false','--workdir','/session-state','dev',*native]
             if status:
                 if args.events:
-                    captured={};code=run_owned(command,env,captured,input_data=policy_bytes,capture_limit=524288,forward_output=False)
+                    captured={};code=run_owned(command,env,captured,input_data=policy_bytes,capture_limit=4194304,forward_output=False)
                     if code:return code
                     if any(item.get('truncated') for item in captured.values()):raise ValueError('event output was truncated')
                     rendered=event_lines(bytes(captured.get('stdout',{}).get('data',b'')))

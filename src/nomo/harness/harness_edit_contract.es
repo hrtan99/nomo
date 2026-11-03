@@ -60,6 +60,15 @@ public flow text_error(text: string, field: string) -> string {
     return "";
 }
 
+// History-work summaries are complete facts, not abbreviated context.
+public flow history_fallback_summary() -> string { return "Edit applied; model summary unavailable (blank or over limit)."; }
+public flow history_summary_error(text: string, field: string) -> string {
+    if len(text) == 0 || len(text) > 1024 || trim(text) == "" { return field + " requires 1..1024 nonblank UTF-8 bytes"; }
+    let size = match text_bytes(text, field) { Ok(value) => value, Err(error) => { return error; } };
+    if size > 1024 { return field + " requires 1..1024 nonblank UTF-8 bytes"; }
+    return "";
+}
+
 // The same bounded scanner serves legacy and current-v2 decoding. Diagnostic
 // classification changes no accepted wire: outside-string JSON whitespace was
 // already supported, while quoted data is left for the complete JSON parser.

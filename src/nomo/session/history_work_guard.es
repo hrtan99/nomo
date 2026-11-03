@@ -6,7 +6,7 @@ import nomo.session.chat_session_contract.Session;
 import nomo.session.chat_history.{Entry, load as load_chat};
 import nomo.session.edit_operation.selector_error;
 import nomo.model.read_protocol.question_error;
-import nomo.harness.harness_edit_contract.text_error;
+import nomo.harness.harness_edit_contract.history_summary_error;
 import std.text.len;
 import nomo.harness.harness_work_contract.{Ledger, ledger_error, native_tokens};
 
@@ -29,7 +29,7 @@ public flow invalid(value: Record) -> string {
     if value.phase == "running" {
         if value.summary != "" || value.reserved != full() || value.settled != None() { return "invalid running work reservation"; }
     } else {
-        if text_error(value.summary, "summary") != "" || value.reserved != zero() { return "invalid completed work summary or reservation"; }
+        if history_summary_error(value.summary, "summary") != "" || value.reserved != zero() { return "invalid completed work summary or reservation"; }
         let spent = match value.settled { Some(item) => item, None() => { return "missing settled work ledger"; } };
         if ledger_error(spent) != "" || spent.read.steps + spent.edit.steps != 13 || spent.read.calls + spent.edit.calls != 7 ||
             spent.read.tokens + spent.edit.tokens != 47104 || native_tokens(spent) != 196608 { return "invalid settled work ledger"; }

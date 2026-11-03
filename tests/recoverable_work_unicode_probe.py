@@ -10,8 +10,12 @@ SECOND_TASK='Change green to gold using context'
 DELEGATE='读取 context.txt 中的颜色；'+'确认颜色并保留相关上下文。'*5
 CHILD='当前颜色是绿色'
 READ_SUMMARY='文件内容是绿色'
-FIRST_SUMMARY='已按绿色上下文完成编辑'
-SECOND_SUMMARY='Second edit completed.'
+FALLBACK='Edit applied; model summary unavailable (blank or over limit).'
+MODE=os.environ.get('SYNTHETIC_SUMMARY_MODE','full')
+FIRST_SUMMARY=FALLBACK if MODE=='fallback' else '界'*341+'a'
+MODEL_FIRST_SUMMARY='X'*1025 if MODE=='fallback' else FIRST_SUMMARY
+FIRST_SOURCE='system' if MODE=='fallback' else 'model'
+SECOND_SUMMARY='界'*341+'a'
 
 class Fake(BaseHTTPRequestHandler):
     def log_message(self,*_):pass
@@ -35,19 +39,19 @@ class Fake(BaseHTTPRequestHandler):
                 value=['delegate','把 old 替换为 green']
             elif i==9:value=['edit','old','green']
             elif i==10:
-                assert ctx['current']['edit']['after']=='before green\n';value=FIRST_SUMMARY
+                assert ctx['current']['edit']['after']=='before green\n';value=MODEL_FIRST_SUMMARY
             elif i==11:
-                assert ctx['current']['request']==SECOND_TASK and ctx['prior_work']['summary']==FIRST_SUMMARY;value=['delegate','Read context.txt for the color']
+                assert ctx['current']['request']==SECOND_TASK and ctx['prior_work']['summary']==FIRST_SUMMARY and ctx['prior_work']['summary_source']==FIRST_SOURCE;value=['delegate','Read context.txt for the color']
             elif i==12:value=['read','context.txt']
             elif i==13:value=['final',CHILD]
             elif i==14:
                 assert ctx['current']['result']==CHILD and '绿色' in ctx['current']['outcome'];value=READ_SUMMARY
             elif i==15:
-                assert ctx['prior_work']['summary']==FIRST_SUMMARY and ctx['current']['evidence']['summary']==READ_SUMMARY;value=['delegate','Replace green with gold']
+                assert ctx['prior_work']['summary']==FIRST_SUMMARY and ctx['prior_work']['summary_source']==FIRST_SOURCE and ctx['current']['evidence']['summary']==READ_SUMMARY;value=['delegate','Replace green with gold']
             elif i==16:value=['edit','green','gold']
             elif i==17:value=SECOND_SUMMARY
             elif i==18:
-                assert ctx['work']['summary']==FIRST_SUMMARY and ctx['followup']['summary']==SECOND_SUMMARY;value=['delegate','Read context.txt']
+                assert ctx['work']['summary']==FIRST_SUMMARY and ctx['work']['summary_source']==FIRST_SOURCE and ctx['followup']['summary']==SECOND_SUMMARY and ctx['followup']['summary_source']=='model';value=['delegate','Read context.txt']
             elif i==19:value=['read','context.txt']
             elif i==20:value=['final','记录完整']
             elif i==21:value='两次编辑均已记录'
@@ -119,6 +123,7 @@ def main():
         assert view['work_phase']=='complete' and view['followup_phase']=='complete' and view['check_outcome']=='passed' and view['followup_check_outcome']=='passed'
         contents=[json.loads(event['text']) for event in view['work_events']]
         assert FIRST_TASK in contents and FIRST_SUMMARY in contents and CHILD in contents and READ_SUMMARY in contents and any('绿色' in value for value in contents)
+        assert any(json.loads(event['text'])==FIRST_SUMMARY and event['role']==('system' if MODE=='fallback' else 'assistant') and event['kind']==('notice' if MODE=='fallback' else 'answer') for event in view['work_events'])
         with sqlite3.connect(state/'history.sqlite3') as db:assert db.execute('pragma integrity_check').fetchone()==('ok',)
         resumed=subprocess.run([str(project/'scripts/nomo-read.sh'),'session-continue','--root',str(current),'--state',str(state),'--allow','context.txt','--once','解释两次结果','--events-policy-dir',str(policy)],env=env,capture_output=True,timeout=120)
         assert resumed.returncode==0 and server.phases==list(range(22)) and not server.failed

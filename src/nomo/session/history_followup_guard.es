@@ -10,7 +10,7 @@ import nomo.session.history_check_guard.{Record as CheckRecord, inspect as inspe
 import nomo.session.edit_operation_store.inspect as inspect_edit;
 import nomo.session.edit_operation.{selector_error, Record as EditRecord};
 import nomo.model.read_protocol.question_error;
-import nomo.harness.harness_edit_contract.text_error;
+import nomo.harness.harness_edit_contract.history_summary_error;
 import nomo.harness.harness_work_contract.{Ledger, ledger_error, native_tokens};
 
 // One additional work attempt, with separate reserved budget and fresh grants.
@@ -48,7 +48,7 @@ flow invalid(row: Record) -> string {
     if row.phase == "running" {
         if row.summary != "" || row.reserved != full() || row.settled != None() { return "invalid followup reservation"; }
     } else {
-        if text_error(row.summary, "summary") != "" || row.reserved != zero() { return "invalid followup completion"; }
+        if history_summary_error(row.summary, "summary") != "" || row.reserved != zero() { return "invalid followup completion"; }
         let spent = match row.settled { Some(value) => value, None() => { return "missing followup ledger"; } };
         if ledger_error(spent) != "" || spent.read.steps + spent.edit.steps != 13 || spent.read.calls + spent.edit.calls != 7 ||
             spent.read.tokens + spent.edit.tokens != 47104 || native_tokens(spent) != 196608 { return "invalid followup ledger"; }
