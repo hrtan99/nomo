@@ -1,6 +1,7 @@
 import contextlib
 import importlib.util
 import io
+import shlex
 from pathlib import Path
 import unittest
 from unittest.mock import patch
@@ -139,6 +140,27 @@ class SessionChatTest(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertIn('resume', calls.call_args.args[0])
         self.assertNotIn('work', calls.call_args.args[0])
+
+    def test_failure_shows_quoted_offline_status_with_policy(self):
+        self.args[1] = '/tmp/session dir'
+        self.args += ['--events-policy-dir', '/tmp/policy dir']
+        code, _, err, calls = self.run_chat('/work op /tmp f task\n', codes=(3,))
+        self.assertEqual(code, 3); self.assertEqual(calls.call_count, 1)
+        hint = next(line.removeprefix('Inspect status: ') for line in err.splitlines() if line.startswith('Inspect status: '))
+        self.assertEqual(shlex.split(hint)[1:], ['session-id', 'status', '--sessions-dir=/tmp/session dir', '--id='+'1'*32, '--events-policy-dir=/tmp/policy dir'])
+
+    def test_new_session_failure_uses_only_observed_valid_id(self):
+        self.args = ['--sessions-dir', '/tmp/sessions', '--new', '--root', '/workspace', '--allow', 'file.txt']
+        for observed in (True, False):
+            def fail(command, env, **kwargs):
+                if observed: kwargs['diagnostic'].feed('stdout', b'SESSION ID '+b'2'*32+b'\n')
+                return 3
+            out,err=Terminal(),io.StringIO()
+            with patch.object(module.sys,'stdin',Terminal('first\n')),patch.object(module.sys,'stdout',out),patch.object(module.sys,'stderr',err),patch.object(module.edit,'run_owned',side_effect=fail) as calls:
+                self.assertEqual(module.main(self.args),3)
+            self.assertEqual(calls.call_count,1)
+            if observed:self.assertIn('--id='+('2'*32),err.getvalue())
+            else:self.assertIn('Session ID was not confirmed',err.getvalue());self.assertNotIn('Inspect status:',err.getvalue())
 
     def test_option_like_allow_and_work_values_are_single_arguments(self):
         self.args[-2:] = ['--allow=-context']

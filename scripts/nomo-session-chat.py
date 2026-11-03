@@ -92,6 +92,16 @@ def show_resume(args, *, show_id):
         interactive.append('--events-policy-dir=' + args.events_policy_dir)
     print('Resume interactive: ' + shlex.join(interactive), flush=True)
 
+def show_status_hint(args, identifier):
+    if identifier is None:
+        print('Session ID was not confirmed; inspect the retained sessions directory.', file=sys.stderr, flush=True)
+        return
+    command = [str(ROOT / 'scripts/nomo-read.sh'), 'session-id', 'status',
+               '--sessions-dir=' + args.sessions_dir, '--id=' + identifier]
+    if args.events_policy_dir is not None:
+        command.append('--events-policy-dir=' + args.events_policy_dir)
+    print('Inspect status: ' + shlex.join(command), file=sys.stderr, flush=True)
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--sessions-dir', required=True)
@@ -194,6 +204,7 @@ def main(argv=None):
                 code = edit.run_owned(command, dict(os.environ))
                 if code:
                     print('Work stopped; inspect session status before continuing.', file=sys.stderr, flush=True)
+                    show_status_hint(args, args.id)
                     return code
                 continue
         if not question.strip():
@@ -216,6 +227,7 @@ def main(argv=None):
         code = edit.run_owned(command, dict(os.environ), **options)
         if code:
             print('Turn stopped; inspect session status before continuing.', file=sys.stderr, flush=True)
+            show_status_hint(args, observer.identifier if starting else args.id)
             return code
         if observer is not None:
             if observer.identifier is None:
