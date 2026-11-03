@@ -176,7 +176,7 @@ def main(argv=None):
                 return 0
             if question == '/help':
                 print('Read turns use the selected root and allowlist. /status inspects recorded state.')
-                print('Natural-language edits target selected files in the current root; each requires preview and fresh confirmation. The root must be private and owned by you.')
+                print('Natural-language edits target selected files in the current root; each requires preview and fresh confirmation. The root must be owned by you and not writable by group or others.')
                 if args.events_policy_dir is not None:print('/events displays committed events grouped by chat, work and followup; /status shows bounded check output.')
                 else:print('/outputs shows recorded check output.')
                 if args.events_policy_dir is None:

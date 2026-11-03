@@ -14,7 +14,7 @@ services:
         target: /home/nomo/.cargo
         read_only: true
       - type: bind
-        source: "${NOMO_EDIT_WORKSPACE_DIR:?explicit private workspace required}"
+        source: "${NOMO_EDIT_WORKSPACE_DIR:?explicit owned workspace required}"
         target: /edit-fixture
         bind:
           create_host_path: false

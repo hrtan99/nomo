@@ -58,7 +58,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
     while i < limit limit Iterations(32) { work_args = work_args.push(args[i]); i = i + 1; }
     if has_check && check_digest == "" { return refused("invalid check reference"); }
     let input = match parse(work_args) { Ok(value) => value, Err(error) => { return refused(error); } };
-    if input.edit.help { return refused("select a current read root, private edit root, target and task"); }
+    if input.edit.help { return refused("select a current read root, owned edit root, target and task"); }
     match available() { Ok(_) => {} Err(error) => { return refused(error); } }
     let history = match load_chat() { Ok(Some(value)) => value, _ => { return refused("a saved prior chat turn is required"); } };
     let first_check = match inspect_first_check() { Ok(value) => value, Err(error) => { return refused(error); } };

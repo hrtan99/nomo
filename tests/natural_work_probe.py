@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Exercise one interactive natural-language edit and same-ID continuation."""
-import json, os, pty, re, select, shutil, signal, subprocess, tempfile, termios, threading, time
+import json, os, pty, re, select, shutil, signal, stat, subprocess, tempfile, termios, threading, time
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
@@ -75,7 +75,10 @@ def interactive(command, env, question, editing):
 def main():
     out=Path(tempfile.mkdtemp(prefix='nomo-natural-work-'));project=out/'project'
     shutil.copytree(ROOT,project,ignore=shutil.ignore_patterns('.git','.etas','tmp','__pycache__','.pytest_cache'));(project/'.etas').mkdir(mode=0o700)
-    workspace=out/'workspace';workspace.mkdir(mode=0o700)
+    workspace=out/'workspace';mask=os.umask(0o022)
+    try: workspace.mkdir(mode=0o755)
+    finally: os.umask(mask)
+    assert stat.S_IMODE(workspace.stat().st_mode)==0o755
     for name in FILES:(workspace/name).write_text('before old\n' if name=='note.txt' else 'unrelated context\n')
     sessions=out/'sessions';sessions.mkdir(mode=0o700);policy=out/'policy';policy.mkdir(mode=0o700)
     (policy/'policy.json').write_text(json.dumps({'format':1,'literals':['SYNTHETIC_NEVER_PRESENT']}));(policy/'policy.json').chmod(0o600)
@@ -92,6 +95,7 @@ def main():
         command=[str(project/'scripts/nomo-read.sh'),'session-chat','--sessions-dir',str(sessions),'--new','--root',str(workspace),'--allow',','.join(FILES),'--events-policy-dir',str(policy),'--check','/bin/sh','-c','test "$(cat note.txt)" = "before green"']
         first=interactive(command,env,TASK,True);match=re.search(rb'SESSION ID ([0-9a-f]{32})',first);assert match
         assert (workspace/'note.txt').read_text()=='before green\n' and all((workspace/f).read_text()=='unrelated context\n' for f in FILES[:-1])
+        assert stat.S_IMODE(workspace.stat().st_mode)==0o755
         command=[str(project/'scripts/nomo-read.sh'),'session-chat','--sessions-dir',str(sessions),'--id',match.group(1).decode(),'--root',str(workspace),'--allow',','.join(FILES),'--events-policy-dir',str(policy)]
         second=interactive(command,env,'现在文件的颜色是什么？',False)
         assert not server.failure and server.phases==list(range(15));assert '当前内容是 before green'.encode() in second

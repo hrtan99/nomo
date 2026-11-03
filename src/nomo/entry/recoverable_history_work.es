@@ -59,7 +59,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
     let end = if has_check { count(args) - 4 } else { count(args) - 2 };
     while i < end limit Iterations(32) { work_args = work_args.push(args[i]); i = i + 1; }
     let input = match parse(work_args) { Ok(value) => value, Err(error) => { return refused(error); } };
-    if input.edit.help { return refused("select a current read root, private edit root, target and task"); }
+    if input.edit.help { return refused("select a current read root, owned edit root, target and task"); }
     let policy = match load_policy() { Ok(value) => value, Err(error) => { return refused(error); } };
     match load_legacy() { Ok(None()) => {} _ => { return refused("legacy session cannot be migrated automatically"); } }
     match inspect_legacy_work() { Ok(None()) => {} _ => { return refused("legacy work exists or is invalid"); } }

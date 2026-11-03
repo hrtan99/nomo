@@ -24,7 +24,7 @@ def main(argv=None):
             if item==state or item in state.parents or state in item.parents:raise ValueError('state must not overlap read or edit roots')
         info=state.stat();workinfo=workspace.stat()
         if info.st_uid!=os.getuid() or stat.S_IMODE(info.st_mode)!=0o700:raise ValueError('state must be owned by you with mode 0700')
-        if workinfo.st_uid!=os.getuid() or stat.S_IMODE(workinfo.st_mode)&0o077:raise ValueError('workspace must be private and owned by you')
+        if workinfo.st_uid!=os.getuid() or stat.S_IMODE(workinfo.st_mode)&0o022:raise ValueError('workspace must be owned by you and not writable by group or others')
         cache=ROOT/'.etas'
         if cache.is_symlink():raise ValueError('project .etas mountpoint must not be a symlink')
         cache.mkdir(mode=0o700,exist_ok=True)

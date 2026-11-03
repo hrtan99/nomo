@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Launch the existing confirmed edit flow for an exclusive private workspace."""
+"""Launch the existing confirmed edit flow for an exclusive workspace."""
 import argparse
 import io
 import os
@@ -53,8 +53,8 @@ def prepare(args, stdin_tty, stdout_tty):
     workspace = directory(args.root, 'workspace')
     state = directory(args.state, 'state')
     workspace_info = workspace.stat()
-    if workspace_info.st_uid != os.getuid() or stat.S_IMODE(workspace_info.st_mode) & 0o077:
-        raise ValueError('workspace must be owned by you and inaccessible to other users')
+    if workspace_info.st_uid != os.getuid() or stat.S_IMODE(workspace_info.st_mode) & 0o022:
+        raise ValueError('workspace must be owned by you and not writable by group or others')
     if workspace == state or workspace in state.parents or state in workspace.parents:
         raise ValueError('state and workspace must be separate, non-overlapping directories')
     info = state.stat()
@@ -403,8 +403,8 @@ def prepare_project_check(root, check, version=None):
     """Prepare a user-selected check without opening an edit operation store."""
     workspace = directory(root, 'workspace')
     info = workspace.stat()
-    if info.st_uid != os.getuid() or stat.S_IMODE(info.st_mode) & 0o077:
-        raise ValueError('workspace must be owned by you and inaccessible to other users')
+    if info.st_uid != os.getuid() or stat.S_IMODE(info.st_mode) & 0o022:
+        raise ValueError('workspace must be owned by you and not writable by group or others')
     if not check or not check[0]:
         raise ValueError('provide a check command')
     version = version if version is not None else os.environ.get('NOMO_ETAS_VERSION', '0.2.2')
@@ -428,7 +428,7 @@ def prepare_project_check(root, check, version=None):
 
 
 def project_check_main(argv):
-    parser = argparse.ArgumentParser(description='Run a selected offline check in a private workspace.',
+    parser = argparse.ArgumentParser(description='Run a selected offline check in an owned workspace.',
                                      epilog='Checks can modify the workspace. They do not establish an edit or session outcome.')
     parser.add_argument('--root', required=True)
     parser.add_argument('command', nargs=argparse.REMAINDER, help='check command and arguments after --')
@@ -505,7 +505,7 @@ def edit_status_main(argv):
 
 
 def main(argv=None, work=False):
-    parser = argparse.ArgumentParser(description='Edit one file in an exclusive private workspace with preview and confirmation.', epilog='Use an exclusive workspace without symlinks or concurrent writers. State must be a separate empty mode-0700 directory; preserve it after an uncertain result.')
+    parser = argparse.ArgumentParser(description='Edit one file in an exclusive workspace with preview and confirmation.', epilog='Use an exclusive workspace without symlinks or concurrent writers. State must be a separate empty mode-0700 directory; preserve it after an uncertain result.')
     parser.add_argument('--root', required=True)
     parser.add_argument('--state', required=True, help='empty private directory for one durable operation')
     parser.add_argument('--id', required=True)

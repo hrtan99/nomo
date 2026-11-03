@@ -130,7 +130,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
     while i < limit limit Iterations(32) { work_args = work_args.push(args[i]); i = i + 1; }
     if has_check && check_digest == "" { return refused("invalid check reference"); }
     let input = match parse(work_args) { Ok(value) => value, Err(error) => { return refused(error); } };
-    if input.edit.help { return refused("select a current read root, private edit root, target and task"); }
+    if input.edit.help { return refused("select a current read root, owned edit root, target and task"); }
     let policy = match load_policy() { Ok(item) => item, Err(error) => { return refused(error); } };
     let history = match load_chat(policy, binding) { Ok(Some(value)) => value, _ => { return refused("saved event chat required"); } };
     if history.value.chat.phase == "running" { return refused("chat turn unresolved"); }

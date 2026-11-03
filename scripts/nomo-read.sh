@@ -20,9 +20,9 @@ Usage:
   Event sessions support up to 32 saved read turns, with prior usage retained.
   This mode supports two work operations plus up to 32 additional followups, each freshly confirmed with an optional offline check.
   nomo-read.sh event-policy-init --directory PRIVATE_DIRECTORY
-  nomo-read.sh session-id work --sessions-dir PRIVATE_DIRECTORY --id SESSION_ID --read-root DIR --root PRIVATE_DIRECTORY --operation-id ID --path FILE --allow FILE[,FILE...] --once TASK [--check COMMAND ARG ...]
-  nomo-read.sh session-followup --read-root ABSOLUTE_DIRECTORY --allow FILE[,FILE...] --root PRIVATE_DIRECTORY --state PRIVATE_DIRECTORY --id ID --path FILE --once TASK [--check COMMAND ARG ...]
-  nomo-read.sh session-work --read-root ABSOLUTE_DIRECTORY --allow FILE[,FILE...] --root PRIVATE_DIRECTORY --state PRIVATE_DIRECTORY --id ID --path FILE --once TASK [--check COMMAND ARG ...]
+  nomo-read.sh session-id work --sessions-dir PRIVATE_DIRECTORY --id SESSION_ID --read-root DIR --root OWNED_DIRECTORY --operation-id ID --path FILE --allow FILE[,FILE...] --once TASK [--check COMMAND ARG ...]
+  nomo-read.sh session-followup --read-root ABSOLUTE_DIRECTORY --allow FILE[,FILE...] --root OWNED_DIRECTORY --state PRIVATE_DIRECTORY --id ID --path FILE --once TASK [--check COMMAND ARG ...]
+  nomo-read.sh session-work --read-root ABSOLUTE_DIRECTORY --allow FILE[,FILE...] --root OWNED_DIRECTORY --state PRIVATE_DIRECTORY --id ID --path FILE --once TASK [--check COMMAND ARG ...]
   nomo-read.sh edit --root ABSOLUTE_DIRECTORY --state FRESH_PRIVATE_DIRECTORY --id ID --path FILE --target TEXT --replacement TEXT [--check COMMAND ARG ...]
   nomo-read.sh edit --root ABSOLUTE_DIRECTORY --state FRESH_PRIVATE_DIRECTORY --id ID --path FILE --once TASK [--check COMMAND ARG ...]
   nomo-read.sh work --read-root ABSOLUTE_DIRECTORY --allow FILE[,FILE...] --root ABSOLUTE_DIRECTORY --state FRESH_PRIVATE_DIRECTORY --id ID --path FILE --once TASK [--check COMMAND ARG ...]
@@ -46,7 +46,7 @@ Session-chat accepts one piped UTF-8 question (at most 128 bytes); the input
 must reach EOF within 2 seconds and contain no extra lines. With terminal input
 and redirected output, specify --once QUESTION.
 Interactive session-chat can propose an edit to a selected file from a natural
-language request; the selected root must also satisfy the private edit workspace
+language request; the selected root must also satisfy the owned edit workspace
 requirements. Each edit requires preview and fresh confirmation. Optionally pass
 --check COMMAND ARG ... last to run that check after each natural-language edit.
 Chat supports two tasks by default, or four with --turns 4, in one process.
@@ -74,7 +74,7 @@ secrets, and does not bind the workspace. Keep policy bytes and binding.key
 unchanged for the session; a mismatch refuses resume. Existing sessions are not
 automatically migrated. Event-recording mode supports two work operations plus up
 to 32 additional followups, each with an optional check. Check output recording is bounded.
-Checks run offline and may modify the selected private workspace.
+Checks run offline and may modify the selected workspace.
 Edit status is recorded data only; it does not inspect the current file.
 Use status only after the operation stops; SQLite may update state bookkeeping.
 HELP

@@ -22,7 +22,7 @@ flow checked_path(name: string) -> Result<WorkspacePath<EditableRoot>, string> {
 }
 
 // This stat is not lstat/inode identity or a concurrent-file guarantee. The
-// caller provisions an exclusive private regular-file tree without symlinks.
+// caller uses an owned regular-file tree without symlinks or concurrent writers.
 flow read_existing(name: string) -> Result<bytes, string> {
     let target = match checked_path(name) { Ok(value) => value, Err(error) => { return Err(error); } };
     let message = Message.new(stat(target));
