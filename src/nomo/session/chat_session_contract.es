@@ -10,10 +10,10 @@ import nomo.model.read_protocol.question_error;
 public type Session = { format: i32, phase: string, invocation: Invocation, last_request: string, pending: string };
 
 public flow fresh() -> Session {
-    return Session { format = 8, phase = "ready", invocation = Invocation { usage = fresh_invocation().usage, maximum = multi_maximum(2), admitted = 0, prior = fresh_invocation().prior }, last_request = "", pending = "" };
+    return Session { format = 10, phase = "ready", invocation = Invocation { usage = fresh_invocation().usage, maximum = multi_maximum(2), admitted = 0, prior = fresh_invocation().prior }, last_request = "", pending = "" };
 }
 public flow fresh_events() -> Session {
-    return Session { format = 7, phase = "ready", invocation = Invocation { usage = session_invocation().usage, maximum = multi_maximum(32), admitted = 0, prior = session_invocation().prior }, last_request = "", pending = "" };
+    return Session { format = 9, phase = "ready", invocation = Invocation { usage = session_invocation().usage, maximum = multi_maximum(32), admitted = 0, prior = session_invocation().prior }, last_request = "", pending = "" };
 }
 
 // Expand future per-turn scan reservations while preserving already recorded usage.
@@ -25,9 +25,9 @@ flow expanded(value: Invocation) -> Invocation {
 }
 
 public flow invalid(value: Session) -> string {
-    if (value.format < 1 || value.format > 8) || (value.phase != "ready" && value.phase != "running" && value.phase != "complete") { return "invalid chat session format or phase"; }
-    let multi = value.format == 5 || value.format == 6 || value.format == 7 || value.format == 8;
-    let maximum = if value.format == 4 || value.format == 5 || value.format == 7 { 32 } else { 2 };
+    if (value.format < 1 || value.format > 10) || (value.phase != "ready" && value.phase != "running" && value.phase != "complete") { return "invalid chat session format or phase"; }
+    let multi = value.format >= 5;
+    let maximum = if value.format == 4 || value.format == 5 || value.format == 7 || value.format == 9 { 32 } else { 2 };
     let state = expanded(value.invocation); let used = state.usage;
     if state.admitted < 0 || state.admitted > maximum { return "invalid chat session limits"; }
     if multi {
@@ -74,8 +74,8 @@ public flow begin(value: Session, request: string) -> Result<Session, string> {
     let error = invalid(value); if error != "" { return Err(error); }
     if value.phase != "ready" { return Err("chat session is not ready; no automatic retry"); }
     if question_error(request) != "" { return Err("invalid pending request"); }
-    let old = expanded(value.invocation); let format = if value.format == 4 || value.format == 5 { 7 } else { if value.format == 3 || value.format == 6 { 8 } else { value.format } };
-    let invocation = if format == 7 || format == 8 { Invocation { usage = old.usage, maximum = multi_maximum(if format == 7 { 32 } else { 2 }), admitted = old.admitted, prior = old.prior } } else { old };
+    let old = expanded(value.invocation); let format = if value.format == 4 || value.format == 5 || value.format == 7 { 9 } else { if value.format == 3 || value.format == 6 || value.format == 8 { 10 } else { value.format } };
+    let invocation = if format == 9 || format == 10 { Invocation { usage = old.usage, maximum = multi_maximum(if format == 9 { 32 } else { 2 }), admitted = old.admitted, prior = old.prior } } else { old };
     let next = Session { format = format, phase = "running", invocation = invocation, last_request = value.last_request, pending = request };
     let problem = invalid(next); if problem != "" { return Err(problem); }
     return Ok(next);
@@ -92,12 +92,12 @@ public flow complete(value: Session, result: TurnResult) -> Result<Session, stri
         return Err("completed chat projection changed");
     }
     let tools = next.usage.tools - previous.usage.tools;
-    let maximum_tools = if value.format == 5 || value.format == 6 || value.format == 7 || value.format == 8 { 3 } else { 1 };
+    let maximum_tools = if value.format >= 5 { 3 } else { 1 };
     if tools < 0 || tools > maximum_tools || (selected.tool == "" && tools != 0) || (selected.tool != "" && tools == 0) ||
         next.maximum != previous.maximum || next.admitted != previous.admitted + 1 ||
         next.usage.steps != previous.usage.steps + 5 + tools * 2 || next.usage.calls != previous.usage.calls + 3 + tools ||
-        next.usage.tokens != previous.usage.tokens + (3 + tools) * 2048 || next.usage.scan != previous.usage.scan + tools * if value.format == 7 || value.format == 8 { 4194560 } else { 16384 } { return Err("completed chat ledger changed"); }
-    let session = Session { format = value.format, phase = if next.admitted == (if value.format == 4 || value.format == 5 || value.format == 7 { 32 } else { 2 }) { "complete" } else { "ready" },
+        next.usage.tokens != previous.usage.tokens + if value.format >= 9 { 8192 + tools * 4096 } else { (3 + tools) * 2048 } || next.usage.scan != previous.usage.scan + tools * if value.format >= 7 { 4194560 } else { 16384 } { return Err("completed chat ledger changed"); }
+    let session = Session { format = value.format, phase = if next.admitted == (if value.format == 4 || value.format == 5 || value.format == 7 || value.format == 9 { 32 } else { 2 }) { "complete" } else { "ready" },
         invocation = next, last_request = value.pending, pending = "" };
     let problem = invalid(session); if problem != "" { return Err(problem); }
     return Ok(session);

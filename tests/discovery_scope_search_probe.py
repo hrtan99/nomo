@@ -16,6 +16,8 @@ class Fake(BaseHTTPRequestHandler):
  def do_POST(self):
   try:
    req=json.loads(self.rfile.read(int(self.headers['Content-Length'])));ctx=json.loads(req['messages'][1]['content']);i=len(self.server.seen)
+   if i in (1,2,3):assert req.get('max_tokens')==4096,('child output budget',req.get('max_tokens'))
+   if i in (0,4):assert req.get('max_tokens')==2048,('parent output budget',req.get('max_tokens'))
    if i==0:
     files=ctx['current']['allowed'];assert len(files)==43 and 'src/app/greeting.py' in files and not any(x.startswith(('node_modules/','.private/')) for x in files),files
     self.server.files=files;v=['delegate','Read the project file defining the greeting']

@@ -87,7 +87,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyR
         Some(first) => { match facts.followup {
             Some(second) => {
                 let usage = running.value.chat.invocation.usage;
-                let budget = BudgetFacts { work_calls = facts.calls, work_generation = facts.generation, chat_used_calls = usage.calls, chat_used_generation = usage.tokens, chat_reserved_calls = if running.value.chat.format == 5 || running.value.chat.format == 7 { 6 } else { 4 }, chat_reserved_generation = if running.value.chat.format == 5 || running.value.chat.format == 7 { 12288 } else { 8192 } };
+                let budget = BudgetFacts { work_calls = facts.calls, work_generation = facts.generation, chat_used_calls = usage.calls, chat_used_generation = usage.tokens, chat_reserved_calls = if running.value.chat.format == 5 || running.value.chat.format == 7 || running.value.chat.format == 9 { 6 } else { 4 }, chat_reserved_generation = if running.value.chat.format == 9 { 20480 } else { if running.value.chat.format == 5 || running.value.chat.format == 7 { 12288 } else { 8192 } } };
                 run_after_followup(args[4], allowed, running.value.chat.invocation, first, second, facts.additional, history, budget)
             }
             None() => run_after_work(args[4], allowed, running.value.chat.invocation, first, history),
@@ -206,7 +206,7 @@ public flow status(args: Array<string>) -> i32 ![Console, Memory, Fs.read<Policy
     let view = View { format = 1, encoding = saved.value.encoding, phase = saved.value.chat.phase,
         turns = saved.value.events.turns, first_count = saved.value.events.first_count,
         used_calls = used.calls, used_tokens = used.tokens, used_tools = used.tools, used_scan = used.scan,
-        reserved_calls = if pending { if saved.value.chat.format == 5 || saved.value.chat.format == 7 { 6 } else { 4 } } else { 0 }, reserved_tokens = if pending { if saved.value.chat.format == 5 || saved.value.chat.format == 7 { 12288 } else { 8192 } } else { 0 },
+        reserved_calls = if pending { if saved.value.chat.format == 5 || saved.value.chat.format == 7 || saved.value.chat.format == 9 { 6 } else { 4 } } else { 0 }, reserved_tokens = if pending { if saved.value.chat.format == 9 { 20480 } else { if saved.value.chat.format == 5 || saved.value.chat.format == 7 { 12288 } else { 8192 } } } else { 0 },
         events = saved.value.events.events, work_phase = work_phase, work_edit_phase = work_edit_phase, work_reserved_calls = work_reserved_calls,
         work_reserved_tokens = work_reserved_tokens, work_settled_calls = work_settled_calls,
         work_settled_tokens = work_settled_tokens, work_events = work_events,

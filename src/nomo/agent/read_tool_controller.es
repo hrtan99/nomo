@@ -5,8 +5,8 @@ import std.io.println;
 import nomo.core.read_text.{safe, bounded};
 import nomo.harness.model_plan_diagnostic.response_text;
 import nomo.core.conversation.{State, stop, charge};
-import nomo.agent.model_tool_controller.capacity;
-import nomo.agent.loop.{emit, failure};
+import nomo.agent.model_tool_controller.{capacity, history, failed};
+import nomo.agent.loop.emit;
 import nomo.agent.conversation_events.emit as emit_event;
 import nomo.model.conversation_output.ConversationOutput;
 import nomo.model.model_tool_contract.{Session, Limits, Context, candidate_error, context_error, budget_error, charge_action, default_limits};
@@ -25,15 +25,6 @@ flow emit_mode(state: State, role: string, kind: string, name: string, text: str
     };
 }
 
-
-flow history(session: Session, state: State) -> Session {
-    return Session { history = state, calls = session.calls, tokens = session.tokens, tools = session.tools, scan = session.scan };
-}
-
-flow failed(session: Session, message: string, status: i32) -> LoopTurn {
-    let result = failure(session.history, message, status);
-    return LoopTurn { state = history(session, result.state), status = status };
-}
 
 // Retain all task, parent, tool and confirmed outcome events. Only controller
 // Model-text history is optional; state history/accounting is never rewritten.
@@ -109,7 +100,7 @@ flow run_multistep(raw: string, allowed: Array<string>, previous: Session, priva
         let full = capacity(session, 4, 66080); if full != "" { return failed(history(session, stop(session.history)), full, 4); }
         let original = Context { history = session.history.events, allowed = allowed, final_only = tools == 3 };
         let context = match bounded_model_context(original, 262144) { Ok(value) => value, Err(error) => { return failed(session, error, 4); } };
-        session = Session { history = charge(session.history), calls = session.calls + 1, tokens = session.tokens + 2048, tools = session.tools, scan = session.scan };
+        session = Session { history = charge(session.history), calls = session.calls + 1, tokens = session.tokens + 4096, tools = session.tools, scan = session.scan };
         session = history(session, emit_mode(session.history, "model", "text", "qwen", "", private_progress));
         calls = calls + 1;
         if private_progress { println("CHILD STAGE model-action"); }

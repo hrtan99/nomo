@@ -50,10 +50,10 @@ flow stage(turn: i32, phase: string, before: Ledger, local: Ledger, multi: bool)
     let tools = if phase == "aggregate" { 0 } else { if multi { 3 } else { 1 } };
     println("TURN " + to_string_i32(turn) + " STAGE " + phase + " " + numbers(total(before, local)) +
         " reserved_steps=" + to_string_i32(steps) + " reserved_calls=" + to_string_i32(calls) +
-        " reserved_tokens=" + to_string_i32(calls * 2048) + " reserved_tools=" + to_string_i32(tools) +
+        " reserved_tokens=" + to_string_i32(if multi && phase != "aggregate" { 18432 } else { calls * 2048 }) + " reserved_tools=" + to_string_i32(tools) +
         " reserved_scan=" + to_string_i32(tools * if multi { 4194560 } else { 16384 }));
     if phase == "child" {
-        println(if multi { "RESERVATION child-1 steps=7 calls=4 tokens=8192 tools=3 scan=12583680 tail_steps=2 tail_calls=1 tail_tokens=2048 unresolved=true" } else { "RESERVATION child-1 steps=3 calls=2 tokens=4096 tools=1 scan=16384 tail_steps=2 tail_calls=1 tail_tokens=2048 unresolved=true" });
+        println(if multi { "RESERVATION child-1 steps=7 calls=4 tokens=16384 tools=3 scan=12583680 tail_steps=2 tail_calls=1 tail_tokens=2048 unresolved=true" } else { "RESERVATION child-1 steps=3 calls=2 tokens=4096 tools=1 scan=16384 tail_steps=2 tail_calls=1 tail_tokens=2048 unresolved=true" });
     }
 }
 
@@ -88,7 +88,7 @@ flow execute(request: string, allowed: Array<string>, prior: Previous, before: L
         state = match if multi { multi_settle(state, child.state) } else { settle(state, child.state) } { Ok(value) => value, Err(error) => { return refused(state, error, false); } };
     }
     println("SETTLED child-1 " + numbers(total(before, state)) + " released_steps=" + to_string_i32((if multi { 9 } else { 5 }) - state.steps) +
-        " released_calls=" + to_string_i32((if multi { 5 } else { 3 }) - state.calls) + " released_tokens=" + to_string_i32((if multi { 10240 } else { 6144 }) - state.tokens) +
+        " released_calls=" + to_string_i32((if multi { 5 } else { 3 }) - state.calls) + " released_tokens=" + to_string_i32((if multi { 18432 } else { 6144 }) - state.tokens) +
         " released_tools=" + to_string_i32((if multi { 3 } else { 1 }) - state.tools) + " released_scan=" + to_string_i32((if multi { 12583680 } else { 16384 }) - state.scan) + " unresolved=false");
     if child.status != 0 { return refused(state, "child returned failure; no aggregation", true); }
     if !(if unicode { unicode_bounded(observed.result, 256) } else { bounded(observed.result, 256) }) { return refused(state, "invalid bounded child result", true); }

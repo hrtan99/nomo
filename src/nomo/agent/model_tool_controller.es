@@ -12,11 +12,11 @@ import nomo.harness.legacy_string_stages.LegacyChildModel;
 public import nomo.model.model_tool_contract.LoopTurn;
 type ModelAttempt = { state: Session, context: Context };
 
-flow history(session: Session, state: State) -> Session {
+public flow history(session: Session, state: State) -> Session {
     return Session { history = state, calls = session.calls, tokens = session.tokens, tools = session.tools, scan = session.scan };
 }
 
-flow failed(session: Session, message: string, status: i32) -> LoopTurn {
+public flow failed(session: Session, message: string, status: i32) -> LoopTurn {
     let result = failure(session.history, message, status);
     return LoopTurn { state = history(session, result.state), status = status };
 }

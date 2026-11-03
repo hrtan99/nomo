@@ -22,7 +22,7 @@ flow safe_role(value: string) -> bool { return value == "user" || value == "main
 flow safe_kind(value: string) -> bool { return value == "request" || value == "plan" || value == "delegate" || value == "context" || value == "input" || value == "tool" || value == "result" || value == "consume" || value == "answer" || value == "final" || value == "error" || value == "event"; }
 flow safe_name(value: string) -> bool { return value == "" || value == "child-1" || value == "read" || value == "search"; }
 flow frame_error(frame: Frame) -> string {
-    if frame.format != 3 || (frame.chat.format != 3 && frame.chat.format != 6 && frame.chat.format != 8) { return "invalid chat frame format"; }
+    if frame.format != 3 || (frame.chat.format != 3 && frame.chat.format != 6 && frame.chat.format != 8 && frame.chat.format != 10) { return "invalid chat frame format"; }
     let error = invalid(frame.chat); if error != "" { return error; }
     let n = count(frame.events); let turns = frame.chat.invocation.admitted;
     if n > 48 || (turns == 0 && (n != 0 || frame.first_count != 0)) ||
