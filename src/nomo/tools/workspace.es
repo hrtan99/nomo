@@ -53,14 +53,14 @@ public flow discover(page: usize) -> Result<Discovery, string> ![Console, Fs.lis
                             if seen >= page * 256 { if count(files) == 256 { more = true; break; } files = files.push(name); }
                             seen = seen + 1;
                         }
-                        else if info.is_dir && depths[i] < 4 { if count(dirs) >= 512 { return Err("discovery exceeds 512 directories; select a narrower root"); } dirs = dirs.push(entry); depths = depths.push(depths[i] + 1); }
+                        else if info.is_dir && depths[i] < 7 { if count(dirs) >= 512 { return Err("discovery exceeds 512 directories; select a narrower root"); } dirs = dirs.push(entry); depths = depths.push(depths[i] + 1); }
                         else if info.is_dir { deep = true; } else { unsupported = true; }
                     }
                 }
             }
             i = i + 1;
         }
-        if deep { println("DISCOVERY INCOMPLETE: directories beyond four levels were not visited."); }
+        if deep { println("DISCOVERY INCOMPLETE: directories beyond seven levels were not visited."); }
         if unsupported { println("DISCOVERY INCOMPLETE: unsupported names or file types were omitted."); }
         if count(files) == 0 { return Err("discovery page is empty"); }
         println("DISCOVERY PAGE " + to_string_usize(page) + (if more { ": more candidates remain." } else { ": no later candidates found within discovery bounds." }));

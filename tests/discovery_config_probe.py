@@ -11,7 +11,7 @@ for i in range(5):(workspace/('alpha%02d.txt'%i)).write_text('ordinary synthetic
 (workspace/'.editorconfig').write_text('[*]\nindent_size = 2\n');(workspace/'.gitignore').write_text('build/\n')
 (workspace/'.env').write_text('SYNTHETIC_CREDENTIAL\n');(workspace/'.env.production').write_text('SYNTHETIC_CREDENTIAL\n');(workspace/'.env.example').write_text('EXAMPLE=1\n')
 (workspace/'.git').mkdir();(workspace/'.git/config').write_text('metadata\n');(workspace/'node_modules').mkdir();(workspace/'node_modules/ignored.txt').write_text('dependency\n')
-(workspace/'deep/a/b/c/d').mkdir(parents=True);(workspace/'deep/a/b/c/d/outside.txt').write_text('too deep\n');(workspace/'unsupported name.txt').write_text('invalid name\n')
+(workspace/'deep/a/b/c/d/e/f/g').mkdir(parents=True);(workspace/'deep/a/b/c/d/e/f/hit.txt').write_text('within path policy\n');(workspace/'deep/a/b/c/d/e/f/g/outside.txt').write_text('too deep\n');(workspace/'unsupported name.txt').write_text('invalid name\n')
 sessions=out/'sessions';sessions.mkdir(mode=0o700);policy=out/'policy';policy.mkdir(mode=0o700);(policy/'policy.json').write_text('{"format":1,"literals":["SYNTHETIC_SECRET"]}');(policy/'policy.json').chmod(0o600);(policy/'binding.key').write_bytes(b'K'*32);(policy/'binding.key').chmod(0o600)
 class Fake(BaseHTTPRequestHandler):
  def log_message(self,*a):pass
@@ -19,11 +19,11 @@ class Fake(BaseHTTPRequestHandler):
   try:
    req=json.loads(self.rfile.read(int(self.headers['Content-Length'])));ctx=json.loads(req['messages'][1]['content']);i=len(self.server.seen)
    if i in (1,2,3):assert req.get('max_tokens')==4096,('child output budget',req.get('max_tokens'))
-   if i in (0,4):assert req.get('max_tokens')==2048,('parent output budget',req.get('max_tokens'))
+   if i in (0,4):assert req.get('max_tokens')==4096,('parent output budget',req.get('max_tokens'))
    if i==0:
-    files=ctx['current']['allowed'];expected={'.github/workflows/ci.yml','.editorconfig','.gitignore','.env.example'}
+    files=ctx['current']['allowed'];expected={'.github/workflows/ci.yml','.editorconfig','.gitignore','.env.example','deep/a/b/c/d/e/f/hit.txt'}
     assert expected.issubset(files) and len(files)>4,files
-    assert not any(x in files for x in ('.git/config','.env','.env.production','node_modules/ignored.txt','deep/a/b/c/d/outside.txt','unsupported name.txt')),files
+    assert not any(x in files for x in ('.git/config','.env','.env.production','node_modules/ignored.txt','deep/a/b/c/d/e/f/g/outside.txt','unsupported name.txt')),files
     self.server.files=files;v=['delegate','Find the configuration that contains before old']
    elif i==1:v=['search','before old','*']
    elif i==2:assert '.github/workflows/ci.yml:1' in json.dumps(ctx);v=['read','.github/workflows/ci.yml']
@@ -44,7 +44,7 @@ manifest=project/'etas.toml';text=manifest.read_text()
 for name in ('nomo-read-session-new','nomo-read-session-existing','nomo-history-work'):
  start=text.index('[runtime.profiles.'+name+'.model]');end=text.index('[runtime.profiles.'+name+'.model.timeout]',start);part=text[start:end].replace('https://api.minimax.cn/v1','http://host.docker.internal:%d/v1'%server.server_port).replace('allow_private = false','allow_private = true');text=text[:start]+part+text[end:]
 manifest.write_text(text)
-env={'PATH':os.environ['PATH'],'HOME':os.environ['HOME'],'MINIMAX_API_KEY':'SYNTHETIC_ONLY','NOMO_ETAS_VERSION':'0.2.6'}
+env={'PATH':os.environ['PATH'],'HOME':os.environ['HOME'],'MINIMAX_API_KEY':'SYNTHETIC_ONLY','NOMO_ETAS_VERSION':'0.2.6','NOMO_ETAS_GRAPH':os.environ.get('NOMO_ETAS_GRAPH','026-20261103-a')}
 cmd=[str(project/'scripts/nomo-read.sh'),'session-chat','--sessions-dir',str(sessions),'--new','--root',str(workspace),'--discover','--check','/bin/sh','-c',"grep -qx 'name: before green' .github/workflows/ci.yml"]
 master,slave=pty.openpty();setting=termios.tcgetattr(slave);setting[3]&=~(termios.ECHO|termios.ECHONL);termios.tcsetattr(slave,termios.TCSANOW,setting);proc=subprocess.Popen(cmd,stdin=slave,stdout=slave,stderr=slave,env=env,start_new_session=True);os.close(slave);log=bytearray();step=0;deadline=time.monotonic()+180
 try:
@@ -69,7 +69,7 @@ try:
   except OSError:break
  (out/'terminal.log').write_bytes(log)
  assert proc.returncode==0 and step==4 and server.seen==list(range(12)),(proc.returncode,step,server.error,server.seen)
- assert b'DISCOVERY INCOMPLETE: directories beyond four levels' in log and b'DISCOVERY INCOMPLETE: unsupported names or file types' in log and b'SAVED chat history' in log and (workspace/'.github/workflows/ci.yml').read_text()=='name: before green\n'
+ assert b'DISCOVERY INCOMPLETE: directories beyond seven levels' in log and b'DISCOVERY INCOMPLETE: unsupported names or file types' in log and b'SAVED chat history' in log and (workspace/'.github/workflows/ci.yml').read_text()=='name: before green\n'
  print(json.dumps({'status':'passed','scope':'configuration discovery, bounded omissions, selection and confirmed edit','candidate_count':len(server.files),'files':server.files,'fake_http':len(server.seen),'result_dir':str(out)}))
 except Exception as e:
  (out/'terminal.log').write_bytes(log);print(json.dumps({'status':'failed','step':step,'error':repr(e),'server_error':server.error,'phases':server.seen,'result_dir':str(out),'tail':bytes(log).decode('utf8','replace')[-3000:]}));raise

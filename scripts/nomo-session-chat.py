@@ -220,7 +220,7 @@ def main(argv=None):
             print('Input cancelled.', file=sys.stderr)
             return 130
     if args.discover:
-        print('Discovery uses pages of 256 files, up to eight automatic pages, four directory levels and 512 directories; each directory is limited to 1024 entries and 131072 name bytes. Unsupported paths and file types are excluded.', flush=True)
+        print('Discovery uses pages of 256 files, up to eight automatic pages, seven directory levels and 512 directories; each directory is limited to 1024 entries and 131072 name bytes. Unsupported paths and file types are excluded.', flush=True)
         print('Each automatic page uses another bounded chat turn: up to 6 calls and 24576 output tokens for new sessions. Page contents may change between turns.', flush=True)
         print('Excluded: .git/.hg/.svn/.bzr, dependency and build directories, .venv/.tox/.cache/.mypy_cache/.pytest_cache, .ssh/.aws/.gnupg/.netrc, and .env files except .env.example/.env.sample.', flush=True)
         print('Dotfiles and project configuration in scope may be sent to the model.', flush=True)
