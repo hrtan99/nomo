@@ -1,7 +1,8 @@
 module nomo.cli.harness_work_args;
 
+import nomo.core.read_text.within;
 import std.collections.len as count;
-import std.text.{len, split};
+import std.text.{split};
 import nomo.cli.harness_edit_args.Input;
 import nomo.cli.harness_edit_args.parse as edit_args;
 import nomo.model.model_tool_contract.{question_error, allowed_error};
@@ -25,7 +26,7 @@ flow parse_with(args: Array<string>, unicode: bool) -> Result<Work, string> {
         index = index + 2;
     }
     var maximum: usize = 97; if unicode { maximum = 195; }
-    if !supplied || len(raw) > maximum { return Err("expected one bounded --allow FILE[,FILE]"); }
+    if !supplied || !within(raw, maximum) { return Err("expected one bounded --allow FILE[,FILE]"); }
     let edit = match edit_args(selected) { Ok(value) => value, Err(error) => { return Err(error); } };
     let request = if unicode { unicode_question_error(edit.request) } else { question_error(edit.request) }; if request != "" { return Err(request); }
     let allowed = split(raw, ",");

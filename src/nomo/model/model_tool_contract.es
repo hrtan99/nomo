@@ -5,6 +5,7 @@ import std.collections.len as count;
 import std.json.{JsonValue, parse, stringify};
 import std.agent.message.Message;
 import nomo.core.text.printable;
+import nomo.core.read_text.search_literal;
 import nomo.harness.model_plan_diagnostic.response_error;
 public import nomo.model.tool_context.{Context, allowed_error, candidate_error};
 import nomo.core.conversation.{State, fresh, charge};
@@ -48,7 +49,7 @@ public flow read_selection_error(operation: string, files: Array<string>, litera
         if count(files) != 1 { return "unsupported action or arity"; }
         if literal != "" { return "read action requires an empty literal"; }
     } else if operation == "search" {
-        if len(literal) == 0 || len(literal) > 64 || !printable(literal) { return "invalid search literal"; }
+        if !search_literal(literal) { return "invalid search literal"; }
     } else { return "unsupported action or arity"; }
     return selected_error(files, allowed);
 }

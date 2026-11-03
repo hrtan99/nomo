@@ -7,9 +7,12 @@ import std.bytes.len as bytes_len;
 // Read-only conversational text: UTF-8 byte ceilings remain explicit.
 // Reject C0/C1 controls, terminal escape, Unicode line separators and common
 // invisible bidirectional formatting controls before any terminal output.
+public flow within(text: string, maximum: usize) -> bool {
+    return len(text) <= maximum && bytes_len(utf8_encode(text)) <= maximum;
+}
+
 public flow safe(text: string, maximum: usize) -> bool {
-    if maximum == 0 || maximum > 262144 || len(text) > maximum { return false; }
-    if bytes_len(utf8_encode(text)) > maximum { return false; }
+    if maximum == 0 || maximum > 262144 || !within(text, maximum) { return false; }
     for character in split(text, "") limit Iterations(262146) {
         if character != "" {
             let bytes = utf8_encode(character); let size = bytes_len(bytes);
@@ -26,4 +29,9 @@ public flow safe(text: string, maximum: usize) -> bool {
 
 public flow bounded(text: string, maximum: usize) -> bool {
     return text != "" && trim(text) != "" && safe(text, maximum);
+}
+
+// Search is literal and bounded in UTF-8 bytes; spaces remain valid data.
+public flow search_literal(value: string) -> bool {
+    return value != "" && safe(value, 64);
 }

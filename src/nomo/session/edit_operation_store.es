@@ -43,7 +43,7 @@ public flow available_in(followup: bool) -> Result<bool, string> {
         Some(_) => Err("edit operation slot already consumed; no retry") };
 }
 
-public flow begin_in(binding: Binding, followup: bool) -> Result<MemoryVersion, string> ![Memory, Error<StorageError>] {
+public flow begin_in(binding: Binding, followup: bool) -> Result<MemoryVersion, string> ![Memory, Error<StorageError>, Error<IndexError>] {
     let invalid = binding_error(binding); if invalid != "" { return Err(invalid); }
     match available_in(followup) { Ok(_) => {} Err(error) => { return Err(error); } }
     let row = Record { format = 1, phase = "intent", binding = binding };
@@ -51,7 +51,7 @@ public flow begin_in(binding: Binding, followup: bool) -> Result<MemoryVersion, 
     return Ok(version);
 }
 
-public flow complete_in(binding: Binding, expected_version: MemoryVersion, followup: bool) -> Result<bool, string> ![Memory, Error<StorageError>] {
+public flow complete_in(binding: Binding, expected_version: MemoryVersion, followup: bool) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
     let invalid = binding_error(binding); if invalid != "" { return Err(invalid); }
     let before = match read(followup) { Some(value) => value, None() => { return Err("edit intent missing; no retry"); } };
     let expected = Record { format = 1, phase = "intent", binding = binding };
@@ -83,8 +83,8 @@ public flow inspect_in(id: string, workspace: string, path: string, followup: bo
 }
 
 public flow available() -> Result<bool, string> { return available_in(false); }
-public flow begin(binding: Binding) -> Result<Ticket, string> ![Memory, Error<StorageError>] {
+public flow begin(binding: Binding) -> Result<Ticket, string> ![Memory, Error<StorageError>, Error<IndexError>] {
     return match begin_in(binding, false) { Ok(version) => Ok(Ticket { binding = binding, version = version }), Err(error) => Err(error) };
 }
-public flow complete(ticket: Ticket) -> Result<bool, string> ![Memory, Error<StorageError>] { return complete_in(ticket.binding, ticket.version, false); }
+public flow complete(ticket: Ticket) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] { return complete_in(ticket.binding, ticket.version, false); }
 public flow inspect(id: string, workspace: string, path: string) -> Result<Option<Record>, string> { return inspect_in(id, workspace, path, false); }

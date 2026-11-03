@@ -42,10 +42,10 @@ def main(argv=None):
         deadline=os.environ.get('NOMO_MODEL_REQUEST_DEADLINE_MS','120000')
         if not deadline.isascii() or not deadline.isdigit() or len(deadline)>7 or not 2000<=int(deadline)<=3600000:raise ValueError('model request deadline must be an integer from 2000 to 3600000')
         names=args.allow.split(',')
-        if not 1<=len(names)<=4 or len(set(names))!=len(names) or any(not 1<=len(n)<=128 or len(n.split('/'))>8 or any(p in ('','.','..') or not re.fullmatch(r'[A-Za-z0-9._-]+',p) for p in n.split('/')) for n in names):raise ValueError('allow must name one to four distinct safe relative files')
+        if not 1<=len(names)<=4 or len(set(names))!=len(names) or any(not edit.safe_path(n, 128) for n in names) or len(args.allow.encode('utf-8'))>195:raise ValueError('allow must name one to four distinct safe relative files')
         if not edit.safe_read_question(args.once):raise ValueError('work task must be 1..128 safe nonblank UTF-8 bytes')
         selected=Path(args.path)
-        if not args.id or not args.path or selected.is_absolute() or '..' in selected.parts or '\\' in args.path or '\0' in args.path:raise ValueError('select an ID and relative workspace file')
+        if not args.id or not edit.safe_path(args.path):raise ValueError('select an ID and relative workspace file')
         current=workspace
         for part in selected.parts:
             current=current/part

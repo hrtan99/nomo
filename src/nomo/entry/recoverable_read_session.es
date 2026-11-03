@@ -1,5 +1,6 @@
 module nomo.entry.recoverable_read_session;
 
+import nomo.core.read_text.within;
 import std.io.println;
 import std.text.{len, split, to_string_i32};
 import std.bytes.len as byte_count;
@@ -58,7 +59,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyR
     if (count(args) != 7 && !natural) || (args[0] != "new" && args[0] != "continue") || args[1] != "--allow" || args[3] != "--once" || args[5] != "--policy-binding" {
         println("REFUSED expected new|continue --allow FILE[,FILE...] --once QUESTION"); return 1;
     }
-    if len(args[2]) > 195 { println("REFUSED allowlist too long"); return 1; }
+    if !within(args[2], 195) { println("REFUSED allowlist too long"); return 1; }
     let allowed = if args[2] == "*" { match discover() { Ok(value) => value, Err(error) => { println("REFUSED " + error); return 1; } } } else { split(args[2], ",") };
     if args[2] != "*" && count(allowed) > 4 { println("REFUSED explicit selection supports up to four files"); return 1; }
     let invalid = candidate_error(allowed);

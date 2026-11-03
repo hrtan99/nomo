@@ -6,7 +6,7 @@ import std.codec.text.{utf8_decode, Strict};
 import std.text.{len, split, contains, starts_with, to_string_usize};
 import std.agent.message.Message;
 import std.collections.len as count;
-import nomo.core.text.printable;
+import nomo.core.read_text.search_literal;
 public import nomo.tools.path_policy.valid_path;
 import nomo.model.tool_context.candidate_error;
 import std.fs.IOError as FileError;
@@ -103,7 +103,7 @@ public flow list_directory(name: string) -> Outcome {
 // A Host overflow check may probe one additional byte, never return a prefix.
 flow search_with(names: Array<string>, literal: string, maximum: usize) -> Outcome ![Fs.read<ReadOnlyRoot>, Error<FileError>, Error<IndexError>] {
     if count(names) == 0 || count(names) > (if maximum == 4194304 { 256 } else { 4 }) { return outcome("refused", "search file count exceeds scope", 0); }
-    if len(literal) == 0 || len(literal) > 64 || !printable(literal) { return outcome("refused", "literal must be 1..64 printable ASCII characters", 0); }
+    if !search_literal(literal) { return outcome("refused", "literal must be 1..64 safe UTF-8 bytes", 0); }
     let invalid = candidate_error(names); if invalid != "" { return outcome("refused", invalid, 0); }
     var output = "";
     var scanned: usize = 0;

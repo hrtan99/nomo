@@ -62,7 +62,7 @@ Work first reads or searches one of the allowed context files, then uses that
 evidence to propose an edit to the selected workspace file. It sends context
 and task to the model before write confirmation. Work is one-shot, not resume.
 Its task must be 1..128 printable ASCII characters; allow one or two distinct
-relative context paths of at most 48 characters each. At most one read/search
+relative context paths of at most 48 UTF-8 bytes each. At most one read/search
 and one confirmed edit occur. The read root can be the edit workspace; state
 must be separate from both. Work allows up to 7 model calls and 47,104 requested
 output tokens, not a measured usage or cost limit.

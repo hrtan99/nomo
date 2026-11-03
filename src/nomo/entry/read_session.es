@@ -1,12 +1,13 @@
 module nomo.entry.read_session;
 
+import nomo.core.read_text.within;
 
 import std.io.println;
 import std.io.IOError as ConsoleError;
 import std.fs.IOError as FileError;
 import std.effects.Fs;
 import nomo.tools.workspace.{ReadOnlyRoot, discover};
-import std.text.{len, split, to_string_i32};
+import std.text.{split, to_string_i32};
 import std.collections.len as count;
 import nomo.model.model_tool_contract.candidate_error;
 import nomo.model.read_protocol.question_error;
@@ -32,7 +33,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyR
     if (count(args) != 5 && !natural) || (args[0] != "new" && args[0] != "continue") || args[1] != "--allow" || args[3] != "--once" {
         println("REFUSED expected new|continue --allow FILE[,FILE...] --once QUESTION"); return 1;
     }
-    if len(args[2]) > 195 { println("REFUSED allowlist too long"); return 1; }
+    if !within(args[2], 195) { println("REFUSED allowlist too long"); return 1; }
     let allowed = if args[2] == "*" { match discover() { Ok(value) => value, Err(error) => { println("REFUSED " + error); return 1; } } } else { split(args[2], ",") };
     if args[2] != "*" && count(allowed) > 4 { println("REFUSED explicit selection supports up to four files"); return 1; }
     let paths = candidate_error(allowed); if paths != "" { println("REFUSED " + paths); return 1; }

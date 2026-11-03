@@ -1,7 +1,8 @@
 module nomo.entry.read_model_tools_chat;
 
+import nomo.core.read_text.within;
 import std.io.{println, read_line};
-import std.text.{len, split, to_string_i32, starts_with};
+import std.text.{split, to_string_i32, starts_with};
 import std.collections.len as count;
 import std.codec.text.utf8_encode;
 import std.bytes.len as byte_count;
@@ -50,7 +51,7 @@ public flow run(args: Array<string>) -> i32 {
     if count(args) != 3 && count(args) != 5 { return refused("expected new --allow FILE[,FILE...] [--turns 4] or standalone help"); }
     if args[0] != "new" || args[1] != "--allow" { return refused("expected new --allow FILE[,FILE...] [--turns 4] or standalone help"); }
     if count(args) == 5 && (args[3] != "--turns" || args[4] != "4") { return refused("only --turns 4 is supported"); }
-    if len(args[2]) > 195 { return refused("raw allowlist exceeds 195 characters"); }
+    if !within(args[2], 195) { return refused("raw allowlist exceeds 195 UTF-8 bytes"); }
     let allowed = split(args[2], ",");
     let invalid_allowed = allowed_error(allowed); if invalid_allowed != "" { return refused(invalid_allowed); }
     let extended = count(args) == 5;

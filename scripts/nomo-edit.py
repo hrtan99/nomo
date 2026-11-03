@@ -15,13 +15,24 @@ import time
 
 ROOT = Path(__file__).resolve().parent.parent
 
-def safe_read_question(value):
-    """Mirror the read protocol's UTF-8 byte and terminal-safety bounds."""
+def safe_text(value, maximum):
+    """Mirror the source UTF-8 byte and terminal-safety bounds."""
     try:
-        if not value.strip() or len(value.encode('utf-8')) > 128:return False
+        if not value or len(value.encode('utf-8')) > maximum:return False
     except UnicodeEncodeError:return False
     return all(not (ord(c) < 32 or 127 <= ord(c) <= 159 or 0x200b <= ord(c) <= 0x200f or
                    0x2028 <= ord(c) <= 0x202e or 0x2060 <= ord(c) <= 0x2069 or ord(c) == 0xfeff) for c in value)
+
+
+def safe_read_question(value):
+    return bool(value.strip()) and safe_text(value, 128)
+
+
+def safe_path(value, maximum=128):
+    if not safe_text(value, maximum):return False
+    parts = value.split('/')
+    return len(parts) <= 8 and all(part not in ('', '.', '..') and
+        all(ord(c) >= 128 or c in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-' for c in part) for part in parts)
 
 
 def format_check_capture(entry, env):
@@ -70,9 +81,7 @@ def prepare(args, stdin_tty, stdout_tty):
             raise ValueError('read root and state must be separate, non-overlapping directories')
         names = allowed.split(',') if allowed is not None else []
         if (not 1 <= len(names) <= 2 or len(set(names)) != len(names) or
-                any(not 1 <= len(name) <= 48 or len(name.split('/')) > 8 or
-                    any(part in ('', '.', '..') or not re.fullmatch(r'[A-Za-z0-9._-]+', part)
-                        for part in name.split('/')) for name in names)):
+                any(not safe_path(name, 48) for name in names)):
             raise ValueError('allow must name one or two distinct safe relative files')
         if task is None or not task.strip() or len(task) > 128 or not all(32 <= ord(c) <= 126 for c in task):
             raise ValueError('work task must be 1..128 printable ASCII characters, not only spaces')
@@ -99,7 +108,7 @@ def prepare(args, stdin_tty, stdout_tty):
     elif not args.target or args.replacement is None:
         raise ValueError('provide either a nonempty task or target and replacement')
     selected = Path(args.path)
-    if selected.is_absolute() or '..' in selected.parts or '\\' in args.path or '\0' in args.path:
+    if not safe_path(args.path):
         raise ValueError('file must be a relative path inside the workspace')
     current = workspace
     for part in selected.parts:

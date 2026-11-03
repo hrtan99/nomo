@@ -1,8 +1,9 @@
 module nomo.entry.read_model_tools_entry;
 
+import nomo.core.read_text.within;
 import std.io.println;
 import std.collections.len as count;
-import std.text.{len, split};
+import std.text.{split};
 import nomo.cli.read_cli.parse_args;
 import nomo.harness.read_tool_contract.fresh;
 import nomo.harness.read_model_tools.run as coordinate;
@@ -10,7 +11,7 @@ import nomo.harness.read_model_tools.refused;
 
 flow help() -> unit {
     println("Nomo model/tool harness: new --once TEXT --allow FILE[,FILE...] (either flag order).");
-    println("Raw request/task 1..128, child 1..256, final 1..512 safe UTF-8 bytes; 1..4 paths of <=48 characters, raw allowlist <=195.");
+    println("Raw request/task 1..128, child 1..256, final 1..512 safe UTF-8 bytes; 1..4 paths of <=128 UTF-8 bytes, raw allowlist <=195 bytes.");
     println("Shared maximum: 7 steps / 4 model calls / 8192 token allowance / 1 read-or-search / 16384 scan allowance; not measured usage.");
     println("Complete model context <=2048. Read size checked after reading. One fresh serial child; no writes, commands, resume, line mode or persistence. Host aborts may leave reservations unresolved.");
 }
@@ -26,7 +27,7 @@ public flow run(args: Array<string>) -> i32 {
         if flag == "--allow" {
             if supplied || index + 1 >= count(args) { return refused(fresh(), "expected exactly one --allow FILE[,FILE...]"); }
             allowed = args[index + 1];
-            if len(allowed) > 195 { return refused(fresh(), "raw allowlist exceeds 195 characters"); }
+            if !within(allowed, 195) { return refused(fresh(), "raw allowlist exceeds 195 UTF-8 bytes"); }
             supplied = true;
             index = index + 2;
         } else {

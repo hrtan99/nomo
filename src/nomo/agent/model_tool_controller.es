@@ -27,7 +27,7 @@ public flow capacity(session: Session, slots: usize, characters: usize) -> strin
 
 // Retain all task, parent, tool and confirmed outcome events. Only controller
 // Model-text history is optional; state history/accounting is never rewritten.
-flow bounded_model_context(input: Context) -> Result<Context, string> {
+public flow bounded_model_context(input: Context, maximum: usize) -> Result<Context, string> {
     var policies: Array<EventPolicy> = [];
     for event in input.history limit Iterations(32) {
         var policy = EventPolicy.Required;
@@ -35,7 +35,7 @@ flow bounded_model_context(input: Context) -> Result<Context, string> {
         if event.role == "user" && event.kind == "input" { policy = EventPolicy.Task; }
         policies = policies.push(policy);
     }
-    let selected = match select_context(input, policies, 2048) {
+    let selected = match select_context(input, policies, maximum) {
         Ok(value) => value,
         Err(error) => {
             let message = match error {
@@ -43,7 +43,7 @@ flow bounded_model_context(input: Context) -> Result<Context, string> {
                 SelectionRefusal.InvalidContext => "invalid bounded model context",
                 SelectionRefusal.InvalidLimit => "invalid model context byte limit",
                 SelectionRefusal.Encoding => "model context encoding refused",
-                SelectionRefusal.RequiredTooLarge => "required model context exceeds 2048 encoded UTF-8 bytes",
+                SelectionRefusal.RequiredTooLarge => if maximum == 2048 { "required model context exceeds 2048 encoded UTF-8 bytes" } else { "required model context exceeds 262144 encoded UTF-8 bytes" },
             };
             return Err(message);
         },
@@ -63,7 +63,7 @@ flow model_attempt(previous: Session, allowed: Array<string>, limits: Limits, fi
         return Err(failed(history(session, stop(session.history)), full, 4));
     }
     let original = Context { history = session.history.events, allowed = allowed, final_only = final_only };
-    let context = match bounded_model_context(original) {
+    let context = match bounded_model_context(original, 2048) {
         Ok(value) => value, Err(error) => { return Err(failed(session, error, 4)); }
     };
     var error = context_error(context);

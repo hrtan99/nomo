@@ -93,8 +93,9 @@ class NaturalObserver(StartIdObserver):
         self.buffer.extend(data)
         while b'\n' in self.buffer:
             line, _, remainder = self.buffer.partition(b'\n');self.buffer = bytearray(remainder)
-            fields = line.decode('utf-8', 'replace').rstrip('\r').split(' ')
-            if len(fields)==4 and fields[:2]==['NATURAL','WORK'] and fields[2] in ('work','followup') and (fields[3] in self.allowed or ('*' in self.allowed and len(fields[3]) <= 128 and re.fullmatch(r'[A-Za-z0-9._/-]+', fields[3]) and all(part not in ('', '.', '..') for part in fields[3].split('/')))):
+            try: fields = line.decode('utf-8', 'strict').rstrip('\r').split(' ')
+            except UnicodeDecodeError: continue
+            if len(fields)==4 and fields[:2]==['NATURAL','WORK'] and fields[2] in ('work','followup') and (edit.safe_path(fields[3]) and (fields[3] in self.allowed or '*' in self.allowed)):
                 self.route = (fields[2], fields[3])
             elif fields == ['NATURAL','DELEGATE']:self.deferred = 'read'
             elif fields == ['NATURAL','DELEGATE','LIMIT']:self.deferred = 'limit'
