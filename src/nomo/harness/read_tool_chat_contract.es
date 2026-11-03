@@ -2,15 +2,13 @@ module nomo.harness.read_tool_chat_contract;
 
 import std.text.{len, starts_with};
 import std.collections.len as count;
-import std.json.{JsonValue, stringify};
+import std.json.JsonValue;
 import std.agent.message.Message;
 import nomo.core.conversation.Event;
 import nomo.model.model_tool_contract.{Session, candidate_error};
-import nomo.core.text.printable;
+import nomo.core.text.{printable, context_json_error};
 import nomo.core.read_text.{bounded, safe};
 import nomo.model.read_protocol.decode_child;
-import std.codec.text.utf8_encode;
-import std.bytes.len as byte_count;
 import nomo.harness.read_tool_contract.{Ledger, Observed, ledger_error};
 import nomo.harness.read_tool_contract.fresh as fresh_ledger;
 
@@ -38,11 +36,7 @@ public flow prior_error(prior: Previous) -> string {
 
 public flow context_error(context: Context) -> string {
     let message = Message.new(context);
-    let conversion: Option<Message<JsonValue>> = message.cast<JsonValue>();
-    let json = match conversion { Some(value) => value.body, None() => { return "context conversion refused"; } };
-    let encoded = match stringify(json) { Ok(value) => value, Err(_) => { return "context JSON refused"; } };
-    if byte_count(utf8_encode(encoded)) > 262144 { return "model context exceeds 262144 serialized bytes"; }
-    return "";
+    return context_json_error(message.cast<JsonValue>(), 262144, true, "model context exceeds 262144 serialized bytes");
 }
 
 // Check every prior event before projecting the unchanged one-shot validator's

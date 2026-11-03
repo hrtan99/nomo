@@ -2,9 +2,9 @@ module nomo.harness.harness_model_contract;
 
 import std.text.{len, trim, split};
 import std.collections.len as count;
-import std.json.{JsonValue, parse, stringify};
+import std.json.{JsonValue, parse};
 import std.agent.message.Message;
-import nomo.core.text.printable;
+import nomo.core.text.{printable, context_json_error};
 import nomo.harness.model_plan_diagnostic.{read_plan_error, response_error};
 
 public type Context = { phase: string, request: string, task: string, result: string };
@@ -84,11 +84,7 @@ public flow read_aggregate_error(raw: string) -> string {
 // Check the complete Prompt.data encoding, not just its unescaped field values.
 public flow context_error(context: Context) -> string {
     let message = Message.new(context);
-    let conversion: Option<Message<JsonValue>> = message.cast<JsonValue>();
-    let json = match conversion { Some(value) => value.body, None() => { return "context conversion refused"; } };
-    let encoded = match stringify(json) { Ok(value) => value, Err(_) => { return "context JSON refused"; } };
-    if len(encoded) > 2048 { return "model context exceeds 2048 serialized characters"; }
-    return "";
+    return context_json_error(message.cast<JsonValue>(), 2048, false, "model context exceeds 2048 serialized characters");
 }
 
 flow ledger_error(state: Ledger) -> string {

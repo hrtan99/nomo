@@ -2,9 +2,9 @@ module nomo.model.model_tool_contract;
 
 import std.text.{len, trim, split};
 import std.collections.len as count;
-import std.json.{JsonValue, parse, stringify};
+import std.json.{JsonValue, parse};
 import std.agent.message.Message;
-import nomo.core.text.printable;
+import nomo.core.text.{printable, context_json_error};
 import nomo.core.read_text.search_literal;
 import nomo.harness.model_plan_diagnostic.response_error;
 public import nomo.model.tool_context.{Context, allowed_error, candidate_error};
@@ -155,11 +155,7 @@ public flow decode_work_reply(raw: string, allowed: Array<string>, final_only: b
 // whole serialized record, including escaped strings, metadata and both paths.
 public flow context_error(context: Context) -> string {
     let message = Message.new(context);
-    let conversion: Option<Message<JsonValue>> = message.cast<JsonValue>();
-    let json = match conversion { Some(value) => value.body, None() => { return "context conversion refused"; } };
-    let encoded = match stringify(json) { Ok(value) => value, Err(_) => { return "context JSON refused"; } };
-    if len(encoded) > 262144 { return "model context exceeds 262144 serialized characters"; }
-    return "";
+    return context_json_error(message.cast<JsonValue>(), 262144, false, "model context exceeds 262144 serialized characters");
 }
 
 // Admission and charging are separate pure operations. The caller must perform

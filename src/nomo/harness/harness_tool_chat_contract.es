@@ -2,13 +2,13 @@ module nomo.harness.harness_tool_chat_contract;
 
 import std.text.{len, starts_with};
 import std.collections.len as count;
-import std.json.{JsonValue, stringify};
+import std.json.JsonValue;
 import std.agent.message.Message;
 import nomo.core.conversation.{Event, State, add, fresh};
 import nomo.model.model_tool_contract.{Session, question_error, allowed_error, candidate_error};
 import nomo.model.model_tool_contract.Context as ChildContext;
 import nomo.model.model_tool_contract.context_error as child_context_error;
-import nomo.core.text.printable;
+import nomo.core.text.{printable, context_json_error};
 import nomo.core.read_text.{safe, bounded as utf8_bounded};
 import nomo.model.read_protocol.question_error as utf8_question_error;
 import nomo.harness.harness_model_contract.bounded;
@@ -54,11 +54,7 @@ public flow prior_error(prior: Previous) -> string {
 
 public flow context_error(context: Context) -> string {
     let message = Message.new(context);
-    let conversion: Option<Message<JsonValue>> = message.cast<JsonValue>();
-    let json = match conversion { Some(value) => value.body, None() => { return "context conversion refused"; } };
-    let encoded = match stringify(json) { Ok(value) => value, Err(_) => { return "context JSON refused"; } };
-    if len(encoded) > 2048 { return "model context exceeds 2048 serialized characters"; }
-    return "";
+    return context_json_error(message.cast<JsonValue>(), 2048, false, "model context exceeds 2048 serialized characters");
 }
 
 public flow seed(request: string, prior: Previous) -> State {
