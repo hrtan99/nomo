@@ -17,7 +17,7 @@ import nomo.harness.read_tool_chat_contract.context_error as unicode_context_err
 import nomo.harness.read_tool_chat_contract.inspect_turn as unicode_inspect_turn;
 import nomo.harness.read_tool_chat_contract.turn_error as unicode_turn_error;
 import nomo.harness.read_tool_chat_contract.{is_extended, extended_turn_error, extended_combine};
-import nomo.harness.read_tool_chat_contract.{session_maximum, session_turn_error, session_combine, multi_maximum, multi_turn_error, multi_combine, multi_bump, multi_settle, inspect_multi_turn};
+import nomo.harness.read_tool_chat_contract.{session_maximum, session_turn_error, session_combine, multi_maximum, multi_wide_maximum, multi_turn_error, multi_combine, multi_bump, multi_settle, inspect_multi_turn};
 
 flow refused(usage: Ledger, error: string, resolved: bool) -> LocalTurn {
     println("REFUSED " + error);
@@ -42,7 +42,7 @@ flow total(before: Ledger, local: Ledger) -> Ledger {
         tools = before.tools + local.tools, scan = before.scan + local.scan };
 }
 
-flow stage(turn: i32, phase: string, before: Ledger, local: Ledger, multi: bool) -> unit {
+flow stage(turn: i32, phase: string, before: Ledger, local: Ledger, multi: bool, wide: bool) -> unit {
     var steps: i32 = 0;
     if phase == "plan" { steps = if multi { 10 } else { 6 }; }
     if phase == "child" { steps = if multi { 9 } else { 5 }; }
@@ -50,16 +50,16 @@ flow stage(turn: i32, phase: string, before: Ledger, local: Ledger, multi: bool)
     let tools = if phase == "aggregate" { 0 } else { if multi { 3 } else { 1 } };
     println("TURN " + to_string_i32(turn) + " STAGE " + phase + " " + numbers(total(before, local)) +
         " reserved_steps=" + to_string_i32(steps) + " reserved_calls=" + to_string_i32(calls) +
-        " reserved_tokens=" + to_string_i32(if multi && phase != "aggregate" { 18432 } else { calls * 2048 }) + " reserved_tools=" + to_string_i32(tools) +
+        " reserved_tokens=" + to_string_i32(if multi && phase != "aggregate" { if wide { 20480 } else { 18432 } } else { calls * 2048 }) + " reserved_tools=" + to_string_i32(tools) +
         " reserved_scan=" + to_string_i32(tools * if multi { 4194560 } else { 16384 }));
     if phase == "child" {
-        println(if multi { "RESERVATION child-1 steps=7 calls=4 tokens=16384 tools=3 scan=12583680 tail_steps=2 tail_calls=1 tail_tokens=2048 unresolved=true" } else { "RESERVATION child-1 steps=3 calls=2 tokens=4096 tools=1 scan=16384 tail_steps=2 tail_calls=1 tail_tokens=2048 unresolved=true" });
+        println(if multi { if wide { "RESERVATION child-1 steps=7 calls=4 tokens=16384 tools=3 scan=12583680 tail_steps=2 tail_calls=1 tail_tokens=4096 unresolved=true" } else { "RESERVATION child-1 steps=7 calls=4 tokens=16384 tools=3 scan=12583680 tail_steps=2 tail_calls=1 tail_tokens=2048 unresolved=true" } } else { "RESERVATION child-1 steps=3 calls=2 tokens=4096 tools=1 scan=16384 tail_steps=2 tail_calls=1 tail_tokens=2048 unresolved=true" });
     }
 }
 
 // The invocation supplies cumulative usage and a validated successful selection.
 // Fresh local counters are a subledger of the already checked global reservation.
-flow execute(request: string, allowed: Array<string>, prior: Previous, before: Ledger, turn: i32, unicode: bool, private_progress: bool, multi: bool) -> LocalTurn {
+flow execute(request: string, allowed: Array<string>, prior: Previous, before: Ledger, turn: i32, unicode: bool, private_progress: bool, multi: bool, wide: bool) -> LocalTurn {
     var state = fresh();
     if turn < 1 || turn > 32 || (turn == 1 && prior.task != "") || (turn > 1 && prior.task == "") {
         return refused(state, "invalid turn selection", true);
@@ -69,15 +69,15 @@ flow execute(request: string, allowed: Array<string>, prior: Previous, before: L
     let previous = if unicode { unicode_prior_error(prior) } else { prior_error(prior) }; if previous != "" { return refused(state, previous, true); }
     let plan = Context { phase = "plan", request = request, task = "", result = "", tool = "", outcome = "", allowed = allowed, prior = prior };
     let invalid_plan = if unicode { unicode_context_error(plan) } else { context_error(plan) }; if invalid_plan != "" { return refused(state, invalid_plan, true); }
-    state = match if multi { multi_bump(state, true) } else { bump(state, true) } { Ok(value) => value, Err(error) => { return refused(state, error, true); } };
-    stage(turn, "plan", before, state, multi);
+    state = match if multi { multi_bump(state, true, wide) } else { bump(state, true) } { Ok(value) => value, Err(error) => { return refused(state, error, true); } };
+    stage(turn, "plan", before, state, multi, wide);
     let raw = perform LegacyChatStages.main(plan);
     let decoded = if unicode { unicode_decode_plan(raw) } else { decode_plan(raw) };
     let task = match decoded { Ok(value) => value, Err(error) => { return refused(state, error, true); } };
-    state = match if multi { multi_bump(state, false) } else { bump(state, false) } { Ok(value) => value, Err(error) => { return refused(state, error, true); } };
+    state = match if multi { multi_bump(state, false, wide) } else { bump(state, false) } { Ok(value) => value, Err(error) => { return refused(state, error, true); } };
     if private_progress { println("EVENT main -> child-1 request child-1: [REDACTED]"); }
     else { println("EVENT main -> child-1 request child-1: " + task); }
-    stage(turn, "child", before, state, multi);
+    stage(turn, "child", before, state, multi, wide);
     let child = perform LegacyChatStages.child(task, allowed, seed(request, prior), multi);
     let inspected = if multi { inspect_multi_turn(child.state, child.status, request, task, allowed, prior) } else { if unicode { unicode_inspect_turn(child.state, child.status, request, task, allowed, prior) }
         else { inspect_turn(child.state, child.status, request, task, allowed, prior) } };
@@ -85,16 +85,16 @@ flow execute(request: string, allowed: Array<string>, prior: Previous, before: L
         Ok(value) => value, Err(error) => { return refused(state, error, false); }
     };
     if child.state.calls != 0 {
-        state = match if multi { multi_settle(state, child.state) } else { settle(state, child.state) } { Ok(value) => value, Err(error) => { return refused(state, error, false); } };
+        state = match if multi { multi_settle(state, child.state, wide) } else { settle(state, child.state) } { Ok(value) => value, Err(error) => { return refused(state, error, false); } };
     }
     println("SETTLED child-1 " + numbers(total(before, state)) + " released_steps=" + to_string_i32((if multi { 9 } else { 5 }) - state.steps) +
-        " released_calls=" + to_string_i32((if multi { 5 } else { 3 }) - state.calls) + " released_tokens=" + to_string_i32((if multi { 18432 } else { 6144 }) - state.tokens) +
+        " released_calls=" + to_string_i32((if multi { 5 } else { 3 }) - state.calls) + " released_tokens=" + to_string_i32((if multi { if wide { 20480 } else { 18432 } } else { 6144 }) - state.tokens) +
         " released_tools=" + to_string_i32((if multi { 3 } else { 1 }) - state.tools) + " released_scan=" + to_string_i32((if multi { 12583680 } else { 16384 }) - state.scan) + " unresolved=false");
     if child.status != 0 { return refused(state, "child returned failure; no aggregation", true); }
     if !(if unicode { unicode_bounded(observed.result, 256) } else { bounded(observed.result, 256) }) { return refused(state, "invalid bounded child result", true); }
     if private_progress { println("EVENT child-1 -> main result child-1: [REDACTED]"); }
     else { println("EVENT child-1 -> main result child-1: " + observed.result); }
-    state = match if multi { multi_bump(state, false) } else { bump(state, false) } { Ok(value) => value, Err(error) => { return refused(state, error, true); } };
+    state = match if multi { multi_bump(state, false, wide) } else { bump(state, false) } { Ok(value) => value, Err(error) => { return refused(state, error, true); } };
     if private_progress { println("EVENT main -> main consume child-1: [REDACTED]"); }
     else { println("EVENT main -> main consume child-1: " + observed.result); }
     if observed.tool != "" {
@@ -104,8 +104,8 @@ flow execute(request: string, allowed: Array<string>, prior: Previous, before: L
     let aggregate = Context { phase = "aggregate", request = request, task = task, result = observed.result,
         tool = observed.tool, outcome = observed.outcome, allowed = allowed, prior = prior };
     let invalid_aggregate = if unicode { unicode_context_error(aggregate) } else { context_error(aggregate) }; if invalid_aggregate != "" { return refused(state, invalid_aggregate, true); }
-    state = match if multi { multi_bump(state, true) } else { bump(state, true) } { Ok(value) => value, Err(error) => { return refused(state, error, true); } };
-    stage(turn, "aggregate", before, state, multi);
+    state = match if multi { multi_bump(state, true, wide) } else { bump(state, true) } { Ok(value) => value, Err(error) => { return refused(state, error, true); } };
+    stage(turn, "aggregate", before, state, multi, wide);
     let answer = perform LegacyChatStages.main(aggregate);
     if !(if unicode { unicode_bounded(answer, 512) } else { bounded(answer, 512) }) { return refused(state, "invalid bounded final answer", true); }
     println("FINAL " + answer);
@@ -115,17 +115,18 @@ flow execute(request: string, allowed: Array<string>, prior: Previous, before: L
 }
 
 flow run_mode(request: string, allowed: Array<string>, invocation: Invocation, unicode: bool, private_progress: bool) -> TurnResult {
-    let multi = unicode && (invocation.maximum == multi_maximum(2) || invocation.maximum == multi_maximum(32));
+    let wide = unicode && (invocation.maximum == multi_wide_maximum(2) || invocation.maximum == multi_wide_maximum(32));
+    let multi = wide || (unicode && (invocation.maximum == multi_maximum(2) || invocation.maximum == multi_maximum(32)));
     let session = unicode && invocation.maximum == session_maximum();
     let extended = unicode && is_extended(invocation.maximum);
-    let invalid = if multi { multi_turn_error(invocation, if invocation.maximum == multi_maximum(32) { 32 } else { 2 }) } else { if session { session_turn_error(invocation) } else { if extended { extended_turn_error(invocation) } else { if unicode { unicode_turn_error(invocation) } else { turn_error(invocation) } } } };
+    let invalid = if multi { multi_turn_error(invocation, if invocation.maximum == multi_maximum(32) || invocation.maximum == multi_wide_maximum(32) { 32 } else { 2 }) } else { if session { session_turn_error(invocation) } else { if extended { extended_turn_error(invocation) } else { if unicode { unicode_turn_error(invocation) } else { turn_error(invocation) } } } };
     if invalid != "" { println("REFUSED " + invalid); return TurnResult { status = 1, state = invocation, resolved = true, completed = None() }; }
-    let last_admission = if multi && invocation.maximum == multi_maximum(32) { 31 } else { if session { 31 } else { if extended { 3 } else { 1 } } };
+    let last_admission = if multi && (invocation.maximum == multi_maximum(32) || invocation.maximum == multi_wide_maximum(32)) { 31 } else { if session { 31 } else { if extended { 3 } else { 1 } } };
     if invocation.admitted < 0 || invocation.admitted > last_admission {
         println("REFUSED turn limit reached"); return TurnResult { status = 1, state = invocation, resolved = true, completed = None() };
     }
     let turn = invocation.admitted + 1;
-    let local = execute(request, allowed, invocation.prior, invocation.usage, turn, unicode, private_progress, multi);
+    let local = execute(request, allowed, invocation.prior, invocation.usage, turn, unicode, private_progress, multi, wide);
     if !local.resolved { return TurnResult { status = 1, state = invocation, resolved = false, completed = None() }; }
     let combined = if multi { multi_combine(invocation.usage, local.usage, invocation.maximum) } else { if session { session_combine(invocation.usage, local.usage) } else { if extended { extended_combine(invocation.usage, local.usage) } else { combine(invocation.usage, local.usage, invocation.maximum) } } };
     let usage = match combined {

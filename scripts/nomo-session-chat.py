@@ -204,11 +204,11 @@ def main(argv=None):
             return 130
     if args.discover:
         print('Discovery uses pages of 256 files, up to four automatic pages, four directory levels and 256 directories; each directory is limited to 1024 entries and 131072 name bytes. Unsupported paths and file types are excluded.', flush=True)
-        print('Each automatic page uses another bounded chat turn: up to 6 calls and 20480 output tokens. Page contents may change between turns.', flush=True)
+        print('Each automatic page uses another bounded chat turn: up to 6 calls and 24576 output tokens for new sessions. Page contents may change between turns.', flush=True)
         print('Excluded: .git/.hg/.svn/.bzr, dependency and build directories, .venv/.tox/.cache/.mypy_cache/.pytest_cache, .ssh/.aws/.gnupg/.netrc, and .env files except .env.example/.env.sample.', flush=True)
         print('Dotfiles and project configuration in scope may be sent to the model.', flush=True)
         print('A link outside the selected workspace stops discovery; choose a narrower root.', flush=True)
-    print('A read turn may reserve up to 6 calls and 20480 output tokens: up to 4 child calls at 4096 each and 2 parent calls at 2048 each; up to 3 read/search operations reserve 4 MiB plus 256 probe bytes each.', flush=True)
+    print('A read turn may reserve up to 6 calls and 24576 output tokens for new sessions: up to 4 child calls at 4096 each and 2 parent calls at up to 4096 each; up to 3 read/search operations reserve 4 MiB plus 256 probe bytes each.', flush=True)
     if args.id is not None:
         show_resume(args, show_id=True)
     else:
@@ -337,7 +337,7 @@ def main(argv=None):
                 print('The agent is inspecting discovery page ' + str(args.page) + ' using another bounded chat turn.', flush=True)
             else:
                 extra_read = True
-                print('The agent is gathering more evidence using one additional chat turn (up to 6 calls and 20480 output tokens).', flush=True)
+                print('The agent is gathering more evidence using one additional chat turn (up to 6 calls and 24576 output tokens for new sessions).', flush=True)
             command = [sys.executable, str(ROOT / 'scripts/nomo-session-id.py'), 'resume',
                        '--sessions-dir', args.sessions_dir, '--id', args.id, '--root', args.root,
                        '--allow=' + args.allow, '--once=' + question, '--natural-work']
