@@ -86,9 +86,13 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
     match complete(intent) { Ok(_) => {} Err(error) => { return refused("edit may have completed; " + error); } }
     println("APPLIED " + selected.id);
     let confirmed = Confirmed { binding = selected, after = pending.prepared.proposal.after };
+    println("POST_EDIT context");
     let completed = match finish_edit(pending, confirmed) { Ok(value) => value, Err(failure) => { return refused(failure.error); } };
+    println("POST_EDIT aggregate");
     let summary = match summarize_history(completed, prior_request, previous) { Ok(value) => value, Err(failure) => { return refused(failure.error); } };
+    println("POST_EDIT events");
     let records = match capture(pending, confirmed, summary) { Ok(value) => value, Err(error) => { return refused("edit completed; " + error); } };
+    println("POST_EDIT persist");
     match finish(ticket, summary.answer, summary.state, records, policy, binding) { Ok(_) => {} Err(error) => { return refused("edit completed; " + error); } }
     display("FINAL ", summary.answer); println("SAVED event work facts; no grant or root identity is persisted.");
     ledger(summary.state); return 0;

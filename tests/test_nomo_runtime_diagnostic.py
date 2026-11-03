@@ -46,6 +46,18 @@ class DiagnosticTests(unittest.TestCase):
         observer.feed('stdout', b'TURN 1 STAGE child steps=2 calls=1 tokens=2048 tools=0 scan=0 reserved_steps=5 reserved_calls=3 reserved_tokens=6144 reserved_tools=1 reserved_scan=4096\n' + observer._length + b'\n')
         self.assertIn('last_stage_text=chat-child text_marker=incomplete_response_length', self.report(observer))
 
+    def test_post_edit_marker_is_bounded_and_advisory(self):
+        observer=edit.RuntimeDiagnostic()
+        for chunk in (b'POST_EDIT con',b'text\nPOST_EDIT aggre',b'gate\nPOST_EDIT persist extra\n'):
+            observer.feed('stdout',chunk)
+        report=self.report(observer);self.assertIn('post_edit_text=aggregate',report);self.assertIn('untrusted',report)
+        observer.feed('stderr',b'POST_EDIT persist\n')
+        self.assertIn('post_edit_text=persist',self.report(observer));self.assertEqual('',self.report(observer,0))
+
+    def test_summary_bound_message_is_actionable_and_not_a_retry(self):
+        observer=edit.RuntimeDiagnostic();observer.feed('stdout',b'POST_EDIT aggregate\n'+observer._summary_bound+b'\n')
+        report=self.report(observer);self.assertIn('text_marker=summary_blank_or_over_limit',report);self.assertIn('may already be applied',report);self.assertIn('inspect the file and session status',report);self.assertIn('Do not automatically retry',report)
+
 
 if __name__ == '__main__':
     unittest.main()

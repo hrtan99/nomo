@@ -158,10 +158,12 @@ class RuntimeDiagnostic:
     """
     _length = b'error[analysis::UnhandledRuntimeError]: model generation failed: IncompleteResponse: OpenAI-compatible generation is incomplete (finish_reason=length)'
     _provider_503 = b'error[analysis::UnhandledRuntimeError]: model host boundary failed: OpenAI-compatible endpoint returned an error status (status=503)'
+    _summary_bound = b'REFUSED edit completed; final answer requires 1..512 nonblank UTF-8 bytes'
     _stages = (b'read-plan', b'read-child', b'read-aggregate', b'edit-plan', b'edit-child', b'edit-aggregate')
 
     def __init__(self):
         self.stage = None
+        self.post_edit = None
         self.categories = set()
         self.buffers = {'stdout': bytearray(), 'stderr': bytearray()}
         self.discard = {'stdout': False, 'stderr': False}
@@ -181,6 +183,8 @@ class RuntimeDiagnostic:
                     self.buffers[stream].append(byte)
 
     def _line(self, line):
+        if line in (b'POST_EDIT context', b'POST_EDIT aggregate', b'POST_EDIT events', b'POST_EDIT persist'):
+            self.post_edit = line[len(b'POST_EDIT '):].decode('ascii')
         chat = re.fullmatch(rb'TURN [1-9][0-9]* STAGE (plan|child|aggregate) steps=[0-9]+ calls=[0-9]+ tokens=[0-9]+ tools=[0-9]+ scan=[0-9]+ reserved_steps=[0-9]+ reserved_calls=[0-9]+ reserved_tokens=[0-9]+ reserved_tools=[0-9]+ reserved_scan=[0-9]+', line)
         if chat:
             self.stage = 'chat-' + chat.group(1).decode('ascii')
@@ -191,14 +195,18 @@ class RuntimeDiagnostic:
             self.categories.add('incomplete_response_length')
         elif line == self._provider_503:
             self.categories.add('provider_http_503')
+        elif line == self._summary_bound:
+            self.categories.add('summary_blank_or_over_limit')
 
     def report(self, exit_code):
         if exit_code != 3:
             return
         category = next(iter(self.categories)) if len(self.categories) == 1 else 'unknown'
         print('Runtime diagnostic (observed terminal text, untrusted): last_stage_text=' +
-              (self.stage or 'unknown') + ' text_marker=' + category +
+              (self.stage or 'unknown') + ' text_marker=' + category + ' post_edit_text=' + (self.post_edit or 'unknown') +
               '. Inspect retained state; this is not a retry decision.', file=sys.stderr, flush=True)
+        if category == 'summary_blank_or_over_limit' and self.post_edit == 'aggregate':
+            print('The observed text may indicate a blank or over-limit summary. The edit may already be applied; inspect the file and session status before deciding what to do. Do not automatically retry.', file=sys.stderr, flush=True)
 
 
 def run_owned(command, env, capture=None, input_data=None, diagnostic=None):
