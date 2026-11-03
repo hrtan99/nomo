@@ -31,7 +31,8 @@ Usage:
   nomo-read.sh edit-status --state PRIVATE_DIRECTORY --id ID --path FILE
   nomo-read.sh resume --id SESSION_ID  (not available yet)
 
-Select one to four relative files of at most 16384 bytes for read/session workflows; standalone work remains limited to two. The default model
+Explicit --allow selects one to four files for read/session workflows; --discover uses the stated discovery bounds.
+Each file read is limited to 16384 bytes; standalone work remains limited to two. The default model
 is MiniMax M Plan (China), MiniMax-M3.1-Flash at https://api.minimax.cn/v1.
 Provide its subscription key through MINIMAX_API_KEY in the environment.
 MiniMax thinking counts against output limits. The runtime does not expose
