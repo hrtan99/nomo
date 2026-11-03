@@ -108,6 +108,8 @@ def show_resume(args, *, show_id):
                    '--id=' + args.id, '--root=' + args.root, '--allow=' + args.allow]
     if args.events_policy_dir is not None:
         interactive.append('--events-policy-dir=' + args.events_policy_dir)
+    if args.check is not None:
+        interactive.extend(['--check', *args.check])
     print('Resume interactive: ' + shlex.join(interactive), flush=True)
 
 def show_status_hint(args, identifier):
