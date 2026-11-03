@@ -12,7 +12,7 @@ import std.collections.len as count;
 import nomo.model.model_tool_contract.candidate_error;
 import nomo.model.read_protocol.question_error;
 import nomo.harness.read_tool_chat.run_private_turn as run_turn;
-import nomo.harness.natural_work_chat.{run as run_natural, route as natural_route};
+import nomo.harness.natural_work_chat.{run as run_natural, route as natural_route, delegated as delegate_route};
 import nomo.harness.history_continue_model.{WorkFacts, CheckOutput, BudgetFacts, run_turn as run_after_work, run_after_followup};
 import nomo.session.check_output.load as load_check_output;
 import nomo.session.check_output_display.render as render_check_output;
@@ -121,7 +121,8 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyR
     let completed = match result.completed { Some(item) => item, None() => { println("REFUSED completed event batch missing"); return 1; } };
     match save_completed(next, Some(reserved), completed.records) { Ok(_) => {} Err(error) => { println("REFUSED " + error); return 1; } }
     println("SAVED chat history; prior data is not a grant or workspace identity.");
-    if natural { let route = natural_route(completed.answer, allowed, work_facts != None(), result.state.admitted < 2, scope.page, scope.more); if route != "" { println(route); } }
+    let route = if natural { natural_route(completed.answer, allowed, work_facts != None(), result.state.admitted < 2, scope.page, scope.more) } else { delegate_route(completed.answer, result.state.admitted < 2) };
+    if route != "" { println(route); }
     return 0;
 }
 

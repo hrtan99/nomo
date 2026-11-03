@@ -209,6 +209,7 @@ def main(argv=None):
         print('Dotfiles and project configuration in scope may be sent to the model.', flush=True)
         print('A link outside the selected workspace stops discovery; choose a narrower root.', flush=True)
     print('A read turn may reserve up to 6 calls and 24576 output tokens for new sessions: up to 4 child calls at 4096 each and 2 parent calls at up to 4096 each; up to 3 read/search operations reserve 4 MiB plus 256 probe bytes each.', flush=True)
+    if args.once is not None: print('An unfinished delegated answer may use one additional read turn with the same limits.', flush=True)
     if args.id is not None:
         show_resume(args, show_id=True)
     else:
@@ -316,7 +317,7 @@ def main(argv=None):
         natural = tty and args.once is None
         if natural:command += ['--natural-work']
         options = {} if tty else {'input_data': b''}
-        observer = NaturalObserver(['*'] if args.discover else args.allow.split(',')) if natural else (StartIdObserver() if starting else None)
+        observer = NaturalObserver(['*'] if args.discover else args.allow.split(','))
         if observer is not None:
             options['diagnostic'] = observer
         code = edit.run_owned(command, dict(os.environ), **options)
@@ -331,7 +332,7 @@ def main(argv=None):
             args.id = observer.identifier
             show_resume(args, show_id=False)
         extra_read = False
-        while natural and (observer.deferred == 'page' or observer.deferred == 'read' and not extra_read):
+        while (natural and observer.deferred == 'page') or (observer.deferred == 'read' and not extra_read):
             if observer.deferred == 'page':
                 args.page += 1; args.allow = '*' + str(args.page)
                 print('The agent is inspecting discovery page ' + str(args.page) + ' using another bounded chat turn.', flush=True)
@@ -340,16 +341,18 @@ def main(argv=None):
                 print('The agent is gathering more evidence using one additional chat turn (up to 6 calls and 24576 output tokens for new sessions).', flush=True)
             command = [sys.executable, str(ROOT / 'scripts/nomo-session-id.py'), 'resume',
                        '--sessions-dir', args.sessions_dir, '--id', args.id, '--root', args.root,
-                       '--allow=' + args.allow, '--once=' + question, '--natural-work']
+                       '--allow=' + args.allow, '--once=' + question]
+            if natural:command += ['--natural-work']
             if args.events_policy_dir is not None:command += ['--events-policy-dir', args.events_policy_dir]
             observer = NaturalObserver(['*'] if args.discover else args.allow.split(','))
-            code = edit.run_owned(command, dict(os.environ), diagnostic=observer)
+            code = edit.run_owned(command, dict(os.environ), diagnostic=observer, **({} if tty else {'input_data': b''}))
             if code:
                 print('Additional read stopped; inspect session status before continuing.', file=sys.stderr, flush=True)
                 show_status_hint(args, args.id)
                 return code
-        if natural and observer.deferred is not None:
+        if observer.deferred is not None:
             print('The agent could not continue discovery or the additional read; no further edit was made. Refine the scope or inspect the session before continuing.', flush=True)
+            if args.once is not None: return 1
         if natural and observer.route is not None:
             action, path = observer.route
             operation_id = 'auto-' + secrets.token_hex(8)

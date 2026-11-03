@@ -35,8 +35,11 @@ public flow target(answer: string, allowed: Array<string>) -> Option<string> {
 }
 
 // A completed delegation may use another already-budgeted chat turn; it is not an edit grant.
+public flow delegated(answer: string, more: bool) -> string {
+    return match decode_work_plan(answer) { Ok(_) => if more { "NATURAL DELEGATE" } else { "NATURAL DELEGATE LIMIT" }, Err(_) => "" };
+}
 public flow route(answer: string, allowed: Array<string>, followup: bool, more: bool, page: usize, more_pages: bool) -> string {
     if answer == "NEXT_PAGE" && more_pages { return if more && page < 3 { "NATURAL PAGE" } else { "NATURAL PAGE LIMIT" }; }
     match target(answer, allowed) { Some(path) => { return "NATURAL WORK " + (if followup { "followup" } else { "work" }) + " " + path; } None() => {} }
-    return match decode_work_plan(answer) { Ok(_) => if more { "NATURAL DELEGATE" } else { "NATURAL DELEGATE LIMIT" }, Err(_) => "" };
+    return delegated(answer, more);
 }
