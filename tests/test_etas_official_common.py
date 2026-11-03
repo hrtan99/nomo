@@ -2,6 +2,7 @@
 import importlib.util
 import hashlib
 import json
+import os
 from pathlib import Path
 import shutil
 import tempfile
@@ -33,7 +34,7 @@ class OfficialBootstrapSharing(unittest.TestCase):
         self.assertEqual(old._common.SELECTOR, 'latest012')
 
     def test_known_legacy_and_composite_identity_are_revalidated(self):
-        for label in ('012', '022', '023', '024'):
+        for label in ('012', '022', '023', '024', '025', '026'):
             with self.subTest(label=label), tempfile.TemporaryDirectory() as directory:
                 wrapper = load(label)
                 common = wrapper._common
@@ -51,7 +52,10 @@ class OfficialBootstrapSharing(unittest.TestCase):
                          folder / 'cli-origins.json': 'fixture-origins'}[path]), \
                      patch.object(common, 'read', side_effect=lambda args: 'fixture-rustc' if args[0]=='rustc' else 'fixture-cargo'), \
                      patch.object(common, 'graph_guard', return_value={}), patch.object(common, 'registry_guard') as registry:
-                    values = [(common.BOOTSTRAP_SHA, 'shared-verified'), (common.PREVIOUS_CURRENT, 'shared-verified')]
+                    values = [(common.BOOTSTRAP_SHA, 'shared-verified')]
+                    if common.PREVIOUS_CURRENT is not None: values.append((common.PREVIOUS_CURRENT, 'shared-verified'))
+                    previous = {'012':'01552d56e137654ce92a5a5a8f9a87bc453acd64b7a330e329b9c4fbbd26ffc0','022':'91ea6d4934155e5e6265c3df75f6848354b76fbf4a8f434b7625165a83635cc3','023':'49de480236faa63d3ca9848e612e216c393c18b6840bd9885d562e4e21fb453d','024':'c5ed54add4b7f5d3329845e16a12ae2fdecad7687f286860fc56cb4d6ea893db','025':'48d947d96597cfdb5225ac4c1b851e4dd870eedf55ad0d51c29b4f56029cc3e4','026':'2f5b586e027532be033d071ac8179160b78cce7e83586fbc56c40ce7efb5342a'}
+                    values.append((previous[label], 'shared-verified'))
                     if common.PREVIOUS_BOOTSTRAP is not None: values.append((common.PREVIOUS_BOOTSTRAP, 'shared-verified'))
                     if common.LEGACY_SHA is not None: values.append((common.LEGACY_SHA, 'legacy-revalidated'))
                     if common.PREVIOUS_SHARED is not None: values.append((common.PREVIOUS_SHARED, 'shared-verified'))
@@ -91,6 +95,28 @@ class OfficialBootstrapSharing(unittest.TestCase):
             bridge_path.write_text(json.dumps(bridge))
             common.configure('022', wrapper)
             self.assertNotEqual(before, common.BOOTSTRAP_SHA)
+
+    def test_026_graphs_are_selected_and_isolated(self):
+        with patch.dict(os.environ, {'NOMO_NORMAL_GRAPH': '026-20261103-a'}): old = load('026')._common
+        with patch.dict(os.environ, {'NOMO_NORMAL_GRAPH': '026-v68'}): new = load('026')._common
+        self.assertEqual((old.SELECTOR, new.SELECTOR), ('latest026', 'latest026v68'))
+        self.assertNotEqual(old.ROOT, new.ROOT)
+        self.assertEqual(new.TARGET, new.ROOT / 'target')
+        self.assertEqual(new.SPEC['selector'], new.SELECTOR)
+        with patch.dict(os.environ, {'NOMO_NORMAL_GRAPH': 'unrecognized'}):
+            with self.assertRaises(KeyError): load('026')
+
+    def test_fresh_graph_refuses_existing_binary_and_partial_root(self):
+        with patch.dict(os.environ, {'NOMO_NORMAL_GRAPH': '026-v68'}): common = load('026')._common
+        with tempfile.TemporaryDirectory() as directory:
+            folder = Path(directory); root = folder / 'graph'; binary = folder / 'bin' / 'etas'
+            binary.parent.mkdir(); binary.write_bytes(b'preserve')
+            with patch.object(common, 'guard_environment'), patch.object(common, 'ROOT', root), patch.object(common, 'INSTALLED', binary), patch.object(common, 'run') as run:
+                with self.assertRaisesRegex(RuntimeError, 'refuse replacement'): common.prepare()
+                self.assertEqual(binary.read_bytes(), b'preserve'); self.assertFalse(root.exists()); run.assert_not_called()
+                binary.unlink(); root.mkdir()
+                with self.assertRaisesRegex(RuntimeError, 'pre-existing unowned'): common.prepare()
+                self.assertTrue(root.is_dir()); run.assert_not_called()
 
     def test_new_023_graph_has_no_legacy_or_previous_shared_provenance(self):
         common = load('023')._common
