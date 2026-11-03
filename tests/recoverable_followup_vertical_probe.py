@@ -10,7 +10,7 @@ class Fake(BaseHTTPRequestHandler):
         try:
             assert self.path=='/v1/chat/completions' and self.headers.get('Authorization')=='Bearer SYNTHETIC_ONLY'
             req=json.loads(self.rfile.read(int(self.headers['Content-Length'])));ctx=json.loads(req['messages'][1]['content']);i=len(self.server.phases)
-            assert i<22 and req['max_tokens']==[2048,2048,2048,2048,2048,2048,2048,2048,4096,32768,2048,2048,2048,2048,2048,4096,32768,2048,2048,2048,2048,2048][i]
+            assert i<22 and req['max_tokens']==[2048,2048,2048,2048,2048,4096,4096,2048,4096,32768,2048,2048,4096,4096,2048,4096,32768,2048,2048,2048,2048,2048][i]
             if i==12 and self.server.fail_read:
                 self.server.phases.append(i);self.send_error(503);return
             if i==0:value=['delegate','Read context.txt']
@@ -49,7 +49,7 @@ class Fake(BaseHTTPRequestHandler):
                     data=item['output']['fields'][0];assert data['stderr'] in ('','\n') and not data['stderr_truncated']
                     if self.server.omitted and key=='work':assert data['stdout']=='' and data['stdout_truncated'] and 'was omitted and is not evidence of empty output' in req['messages'][0]['content']
                     else:assert data['stdout']==stdout and not data['stdout_truncated']
-                assert ctx['budget']=={'work_calls':14,'work_generation':94208,'chat_used_calls':4,'chat_used_generation':8192,'chat_reserved_calls':4,'chat_reserved_generation':8192};value=['delegate','Read context.txt']
+                assert ctx['budget']=={'work_calls':14,'work_generation':102400,'chat_used_calls':4,'chat_used_generation':8192,'chat_reserved_calls':4,'chat_reserved_generation':8192};value=['delegate','Read context.txt']
             elif i==19:value=['read','context.txt']
             elif i==20:value=['final','blue CEDAR42']
             else:
@@ -147,7 +147,7 @@ def main():
             (out/'status.stdout').write_bytes(status.stdout);(out/'status.stderr').write_bytes(status.stderr)
             assert status.returncode==0 and b'RECORDED FOLLOWUP complete' in status.stdout and b'RECORDED FOLLOWUP CHECK complete' in status.stdout
             views=[json.loads(line.removeprefix(b'EVENT VIEW ')) for line in status.stdout.splitlines() if line.startswith(b'EVENT VIEW {')];assert len(views)==1;view=views[0]
-            assert view['work_settled_calls']==7 and view['followup_settled_calls']==7 and view['followup_settled_tokens']==47104
+            assert view['work_settled_calls']==7 and view['followup_settled_calls']==7 and view['followup_settled_tokens']==51200
             assert view['check_outcome']=='passed' and view['followup_check_outcome']=='passed' and view['followup_check_id']=='edit2' and json.loads(view['followup_check_stdout'])=='SECOND_CHECK_OK'
             if omitted:assert view['check_stdout_omitted'] and view['check_stdout_truncated'] and json.loads(view['check_stdout'])==''
             with sqlite3.connect(state/'history.sqlite3') as db:

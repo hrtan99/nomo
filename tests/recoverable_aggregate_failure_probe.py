@@ -27,7 +27,7 @@ def main():
     state=out/'state';state.mkdir(mode=0o700);policy=out/'policy';policy.mkdir(mode=0o700)
     (policy/'policy.json').write_text('{"format":1,"literals":["SYNTHETIC_NEVER_PRESENT"]}');(policy/'policy.json').chmod(0o600)
     (policy/'binding.key').write_bytes(b'K'*32);(policy/'binding.key').chmod(0o600)
-    server=HTTPServer(('127.0.0.1',0),AggregateFailureFake);server.phases=[];server.failed=False;server.mode=mode
+    server=HTTPServer(('127.0.0.1',0),AggregateFailureFake);server.phases=[];server.failed=False;server.mode=mode;server.event_budget=True
     thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start();proc=None;master=None
     try:
         manifest=project/'etas.toml';text=manifest.read_text()
@@ -84,7 +84,7 @@ def main():
             shown=subprocess.run([str(project/'scripts/nomo-read.sh'),'session-status','--state',str(state),'--events','--events-policy-dir',str(policy)],env=env,capture_output=True,timeout=120)
             assert shown.returncode==0 and json.dumps(expected,ensure_ascii=False).encode() in shown.stdout and not any(b<32 and b not in (10,13) for b in shown.stdout)
         else:
-            assert view['work_phase']=='running' and view['work_edit_phase']=='completed' and view['work_reserved_calls']==7 and view['work_reserved_tokens']==47104 and view['check_phase']=='planned'
+            assert view['work_phase']=='running' and view['work_edit_phase']=='completed' and view['work_reserved_calls']==7 and view['work_reserved_tokens']==51200 and view['check_phase']=='planned'
             assert b'edit completion was recorded' in status.stdout and b'no start was recorded at this snapshot' in status.stdout and b'a new session does not resolve this one' in status.stdout
         with sqlite3.connect(state/'history.sqlite3') as db:
             assert db.execute('pragma integrity_check').fetchone()==('ok',)

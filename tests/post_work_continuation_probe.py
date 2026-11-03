@@ -10,7 +10,9 @@ class Fake(BaseHTTPRequestHandler):
         try:
             assert self.path=='/v1/chat/completions' and self.headers.get('Authorization')=='Bearer SYNTHETIC_ONLY'
             req=json.loads(self.rfile.read(int(self.headers['Content-Length'])));ctx=json.loads(req['messages'][1]['content']);i=len(self.server.phases)
-            assert i<15 and req['max_tokens']==[2048,2048,2048,2048,2048,2048,2048,2048,4096,32768,2048,2048,2048,2048,2048][i]
+            limits=[2048,2048,2048,2048,2048,2048,2048,2048,4096,32768,2048,2048,2048,2048,2048]
+            if getattr(self.server,'event_budget',False):limits[5:7]=[4096,4096]
+            assert i<15 and req['max_tokens']==limits[i]
             if i==0:value=['delegate','Read context.txt']
             elif i==1:value=['read','context.txt']
             elif i==2:value=['final','blue CEDAR42']

@@ -17,7 +17,7 @@ def main():
     state=out/'state';state.mkdir(mode=0o700);policy=out/'policy';policy.mkdir(mode=0o700)
     (policy/'policy.json').write_text('{"format":1,"literals":["SYNTHETIC_NEVER_PRESENT"]}');(policy/'policy.json').chmod(0o600)
     (policy/'binding.key').write_bytes(b'K'*32);(policy/'binding.key').chmod(0o600)
-    server=HTTPServer(('127.0.0.1',0),Fake);server.phases=[];server.failed=False
+    server=HTTPServer(('127.0.0.1',0),Fake);server.phases=[];server.failed=False;server.event_budget=True
     thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start();proc=None;master=None
     try:
         manifest=project/'etas.toml';text=manifest.read_text()
@@ -62,7 +62,7 @@ def main():
         phase='running' if mode in ('interrupt','storagefail') else 'complete'
         assert status.returncode==0 and b'RECORDED WORK complete' in status.stdout and ('RECORDED CHECK '+phase).encode() in status.stdout, 'status failed'
         lines=[line.removeprefix(b'EVENT VIEW ') for line in status.stdout.splitlines() if line.startswith(b'EVENT VIEW {')]
-        assert len(lines)==1;view=json.loads(lines[0]);assert view['work_phase']=='complete' and view['work_settled_calls']==7 and view['work_settled_tokens']==47104
+        assert len(lines)==1;view=json.loads(lines[0]);assert view['work_phase']=='complete' and view['work_settled_calls']==7 and view['work_settled_tokens']==51200
         assert view['check_phase']==phase and view['check_id']=='edit1'
         if mode in ('interrupt','storagefail'):
             assert (interrupted if mode=='interrupt' else changed_policy and b'CHECK_FINISHED' in output and b'event policy unavailable or changed' in output)
