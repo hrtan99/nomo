@@ -289,7 +289,7 @@ def main(argv=None):
             if question == '/help':
                 print('Read turns use the selected root and allowlist. /scope shows it; /allow FILES selects up to four files; /discover [N] enables bounded discovery. /status inspects recorded state. /check [COMMAND ARG ... | --clear] shows, sets or clears the automatic check; /check --run runs it now; event sessions save filtered output for later model context.')
                 print('Natural-language edits target selected files in the current root; each requires preview and fresh confirmation. The root must be owned by you and not writable by group or others.')
-                if args.events_policy_dir is not None:print('/events displays committed events grouped by chat, work and followup; /status shows bounded check output.')
+                if args.events_policy_dir is not None:print('/events displays committed events in the recorded timeline and work of unknown order; /status shows bounded check output.')
                 else:print('/outputs shows recorded check output.')
                 if args.events_policy_dir is None:
                     print('/work OP_ID EDIT_ROOT PATH "TASK" [--check COMMAND ARG ...] runs one explicitly confirmed work operation.')

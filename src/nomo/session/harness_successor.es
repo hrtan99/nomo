@@ -2,8 +2,6 @@ module nomo.session.harness_successor;
 
 import std.text.{len, trim, split, to_string_i32, to_string_usize};
 import std.collections.len as count;
-import std.bytes.len as byte_count;
-import std.codec.text.utf8_encode;
 import std.json.{JsonValue, parse, stringify};
 import std.agent.message.Message;
 import nomo.core.text.printable;
@@ -14,7 +12,7 @@ import nomo.model.model_tool_contract.context_error as child_context_error;
 import nomo.harness.harness_model_contract.{bounded, decode_plan};
 import nomo.harness.harness_tool_contract.{Ledger, same};
 import nomo.harness.harness_tool_chat_contract.{Previous, Context, Invocation, TurnResult, prior_error, turn_error, context_error, inspect_turn};
-import nomo.session.harness_checkpoint.{Identity, Checkpoint, identity_error, read_ledger};
+import nomo.session.harness_checkpoint.{Identity, Checkpoint, identity_error, read_ledger, framed};
 import nomo.session.harness_checkpoint.validate as validate_first;
 import nomo.session.harness_checkpoint.encode as encode_first;
 import nomo.session.harness_checkpoint.decode as decode_first;
@@ -123,31 +121,6 @@ public flow from_turn(identity: Identity, predecessor: Checkpoint, predecessor_v
 }
 
 // The nested first checkpoint is data in one string, never a widened v1 cast.
-flow framed(raw: string) -> bool {
-    if len(raw) == 0 || len(raw) > 196608 || byte_count(utf8_encode(raw)) > 196608 { return false; }
-    var opened = false; var closed = false; var quoted = false; var escaped = false;
-    var leaves: usize = 0; var characters: usize = 0; var field_size: usize = 0; var unicode: usize = 0;
-    let slash = split("\\/", "")[1];
-    for character in split(raw, "") limit Iterations(196610) {
-        if character != "" && byte_count(utf8_encode(character)) != 1 { return false; }
-        if quoted {
-            if unicode > 0 { unicode = unicode - 1; }
-            else if escaped { escaped = false; if character == "u" { unicode = 4; } }
-            else if character == slash { escaped = true; field_size = field_size + 1; characters = characters + 1; }
-            else if character == "\"" { quoted = false; }
-            else { field_size = field_size + 1; characters = characters + 1; }
-            let maximum: usize = if leaves == 6 { 65536 } else { 1024 };
-            if field_size > maximum || characters > 73728 { return false; }
-        } else if character == "" || character == " " || character == "\n" || character == "\r" || character == "\t" {
-        } else if character == "[" { if opened || closed { return false; } opened = true;
-        } else if character == "]" { if !opened || closed { return false; } closed = true;
-        } else if character == "\"" {
-            if !opened || closed { return false; } leaves = leaves + 1;
-            if leaves > 100 { return false; } quoted = true; field_size = 0;
-        } else if character != "," || !opened || closed { return false; }
-    }
-    return opened && closed && !quoted && !escaped && unicode == 0;
-}
 
 flow fields_error(fields: Array<string>) -> string {
     if count(fields) > 100 { return "successor string fields exceed bounds"; }
@@ -179,12 +152,12 @@ public flow encode(saved: Successor) -> Result<string, string> {
     let conversion: Option<Message<JsonValue>> = message.cast<JsonValue>();
     let json = match conversion { Some(value) => value.body, None() => { return Err("successor encoding conversion refused"); } };
     let encoded = match stringify(json) { Ok(value) => value, Err(_) => { return Err("successor JSON encoding refused"); } };
-    if !framed(encoded) { return Err("successor encoded bounds exceeded"); }
+    if !framed(encoded, true) { return Err("successor encoded bounds exceeded"); }
     return Ok(encoded);
 }
 
 public flow decode(raw: string) -> Result<Successor, string> {
-    if !framed(raw) { return Err("successor encoded shape or bounds invalid"); }
+    if !framed(raw, true) { return Err("successor encoded shape or bounds invalid"); }
     let parsed = match parse(raw) { Ok(value) => value, Err(_) => { return Err("invalid successor JSON"); } };
     let message = Message.new(parsed);
     let conversion: Option<Message<Array<string>>> = message.cast<Array<string>>();

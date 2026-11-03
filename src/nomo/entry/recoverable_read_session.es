@@ -47,7 +47,9 @@ flow conversation(frame: EventFrame, policy: Policy) -> Result<Array<Event>, str
     for event in frame.events limit Iterations(768) {
         if (event.role == "user" && event.kind == "request") ||
             (event.role == "model" && event.kind == "request") ||
-            (event.role == "tool" && event.kind == "check" && event.name == "independent-check") ||
+            (event.role == "tool" && event.kind == "check") ||
+            (event.role == "system" && (event.kind == "work-boundary" || event.kind == "notice")) ||
+            (event.role == "assistant" && event.kind == "answer") ||
             (event.role == "main" && (event.kind == "consume" || event.kind == "tool" || event.kind == "answer")) {
             let value = match decode(event.text, policy) { Ok(item) => item, Err(error) => { return Err(error); } };
             selected = selected.push(Event { role = event.role, kind = event.kind, name = event.name, text = value });

@@ -14,7 +14,7 @@ import nomo.harness.harness_tool_chat_contract.Previous;
 import nomo.entry.harness_work_entry.{prepare_expanded_unicode, finish_edit, finish_history_summary, expanded_ledger as ledger, Pending, Failure, Completed, Summary};
 import nomo.session.event_policy.{PolicyRoot, load as load_policy};
 import nomo.session.chat_history.load as load_legacy;
-import nomo.session.recoverable_chat_store.load as load_chat;
+import nomo.session.recoverable_chat_store.{load as load_chat, record_work};
 import nomo.session.recoverable_work_store.{admit, claim, finish, abandon as abandon_work, load as load_work};
 import nomo.session.recoverable_check_store.{plan as plan_check, load as load_check, abandon as abandon_check};
 import nomo.session.work_fact_events.capture;
@@ -95,6 +95,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
     let records = match capture(pending, confirmed, summary) { Ok(value) => value, Err(error) => { return refused("edit completed; " + error); } };
     println("POST_EDIT persist");
     match finish(ticket, summary.answer, summary.state, records, policy, binding) { Ok(_) => {} Err(error) => { return refused("edit completed; " + error); } }
+    match record_work(selected.id, records, policy, binding) { Ok(_) => {} Err(error) => { return refused("work saved; timeline incomplete: " + error); } }
     display("FINAL ", summary.answer); println("SAVED event work facts; no grant or root identity is persisted.");
     ledger(summary.state, wide); return 0;
 }

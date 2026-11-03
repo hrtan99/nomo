@@ -5,7 +5,7 @@ import std.memory.{get_entry, prepare_put, operation_ref, commit, MemoryEntry, M
 import nomo.session.chat_session_contract.{Session, fresh_events, invalid as invalid_chat, begin, complete, extend};
 import nomo.harness.harness_tool_chat_contract.TurnResult;
 import nomo.session.redaction.{Policy, policy_error, text as redact};
-import nomo.session.recoverable_events.{Frame as EventFrame, empty as empty_events, invalid as invalid_events, append};
+import nomo.session.recoverable_events.{Frame as EventFrame, empty as empty_events, invalid as invalid_events, append, work_batch};
 import nomo.session.event_text_codec.{encode, decode, encode_prefix};
 import nomo.session.history_check_guard.invalid_values;
 import nomo.core.conversation.Event;
@@ -109,8 +109,21 @@ public flow finish(expected: MemoryEntry<string, Frame>, result: TurnResult, pol
     return write(Frame { format = 1, encoding = "json-string-v1", policy_binding = binding, chat = chat, events = events }, Some(expected), policy, binding);
 }
 
+// Work facts commit separately; only a confirmed subsequent copy enters this order.
+public flow record_work(id: string, records: Array<Event>, policy: Policy, binding: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+    let before = match load(policy, binding) { Ok(Some(value)) => value, _ => { return Err("existing recoverable session required"); } };
+    if before.value.chat.phase == "running" { return Err("chat turn unresolved"); }
+    let batch = match work_batch(records, policy) { Ok(value) => value, Err(error) => { return Err(error); } };
+    let marker = match encode("Recorded completed work; selected facts follow.", policy) { Ok(value) => value.value, Err(error) => { return Err(error); } };
+    let previous = before.value.events; var ordered = previous.events.push(Event { role = "system", kind = "work-boundary", name = id, text = marker });
+    for item in batch.events limit Iterations(24) { ordered = ordered.push(item); }
+    let events = EventFrame { format = 2, turns = previous.turns, first_count = previous.first_count, events = ordered };
+    let frame = Frame { format = before.value.format, encoding = before.value.encoding, policy_binding = before.value.policy_binding, chat = before.value.chat, events = events };
+    return match write(frame, Some(before), policy, binding) { Ok(_) => Ok(true), Err(error) => Err(error) };
+}
+
 // Record a completed independent check as its own event, without a work/edit row.
-public flow record_check(id: string, digest: string, outcome: string, exit_code: string, stdout: string, stderr: string, out_truncated: bool, err_truncated: bool, policy: Policy, binding: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+public flow record_check(id: string, digest: string, outcome: string, exit_code: string, stdout: string, stderr: string, out_truncated: bool, err_truncated: bool, independent: bool, policy: Policy, binding: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
     let bad = invalid_values(1, "complete", id, digest, outcome, exit_code, false); if bad != "" { return Err(bad); }
     let before = match load(policy, binding) { Ok(Some(value)) => value, _ => { return Err("existing recoverable session required"); } };
     if before.value.chat.phase == "running" { return Err("chat turn unresolved"); }
@@ -118,10 +131,10 @@ public flow record_check(id: string, digest: string, outcome: string, exit_code:
     let err = match encode_prefix(stderr, err_truncated, policy) { Ok(item) => item, Err(error) => { return Err(error); } };
     let plain_out = match decode(out.value, policy) { Ok(item) => item, Err(error) => { return Err(error); } };
     let plain_err = match decode(err.value, policy) { Ok(item) => item, Err(error) => { return Err(error); } };
-    let text = "Recorded independent check " + id + " (command digest " + digest + "); workspace may have changed since. Outcome " + outcome + ". Exit " + exit_code + "\nstdout: " + plain_out + "\nstderr: " + plain_err + "\nSome output may be omitted or truncated: " + if out.truncated || err.truncated { "yes" } else { "no" };
+    let text = "Recorded check " + id + " (command digest " + digest + "); workspace may have changed since. Outcome " + outcome + ". Exit " + exit_code + "\nstdout: " + plain_out + "\nstderr: " + plain_err + "\nSome output may be omitted or truncated: " + if out.truncated || err.truncated { "yes" } else { "no" };
     let encoded = match encode(text, policy) { Ok(item) => item.value, Err(error) => { return Err(error); } };
     let previous = before.value.events;
-    let events = EventFrame { format = 2, turns = previous.turns, first_count = previous.first_count, events = previous.events.push(Event { role = "tool", kind = "check", name = "independent-check", text = encoded }) };
+    let events = EventFrame { format = 2, turns = previous.turns, first_count = previous.first_count, events = previous.events.push(Event { role = "tool", kind = "check", name = if independent { "independent-check" } else { "work-check" }, text = encoded }) };
     let frame = Frame { format = before.value.format, encoding = before.value.encoding, policy_binding = before.value.policy_binding, chat = before.value.chat, events = events };
     return match write(frame, Some(before), policy, binding) { Ok(_) => Ok(true), Err(error) => Err(error) };
 }

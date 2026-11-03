@@ -30,10 +30,13 @@ public flow run_mode(args: Array<string>, followup: bool) -> i32 ![Console, Memo
         let message: Option<Message<Array<string>>> = Message.new(parsed).cast<Array<string>>();
         let fields = match message { Some(item) => item.body, None() => { println("REFUSED invalid check output fields"); return 1; } };
         if count(fields) != 2 { println("REFUSED invalid check output field count"); return 1; }
-        if args[2] == "independent" { match record_check(args[3], args[4], args[5], args[6], fields[0], fields[1], args[7] == "true", args[8] == "true", policy, binding) { Ok(_) => { println("INDEPENDENT CHECK SAVED"); return 0; } Err(error) => { println("REFUSED " + error); return 1; } } }
-        if additional { match finish_check(binding, args[3], args[4], args[5], args[6], fields[0], fields[1], args[7] == "true", args[8] == "true", policy) { Ok(_) => { println("CHECK AND SELECTED OUTPUT SAVED"); return 0; } Err(error) => { println("REFUSED " + error); return 1; } } }
-        if followup { match finish_followup(args[3], args[4], args[5], args[6], fields[0], fields[1], args[7] == "true", args[8] == "true", policy, binding) { Ok(_) => { println("CHECK AND SELECTED OUTPUT SAVED"); return 0; } Err(error) => { println("REFUSED " + error); return 1; } } }
-        match finish(args[3], args[4], args[5], args[6], fields[0], fields[1], args[7] == "true", args[8] == "true", policy, binding) { Ok(_) => { println("CHECK AND SELECTED OUTPUT SAVED"); return 0; } Err(error) => { println("REFUSED " + error); return 1; } }
+        let independent = args[2] == "independent";
+        if !independent {
+            if additional { match finish_check(binding, args[3], args[4], args[5], args[6], fields[0], fields[1], args[7] == "true", args[8] == "true", policy) { Ok(_) => {} Err(error) => { println("REFUSED " + error); return 1; } } }
+            if !additional && followup { match finish_followup(args[3], args[4], args[5], args[6], fields[0], fields[1], args[7] == "true", args[8] == "true", policy, binding) { Ok(_) => {} Err(error) => { println("REFUSED " + error); return 1; } } }
+            if !additional && !followup { match finish(args[3], args[4], args[5], args[6], fields[0], fields[1], args[7] == "true", args[8] == "true", policy, binding) { Ok(_) => {} Err(error) => { println("REFUSED " + error); return 1; } } }
+        }
+        match record_check(args[3], args[4], args[5], args[6], fields[0], fields[1], args[7] == "true", args[8] == "true", independent, policy, binding) { Ok(_) => { println(if independent { "INDEPENDENT CHECK SAVED" } else { "CHECK AND SELECTED OUTPUT SAVED" }); return 0; } Err(error) => { println("REFUSED check may be saved; timeline incomplete: " + error); return 1; } }
     }
     println("REFUSED invalid check action"); return 1;
 }

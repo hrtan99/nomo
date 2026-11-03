@@ -53,9 +53,13 @@ def event_lines(raw):
         elif phase=='running':rendered.append('UNRESOLVED '+label+': start was recorded but completion is unknown. Do not rerun automatically.')
     if rendered:
         rendered.append('Before starting a separate session, ensure the earlier invocation has stopped and inspect the workspace. Use session-chat --new or session-id start with selected roots; a new session does not resolve this one and requires fresh approval.')
-    for key,label,maximum in (('events','CHAT',768),('work_events','WORK',24),('followup_events','FOLLOWUP',24)):
+    linked={item.get('name') for item in view.get('events',[]) if isinstance(item,dict) and item.get('role')=='system' and item.get('kind')=='work-boundary'}
+    def sequenced_check(identifier):
+        return any(item.get('name')=='work-check' and json.loads(item['text']).startswith('Recorded check '+identifier+' (') for item in view['events'] if isinstance(item,dict))
+    for key,label,maximum in (('events','TIMELINE',768),('work_events','UNORDERED WORK',24),('followup_events','UNORDERED FOLLOWUP',24)):
         events=view.get(key)
         if not isinstance(events,list) or len(events)>maximum:raise ValueError('invalid event batch')
+        if key!='events' and any(item.get('kind')=='applied' and json.loads(item['text']) in linked for item in events):continue
         for index,item in enumerate(events,1):
             if not isinstance(item,dict):raise ValueError('invalid event')
             fields=[item.get(name) for name in ('role','kind','name','text')]
@@ -67,10 +71,14 @@ def event_lines(raw):
             values=[display_json_string(value,encoding) for value in (*fields[:3],text)]
             rendered.append(label+' '+str(index)+' role='+values[0]+' kind='+values[1]+' name='+values[2]+' text='+values[3])
     for number,item in enumerate(view.get('additional_work',[]),3):
+        if item['check']['phase']=='complete' and not sequenced_check(item['core']['id']):rendered.append('UNORDERED CHECK: historical result is available in /status.')
+        if item['core']['id'] in linked:continue
         for index,event in enumerate(item['result']['events'],1):
             text=json.loads(event['text'])
             values=[display_json_string(value,getattr(sys.stdout,'encoding',None) or 'utf-8') for value in (event['role'],event['kind'],event['name'],text)]
-            rendered.append('WORK '+str(number)+'.'+str(index)+' role='+values[0]+' kind='+values[1]+' name='+values[2]+' text='+values[3])
+            rendered.append('UNORDERED WORK '+str(number)+'.'+str(index)+' role='+values[0]+' kind='+values[1]+' name='+values[2]+' text='+values[3])
+    for prefix in ('check','followup_check'):
+        if view.get(prefix+'_phase')=='complete' and not sequenced_check(view[prefix+'_id']):rendered.append('UNORDERED CHECK: historical result is available in /status.')
     return rendered
 
 def main(argv=None):
@@ -143,8 +151,8 @@ def main(argv=None):
                     if code:return code
                     if any(item.get('truncated') for item in captured.values()):raise ValueError('event output was truncated')
                     rendered=event_lines(bytes(captured.get('stdout',{}).get('data',b'')))
-                    print('Recorded events, grouped by chat, work and followup; ordering across groups is not established. Work entries are selected facts; past approvals do not grant authority.',flush=True)
-                    if not any(line.startswith(('CHAT ','WORK ','FOLLOWUP ')) for line in rendered):print('No committed events.',flush=True)
+                    print('Timeline contains confirmed recorded order; UNORDERED entries predate sequencing or have a missing copy. Work facts are selected; past approvals do not grant authority.',flush=True)
+                    if not any(line.startswith(('TIMELINE ','UNORDERED ')) for line in rendered):print('No committed events.',flush=True)
                     for line in rendered:print(line,flush=True)
                     return 0
                 return run_owned(command,env,input_data=policy_bytes)

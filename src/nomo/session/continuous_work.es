@@ -5,8 +5,8 @@ import std.collections.len as count;
 import nomo.core.conversation.Event;
 import nomo.session.edit_operation.Binding;
 import nomo.session.redaction.{Policy, text as redact};
-import nomo.session.event_text_codec.{encode, encode_prefix};
-import nomo.session.recoverable_events.{empty, append};
+import nomo.session.event_text_codec.encode_prefix;
+import nomo.session.recoverable_events.work_batch;
 import nomo.harness.harness_work_contract.{Ledger, ledger_error};
 
 // All additional rounds share one append-only history and one current slot.
@@ -74,12 +74,7 @@ public flow finish(ticket: Stored, summary: string, source: string, spent: Ledge
     let item = ticket.value.current; if item.edit.phase != "completed" || item.result.phase != "running" { return Err("completed work edit required"); }
     if ledger_error(spent) != "" || spent.read.calls + spent.edit.calls != 7 || spent.read.tokens + spent.edit.tokens != (if item.result.source == "wide" { 61440 } else { 51200 }) { return Err("additional work ledger differs from reservation"); }
     let cleaned = match redact(summary, policy) { Ok(value) => value.value, Err(error) => { return Err(error); } };
-    var encoded: Array<Event> = [];
-    for event in records limit Iterations(24) {
-        let text = match encode(event.text, policy) { Ok(value) => value.value, Err(error) => { return Err(error); } };
-        encoded = encoded.push(Event { role = event.role, kind = event.kind, name = event.name, text = text });
-    }
-    let saved = match append(empty(), 1, encoded, policy) { Ok(value) => value.frame.events, Err(error) => { return Err(error); } };
+    let saved = match work_batch(records, policy) { Ok(value) => value.events, Err(error) => { return Err(error); } };
     let result = ResultData { phase = "complete", summary = cleaned, source = source, calls = spent.read.calls + spent.edit.calls, generation = spent.read.tokens + spent.edit.tokens, events = saved };
     return put(ticket, Entry { core = item.core, edit = item.edit, result = result, check = item.check });
 }

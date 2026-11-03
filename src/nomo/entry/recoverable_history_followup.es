@@ -22,7 +22,7 @@ import nomo.session.event_text_codec.decode;
 
 import nomo.harness.harness_tool_chat_contract.Previous;
 import nomo.entry.harness_work_entry.{prepare_expanded_unicode, finish_edit, finish_history_summary, expanded_ledger as ledger, Pending, Failure, Completed, Summary};
-import nomo.session.recoverable_chat_store.load as load_chat;
+import nomo.session.recoverable_chat_store.{load as load_chat, record_work};
 import nomo.session.recoverable_followup_store.{admit, claim, finish, abandon as abandon_followup};
 import nomo.session.recoverable_followup_store.load as load_followup;
 import nomo.session.continuous_work.{load as load_extra, admit as admit_extra, edit_intent, edit_complete, finish as finish_extra, abandon as abandon_extra, abandon_check as abandon_extra_check};
@@ -89,6 +89,7 @@ flow more(input: Work, prior_request: string, previous: Previous, first_id: stri
     let summary = match summarize_history(captured, prior_request, previous, prior, wide) { Ok(value) => value, Err(failure) => { return refused(failure.error); } };
     let records = match capture(pending, confirmed, summary) { Ok(value) => value, Err(error) => { return refused(error); } };
     match finish_extra(edited, summary.answer, if summary.model_generated { "model" } else { "system" }, summary.state, records, policy) { Ok(_) => {} Err(error) => { return refused("edit completed; " + error); } }
+    match record_work(selected.id, records, policy, binding) { Ok(_) => {} Err(error) => { return refused("work saved; timeline incomplete: " + error); } }
     display("FINAL ", summary.answer); println("SAVED additional work facts"); ledger(summary.state, wide); return 0;
 }
 
@@ -161,6 +162,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
     let records = match capture(pending, confirmed, summary) { Ok(value) => value, Err(error) => { return refused("edit completed; " + error); } };
     println("POST_EDIT persist");
     match finish(ticket, summary.answer, summary.state, records, policy, binding) { Ok(_) => {} Err(error) => { return refused("edit completed; " + error); } }
+    match record_work(selected.id, records, policy, binding) { Ok(_) => {} Err(error) => { return refused("work saved; timeline incomplete: " + error); } }
     display("FINAL ", summary.answer); println("SAVED event followup facts; no grant or root identity is persisted.");
     ledger(summary.state, wide); return 0;
 }

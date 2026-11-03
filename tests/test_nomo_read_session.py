@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Host-side validation and offline-status credential isolation."""
-import contextlib,fcntl,importlib.util,io,os,signal,subprocess,sys,tempfile,time,unittest
+import contextlib,fcntl,importlib.util,io,json,os,signal,subprocess,sys,tempfile,time,unittest
 from pathlib import Path
 from unittest.mock import patch
 
@@ -86,6 +86,18 @@ class ReadSessionLauncherTest(unittest.TestCase):
             self.assertEqual(self.invoke(['status','--state',str(self.state),'--events-policy-dir',str(policy)]),0)
             cmd,env=run.call_args.args[:2];self.assertIn('recoverable_read_status',cmd);self.assertNotIn('MINIMAX_API_KEY',env)
             run.reset_mock();self.assertNotEqual(self.invoke(['status','--state',str(self.state),'--events-policy-dir',str(self.state)]),0);run.assert_not_called()
+
+    def test_timeline_keeps_order_and_labels_legacy_work_unknown(self):
+        def event(role,kind,name,text):return dict(role=role,kind=kind,name=name,text=json.dumps(text))
+        view={'encoding':'json-string-v1','events':[event('user','request','','first'),event('system','work-boundary','new','recorded'),event('tool','applied','edit','new'),event('tool','check','work-check','Recorded check new (command digest x); passed')],
+              'work_events':[event('tool','applied','edit','new')], 'followup_events':[event('tool','applied','edit','old')], 'additional_work':[], 'check_phase':'complete', 'check_id':'new'}
+        rendered=launcher.event_lines(('EVENT VIEW '+json.dumps(view)+'\n').encode())
+        self.assertEqual([line.split(' ',1)[0] for line in rendered[:4]],['TIMELINE']*4)
+        self.assertTrue(any(line.startswith('UNORDERED FOLLOWUP ') and 'old' in line for line in rendered))
+        self.assertFalse(any(line.startswith('UNORDERED CHECK:') for line in rendered))
+        self.assertFalse(any(line.startswith('UNORDERED WORK ') for line in rendered))
+        view['check_id']='old-check'
+        self.assertTrue(any(line.startswith('UNORDERED CHECK:') for line in launcher.event_lines(('EVENT VIEW '+json.dumps(view)+'\n').encode())))
 
     def test_init_creates_offline_event_session_without_model_credentials(self):
         policy=self.root/'policy';policy.mkdir(mode=0o700)

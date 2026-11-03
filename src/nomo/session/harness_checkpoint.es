@@ -101,12 +101,13 @@ public flow from_turn(identity: Identity, turn: TurnResult) -> Result<Checkpoint
 }
 
 // Reject nested shapes and bound encoded bytes before JSON parsing/casting.
-flow framed(raw: string) -> bool {
-    if len(raw) == 0 || len(raw) > 65536 || byte_count(utf8_encode(raw)) > 65536 { return false; }
+public flow framed(raw: string, successor: bool) -> bool {
+    let limit: usize = if successor { 196608 } else { 65536 };
+    if len(raw) == 0 || len(raw) > limit || byte_count(utf8_encode(raw)) > limit { return false; }
     var opened = false; var closed = false; var quoted = false; var escaped = false;
     var leaves: usize = 0; var characters: usize = 0; var field_size: usize = 0; var unicode: usize = 0;
     let slash = split("\\/", "")[1];
-    for character in split(raw, "") limit Iterations(65538) {
+    for character in split(raw, "") limit Iterations(196610) {
         if character != "" && byte_count(utf8_encode(character)) != 1 { return false; }
         if quoted {
             if unicode > 0 { unicode = unicode - 1; }
@@ -114,13 +115,14 @@ flow framed(raw: string) -> bool {
             else if character == slash { escaped = true; field_size = field_size + 1; characters = characters + 1; }
             else if character == "\"" { quoted = false; }
             else { field_size = field_size + 1; characters = characters + 1; }
-            if field_size > 1024 || characters > 8192 { return false; }
+            let maximum: usize = if successor && leaves == 6 { 65536 } else { 1024 };
+            if field_size > maximum || characters > (if successor { 73728 } else { 8192 }) { return false; }
         } else if character == "" || character == " " || character == "\n" || character == "\r" || character == "\t" {
         } else if character == "[" { if opened || closed { return false; } opened = true;
         } else if character == "]" { if !opened || closed { return false; } closed = true;
         } else if character == "\"" {
             if !opened || closed { return false; } leaves = leaves + 1;
-            if leaves > 80 { return false; } quoted = true; field_size = 0;
+            if leaves > (if successor { 100 } else { 80 }) { return false; } quoted = true; field_size = 0;
         } else if character != "," || !opened || closed { return false; }
     }
     return opened && closed && !quoted && !escaped && unicode == 0;
@@ -178,12 +180,12 @@ public flow encode(saved: Checkpoint) -> Result<string, string> {
     let conversion: Option<Message<JsonValue>> = message.cast<JsonValue>();
     let json = match conversion { Some(value) => value.body, None() => { return Err("checkpoint encoding conversion refused"); } };
     let encoded = match stringify(json) { Ok(value) => value, Err(_) => { return Err("checkpoint JSON encoding refused"); } };
-    if !framed(encoded) { return Err("checkpoint encoded bounds exceeded"); }
+    if !framed(encoded, false) { return Err("checkpoint encoded bounds exceeded"); }
     return Ok(encoded);
 }
 
 public flow decode(raw: string) -> Result<Checkpoint, string> {
-    if !framed(raw) { return Err("checkpoint encoded shape or bounds invalid"); }
+    if !framed(raw, false) { return Err("checkpoint encoded shape or bounds invalid"); }
     let parsed = match parse(raw) { Ok(value) => value, Err(_) => { return Err("invalid checkpoint JSON"); } };
     let message = Message.new(parsed);
     let conversion: Option<Message<Array<string>>> = message.cast<Array<string>>();
