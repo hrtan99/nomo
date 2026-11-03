@@ -87,6 +87,18 @@ class SimpleEntryTests(unittest.TestCase):
                     self.assertEqual(command[command.index('--id')+1], 'a'*32)
                     self.assertNotIn('--root', command); self.assertNotIn('--once', command)
 
+    def test_events_only_available_on_offline_status(self):
+        with tempfile.TemporaryDirectory(prefix='nomo-events-') as tmp:
+            base = Path(tmp).resolve(); workspace = base/'workspace'; workspace.mkdir(); state = base/'state'
+            with patch.dict(os.environ, {'NOMO_STATE_DIR': str(state)}), patch.object(module.os, 'execv') as execute:
+                with patch.object(module.sys, 'argv', ['nomo', '--root', str(workspace)]): module.main()
+                with patch.object(module.sys, 'argv', ['nomo', '--status', '--events', '--id', 'a'*32]):
+                    module.main(); command = execute.call_args.args[1]
+                    self.assertEqual(command[1:3], ['session-id', 'status']); self.assertIn('--events', command)
+            with patch.object(module.sys, 'argv', ['nomo', '--events', '--id', 'a'*32]), patch.object(module.os, 'execv') as execute:
+                with self.assertRaises(SystemExit): module.main()
+                execute.assert_not_called()
+
     def test_status_rejects_missing_id_and_incompatible_options(self):
         for options in ([], ['--once', 'q'], ['--page', '0'], ['--allow', 'a'], ['--check', 'true']):
             args = ['nomo', '--status'] + ([] if not options else ['--id', 'a'*32, *options])

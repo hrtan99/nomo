@@ -56,12 +56,14 @@ def main():
     parser.add_argument('--root', default=os.getcwd(), help='workspace directory (default: current directory)')
     parser.add_argument('--id', help='resume this exact session ID')
     parser.add_argument('--status', action='store_true', help='inspect the selected session offline')
+    parser.add_argument('--events', action='store_true', help='include recorded events with --status')
     parser.add_argument('--once', help='run one read-only question')
     scope = parser.add_mutually_exclusive_group()
     scope.add_argument('--page', type=int, choices=range(8), help='initial discovery page, 0..7 (default: 0)')
     scope.add_argument('--allow', help='read only these one to four comma-separated relative files')
     parser.add_argument('--check', nargs=argparse.REMAINDER, help='offline command after a confirmed edit')
     args = parser.parse_args()
+    if args.events and not args.status: parser.error('--events requires --status')
     if args.status and (args.id is None or args.once is not None or args.page is not None or args.allow is not None or args.check is not None):
         parser.error('--status requires --id and accepts no question, scope or check')
     if args.check == []:
@@ -77,7 +79,7 @@ def main():
             workspace = workspace.resolve(strict=True)
         sessions, policy = state_paths(args.id is not None, workspace)
         if args.status:
-            command = [str(ROOT/'scripts/nomo-read.sh'), 'session-id', 'status', '--sessions-dir', str(sessions), '--id', args.id, '--events-policy-dir', str(policy)]
+            command = [str(ROOT/'scripts/nomo-read.sh'), 'session-id', 'status', '--sessions-dir', str(sessions), '--id', args.id, '--events-policy-dir', str(policy), *(['--events'] if args.events else [])]
         else:
             print('Saved event text may contain sensitive data; no secret filter is configured by default.', flush=True)
             print(('Discovery is bounded and does not interpret .gitignore' if args.allow is None else 'Only explicitly selected files are in scope') + '; session IDs do not verify workspace identity.', flush=True)
