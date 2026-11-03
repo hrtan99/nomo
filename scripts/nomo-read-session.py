@@ -19,6 +19,19 @@ def directory(value,label):
     if not path.is_dir():raise ValueError(label+' must be a directory')
     return path
 
+def display_json_string(value, encoding):
+    """Keep readable Unicode while escaping controls and unencodable characters."""
+    text=json.dumps(value,ensure_ascii=False)
+    out=[]
+    for character in text:
+        try:
+            if not character.isprintable():raise UnicodeEncodeError('display',character,0,1,'not printable')
+            character.encode(encoding)
+            out.append(character)
+        except (UnicodeEncodeError, LookupError):
+            out.append(json.dumps(character,ensure_ascii=True)[1:-1])
+    return ''.join(out)
+
 def event_lines(raw):
     """Decode the bounded status view without trusting text as terminal control."""
     if len(raw)>4194304:raise ValueError('event view exceeds display bound')
@@ -56,7 +69,8 @@ def event_lines(raw):
             try:text=json.loads(fields[3])
             except ValueError as error:raise ValueError('invalid event text encoding') from error
             if not isinstance(text,str) or len(text)>2048 or any(len(value)>128 for value in fields[:3]):raise ValueError('event text or metadata exceeds bound')
-            values=[json.dumps(value,ensure_ascii=True) for value in (*fields[:3],text)]
+            encoding=getattr(sys.stdout,'encoding',None) or 'utf-8'
+            values=[display_json_string(value,encoding) for value in (*fields[:3],text)]
             rendered.append(label+' '+str(index)+' role='+values[0]+' kind='+values[1]+' name='+values[2]+' text='+values[3])
     return rendered
 

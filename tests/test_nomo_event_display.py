@@ -11,6 +11,12 @@ def raw_view(**updates):
 class EventDisplayTest(unittest.TestCase):
  def test_group_order_and_terminal_controls_are_escaped(self):
   result=launcher.event_lines(raw_view());self.assertEqual([line.split()[0] for line in result],['CHAT','WORK','FOLLOWUP']);self.assertIn(r'\u001b',result[0]);self.assertIn(r'\n',result[0]);self.assertNotIn('\x1b',result[0]);self.assertIn('green',result[1]);self.assertIn('done',result[2])
+ def test_unicode_is_readable_and_controls_stay_escaped(self):
+  output='\n'.join(launcher.event_lines(raw_view(events=[event('user','request','','中文😀\u202e\u0085\n\x1b')])))
+  self.assertIn('中文😀',output);self.assertIn(r'\u202e',output);self.assertIn(r'\u0085',output);self.assertIn(r'\n',output);self.assertIn(r'\u001b',output)
+  self.assertNotIn('\u202e',output);self.assertNotIn('\u0085',output);self.assertNotIn('\x1b',output)
+  ascii_value=launcher.display_json_string('中文😀\ud800','ascii')
+  self.assertEqual(json.loads(ascii_value),'中文😀\ud800');self.assertTrue(ascii_value.isascii())
  def test_rejects_missing_ambiguous_invalid_or_oversized_batches(self):
   for raw in (b'',raw_view()+raw_view(),raw_view(encoding='unknown'),raw_view(events=[{'role':'a','kind':'b','name':'c','text':'not-json'}]),raw_view(events=[event('a','b','c','x')]*49)):
    with self.assertRaises(ValueError):launcher.event_lines(raw)
