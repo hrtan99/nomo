@@ -94,6 +94,14 @@ class SessionChatTest(unittest.TestCase):
         code,_,_,calls=self.run_chat('/events\n/exit\n')
         self.assertEqual(code,0);command=calls.call_args.args[0];self.assertIn('status',command);self.assertIn('--events',command);self.assertIn('--events-policy-dir',command)
 
+    def test_help_matches_the_selected_recording_mode(self):
+        code,out,_,_=self.run_chat('/help\n/exit\n')
+        self.assertEqual(code,0);self.assertIn('/outputs shows recorded check output',out);self.assertNotIn('/events displays',out)
+        self.args+=['--events-policy-dir','/policy']
+        code,out,_,_=self.run_chat('/help\n/exit\n')
+        self.assertEqual(code,0);self.assertIn('/events displays committed events',out);self.assertNotIn('/outputs shows recorded check output',out)
+        self.assertIn('without implicit shell expansion',out)
+
     def test_event_chat_routes_work_followup_and_check_with_policy(self):
         self.args += ['--events-policy-dir', '/private-policy']
         code, _, err, calls = self.run_chat('/work op /tmp/edit file.txt "change" --check true\n/followup op2 /tmp/edit file.txt "change"\n/status\n/exit\n', codes=(0,0,0))

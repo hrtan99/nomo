@@ -136,7 +136,8 @@ def main(argv=None):
         else:
             print('Work requires a completed first turn.', flush=True)
     if tty and args.once is None:
-        print('Enter a question, /help, /status, /events, /outputs, /work, /followup or /exit.', flush=True)
+        saved = '/events' if args.events_policy_dir is not None else '/outputs'
+        print('Enter a question, /help, /status, ' + saved + ', /work, /followup or /exit.', flush=True)
     while True:
         if args.once is not None:
             question = args.once
@@ -152,15 +153,16 @@ def main(argv=None):
             if question == '/exit':
                 return 0
             if question == '/help':
-                print('Read turns use the selected root and allowlist. /status inspects recorded state; /outputs shows recorded check output.')
-                if args.events_policy_dir is not None:print('/events displays committed events grouped by chat, work and followup.')
+                print('Read turns use the selected root and allowlist. /status inspects recorded state.')
+                if args.events_policy_dir is not None:print('/events displays committed events grouped by chat, work and followup; /status shows bounded check output.')
+                else:print('/outputs shows recorded check output.')
                 if args.events_policy_dir is None:
                     print('/work OP_ID EDIT_ROOT PATH "TASK" [--check COMMAND ARG ...] runs one explicitly confirmed work operation.')
                     print('/followup OP_ID EDIT_ROOT PATH "TASK" [--check COMMAND ARG ...] runs the second bounded work operation.')
                 else:
                     print('/work OP_ID EDIT_ROOT PATH "TASK" [--check COMMAND ARG ...] runs one confirmed work operation.')
                     print('/followup OP_ID EDIT_ROOT PATH "TASK" [--check COMMAND ARG ...] runs one additional confirmed work operation.')
-                print('Quote arguments containing spaces. No shell interprets the check arguments. /exit leaves the session.')
+                print('Quote arguments containing spaces. Check arguments are passed directly, without implicit shell expansion. /exit leaves the session.')
                 continue
             if question in ('/status','/events','/outputs'):
                 if args.id is None:
