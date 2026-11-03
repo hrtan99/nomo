@@ -8,9 +8,9 @@ edit=importlib.util.module_from_spec(spec);spec.loader.exec_module(edit)
 
 class WorkQuestionTest(unittest.TestCase):
     def test_multilingual_and_exact_byte_boundary(self):
-        for question in ('Change old to green','将 old 改为 green','港'*42+'ab','x'*128):
+        for question in ('Change old to green','将 old 改为 green','港'*170+'ab','x'*512):
             with self.subTest(question=question):self.assertTrue(edit.safe_read_question(question))
-        for question in ('','   ','港'*43,'x'*129):
+        for question in ('','   ','港'*171,'x'*513):
             with self.subTest(question=question):self.assertFalse(edit.safe_read_question(question))
 
     def test_terminal_controls_and_invalid_unicode_are_rejected(self):
