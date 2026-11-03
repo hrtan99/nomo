@@ -56,6 +56,7 @@ def main():
     parser.add_argument('--root', default=os.getcwd(), help='workspace directory (default: current directory)')
     parser.add_argument('--id', help='resume this exact session ID')
     parser.add_argument('--once', help='run one read-only question')
+    parser.add_argument('--page', type=int, choices=range(8), default=0, help='initial discovery page, 0..7')
     parser.add_argument('--check', nargs=argparse.REMAINDER, help='offline command after a confirmed edit')
     args = parser.parse_args()
     if args.check == []:
@@ -70,7 +71,7 @@ def main():
         print('Saved event text may contain sensitive data; no secret filter is configured by default.', flush=True)
         print('Discovery is bounded and does not interpret .gitignore; session IDs do not verify workspace identity.', flush=True)
         command = [str(ROOT/'scripts/nomo-read.sh'), 'session-chat', '--sessions-dir', str(sessions),
-                   '--id='+args.id if args.id is not None else '--new', '--root', str(workspace), '--discover',
+                   '--id='+args.id if args.id is not None else '--new', '--root', str(workspace), '--discover', '--page', str(args.page),
                    '--events-policy-dir', str(policy)]
         if args.once is not None:
             command += ['--once', args.once]

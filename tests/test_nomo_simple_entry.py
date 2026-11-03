@@ -37,6 +37,22 @@ class SimpleEntryTests(unittest.TestCase):
                 self.assertIn('--id='+'a'*32, execute.call_args.args[1])
                 self.assertEqual((policy/'binding.key').read_bytes(), key)
 
+    def test_once_can_select_a_discovery_page(self):
+        with tempfile.TemporaryDirectory(prefix='nomo-page-') as tmp:
+            base = Path(tmp).resolve(); workspace = base/'workspace'; workspace.mkdir(); state = base/'state'
+            for page in ('0', '5', '7'):
+                with self.subTest(page=page), patch.dict(os.environ, {'NOMO_STATE_DIR': str(state)}), \
+                     patch.object(module.sys, 'argv', ['nomo', '--root', str(workspace), '--page', page, '--once', 'read']), \
+                     patch.object(module.os, 'execv') as execute:
+                    module.main(); command = execute.call_args.args[1]
+                    self.assertEqual(command[command.index('--page')+1], page)
+                    self.assertEqual(command[command.index('--once')+1], 'read')
+            for page in ('-1', '8'):
+                with self.subTest(invalid=page), patch.object(module.sys, 'argv', ['nomo', '--page', page]), \
+                     patch.object(module.os, 'execv') as execute:
+                    with self.assertRaises(SystemExit): module.main()
+                    execute.assert_not_called()
+
     def test_resume_missing_state_and_overlapping_workspace_do_not_create_state(self):
         with tempfile.TemporaryDirectory(prefix='nomo-entry-') as tmp:
             base = Path(tmp).resolve(); workspace = base/'workspace'; workspace.mkdir()
