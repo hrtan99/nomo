@@ -51,7 +51,7 @@ try:
   elif step==2 and v.count(b'CONFIRM Apply this exact preview?')>=1:os.write(master,b'yes\n');step=3
   elif step==3 and v.count(b'nomo> ')>=2:os.write(master,b'Change green to gold in note.txt\n');step=4
   elif step==4 and v.count(b'Type `yes` to approve:')>=2:os.kill(proc.pid,signal.SIGINT);step=5
-  elif step==5 and b'Abandon this interrupted work and continue this session?' in v:os.write(master,b'yes\n');step=6
+  elif step==5 and b'Abandon this interrupted operation and continue this session?' in v:os.write(master,b'yes\n');step=6
   elif step==6 and b'Continue with a new request' in v:os.write(master,b'Change green to gold in note.txt now\n');step=7
   elif step==7 and v.count(b'Type `yes` to approve:')>=3:os.write(master,b'yes\n');step=8
   elif step==8 and v.count(b'CONFIRM Apply this exact preview?')>=2:os.write(master,b'yes\n');step=9

@@ -16,7 +16,7 @@ import nomo.session.continuous_work.{Entry, load as load_continuous};
 public type Facts = { first: Option<WorkFacts>, followup: Option<WorkFacts>, additional: Array<WorkFacts>, calls: i32, generation: i32 };
 flow extra_fact(item: Entry, policy: Policy) -> Result<WorkFacts, string> {
     if item.result.phase == "abandoned" && (item.check.phase == "none" || item.check.phase == "planned") { return Ok(WorkFacts { id = item.core.id, summary = "User abandoned interrupted work; its effect is unknown. Inspect the file before a new edit.", summary_source = "system", selection = None(), check = "unknown", exit_code = "", output = None() }); }
-    if item.result.phase != "complete" || (item.check.phase != "none" && item.check.phase != "complete") { return Err("continuous work unresolved"); }
+    if item.result.phase != "complete" || (item.check.phase != "none" && item.check.phase != "complete" && item.check.phase != "abandoned") { return Err("continuous work unresolved"); }
     var output: Option<CheckOutput> = None();
     if item.check.phase == "complete" {
         let out = match decode(item.check.stdout, policy) { Ok(value) => value, Err(error) => { return Err(error); } };
@@ -25,7 +25,7 @@ flow extra_fact(item: Entry, policy: Policy) -> Result<WorkFacts, string> {
     }
     let chosen = match selection(item.result.events, policy) { Ok(value) => value, Err(error) => { return Err(error); } };
     return Ok(WorkFacts { id = item.core.id, summary = item.result.summary, summary_source = item.result.source, selection = chosen,
-        check = if item.check.phase == "none" { "not requested" } else { item.check.outcome }, exit_code = item.check.exit_code, output = output });
+        check = if item.check.phase == "none" { "not requested" } else { if item.check.phase == "abandoned" { "abandoned; outcome unknown" } else { item.check.outcome } }, exit_code = item.check.exit_code, output = output });
 }
 // Only completed recorded actions become untrusted model context. An uncertain
 // edit or check is not retried and cannot be represented as a successful fact.
@@ -59,9 +59,10 @@ public flow snapshot(policy: Policy, binding: string) -> Result<Facts, string> {
             calls = spent.read.calls + spent.edit.calls; generation = spent.read.tokens + spent.edit.tokens;
             var outcome = "not requested"; var exit = ""; var output: Option<CheckOutput> = None();
             match first_check { Some(value) => {
+                if value.value.check.phase == "abandoned" { outcome = "abandoned; outcome unknown"; } else {
                 if value.value.check.phase != "complete" { return Err("first check unresolved"); }
                 outcome = value.value.check.outcome; exit = value.value.check.exit_code;
-                output = Some(match check_values(Some(value.value), policy) { Ok(item) => item, Err(error) => { return Err(error); } });
+                output = Some(match check_values(Some(value.value), policy) { Ok(item) => item, Err(error) => { return Err(error); } }); }
             } None() => {} }
             let origin = match summary_source(item.value.events, work.summary, policy) { Ok(value) => value, Err(error) => { return Err(error); } };
             let chosen = match selection(item.value.events.events, policy) { Ok(value) => value, Err(error) => { return Err(error); } };
@@ -88,11 +89,12 @@ public flow snapshot(policy: Policy, binding: string) -> Result<Facts, string> {
             calls = calls + spent.read.calls + spent.edit.calls; generation = generation + spent.read.tokens + spent.edit.tokens;
             var outcome = "not requested"; var exit = ""; var output: Option<CheckOutput> = None();
             match second_check { Some(value) => {
+                if value.value.check.phase == "abandoned" { outcome = "abandoned; outcome unknown"; } else {
                 if value.value.check.phase != "complete" { return Err("followup check unresolved"); }
                 outcome = value.value.check.outcome; exit = value.value.check.exit_code;
                 let out = match decode(value.value.stdout, policy) { Ok(item) => item, Err(error) => { return Err(error); } };
                 let err = match decode(value.value.stderr, policy) { Ok(item) => item, Err(error) => { return Err(error); } };
-                output = Some(CheckOutput { stdout = out, stderr = err, stdout_truncated = value.value.stdout_truncated, stderr_truncated = value.value.stderr_truncated });
+                output = Some(CheckOutput { stdout = out, stderr = err, stdout_truncated = value.value.stdout_truncated, stderr_truncated = value.value.stderr_truncated }); }
             } None() => {} }
             let origin = match summary_source(item.value.events, work.summary, policy) { Ok(value) => value, Err(error) => { return Err(error); } };
             let chosen = match selection(item.value.events.events, policy) { Ok(value) => value, Err(error) => { return Err(error); } };

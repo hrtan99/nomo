@@ -46,7 +46,7 @@ public flow admit(binding: string, id: string, workspace: string, path: string, 
     match previous { Some(item) => {
         let last = item.value.current;
         if last.result.phase == "abandoned" { if last.check.phase != "none" && last.check.phase != "planned" { return Err("abandoned check unresolved"); } }
-        else if last.result.phase != "complete" || (last.check.phase != "none" && last.check.phase != "complete") { return Err("previous work or check is unfinished"); }
+        else if last.result.phase != "complete" || (last.check.phase != "none" && last.check.phase != "complete" && last.check.phase != "abandoned") { return Err("previous work or check is unfinished"); }
         history = item.value.history.push(last);
     } None() => {} }
     if count(history) >= 32 { return Err("continuous session history limit reached"); }
@@ -102,4 +102,11 @@ public flow abandon(binding: string, id: string) -> Result<bool, string> ![Memor
     if item.core.id != id || item.result.phase != "running" || (item.check.phase != "none" && item.check.phase != "planned") { return Err("interrupted work identity or phase differs"); }
     let result = ResultData { phase = "abandoned", summary = item.result.summary, source = item.result.source, calls = item.result.calls, generation = item.result.generation, events = item.result.events };
     return match put(row, Entry { core = item.core, edit = item.edit, result = result, check = item.check }) { Ok(_) => Ok(true), Err(error) => Err(error) };
+}
+
+public flow abandon_check(binding: string, id: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+    let row = match load(binding) { Ok(Some(value)) => value, _ => { return Err("interrupted check missing"); } }; let item = row.value.current;
+    if item.core.id != id || item.result.phase != "complete" || item.check.phase != "running" { return Err("interrupted check identity or phase differs"); }
+    let check = Check { phase = "abandoned", digest = item.check.digest, outcome = item.check.outcome, exit_code = item.check.exit_code, stdout = item.check.stdout, stderr = item.check.stderr, stdout_truncated = item.check.stdout_truncated, stderr_truncated = item.check.stderr_truncated };
+    return match put(row, Entry { core = item.core, edit = item.edit, result = item.result, check = check }) { Ok(_) => Ok(true), Err(error) => Err(error) };
 }

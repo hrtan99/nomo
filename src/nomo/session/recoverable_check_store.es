@@ -89,3 +89,11 @@ public flow finish(id: string, digest: string, outcome: string, exit_code: strin
     let frame = Frame { format = 1, policy_binding = binding, work_history = old.work_history, workspace = old.workspace, path = old.path, check = record, stdout = out.value, stderr = err.value, stdout_truncated = out.truncated, stderr_truncated = err.truncated };
     match write(frame, Some(before), policy, binding) { Ok(_) => Ok(true), Err(error) => Err(error) }
 }
+
+public flow abandon(id: string, policy: Policy, binding: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+    let before = match load(policy, binding) { Ok(Some(item)) => item, _ => { return Err("running check missing"); } }; let old = before.value;
+    if old.check.id != id || old.check.phase != "running" { return Err("interrupted check identity or phase differs"); }
+    let record = Record { format = old.check.format, phase = "abandoned", id = old.check.id, digest = old.check.digest, outcome = "", exit_code = "" };
+    let frame = Frame { format = old.format, policy_binding = old.policy_binding, work_history = old.work_history, workspace = old.workspace, path = old.path, check = record, stdout = old.stdout, stderr = old.stderr, stdout_truncated = old.stdout_truncated, stderr_truncated = old.stderr_truncated };
+    return match write(frame, Some(before), policy, binding) { Ok(_) => Ok(true), Err(error) => Err(error) };
+}

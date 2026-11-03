@@ -58,7 +58,7 @@ public flow load(policy: Policy, binding: string) -> Result<Option<MemoryEntry<s
             if parent_edit.phase != "completed" { return Err("first edit unresolved"); }
             }
             let parent_check = match load_parent_check(policy, binding) { Ok(value) => value, Err(error) => { return Err(error); } };
-            let check_version = match parent_check { Some(value) => { if value.value.check.phase != "complete" && !(parent_work.value.work.phase == "abandoned" && value.value.check.phase == "planned") { return Err("first check unresolved"); } value.version.opaque }, None() => "" };
+            let check_version = match parent_check { Some(value) => { if value.value.check.phase != "complete" && value.value.check.phase != "abandoned" && !(parent_work.value.work.phase == "abandoned" && value.value.check.phase == "planned") { return Err("first check unresolved"); } value.version.opaque }, None() => "" };
             if check_version != item.value.parent_check_version { return Err("first check changed"); }
         }
         None() => {}
@@ -105,7 +105,7 @@ public flow admit(id: string, workspace: string, path: string, request: string, 
     if first_edit.phase != "completed" { return Err("completed first edit required"); }
     }
     let parent_check = match load_parent_check(policy, binding) { Ok(item) => item, Err(error) => { return Err(error); } };
-    let check_version = match parent_check { Some(item) => { if item.value.check.phase != "complete" && !(parent_work.value.work.phase == "abandoned" && item.value.check.phase == "planned") { return Err("first check unresolved"); } item.version.opaque }, None() => "" };
+    let check_version = match parent_check { Some(item) => { if item.value.check.phase != "complete" && item.value.check.phase != "abandoned" && !(parent_work.value.work.phase == "abandoned" && item.value.check.phase == "planned") { return Err("first check unresolved"); } item.version.opaque }, None() => "" };
     let frame = Frame { format = 1, policy_binding = binding, parent_work_version = parent_work.version.opaque, parent_check_version = check_version, work = row, events = empty_events() };
     let version = match write(frame, None(), policy, binding) { Ok(item) => item, Err(error) => { return Err(error); } };
     return Ok(Ticket { frame = frame, version = version, chat = chat });

@@ -25,9 +25,9 @@ import nomo.entry.harness_work_entry.{prepare_expanded_unicode, finish_edit, fin
 import nomo.session.recoverable_chat_store.load as load_chat;
 import nomo.session.recoverable_followup_store.{admit, claim, finish, abandon as abandon_followup};
 import nomo.session.recoverable_followup_store.load as load_followup;
-import nomo.session.continuous_work.{load as load_extra, admit as admit_extra, edit_intent, edit_complete, finish as finish_extra, abandon as abandon_extra};
+import nomo.session.continuous_work.{load as load_extra, admit as admit_extra, edit_intent, edit_complete, finish as finish_extra, abandon as abandon_extra, abandon_check as abandon_extra_check};
 import nomo.session.redaction.Policy;
-import nomo.session.recoverable_followup_check_store.{plan as plan_check, load as load_followup_check};
+import nomo.session.recoverable_followup_check_store.{plan as plan_check, load as load_followup_check, abandon as abandon_followup_check};
 import nomo.session.work_fact_events.capture;
 import nomo.session.history_followup_edit_store.{available, begin, complete};
 import nomo.entry.edit_coordinator.{Confirmed, confirm_current};
@@ -120,7 +120,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
     var first_output: Option<CheckOutput> = None(); var checked = "not requested"; var exit = "";
     match first_check {
         Some(value) => {
-            if first_work.value.work.phase == "abandoned" && value.value.check.phase == "planned" { checked = "not started after abandoned work"; } else {
+            if value.value.check.phase == "abandoned" { checked = "abandoned; outcome unknown"; } else if first_work.value.work.phase == "abandoned" && value.value.check.phase == "planned" { checked = "not started after abandoned work"; } else {
             if value.value.check.phase != "complete" { return refused("first check outcome unresolved"); }
             let out = match decode(value.value.stdout, policy) { Ok(item) => item, Err(error) => { return refused(error); } };
             let err = match decode(value.value.stderr, policy) { Ok(item) => item, Err(error) => { return refused(error); } };
@@ -168,6 +168,9 @@ public flow abandon(args: Array<string>) -> i32 ![Console, Memory, Fs.read<Polic
     if count(args) != 2 { return refused("recovery requires binding and operation ID"); }
     let policy = match load_policy() { Ok(value) => value, Err(error) => { return refused(error); } };
     let extra = match load_extra(args[0]) { Ok(value) => value, Err(error) => { return refused(error); } };
-    let result = match extra { Some(_) => abandon_extra(args[0], args[1]), None() => abandon_followup(args[1], policy, args[0]) };
-    return match result { Ok(_) => { println("RECORDED user decision: abandoned; prior outcome remains unknown and budget remains reserved."); 0 } Err(error) => refused(error) };
+    let result = match extra {
+        Some(item) => if item.value.current.result.phase == "complete" { abandon_extra_check(args[0], args[1]) } else { abandon_extra(args[0], args[1]) },
+        None() => { let work = match load_followup(policy, args[0]) { Ok(Some(value)) => value, _ => { return refused("interrupted followup missing"); } }; if work.value.work.phase == "complete" { abandon_followup_check(args[1], policy, args[0]) } else { abandon_followup(args[1], policy, args[0]) } },
+    };
+    return match result { Ok(_) => { println("RECORDED user decision: abandoned; interrupted outcome remains unknown; saved budgets are retained."); 0 } Err(error) => refused(error) };
 }

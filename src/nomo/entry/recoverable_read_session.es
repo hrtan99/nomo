@@ -139,6 +139,7 @@ public flow status(args: Array<string>) -> i32 ![Console, Memory, Fs.read<Policy
         println("ADDITIONAL WORK " + item.core.id + " phase=" + item.result.phase + " edit=" + item.edit.phase + " check=" + item.check.phase +
             " settled_calls=" + to_string_i32(item.result.calls) + " settled_generation=" + to_string_i32(item.result.generation) +
             if item.result.phase == "running" || item.result.phase == "abandoned" { " reserved_calls=7 reserved_generation=51200" } else { " reserved_calls=0 reserved_generation=0" });
+        if item.check.phase == "abandoned" { println("ABANDONED CHECK: outcome unknown; inspect the workspace before further action."); }
     }
     var followup_phase = "none"; var followup_edit_phase = "none"; var followup_reserved_calls: i32 = 0; var followup_reserved_tokens: i32 = 0;
     var followup_settled_calls: i32 = 0; var followup_settled_tokens: i32 = 0; var followup_events: Array<Event> = [];
@@ -194,6 +195,7 @@ public flow status(args: Array<string>) -> i32 ![Console, Memory, Fs.read<Policy
     if work_phase == "running" { show_edit_status("WORK", work_edit_phase); }
     if work_phase == "abandoned" { println("ABANDONED WORK: user chose to continue; the prior effect remains unknown and its full reservation is retained."); }
     if followup_phase == "running" { show_edit_status("FOLLOWUP", followup_edit_phase); }
+    if check_phase == "abandoned" || followup_check_phase == "abandoned" { println("ABANDONED CHECK: outcome unknown; inspect the workspace before further action."); }
     if check_phase == "planned" { println("UNRESOLVED CHECK: no start was recorded at this snapshot; the earlier process may still act. Do not rerun automatically."); }
     else if check_phase == "running" { println("UNRESOLVED CHECK: start was recorded but completion is unknown. Do not rerun automatically."); }
     if followup_check_phase == "planned" { println("UNRESOLVED FOLLOWUP CHECK: no start was recorded at this snapshot; the earlier process may still act. Do not rerun automatically."); }

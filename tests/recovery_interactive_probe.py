@@ -46,7 +46,7 @@ try:
   v=bytes(log)
   if step==0 and b'nomo> ' in v:os.write(master,b'Change old to green in note.txt\n');step=1
   elif step==1 and b'Type `yes` to approve:' in v:os.kill(proc.pid,signal.SIGINT);step=2
-  elif step==2 and b'Abandon this interrupted work and continue this session?' in v:os.write(master,b'yes\n');step=3
+  elif step==2 and b'Abandon this interrupted operation and continue this session?' in v:os.write(master,b'yes\n');step=3
   elif step==3 and b'Continue with a new request' in v:os.write(master,b'Change old to green in note.txt now\n');step=4
   elif step==4 and v.count(b'Type `yes` to approve:')>=2:os.write(master,b'yes\n');step=5
   elif step==5 and b'CONFIRM Apply this exact preview?' in v:os.write(master,b'yes\n');step=6
