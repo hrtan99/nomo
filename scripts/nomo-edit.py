@@ -159,6 +159,12 @@ class RuntimeDiagnostic:
     _length = b'error[analysis::UnhandledRuntimeError]: model generation failed: IncompleteResponse: OpenAI-compatible generation is incomplete (finish_reason=length)'
     _provider_503 = b'error[analysis::UnhandledRuntimeError]: model host boundary failed: OpenAI-compatible endpoint returned an error status (status=503)'
     _summary_bound = b'REFUSED edit completed; final answer requires 1..512 nonblank UTF-8 bytes'
+    _read_refusals = {
+        b'REFUSED expected bounded flat JSON string array': 'bounded_json_frame_refused',
+        b'REFUSED invalid JSON': 'invalid_json_refused',
+        b'REFUSED expected string fields': 'string_fields_refused',
+        b'REFUSED invalid bounded delegated task': 'delegated_task_refused',
+    }
     _stages = (b'read-plan', b'read-child', b'read-aggregate', b'edit-plan', b'edit-child', b'edit-aggregate')
 
     def __init__(self):
@@ -197,6 +203,8 @@ class RuntimeDiagnostic:
             self.categories.add('provider_http_503')
         elif line == self._summary_bound:
             self.categories.add('summary_blank_or_over_limit')
+        elif line in self._read_refusals:
+            self.categories.add(self._read_refusals[line])
 
     def report(self, exit_code):
         if exit_code != 3:

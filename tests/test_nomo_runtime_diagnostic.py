@@ -58,6 +58,16 @@ class DiagnosticTests(unittest.TestCase):
         observer=edit.RuntimeDiagnostic();observer.feed('stdout',b'POST_EDIT aggregate\n'+observer._summary_bound+b'\n')
         report=self.report(observer);self.assertIn('text_marker=summary_blank_or_over_limit',report);self.assertIn('may already be applied',report);self.assertIn('inspect the file and session status',report);self.assertIn('Do not automatically retry',report)
 
+    def test_only_exact_bounded_read_refusals_are_classified(self):
+        for line, category in edit.RuntimeDiagnostic._read_refusals.items():
+            with self.subTest(category=category):
+                observer=edit.RuntimeDiagnostic()
+                observer.feed('stdout',line+b'\n')
+                self.assertIn('text_marker='+category,self.report(observer))
+                other=edit.RuntimeDiagnostic()
+                other.feed('stdout',line+b' extra\n')
+                self.assertIn('text_marker=unknown',self.report(other))
+
 
 if __name__ == '__main__':
     unittest.main()
