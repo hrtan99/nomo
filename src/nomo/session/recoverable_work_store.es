@@ -2,11 +2,10 @@ module nomo.session.recoverable_work_store;
 
 import std.memory.{get_entry, prepare_put, operation_ref, commit, MemoryEntry, MemoryVersion,
     WriteCondition, WriteOutcome, MemoryWriteChange, StorageDurability, Missing, Match};
-import std.collections.len as count;
 import nomo.core.conversation.Event;
 import nomo.session.redaction.{Policy, text as redact};
-import nomo.session.event_text_codec.{encode, decode};
-import nomo.session.recoverable_events.{Frame as EventFrame, empty as empty_events, invalid as invalid_events, append};
+import nomo.session.event_text_codec.decode;
+import nomo.session.recoverable_events.{Frame as EventFrame, empty as empty_events, invalid as invalid_events, work_batch};
 import nomo.session.recoverable_chat_store.{Frame as ChatFrame, load as load_chat};
 import nomo.session.history_work_guard.{Record, Budget, invalid as invalid_work};
 import nomo.harness.harness_work_contract.Ledger;
@@ -104,13 +103,7 @@ public flow claim(ticket: Ticket, policy: Policy, binding: string) -> Result<boo
 
 public flow finish(ticket: Ticket, summary: string, spent: Ledger, records: Array<Event>, policy: Policy, binding: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
     match claim(ticket, policy, binding) { Ok(_) => {} Err(error) => { return Err(error); } }
-    if count(records) == 0 || count(records) > 24 { return Err("invalid work event batch"); }
-    var encoded: Array<Event> = [];
-    for item in records limit Iterations(24) {
-        let text = match encode(item.text, policy) { Ok(value) => value.value, Err(error) => { return Err(error); } };
-        encoded = encoded.push(Event { role = item.role, kind = item.kind, name = item.name, text = text });
-    }
-    let events = match append(empty_events(), 1, encoded, policy) { Ok(item) => item.frame, Err(error) => { return Err(error); } };
+    let events = match work_batch(records, policy) { Ok(item) => item, Err(error) => { return Err(error); } };
     let old = ticket.frame.work;
     let row = Record { format = old.format, phase = "complete", id = old.id, workspace = old.workspace, path = old.path,
         request = old.request, history_version = old.history_version, reserved = zero(), settled = Some(spent), summary = summary };

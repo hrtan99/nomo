@@ -45,7 +45,8 @@ public flow admit(binding: string, id: string, workspace: string, path: string, 
     var history: Array<Entry> = [];
     match previous { Some(item) => {
         let last = item.value.current;
-        if last.result.phase != "complete" || (last.check.phase != "none" && last.check.phase != "complete") { return Err("previous work or check is unfinished"); }
+        if last.result.phase == "abandoned" { if last.check.phase != "none" && last.check.phase != "planned" { return Err("abandoned check unresolved"); } }
+        else if last.result.phase != "complete" || (last.check.phase != "none" && last.check.phase != "complete") { return Err("previous work or check is unfinished"); }
         history = item.value.history.push(last);
     } None() => {} }
     if count(history) >= 32 { return Err("continuous session history limit reached"); }
@@ -94,4 +95,11 @@ public flow finish_check(binding: string, id: string, digest: string, outcome: s
     let err = match encode_prefix(stderr, err_truncated, policy) { Ok(value) => value, Err(error) => { return Err(error); } };
     let check = Check { phase = "complete", digest = digest, outcome = outcome, exit_code = exit_code, stdout = out.value, stderr = err.value, stdout_truncated = out.truncated, stderr_truncated = err.truncated };
     return put(row, Entry { core = item.core, edit = item.edit, result = item.result, check = check });
+}
+
+public flow abandon(binding: string, id: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+    let row = match load(binding) { Ok(Some(value)) => value, _ => { return Err("interrupted work missing"); } }; let item = row.value.current;
+    if item.core.id != id || item.result.phase != "running" || (item.check.phase != "none" && item.check.phase != "planned") { return Err("interrupted work identity or phase differs"); }
+    let result = ResultData { phase = "abandoned", summary = item.result.summary, source = item.result.source, calls = item.result.calls, generation = item.result.generation, events = item.result.events };
+    return match put(row, Entry { core = item.core, edit = item.edit, result = result, check = item.check }) { Ok(_) => Ok(true), Err(error) => Err(error) };
 }

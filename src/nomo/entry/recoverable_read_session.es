@@ -138,7 +138,7 @@ public flow status(args: Array<string>) -> i32 ![Console, Memory, Fs.read<Policy
     for item in additional limit Iterations(32) {
         println("ADDITIONAL WORK " + item.core.id + " phase=" + item.result.phase + " edit=" + item.edit.phase + " check=" + item.check.phase +
             " settled_calls=" + to_string_i32(item.result.calls) + " settled_generation=" + to_string_i32(item.result.generation) +
-            if item.result.phase == "running" { " reserved_calls=7 reserved_generation=51200" } else { " reserved_calls=0 reserved_generation=0" });
+            if item.result.phase == "running" || item.result.phase == "abandoned" { " reserved_calls=7 reserved_generation=51200" } else { " reserved_calls=0 reserved_generation=0" });
     }
     var followup_phase = "none"; var followup_edit_phase = "none"; var followup_reserved_calls: i32 = 0; var followup_reserved_tokens: i32 = 0;
     var followup_settled_calls: i32 = 0; var followup_settled_tokens: i32 = 0; var followup_events: Array<Event> = [];

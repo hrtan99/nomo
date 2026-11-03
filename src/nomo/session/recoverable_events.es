@@ -6,6 +6,7 @@ import std.bytes.len as byte_count;
 import nomo.core.conversation.Event;
 import nomo.core.read_text.safe;
 import nomo.session.redaction.{Policy, policy_error, text as redact};
+import nomo.session.event_text_codec.encode;
 
 // A pure, bounded projection. This does not persist events or grant authority.
 // Exact known-literal filtering is not comprehensive secret detection; callers
@@ -66,4 +67,15 @@ public flow append(before: Frame, turn: i32, input: Array<Event>, policy: Policy
     let next = Frame { format = 1, turns = turn, first_count = first, events = records };
     let problem = invalid(next, policy); if problem != "" { return Err(problem); }
     return Ok(Advance { frame = next, replacements = replacements });
+}
+
+// The first and followup work use the same bounded, redacted event batch.
+public flow work_batch(records: Array<Event>, policy: Policy) -> Result<Frame, string> {
+    if count(records) == 0 || count(records) > 24 { return Err("invalid work event batch"); }
+    var encoded: Array<Event> = [];
+    for item in records limit Iterations(24) {
+        let text = match encode(item.text, policy) { Ok(value) => value.value, Err(error) => { return Err(error); } };
+        encoded = encoded.push(Event { role = item.role, kind = item.kind, name = item.name, text = text });
+    }
+    return match append(empty(), 1, encoded, policy) { Ok(item) => Ok(item.frame), Err(error) => Err(error) };
 }

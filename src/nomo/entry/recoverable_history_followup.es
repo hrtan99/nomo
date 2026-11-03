@@ -11,7 +11,6 @@ import std.fs.IOError as FileError;
 import std.effects.Fs;
 import nomo.cli.harness_work_args.{Work, parse_unicode as parse};
 import nomo.harness.harness_work_contract.Ledger;
-import nomo.harness.harness_work_contract.fresh as fresh_ledger;
 import nomo.harness.read_model_tools.{expanded_work_child_turn as work_child_turn};
 import nomo.harness.legacy_string_stages.{LegacyStringStages, LegacyEditStages};
 import nomo.harness.history_followup_model.{read_main, plan, child, aggregate, PriorWork, HistoryWork};
@@ -24,10 +23,9 @@ import nomo.session.event_text_codec.decode;
 import nomo.harness.harness_tool_chat_contract.Previous;
 import nomo.entry.harness_work_entry.{prepare_expanded_unicode, finish_edit, finish_history_summary, expanded_ledger as ledger, Pending, Failure, Completed, Summary};
 import nomo.session.recoverable_chat_store.load as load_chat;
-import nomo.session.recoverable_followup_store.{admit, claim, finish};
+import nomo.session.recoverable_followup_store.{admit, claim, finish, abandon as abandon_followup};
 import nomo.session.recoverable_followup_store.load as load_followup;
-import nomo.session.history_followup_edit_store.inspect as inspect_followup_edit;
-import nomo.session.continuous_work.{load as load_extra, admit as admit_extra, edit_intent, edit_complete, finish as finish_extra};
+import nomo.session.continuous_work.{load as load_extra, admit as admit_extra, edit_intent, edit_complete, finish as finish_extra, abandon as abandon_extra};
 import nomo.session.redaction.Policy;
 import nomo.session.recoverable_followup_check_store.{plan as plan_check, load as load_followup_check};
 import nomo.session.work_fact_events.capture;
@@ -67,40 +65,16 @@ flow historical(value: WorkFacts) -> HistoryWork {
 flow more(input: Work, prior_request: string, previous: Previous, first_id: string, check_digest: string, policy: Policy, binding: string) -> i32 {
     let second = match load_followup(policy, binding) { Ok(Some(value)) => value, _ => { return refused("completed followup required"); } };
     let work = second.value.work;
-    if work.phase != "complete" || input.edit.id == first_id || input.edit.id == work.id { return refused("distinct completed prior works required"); }
-    let second_edit = match inspect_followup_edit(work.id, work.workspace, work.path) { Ok(Some(value)) => value, _ => { return refused("completed followup edit required"); } };
-    if second_edit.phase != "completed" { return refused("followup edit unresolved"); }
-    let check = match load_followup_check(policy, binding) { Ok(value) => value, Err(error) => { return refused(error); } };
-    var checked = "not requested"; var exit = ""; var output: Option<CheckOutput> = None();
-    match check { Some(value) => {
-        if value.value.check.phase != "complete" { return refused("followup check unresolved"); }
-        let out = match decode(value.value.stdout, policy) { Ok(value) => value, Err(error) => { return refused(error); } };
-        let err = match decode(value.value.stderr, policy) { Ok(value) => value, Err(error) => { return refused(error); } };
-        output = Some(CheckOutput { stdout = out, stderr = err, stdout_truncated = value.value.stdout_truncated, stderr_truncated = value.value.stderr_truncated });
-        checked = value.value.check.outcome; exit = value.value.check.exit_code;
-    } None() => {} }
-    let origin = match summary_source(second.value.events, work.summary, policy) { Ok(value) => value, Err(error) => { return refused(error); } };
-    let chosen = match selection(second.value.events.events, policy) { Ok(value) => value, Err(error) => { return refused(error); } };
+    if input.edit.id == first_id || input.edit.id == work.id { return refused("distinct work ID required"); }
     let facts = match work_snapshot(policy, binding) { Ok(value) => value, Err(error) => { return refused(error); } };
-    var history: Array<HistoryWork> = [];
+    var latest = match facts.followup { Some(value) => value, None() => { return refused("followup facts missing"); } };
+    var request = work.request; var history: Array<HistoryWork> = [];
     match facts.first { Some(value) => { history = history.push(historical(value)); } None() => {} }
-    match facts.followup { Some(value) => { history = history.push(historical(value)); } None() => {} }
-    for value in facts.additional limit Iterations(32) { history = history.push(historical(value)); }
-    var prior = PriorWork { request = work.request, summary = work.summary, summary_source = origin, selection = chosen, check = checked, exit_code = exit, output = output, history = history };
+    history = history.push(historical(latest));
+    for value in facts.additional limit Iterations(32) { history = history.push(historical(value)); latest = value; }
     let extra = match load_extra(binding) { Ok(value) => value, Err(error) => { return refused(error); } };
-    match extra { Some(value) => {
-        let item = value.value.current;
-        if item.result.phase != "complete" || (item.check.phase != "none" && item.check.phase != "complete") { return refused("previous work unresolved"); }
-        var prior_output: Option<CheckOutput> = None();
-        if item.check.phase == "complete" {
-            let out = match decode(item.check.stdout, policy) { Ok(value) => value, Err(error) => { return refused(error); } };
-            let err = match decode(item.check.stderr, policy) { Ok(value) => value, Err(error) => { return refused(error); } };
-            prior_output = Some(CheckOutput { stdout = out, stderr = err, stdout_truncated = item.check.stdout_truncated, stderr_truncated = item.check.stderr_truncated });
-        }
-        let chosen = match selection(item.result.events, policy) { Ok(value) => value, Err(error) => { return refused(error); } };
-        prior = PriorWork { request = item.core.request, summary = item.result.summary, summary_source = item.result.source, selection = chosen,
-            check = if item.check.phase == "none" { "not requested" } else { item.check.outcome }, exit_code = item.check.exit_code, output = prior_output, history = history };
-    } None() => {} }
+    match extra { Some(value) => { request = value.value.current.core.request; } None() => {} }
+    let prior = PriorWork { request = request, summary = latest.summary, summary_source = latest.summary_source, selection = latest.selection, check = latest.check, exit_code = latest.exit_code, output = latest.output, history = history };
     let ticket = match admit_extra(binding, input.edit.id, input.edit.workspace, input.edit.path, input.edit.request, check_digest, policy) { Ok(value) => value, Err(error) => { return refused(error); } };
     println("RESERVED additional work: 7 calls, 51200 output tokens; interruption leaves this work unresolved.");
     let pending = match prepare_history(input, prior_request, previous, prior) { Ok(value) => value, Err(failure) => { ledger(failure.state); return refused(failure.error); } };
@@ -188,4 +162,12 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
     match finish(ticket, summary.answer, summary.state, records, policy, binding) { Ok(_) => {} Err(error) => { return refused("edit completed; " + error); } }
     display("FINAL ", summary.answer); println("SAVED event followup facts; no grant or root identity is persisted.");
     ledger(summary.state); return 0;
+}
+
+public flow abandon(args: Array<string>) -> i32 ![Console, Memory, Fs.read<PolicyRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {
+    if count(args) != 2 { return refused("recovery requires binding and operation ID"); }
+    let policy = match load_policy() { Ok(value) => value, Err(error) => { return refused(error); } };
+    let extra = match load_extra(args[0]) { Ok(value) => value, Err(error) => { return refused(error); } };
+    let result = match extra { Some(_) => abandon_extra(args[0], args[1]), None() => abandon_followup(args[1], policy, args[0]) };
+    return match result { Ok(_) => { println("RECORDED user decision: abandoned; prior outcome remains unknown and budget remains reserved."); 0 } Err(error) => refused(error) };
 }

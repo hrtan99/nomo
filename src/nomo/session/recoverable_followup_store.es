@@ -2,11 +2,10 @@ module nomo.session.recoverable_followup_store;
 
 import std.memory.{get_entry, prepare_put, operation_ref, commit, MemoryEntry, MemoryVersion,
     WriteCondition, WriteOutcome, MemoryWriteChange, StorageDurability, Missing, Match};
-import std.collections.len as count;
 import nomo.core.conversation.Event;
 import nomo.session.redaction.{Policy, text as redact};
-import nomo.session.event_text_codec.{encode, decode};
-import nomo.session.recoverable_events.{Frame as EventFrame, empty as empty_events, invalid as invalid_events, append};
+import nomo.session.event_text_codec.decode;
+import nomo.session.recoverable_events.{Frame as EventFrame, empty as empty_events, invalid as invalid_events, work_batch};
 import nomo.session.recoverable_chat_store.{Frame as ChatFrame, load as load_chat};
 import nomo.session.history_work_guard.{Record, Budget, invalid as invalid_work};
 import nomo.harness.harness_work_contract.Ledger;
@@ -30,7 +29,7 @@ flow frame_error(value: Frame, policy: Policy, binding: string) -> string {
     if value.format != 1 || value.policy_binding != binding || value.parent_work_version == "" { return "invalid recoverable followup format or policy binding"; }
     let work_error = invalid_work(value.work); if work_error != "" { return work_error; }
     let event_error = invalid_events(value.events, policy); if event_error != "" { return event_error; }
-    if (value.work.phase == "running" && value.events.turns != 0) || (value.work.phase == "complete" && value.events.turns != 1) {
+    if ((value.work.phase == "running" || value.work.phase == "abandoned") && value.events.turns != 0) || (value.work.phase == "complete" && value.events.turns != 1) {
         return "work phase and event boundary differ";
     }
     for field in [value.work.id, value.work.workspace, value.work.path, value.work.request, value.work.summary] limit Iterations(5) {
@@ -124,13 +123,7 @@ public flow claim(ticket: Ticket, policy: Policy, binding: string) -> Result<boo
 
 public flow finish(ticket: Ticket, summary: string, spent: Ledger, records: Array<Event>, policy: Policy, binding: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
     match claim(ticket, policy, binding) { Ok(_) => {} Err(error) => { return Err(error); } }
-    if count(records) == 0 || count(records) > 24 { return Err("invalid work event batch"); }
-    var encoded: Array<Event> = [];
-    for item in records limit Iterations(24) {
-        let text = match encode(item.text, policy) { Ok(value) => value.value, Err(error) => { return Err(error); } };
-        encoded = encoded.push(Event { role = item.role, kind = item.kind, name = item.name, text = text });
-    }
-    let events = match append(empty_events(), 1, encoded, policy) { Ok(item) => item.frame, Err(error) => { return Err(error); } };
+    let events = match work_batch(records, policy) { Ok(item) => item, Err(error) => { return Err(error); } };
     let old = ticket.frame.work;
     let row = Record { format = old.format, phase = "complete", id = old.id, workspace = old.workspace, path = old.path,
         request = old.request, history_version = old.history_version, reserved = zero(), settled = Some(spent), summary = summary };
@@ -138,4 +131,12 @@ public flow finish(ticket: Ticket, summary: string, spent: Ledger, records: Arra
     let current = match load(policy, binding) { Ok(Some(item)) => item, _ => { return Err("recoverable followup missing or invalid"); } };
     if current.value != ticket.frame || current.version.opaque != ticket.version.opaque { return Err("recoverable followup reservation changed; no retry"); }
     match write(frame, Some(current), policy, binding) { Ok(_) => Ok(true), Err(error) => Err(error) }
+}
+
+public flow abandon(id: string, policy: Policy, binding: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+    let current = match load(policy, binding) { Ok(Some(value)) => value, _ => { return Err("interrupted followup missing"); } }; let old = current.value.work;
+    if old.id != id || old.phase != "running" { return Err("interrupted followup identity or phase differs"); }
+    let row = Record { format = old.format, phase = "abandoned", id = old.id, workspace = old.workspace, path = old.path, request = old.request, history_version = old.history_version, reserved = old.reserved, settled = old.settled, summary = old.summary };
+    let frame = Frame { format = current.value.format, policy_binding = binding, parent_work_version = current.value.parent_work_version, parent_check_version = current.value.parent_check_version, work = row, events = current.value.events };
+    return match write(frame, Some(current), policy, binding) { Ok(_) => Ok(true), Err(error) => Err(error) };
 }

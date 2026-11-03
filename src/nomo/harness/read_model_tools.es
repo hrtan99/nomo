@@ -59,35 +59,29 @@ flow unresolved(error: string) -> i32 {
 
 // Both entries seed explicitly selected data; local counters are charged only
 // under their owner's prior reservation. No previous tool is dispatched here.
+flow seed(selected: State) -> Session { return Session { history = selected, calls = 0, tokens = 0, tools = 0, scan = 0 }; }
 public flow child_turn(task: string, allowed: Array<string>, selected: State) -> LoopTurn ~ ChatChildStage<ReadOnlyRoot> {
-    let seeded = Session { history = selected, calls = 0, tokens = 0, tools = 0, scan = 0 };
-    return run_loop(task, allowed, default_limits(), seeded);
+    return run_loop(task, allowed, default_limits(), seed(selected));
 }
 
 public flow private_child_turn(task: string, allowed: Array<string>, selected: State) -> LoopTurn ~ ChatChildStage<ReadOnlyRoot> {
-    let seeded = Session { history = selected, calls = 0, tokens = 0, tools = 0, scan = 0 };
-    return run_private_loop(task, allowed, default_limits(), seeded);
+    return run_private_loop(task, allowed, default_limits(), seed(selected));
 }
 public flow work_child_turn(task: string, allowed: Array<string>, selected: State) -> LoopTurn ~ ChatChildStage<ReadOnlyRoot> {
-    let seeded = Session { history = selected, calls = 0, tokens = 0, tools = 0, scan = 0 };
-    return run_work_loop(task, allowed, default_limits(), seeded);
+    return run_work_loop(task, allowed, default_limits(), seed(selected));
 }
 public flow private_work_child_turn(task: string, allowed: Array<string>, selected: State) -> LoopTurn ~ ChatChildStage<ReadOnlyRoot> {
-    let seeded = Session { history = selected, calls = 0, tokens = 0, tools = 0, scan = 0 };
-    return run_private_work_loop(task, allowed, default_limits(), seeded);
+    return run_private_work_loop(task, allowed, default_limits(), seed(selected));
 }
 public flow chat_child_turn(task: string, allowed: Array<string>, selected: State) -> LoopTurn ~ ChatChildStage<ReadOnlyRoot> {
-    let seeded = Session { history = selected, calls = 0, tokens = 0, tools = 0, scan = 0 };
-    return run_chat_loop(task, allowed, default_limits(), seeded, false);
+    return run_chat_loop(task, allowed, default_limits(), seed(selected), false);
 }
 public flow private_chat_child_turn(task: string, allowed: Array<string>, selected: State) -> LoopTurn ~ ChatChildStage<ReadOnlyRoot> {
-    let seeded = Session { history = selected, calls = 0, tokens = 0, tools = 0, scan = 0 };
-    return run_chat_loop(task, allowed, default_limits(), seeded, true);
+    return run_chat_loop(task, allowed, default_limits(), seed(selected), true);
 }
 
 public flow expanded_work_child_turn(task: string, allowed: Array<string>, selected: State) -> LoopTurn ~ ChatChildStage<ReadOnlyRoot> {
-    let seeded = Session { history = selected, calls = 0, tokens = 0, tools = 0, scan = 0 };
-    return run_expanded_work_loop(task, allowed, seeded);
+    return run_expanded_work_loop(task, allowed, seed(selected));
 }
 
 flow failed(state: Ledger, error: string, resolved: bool) -> Result<Report, Failure> {

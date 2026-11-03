@@ -128,7 +128,7 @@ def show_status_hint(args, identifier):
         command.append('--events-policy-dir=' + args.events_policy_dir)
     print('Inspect status: ' + shlex.join(command), file=sys.stderr, flush=True)
 
-def abandon_stopped_work(args, operation_id):
+def abandon_stopped_work(args, operation_id, action):
     # Called only by the live owner after the matching transport returned 130.
     registry_spec = importlib.util.spec_from_file_location('session_id', ROOT / 'scripts/nomo-session-id.py')
     registry = importlib.util.module_from_spec(registry_spec); registry_spec.loader.exec_module(registry)
@@ -148,7 +148,7 @@ def abandon_stopped_work(args, operation_id):
         compose = ['docker', 'compose', '--env-file', '/dev/null']
         for name in ('compose.yaml', 'config/etas-025-official-compose.yaml', 'config/etas-runtime-cache-compose.yaml', 'config/nomo-read-session-compose.yaml', 'config/nomo-event-policy-work-compose.yaml'):
             compose += ['--file', str(ROOT / name)]
-        native = ['python3', '-B', '/workspace/scripts/nomo-event-policy-mount-bootstrap.py', binding, 'run', '/workspace', '--flow', 'recoverable_work_abandon', '--profile', 'nomo-read-events-status', '--allow-effects', '--args', binding, operation_id]
+        native = ['python3', '-B', '/workspace/scripts/nomo-event-policy-mount-bootstrap.py', binding, 'run', '/workspace', '--flow', 'recoverable_work_abandon' if action == 'work' else 'recoverable_followup_abandon', '--profile', 'nomo-read-events-status', '--allow-effects', '--args', binding, operation_id]
         command = [sys.executable, str(ROOT / 'scripts/terminal-transport.py'), *compose, 'run', '--rm', '--no-deps', '--pull', 'never', '--tty=false', '--workdir', '/session-state', 'dev', *native]
         return edit.run_owned(command, env)
     finally: os.close(fd)
@@ -156,12 +156,12 @@ def abandon_stopped_work(args, operation_id):
 def recovery_ready(code, signals, proof, closed):
     return code == 130 and signals == [signal.SIGINT] and proof == b'clean-sigint\n' and closed
 
-def offer_recovery(args, operation_id):
+def offer_recovery(args, operation_id, action):
     print('The interrupted edit may have taken effect. Inspect the file before continuing; the old work and its full reserved budget will remain recorded.', flush=True)
     try: answer = input('Abandon this interrupted work and continue this session? [y/N] ').strip().lower()
     except (EOFError, KeyboardInterrupt): return False
     if answer not in ('y', 'yes'): return False
-    try: return abandon_stopped_work(args, operation_id) == 0
+    try: return abandon_stopped_work(args, operation_id, action) == 0
     except (OSError, ValueError) as error:
         print('Recovery decision was not confirmed: ' + str(error), file=sys.stderr, flush=True)
         return False
@@ -344,7 +344,7 @@ def main(argv=None):
             except BlockingIOError: proof, closed = b'', False
             finally: os.close(proof_read)
             if code:
-                if recovery_ready(code, signals, proof, closed) and action == 'work' and args.events_policy_dir is not None and offer_recovery(args, operation_id):
+                if recovery_ready(code, signals, proof, closed) and args.events_policy_dir is not None and offer_recovery(args, operation_id, action):
                     print('Continue with a new request; a new edit requires fresh confirmations.', flush=True)
                     continue
                 print('Work stopped; inspect session status before continuing.', file=sys.stderr, flush=True)

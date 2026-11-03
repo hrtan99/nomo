@@ -15,6 +15,7 @@ import nomo.session.continuous_work.{Entry, load as load_continuous};
 
 public type Facts = { first: Option<WorkFacts>, followup: Option<WorkFacts>, additional: Array<WorkFacts>, calls: i32, generation: i32 };
 flow extra_fact(item: Entry, policy: Policy) -> Result<WorkFacts, string> {
+    if item.result.phase == "abandoned" && (item.check.phase == "none" || item.check.phase == "planned") { return Ok(WorkFacts { id = item.core.id, summary = "User abandoned interrupted work; its effect is unknown. Inspect the file before a new edit.", summary_source = "system", selection = None(), check = "unknown", exit_code = "", output = None() }); }
     if item.result.phase != "complete" || (item.check.phase != "none" && item.check.phase != "complete") { return Err("continuous work unresolved"); }
     var output: Option<CheckOutput> = None();
     if item.check.phase == "complete" {
@@ -75,7 +76,12 @@ public flow snapshot(policy: Policy, binding: string) -> Result<Facts, string> {
         }
         Some(item) => {
             match first_facts { Some(_) => {} None() => { return Err("first work facts missing"); } }
-            let work = item.value.work; if work.phase != "complete" { return Err("followup unresolved"); }
+            let work = item.value.work;
+            if work.phase == "abandoned" {
+                calls = calls + work.reserved.calls; generation = generation + work.reserved.generation;
+                second_facts = Some(WorkFacts { id = work.id, summary = "User abandoned interrupted work; its effect is unknown. Inspect the file before a new edit.", summary_source = "system", selection = None(), check = "unknown", exit_code = "", output = None() });
+            } else {
+            if work.phase != "complete" { return Err("followup unresolved"); }
             let edit = match inspect_followup_edit(work.id, work.workspace, work.path) { Ok(Some(value)) => value, _ => { return Err("completed followup edit required"); } };
             if edit.phase != "completed" { return Err("followup edit unresolved"); }
             let spent = match work.settled { Some(value) => value, None() => { return Err("followup budget missing"); } };
@@ -84,7 +90,6 @@ public flow snapshot(policy: Policy, binding: string) -> Result<Facts, string> {
             match second_check { Some(value) => {
                 if value.value.check.phase != "complete" { return Err("followup check unresolved"); }
                 outcome = value.value.check.outcome; exit = value.value.check.exit_code;
-                // The two check frames have identical structural fields.
                 let out = match decode(value.value.stdout, policy) { Ok(item) => item, Err(error) => { return Err(error); } };
                 let err = match decode(value.value.stderr, policy) { Ok(item) => item, Err(error) => { return Err(error); } };
                 output = Some(CheckOutput { stdout = out, stderr = err, stdout_truncated = value.value.stdout_truncated, stderr_truncated = value.value.stderr_truncated });
@@ -92,6 +97,7 @@ public flow snapshot(policy: Policy, binding: string) -> Result<Facts, string> {
             let origin = match summary_source(item.value.events, work.summary, policy) { Ok(value) => value, Err(error) => { return Err(error); } };
             let chosen = match selection(item.value.events.events, policy) { Ok(value) => value, Err(error) => { return Err(error); } };
             second_facts = Some(WorkFacts { id = work.id, summary = work.summary, summary_source = origin, selection = chosen, check = outcome, exit_code = exit, output = output });
+            }
         }
     }
     var additional: Array<WorkFacts> = [];
@@ -101,7 +107,7 @@ public flow snapshot(policy: Policy, binding: string) -> Result<Facts, string> {
         let items = value.value.history.push(value.value.current);
         for item in items limit Iterations(32) {
             let fact = match extra_fact(item, policy) { Ok(value) => value, Err(error) => { return Err(error); } };
-            additional = additional.push(fact); calls = calls + item.result.calls; generation = generation + item.result.generation;
+            additional = additional.push(fact); calls = calls + if item.result.phase == "abandoned" { 7 } else { item.result.calls }; generation = generation + if item.result.phase == "abandoned" { 51200 } else { item.result.generation };
         }
     } None() => {} }
     return Ok(Facts { first = first_facts, followup = second_facts, additional = additional, calls = calls, generation = generation });
