@@ -10,11 +10,11 @@ import nomo.model.model_tool_contract.{Session, allowed_error};
 import nomo.model.read_protocol.decode_child as decode_reply;
 import nomo.core.read_text.bounded;
 import nomo.harness.read_tool_contract.inspect_work as inspect;
-import nomo.harness.harness_tool_contract.settle;
+import nomo.harness.harness_tool_contract.work_settle as settle;
 import nomo.harness.harness_tool_contract.Ledger as ReadLedger;
 import nomo.harness.harness_tool_contract.fresh as read_fresh;
-import nomo.harness.harness_tool_contract.bump as read_bump;
-import nomo.harness.harness_tool_contract.ledger_error as read_error;
+import nomo.harness.harness_tool_contract.work_bump as read_bump;
+import nomo.harness.harness_tool_contract.work_error as read_error;
 import nomo.harness.harness_edit_contract.Context as EditContext;
 import nomo.harness.harness_edit_contract.Ledger as EditLedger;
 import nomo.harness.harness_edit_contract.fresh as edit_fresh;
@@ -31,7 +31,7 @@ public type Ledger = { read: ReadLedger, edit: EditLedger };
 public flow fresh() -> Ledger { return Ledger { read = read_fresh(), edit = edit_fresh() }; }
 
 flow read_complete(value: ReadLedger) -> bool {
-    return value.steps == 7 && value.calls == 4 && value.tokens == 8192 && value.tools == 1 && value.scan == 4096;
+    return value.steps == 7 && value.calls == 4 && (value.tokens == 8192 || value.tokens == 12288) && value.tools == 1 && value.scan == 4096;
 }
 
 // This is a configured cumulative ceiling, never measured provider usage.
@@ -45,7 +45,7 @@ public flow ledger_error(state: Ledger) -> string {
     let edit = edit_error(state.edit); if edit != "" { return edit; }
     if state.edit.steps != 0 && !read_complete(state.read) { return "edit tail requires settled read work"; }
     if state.read.steps + state.edit.steps > 13 || state.read.calls + state.edit.calls > 7 ||
-        state.read.tokens + state.edit.tokens > 47104 || native_tokens(state) > 196608 {
+        state.read.tokens + state.edit.tokens > 51200 || native_tokens(state) > 196608 {
         return "shared work reservation exhausted";
     }
     return "";
@@ -78,7 +78,7 @@ flow selected_error(value: Evidence, complete: bool) -> string {
     let invalid = read_error(value.ledger); if invalid != "" { return invalid; }
     if complete {
         if !read_complete(value.ledger) || !bounded(value.summary, 512) { return "read evidence is not settled"; }
-    } else if value.summary != "" || value.ledger.steps != 5 || value.ledger.calls != 3 || value.ledger.tokens != 6144 ||
+    } else if value.summary != "" || value.ledger.steps != 5 || value.ledger.calls != 3 || (value.ledger.tokens != 6144 && value.ledger.tokens != 10240) ||
         value.ledger.tools != 1 || value.ledger.scan != 4096 { return "invalid pending read evidence"; }
     return "";
 }

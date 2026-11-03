@@ -9,7 +9,7 @@ import nomo.harness.model_plan_diagnostic.{response_error, response_text};
 import nomo.cli.harness_work_args.{Work, parse};
 import nomo.harness.harness_work_contract.{Context, Evidence, Ledger, fresh, ledger_error, bump_edit, native_tokens, collect, finish_evidence, context_error};
 import nomo.harness.harness_model_tools.{run_context as read_context, work_child_turn, chain_child_turn, Report as ReadReport, Failure as ReadFailure};
-import nomo.harness.read_model_tools.run_context as unicode_read_context;
+import nomo.harness.read_model_tools.{run_context as unicode_read_context, run_expanded_context};
 import nomo.harness.harness_tool_contract.Ledger as ReadLedger;
 import nomo.harness.legacy_string_stages.{LegacyStringStages, LegacyEditStages};
 import nomo.harness.edit_original.EditOriginal;
@@ -53,8 +53,9 @@ public type Completed = { context: Context, state: Ledger };
 public type Summary = { answer: string, state: Ledger, model_generated: bool };
 flow failed(state: Ledger, error: string) -> Result<Pending, Failure> { return Err(Failure { state = state, error = error }); }
 
-flow unicode_read(request: string, allowed: Array<string>, state: ReadLedger) -> Result<ReadReport, ReadFailure> {
-    return match unicode_read_context(request, allowed, state, "read-", true, false, false, false) {
+flow unicode_read(request: string, allowed: Array<string>, state: ReadLedger, expanded: bool) -> Result<ReadReport, ReadFailure> {
+    let result = if expanded { run_expanded_context(request, allowed, state) } else { unicode_read_context(request, allowed, state, "read-", true, false, false, false) };
+    return match result {
         Ok(value) => Ok(ReadReport { request = value.request, task = value.task, allowed = value.allowed, child = value.child,
             status = value.status, observed = value.observed, answer = value.answer, ledger = value.ledger }),
         Err(error) => Err(ReadFailure { state = error.state, error = error.error, resolved = error.resolved }),
@@ -62,12 +63,12 @@ flow unicode_read(request: string, allowed: Array<string>, state: ReadLedger) ->
 }
 
 // Callers admit the unused edit slot before this shared Model/File preparation.
-flow prepare_mode_with(input: Work, original_error: (string) -> string, stage_log: (string, Ledger) -> unit, chain_read: bool, inspect_plan: bool, inspect_all: bool, unicode: bool) -> Result<Pending, Failure> {
+flow prepare_mode_with(input: Work, original_error: (string) -> string, stage_log: (string, Ledger) -> unit, chain_read: bool, inspect_plan: bool, inspect_all: bool, unicode: bool, expanded: bool) -> Result<Pending, Failure> {
     var state = fresh();
     let selected = Selector { id = input.edit.id, workspace = input.edit.workspace, path = input.edit.path };
     let invalid = ledger_error(state); if invalid != "" { return failed(state, invalid); }
-    println("RESERVATION work13 steps/7 calls/47104 generation/196608 native; edit tail6 steps/3 calls/38912 generation/163840 native; one read/search and one atomic maximum");
-    let read_result = if unicode { unicode_read(input.edit.request, input.allowed, state.read) }
+    println(if expanded { "RESERVATION work13 steps/7 calls/51200 generation/196608 native; edit tail6 steps/3 calls/38912 generation/163840 native; one read/search and one atomic maximum" } else { "RESERVATION work13 steps/7 calls/47104 generation/196608 native; edit tail6 steps/3 calls/38912 generation/163840 native; one read/search and one atomic maximum" });
+    let read_result = if unicode { unicode_read(input.edit.request, input.allowed, state.read, expanded) }
         else { read_context(input.edit.request, input.allowed, state.read, "read-", true, chain_read, inspect_plan, inspect_all) };
     let read = match read_result {
         Ok(value) => value,
@@ -108,13 +109,22 @@ flow prepare_mode_with(input: Work, original_error: (string) -> string, stage_lo
 }
 
 public flow prepare_with(input: Work, original_error: (string) -> string, stage_log: (string, Ledger) -> unit, chain_read: bool, inspect_plan: bool, inspect_all: bool) -> Result<Pending, Failure> {
-    return prepare_mode_with(input, original_error, stage_log, chain_read, inspect_plan, inspect_all, false);
+    return prepare_mode_with(input, original_error, stage_log, chain_read, inspect_plan, inspect_all, false, false);
 }
 
 public flow prepare_unicode(input: Work, original_error: (string) -> string, stage_log: (string, Ledger) -> unit) -> Result<Pending, Failure> {
-    return prepare_mode_with(input, original_error, stage_log, false, false, false, true) with {
+    return prepare_mode_with(input, original_error, stage_log, false, false, false, true, false) with {
         EditOriginal.read(path) => { resume read_original(path); }
     };
+}
+
+public flow prepare_expanded_unicode(input: Work, original_error: (string) -> string, stage_log: (string, Ledger) -> unit) -> Result<Pending, Failure> {
+    return prepare_mode_with(input, original_error, stage_log, false, false, false, true, true) with {
+        EditOriginal.read(path) => { resume read_original(path); }
+    };
+}
+public flow expanded_ledger(state: Ledger) -> unit {
+    println("LEDGER work steps=" + to_string_i32(state.read.steps + state.edit.steps) + "/13 calls=" + to_string_i32(state.read.calls + state.edit.calls) + "/7 generation_allowance=" + to_string_i32(state.read.tokens + state.edit.tokens) + "/51200 native_token_ceiling=" + to_string_i32(native_tokens(state)) + "/196608; configured allowances are not measured usage");
 }
 
 // The production facade binds the original native reader once; exceptions and

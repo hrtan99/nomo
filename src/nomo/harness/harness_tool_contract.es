@@ -60,6 +60,35 @@ public flow settle(state: Ledger, child: Session) -> Result<Ledger, string> {
         tools = tools, scan = tools * 4096 });
 }
 
+// Expanded work has one 2048-token parent plan, two 4096-token child
+// attempts, and one 2048-token parent aggregate. Legacy ledgers remain valid.
+public flow work_error(state: Ledger) -> string {
+    if ledger_error(state) == "" { return ""; }
+    if state.steps < 0 || state.steps > 7 || state.calls < 2 || state.calls > 4 ||
+        state.tools < 0 || state.tools > 1 || state.scan != state.tools * 4096 ||
+        state.steps < state.calls + state.tools || state.steps > state.calls + state.tools + 2 { return "invalid expanded work read ledger"; }
+    let expected = if state.calls == 2 { 6144 } else { if state.calls == 3 { 10240 } else { 12288 } };
+    return if state.tokens == expected { "" } else { "invalid expanded work read ledger" };
+}
+public flow work_bump(state: Ledger, call: bool) -> Result<Ledger, string> {
+    let error = work_error(state); if error != "" { return Err(error); }
+    if state.calls < 3 { return bump(state, call); }
+    if state.steps >= 7 || (call && state.calls != 3) || (!call && state.steps >= state.calls + state.tools + 2) { return Err("shared reservation exhausted"); }
+    let next = Ledger { steps = state.steps + 1, calls = state.calls + if call { 1 } else { 0 }, tokens = state.tokens + if call { 2048 } else { 0 }, tools = state.tools, scan = state.scan };
+    let invalid = work_error(next); if invalid != "" { return Err(invalid); } return Ok(next);
+}
+public flow work_settle(state: Ledger, child: Session) -> Result<Ledger, string> {
+    if child.tokens == child.calls * 2048 { return settle(state, child); }
+    let expected = Ledger { steps = 2, calls = 1, tokens = 2048, tools = 0, scan = 0 };
+    if state != expected ||
+        child.calls < 1 || child.calls > 2 || child.tokens != child.calls * 4096 || child.tools > 1 ||
+        child.scan != child.tools * 4096 || child.history.spent != (if child.calls == 2 { 2 } else { 1 }) + (if child.tools == 1 { 1 } else { 0 }) ||
+        (child.calls == 2 && child.tools != 1) { return Err("invalid expanded child ledger"); }
+    let calls = if child.calls == 2 { 2 } else { 1 }; let tools = if child.tools == 1 { 1 } else { 0 };
+    let value = Ledger { steps = 2 + child.history.spent, calls = 1 + calls, tokens = 2048 + calls * 4096, tools = tools, scan = tools * 4096 };
+    let error = work_error(value); if error != "" { return Err(error); } return Ok(value);
+}
+
 public flow context_error(context: Context) -> string {
     let message = Message.new(context);
     let conversion: Option<Message<JsonValue>> = message.cast<JsonValue>();

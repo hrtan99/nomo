@@ -14,12 +14,12 @@ import std.codec.text.utf8_encode;
 import std.bytes.len as byte_count;
 
 public import nomo.harness.harness_tool_contract.{Context, Ledger, Observed, numbers, fresh, ledger_error, bump, settle};
-flow child_ledger_error(child: Session) -> string {
+flow child_ledger_error(child: Session, work: bool) -> string {
     if child.history.spent < 1 || child.history.spent > 3 || child.calls < 1 || child.calls > 2 ||
-        child.tokens > 4096 || child.tools > 1 || child.scan > 4096 { return "invalid child ledger"; }
+        child.tokens > (if work { 8192 } else { 4096 }) || child.tools > 1 || child.scan > 4096 { return "invalid child ledger"; }
     let calls: i32 = if child.calls == 2 { 2 } else { 1 };
     let tools: i32 = if child.tools == 1 { 1 } else { 0 };
-    if child.history.spent != calls + tools || child.tokens != child.calls * 2048 ||
+    if child.history.spent != calls + tools || (child.tokens != child.calls * 2048 && !(work && child.tokens == child.calls * 4096)) ||
         child.scan != child.tools * 4096 || (child.calls == 2 && child.tools != 1) { return "invalid child ledger"; }
     return "";
 }
@@ -40,7 +40,7 @@ flow same(event: Event, role: string, kind: string, name: string, text: string) 
 // Only the six ordinary return shapes reachable from our fresh seeded loop are admitted.
 // Host aborts never reach this function and cannot be represented as settled returns.
 flow inspect_mode(child: Session, status: i32, request: string, task: string, allowed: Array<string>, work: bool) -> Result<Observed, string> {
-    let invalid = child_ledger_error(child); if invalid != "" { return Err(invalid); }
+    let invalid = child_ledger_error(child, work); if invalid != "" { return Err(invalid); }
     if !bounded(request, 128) || !bounded(task, if work { 512 } else { 128 }) || allowed_error(allowed) != "" { return Err("invalid selected child context"); }
     let events = child.history.events;
     let size = count(events);

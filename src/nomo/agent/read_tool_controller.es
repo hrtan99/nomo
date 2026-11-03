@@ -4,11 +4,11 @@ import std.text.{len, to_string_usize};
 import std.io.println;
 import nomo.core.read_text.{safe, bounded};
 import nomo.harness.model_plan_diagnostic.response_text;
-import nomo.core.conversation.{State, capacity_error, stop};
+import nomo.core.conversation.{State, capacity_error, stop, charge};
 import nomo.agent.loop.{emit, failure};
 import nomo.agent.conversation_events.emit as emit_event;
 import nomo.model.conversation_output.ConversationOutput;
-import nomo.model.model_tool_contract.{Session, Limits, Context, allowed_error, context_error, budget_error, charge_action};
+import nomo.model.model_tool_contract.{Session, Limits, Context, allowed_error, context_error, budget_error, charge_action, default_limits};
 import nomo.tools.read_contract.{outcome, ReadTools};
 import nomo.tools.read_display.display;
 import nomo.model.read_protocol.{question_error, decode_child, compact_frame};
@@ -69,7 +69,7 @@ flow bounded_model_context(input: Context, maximum: usize) -> Result<Context, st
 
 // Reserve the attempted model event and its largest final/action/error output.
 // The context includes all preceding events, never the not-yet-made request.
-flow model_attempt(previous: Session, allowed: Array<string>, limits: Limits, final_only: bool, private_progress: bool, chat: bool) -> Result<ModelAttempt, LoopTurn> {
+flow model_attempt(previous: Session, allowed: Array<string>, limits: Limits, final_only: bool, private_progress: bool, chat: bool, expanded: bool) -> Result<ModelAttempt, LoopTurn> {
     var session = previous;
     let full = capacity(session, 2, 518);
     if full != "" {
@@ -80,17 +80,22 @@ flow model_attempt(previous: Session, allowed: Array<string>, limits: Limits, fi
         Ok(value) => value, Err(error) => { return Err(failed(session, error, 4)); }
     };
     var error = if chat { "" } else { context_error(context) };
-    if error == "" { error = budget_error(session, limits, false); }
+    if error == "" {
+        if expanded {
+            if session.history.spent >= 3 || session.calls >= 2 || session.tokens != session.calls * 4096 || session.tools > 1 || session.scan > 4096 { error = "expanded work model reservation exhausted"; }
+        } else { error = budget_error(session, limits, false); }
+    }
     if error != "" {
         return Err(failed(session, error, 4));
     }
-    session = charge_action(session, false);
+    if expanded { session = Session { history = charge(session.history), calls = session.calls + 1, tokens = session.tokens + 4096, tools = session.tools, scan = session.scan }; }
+    else { session = charge_action(session, false); }
     session = history(session, emit_mode(session.history, "model", "text", "qwen", "", private_progress));
     return Ok(ModelAttempt { state = session, context = context });
 }
 
 // This same controller is used by scoped production and deterministic handlers.
-flow run_mode(raw: string, allowed: Array<string>, limits: Limits, previous: Session, work: bool, inspect_all: bool, private_progress: bool, chat: bool) -> LoopTurn {
+flow run_mode(raw: string, allowed: Array<string>, limits: Limits, previous: Session, work: bool, inspect_all: bool, private_progress: bool, chat: bool, expanded: bool) -> LoopTurn {
     if previous.history.stopped { return LoopTurn { state = previous, status = 4 }; }
     let full = capacity(previous, 1, if work { 512 } else { 128 });
     if full != "" { return failed(history(previous, stop(previous.history)), full, 4); }
@@ -98,7 +103,7 @@ flow run_mode(raw: string, allowed: Array<string>, limits: Limits, previous: Ses
     if invalid == "" { invalid = allowed_error(allowed); }
     if invalid != "" { return failed(previous, invalid, 2); }
     var session = history(previous, emit_mode(previous.history, "user", "input", "", raw, private_progress));
-    let first = match model_attempt(session, allowed, limits, false, private_progress, chat) { Ok(value) => value, Err(error) => { return error; } };
+    let first = match model_attempt(session, allowed, limits, false, private_progress, chat, expanded) { Ok(value) => value, Err(error) => { return error; } };
     // Host failure aborts here, without a recoverable source error event.
     if private_progress { println("CHILD STAGE model-action"); }
     let first_raw = perform LegacyChildModel.infer(first.context);
@@ -116,7 +121,7 @@ flow run_mode(raw: string, allowed: Array<string>, limits: Limits, previous: Ses
     let tool_full = capacity(session, 2, len(first_raw) + 284);
     if tool_full != "" { return failed(history(session, stop(session.history)), tool_full, 4); }
     session = history(session, emit_mode(session.history, "model", "request", action.operation, compact_frame(first_raw), private_progress));
-    let exhausted = budget_error(session, limits, true);
+    let exhausted = if expanded { if session.tools != 0 || session.scan != 0 || session.history.spent >= 3 { "expanded work tool reservation exhausted" } else { "" } } else { budget_error(session, limits, true) };
     if exhausted != "" { return failed(session, exhausted, 4); }
     session = charge_action(session, true);
     var result = outcome("refused", "unsupported operation", 0);
@@ -130,7 +135,7 @@ flow run_mode(raw: string, allowed: Array<string>, limits: Limits, previous: Ses
         return LoopTurn { state = history(session, emit_mode(session.history, "tool", "error", action.operation, data, private_progress)), status = 3 };
     }
     session = history(session, emit_mode(session.history, "tool", "complete", action.operation, data, private_progress));
-    let second = match model_attempt(session, allowed, limits, true, private_progress, chat) { Ok(value) => value, Err(error) => { return error; } };
+    let second = match model_attempt(session, allowed, limits, true, private_progress, chat, expanded) { Ok(value) => value, Err(error) => { return error; } };
     if private_progress { println("CHILD STAGE model-final"); }
     let second_raw = perform LegacyChildModel.infer(second.context);
     if inspect_all { println(response_text(second_raw, "read-child-final", "lab-qwen-", 1152)); }
@@ -143,17 +148,20 @@ flow run_mode(raw: string, allowed: Array<string>, limits: Limits, previous: Ses
 }
 
 public flow run_loop_controller(raw: string, allowed: Array<string>, limits: Limits, previous: Session, work: bool, inspect_all: bool) -> LoopTurn {
-    return run_mode(raw, allowed, limits, previous, work, inspect_all, false, false);
+    return run_mode(raw, allowed, limits, previous, work, inspect_all, false, false, false);
 }
 public flow run_private_loop_controller(raw: string, allowed: Array<string>, limits: Limits, previous: Session) -> LoopTurn {
-    return run_mode(raw, allowed, limits, previous, false, false, true, false);
+    return run_mode(raw, allowed, limits, previous, false, false, true, false, false);
 }
 public flow run_private_work_loop_controller(raw: string, allowed: Array<string>, limits: Limits, previous: Session) -> LoopTurn {
-    return run_mode(raw, allowed, limits, previous, true, false, true, false);
+    return run_mode(raw, allowed, limits, previous, true, false, true, false, false);
 }
 
 // Chat accepts the same bounded task as work, retaining a larger explicitly
 // measured context for prior-turn evidence and JSON escaping.
 public flow run_chat_loop_controller(raw: string, allowed: Array<string>, limits: Limits, previous: Session, private_progress: bool) -> LoopTurn {
-    return run_mode(raw, allowed, limits, previous, true, false, private_progress, true);
+    return run_mode(raw, allowed, limits, previous, true, false, private_progress, true, false);
+}
+public flow run_expanded_work_loop_controller(raw: string, allowed: Array<string>, previous: Session) -> LoopTurn {
+    return run_mode(raw, allowed, default_limits(), previous, true, false, true, false, true);
 }

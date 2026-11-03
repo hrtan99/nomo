@@ -6,6 +6,7 @@ from pathlib import Path
 
 ROOT=Path(__file__).resolve().parent.parent
 MODE=os.environ.get('SYNTHETIC_SUMMARY_MODE','full')
+BASELINE=os.environ.get('SYNTHETIC_BUDGET_BASELINE')
 FILES=['context.txt','second.txt','third.txt','fourth.txt']
 FIRST_TASK=('Change old to green '+ '\\'*108) if MODE=='escaped' else '请将 old 替换为 green'
 SECOND_TASK=('Change green to gold '+ '\\'*107) if MODE=='escaped' else 'Change green to gold using context'
@@ -31,10 +32,16 @@ class Fake(BaseHTTPRequestHandler):
         try:
             assert self.path=='/v1/chat/completions' and self.headers.get('Authorization')=='Bearer SYNTHETIC_ONLY'
             req=json.loads(self.rfile.read(int(self.headers['Content-Length'])));ctx=json.loads(req['messages'][1]['content']);i=len(self.server.phases)
-            assert req['max_tokens']==[2048,2048,2048,2048,2048,2048,2048,2048,4096,32768,2048,2048,2048,2048,2048,4096,32768,2048,2048,2048,2048,2048][i]
+            limits=[2048,2048,2048,2048,2048,4096,4096,2048,4096,32768,2048,2048,4096,4096,2048,4096,32768,2048,2048,2048,2048,2048]
+            if BASELINE:limits[5:7]=[2048,2048]
+            assert req['max_tokens']==limits[i]
             if MULTI and i in (1,5,12,19):assert ctx['allowed']==FILES
             if (MODE=='resume-action' and i==19) or (MODE=='resume-final' and i==20):
                 self.server.phases.append(i);self.send_error(503);return
+            if MODE=='work-length' and i==5:
+                cap=2048 if BASELINE else 4096
+                data=json.dumps({'choices':[{'message':{'role':'assistant','content':''},'finish_reason':'length'}], 'usage':{'prompt_tokens':100,'completion_tokens':cap,'total_tokens':cap+100}}).encode()
+                self.server.phases.append(i);self.send_response(200);self.send_header('Content-Length',str(len(data)));self.end_headers();self.wfile.write(data);return
             if i==0:value=['delegate',LONG_TASK if MODE=='chat-long' else INITIAL_TASK]
             elif i==1:
                 if MODE=='chat-long':assert ctx['history'][-1]['text']==LONG_TASK
@@ -66,6 +73,7 @@ class Fake(BaseHTTPRequestHandler):
             elif i==16:value=['edit','green','gold']
             elif i==17:value=SECOND_SUMMARY
             elif i==18:
+                assert ctx['budget']['work_calls']==14 and ctx['budget']['work_generation']==(98304 if BASELINE else 102400)
                 assert ctx['work']['summary']==FIRST_SUMMARY and ctx['work']['summary_source']==FIRST_SOURCE and ctx['followup']['summary']==SECOND_SUMMARY and ctx['followup']['summary_source']=='model';value=['delegate',LONG_TASK if MODE=='chat-long' else 'Read context.txt']
             elif i==19:
                 if MODE=='chat-long':assert ctx['history'][-1]['text']==LONG_TASK
@@ -74,8 +82,11 @@ class Fake(BaseHTTPRequestHandler):
             elif i==21:value='两次编辑均已记录'
             else:raise AssertionError('unexpected extra request')
             content=json.dumps(value,ensure_ascii=False,separators=(',',':')) if isinstance(value,list) else value
+            usage={'prompt_tokens':100,'completion_tokens':20,'total_tokens':120}
+            if MODE=='work-native-action' and i==5:usage={'prompt_tokens':16000,'completion_tokens':265,'total_tokens':16265}
+            if MODE=='work-native-final' and i==6:usage={'prompt_tokens':24000,'completion_tokens':337,'total_tokens':24337}
             data=json.dumps({'choices':[{'message':{'role':'assistant','content':content},'finish_reason':'stop'}],
-                             'usage':{'prompt_tokens':100,'completion_tokens':20,'total_tokens':120}},ensure_ascii=False).encode()
+                             'usage':usage},ensure_ascii=False).encode()
             self.server.phases.append(i);self.send_response(200);self.send_header('Content-Length',str(len(data)));self.end_headers();self.wfile.write(data)
         except Exception:
             self.server.failed=True
@@ -112,6 +123,10 @@ def work(command,env,before,after):
 def main():
     out=Path(tempfile.mkdtemp(prefix='nomo-work-unicode-'));project=out/'project'
     shutil.copytree(ROOT,project,ignore=shutil.ignore_patterns('.git','.etas','tmp','__pycache__','.pytest_cache'));(project/'.etas').mkdir(mode=0o700)
+    old=out/'old'
+    if BASELINE:
+        shutil.copytree(Path(BASELINE),old,ignore=shutil.ignore_patterns('.git','.etas','tmp','__pycache__','.pytest_cache'));(old/'.etas').mkdir(mode=0o700)
+    else:old=project
     context=out/'context';context.mkdir(mode=0o700);(context/'context.txt').write_text('\\'*120 if MODE=='escaped' else '蓝色 blue\n')
     current=out/'current';current.mkdir(mode=0o700);(current/'context.txt').write_text('绿色 green\n')
     if MULTI:
@@ -124,24 +139,47 @@ def main():
     server=HTTPServer(('127.0.0.1',0),Fake);server.phases=[];server.failed=False
     thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start()
     try:
-        manifest=project/'etas.toml';text=manifest.read_text()
-        for name in ('nomo-read-events-new','nomo-read-events-existing','nomo-history-events-work'):
-            start=text.index('[runtime.profiles.'+name+'.model]');end=text.index('[runtime.profiles.'+name+'.model.timeout]',start)
-            part=text[start:end].replace('https://api.minimax.cn/v1','http://host.docker.internal:%d/v1'%server.server_port).replace('allow_private = false','allow_private = true');text=text[:start]+part+text[end:]
-        manifest.write_text(text);env={'PATH':os.environ['PATH'],'HOME':os.environ['HOME'],'MINIMAX_API_KEY':'SYNTHETIC_ONLY','NOMO_ETAS_VERSION':'0.2.5'}
+        for selected in (project,old) if BASELINE else (project,):
+            manifest=selected/'etas.toml';text=manifest.read_text()
+            for name in ('nomo-read-events-new','nomo-read-events-existing','nomo-history-events-work'):
+                start=text.index('[runtime.profiles.'+name+'.model]');end=text.index('[runtime.profiles.'+name+'.model.timeout]',start)
+                part=text[start:end].replace('https://api.minimax.cn/v1','http://host.docker.internal:%d/v1'%server.server_port).replace('allow_private = false','allow_private = true');text=text[:start]+part+text[end:]
+            manifest.write_text(text)
+        env={'PATH':os.environ['PATH'],'HOME':os.environ['HOME'],'MINIMAX_API_KEY':'SYNTHETIC_ONLY','NOMO_ETAS_VERSION':'0.2.5'}
         allowed=','.join(FILES) if MULTI else 'context.txt'
-        first=subprocess.run([str(project/'scripts/nomo-read.sh'),'session-new','--root',str(context),'--state',str(state),'--allow',allowed,'--once',INITIAL_QUESTION,'--events-policy-dir',str(policy)],env=env,capture_output=True,timeout=120)
+        first=subprocess.run([str(old/'scripts/nomo-read.sh'),'session-new','--root',str(context),'--state',str(state),'--allow',allowed,'--once',INITIAL_QUESTION,'--events-policy-dir',str(policy)],env=env,capture_output=True,timeout=120)
         if first.returncode:raise AssertionError('synthetic initial chat failed: '+first.stderr.decode('utf-8','replace')[-2000:])
         assert server.phases==list(range(4)) and not server.failed
+        if MODE in ('work-length','work-native-action','work-native-final'):
+            cmd=[str(old/'scripts/nomo-read.sh'),'session-work','--read-root',str(current),'--root',str(workspace),'--state',str(state),'--id','edit1','--path','note.txt','--allow',allowed,'--once',FIRST_TASK,'--events-policy-dir',str(policy)]
+            master,slave=pty.openpty();proc=subprocess.Popen(cmd,stdin=slave,stdout=slave,stderr=slave,env=env,start_new_session=True);os.close(slave)
+            output=bytearray();deadline=time.monotonic()+120
+            while proc.poll() is None:
+                if time.monotonic()>deadline:os.killpg(proc.pid,signal.SIGTERM);raise TimeoutError('work length probe timeout')
+                if select.select([master],[],[],.1)[0]:
+                    try:output.extend(os.read(master,65536))
+                    except OSError:pass
+            os.close(master)
+            expected_calls=7 if MODE=='work-native-final' else 6
+            assert proc.returncode==3 and server.phases==list(range(expected_calls)) and not server.failed
+            assert b'PREVIEW ' not in output and (workspace/'note.txt').read_text()=='before old\n'
+            status=subprocess.run([str(project/'scripts/nomo-read.sh'),'session-status','--state',str(state),'--events-policy-dir',str(policy)],env=env,capture_output=True,timeout=120)
+            views=[json.loads(line.removeprefix(b'EVENT VIEW ')) for line in status.stdout.splitlines() if line.startswith(b'EVENT VIEW {')]
+            reserved=47104 if BASELINE else 51200
+            assert status.returncode==0 and len(views)==1 and views[0]['work_phase']=='running' and views[0]['work_reserved_tokens']==reserved
+            print(json.dumps({'status':'passed','scope':'synthetic child limit failure; no preview, edit or retry','mode':MODE,'fake_requests':expected_calls,'reserved_tokens':reserved}));return
         for action,identifier,before,after,task in [('session-work','edit1','old','green',FIRST_TASK),('session-followup','edit2','green','gold',SECOND_TASK)]:
             check='test "$(cat note.txt)" = "before '+after+'" && printf CHECK_OK'
-            cmd=[str(project/'scripts/nomo-read.sh'),action,'--read-root',str(current),'--root',str(workspace),'--state',str(state),'--id',identifier,'--path','note.txt','--allow',allowed,'--once',task,'--events-policy-dir',str(policy),'--check','/bin/sh','-c',check]
+            selected=old if action=='session-work' else project
+            cmd=[str(selected/'scripts/nomo-read.sh'),action,'--read-root',str(current),'--root',str(workspace),'--state',str(state),'--id',identifier,'--path','note.txt','--allow',allowed,'--once',task,'--events-policy-dir',str(policy),'--check','/bin/sh','-c',check]
             work(cmd,env,before,after);assert (workspace/'note.txt').read_text()=='before '+after+'\n' and not server.failed
         assert server.phases==list(range(18))
         status=subprocess.run([str(project/'scripts/nomo-read.sh'),'session-status','--state',str(state),'--events-policy-dir',str(policy)],env=env,capture_output=True,timeout=120)
         views=[json.loads(line.removeprefix(b'EVENT VIEW ')) for line in status.stdout.splitlines() if line.startswith(b'EVENT VIEW {')]
         assert status.returncode==0 and len(views)==1;view=views[0]
         assert view['work_phase']=='complete' and view['followup_phase']=='complete' and view['check_outcome']=='passed' and view['followup_check_outcome']=='passed'
+        assert view['work_settled_calls']==7 and view['followup_settled_calls']==7
+        assert view['work_settled_tokens']==(47104 if BASELINE else 51200) and view['followup_settled_tokens']==51200
         if MODE=='chat-long':assert any(event['kind']=='delegate' and json.loads(event['text'])==LONG_TASK for event in view['events'])
         contents=[json.loads(event['text']) for event in view['work_events']]
         assert FIRST_TASK in contents and FIRST_SUMMARY in contents and CHILD in contents and READ_SUMMARY in contents and any('绿色' in value for value in contents)

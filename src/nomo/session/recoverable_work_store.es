@@ -20,7 +20,7 @@ public type Ticket = { frame: Frame, version: MemoryVersion, chat: MemoryEntry<s
 alias Schema = MemoryRegion<{ Rows: Store<string, Frame> }>;
 let Runs = std.memory.region<Schema>(stable_id = "nomo-recoverable-work-v1", store = "recoverable-work");
 
-flow full() -> Budget { return Budget { steps = 13, calls = 7, generation = 47104, native_tokens = 196608 }; }
+flow full() -> Budget { return Budget { steps = 13, calls = 7, generation = 51200, native_tokens = 196608 }; }
 flow zero() -> Budget { return Budget { steps = 0, calls = 0, generation = 0, native_tokens = 0 }; }
 
 flow frame_error(value: Frame, policy: Policy, binding: string) -> string {
@@ -85,7 +85,7 @@ public flow admit(id: string, workspace: string, path: string, request: string, 
         return Err("completed unchanged recoverable chat required");
     }
     match load(policy, binding) { Ok(None()) => {} Ok(Some(_)) => { return Err("recoverable work already admitted; no retry"); } Err(error) => { return Err(error); } }
-    let row = Record { format = 1, phase = "running", id = id, workspace = workspace, path = path,
+    let row = Record { format = 2, phase = "running", id = id, workspace = workspace, path = path,
         request = request, history_version = chat.version.opaque, reserved = full(), settled = None(), summary = "" };
     let frame = Frame { format = 1, policy_binding = binding, work = row, events = empty_events() };
     let version = match write(frame, None(), policy, binding) { Ok(item) => item, Err(error) => { return Err(error); } };
@@ -112,7 +112,7 @@ public flow finish(ticket: Ticket, summary: string, spent: Ledger, records: Arra
     }
     let events = match append(empty_events(), 1, encoded, policy) { Ok(item) => item.frame, Err(error) => { return Err(error); } };
     let old = ticket.frame.work;
-    let row = Record { format = 1, phase = "complete", id = old.id, workspace = old.workspace, path = old.path,
+    let row = Record { format = old.format, phase = "complete", id = old.id, workspace = old.workspace, path = old.path,
         request = old.request, history_version = old.history_version, reserved = zero(), settled = Some(spent), summary = summary };
     let frame = Frame { format = 1, policy_binding = binding, work = row, events = events };
     let current = match load(policy, binding) { Ok(Some(item)) => item, _ => { return Err("recoverable work missing or invalid"); } };
