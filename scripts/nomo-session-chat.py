@@ -187,6 +187,14 @@ def work_command(args, action, root, operation_id, path, task, check):
     return command
 
 
+def show_discovery():
+    print('Discovery uses pages of 256 files, up to eight automatic pages, seven directory levels and 512 directories; each directory is limited to 1024 entries and 131072 name bytes. Unsupported paths and file types are excluded; .gitignore is not interpreted.', flush=True)
+    print('Each automatic page uses another bounded chat turn: up to 6 calls and 24576 output tokens for new sessions. Page contents may change between turns.', flush=True)
+    print('Excluded: .git/.hg/.svn/.bzr, dependency and build directories, .venv/.tox/.cache/.mypy_cache/.pytest_cache, .ssh/.aws/.gnupg/.netrc, and .env files except .env.example/.env.sample.', flush=True)
+    print('Dotfiles and project configuration in scope may be sent to the model.', flush=True)
+    print('A link outside the selected workspace stops discovery; choose a narrower root.', flush=True)
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--sessions-dir', required=True)
@@ -219,12 +227,7 @@ def main(argv=None):
         except KeyboardInterrupt:
             print('Input cancelled.', file=sys.stderr)
             return 130
-    if args.discover:
-        print('Discovery uses pages of 256 files, up to eight automatic pages, seven directory levels and 512 directories; each directory is limited to 1024 entries and 131072 name bytes. Unsupported paths and file types are excluded.', flush=True)
-        print('Each automatic page uses another bounded chat turn: up to 6 calls and 24576 output tokens for new sessions. Page contents may change between turns.', flush=True)
-        print('Excluded: .git/.hg/.svn/.bzr, dependency and build directories, .venv/.tox/.cache/.mypy_cache/.pytest_cache, .ssh/.aws/.gnupg/.netrc, and .env files except .env.example/.env.sample.', flush=True)
-        print('Dotfiles and project configuration in scope may be sent to the model.', flush=True)
-        print('A link outside the selected workspace stops discovery; choose a narrower root.', flush=True)
+    if args.discover: show_discovery()
     print('A read turn may reserve up to 6 calls and 24576 output tokens for new sessions: up to 4 child calls at 4096 each and 2 parent calls at up to 4096 each; up to 3 read/search operations reserve 4 MiB plus 256 probe bytes each.', flush=True)
     if args.once is not None: print('An unfinished delegated answer may use one additional read turn with the same limits.', flush=True)
     if args.id is not None:
@@ -237,7 +240,7 @@ def main(argv=None):
             print('Work requires a completed first turn.', flush=True)
     if tty and args.once is None:
         saved = '/events' if args.events_policy_dir is not None else '/outputs'
-        print('Enter a question or an edit request, /help, /status, ' + saved + ', /check, /work, /followup, /page N or /exit.', flush=True)
+        print('Enter a question or an edit request, /help, /status, ' + saved + ', /check, /work, /followup, /scope, /allow FILES, /discover [N], /page N or /exit.', flush=True)
     while True:
         if args.once is not None:
             question = args.once
@@ -252,6 +255,25 @@ def main(argv=None):
                 return 130
             if question == '/exit':
                 return 0
+            if question == '/scope':
+                print('Current scope: ' + ('discovery page ' + str(args.page) if args.discover else args.allow), flush=True)
+                continue
+            if question == '/allow' or question.startswith('/allow '):
+                names = question[6:].strip().split(',')
+                if not 1 <= len(names) <= 4 or len(set(names)) != len(names) or any(not edit.safe_path(name) for name in names):
+                    print('REFUSED /allow requires one to four distinct safe relative files.', file=sys.stderr, flush=True)
+                else:
+                    args.discover = False; args.allow = ','.join(names); args.page = 0
+                    print('Selected explicit files: ' + args.allow + '. Saved history may still contain previously read data.', flush=True)
+                continue
+            if question == '/discover' or question.startswith('/discover '):
+                choice = question[9:].strip() or '0'
+                if choice not in tuple(str(i) for i in range(8)):
+                    print('REFUSED /discover requires a page from 0 to 7.', file=sys.stderr, flush=True)
+                else:
+                    args.discover = True; args.page = int(choice); args.allow = '*' + choice
+                    print('Selected discovery page ' + choice + '.', flush=True); show_discovery()
+                continue
             if question.startswith('/page '):
                 choice = question[6:]
                 if not args.discover or choice not in tuple(str(i) for i in range(8)):
@@ -261,7 +283,7 @@ def main(argv=None):
                     print('Selected discovery page ' + choice + '; the next request uses a fresh traversal.', flush=True)
                 continue
             if question == '/help':
-                print('Read turns use the selected root and allowlist. /status inspects recorded state. /check [COMMAND ARG ... | --clear] shows, sets or clears the automatic check for future natural-language edits until exit.')
+                print('Read turns use the selected root and allowlist. /scope shows it; /allow FILES selects up to four files; /discover [N] enables bounded discovery. /status inspects recorded state. /check [COMMAND ARG ... | --clear] shows, sets or clears the automatic check for future natural-language edits until exit.')
                 print('Natural-language edits target selected files in the current root; each requires preview and fresh confirmation. The root must be owned by you and not writable by group or others.')
                 if args.events_policy_dir is not None:print('/events displays committed events grouped by chat, work and followup; /status shows bounded check output.')
                 else:print('/outputs shows recorded check output.')

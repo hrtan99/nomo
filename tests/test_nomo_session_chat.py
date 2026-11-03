@@ -51,6 +51,18 @@ class SessionChatTest(unittest.TestCase):
         self.assertIn("Automatic check for future natural edits: python3 -c 'assert 2 == 2'", output.getvalue())
         self.assertIn('Automatic check for future natural edits: none', output.getvalue())
 
+    def test_scope_can_change_between_turns_and_bad_selection_keeps_scope(self):
+        code, out, error, calls = self.run_chat('/scope\n/allow src/a.py,README.md\nfirst\n/allow ../bad\nsecond\n/discover 5\nthird\n/allow file.txt\nfourth\n/exit\n', codes=(0,0,0,0))
+        self.assertEqual(code, 0)
+        self.assertIn('Current scope: file.txt', out); self.assertIn('.gitignore is not interpreted', out)
+        self.assertIn('REFUSED /allow', error)
+        scopes = [next(arg for arg in call.args[0] if arg.startswith('--allow=')) for call in calls.call_args_list]
+        self.assertEqual(scopes, ['--allow=src/a.py,README.md', '--allow=src/a.py,README.md', '--allow=*5', '--allow=file.txt'])
+
+    def test_invalid_scope_commands_do_not_dispatch(self):
+        code, out, error, calls = self.run_chat('/allow\n/allow a,a\n/allow a,b,c,d,e\n/discover 8\n/exit\n')
+        self.assertEqual(code, 0); self.assertEqual(error.count('REFUSED'), 4); calls.assert_not_called()
+
     def test_bad_interactive_check_keeps_existing_command(self):
         code, out, error, calls = self.run_chat('/check python3 -m unittest\n/check "unterminated\n/check\n/exit\n')
         self.assertEqual(code, 0)
