@@ -63,6 +63,22 @@ class SessionChatTest(unittest.TestCase):
         code, out, error, calls = self.run_chat('/allow\n/allow a,a\n/allow a,b,c,d,e\n/discover 8\n/exit\n')
         self.assertEqual(code, 0); self.assertEqual(error.count('REFUSED'), 4); calls.assert_not_called()
 
+    def test_configured_check_can_run_without_a_model_turn(self):
+        code, out, error, calls = self.run_chat('/check python3 -m unittest\n/check --run\n/check\n/exit\n', codes=(7,))
+        self.assertEqual(code, 0); self.assertEqual(error, '')
+        command = calls.call_args.args[0]
+        self.assertEqual(command[-7:], ['--check-only', '--root', '/workspace', '--', 'python3', '-m', 'unittest'])
+        self.assertIn('not saved in session history or sent to the model', out)
+        self.assertEqual(out.count('Automatic check for future natural edits: python3 -m unittest'), 2)
+
+    def test_running_missing_check_refuses_without_dispatch(self):
+        code, _, error, calls = self.run_chat('/check --run\n/exit\n')
+        self.assertEqual(code, 0); self.assertIn('configure a check', error); calls.assert_not_called()
+
+    def test_interrupted_manual_check_stops_session(self):
+        code, _, _, calls = self.run_chat('/check true\n/check --run\n', codes=(130,))
+        self.assertEqual(code, 130); calls.assert_called_once()
+
     def test_bad_interactive_check_keeps_existing_command(self):
         code, out, error, calls = self.run_chat('/check python3 -m unittest\n/check "unterminated\n/check\n/exit\n')
         self.assertEqual(code, 0)

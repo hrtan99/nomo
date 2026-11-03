@@ -283,7 +283,7 @@ def main(argv=None):
                     print('Selected discovery page ' + choice + '; the next request uses a fresh traversal.', flush=True)
                 continue
             if question == '/help':
-                print('Read turns use the selected root and allowlist. /scope shows it; /allow FILES selects up to four files; /discover [N] enables bounded discovery. /status inspects recorded state. /check [COMMAND ARG ... | --clear] shows, sets or clears the automatic check for future natural-language edits until exit.')
+                print('Read turns use the selected root and allowlist. /scope shows it; /allow FILES selects up to four files; /discover [N] enables bounded discovery. /status inspects recorded state. /check [COMMAND ARG ... | --clear] shows, sets or clears the automatic check; /check --run runs it now without saving the result to the session.')
                 print('Natural-language edits target selected files in the current root; each requires preview and fresh confirmation. The root must be owned by you and not writable by group or others.')
                 if args.events_policy_dir is not None:print('/events displays committed events grouped by chat, work and followup; /status shows bounded check output.')
                 else:print('/outputs shows recorded check output.')
@@ -320,6 +320,12 @@ def main(argv=None):
                     words = shlex.split(question)
                     action = words[0][1:]
                     if action == 'check':
+                        if words[1:] == ['--run']:
+                            if not args.check: raise ValueError('configure a check before running it')
+                            print('Running the configured check now; its output is not saved in session history or sent to the model.', flush=True)
+                            code = edit.run_owned([sys.executable, str(ROOT/'scripts/nomo-edit.py'), '--check-only', '--root', args.root, '--', *args.check], dict(os.environ))
+                            if code == 130: return 130
+                            continue
                         if words[1:] == ['--clear']: args.check = None
                         elif len(words) > 1:
                             if not words[1]: raise ValueError('check command must not be empty')
