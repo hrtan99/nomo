@@ -17,6 +17,10 @@ class EventDisplayTest(unittest.TestCase):
   self.assertNotIn('\u202e',output);self.assertNotIn('\u0085',output);self.assertNotIn('\x1b',output)
   ascii_value=launcher.display_json_string('中文😀\ud800','ascii')
   self.assertEqual(json.loads(ascii_value),'中文😀\ud800');self.assertTrue(ascii_value.isascii())
+ def test_long_saved_plan_remains_visible(self):
+  text=' '*3000+'["delegate","Read context"]'
+  output='\n'.join(launcher.event_lines(raw_view(events=[event('main','plan','',text)])))
+  self.assertIn('Read context',output)
  def test_rejects_missing_ambiguous_invalid_or_oversized_batches(self):
   for raw in (b'',raw_view()+raw_view(),raw_view(encoding='unknown'),raw_view(events=[{'role':'a','kind':'b','name':'c','text':'not-json'}]),raw_view(events=[event('a','b','c','x')]*49)):
    with self.assertRaises(ValueError):launcher.event_lines(raw)
