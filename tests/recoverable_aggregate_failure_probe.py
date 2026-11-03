@@ -77,13 +77,15 @@ def main():
         lines=[line.removeprefix(b'EVENT VIEW ') for line in status.stdout.splitlines() if line.startswith(b'EVENT VIEW {')]
         assert status.returncode==0 and len(lines)==1;view=json.loads(lines[0])
         if success:
-            assert view['work_phase']=='complete' and view['work_settled_calls']==7 and view['check_phase']=='complete' and view['check_outcome']=='passed'
+            assert view['work_phase']=='complete' and view['work_edit_phase']=='completed' and view['work_settled_calls']==7 and view['check_phase']=='complete' and view['check_outcome']=='passed'
             expected={'aggregate-invalid':'Edit applied; model summary unavailable (blank or over limit).','fallback-blank':'Edit applied; model summary unavailable (blank or over limit).','success-short':'Done.','success-reserved':'Edit applied; model summary unavailable (blank or over limit).','success-513':'X'*513,'success-boundary':'é'*512,'success-escaped':chr(1)*1023+'X'}[mode]
             events=[(item['role'],item['kind'],json.loads(item['text'])) for item in view['work_events']]
             assert (('system','notice',expected) if fallback else ('assistant','answer',expected)) in events
             shown=subprocess.run([str(project/'scripts/nomo-read.sh'),'session-status','--state',str(state),'--events','--events-policy-dir',str(policy)],env=env,capture_output=True,timeout=120)
             assert shown.returncode==0 and json.dumps(expected,ensure_ascii=True).encode() in shown.stdout and not any(b<32 and b not in (10,13) for b in shown.stdout)
-        else:assert view['work_phase']=='running' and view['work_reserved_calls']==7 and view['work_reserved_tokens']==47104 and view['check_phase']=='planned'
+        else:
+            assert view['work_phase']=='running' and view['work_edit_phase']=='completed' and view['work_reserved_calls']==7 and view['work_reserved_tokens']==47104 and view['check_phase']=='planned'
+            assert b'edit completion was recorded' in status.stdout and b'no start was recorded at this snapshot' in status.stdout and b'a new session does not resolve this one' in status.stdout
         with sqlite3.connect(state/'history.sqlite3') as db:
             assert db.execute('pragma integrity_check').fetchone()==('ok',)
             names={x[0] for x in db.execute("select region from memory_entries")}

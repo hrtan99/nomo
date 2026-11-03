@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Real work-entry boundary checks with synthetic responses and no edit."""
-import json,os,pty,select,shutil,signal,sqlite3,subprocess,tempfile,termios,threading,time
+import json,os,pty,select,shutil,signal,sqlite3,subprocess,sys,tempfile,termios,threading,time
 from http.server import HTTPServer
 from pathlib import Path
 from post_work_continuation_probe import Fake
@@ -55,14 +55,19 @@ def main():
         manifest.write_text(text);env={'PATH':os.environ['PATH'],'HOME':os.environ['HOME'],'MINIMAX_API_KEY':'SYNTHETIC_ONLY','NOMO_ETAS_VERSION':'0.2.5'}
         first=subprocess.run([str(project/'scripts/nomo-read.sh'),'session-new','--root',str(context),'--state',str(initial),'--allow','context.txt','--once','Read the color and include CEDAR42','--events-policy-dir',str(policy)],env=env,capture_output=True,timeout=120)
         assert first.returncode==0 and server.phases==list(range(4)) and not server.failed
-        for mode in ('128','129','512','escaped512','513'):
+        for mode in (('513',) if sys.argv[1:]==['513'] else ('128','129','512','escaped512','513')):
             state=out/('state-'+mode);state.mkdir(mode=0o700);(state/'.nomo-session.lock').touch(mode=0o600)
             with sqlite3.connect(initial/'history.sqlite3') as src,sqlite3.connect(state/'history.sqlite3') as dst:src.backup(dst)
             (state/'history.sqlite3').chmod(0o600);server.phases=list(range(4));server.mode=mode
             command=[str(project/'scripts/nomo-read.sh'),'session-work','--read-root',str(context),'--root',str(workspace),'--state',str(state),'--id','edit1','--path','note.txt','--allow','context.txt','--once','Change old to green using context','--events-policy-dir',str(policy),'--check','/bin/true']
             code,output=execute(command,env)
             assert code==3 and b'PREVIEW ' not in output and b'APPLIED ' not in output and (workspace/'note.txt').read_text()=='before old\n'
-            if mode=='513':assert len(server.phases)==5 and b'REFUSED invalid bounded delegated task' in output and b'plan_rejection_text=length' in output
+            if mode=='513':
+                assert len(server.phases)==5 and b'REFUSED invalid bounded delegated task' in output and b'plan_rejection_text=length' in output
+                status=subprocess.run([str(project/'scripts/nomo-read.sh'),'session-status','--state',str(state),'--events-policy-dir',str(policy)],env=env,capture_output=True,timeout=120)
+                lines=[line.removeprefix(b'EVENT VIEW ') for line in status.stdout.splitlines() if line.startswith(b'EVENT VIEW {')]
+                assert status.returncode==0 and len(lines)==1 and json.loads(lines[0])['work_edit_phase']=='none'
+                assert b'no edit journal is recorded' in status.stdout and b'no start was recorded at this snapshot' in status.stdout and b'earlier process may still act' in status.stdout
             else:assert len(server.phases)==6 and b'STAGE read-child' in output
             results[mode]={'fake_work_requests':len(server.phases)-4,'entered_child':mode!='513','preview':False}
         print(json.dumps({'status':'passed','scope':'local synthetic work-plan limits; no real provider or edit','cases':results}))
