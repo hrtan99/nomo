@@ -53,6 +53,29 @@ class SimpleEntryTests(unittest.TestCase):
                     with self.assertRaises(SystemExit): module.main()
                     execute.assert_not_called()
 
+    def test_explicit_files_disable_discovery_for_new_and_resumed_sessions(self):
+        with tempfile.TemporaryDirectory(prefix='nomo-allow-') as tmp:
+            base = Path(tmp).resolve(); workspace = base/'workspace'; workspace.mkdir(); state = base/'state'
+            with patch.dict(os.environ, {'NOMO_STATE_DIR': str(state)}), patch.object(module.os, 'execv') as execute:
+                for extra in ([], ['--id', 'a'*32]):
+                    with self.subTest(resume=bool(extra)), patch.object(module.sys, 'argv', ['nomo', '--root', str(workspace), '--allow', 'src/a.py,README.md', '--once', 'read', *extra]):
+                        module.main(); command = execute.call_args.args[1]
+                        self.assertIn('--allow=src/a.py,README.md', command)
+                        self.assertNotIn('--discover', command); self.assertNotIn('--page', command)
+                        self.assertEqual(command[command.index('--once')+1], 'read')
+
+    def test_explicit_scope_rejects_wildcards_and_conflicting_page(self):
+        with tempfile.TemporaryDirectory(prefix='nomo-allow-') as tmp:
+            base = Path(tmp).resolve(); workspace = base/'workspace'; workspace.mkdir(); state = base/'state'
+            for value in ('*', '*4', '', 'a,,b', 'a,b,c,d,e'):
+                with self.subTest(value=value), patch.dict(os.environ, {'NOMO_STATE_DIR': str(state)}), \
+                     patch.object(module.sys, 'argv', ['nomo', '--root', str(workspace), '--allow', value]), \
+                     patch.object(module.os, 'execv') as execute:
+                    self.assertEqual(module.main(), 1); execute.assert_not_called(); self.assertFalse(state.exists())
+            with patch.object(module.sys, 'argv', ['nomo', '--allow', 'a', '--page', '1']), patch.object(module.os, 'execv') as execute:
+                with self.assertRaises(SystemExit): module.main()
+                execute.assert_not_called()
+
     def test_resume_missing_state_and_overlapping_workspace_do_not_create_state(self):
         with tempfile.TemporaryDirectory(prefix='nomo-entry-') as tmp:
             base = Path(tmp).resolve(); workspace = base/'workspace'; workspace.mkdir()

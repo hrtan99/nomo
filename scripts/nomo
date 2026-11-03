@@ -56,22 +56,27 @@ def main():
     parser.add_argument('--root', default=os.getcwd(), help='workspace directory (default: current directory)')
     parser.add_argument('--id', help='resume this exact session ID')
     parser.add_argument('--once', help='run one read-only question')
-    parser.add_argument('--page', type=int, choices=range(8), default=0, help='initial discovery page, 0..7')
+    scope = parser.add_mutually_exclusive_group()
+    scope.add_argument('--page', type=int, choices=range(8), default=0, help='initial discovery page, 0..7')
+    scope.add_argument('--allow', help='read only these one to four comma-separated relative files')
     parser.add_argument('--check', nargs=argparse.REMAINDER, help='offline command after a confirmed edit')
     args = parser.parse_args()
     if args.check == []:
         parser.error('--check requires a command')
     try:
         os.umask(0o077)
+        if args.allow is not None and (len(args.allow.encode('utf-8')) > 515 or '*' in args.allow or not 1 <= len(args.allow.split(',')) <= 4 or not all(args.allow.split(','))):
+            raise ValueError('--allow requires one to four explicit relative files')
         workspace = Path(args.root)
         if not workspace.is_dir() or workspace.is_symlink():
             raise ValueError('workspace must be an existing directory with a non-symlink leaf')
         workspace = workspace.resolve(strict=True)
         sessions, policy = state_paths(args.id is not None, workspace)
         print('Saved event text may contain sensitive data; no secret filter is configured by default.', flush=True)
-        print('Discovery is bounded and does not interpret .gitignore; session IDs do not verify workspace identity.', flush=True)
+        print(('Discovery is bounded and does not interpret .gitignore' if args.allow is None else 'Only explicitly selected files are in scope') + '; session IDs do not verify workspace identity.', flush=True)
         command = [str(ROOT/'scripts/nomo-read.sh'), 'session-chat', '--sessions-dir', str(sessions),
-                   '--id='+args.id if args.id is not None else '--new', '--root', str(workspace), '--discover', '--page', str(args.page),
+                   '--id='+args.id if args.id is not None else '--new', '--root', str(workspace),
+                   *(['--discover', '--page', str(args.page)] if args.allow is None else ['--allow='+args.allow]),
                    '--events-policy-dir', str(policy)]
         if args.once is not None:
             command += ['--once', args.once]
