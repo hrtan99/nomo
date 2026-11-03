@@ -40,7 +40,7 @@ public flow discover(page: usize) -> Result<Discovery, string> ![Console, Fs.lis
     return handle {
         var dirs: Array<WorkspacePath<ReadOnlyRoot>> = [root<ReadOnlyRoot>()]; var depths: Array<usize> = [0]; var files: Array<string> = []; var i: usize = 0;
         var deep = false; var unsupported = false; var seen: usize = 0; var more = false;
-        while i < count(dirs) && !more limit Iterations(256) {
+        while i < count(dirs) && !more limit Iterations(512) {
             let entries = list_limited(dirs[i], 1024, 131072);
             for entry in entries limit Iterations(1024) {
                 let name = relative_name(entry);
@@ -53,7 +53,7 @@ public flow discover(page: usize) -> Result<Discovery, string> ![Console, Fs.lis
                             if seen >= page * 256 { if count(files) == 256 { more = true; break; } files = files.push(name); }
                             seen = seen + 1;
                         }
-                        else if info.is_dir && depths[i] < 4 { if count(dirs) >= 256 { return Err("discovery exceeds 256 directories; select a narrower root"); } dirs = dirs.push(entry); depths = depths.push(depths[i] + 1); }
+                        else if info.is_dir && depths[i] < 4 { if count(dirs) >= 512 { return Err("discovery exceeds 512 directories; select a narrower root"); } dirs = dirs.push(entry); depths = depths.push(depths[i] + 1); }
                         else if info.is_dir { deep = true; } else { unsupported = true; }
                     }
                 }
@@ -70,10 +70,10 @@ public flow discover(page: usize) -> Result<Discovery, string> ![Console, Fs.lis
 
 // Select an explicit list or a bounded discovery page. All membership is revalidated per turn.
 public flow selection(raw: string) -> Result<Discovery, string> {
-    if raw == "*" || raw == "*0" { return discover(0); }
-    if raw == "*1" { return discover(1); }
-    if raw == "*2" { return discover(2); }
-    if raw == "*3" { return discover(3); }
+    if raw == "*" { return discover(0); }
+    let pages = ["*0", "*1", "*2", "*3", "*4", "*5", "*6", "*7"];
+    var page: usize = 0;
+    for token in pages limit Iterations(8) { if raw == token { return discover(page); } page = page + 1; }
     let names = split(raw, ",");
     if count(names) > 4 { return Err("explicit selection supports up to four files"); }
     return Ok(Discovery { files = names, page = 0, more = false });

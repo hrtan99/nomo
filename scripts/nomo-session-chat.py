@@ -197,7 +197,7 @@ def main(argv=None):
     files = parser.add_mutually_exclusive_group(required=True)
     files.add_argument('--allow')
     files.add_argument('--discover', action='store_true')
-    parser.add_argument('--page', type=int, default=0, choices=range(4), help='discovery page, 0..3')
+    parser.add_argument('--page', type=int, default=0, choices=range(8), help='discovery page, 0..7')
     parser.add_argument('--events-policy-dir')
     parser.add_argument('--once', help='run exactly one read-only turn')
     parser.add_argument('--check', nargs=argparse.REMAINDER, help='optional command after each natural-language edit')
@@ -220,7 +220,7 @@ def main(argv=None):
             print('Input cancelled.', file=sys.stderr)
             return 130
     if args.discover:
-        print('Discovery uses pages of 256 files, up to four automatic pages, four directory levels and 256 directories; each directory is limited to 1024 entries and 131072 name bytes. Unsupported paths and file types are excluded.', flush=True)
+        print('Discovery uses pages of 256 files, up to eight automatic pages, four directory levels and 512 directories; each directory is limited to 1024 entries and 131072 name bytes. Unsupported paths and file types are excluded.', flush=True)
         print('Each automatic page uses another bounded chat turn: up to 6 calls and 24576 output tokens for new sessions. Page contents may change between turns.', flush=True)
         print('Excluded: .git/.hg/.svn/.bzr, dependency and build directories, .venv/.tox/.cache/.mypy_cache/.pytest_cache, .ssh/.aws/.gnupg/.netrc, and .env files except .env.example/.env.sample.', flush=True)
         print('Dotfiles and project configuration in scope may be sent to the model.', flush=True)
@@ -254,8 +254,8 @@ def main(argv=None):
                 return 0
             if question.startswith('/page '):
                 choice = question[6:]
-                if not args.discover or choice not in ('0','1','2','3'):
-                    print('REFUSED /page requires discovery and a page from 0 to 3.', file=sys.stderr, flush=True)
+                if not args.discover or choice not in tuple(str(i) for i in range(8)):
+                    print('REFUSED /page requires discovery and a page from 0 to 7.', file=sys.stderr, flush=True)
                 else:
                     args.page = int(choice); args.allow = '*' + choice
                     print('Selected discovery page ' + choice + '; the next request uses a fresh traversal.', flush=True)

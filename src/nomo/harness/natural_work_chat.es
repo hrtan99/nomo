@@ -39,7 +39,7 @@ public flow delegated(answer: string, more: bool) -> string {
     return match decode_work_plan(answer) { Ok(_) => if more { "NATURAL DELEGATE" } else { "NATURAL DELEGATE LIMIT" }, Err(_) => "" };
 }
 public flow route(answer: string, allowed: Array<string>, followup: bool, more: bool, page: usize, more_pages: bool) -> string {
-    if answer == "NEXT_PAGE" && more_pages { return if more && page < 3 { "NATURAL PAGE" } else { "NATURAL PAGE LIMIT" }; }
+    if answer == "NEXT_PAGE" && more_pages { return if more && page < 7 { "NATURAL PAGE" } else { "NATURAL PAGE LIMIT" }; }
     match target(answer, allowed) { Some(path) => { return "NATURAL WORK " + (if followup { "followup" } else { "work" }) + " " + path; } None() => {} }
     return delegated(answer, more);
 }
