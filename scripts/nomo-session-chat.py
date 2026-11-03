@@ -4,6 +4,8 @@ import argparse
 import importlib.util
 import os
 import shlex
+import select
+import time
 import sys
 from pathlib import Path
 
@@ -13,6 +15,42 @@ edit = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(edit)
 
 
+# A producer that leaves stdin open must not keep a one-shot run waiting forever.
+PIPE_INPUT_TIMEOUT = 2.0
+PIPE_PAYLOAD_BYTES = 128
+
+
+def piped_question(stream):
+    """Read exactly one bounded UTF-8 line and require EOF before dispatch."""
+    fd = stream.fileno()
+    end = time.monotonic() + PIPE_INPUT_TIMEOUT
+    data = bytearray()
+    while True:
+        remaining = end - time.monotonic()
+        if remaining <= 0 or not select.select([fd], [], [], remaining)[0]:
+            raise ValueError('piped input must reach EOF within 2 seconds')
+        chunk = os.read(fd, PIPE_PAYLOAD_BYTES + 3 - len(data))
+        if not chunk:
+            break
+        data.extend(chunk)
+        if len(data) > PIPE_PAYLOAD_BYTES + 2:
+            raise ValueError('piped question exceeds 128 UTF-8 bytes')
+    if data.endswith(b'\n'):
+        del data[-1:]
+        if data.endswith(b'\r'):
+            del data[-1:]
+    if len(data) > PIPE_PAYLOAD_BYTES:
+        raise ValueError('piped question exceeds 128 UTF-8 bytes')
+    if any(byte < 32 or byte == 127 for byte in data):
+        raise ValueError('piped input must contain exactly one printable line')
+    try:
+        question = data.decode('utf-8')
+    except UnicodeDecodeError as error:
+        raise ValueError('piped input must be valid UTF-8') from error
+    if not question.strip():
+        raise ValueError('piped question must be non-empty')
+    return question
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--sessions-dir', required=True)
@@ -21,10 +59,20 @@ def main(argv=None):
     parser.add_argument('--allow', required=True)
     parser.add_argument('--once', help='run exactly one read-only turn')
     args = parser.parse_args(argv)
-    tty = sys.stdin.isatty() and sys.stdout.isatty()
+    stdin_tty = sys.stdin.isatty()
+    tty = stdin_tty and sys.stdout.isatty()
     if args.once is None and not tty:
-        print('REFUSED non-TTY input requires --once QUESTION', file=sys.stderr)
-        return 64
+        if stdin_tty:
+            print('REFUSED redirected output requires --once QUESTION or one piped line', file=sys.stderr)
+            return 64
+        try:
+            args.once = piped_question(sys.stdin)
+        except (ValueError, OSError) as error:
+            print('REFUSED ' + str(error), file=sys.stderr)
+            return 64
+        except KeyboardInterrupt:
+            print('Input cancelled.', file=sys.stderr)
+            return 130
     prefix = [sys.executable, str(ROOT / 'scripts/nomo-session-id.py'), 'resume',
               '--sessions-dir', args.sessions_dir, '--id', args.id, '--root', args.root,
               '--allow=' + args.allow]
@@ -87,7 +135,9 @@ def main(argv=None):
             if args.once is not None:
                 return 64
             continue
-        code = edit.run_owned(prefix + ['--once=' + question], dict(os.environ))
+        command = prefix + ['--once=' + question]
+        # Non-TTY children get immediate EOF, never extra piped lines.
+        code = edit.run_owned(command, dict(os.environ)) if tty else edit.run_owned(command, dict(os.environ), input_data=b'')
         if code:
             print('Turn stopped; inspect session status before continuing.', file=sys.stderr, flush=True)
             return code

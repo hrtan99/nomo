@@ -38,6 +38,9 @@ MiniMax defaults to verified ETAS 0.2.5; the earlier Qwen route defaults to
 0.2.2. Set NOMO_ETAS_VERSION explicitly to select 0.2.2, 0.2.3, 0.2.4 or 0.2.5.
 For Qwen, the endpoint is reached from the container: for a host-local forward, use
 http://host.docker.internal:PORT/v1 rather than 127.0.0.1.
+Session-chat accepts one piped UTF-8 question (at most 128 bytes); the input
+must reach EOF within 2 seconds and contain no extra lines. With terminal input
+and redirected output, specify --once QUESTION.
 Chat supports two tasks by default, or four with --turns 4, in one process.
 Only the immediately preceding successful task/result/answer is carried forward;
 this is not a durable session. Four-turn maximum: 16 model calls and 32,768
