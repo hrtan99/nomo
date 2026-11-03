@@ -19,7 +19,7 @@ class Fake(BaseHTTPRequestHandler):
    if i in (1,2,3):assert req.get('max_tokens')==4096,('child output budget',req.get('max_tokens'))
    if i in (0,4):assert req.get('max_tokens')==2048,('parent output budget',req.get('max_tokens'))
    if i==0:
-    files=ctx['current']['allowed'];assert len(files)==43 and 'src/app/greeting.py' in files and not any(x.startswith(('node_modules/','.private/')) for x in files),files
+    files=ctx['current']['allowed'];assert len(files)==44 and 'src/app/greeting.py' in files and '.private/hidden.txt' in files and not any(x.startswith('node_modules/') for x in files),files
     self.server.files=files;v=['delegate','Read the project file defining the greeting']
    elif i==1:v=['search','hello from nested project','*']
    elif i==2:assert 'incomplete:' in json.dumps(ctx) and 'src/app/greeting.py:1' in json.dumps(ctx);v=['read','src/app/greeting.py']
@@ -66,7 +66,7 @@ try:
  (out/'terminal.log').write_bytes(log)
  assert proc.returncode==0 and step==4 and server.seen==list(range(12)),(proc.returncode,step,server.error,server.seen)
  assert b'Search incomplete:' in log and b'SAVED chat history' in log and (workspace/'src/app/greeting.py').read_text()=='GREETING = \"hello to users\"\n'
- print(json.dumps({'status':'passed','scope':'bounded multilevel discovery; agent chooses, reads and edits a nested file among 43 candidates with explicit incomplete results','candidate_count':len(server.files),'files':server.files,'fake_http':len(server.seen),'result_dir':str(out)}))
+ print(json.dumps({'status':'passed','scope':'bounded multilevel discovery; agent chooses, reads and edits a nested file among 44 candidates with explicit incomplete results','candidate_count':len(server.files),'files':server.files,'fake_http':len(server.seen),'result_dir':str(out)}))
 except Exception as e:
  (out/'terminal.log').write_bytes(log);print(json.dumps({'status':'failed','step':step,'error':repr(e),'server_error':server.error,'phases':server.seen,'result_dir':str(out),'tail':bytes(log).decode('utf8','replace')[-3000:]}));raise
 finally:

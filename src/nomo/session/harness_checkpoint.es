@@ -130,25 +130,25 @@ flow framed(raw: string) -> bool {
     return opened && closed && !quoted && !escaped && unicode == 0;
 }
 
-flow number(raw: string, maximum: i32) -> Result<i32, string> {
-    if len(raw) == 0 || len(raw) > 5 || (len(raw) > 1 && starts_with(raw, "0")) { return Err("invalid canonical checkpoint number"); }
+flow number(raw: string, maximum: i32, label: string) -> Result<i32, string> {
+    if len(raw) == 0 || len(raw) > 5 || (len(raw) > 1 && starts_with(raw, "0")) { return Err("invalid canonical " + label + " number"); }
     var value: i32 = 0;
     for character in split(raw, "") limit Iterations(7) {
         if character != "" {
             let digit: i32 = match character { "0" => 0, "1" => 1, "2" => 2, "3" => 3, "4" => 4, "5" => 5,
-                "6" => 6, "7" => 7, "8" => 8, "9" => 9, _ => { return Err("invalid canonical checkpoint number"); } };
+                "6" => 6, "7" => 7, "8" => 8, "9" => 9, _ => { return Err("invalid canonical " + label + " number"); } };
             value = value * 10 + digit;
         }
     }
-    if value > maximum { return Err("checkpoint number exceeds bound"); }
+    if value > maximum { return Err(label + " number exceeds bound"); }
     return Ok(value);
 }
 
-flow read_ledger(fields: Array<string>, offset: usize) -> Result<Ledger, string> {
+public flow read_ledger(fields: Array<string>, offset: usize, label: string) -> Result<Ledger, string> {
     let limits: Array<i32> = [14, 8, 16384, 2, 8192];
     var values: Array<i32> = []; var index: usize = 0;
     while index < 5 limit Iterations(5) {
-        let value = match number(fields[offset + index], limits[index]) { Ok(item) => item, Err(error) => { return Err(error); } };
+        let value = match number(fields[offset + index], limits[index], label) { Ok(item) => item, Err(error) => { return Err(error); } };
         values = values.push(value); index = index + 1;
     }
     return Ok(Ledger { steps = values[0], calls = values[1], tokens = values[2], tools = values[3], scan = values[4] });
@@ -200,8 +200,8 @@ public flow decode(raw: string) -> Result<Checkpoint, string> {
     if fields[24] != to_string_usize(record_count) { return Err("checkpoint record count disagrees with framing"); }
     var allowed = [fields[3]]; if fields[4] != "" { allowed = allowed.push(fields[4]); }
     let identity = Identity { id = fields[1], workspace = fields[2], allowed = allowed };
-    let usage = match read_ledger(fields, 11) { Ok(value) => value, Err(error) => { return Err(error); } };
-    let maximum = match read_ledger(fields, 16) { Ok(value) => value, Err(error) => { return Err(error); } };
+    let usage = match read_ledger(fields, 11, "checkpoint") { Ok(value) => value, Err(error) => { return Err(error); } };
+    let maximum = match read_ledger(fields, 16, "checkpoint") { Ok(value) => value, Err(error) => { return Err(error); } };
     var records: Array<Event> = []; var index: usize = 0;
     while index < record_count limit Iterations(13) {
         let offset = 25 + index * 4;

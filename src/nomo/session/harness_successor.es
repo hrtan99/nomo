@@ -1,6 +1,6 @@
 module nomo.session.harness_successor;
 
-import std.text.{len, trim, split, starts_with, to_string_i32, to_string_usize};
+import std.text.{len, trim, split, to_string_i32, to_string_usize};
 import std.collections.len as count;
 import std.bytes.len as byte_count;
 import std.codec.text.utf8_encode;
@@ -14,7 +14,7 @@ import nomo.model.model_tool_contract.context_error as child_context_error;
 import nomo.harness.harness_model_contract.{bounded, decode_plan};
 import nomo.harness.harness_tool_contract.Ledger;
 import nomo.harness.harness_tool_chat_contract.{Previous, Context, Invocation, TurnResult, prior_error, turn_error, context_error, inspect_turn};
-import nomo.session.harness_checkpoint.{Identity, Checkpoint, identity_error};
+import nomo.session.harness_checkpoint.{Identity, Checkpoint, identity_error, read_ledger};
 import nomo.session.harness_checkpoint.validate as validate_first;
 import nomo.session.harness_checkpoint.encode as encode_first;
 import nomo.session.harness_checkpoint.decode as decode_first;
@@ -153,29 +153,6 @@ flow framed(raw: string) -> bool {
     return opened && closed && !quoted && !escaped && unicode == 0;
 }
 
-flow number(raw: string, maximum: i32) -> Result<i32, string> {
-    if len(raw) == 0 || len(raw) > 5 || (len(raw) > 1 && starts_with(raw, "0")) { return Err("invalid canonical successor number"); }
-    var value: i32 = 0;
-    for character in split(raw, "") limit Iterations(7) {
-        if character != "" {
-            let digit: i32 = match character { "0" => 0, "1" => 1, "2" => 2, "3" => 3, "4" => 4, "5" => 5,
-                "6" => 6, "7" => 7, "8" => 8, "9" => 9, _ => { return Err("invalid canonical successor number"); } };
-            value = value * 10 + digit;
-        }
-    }
-    if value > maximum { return Err("successor number exceeds bound"); }
-    return Ok(value);
-}
-
-flow read_ledger(fields: Array<string>, offset: usize) -> Result<Ledger, string> {
-    let limits: Array<i32> = [14, 8, 16384, 2, 8192]; var values: Array<i32> = []; var index: usize = 0;
-    while index < 5 limit Iterations(5) {
-        let value = match number(fields[offset + index], limits[index]) { Ok(item) => item, Err(error) => { return Err(error); } };
-        values = values.push(value); index = index + 1;
-    }
-    return Ok(Ledger { steps = values[0], calls = values[1], tokens = values[2], tools = values[3], scan = values[4] });
-}
-
 flow fields_error(fields: Array<string>) -> string {
     if count(fields) > 100 { return "successor string fields exceed bounds"; }
     var characters: usize = 0; var index: usize = 0;
@@ -225,8 +202,8 @@ public flow decode(raw: string) -> Result<Successor, string> {
     var allowed = [fields[3]]; if fields[4] != "" { allowed = allowed.push(fields[4]); }
     let identity = Identity { id = fields[1], workspace = fields[2], allowed = allowed };
     let predecessor = match decode_first(fields[5]) { Ok(value) => value, Err(error) => { return Err(error); } };
-    let usage = match read_ledger(fields, 13) { Ok(value) => value, Err(error) => { return Err(error); } };
-    let maximum = match read_ledger(fields, 18) { Ok(value) => value, Err(error) => { return Err(error); } };
+    let usage = match read_ledger(fields, 13, "successor") { Ok(value) => value, Err(error) => { return Err(error); } };
+    let maximum = match read_ledger(fields, 18, "successor") { Ok(value) => value, Err(error) => { return Err(error); } };
     var records: Array<Event> = []; var index: usize = 0;
     while index < record_count limit Iterations(18) {
         let offset = 27 + index * 4;

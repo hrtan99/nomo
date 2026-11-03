@@ -16,7 +16,7 @@ class Fake(BaseHTTPRequestHandler):
   try:
    req=json.loads(self.rfile.read(int(self.headers['Content-Length'])));ctx=json.loads(req['messages'][1]['content']);i=len(self.server.seen)
    if i==0:
-    files=ctx['current']['allowed'];assert len(files)>4 and 'src/app/greeting.py' in files and not any(x.startswith(('node_modules/','.private/')) for x in files),files
+    files=ctx['current']['allowed'];assert len(files)>4 and 'src/app/greeting.py' in files and '.private/hidden.txt' in files and not any(x.startswith('node_modules/') for x in files),files
     self.server.files=files;v=['delegate','Read the project file defining the greeting']
    elif i==1:
     assert 'src/app/greeting.py' in ctx['allowed'];v=['read','src/app/greeting.py']

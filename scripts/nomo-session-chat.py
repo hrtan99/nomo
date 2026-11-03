@@ -196,7 +196,11 @@ def main(argv=None):
         except KeyboardInterrupt:
             print('Input cancelled.', file=sys.stderr)
             return 130
-    if args.discover: print('Discovery searches up to four directory levels, 64 directories and 256 files; hidden paths, unsupported names and common dependency/build directories are excluded.', flush=True)
+    if args.discover:
+        print('Discovery covers up to four directory levels, 64 directories and 256 files; unsupported paths and file types are excluded.', flush=True)
+        print('Excluded: .git/.hg/.svn/.bzr, dependency and build directories, .venv/.tox/.cache/.mypy_cache/.pytest_cache, .ssh/.aws/.gnupg/.netrc, and .env files except .env.example/.env.sample.', flush=True)
+        print('Dotfiles and project configuration in scope may be sent to the model.', flush=True)
+        print('A link outside the selected workspace stops discovery; choose a narrower root.', flush=True)
     print('A read turn may reserve up to 6 calls and 20480 output tokens: up to 4 child calls at 4096 each and 2 parent calls at 2048 each; up to 3 read/search operations reserve 4 MiB plus 256 probe bytes each.', flush=True)
     if args.id is not None:
         show_resume(args, show_id=True)
