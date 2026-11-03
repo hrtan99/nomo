@@ -82,6 +82,7 @@ class NaturalObserver(StartIdObserver):
         self.allowed = allowed
         self.buffer = bytearray()
         self.route = None
+        self.deferred = None
 
     def feed(self, stream, data):
         super().feed(stream, data)
@@ -92,6 +93,8 @@ class NaturalObserver(StartIdObserver):
             fields = line.decode('utf-8', 'replace').rstrip('\r').split(' ')
             if len(fields)==4 and fields[:2]==['NATURAL','WORK'] and fields[2] in ('work','followup') and fields[3] in self.allowed:
                 self.route = (fields[2], fields[3])
+            elif fields == ['NATURAL','DELEGATE']:self.deferred = 'read'
+            elif fields == ['NATURAL','DELEGATE','LIMIT']:self.deferred = 'limit'
 
 
 def show_resume(args, *, show_id):
@@ -262,6 +265,20 @@ def main(argv=None):
                 return 1
             args.id = observer.identifier
             show_resume(args, show_id=False)
+        if natural and observer.deferred == 'read':
+            print('The agent is gathering more evidence using one additional chat turn (up to 4 calls and 8192 output tokens).', flush=True)
+            command = [sys.executable, str(ROOT / 'scripts/nomo-session-id.py'), 'resume',
+                       '--sessions-dir', args.sessions_dir, '--id', args.id, '--root', args.root,
+                       '--allow=' + args.allow, '--once=' + question, '--natural-work']
+            if args.events_policy_dir is not None:command += ['--events-policy-dir', args.events_policy_dir]
+            observer = NaturalObserver(args.allow.split(','))
+            code = edit.run_owned(command, dict(os.environ), diagnostic=observer)
+            if code:
+                print('Additional read stopped; inspect session status before continuing.', file=sys.stderr, flush=True)
+                show_status_hint(args, args.id)
+                return code
+        if natural and observer.deferred is not None:
+            print('The agent could not finish the additional read; no further edit was made. Specify the selected file and exact change, then try again' + (' in a new session.' if observer.deferred == 'limit' else '.'), flush=True)
         if natural and observer.route is not None:
             action, path = observer.route
             command = [sys.executable, str(ROOT / 'scripts/nomo-session-id.py'), action,

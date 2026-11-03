@@ -10,7 +10,7 @@ import std.collections.len as count;
 import nomo.model.model_tool_contract.allowed_error;
 import nomo.model.read_protocol.question_error;
 import nomo.harness.read_tool_chat.{run_private_turn, run_with_history};
-import nomo.harness.natural_work_chat.{run as run_natural, target as natural_target};
+import nomo.harness.natural_work_chat.{run as run_natural, route as natural_route};
 import nomo.harness.history_continue_model.{BudgetFacts, run_turn as run_after_work, run_after_followup};
 import nomo.session.recoverable_work_facts.snapshot as work_facts;
 import nomo.session.continuous_work.{Entry as ExtraEntry, load as load_continuous};
@@ -98,7 +98,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyR
     if result.status != 0 || !result.resolved { println("REFUSED chat turn unresolved; inspect without retry"); return 1; }
     match finish(running, result, policy, binding) { Ok(_) => {} Err(error) => { println("REFUSED " + error); return 1; } }
     println("SAVED chat and event records together; saved text is untrusted and does not grant authority.");
-    if natural { match result.completed { Some(item) => { match natural_target(item.answer, allowed) { Some(path) => { println("NATURAL WORK " + (match facts.first { None() => "work", Some(_) => "followup" }) + " " + path); } None() => {} } } None() => {} } }
+    if natural { match result.completed { Some(item) => { let route = natural_route(item.answer, allowed, facts.first != None(), result.state.admitted < 32); if route != "" { println(route); } } None() => {} } }
     return 0;
 }
 
