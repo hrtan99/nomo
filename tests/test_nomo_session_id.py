@@ -25,6 +25,12 @@ class SessionIDTest(unittest.TestCase):
   args=['work','--sessions-dir',str(self.base),'--id',self.identifier,'--read-root','/read','--root','/edit','--operation-id','op1','--path','note.txt','--allow','context.txt','--once','change','--check','/bin/true']
   with patch.object(module._edit,'run_owned',return_value=0) as launch:
    code,out,_=self.call(args);self.assertEqual(code,0);cmd=launch.call_args.args[0];self.assertTrue(any(str(x).endswith('nomo-history-work.py') for x in cmd));self.assertIn(str(self.base/self.identifier),cmd);self.assertIn('--id=op1',cmd);self.assertEqual(cmd[-2:],['--check','/bin/true']);self.assertIn('SESSION ID '+self.identifier,out)
+ def test_event_work_forwards_policy_before_check(self):
+  (self.base/self.identifier).mkdir(mode=0o700)
+  args=['work','--sessions-dir',str(self.base),'--id',self.identifier,'--read-root','/read','--root','/edit','--operation-id','op1','--path','note.txt','--allow','context.txt','--once','change','--events-policy-dir','/policy']
+  with patch.object(module._edit,'run_owned',return_value=0) as launch:
+   self.assertEqual(self.call(args)[0],0);self.assertEqual(launch.call_args.args[0][-2:],['--events-policy-dir','/policy'])
+   launch.reset_mock();self.assertEqual(self.call(args+['--check','true'])[0],0);self.assertEqual(launch.call_args.args[0][-4:],['--events-policy-dir','/policy','--check','true'])
  def test_outputs_is_only_forwarded_for_status(self):
   (self.base/self.identifier).mkdir(mode=0o700)
   with patch.object(module._edit,'run_owned',return_value=0) as launch:

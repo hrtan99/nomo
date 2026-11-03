@@ -854,3 +854,49 @@ name = "nomo-read-events-status"
 module = "nomo.main"
 flow = "recoverable_read_status"
 profile = "nomo-read-events-status"
+
+[runtime.profiles.nomo-history-events-work]
+boundary_policy = "nomo-harness-work"
+[runtime.profiles.nomo-history-events-work.memory]
+backend = "sqlite"
+path = "file:history.sqlite3?mode=rw"
+[runtime.profiles.nomo-history-events-work.model]
+adapter = "openai"
+model = "MiniMax-M3.1-Flash"
+base_url = "https://api.minimax.cn/v1"
+api_key_env = "MINIMAX_API_KEY"
+allow_private = false
+
+[runtime.profiles.nomo-history-events-work.model.timeout]
+request_deadline_ms = 120000
+connect_timeout_ms = 2000
+[runtime.profiles.nomo-history-events-work.model.retry]
+attempts = 1
+delay_ms = 0
+[runtime.profiles.nomo-history-events-work.filesystem.regions."nomo.tools.workspace.ReadOnlyRoot"]
+root = "/work-context"
+read = true
+write = false
+delete = false
+[runtime.profiles.nomo-history-events-work.filesystem.regions."nomo.tools.edit_file.EditableRoot"]
+root = "/edit-fixture"
+read = true
+write = true
+delete = false
+[runtime.profiles.nomo-history-events-work.policy]
+mode = "local-static"
+rules = ["console=allow", "memory=allow", "model=allow", "approval=allow", "filesystem:Fs.stat=allow", "filesystem:Fs.read=allow", "filesystem:Fs.atomic_replace=allow", "filesystem:Fs.write=deny", "filesystem:HostFilesystem.delete=deny"]
+[runtime.profiles.nomo-history-events-work.approval]
+mode = "prompt"
+
+
+[runtime.profiles.nomo-history-events-work.filesystem.regions."nomo.session.event_policy.PolicyRoot"]
+root = "/tmp/nomo-event-policy"
+read = true
+write = false
+
+[[bin]]
+name = "nomo-history-events-work"
+module = "nomo.main"
+flow = "recoverable_history_work"
+profile = "nomo-history-events-work"

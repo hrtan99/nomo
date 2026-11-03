@@ -82,7 +82,7 @@ def show_resume(args, *, show_id):
     if args.events_policy_dir is None:
         print('Read turns and bounded work use this session; each edit requires fresh confirmations.', flush=True)
     else:
-        print('Event recording supports read-only turns and status; work/check is not available in this mode.', flush=True)
+        print('Event recording supports read turns, status and one confirmed work operation with an optional check; followup is unavailable.', flush=True)
     policy = '' if args.events_policy_dir is None else ' --events-policy-dir ' + shlex.quote(args.events_policy_dir)
     print('Resume: nomo-read.sh session-id resume --sessions-dir ' + shlex.quote(args.sessions_dir)
           + ' --id ' + shlex.quote(args.id) + ' --root DIR --allow FILE' + policy + ' --once QUESTION', flush=True)
@@ -122,7 +122,7 @@ def main(argv=None):
     else:
         print('New session: the first question starts a read turn.', flush=True)
         if args.events_policy_dir is not None:
-            print('Event recording supports read-only turns and status; work/check is not available in this mode.', flush=True)
+            print('Event recording supports read turns, status and one confirmed work operation with an optional check; followup is unavailable.', flush=True)
         else:
             print('Work requires a completed first turn.', flush=True)
     if tty and args.once is None:
@@ -146,7 +146,7 @@ def main(argv=None):
                 if args.events_policy_dir is None:
                     print('/work OP_ID EDIT_ROOT PATH "TASK" [--check COMMAND ARG ...] runs one explicitly confirmed work operation.')
                     print('/followup OP_ID EDIT_ROOT PATH "TASK" [--check COMMAND ARG ...] runs the second bounded work operation.')
-                else:print('Event-recording mode currently supports read-only chat and status only.')
+                else:print('/work OP_ID EDIT_ROOT PATH "TASK" [--check COMMAND ARG ...] runs one confirmed work operation. Followup is unavailable.')
                 print('Quote arguments containing spaces. No shell interprets the check arguments. /exit leaves the session.')
                 continue
             if question == '/status' or question == '/outputs':
@@ -154,7 +154,7 @@ def main(argv=None):
                     print('REFUSED enter a first question to start the session.', file=sys.stderr, flush=True)
                     continue
                 if question == '/outputs' and args.events_policy_dir is not None:
-                    print('REFUSED event-recording sessions do not have work/check output.',file=sys.stderr,flush=True)
+                    print('REFUSED /outputs is unavailable in event-recording mode; /status shows bounded recorded check output.',file=sys.stderr,flush=True)
                     continue
                 command = [sys.executable, str(ROOT / 'scripts/nomo-session-id.py'), 'status',
                            '--sessions-dir', args.sessions_dir, '--id', args.id]
@@ -169,18 +169,18 @@ def main(argv=None):
                 if args.id is None:
                     print('REFUSED enter a first question to start the session.', file=sys.stderr, flush=True)
                     continue
-                if args.events_policy_dir is not None:
-                    print('REFUSED event-recording sessions currently support read-only chat and status only.',file=sys.stderr,flush=True)
-                    continue
                 try:
                     words = shlex.split(question)
                     action = words[0][1:]
                     if len(words) < 5 or (len(words) > 5 and (words[5] != '--check' or len(words) == 6)):
                         raise ValueError('expected /work or /followup OP_ID EDIT_ROOT PATH "TASK" [--check COMMAND ARG ...]')
+                    if args.events_policy_dir is not None and action != 'work':raise ValueError('event work does not yet support followup')
                     command = [sys.executable, str(ROOT / 'scripts/nomo-session-id.py'), action,
                                '--sessions-dir', args.sessions_dir, '--id', args.id,
                                '--read-root', args.root, '--root', words[2], '--operation-id=' + words[1],
-                               '--path=' + words[3], '--allow=' + args.allow, '--once=' + words[4], *words[5:]]
+                               '--path=' + words[3], '--allow=' + args.allow, '--once=' + words[4]]
+                    if args.events_policy_dir is not None:command += ['--events-policy-dir',args.events_policy_dir]
+                    command += words[5:]
                 except ValueError as error:
                     print('REFUSED ' + str(error), file=sys.stderr, flush=True)
                     continue

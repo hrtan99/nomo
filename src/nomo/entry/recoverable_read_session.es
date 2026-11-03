@@ -13,6 +13,8 @@ import nomo.harness.read_tool_chat.run_private_turn;
 import nomo.session.event_policy.load as load_policy;
 import nomo.session.chat_history.load as load_legacy;
 import nomo.session.recoverable_chat_store.{create, load, reserve, finish};
+import nomo.session.recoverable_work_store.load as load_recoverable_work;
+import nomo.session.recoverable_check_store.load as load_recoverable_check;
 import nomo.session.history_work_guard.inspect as inspect_work;
 import nomo.session.history_followup_guard.inspect as inspect_followup;
 import nomo.session.history_check_guard.inspect as inspect_check;
@@ -52,6 +54,12 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyR
         match create(policy, binding) { Ok(_) => {} Err(error) => { println("REFUSED " + error); return 1; } }
     } else { match existing { Some(_) => {} None() => { println("REFUSED recoverable session missing"); return 1; } } }
     let current = match load(policy, binding) { Ok(Some(item)) => item, _ => { println("REFUSED recoverable session missing or invalid"); return 1; } };
+    match load_recoverable_work(policy, binding) {
+        Ok(None()) => {}
+        Ok(Some(_)) => { println("REFUSED work history exists; continuation is not supported by this path"); return 1; }
+        Err(error) => { println("REFUSED " + error); return 1; }
+    }
+    match load_recoverable_check(policy, binding) { Ok(None()) => {} _ => { println("REFUSED check history exists or is invalid"); return 1; } }
     let version = match reserve(current, args[4], policy, binding) { Ok(item) => item, Err(error) => { println("REFUSED " + error); return 1; } };
     let running = match load(policy, binding) { Ok(Some(item)) => item, _ => { println("REFUSED reservation missing"); return 1; } };
     if running.version.opaque != version.opaque || running.value.chat.phase != "running" { println("REFUSED reservation changed"); return 1; }
@@ -65,20 +73,54 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyR
 
 public type View = { format: i32, encoding: string, phase: string, turns: i32, first_count: usize,
     used_calls: i32, used_tokens: i32, used_tools: i32, used_scan: i32, reserved_calls: i32, reserved_tokens: i32,
-    events: Array<Event> };
+    events: Array<Event>, work_phase: string, work_reserved_calls: i32, work_reserved_tokens: i32,
+    work_settled_calls: i32, work_settled_tokens: i32, work_events: Array<Event>,
+    check_phase: string, check_id: string, check_digest: string, check_outcome: string, check_exit: string,
+    check_stdout: string, check_stderr: string, check_stdout_truncated: bool, check_stderr_truncated: bool, check_stdout_omitted: bool, check_stderr_omitted: bool };
 
 public flow status(args: Array<string>) -> i32 ![Console, Memory, Fs.read<PolicyRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {
     if count(args) != 2 || args[0] != "--policy-binding" { println("REFUSED recoverable status requires policy binding"); return 1; }
     let policy = match load_policy() { Ok(item) => item, Err(error) => { println("REFUSED " + error); return 1; } };
     match load_legacy() { Ok(None()) => {} _ => { println("REFUSED legacy or invalid session data"); return 1; } }
     let saved = match load(policy, args[1]) { Ok(Some(item)) => item, Ok(None()) => { println("REFUSED recoverable session missing"); return 1; } Err(error) => { println("REFUSED " + error); return 1; } };
+    let work = match load_recoverable_work(policy, args[1]) { Ok(item) => item, Err(error) => { println("REFUSED " + error); return 1; } };
+    let check = match load_recoverable_check(policy, args[1]) { Ok(item) => item, Err(error) => { println("REFUSED " + error); return 1; } };
+    var check_phase = "none"; var check_id = ""; var check_digest = ""; var check_outcome = ""; var check_exit = "";
+    var check_stdout = ""; var check_stderr = ""; var check_stdout_truncated = false; var check_stderr_truncated = false; var check_stdout_omitted = false; var check_stderr_omitted = false;
+    match check { Some(item) => {
+        check_phase = item.value.check.phase; check_id = item.value.check.id; check_digest = item.value.check.digest;
+        check_outcome = item.value.check.outcome; check_exit = item.value.check.exit_code;
+        check_stdout = item.value.stdout; check_stderr = item.value.stderr;
+        check_stdout_truncated = item.value.stdout_truncated; check_stderr_truncated = item.value.stderr_truncated;
+        check_stdout_omitted = check_stdout_truncated && check_stdout == "\"\""; check_stderr_omitted = check_stderr_truncated && check_stderr == "\"\"";
+        if check_stdout_omitted || check_stderr_omitted { println("CHECK OUTPUT omitted because capture or transfer limits were exceeded; inspect or rerun only under a new explicitly authorized operation."); }
+        println("RECORDED CHECK " + check_phase + "; an interrupted check is not replayed.");
+    } None() => {} }
+    var work_phase = "none"; var work_reserved_calls: i32 = 0; var work_reserved_tokens: i32 = 0;
+    var work_settled_calls: i32 = 0; var work_settled_tokens: i32 = 0; var work_events: Array<Event> = [];
+    match work {
+        Some(item) => {
+            work_phase = item.value.work.phase; work_reserved_calls = item.value.work.reserved.calls;
+            work_reserved_tokens = item.value.work.reserved.generation; work_events = item.value.events.events;
+            match item.value.work.settled {
+                Some(spent) => { work_settled_calls = spent.read.calls + spent.edit.calls; work_settled_tokens = spent.read.tokens + spent.edit.tokens; }
+                None() => {}
+            }
+            println("RECORDED WORK " + work_phase + "; selected facts only, no replay or root identity implied.");
+        }
+        None() => {}
+    }
     let used = saved.value.chat.invocation.usage;
     let pending = saved.value.chat.phase == "running";
     let view = View { format = 1, encoding = saved.value.encoding, phase = saved.value.chat.phase,
         turns = saved.value.events.turns, first_count = saved.value.events.first_count,
         used_calls = used.calls, used_tokens = used.tokens, used_tools = used.tools, used_scan = used.scan,
         reserved_calls = if pending { 4 } else { 0 }, reserved_tokens = if pending { 8192 } else { 0 },
-        events = saved.value.events.events };
+        events = saved.value.events.events, work_phase = work_phase, work_reserved_calls = work_reserved_calls,
+        work_reserved_tokens = work_reserved_tokens, work_settled_calls = work_settled_calls,
+        work_settled_tokens = work_settled_tokens, work_events = work_events,
+        check_phase = check_phase, check_id = check_id, check_digest = check_digest, check_outcome = check_outcome, check_exit = check_exit,
+        check_stdout = check_stdout, check_stderr = check_stderr, check_stdout_truncated = check_stdout_truncated, check_stderr_truncated = check_stderr_truncated, check_stdout_omitted = check_stdout_omitted, check_stderr_omitted = check_stderr_omitted };
     let converted: Option<Message<JsonValue>> = Message.new(view).cast<JsonValue>();
     let value = match converted { Some(item) => item.body, None() => { println("REFUSED event view conversion"); return 1; } };
     let raw = match stringify(value) { Ok(item) => item, Err(_) => { println("REFUSED event view encoding"); return 1; } };

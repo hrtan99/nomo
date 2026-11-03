@@ -21,7 +21,7 @@ public type Ticket = { record: Record, version: MemoryVersion, history: Entry };
 alias Schema = MemoryRegion<{ Rows: Store<string, Record> }>;
 let Runs = std.memory.region<Schema>(stable_id = "nomo-history-work-v1", store = "history-work");
 flow read() -> Option<MemoryEntry<string, Record>> { return get_entry(Runs.Rows, "work"); }
-flow invalid(value: Record) -> string {
+public flow invalid(value: Record) -> string {
     if value.format != 1 || (value.phase != "running" && value.phase != "complete") { return "invalid history-work phase"; }
     let selected = selector_error(value.id, value.workspace, value.path); if selected != "" { return selected; }
     let question = question_error(value.request); if question != "" { return question; }

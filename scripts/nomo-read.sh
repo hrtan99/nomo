@@ -16,7 +16,8 @@ Usage:
   nomo-read.sh session-id status --sessions-dir PRIVATE_DIRECTORY --id SESSION_ID [--outputs]
   nomo-read.sh session-id decision --sessions-dir PRIVATE_DIRECTORY --id SESSION_ID --operation-id ID --target work|check|followup|followup-check
   nomo-read.sh session-chat --sessions-dir PRIVATE_DIRECTORY (--new | --id SESSION_ID) --root DIR --allow FILE[,FILE] [--events-policy-dir PRIVATE_DIRECTORY] [--once QUESTION]
-  Event-recording read-only sessions accept --events-policy-dir PRIVATE_DIRECTORY on start, resume, status and session-chat.
+  Event-recording sessions accept --events-policy-dir PRIVATE_DIRECTORY on start, resume, status, work and session-chat.
+  One freshly confirmed work operation and an optional offline check are supported; followup is unavailable in this mode.
   nomo-read.sh event-policy-init --directory PRIVATE_DIRECTORY
   nomo-read.sh session-id work --sessions-dir PRIVATE_DIRECTORY --id SESSION_ID --read-root DIR --root PRIVATE_DIRECTORY --operation-id ID --path FILE --allow FILE[,FILE] --once TASK [--check COMMAND ARG ...]
   nomo-read.sh session-followup --read-root ABSOLUTE_DIRECTORY --allow FILE[,FILE] --root PRIVATE_DIRECTORY --state PRIVATE_DIRECTORY --id ID --path FILE --once TASK [--check COMMAND ARG ...]
@@ -60,13 +61,14 @@ must be separate from both. Work allows up to 7 model calls and 47,104 requested
 output tokens, not a measured usage or cost limit.
 For model editing, NOMO_MODEL_REQUEST_DEADLINE_MS sets each request deadline
 from 2000 to 3600000 milliseconds (default 120000); there are no automatic retries.
-For opt-in read-only event recording, create a private 0700 policy directory,
+For opt-in event recording, create a private 0700 policy directory,
 run event-policy-init for its private binding key, and create a 0600 policy.json
 with {"format":1,"literals":["YOUR_SENSITIVE_LITERAL"]}. Do not put actual
 secrets in shell arguments. This filters exact known literals only, not unknown
 secrets, and does not bind the workspace. Keep policy bytes and binding.key
 unchanged for the session; a mismatch refuses resume. Existing sessions are not
-automatically migrated, and event-recording mode does not support work/check.
+automatically migrated. Event-recording mode supports one work operation and an
+optional check; followup is unavailable. Check output recording is bounded.
 Checks run offline and may modify the selected private workspace.
 Edit status is recorded data only; it does not inspect the current file.
 Use status only after the operation stops; SQLite may update state bookkeeping.

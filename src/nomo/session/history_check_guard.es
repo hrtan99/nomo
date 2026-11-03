@@ -32,7 +32,7 @@ flow valid_failure_code(value: string) -> bool {
     }
     return n >= 1 && n <= 123;
 }
-flow invalid(row: Record) -> string {
+public flow invalid(row: Record) -> string {
     if row.format != 1 || (row.phase != "planned" && row.phase != "running" && row.phase != "complete") || row.id == "" || !hex_digest(row.digest) {
         return "invalid history-check record";
     }

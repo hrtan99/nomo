@@ -19,6 +19,8 @@ import nomo.entry.read_model_tools_chat.run as run_read_model_tools_chat;
 import nomo.entry.read_session.run as run_read_session;
 import nomo.entry.recoverable_read_session.{run as run_recoverable_read_session, status as run_recoverable_read_status};
 import nomo.entry.history_work.run as run_history_work;
+import nomo.entry.recoverable_history_work.run as run_recoverable_history_work;
+import nomo.entry.recoverable_history_check.run as run_recoverable_history_check;
 import nomo.entry.history_followup.run as run_history_followup;
 import nomo.entry.history_followup_check.run as run_history_followup_check;
 import nomo.entry.history_check.run as run_history_check;
@@ -186,6 +188,18 @@ flow history_check(args: Array<string>) -> i32 {
 flow history_work(args: Array<string>) -> i32 {
     let status = run_history_work(args);
     if status != 0 { abort("Nomo history work stopped; inspect recorded edit status"); }
+    return 0;
+}
+
+flow recoverable_history_work(args: Array<string>) -> i32 {
+    let status = run_recoverable_history_work(args);
+    if status != 0 { abort("Nomo event work stopped; inspect recorded edit status"); }
+    return 0;
+}
+
+flow recoverable_history_check(args: Array<string>) -> i32 {
+    let status = run_recoverable_history_check(args);
+    if status != 0 { abort("Nomo event check stopped; inspect recorded status"); }
     return 0;
 }
 

@@ -41,7 +41,7 @@ def main(argv=None):
         if args.action=='start' and args.id is not None:raise ValueError('a new session ID is generated automatically')
         if args.action!='start' and args.id is None:raise ValueError('select an existing session ID')
         if args.outputs and args.action!='status':raise ValueError('--outputs is only available for status')
-        if args.events_policy_dir is not None and args.action not in ('start','resume','status'):raise ValueError('event-recording sessions currently support read-only chat and status only')
+        if args.events_policy_dir is not None and args.action not in ('start','resume','status','work'):raise ValueError('event-recording sessions do not yet support followup or decisions')
         if args.events_policy_dir is not None and args.outputs:raise ValueError('--outputs is unavailable for event-recording sessions')
         if args.id=='latest':raise ValueError('latest compatible session is unavailable: workspace identity continuity cannot yet be verified')
         if args.action=='decision':
@@ -68,6 +68,7 @@ def main(argv=None):
             command=[sys.executable,str(ROOT/'scripts/nomo-recovery-decision.py'),'--state',str(state),'--id='+args.operation_id,'--target',args.target]
         elif args.action in ('work','followup'):
             command=[sys.executable,str(ROOT/('scripts/nomo-history-followup.py' if args.action=='followup' else 'scripts/nomo-history-work.py')),'--state',str(state),'--read-root',args.read_root,'--root',args.root,'--id='+args.operation_id,'--path='+args.path,'--allow='+args.allow,'--once='+args.once]
+            if args.events_policy_dir is not None:command+=['--events-policy-dir',args.events_policy_dir]
             if args.check is not None:command+=['--check',*args.check]
         else:
             mode={'start':'new','resume':'continue','status':'status'}[args.action]

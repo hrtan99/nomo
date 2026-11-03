@@ -3,6 +3,7 @@ module nomo.session.event_text_codec;
 import std.agent.message.Message;
 import std.json.{JsonValue, parse, stringify};
 import nomo.core.read_text.safe;
+import std.text.split;
 import nomo.session.redaction.{Policy, text as redact};
 
 // Canonical JSON string notation is reversible for LF, CR, TAB, quotes and
@@ -27,4 +28,18 @@ public flow decode(encoded: string, policy: Policy) -> Result<string, string> {
     let canonical = match encode(raw, policy) { Ok(item) => item, Err(error) => { return Err(error); } };
     if canonical.replacements != 0 || canonical.value != encoded { return Err("event text is noncanonical or contains a known sensitive literal"); }
     return Ok(raw);
+}
+
+// Filter the complete bounded stream before taking a display prefix. If the
+// host cannot transfer the complete capture, it supplies an empty stream and
+// the truncation flag instead of a potentially sensitive partial literal.
+public type Prefix = { value: string, truncated: bool };
+public flow encode_prefix(text: string, truncated: bool, policy: Policy) -> Result<Prefix, string> {
+    let clean = match redact(text, policy) { Ok(item) => item.value, Err(error) => { return Err(error); } };
+    var selected = ""; var seen: usize = 0; var clipped = truncated;
+    for character in split(clean, "") limit Iterations(10242) {
+        if character != "" { if seen < 128 { selected = selected + character; } else { clipped = true; } seen = seen + 1; }
+    }
+    let encoded = match encode(selected, policy) { Ok(item) => item.value, Err(error) => { return Err(error); } };
+    return Ok(Prefix { value = encoded, truncated = clipped });
 }

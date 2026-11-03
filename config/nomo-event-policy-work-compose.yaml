@@ -1,0 +1,9 @@
+services:
+  dev:
+    volumes:
+      - type: bind
+        source: "${NOMO_EVENT_POLICY_DIR:?select a private event policy directory}"
+        target: /event-policy-source
+        read_only: true
+        bind:
+          create_host_path: false
