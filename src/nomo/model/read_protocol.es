@@ -98,11 +98,12 @@ public flow answer(raw: string) -> Result<string, string> {
 }
 
 // Report only the violated constraint; never display the model's rejected text.
-flow child_final_error(text: string) -> string {
-    if text == "" || trim(text) == "" { return "child final text is empty"; }
-    if len(text) > 256 || byte_count(utf8_encode(text)) > 256 { return "child final exceeds 256 UTF-8 bytes"; }
-    if !safe(text, 256) { return "child final contains unsupported control or formatting characters"; }
-    return "";
+flow child_final(text: string) -> Result<string, string> {
+    if len(text) > 256 || byte_count(utf8_encode(text)) > 256 { return Err("child final exceeds 256 UTF-8 bytes"); }
+    var line = "";
+    for character in split(text, "") limit Iterations(258) { line = line + if character == "\n" || character == "\r" || character == "\t" { " " } else { character }; }
+    if !bounded(line, 256) { return Err("child final contains unsupported control or formatting characters or is empty"); }
+    return Ok(line);
 }
 
 public flow decode_child(raw: string, allowed: Array<string>, final_only: bool) -> Result<Action, string> {
@@ -111,8 +112,8 @@ public flow decode_child(raw: string, allowed: Array<string>, final_only: bool) 
     if count(values) < 2 || count(values) > 6 { return Err("invalid action field count"); }
     if values[0] == "final" {
         if count(values) != 2 { return Err("child final must contain exactly two fields"); }
-        let invalid = child_final_error(values[1]); if invalid != "" { return Err(invalid); }
-        return Ok(Action { operation = "final", files = [], literal = "", text = values[1] });
+        let final = match child_final(values[1]) { Ok(value) => value, Err(error) => { return Err(error); } };
+        return Ok(Action { operation = "final", files = [], literal = "", text = final });
     }
     if final_only { return Err("second response must be final"); }
     // fields already checked structural whitespace and string safety above.

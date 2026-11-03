@@ -7,7 +7,9 @@ import std.json.{JsonValue, stringify};
 import std.agent.message.Message;
 import nomo.core.text.printable;
 import nomo.core.conversation.Event;
-import nomo.model.model_tool_contract.{Session, allowed_error, decode_reply};
+import nomo.model.model_tool_contract.{Session, allowed_error, candidate_error, decode_reply};
+import nomo.model.read_protocol.decode_child;
+import nomo.core.read_text.{safe, bounded as utf8_bounded};
 import nomo.harness.harness_model_contract.bounded;
 
 public type Context = { phase: string, request: string, task: string, result: string, tool: string, outcome: string, allowed: Array<string> };
@@ -38,19 +40,19 @@ public flow bump(state: Ledger, call: bool) -> Result<Ledger, string> {
         tokens = state.tokens + if call { 2048 } else { 0 }, tools = state.tools, scan = state.scan });
 }
 
-flow child_ledger_error(child: Session) -> string {
+flow child_ledger_error(child: Session, work: bool) -> string {
     if child.history.spent < 1 || child.history.spent > 3 || child.calls < 1 || child.calls > 2 ||
-        child.tokens > 4096 || child.tools > 1 || child.scan > 16384 { return "invalid child ledger"; }
+        child.tokens > (if work { 8192 } else { 4096 }) || child.tools > 1 || child.scan > 16384 { return "invalid child ledger"; }
     let calls: i32 = if child.calls == 2 { 2 } else { 1 };
     let tools: i32 = if child.tools == 1 { 1 } else { 0 };
-    if child.history.spent != calls + tools || child.tokens != child.calls * 2048 ||
+    if child.history.spent != calls + tools || (child.tokens != child.calls * 2048 && !(work && child.tokens == child.calls * 4096)) ||
         (child.scan != child.tools * 4096 && child.scan != child.tools * 16384) || (child.calls == 2 && child.tools != 1) { return "invalid child ledger"; }
     return "";
 }
 
 public flow settle(state: Ledger, child: Session) -> Result<Ledger, string> {
     let invalid = ledger_error(state); if invalid != "" { return Err(invalid); }
-    let child_invalid = child_ledger_error(child); if child_invalid != "" { return Err(child_invalid); }
+    let child_invalid = child_ledger_error(child, false); if child_invalid != "" { return Err(child_invalid); }
     if state.steps != 2 || state.calls != 1 || state.tokens != 2048 || state.tools != 0 || state.scan != 0 {
         return Err("child reservation is not owned by this parent stage");
     }
@@ -104,15 +106,15 @@ flow same(event: Event, role: string, kind: string, name: string, text: string) 
 
 // Only the six ordinary return shapes reachable from our fresh seeded loop are admitted.
 // Host aborts never reach this function and cannot be represented as settled returns.
-public flow inspect(child: Session, status: i32, request: string, task: string, allowed: Array<string>) -> Result<Observed, string> {
-    let invalid = child_ledger_error(child); if invalid != "" { return Err(invalid); }
-    if !bounded(request, 128) || !bounded(task, 128) || allowed_error(allowed) != "" { return Err("invalid selected child context"); }
+public flow inspect_shared(child: Session, status: i32, request: string, task: string, allowed: Array<string>, work: bool, unicode: bool) -> Result<Observed, string> {
+    let invalid = child_ledger_error(child, work); if invalid != "" { return Err(invalid); }
+    if !(if unicode { utf8_bounded(request, 128) } else { bounded(request, 128) }) || !(if unicode { utf8_bounded(task, if work { 512 } else { 128 }) } else { bounded(task, 128) }) || (if unicode { candidate_error(allowed) } else { allowed_error(allowed) }) != "" { return Err("invalid selected child context"); }
     let events = child.history.events;
     let size = count(events);
-    if size < 4 || size > 7 || child.history.stopped || child.history.characters > 8192 { return Err("invalid child history"); }
+    if size < 4 || size > 7 || child.history.stopped || child.history.characters > (if unicode { 262144 } else { 8192 }) { return Err("invalid child history"); }
     var characters: usize = 0;
     for event in events limit Iterations(7) {
-        if len(event.name) > 8 || len(event.text) > 512 || !printable(event.name) || !printable(event.text) {
+        if len(event.name) > 8 || len(event.text) > (if unicode { 65546 } else { 512 }) || !printable(event.name) || !(if unicode { safe(event.text, 65546) } else { printable(event.text) }) {
             return Err("invalid child event data");
         }
         characters = characters + len(event.name) + len(event.text);
@@ -126,15 +128,15 @@ public flow inspect(child: Session, status: i32, request: string, task: string, 
         if size != 4 || child.calls != 1 || (status != 0 && status != 3) { return Err("invalid direct child shape"); }
     } else {
         if size < 5 || events[3].role != "model" || events[3].kind != "request" { return Err("missing selected child tool request"); }
-        let action = match decode_reply(events[3].text, allowed, false) { Ok(value) => value, Err(error) => { return Err(error); } };
+        let action = match if unicode { decode_child(events[3].text, allowed, false) } else { decode_reply(events[3].text, allowed, false) } { Ok(value) => value, Err(error) => { return Err(error); } };
         if (action.operation != "read" && action.operation != "search") || events[3].name != action.operation ||
             events[4].role != "tool" || events[4].name != action.operation { return Err("child tool identity changed"); }
         if size == 5 {
-            if child.calls != 1 || status != 3 || events[4].kind != "error" || !bounded(events[4].text, 512) {
+            if child.calls != 1 || status != 3 || events[4].kind != "error" || !(if unicode { utf8_bounded(events[4].text, 512) } else { bounded(events[4].text, 512) }) {
                 return Err("invalid failed tool shape");
             }
         } else {
-            if events[4].kind != "complete" || !bounded(events[4].text, 266) || !starts_with(events[4].text, "complete: ") {
+            if events[4].kind != "complete" || !(if unicode { utf8_bounded(events[4].text, 65546) } else { bounded(events[4].text, 266) }) || !starts_with(events[4].text, "complete: ") {
                 return Err("invalid completed tool outcome");
             }
             if size == 6 {
@@ -147,13 +149,17 @@ public flow inspect(child: Session, status: i32, request: string, task: string, 
     }
     let last = events[size - 1];
     if status == 0 {
-        if last.role != "assistant" || last.kind != "final" || last.name != "" || !bounded(last.text, 512) {
+        if last.role != "assistant" || last.kind != "final" || last.name != "" || !(if unicode { utf8_bounded(last.text, 512) } else { bounded(last.text, 512) }) {
             return Err("invalid child final event");
         }
         return Ok(Observed { result = last.text, tool = tool, outcome = outcome });
     }
-    if size != 5 && (last.role != "error" || last.kind != "error" || last.name != "" || !bounded(last.text, 512)) {
+    if size != 5 && (last.role != "error" || last.kind != "error" || last.name != "" || !(if unicode { utf8_bounded(last.text, 512) } else { bounded(last.text, 512) })) {
         return Err("invalid child refusal event");
     }
     return Ok(Observed { result = "", tool = "", outcome = "" });
+}
+
+public flow inspect(child: Session, status: i32, request: string, task: string, allowed: Array<string>) -> Result<Observed, string> {
+    return inspect_shared(child, status, request, task, allowed, false, false);
 }

@@ -5,12 +5,14 @@ import std.collections.len as count;
 import std.json.{JsonValue, stringify};
 import std.agent.message.Message;
 import nomo.core.conversation.{Event, State, add, fresh};
-import nomo.model.model_tool_contract.{Session, question_error, allowed_error};
+import nomo.model.model_tool_contract.{Session, question_error, allowed_error, candidate_error};
 import nomo.model.model_tool_contract.Context as ChildContext;
 import nomo.model.model_tool_contract.context_error as child_context_error;
 import nomo.core.text.printable;
+import nomo.core.read_text.{safe, bounded as utf8_bounded};
+import nomo.model.read_protocol.question_error as utf8_question_error;
 import nomo.harness.harness_model_contract.bounded;
-import nomo.harness.harness_tool_contract.{Ledger, Observed, inspect, ledger_error};
+import nomo.harness.harness_tool_contract.{Ledger, Observed, inspect, ledger_error, inspect_shared};
 import nomo.harness.harness_tool_contract.fresh as fresh_ledger;
 
 // Only validated successful selected data crosses a turn boundary.
@@ -77,10 +79,9 @@ flow same(left: Event, right: Event) -> bool {
 
 // Check every prior event before projecting the unchanged one-shot validator's
 // canonical local history. Projection is validation only; model inputs retain it.
-public flow inspect_turn(child: Session, status: i32, request: string, task: string,
-    allowed: Array<string>, prior: Previous) -> Result<Observed, string> {
-    let invalid = prior_error(prior); if invalid != "" { return Err(invalid); }
-    let paths = allowed_error(allowed); if paths != "" { return Err(paths); }
+public flow inspect_turn_shared(child: Session, status: i32, request: string, task: string,
+    allowed: Array<string>, prior: Previous, unicode: bool) -> Result<Observed, string> {
+    let paths = if unicode { candidate_error(allowed) } else { allowed_error(allowed) }; if paths != "" { return Err(paths); }
     let expected = seed(request, prior);
     let size = count(expected.events);
     if count(child.history.events) < size + 2 || count(child.history.events) > size + 6 || child.history.stopped {
@@ -91,7 +92,7 @@ public flow inspect_turn(child: Session, status: i32, request: string, task: str
     var input = fresh();
     var characters: usize = 0;
     for event in child.history.events limit Iterations(12) {
-        if len(event.name) > 8 || len(event.text) > 512 || !printable(event.name) || !printable(event.text) {
+        if len(event.name) > 8 || len(event.text) > (if unicode { 65546 } else { 512 }) || !printable(event.name) || !(if unicode { safe(event.text, 65546) } else { printable(event.text) }) {
             return Err("invalid selected history data");
         }
         characters = characters + len(event.name) + len(event.text);
@@ -107,11 +108,11 @@ public flow inspect_turn(child: Session, status: i32, request: string, task: str
         if count(events) != 3 || status != 4 || child.history.spent != 0 || child.tokens != 0 || child.tools != 0 || child.scan != 0 ||
             !same(events[1], expected_input) ||
             events[2].role != "error" || events[2].kind != "error" || events[2].name != "" ||
-            events[2].text != "model context exceeds 2048 serialized characters" {
+            events[2].text != (if unicode { "model context exceeds 262144 serialized characters" } else { "model context exceeds 2048 serialized characters" }) {
             return Err("invalid unattempted child context refusal");
         }
         let context = ChildContext { history = input.events, allowed = allowed, final_only = false };
-        if question_error(request) != "" || question_error(task) != "" ||
+        if (if unicode { utf8_question_error(request) } else { question_error(request) }) != "" || !(if unicode { utf8_bounded(task, 512) } else { question_error(task) == "" }) ||
             child_context_error(context) != events[2].text {
             return Err("unproven child context refusal");
         }
@@ -119,8 +120,13 @@ public flow inspect_turn(child: Session, status: i32, request: string, task: str
     }
     let state = State { events = normalized.events, characters = normalized.characters,
         spent = child.history.spent, stopped = child.history.stopped };
-    return inspect(Session { history = state, calls = child.calls, tokens = child.tokens,
-        tools = child.tools, scan = child.scan }, status, request, task, allowed);
+    return inspect_shared(Session { history = state, calls = child.calls, tokens = child.tokens,
+        tools = child.tools, scan = child.scan }, status, request, task, allowed, unicode, unicode);
+}
+
+public flow inspect_turn(child: Session, status: i32, request: string, task: string, allowed: Array<string>, prior: Previous) -> Result<Observed, string> {
+    let invalid = prior_error(prior); if invalid != "" { return Err(invalid); }
+    return inspect_turn_shared(child, status, request, task, allowed, prior, false);
 }
 
 public flow invocation_error(state: Ledger) -> string {

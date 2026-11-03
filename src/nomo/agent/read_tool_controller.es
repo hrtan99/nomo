@@ -94,6 +94,36 @@ flow model_attempt(previous: Session, allowed: Array<string>, limits: Limits, fi
     return Ok(ModelAttempt { state = session, context = context });
 }
 
+// A chat child may inspect several explicit candidates under a reserved limit.
+flow run_multistep(raw: string, allowed: Array<string>, previous: Session, private_progress: bool) -> LoopTurn {
+    if previous.history.stopped { return LoopTurn { state = previous, status = 4 }; }
+    let invalid = candidate_error(allowed); if invalid != "" || !bounded(raw, 512) { return failed(previous, "invalid selected child context", 2); }
+    var session = history(previous, emit_mode(previous.history, "user", "input", "", raw, private_progress));
+    var calls: usize = 0; var tools: usize = 0;
+    while calls < 4 limit Iterations(4) {
+        let full = capacity(session, 4, 66080); if full != "" { return failed(history(session, stop(session.history)), full, 4); }
+        let original = Context { history = session.history.events, allowed = allowed, final_only = tools == 3 };
+        let context = match bounded_model_context(original, 262144) { Ok(value) => value, Err(error) => { return failed(session, error, 4); } };
+        session = Session { history = charge(session.history), calls = session.calls + 1, tokens = session.tokens + 2048, tools = session.tools, scan = session.scan };
+        session = history(session, emit_mode(session.history, "model", "text", "qwen", "", private_progress));
+        calls = calls + 1;
+        if private_progress { println("CHILD STAGE model-action"); }
+        let response = perform LegacyChildModel.infer(context);
+        let action = match decode_child(response, allowed, tools == 3) { Ok(value) => value, Err(error) => { return failed(session, error, 3); } };
+        if action.operation == "final" { return LoopTurn { state = history(session, emit_mode(session.history, "assistant", "final", "", action.text, private_progress)), status = 0 }; }
+        session = history(session, emit_mode(session.history, "model", "request", action.operation, compact_frame(response), private_progress));
+        session = Session { history = charge(session.history), calls = session.calls, tokens = session.tokens, tools = session.tools + 1, scan = session.scan + 16384 };
+        tools = tools + 1;
+        if private_progress { println("CHILD STAGE tool"); }
+        let result = if action.operation == "read" { display(perform ReadTools.read(action.files[0])) } else { display(perform ReadTools.search(action.files, action.literal)) };
+        if result.status != "complete" || !safe(result.text, 65536) {
+            return LoopTurn { state = history(session, emit_mode(session.history, "tool", "error", action.operation, result.status + ": " + result.text, private_progress)), status = 3 };
+        }
+        session = history(session, emit_mode(session.history, "tool", "complete", action.operation, "complete: " + result.text, private_progress));
+    }
+    return failed(session, "child model reservation exhausted", 4);
+}
+
 // This same controller is used by scoped production and deterministic handlers.
 flow run_mode(raw: string, allowed: Array<string>, limits: Limits, previous: Session, work: bool, inspect_all: bool, private_progress: bool, chat: bool, expanded: bool) -> LoopTurn {
     if previous.history.stopped { return LoopTurn { state = previous, status = 4 }; }
@@ -164,4 +194,8 @@ public flow run_chat_loop_controller(raw: string, allowed: Array<string>, limits
 }
 public flow run_expanded_work_loop_controller(raw: string, allowed: Array<string>, previous: Session) -> LoopTurn {
     return run_mode(raw, allowed, default_limits(), previous, true, false, true, false, true);
+}
+
+public flow run_multi_chat_loop_controller(raw: string, allowed: Array<string>, previous: Session, private_progress: bool) -> LoopTurn {
+    return run_multistep(raw, allowed, previous, private_progress);
 }

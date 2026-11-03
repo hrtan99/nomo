@@ -4,20 +4,19 @@ import std.text.{len, starts_with};
 import std.collections.len as count;
 import std.json.{JsonValue, stringify};
 import std.agent.message.Message;
-import nomo.core.conversation.{Event, State, add, fresh};
+import nomo.core.conversation.Event;
 import nomo.model.model_tool_contract.{Session, candidate_error};
-import nomo.model.model_tool_contract.Context as ChildContext;
-import nomo.model.model_tool_contract.context_error as child_context_error;
 import nomo.core.text.printable;
 import nomo.core.read_text.{bounded, safe};
-import nomo.model.read_protocol.question_error;
+import nomo.model.read_protocol.decode_child;
 import std.codec.text.utf8_encode;
 import std.bytes.len as byte_count;
-import nomo.harness.read_tool_contract.{Ledger, Observed, inspect_work, ledger_error};
+import nomo.harness.read_tool_contract.{Ledger, Observed, ledger_error};
 import nomo.harness.read_tool_contract.fresh as fresh_ledger;
 
 // Only validated successful selected data crosses a turn boundary.
 public import nomo.harness.harness_tool_chat_contract.{Previous, Context, Invocation, Completed, LocalTurn, TurnResult, default_maximum, fresh_invocation, empty, seed, invocation_error, admission_error, combine};
+import nomo.harness.harness_tool_chat_contract.inspect_turn_shared;
 
 public flow prior_error(prior: Previous) -> string {
     if prior.task == "" {
@@ -52,50 +51,9 @@ flow same(left: Event, right: Event) -> bool {
 
 // Check every prior event before projecting the unchanged one-shot validator's
 // canonical local history. Projection is validation only; model inputs retain it.
-public flow inspect_turn(child: Session, status: i32, request: string, task: string,
-    allowed: Array<string>, prior: Previous) -> Result<Observed, string> {
+public flow inspect_turn(child: Session, status: i32, request: string, task: string, allowed: Array<string>, prior: Previous) -> Result<Observed, string> {
     let invalid = prior_error(prior); if invalid != "" { return Err(invalid); }
-    let paths = candidate_error(allowed); if paths != "" { return Err(paths); }
-    let expected = seed(request, prior);
-    let size = count(expected.events);
-    if count(child.history.events) < size + 2 || count(child.history.events) > size + 6 || child.history.stopped {
-        return Err("invalid selected prior history");
-    }
-    var position: usize = 0;
-    var normalized = fresh();
-    var input = fresh();
-    var characters: usize = 0;
-    for event in child.history.events limit Iterations(12) {
-        if len(event.name) > 8 || len(event.text) > 65546 || !printable(event.name) || !safe(event.text, 65546) {
-            return Err("invalid selected history data");
-        }
-        characters = characters + len(event.name) + len(event.text);
-        if position < size && !same(event, expected.events[position]) { return Err("selected prior history changed"); }
-        if position == 0 || position >= size { normalized = add(normalized, event); }
-        if position < size + 1 { input = add(input, event); }
-        position = position + 1;
-    }
-    if characters != child.history.characters { return Err("invalid selected history character count"); }
-    if child.calls == 0 {
-        let events = normalized.events;
-        let expected_input = Event { role = "user", kind = "input", name = "", text = task };
-        if count(events) != 3 || status != 4 || child.history.spent != 0 || child.tokens != 0 || child.tools != 0 || child.scan != 0 ||
-            !same(events[1], expected_input) ||
-            events[2].role != "error" || events[2].kind != "error" || events[2].name != "" ||
-            events[2].text != "model context exceeds 262144 serialized characters" {
-            return Err("invalid unattempted child context refusal");
-        }
-        let context = ChildContext { history = input.events, allowed = allowed, final_only = false };
-        if question_error(request) != "" || !bounded(task, 512) ||
-            child_context_error(context) != events[2].text {
-            return Err("unproven child context refusal");
-        }
-        return Ok(Observed { result = "", tool = "", outcome = "" });
-    }
-    let state = State { events = normalized.events, characters = normalized.characters,
-        spent = child.history.spent, stopped = child.history.stopped };
-    return inspect_work(Session { history = state, calls = child.calls, tokens = child.tokens,
-        tools = child.tools, scan = child.scan }, status, request, task, allowed);
+    return inspect_turn_shared(child, status, request, task, allowed, prior, true);
 }
 
 public flow turn_error(invocation: Invocation) -> string {
@@ -189,5 +147,77 @@ public flow session_combine(previous: Ledger, local: Ledger) -> Result<Ledger, s
     let value = Ledger { steps = previous.steps + local.steps, calls = previous.calls + local.calls,
         tokens = previous.tokens + local.tokens, tools = previous.tools + local.tools, scan = previous.scan + local.scan };
     if value.steps > 224 || value.calls > 128 || value.tokens > 262144 || value.tools > 32 || value.scan > 524288 { return Err("session allowance exhausted"); }
+    return Ok(value);
+}
+
+// Check every seed and completed tool action before admitting a multi-step result.
+public flow inspect_multi_turn(child: Session, status: i32, request: string, task: string, allowed: Array<string>, prior: Previous) -> Result<Observed, string> {
+    if prior_error(prior) != "" || candidate_error(allowed) != "" || !bounded(request, 128) || !bounded(task, 512) { return Err("invalid child context"); }
+    if (status != 0 && status != 3) || child.history.stopped || child.tools > 3 || child.calls != child.tools + 1 || child.tokens != child.calls * 2048 || child.scan != child.tools * 16384 { return Err("invalid multi-step child ledger"); }
+    let steps: i32 = if child.tools == 3 { 7 } else { if child.tools == 2 { 5 } else { if child.tools == 1 { 3 } else { 1 } } };
+    if child.history.spent != steps { return Err("invalid multi-step child steps"); }
+    let expected = seed(request, prior); let start = count(expected.events); let events = child.history.events;
+    if count(events) != start + 3 + child.tools * 3 { return Err("invalid multi-step event count"); }
+    var index: usize = 0; var characters: usize = 0;
+    for event in events limit Iterations(18) {
+        if len(event.name) > 8 || len(event.text) > 65546 || !printable(event.name) || !safe(event.text, 65546) { return Err("invalid multi-step event"); }
+        if index < start && !same(event, expected.events[index]) { return Err("selected prior history changed"); }
+        characters = characters + len(event.name) + len(event.text); index = index + 1;
+    }
+    if characters != child.history.characters || !same(events[start], Event { role = "user", kind = "input", name = "", text = task }) { return Err("invalid multi-step history"); }
+    var cursor = start + 1; var tool = ""; var outcome = "";
+    var i: usize = 0;
+    while i < child.tools limit Iterations(3) {
+        if !same(events[cursor], Event { role = "model", kind = "text", name = "qwen", text = "" }) { return Err("invalid multi-step model event"); }
+        let request_event = events[cursor + 1]; let action = match decode_child(request_event.text, allowed, false) { Ok(value) => value, Err(error) => { return Err(error); } };
+        let result = events[cursor + 2];
+        if request_event.role != "model" || request_event.kind != "request" || request_event.name != action.operation ||
+            (action.operation != "read" && action.operation != "search") || result.role != "tool" || result.kind != "complete" || result.name != action.operation || !starts_with(result.text, "complete: ") { return Err("invalid multi-step tool outcome"); }
+        tool = action.operation; outcome = result.text; cursor = cursor + 3; i = i + 1;
+    }
+    if !same(events[cursor], Event { role = "model", kind = "text", name = "qwen", text = "" }) { return Err("invalid final model event"); }
+    let final = events[cursor + 1];
+    if status == 3 { if final.role != "error" || final.kind != "error" || final.name != "" || !bounded(final.text, 512) { return Err("invalid multi-step refusal"); } return Ok(Observed { result = "", tool = "", outcome = "" }); }
+    if final.role != "assistant" || final.kind != "final" || final.name != "" || !bounded(final.text, 256) { return Err("invalid multi-step final"); }
+    return Ok(Observed { result = final.text, tool = tool, outcome = outcome });
+}
+
+// Separate reservations preserve the meaning of existing session records.
+public flow multi_maximum(turns: i32) -> Ledger {
+    return Ledger { steps = turns * 11, calls = turns * 6, tokens = turns * 12288, tools = turns * 3, scan = turns * 49152 };
+}
+public flow multi_error(value: Ledger) -> string {
+    if value.steps < 0 || value.steps > 11 || value.calls < 0 || value.calls > 6 || value.tools < 0 || value.tools > 3 ||
+        value.tokens != value.calls * 2048 || value.scan != value.tools * 16384 || value.steps < value.calls + value.tools || value.steps > value.calls + value.tools + 2 { return "invalid multi-step ledger"; }
+    return "";
+}
+public flow multi_bump(value: Ledger, call: bool) -> Result<Ledger, string> {
+    if multi_error(value) != "" { return Err("invalid multi-step ledger"); }
+    let next = Ledger { steps = value.steps + 1, calls = value.calls + if call { 1 } else { 0 }, tokens = value.tokens + if call { 2048 } else { 0 }, tools = value.tools, scan = value.scan };
+    let error = multi_error(next); if error != "" { return Err(error); } return Ok(next);
+}
+public flow multi_settle(value: Ledger, child: Session) -> Result<Ledger, string> {
+    let expected = Ledger { steps = 2, calls = 1, tokens = 2048, tools = 0, scan = 0 };
+    if value != expected { return Err("child reservation not owned"); }
+    if child.tools > 3 || child.calls != child.tools + 1 || child.tokens != child.calls * 2048 || child.scan != child.tools * 16384 { return Err("invalid multi-step child ledger"); }
+    let tools: i32 = if child.tools == 3 { 3 } else { if child.tools == 2 { 2 } else { if child.tools == 1 { 1 } else { 0 } } };
+    if child.history.spent != 1 + tools * 2 { return Err("invalid multi-step child steps"); }
+    return Ok(Ledger { steps = 3 + tools * 2, calls = 2 + tools, tokens = (2 + tools) * 2048, tools = tools, scan = tools * 16384 });
+}
+public flow multi_turn_error(value: Invocation, maximum: i32) -> string {
+    if value.maximum != multi_maximum(maximum) || value.admitted < 0 || value.admitted > maximum { return "multi-step session turn limit reached"; }
+    let used = value.usage; let turns = value.admitted;
+    if used.tools < 0 || used.tools > turns * 3 || used.steps != turns * 5 + used.tools * 2 || used.calls != turns * 3 + used.tools ||
+        used.tokens != used.calls * 2048 || used.scan < used.tools * 4096 || used.scan > used.tools * 16384 || used.scan % 4096 != 0 { return "invalid multi-step session ledger"; }
+    if prior_error(value.prior) != "" || (turns == 0 && value.prior.task != "") || (turns > 0 && value.prior.task == "") { return "invalid multi-step prior"; }
+    let last_tool = if value.prior.tool == "" { 0 } else { 1 };
+    let prior_limit = (turns - 1) * 3 + if last_tool == 1 { 2 } else { 0 };
+    if turns > 0 && (used.tools < last_tool || used.tools - last_tool > prior_limit) { return "invalid multi-step prior tool"; }
+    return "";
+}
+public flow multi_combine(previous: Ledger, local: Ledger, maximum: Ledger) -> Result<Ledger, string> {
+    let error = multi_error(local); if error != "" { return Err(error); }
+    let value = Ledger { steps = previous.steps + local.steps, calls = previous.calls + local.calls, tokens = previous.tokens + local.tokens, tools = previous.tools + local.tools, scan = previous.scan + local.scan };
+    if value.steps > maximum.steps || value.calls > maximum.calls || value.tokens > maximum.tokens || value.tools > maximum.tools || value.scan > maximum.scan { return Err("multi-step session allowance exhausted"); }
     return Ok(value);
 }

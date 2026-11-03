@@ -4,7 +4,7 @@ import std.io.println;
 import std.text.to_string_i32;
 import nomo.core.conversation.{Event, State, add};
 import nomo.model.model_tool_contract.{Session, fresh_loop, default_limits, allowed_error};
-import nomo.agent.read_tool.{LoopTurn, run_loop, run_private_loop, run_work_loop, run_private_work_loop, run_chat_loop, run_expanded_work_loop};
+import nomo.agent.read_tool.{LoopTurn, run_loop, run_private_loop, run_work_loop, run_private_work_loop, run_chat_loop, run_expanded_work_loop, run_multi_chat_loop};
 import nomo.core.read_text.bounded;
 import nomo.model.read_protocol.{question_error, decode_plan, decode_work_plan, work_plan_rejection};
 import nomo.harness.read_tool_contract.{Context, Ledger, Observed, fresh, bump, settle, inspect, inspect_work, context_error};
@@ -73,11 +73,11 @@ public flow work_child_turn(task: string, allowed: Array<string>, selected: Stat
 public flow private_work_child_turn(task: string, allowed: Array<string>, selected: State) -> LoopTurn ~ ChatChildStage<ReadOnlyRoot> {
     return run_private_work_loop(task, allowed, default_limits(), seed(selected));
 }
-public flow chat_child_turn(task: string, allowed: Array<string>, selected: State) -> LoopTurn ~ ChatChildStage<ReadOnlyRoot> {
-    return run_chat_loop(task, allowed, default_limits(), seed(selected), false);
+public flow chat_child_turn(task: string, allowed: Array<string>, selected: State, multi: bool) -> LoopTurn {
+    return if multi { run_multi_chat_loop(task, allowed, seed(selected), false) } else { run_chat_loop(task, allowed, default_limits(), seed(selected), false) };
 }
-public flow private_chat_child_turn(task: string, allowed: Array<string>, selected: State) -> LoopTurn ~ ChatChildStage<ReadOnlyRoot> {
-    return run_chat_loop(task, allowed, default_limits(), seed(selected), true);
+public flow private_chat_child_turn(task: string, allowed: Array<string>, selected: State, multi: bool) -> LoopTurn {
+    return if multi { run_multi_chat_loop(task, allowed, seed(selected), true) } else { run_chat_loop(task, allowed, default_limits(), seed(selected), true) };
 }
 
 public flow expanded_work_child_turn(task: string, allowed: Array<string>, selected: State) -> LoopTurn ~ ChatChildStage<ReadOnlyRoot> {

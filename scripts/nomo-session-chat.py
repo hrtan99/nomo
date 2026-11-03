@@ -197,6 +197,7 @@ def main(argv=None):
             print('Input cancelled.', file=sys.stderr)
             return 130
     if args.discover: print('Discovery searches up to four directory levels, 64 directories and 256 files; hidden paths, unsupported names and common dependency/build directories are excluded.', flush=True)
+    print('A read turn may reserve up to 6 model calls, 12288 output tokens and 3 read/search operations.', flush=True)
     if args.id is not None:
         show_resume(args, show_id=True)
     else:
@@ -311,7 +312,7 @@ def main(argv=None):
             args.id = observer.identifier
             show_resume(args, show_id=False)
         if natural and observer.deferred == 'read':
-            print('The agent is gathering more evidence using one additional chat turn (up to 4 calls and 8192 output tokens).', flush=True)
+            print('The agent is gathering more evidence using one additional chat turn (up to 6 calls and 12288 output tokens).', flush=True)
             command = [sys.executable, str(ROOT / 'scripts/nomo-session-id.py'), 'resume',
                        '--sessions-dir', args.sessions_dir, '--id', args.id, '--root', args.root,
                        '--allow=' + args.allow, '--once=' + question, '--natural-work']
