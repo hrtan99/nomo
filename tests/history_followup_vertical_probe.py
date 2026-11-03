@@ -38,8 +38,8 @@ class Fake(BaseHTTPRequestHandler):
             elif i==17:
                 assert ctx['current']['edit']['after']=='before gold\n';value='Second edit completed using current context.'
             elif i==18:
-                assert ctx['work']=={'id':'edit1','summary':'Edit completed using current context.','summary_source':'unknown','check':'passed','exit_code':'0','output':{'name':'Some','fields':[{'stdout':'FIRST_CHECK_OK','stderr':'','stdout_truncated':False,'stderr_truncated':False}]}}
-                assert ctx['followup']=={'id':'edit2','summary':'Second edit completed using current context.','summary_source':'unknown','check':self.server.expected_check,'exit_code':self.server.expected_exit,'output':{'name':'Some','fields':[{'stdout':'SECOND_CHECK_OK','stderr':'','stdout_truncated':False,'stderr_truncated':False}]}}
+                assert ctx['work']=={'id':'edit1','summary':'Edit completed using current context.','summary_source':'unknown','selection':{'name':'None','fields':[]},'check':'passed','exit_code':'0','output':{'name':'Some','fields':[{'stdout':'FIRST_CHECK_OK','stderr':'','stdout_truncated':False,'stderr_truncated':False}]}}
+                assert ctx['followup']=={'id':'edit2','summary':'Second edit completed using current context.','summary_source':'unknown','selection':{'name':'None','fields':[]},'check':self.server.expected_check,'exit_code':self.server.expected_exit,'output':{'name':'Some','fields':[{'stdout':'SECOND_CHECK_OK','stderr':'','stdout_truncated':False,'stderr_truncated':False}]}}
                 assert ctx['budget']=={'work_calls':14,'work_generation':94208,'chat_used_calls':4,'chat_used_generation':8192,'chat_reserved_calls':4,'chat_reserved_generation':8192};value=['delegate','Read context.txt']
             elif i==19:value=['read','context.txt']
             elif i==20:value=['final','blue CEDAR42']

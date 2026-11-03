@@ -1,6 +1,6 @@
 module nomo.session.recoverable_work_facts;
 
-import nomo.session.work_fact_events.summary_source;
+import nomo.session.work_fact_events.{summary_source, selection};
 
 import nomo.session.redaction.Policy;
 import nomo.session.event_text_codec.decode;
@@ -22,7 +22,8 @@ flow extra_fact(item: Entry, policy: Policy) -> Result<WorkFacts, string> {
         let err = match decode(item.check.stderr, policy) { Ok(value) => value, Err(error) => { return Err(error); } };
         output = Some(CheckOutput { stdout = out, stderr = err, stdout_truncated = item.check.stdout_truncated, stderr_truncated = item.check.stderr_truncated });
     }
-    return Ok(WorkFacts { id = item.core.id, summary = item.result.summary, summary_source = item.result.source,
+    let chosen = match selection(item.result.events, policy) { Ok(value) => value, Err(error) => { return Err(error); } };
+    return Ok(WorkFacts { id = item.core.id, summary = item.result.summary, summary_source = item.result.source, selection = chosen,
         check = if item.check.phase == "none" { "not requested" } else { item.check.outcome }, exit_code = item.check.exit_code, output = output });
 }
 // Only completed recorded actions become untrusted model context. An uncertain
@@ -57,7 +58,8 @@ public flow snapshot(policy: Policy, binding: string) -> Result<Facts, string> {
                 output = Some(match check_values(Some(value.value), policy) { Ok(item) => item, Err(error) => { return Err(error); } });
             } None() => {} }
             let origin = match summary_source(item.value.events, work.summary, policy) { Ok(value) => value, Err(error) => { return Err(error); } };
-            first_facts = Some(WorkFacts { id = work.id, summary = work.summary, summary_source = origin, check = outcome, exit_code = exit, output = output });
+            let chosen = match selection(item.value.events.events, policy) { Ok(value) => value, Err(error) => { return Err(error); } };
+            first_facts = Some(WorkFacts { id = work.id, summary = work.summary, summary_source = origin, selection = chosen, check = outcome, exit_code = exit, output = output });
         }
     }
     match followup {
@@ -82,7 +84,8 @@ public flow snapshot(policy: Policy, binding: string) -> Result<Facts, string> {
                 output = Some(CheckOutput { stdout = out, stderr = err, stdout_truncated = value.value.stdout_truncated, stderr_truncated = value.value.stderr_truncated });
             } None() => {} }
             let origin = match summary_source(item.value.events, work.summary, policy) { Ok(value) => value, Err(error) => { return Err(error); } };
-            second_facts = Some(WorkFacts { id = work.id, summary = work.summary, summary_source = origin, check = outcome, exit_code = exit, output = output });
+            let chosen = match selection(item.value.events.events, policy) { Ok(value) => value, Err(error) => { return Err(error); } };
+            second_facts = Some(WorkFacts { id = work.id, summary = work.summary, summary_source = origin, selection = chosen, check = outcome, exit_code = exit, output = output });
         }
     }
     var additional: Array<WorkFacts> = [];

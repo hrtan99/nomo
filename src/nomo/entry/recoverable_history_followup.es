@@ -1,6 +1,6 @@
 module nomo.entry.recoverable_history_followup;
 
-import nomo.session.work_fact_events.summary_source;
+import nomo.session.work_fact_events.{summary_source, selection};
 
 import std.io.println;
 import std.collections.len as count;
@@ -75,7 +75,8 @@ flow more(input: Work, prior_request: string, previous: Previous, first_id: stri
         checked = value.value.check.outcome; exit = value.value.check.exit_code;
     } None() => {} }
     let origin = match summary_source(second.value.events, work.summary, policy) { Ok(value) => value, Err(error) => { return refused(error); } };
-    var prior = PriorWork { request = work.request, summary = work.summary, summary_source = origin, check = checked, exit_code = exit, output = output };
+    let chosen = match selection(second.value.events.events, policy) { Ok(value) => value, Err(error) => { return refused(error); } };
+    var prior = PriorWork { request = work.request, summary = work.summary, summary_source = origin, selection = chosen, check = checked, exit_code = exit, output = output };
     let extra = match load_extra(binding) { Ok(value) => value, Err(error) => { return refused(error); } };
     match extra { Some(value) => {
         let item = value.value.current;
@@ -86,7 +87,8 @@ flow more(input: Work, prior_request: string, previous: Previous, first_id: stri
             let err = match decode(item.check.stderr, policy) { Ok(value) => value, Err(error) => { return refused(error); } };
             prior_output = Some(CheckOutput { stdout = out, stderr = err, stdout_truncated = item.check.stdout_truncated, stderr_truncated = item.check.stderr_truncated });
         }
-        prior = PriorWork { request = item.core.request, summary = item.result.summary, summary_source = item.result.source,
+        let chosen = match selection(item.result.events, policy) { Ok(value) => value, Err(error) => { return refused(error); } };
+        prior = PriorWork { request = item.core.request, summary = item.result.summary, summary_source = item.result.source, selection = chosen,
             check = if item.check.phase == "none" { "not requested" } else { item.check.outcome }, exit_code = item.check.exit_code, output = prior_output };
     } None() => {} }
     let ticket = match admit_extra(binding, input.edit.id, input.edit.workspace, input.edit.path, input.edit.request, check_digest, policy) { Ok(value) => value, Err(error) => { return refused(error); } };
@@ -144,6 +146,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
     }
     match load_followup_check(policy, binding) { Ok(None()) => {} _ => { return refused("followup check exists or is invalid"); } }
     let origin = match summary_source(first_work.value.events, first_work.value.work.summary, policy) { Ok(value) => value, Err(error) => { return refused(error); } };
+    let chosen = match selection(first_work.value.events.events, policy) { Ok(value) => value, Err(error) => { return refused(error); } };
     let ticket = match admit(input.edit.id, input.edit.workspace, input.edit.path, input.edit.request, history, policy, binding) {
         Ok(value) => value, Err(error) => { return refused(error); }
     };
@@ -153,7 +156,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
     if has_check { match plan_check(ticket, check_digest, policy, binding) { Ok(_) => {} Err(error) => { return refused(error); } } }
     println("RESERVED event followup; interruption or uncertain effects cannot be retried automatically.");
     let prior_request = history.value.chat.last_request; let previous = history.value.chat.invocation.prior;
-    let prior_work = PriorWork { request = first_work.value.work.request, summary = first_work.value.work.summary, summary_source = origin, check = checked, exit_code = exit, output = first_output };
+    let prior_work = PriorWork { request = first_work.value.work.request, summary = first_work.value.work.summary, summary_source = origin, selection = chosen, check = checked, exit_code = exit, output = first_output };
     let pending = match prepare_history(input, prior_request, previous, prior_work) { Ok(value) => value, Err(failure) => { ledger(failure.state); return refused(failure.error); } };
     let selected = match confirm_current(pending.selected, pending.prepared) { Ok(value) => value, Err(error) => { return refused(error); } };
     match claim(ticket, policy, binding) { Ok(_) => {} Err(error) => { return refused(error); } }

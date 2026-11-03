@@ -7,6 +7,8 @@ from pathlib import Path
 ROOT=Path(__file__).resolve().parent.parent
 MODE=os.environ.get('SYNTHETIC_SUMMARY_MODE','full')
 BASELINE=os.environ.get('SYNTHETIC_BUDGET_BASELINE')
+SELECTION_BASELINE=os.environ.get('SYNTHETIC_SELECTION_BASELINE')
+OLD=BASELINE or SELECTION_BASELINE
 FILES=['context.txt','second.txt','third.txt','fourth.txt']
 FIRST_TASK=('Change old to green '+ '\\'*108) if MODE=='escaped' else '请将 old 替换为 green'
 SECOND_TASK=('Change green to gold '+ '\\'*107) if MODE=='escaped' else 'Change green to gold using context'
@@ -24,7 +26,11 @@ INITIAL_RESULT='\\'*160 if MODE=='escaped' else '初始颜色为蓝色'
 INITIAL_ANSWER='\\'*250 if MODE=='escaped' else '初始颜色为蓝色'
 
 LONG_TASK='界'*170+'aa'  # exactly 512 UTF-8 bytes
-MULTI=MODE in ('multi','chat-long')
+MULTI=MODE in ('multi','chat-long','third')
+SEARCH_LITERAL='marker"\\secret' if MODE=='third' else 'marker'
+READ_SELECTION={'name':'Some','fields':['read\ncontext.txt\n']}
+SEARCH_SELECTION={'name':'Some','fields':['search\n'+('[REDACTED]' if MODE=='third' else SEARCH_LITERAL)+'\n'+'\n'.join(FILES)+'\n']}
+FIRST_SELECTION={'name':'None','fields':[]} if OLD else READ_SELECTION
 
 class Fake(BaseHTTPRequestHandler):
     def log_message(self,*_):pass
@@ -64,17 +70,17 @@ class Fake(BaseHTTPRequestHandler):
             elif i==11:
                 self.server.read_context_bytes=len(req['messages'][1]['content'].encode('utf-8'))
                 if MODE=='escaped':assert 8192 < self.server.read_context_bytes <= 16384
-                assert ctx['current']['request']==SECOND_TASK and ctx['prior_work']['summary']==FIRST_SUMMARY and ctx['prior_work']['summary_source']==FIRST_SOURCE;value=['delegate','Read context.txt for the color']
-            elif i==12:value=['search','marker',*FILES] if MULTI else ['read','context.txt']
+                assert ctx['current']['request']==SECOND_TASK and ctx['prior_work']['summary']==FIRST_SUMMARY and ctx['prior_work']['summary_source']==FIRST_SOURCE and ctx['prior_work']['selection']==FIRST_SELECTION;value=['delegate','Read context.txt for the color']
+            elif i==12:value=['search',SEARCH_LITERAL,*FILES] if MULTI else ['read','context.txt']
             elif i==13:value=['final',CHILD]
             elif i==14:
                 assert ctx['current']['result']==CHILD and ('fourth.txt:1' if MULTI else '绿色') in ctx['current']['outcome'];value=READ_SUMMARY
             elif i==15:
-                assert ctx['prior_work']['summary']==FIRST_SUMMARY and ctx['prior_work']['summary_source']==FIRST_SOURCE and ctx['current']['evidence']['summary']==READ_SUMMARY;value=['delegate','Replace green with gold']
+                assert ctx['prior_work']['summary']==FIRST_SUMMARY and ctx['prior_work']['summary_source']==FIRST_SOURCE and ctx['prior_work']['selection']==FIRST_SELECTION and ctx['current']['evidence']['summary']==READ_SUMMARY;value=['delegate','Replace green with gold']
             elif i==16:value=['edit','green','gold']
             elif i==17:value=SECOND_SUMMARY
             elif MODE=='third' and i==18:
-                assert ctx['prior_work']['summary']==SECOND_SUMMARY;value=['delegate','Read context.txt']
+                assert ctx['prior_work']['summary']==SECOND_SUMMARY and ctx['prior_work']['selection']==SEARCH_SELECTION;value=['delegate','Read context.txt']
             elif MODE=='third' and i==19:value=['read','context.txt']
             elif MODE=='third' and i==20:value=['final',CHILD]
             elif MODE=='third' and i==21:value=READ_SUMMARY
@@ -83,12 +89,14 @@ class Fake(BaseHTTPRequestHandler):
             elif MODE=='third' and i==24:value='第三次编辑完成'
             elif MODE=='third' and i==25:
                 assert ctx['budget']['work_calls']==21 and ctx['budget']['work_generation']==153600
-                assert ctx['additional'][0]['id']=='edit3' and ctx['additional'][0]['summary']=='第三次编辑完成';value=['delegate','Read context.txt']
+                assert ctx['work']['selection']==FIRST_SELECTION and ctx['followup']['selection']==SEARCH_SELECTION
+                assert ctx['additional'][0]['id']=='edit3' and ctx['additional'][0]['summary']=='第三次编辑完成' and ctx['additional'][0]['selection']==READ_SELECTION;value=['delegate','Read context.txt']
             elif MODE=='third' and i==26:value=['read','context.txt']
             elif MODE=='third' and i==27:value=['final','记录完整']
             elif MODE=='third' and i==28:value='三次编辑均已记录'
             elif i==18:
                 assert ctx['budget']['work_calls']==14 and ctx['budget']['work_generation']==(98304 if BASELINE else 102400)
+                assert ctx['work']['selection']==FIRST_SELECTION and ctx['followup']['selection']==(SEARCH_SELECTION if MULTI else READ_SELECTION)
                 assert ctx['work']['summary']==FIRST_SUMMARY and ctx['work']['summary_source']==FIRST_SOURCE and ctx['followup']['summary']==SECOND_SUMMARY and ctx['followup']['summary_source']=='model';value=['delegate',LONG_TASK if MODE=='chat-long' else 'Read context.txt']
             elif i==19:
                 if MODE=='chat-long':assert ctx['history'][-1]['text']==LONG_TASK
@@ -139,22 +147,22 @@ def main():
     out=Path(tempfile.mkdtemp(prefix='nomo-work-unicode-'));project=out/'project'
     shutil.copytree(ROOT,project,ignore=shutil.ignore_patterns('.git','.etas','tmp','__pycache__','.pytest_cache'));(project/'.etas').mkdir(mode=0o700)
     old=out/'old'
-    if BASELINE:
-        shutil.copytree(Path(BASELINE),old,ignore=shutil.ignore_patterns('.git','.etas','tmp','__pycache__','.pytest_cache'));(old/'.etas').mkdir(mode=0o700)
+    if OLD:
+        shutil.copytree(Path(OLD),old,ignore=shutil.ignore_patterns('.git','.etas','tmp','__pycache__','.pytest_cache'));(old/'.etas').mkdir(mode=0o700)
     else:old=project
     context=out/'context';context.mkdir(mode=0o700);(context/'context.txt').write_text('\\'*120 if MODE=='escaped' else '蓝色 blue\n')
     current=out/'current';current.mkdir(mode=0o700);(current/'context.txt').write_text('绿色 green\n')
     if MULTI:
         for root in (context,current):
-            for name in FILES[1:]: (root/name).write_text('marker '+name+'\n')
+            for name in FILES[1:]: (root/name).write_text(((SEARCH_LITERAL+' marker ') if name=='fourth.txt' else ('marker ' if MODE!='third' else 'no match '))+name+'\n')
     workspace=out/'workspace';workspace.mkdir(mode=0o700);(workspace/'note.txt').write_text('before old\n')
     state=out/'state';state.mkdir(mode=0o700);policy=out/'policy';policy.mkdir(mode=0o700)
-    (policy/'policy.json').write_text('{"format":1,"literals":["SYNTHETIC_NEVER_PRESENT"]}');(policy/'policy.json').chmod(0o600)
+    (policy/'policy.json').write_text(json.dumps({'format':1,'literals':[SEARCH_LITERAL if MODE=='third' else 'SYNTHETIC_NEVER_PRESENT']}));(policy/'policy.json').chmod(0o600)
     (policy/'binding.key').write_bytes(b'K'*32);(policy/'binding.key').chmod(0o600)
     server=HTTPServer(('127.0.0.1',0),Fake);server.phases=[];server.failed=False
     thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start()
     try:
-        for selected in (project,old) if BASELINE else (project,):
+        for selected in (project,old) if OLD else (project,):
             manifest=selected/'etas.toml';text=manifest.read_text()
             for name in ('nomo-read-events-new','nomo-read-events-existing','nomo-history-events-work'):
                 start=text.index('[runtime.profiles.'+name+'.model]');end=text.index('[runtime.profiles.'+name+'.model.timeout]',start)
@@ -201,6 +209,11 @@ def main():
         assert view['work_settled_calls']==7 and view['followup_settled_calls']==7
         assert view['work_settled_tokens']==(47104 if BASELINE else 51200) and view['followup_settled_tokens']==51200
         if MODE=='third':assert len(view['additional_work'])==1 and view['additional_work'][0]['check']['phase']=='complete' and view['additional_work'][0]['result']['generation']==51200
+        if MODE=='third':
+            request_events=[event for event in view['followup_events'] if event['role']=='tool' and event['kind']=='request']
+            assert len(request_events)==1 and json.loads(request_events[0]['text'])==SEARCH_SELECTION['fields'][0]
+            outcome=next(json.loads(event['text']) for event in view['followup_events'] if event['role']=='tool' and event['kind']=='result')
+            assert 'fourth.txt:1' in outcome and 'second.txt:1' not in outcome and 'third.txt:1' not in outcome
         if MODE=='chat-long':assert any(event['kind']=='delegate' and json.loads(event['text'])==LONG_TASK for event in view['events'])
         contents=[json.loads(event['text']) for event in view['work_events']]
         assert FIRST_TASK in contents and FIRST_SUMMARY in contents and CHILD in contents and READ_SUMMARY in contents and any('绿色' in value for value in contents)

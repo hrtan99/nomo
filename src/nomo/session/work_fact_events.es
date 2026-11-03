@@ -23,8 +23,13 @@ public flow capture(pending: Pending, confirmed: Confirmed, summary: Summary) ->
     let problem = ledger_error(summary.state); if problem != "" { return Err(problem); }
     let invalid = history_summary_error(summary.answer, "summary"); if invalid != "" { return Err(invalid); }
     let read = pending.evidence;
+    // Keep fields unescaped until the event codec filters known literals.
+    var selection = read.operation + "\n";
+    if read.operation == "search" { selection = selection + read.literal + "\n"; }
+    for name in read.files limit Iterations(4) { selection = selection + name + "\n"; }
     return Ok([
         Event { role = "user", kind = "request", name = "", text = pending.request },
+        Event { role = "tool", kind = "request", name = read.operation, text = selection },
         Event { role = "tool", kind = "result", name = read.operation, text = read.outcome },
         Event { role = "assistant", kind = "result", name = "read-child", text = read.result },
         Event { role = "assistant", kind = "result", name = "read-summary", text = read.summary },
@@ -33,6 +38,18 @@ public flow capture(pending: Pending, confirmed: Confirmed, summary: Summary) ->
         Event { role = "tool", kind = "applied", name = "edit", text = selected.id },
         Event { role = if summary.model_generated { "assistant" } else { "system" }, kind = if summary.model_generated { "answer" } else { "notice" }, name = "", text = summary.answer }
     ]);
+}
+
+// Old work records have no selection event. Never infer missing selections
+// from results: a file with no matches will not appear in a search outcome.
+public flow selection(events: Array<Event>, policy: Policy) -> Result<Option<string>, string> {
+    for event in events limit Iterations(48) {
+        if event.role == "tool" && event.kind == "request" && (event.name == "read" || event.name == "search") {
+            let text = match decode(event.text, policy) { Ok(value) => value, Err(error) => { return Err(error); } };
+            return Ok(Some(text));
+        }
+    }
+    return Ok(None());
 }
 
 // Older or incomplete records may lack attributable events; never guess their origin.

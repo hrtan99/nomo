@@ -51,7 +51,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyR
                 }
                 None() => {}
             }
-            work_facts = Some(WorkFacts { id = work.id, summary = work.summary, summary_source = "unknown", check = outcome, exit_code = exit, output = output });
+            work_facts = Some(WorkFacts { id = work.id, summary = work.summary, summary_source = "unknown", selection = None(), check = outcome, exit_code = exit, output = output });
         }
     }
     let following = match inspect_followup() { Ok(value) => value, Err(error) => { println("REFUSED " + error); return 1; } };
@@ -80,7 +80,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyR
             let second = match item.settled { Some(value) => value, None() => { println("REFUSED followup ledger missing"); return 1; } };
             work_calls = first.read.calls + first.edit.calls + second.read.calls + second.edit.calls;
             work_generation = first.read.tokens + first.edit.tokens + second.read.tokens + second.edit.tokens;
-            followup_facts = Some(WorkFacts { id = item.id, summary = item.summary, summary_source = "unknown", check = outcome, exit_code = exit, output = output });
+            followup_facts = Some(WorkFacts { id = item.id, summary = item.summary, summary_source = "unknown", selection = None(), check = outcome, exit_code = exit, output = output });
         }
     }
     let existing = match load() { Ok(value) => value, Err(error) => { println("REFUSED " + error); return 1; } };
