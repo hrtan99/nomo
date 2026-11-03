@@ -92,7 +92,7 @@ flow read_bounded(name: string, bound: usize) -> Outcome ![Fs.read<ReadOnlyRoot>
     } with {
         Error<ReadLimitError>.raise(ReadLimitError.LimitExceeded(maximum)) => {
             if maximum != bound { abort("unexpected workspace read limit"); }
-            finish outcome("refused", if bound == 16384 { "file exceeds 16384 bytes" } else { if bound == 2048 { "file exceeds 2048 bytes" } else { "file exceeds remaining scan allowance" } }, 0);
+            finish outcome("refused", if bound == 16384 { "file exceeds 16384 bytes" } else { if bound == 65536 { "file exceeds 65536 bytes" } else { if bound == 2048 { "file exceeds 2048 bytes" } else { "file exceeds remaining scan allowance" } } }, 0);
         }
     };
 }
@@ -124,17 +124,20 @@ flow search_with(names: Array<string>, literal: string, maximum: usize) -> Outco
     let invalid = candidate_error(names); if invalid != "" { return outcome("refused", invalid, 0); }
     var output = "";
     var scanned: usize = 0;
+    var consumed: usize = 0;
     var matches: usize = 0; var skipped: usize = 0; var skipped_names = "";
     for name in names limit Iterations(256) {
-        let remaining = maximum - scanned;
-        let per_file = if maximum == 4096 { 2048 } else { 16384 };
+        let remaining = maximum - consumed;
+        let per_file = if maximum == 4194304 { 65536 } else { if maximum == 4096 { 2048 } else { 16384 } };
         let bound = if remaining < per_file { remaining } else { per_file };
         let file = read_bounded(name, bound);
         if file.status != "complete" {
             if maximum != 4194304 { return outcome(file.status, name + ": " + file.text, scanned); }
+            consumed = consumed + bound + 1;
             skipped = skipped + 1;
             if len(skipped_names) + len(name) < 1024 { skipped_names = skipped_names + name + "\n"; }
         } else {
+        consumed = consumed + file.scanned;
         let lines = split(file.text, "\n");
         let line_limit = if maximum == 4096 { 128 } else { 16385 };
         if count(lines) > line_limit { return outcome("refused", "file exceeds line limit", scanned); }
@@ -150,8 +153,9 @@ flow search_with(names: Array<string>, literal: string, maximum: usize) -> Outco
             }
         }
         }
+        if maximum == 4194304 && consumed >= maximum && name != names[count(names) - 1] { consumed = maximum + 1; break; }
     }
-    if skipped > 0 { return outcome("incomplete", "skipped " + to_string_usize(skipped) + " unsupported or oversized files; partial results; skipped names (may be partial):\n" + skipped_names + "matches:\n" + output, scanned); }
+    if skipped > 0 || consumed > maximum { return outcome("incomplete", (if consumed > maximum { "scan allowance exhausted; " } else { "" }) + "skipped " + to_string_usize(skipped) + " unsupported or oversized files; partial results; skipped names (may be partial):\n" + skipped_names + "matches:\n" + output, scanned); }
     return outcome("complete", output, scanned);
 }
 
