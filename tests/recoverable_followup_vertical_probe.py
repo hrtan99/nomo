@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Synthetic prior chat followed by a separately approved read/edit/check."""
-import json,os,pty,select,shutil,signal,sqlite3,subprocess,tempfile,termios,threading,time
+import json,os,pty,select,shutil,signal,sqlite3,subprocess,sys,tempfile,termios,threading,time
 from http.server import BaseHTTPRequestHandler,HTTPServer
 from pathlib import Path
 ROOT=Path(__file__).resolve().parent.parent
@@ -33,14 +33,20 @@ class Fake(BaseHTTPRequestHandler):
             elif i==14:
                 assert ctx['prior_work']['check']=='passed' and 'green' in ctx['current']['outcome'];value='Summary: complete: green'
             elif i==15:
-                assert ctx['current']['edit']['before']=='before green\n' and ctx['prior_work']['check']=='passed' and ctx['prior_work']['output']['fields'][0]['stdout']=='FIRST_CHECK_OK';value=['delegate','replace green with gold']
+                output=ctx['prior_work']['output']['fields'][0]
+                assert ctx['current']['edit']['before']=='before green\n' and ctx['prior_work']['check']=='passed'
+                if self.server.omitted:assert output['stdout']=='' and output['stdout_truncated'] and 'was omitted and is not evidence of empty output' in req['messages'][0]['content']
+                else:assert output['stdout']=='FIRST_CHECK_OK'
+                value=['delegate','replace green with gold']
             elif i==16:value=['edit','green','gold']
             elif i==17:
                 assert ctx['current']['edit']['after']=='before gold\n';value='Second edit completed using current context.'
             elif i==18:
                 for key,identifier,summary,stdout in [('work','edit1','Edit completed using current context.','FIRST_CHECK_OK'),('followup','edit2','Second edit completed using current context.','SECOND_CHECK_OK')]:
                     item=ctx[key];assert item['id']==identifier and item['summary']==summary and item['check']=='passed' and item['exit_code']=='0'
-                    data=item['output']['fields'][0];assert data['stdout']==stdout and data['stderr'] in ('','\n') and not data['stdout_truncated'] and not data['stderr_truncated']
+                    data=item['output']['fields'][0];assert data['stderr'] in ('','\n') and not data['stderr_truncated']
+                    if self.server.omitted and key=='work':assert data['stdout']=='' and data['stdout_truncated'] and 'was omitted and is not evidence of empty output' in req['messages'][0]['content']
+                    else:assert data['stdout']==stdout and not data['stdout_truncated']
                 assert ctx['budget']=={'work_calls':14,'work_generation':94208,'chat_used_calls':4,'chat_used_generation':8192,'chat_reserved_calls':4,'chat_reserved_generation':8192};value=['delegate','Read context.txt']
             elif i==19:value=['read','context.txt']
             elif i==20:value=['final','blue CEDAR42']
@@ -57,7 +63,11 @@ class Fake(BaseHTTPRequestHandler):
             try:self.send_error(500)
             except OSError:pass
 
+def omitted_check():
+    return 'test "$(cat note.txt)" = "before green" || exit 1; i=0; while [ "$i" -lt 4500 ]; do printf X; i=$((i+1)); done'
+
 def main():
+    omitted=len(sys.argv)>1 and sys.argv[1]=='omitted'
     out=Path(tempfile.mkdtemp(prefix='nomo-event-followup-',dir='/private/tmp'));project=out/'project'
     shutil.copytree(ROOT,project,ignore=shutil.ignore_patterns('.etas','__pycache__'));(project/'.etas').mkdir(mode=0o700)
     context=out/'context';context.mkdir(mode=0o700);(context/'context.txt').write_text('blue\n')
@@ -66,7 +76,7 @@ def main():
     state=out/'state';state.mkdir(mode=0o700);policy=out/'policy';policy.mkdir(mode=0o700)
     (policy/'policy.json').write_text('{"format":1,"literals":["SYNTHETIC_NEVER_PRESENT"]}');(policy/'policy.json').chmod(0o600)
     (policy/'binding.key').write_bytes(b'K'*32);(policy/'binding.key').chmod(0o600)
-    server=HTTPServer(('127.0.0.1',0),Fake);server.phases=[];server.failed=False;server.fail_summary=False;server.expected_check='passed';server.expected_exit='0'
+    server=HTTPServer(('127.0.0.1',0),Fake);server.phases=[];server.failed=False;server.fail_summary=False;server.expected_check='passed';server.expected_exit='0';server.omitted=omitted
     thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start();proc=None;master=None
     try:
         manifest=project/'etas.toml';text=manifest.read_text()
@@ -80,6 +90,7 @@ def main():
         def run_work(action,identifier,before,after):
             nonlocal proc,master
             check='test "$(cat note.txt)" = "before '+after+'" && printf '+('FIRST_CHECK_OK' if action=='session-work' else 'SECOND_CHECK_OK')
+            if omitted and action=='session-work':check=omitted_check()
             cmd=[str(project/'scripts/nomo-read.sh'),action,'--read-root',str(current),'--root',str(workspace),'--state',str(state),'--id',identifier,'--path','note.txt','--allow','context.txt','--once','Change '+before+' to '+after+' using context','--events-policy-dir',str(policy),'--check','/bin/sh','-c',check]
             master,slave=pty.openpty();settings=termios.tcgetattr(slave);settings[3]&=~(termios.ECHO|termios.ECHONL);termios.tcsetattr(slave,termios.TCSANOW,settings)
             proc=subprocess.Popen(cmd,stdin=slave,stdout=slave,stderr=slave,env=env,start_new_session=True);os.close(slave)
@@ -113,6 +124,7 @@ def main():
         views=[json.loads(line.removeprefix(b'EVENT VIEW ')) for line in status.stdout.splitlines() if line.startswith(b'EVENT VIEW {')];assert len(views)==1;view=views[0]
         assert view['work_settled_calls']==7 and view['followup_settled_calls']==7 and view['followup_settled_tokens']==47104
         assert view['check_outcome']=='passed' and view['followup_check_outcome']=='passed' and view['followup_check_id']=='edit2' and json.loads(view['followup_check_stdout'])=='SECOND_CHECK_OK'
+        if omitted:assert view['check_stdout_omitted'] and view['check_stdout_truncated'] and json.loads(view['check_stdout'])==''
         with sqlite3.connect(state/'history.sqlite3') as db:
             assert db.execute('pragma integrity_check').fetchone()==('ok',)
             names={x[0] for x in db.execute("select region from memory_entries")}
@@ -120,7 +132,7 @@ def main():
         resumed=subprocess.run([str(project/'scripts/nomo-read.sh'),'session-continue','--root',str(current),'--state',str(state),'--allow','context.txt','--once','Explain recorded results','--events-policy-dir',str(policy)],env=env,capture_output=True,timeout=120)
         (out/'resume.stdout').write_bytes(resumed.stdout);(out/'resume.stderr').write_bytes(resumed.stderr)
         assert resumed.returncode==0 and not server.failed and server.phases==list(range(22)) and b'SAVED chat and event records together' in resumed.stdout
-        result={'status':'passed','scope':'local fake two separately confirmed work/check rounds and read continuation with persisted selected facts; no root identity or real provider','fake_requests':22,'first_check_output_reached_followup':True,'fresh_confirmations_twice':True,'check_slots_and_budgets_preserved':True,'resume_received_both_checks':True}
+        result={'status':'passed','scope':'local fake two separately confirmed work/check rounds and read continuation with persisted selected facts; no root identity or real provider','fake_requests':22,'first_check_omitted':omitted,'fresh_confirmations_twice':True,'check_slots_and_budgets_preserved':True,'resume_received_both_checks':True}
     except BaseException as error:result={'status':'failed','failure_type':type(error).__name__,'phases':server.phases,'work_exit':proc.poll() if proc else None,'error':str(error)}
     finally:
         if proc and proc.poll() is None:
