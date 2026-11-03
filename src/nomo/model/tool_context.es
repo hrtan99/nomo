@@ -8,11 +8,19 @@ import nomo.tools.path_policy.valid_path;
 public type Context = { history: Array<Event>, allowed: Array<string>, final_only: bool };
 
 public flow allowed_error(names: Array<string>) -> string {
-    if count(names) < 1 || count(names) > 2 { return "expected one or two allowed files"; }
-    for name in names limit Iterations(2) {
+    if count(names) < 1 || count(names) > 4 { return "expected one to four allowed files"; }
+    for name in names limit Iterations(4) {
         if len(name) > 48 || !valid_path(name) { return "invalid allowed file"; }
     }
-    if count(names) == 2 && names[0] == names[1] { return "duplicate allowed file"; }
+    var i: usize = 0;
+    while i < count(names) limit Iterations(4) {
+        var j = i + 1;
+        while j < count(names) limit Iterations(4) {
+            if names[i] == names[j] { return "duplicate allowed file"; }
+            j = j + 1;
+        }
+        i = i + 1;
+    }
     return "";
 }
 

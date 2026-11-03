@@ -28,10 +28,10 @@ flow target(name: string) -> WorkspacePath<ReadOnlyRoot> {
 }
 
 // The Host enforces the byte cap while reading; overflow never returns a prefix.
-public flow read_file(name: string) -> Outcome ![Fs.read<ReadOnlyRoot>, Error<FileError>, Error<IndexError>] ~ NomoRead<ReadOnlyRoot> {
+flow read_bounded(name: string, bound: usize) -> Outcome ![Fs.read<ReadOnlyRoot>, Error<FileError>, Error<IndexError>] {
     if !valid_path(name) { return outcome("refused", "invalid relative path", 0); }
     return handle {
-        let bytes = read_bytes_limited(target(name), 2048);
+        let bytes = read_bytes_limited(target(name), bound);
         let decoded = utf8_decode(bytes, Strict);
         match decoded {
             Err(_) => outcome("unsupported", "file is not UTF-8", 0),
@@ -39,10 +39,14 @@ public flow read_file(name: string) -> Outcome ![Fs.read<ReadOnlyRoot>, Error<Fi
         }
     } with {
         Error<ReadLimitError>.raise(ReadLimitError.LimitExceeded(maximum)) => {
-            if maximum != 2048 { abort("unexpected workspace read limit"); }
-            finish outcome("refused", "file exceeds 2048 bytes", 0);
+            if maximum != bound { abort("unexpected workspace read limit"); }
+            finish outcome("refused", if bound == 2048 { "file exceeds 2048 bytes" } else { "file exceeds remaining scan allowance" }, 0);
         }
     };
+}
+
+public flow read_file(name: string) -> Outcome ![Fs.read<ReadOnlyRoot>, Error<FileError>, Error<IndexError>] ~ NomoRead<ReadOnlyRoot> {
+    return read_bounded(name, 2048);
 }
 
 // Opaque paths can be counted but this accepted API exposes no name projection.
@@ -54,20 +58,31 @@ public flow list_directory(name: string) -> Outcome {
     return outcome("unsupported", "named listing unavailable: opaque WorkspacePath; entries=" + to_string_usize(count(entries)), 0);
 }
 
-// Search explicit files, never recurse or discover ambient paths. At most two
-// 2 KiB files are scanned, with 128 lines/file, 8 matches and 1024 output chars.
+// Search explicit files, never recurse or discover ambient paths. At most four
+// files and 4096 delivered bytes total, with 128 lines/file and 8 matches.
+// A Host overflow check may probe one additional byte, never return a prefix.
 public flow search_files(names: Array<string>, literal: string) -> Outcome ![Fs.read<ReadOnlyRoot>, Error<FileError>, Error<IndexError>] ~ NomoSearch<ReadOnlyRoot> {
-    if count(names) == 0 || count(names) > 2 { return outcome("refused", "search requires 1..2 explicit files", 0); }
+    if count(names) == 0 || count(names) > 4 { return outcome("refused", "search requires 1..4 explicit files", 0); }
     if len(literal) == 0 || len(literal) > 64 || !printable(literal) { return outcome("refused", "literal must be 1..64 printable ASCII characters", 0); }
-    for name in names limit Iterations(2) {
+    for name in names limit Iterations(4) {
         if !valid_path(name) { return outcome("refused", "invalid relative path", 0); }
     }
-    if count(names) == 2 && names[0] == names[1] { return outcome("refused", "duplicate search file", 0); }
+    var i: usize = 0;
+    while i < count(names) limit Iterations(4) {
+        var j = i + 1;
+        while j < count(names) limit Iterations(4) {
+            if names[i] == names[j] { return outcome("refused", "duplicate search file", 0); }
+            j = j + 1;
+        }
+        i = i + 1;
+    }
     var output = "";
     var scanned: usize = 0;
     var matches: usize = 0;
-    for name in names limit Iterations(2) {
-        let file = read_file(name);
+    for name in names limit Iterations(4) {
+        let remaining = 4096 - scanned;
+        let bound = if remaining < 2048 { remaining } else { 2048 };
+        let file = read_bounded(name, bound);
         if file.status != "complete" { return outcome(file.status, name + ": " + file.text, scanned); }
         let lines = split(file.text, "\n");
         if count(lines) > 128 { return outcome("refused", "file exceeds 128 lines", scanned); }

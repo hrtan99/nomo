@@ -103,6 +103,7 @@ public flow validate(row: Record) -> string {
     let chain = selector_error(row.chain, row.workspace, row.path); if chain != "" { return chain; }
     if row.region != "nomo.tools.edit_file.EditableRoot" { return "work-chain region binding mismatch"; }
     let request = question_error(row.request); if request != "" { return request; }
+    if count(row.allowed) > 2 { return "legacy work-chain supports at most two allowed files"; }
     let allowed = allowed_error(row.allowed); if allowed != "" { return allowed; }
     if row.maximum != lifetime() { return "work-chain lifetime allowance changed"; }
     let saved = if row.turn == 1 { lifetime() } else { turn_caps() };

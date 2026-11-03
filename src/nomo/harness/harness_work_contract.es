@@ -69,7 +69,9 @@ flow selected_error(value: Evidence, complete: bool) -> string {
     if value.operation == "read" && count(value.files) == 1 && value.literal == "" { fields = ["read", value.files[0]]; }
     else if value.operation == "search" {
         fields = ["search", value.literal, value.files[0]];
-        if count(value.files) == 2 { fields = fields.push(value.files[1]); }
+        if count(value.files) >= 2 { fields = fields.push(value.files[1]); }
+        if count(value.files) >= 3 { fields = fields.push(value.files[2]); }
+        if count(value.files) >= 4 { fields = fields.push(value.files[3]); }
     } else { return "read evidence requires a read or search"; }
     let raw = match json(fields) { Ok(item) => item, Err(error) => { return error; } };
     match decode_reply(raw, value.allowed, false) { Ok(_) => {} Err(error) => { return error; } }

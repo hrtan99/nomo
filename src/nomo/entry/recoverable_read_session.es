@@ -40,9 +40,9 @@ import nomo.session.event_policy.PolicyRoot;
 // workspace identity, or claim comprehensive secret redaction.
 public flow run(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyRoot>, Fs.read<PolicyRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {
     if count(args) != 7 || (args[0] != "new" && args[0] != "continue") || args[1] != "--allow" || args[3] != "--once" || args[5] != "--policy-binding" {
-        println("REFUSED expected new|continue --allow FILE[,FILE] --once QUESTION"); return 1;
+        println("REFUSED expected new|continue --allow FILE[,FILE...] --once QUESTION"); return 1;
     }
-    if len(args[2]) > 97 { println("REFUSED allowlist too long"); return 1; }
+    if len(args[2]) > 195 { println("REFUSED allowlist too long"); return 1; }
     let allowed = split(args[2], ","); let invalid = allowed_error(allowed);
     if invalid != "" || question_error(args[4]) != "" { println("REFUSED invalid read request"); return 1; }
     let policy = match load_policy() { Ok(item) => item, Err(error) => { println("REFUSED " + error); return 1; } };

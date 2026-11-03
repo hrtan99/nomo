@@ -32,7 +32,7 @@ flow frame(raw: string, maximum: usize) -> bool {
             if !opened || closed { return false; } closed = true;
         } else if character == "\"" {
             if !opened || closed { return false; }
-            leaves = leaves + 1; if leaves > 4 { return false; } quoted = true;
+            leaves = leaves + 1; if leaves > 6 { return false; } quoted = true;
         } else if character != "," || !opened || closed { return false; }
     }
     return opened && closed && !quoted;
@@ -108,7 +108,7 @@ flow child_final_error(text: string) -> string {
 public flow decode_child(raw: string, allowed: Array<string>, final_only: bool) -> Result<Action, string> {
     let invalid = allowed_error(allowed); if invalid != "" { return Err(invalid); }
     let values = match fields(raw, 1152) { Ok(item) => item, Err(error) => { return Err(error); } };
-    if count(values) < 2 || count(values) > 4 { return Err("invalid action field count"); }
+    if count(values) < 2 || count(values) > 6 { return Err("invalid action field count"); }
     if values[0] == "final" {
         if count(values) != 2 { return Err("child final must contain exactly two fields"); }
         let invalid = child_final_error(values[1]); if invalid != "" { return Err(invalid); }
@@ -119,9 +119,11 @@ public flow decode_child(raw: string, allowed: Array<string>, final_only: bool) 
     if byte_count(utf8_encode(raw)) > 384 { return Err("tool action exceeds 384 UTF-8 bytes"); }
     var files: Array<string> = []; var literal = "";
     if values[0] == "read" && count(values) == 2 { files = [values[1]]; }
-    else if values[0] == "search" && (count(values) == 3 || count(values) == 4) {
+    else if values[0] == "search" && count(values) >= 3 && count(values) <= 6 {
         literal = values[1]; files = [values[2]];
-        if count(values) == 4 { files = files.push(values[3]); }
+        if count(values) >= 4 { files = files.push(values[3]); }
+        if count(values) >= 5 { files = files.push(values[4]); }
+        if count(values) >= 6 { files = files.push(values[5]); }
     } else { return Err("unsupported action or arity"); }
     let selected = read_selection_error(values[0], files, literal, allowed);
     if selected != "" { return Err(selected); }

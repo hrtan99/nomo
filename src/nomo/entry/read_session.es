@@ -28,9 +28,9 @@ import nomo.session.history_followup_check_guard.inspect as inspect_followup_che
 // Saved conversation is untrusted context; a running reservation never resumes.
 public flow run(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {
     if count(args) != 5 || (args[0] != "new" && args[0] != "continue") || args[1] != "--allow" || args[3] != "--once" {
-        println("REFUSED expected new|continue --allow FILE[,FILE] --once QUESTION"); return 1;
+        println("REFUSED expected new|continue --allow FILE[,FILE...] --once QUESTION"); return 1;
     }
-    if len(args[2]) > 97 { println("REFUSED allowlist too long"); return 1; }
+    if len(args[2]) > 195 { println("REFUSED allowlist too long"); return 1; }
     let allowed = split(args[2], ",");
     let paths = allowed_error(allowed); if paths != "" { println("REFUSED " + paths); return 1; }
     let request = args[4]; let question = question_error(request); if question != "" { println("REFUSED " + question); return 1; }

@@ -6,6 +6,7 @@ from pathlib import Path
 
 ROOT=Path(__file__).resolve().parent.parent
 MODE=os.environ.get('SYNTHETIC_SUMMARY_MODE','full')
+FILES=['context.txt','second.txt','third.txt','fourth.txt']
 FIRST_TASK=('Change old to green '+ '\\'*108) if MODE=='escaped' else '请将 old 替换为 green'
 SECOND_TASK=('Change green to gold '+ '\\'*107) if MODE=='escaped' else 'Change green to gold using context'
 DELEGATE='读取 context.txt 中的颜色；'+'确认颜色并保留相关上下文。'*5
@@ -28,10 +29,11 @@ class Fake(BaseHTTPRequestHandler):
             assert self.path=='/v1/chat/completions' and self.headers.get('Authorization')=='Bearer SYNTHETIC_ONLY'
             req=json.loads(self.rfile.read(int(self.headers['Content-Length'])));ctx=json.loads(req['messages'][1]['content']);i=len(self.server.phases)
             assert req['max_tokens']==[2048,2048,2048,2048,2048,2048,2048,2048,4096,32768,2048,2048,2048,2048,2048,4096,32768,2048,2048,2048,2048,2048][i]
+            if MODE=='multi' and i in (1,5,12,19):assert ctx['allowed']==FILES
             if (MODE=='resume-action' and i==19) or (MODE=='resume-final' and i==20):
                 self.server.phases.append(i);self.send_error(503);return
             if i==0:value=['delegate',INITIAL_TASK]
-            elif i==1:value=['read','context.txt']
+            elif i==1:value=['search','marker',*FILES] if MODE=='multi' else ['read','context.txt']
             elif i==2:value=['final',INITIAL_RESULT]
             elif i==3:value=INITIAL_ANSWER
             elif i==4:
@@ -50,17 +52,17 @@ class Fake(BaseHTTPRequestHandler):
                 self.server.read_context_bytes=len(req['messages'][1]['content'].encode('utf-8'))
                 if MODE=='escaped':assert 8192 < self.server.read_context_bytes <= 16384
                 assert ctx['current']['request']==SECOND_TASK and ctx['prior_work']['summary']==FIRST_SUMMARY and ctx['prior_work']['summary_source']==FIRST_SOURCE;value=['delegate','Read context.txt for the color']
-            elif i==12:value=['read','context.txt']
+            elif i==12:value=['search','marker',*FILES] if MODE=='multi' else ['read','context.txt']
             elif i==13:value=['final',CHILD]
             elif i==14:
-                assert ctx['current']['result']==CHILD and '绿色' in ctx['current']['outcome'];value=READ_SUMMARY
+                assert ctx['current']['result']==CHILD and ('fourth.txt:1' if MODE=='multi' else '绿色') in ctx['current']['outcome'];value=READ_SUMMARY
             elif i==15:
                 assert ctx['prior_work']['summary']==FIRST_SUMMARY and ctx['prior_work']['summary_source']==FIRST_SOURCE and ctx['current']['evidence']['summary']==READ_SUMMARY;value=['delegate','Replace green with gold']
             elif i==16:value=['edit','green','gold']
             elif i==17:value=SECOND_SUMMARY
             elif i==18:
                 assert ctx['work']['summary']==FIRST_SUMMARY and ctx['work']['summary_source']==FIRST_SOURCE and ctx['followup']['summary']==SECOND_SUMMARY and ctx['followup']['summary_source']=='model';value=['delegate','Read context.txt']
-            elif i==19:value=['read','context.txt']
+            elif i==19:value=['read','fourth.txt' if MODE=='multi' else 'context.txt']
             elif i==20:value=['final','记录完整']
             elif i==21:value='两次编辑均已记录'
             else:raise AssertionError('unexpected extra request')
@@ -105,6 +107,9 @@ def main():
     shutil.copytree(ROOT,project,ignore=shutil.ignore_patterns('.git','.etas','tmp','__pycache__','.pytest_cache'));(project/'.etas').mkdir(mode=0o700)
     context=out/'context';context.mkdir(mode=0o700);(context/'context.txt').write_text('\\'*120 if MODE=='escaped' else '蓝色 blue\n')
     current=out/'current';current.mkdir(mode=0o700);(current/'context.txt').write_text('绿色 green\n')
+    if MODE=='multi':
+        for root in (context,current):
+            for name in FILES[1:]: (root/name).write_text('marker '+name+'\n')
     workspace=out/'workspace';workspace.mkdir(mode=0o700);(workspace/'note.txt').write_text('before old\n')
     state=out/'state';state.mkdir(mode=0o700);policy=out/'policy';policy.mkdir(mode=0o700)
     (policy/'policy.json').write_text('{"format":1,"literals":["SYNTHETIC_NEVER_PRESENT"]}');(policy/'policy.json').chmod(0o600)
@@ -117,12 +122,13 @@ def main():
             start=text.index('[runtime.profiles.'+name+'.model]');end=text.index('[runtime.profiles.'+name+'.model.timeout]',start)
             part=text[start:end].replace('https://api.minimax.cn/v1','http://host.docker.internal:%d/v1'%server.server_port).replace('allow_private = false','allow_private = true');text=text[:start]+part+text[end:]
         manifest.write_text(text);env={'PATH':os.environ['PATH'],'HOME':os.environ['HOME'],'MINIMAX_API_KEY':'SYNTHETIC_ONLY','NOMO_ETAS_VERSION':'0.2.5'}
-        first=subprocess.run([str(project/'scripts/nomo-read.sh'),'session-new','--root',str(context),'--state',str(state),'--allow','context.txt','--once',INITIAL_QUESTION,'--events-policy-dir',str(policy)],env=env,capture_output=True,timeout=120)
+        allowed=','.join(FILES) if MODE=='multi' else 'context.txt'
+        first=subprocess.run([str(project/'scripts/nomo-read.sh'),'session-new','--root',str(context),'--state',str(state),'--allow',allowed,'--once',INITIAL_QUESTION,'--events-policy-dir',str(policy)],env=env,capture_output=True,timeout=120)
         if first.returncode:raise AssertionError('synthetic initial chat failed: '+first.stderr.decode('utf-8','replace')[-2000:])
         assert server.phases==list(range(4)) and not server.failed
         for action,identifier,before,after,task in [('session-work','edit1','old','green',FIRST_TASK),('session-followup','edit2','green','gold',SECOND_TASK)]:
             check='test "$(cat note.txt)" = "before '+after+'" && printf CHECK_OK'
-            cmd=[str(project/'scripts/nomo-read.sh'),action,'--read-root',str(current),'--root',str(workspace),'--state',str(state),'--id',identifier,'--path','note.txt','--allow','context.txt','--once',task,'--events-policy-dir',str(policy),'--check','/bin/sh','-c',check]
+            cmd=[str(project/'scripts/nomo-read.sh'),action,'--read-root',str(current),'--root',str(workspace),'--state',str(state),'--id',identifier,'--path','note.txt','--allow',allowed,'--once',task,'--events-policy-dir',str(policy),'--check','/bin/sh','-c',check]
             work(cmd,env,before,after);assert (workspace/'note.txt').read_text()=='before '+after+'\n' and not server.failed
         assert server.phases==list(range(18))
         status=subprocess.run([str(project/'scripts/nomo-read.sh'),'session-status','--state',str(state),'--events-policy-dir',str(policy)],env=env,capture_output=True,timeout=120)
@@ -133,7 +139,7 @@ def main():
         assert FIRST_TASK in contents and FIRST_SUMMARY in contents and CHILD in contents and READ_SUMMARY in contents and any('绿色' in value for value in contents)
         assert any(json.loads(event['text'])==FIRST_SUMMARY and event['role']==('system' if MODE=='fallback' else 'assistant') and event['kind']==('notice' if MODE=='fallback' else 'answer') for event in view['work_events'])
         with sqlite3.connect(state/'history.sqlite3') as db:assert db.execute('pragma integrity_check').fetchone()==('ok',)
-        resumed=subprocess.run([str(project/'scripts/nomo-read.sh'),'session-continue','--root',str(current),'--state',str(state),'--allow','context.txt','--once','解释两次结果','--events-policy-dir',str(policy)],env=env,capture_output=True,timeout=120)
+        resumed=subprocess.run([str(project/'scripts/nomo-read.sh'),'session-continue','--root',str(current),'--state',str(state),'--allow',allowed,'--once','解释两次结果','--events-policy-dir',str(policy)],env=env,capture_output=True,timeout=120)
         if MODE in ('resume-action','resume-final'):
             expected='chat-child-action' if MODE=='resume-action' else 'chat-child-final'
             output=resumed.stdout+b'\n'+resumed.stderr

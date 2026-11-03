@@ -6,30 +6,30 @@ root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
 usage() {
     cat <<'HELP'
 Usage:
-  nomo-read.sh ask  --root ABSOLUTE_DIRECTORY --allow FILE[,FILE] --once QUESTION
-  nomo-read.sh chat --root ABSOLUTE_DIRECTORY --allow FILE[,FILE] [--turns 4]
-  nomo-read.sh session-new|session-continue --root ABSOLUTE_DIRECTORY --state PRIVATE_DIRECTORY --allow FILE[,FILE] --once QUESTION
+  nomo-read.sh ask  --root ABSOLUTE_DIRECTORY --allow FILE[,FILE...] --once QUESTION
+  nomo-read.sh chat --root ABSOLUTE_DIRECTORY --allow FILE[,FILE...] [--turns 4]
+  nomo-read.sh session-new|session-continue --root ABSOLUTE_DIRECTORY --state PRIVATE_DIRECTORY --allow FILE[,FILE...] --once QUESTION
   nomo-read.sh session-status --state PRIVATE_DIRECTORY [--outputs | --events --events-policy-dir PRIVATE_DIRECTORY]
   nomo-read.sh session-decision --state PRIVATE_DIRECTORY --id OPERATION_ID --target work|check|followup|followup-check
-  nomo-read.sh session-id start --sessions-dir PRIVATE_DIRECTORY --root DIR --allow FILE[,FILE] --once QUESTION
-  nomo-read.sh session-id resume --sessions-dir PRIVATE_DIRECTORY --id SESSION_ID --root DIR --allow FILE[,FILE] --once QUESTION
+  nomo-read.sh session-id start --sessions-dir PRIVATE_DIRECTORY --root DIR --allow FILE[,FILE...] --once QUESTION
+  nomo-read.sh session-id resume --sessions-dir PRIVATE_DIRECTORY --id SESSION_ID --root DIR --allow FILE[,FILE...] --once QUESTION
   nomo-read.sh session-id status --sessions-dir PRIVATE_DIRECTORY --id SESSION_ID [--outputs | --events --events-policy-dir PRIVATE_DIRECTORY]
   nomo-read.sh session-id decision --sessions-dir PRIVATE_DIRECTORY --id SESSION_ID --operation-id ID --target work|check|followup|followup-check
-  nomo-read.sh session-chat --sessions-dir PRIVATE_DIRECTORY (--new | --id SESSION_ID) --root DIR --allow FILE[,FILE] [--events-policy-dir PRIVATE_DIRECTORY] [--once QUESTION]
+  nomo-read.sh session-chat --sessions-dir PRIVATE_DIRECTORY (--new | --id SESSION_ID) --root DIR --allow FILE[,FILE...] [--events-policy-dir PRIVATE_DIRECTORY] [--once QUESTION]
   Event-recording sessions accept --events-policy-dir PRIVATE_DIRECTORY on start, resume, status, work and session-chat.
   Two freshly confirmed work operations and optional offline checks are supported in this mode.
   nomo-read.sh event-policy-init --directory PRIVATE_DIRECTORY
-  nomo-read.sh session-id work --sessions-dir PRIVATE_DIRECTORY --id SESSION_ID --read-root DIR --root PRIVATE_DIRECTORY --operation-id ID --path FILE --allow FILE[,FILE] --once TASK [--check COMMAND ARG ...]
-  nomo-read.sh session-followup --read-root ABSOLUTE_DIRECTORY --allow FILE[,FILE] --root PRIVATE_DIRECTORY --state PRIVATE_DIRECTORY --id ID --path FILE --once TASK [--check COMMAND ARG ...]
-  nomo-read.sh session-work --read-root ABSOLUTE_DIRECTORY --allow FILE[,FILE] --root PRIVATE_DIRECTORY --state PRIVATE_DIRECTORY --id ID --path FILE --once TASK [--check COMMAND ARG ...]
+  nomo-read.sh session-id work --sessions-dir PRIVATE_DIRECTORY --id SESSION_ID --read-root DIR --root PRIVATE_DIRECTORY --operation-id ID --path FILE --allow FILE[,FILE...] --once TASK [--check COMMAND ARG ...]
+  nomo-read.sh session-followup --read-root ABSOLUTE_DIRECTORY --allow FILE[,FILE...] --root PRIVATE_DIRECTORY --state PRIVATE_DIRECTORY --id ID --path FILE --once TASK [--check COMMAND ARG ...]
+  nomo-read.sh session-work --read-root ABSOLUTE_DIRECTORY --allow FILE[,FILE...] --root PRIVATE_DIRECTORY --state PRIVATE_DIRECTORY --id ID --path FILE --once TASK [--check COMMAND ARG ...]
   nomo-read.sh edit --root ABSOLUTE_DIRECTORY --state FRESH_PRIVATE_DIRECTORY --id ID --path FILE --target TEXT --replacement TEXT [--check COMMAND ARG ...]
   nomo-read.sh edit --root ABSOLUTE_DIRECTORY --state FRESH_PRIVATE_DIRECTORY --id ID --path FILE --once TASK [--check COMMAND ARG ...]
-  nomo-read.sh work --read-root ABSOLUTE_DIRECTORY --allow FILE[,FILE] --root ABSOLUTE_DIRECTORY --state FRESH_PRIVATE_DIRECTORY --id ID --path FILE --once TASK [--check COMMAND ARG ...]
+  nomo-read.sh work --read-root ABSOLUTE_DIRECTORY --allow FILE[,FILE...] --root ABSOLUTE_DIRECTORY --state FRESH_PRIVATE_DIRECTORY --id ID --path FILE --once TASK [--check COMMAND ARG ...]
   nomo-read.sh check --root ABSOLUTE_DIRECTORY -- COMMAND [ARG ...]
   nomo-read.sh edit-status --state PRIVATE_DIRECTORY --id ID --path FILE
   nomo-read.sh resume --id SESSION_ID  (not available yet)
 
-Select one or two relative files in the read-only directory. The default model
+Select one to four relative files for read/session workflows; standalone work remains limited to two. The default model
 is MiniMax M Plan (China), MiniMax-M3.1-Flash at https://api.minimax.cn/v1.
 Provide its subscription key through MINIMAX_API_KEY in the environment.
 MiniMax thinking counts against output limits. The runtime does not expose
@@ -101,7 +101,7 @@ while [[ "$selected" != / && "$selected" == */ ]]; do selected="${selected%/}"; 
 if [[ "$selected" != /* || "$selected" == */. || "$selected" == */.. || ! -d "$selected" || -L "$selected" ]]; then
     echo 'Select an existing absolute read directory with a non-symlink leaf.' >&2; exit 64
 fi
-if [[ -z "$allowed" || ${#allowed} -gt 97 ]]; then echo 'Select one or two relative files with --allow.' >&2; exit 64; fi
+if [[ -z "$allowed" || ${#allowed} -gt 195 ]]; then echo 'Select one to four relative files with --allow.' >&2; exit 64; fi
 if [[ "$action" == ask ]]; then
     if [[ $# -ne 2 || "$1" != --once || -z "$2" ]]; then usage >&2; exit 64; fi
     flow=read_model_tools; native=(new --allow "$allowed" --once "$2"); tty=false

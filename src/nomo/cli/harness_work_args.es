@@ -24,10 +24,12 @@ flow parse_with(args: Array<string>, unicode: bool) -> Result<Work, string> {
         } else { selected = selected.push(flag).push(value); }
         index = index + 2;
     }
-    if !supplied || len(raw) > 97 { return Err("expected one bounded --allow FILE[,FILE]"); }
+    var maximum: usize = 97; if unicode { maximum = 195; }
+    if !supplied || len(raw) > maximum { return Err("expected one bounded --allow FILE[,FILE]"); }
     let edit = match edit_args(selected) { Ok(value) => value, Err(error) => { return Err(error); } };
     let request = if unicode { unicode_question_error(edit.request) } else { question_error(edit.request) }; if request != "" { return Err(request); }
     let allowed = split(raw, ",");
+    if !unicode && count(allowed) > 2 { return Err("legacy work supports at most two allowed files"); }
     let invalid = allowed_error(allowed); if invalid != "" { return Err(invalid); }
     return Ok(Work { edit = edit, allowed = allowed });
 }

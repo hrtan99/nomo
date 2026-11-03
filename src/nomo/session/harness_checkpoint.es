@@ -20,6 +20,7 @@ public type Checkpoint = { format: i32, identity: Identity, request: string, tas
 
 public flow identity_error(identity: Identity) -> string {
     if !bounded(identity.id, 128) || !bounded(identity.workspace, 128) { return "invalid checkpoint identity"; }
+    if count(identity.allowed) > 2 { return "legacy checkpoint supports at most two allowed files"; }
     return allowed_error(identity.allowed);
 }
 

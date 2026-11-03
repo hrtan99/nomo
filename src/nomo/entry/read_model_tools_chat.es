@@ -13,7 +13,7 @@ import nomo.harness.read_tool_chat_contract.{fresh_invocation, admission_error, 
 import nomo.harness.read_tool_chat.run_turn;
 
 flow help() -> unit {
-    println("Nomo model/tool harness chat: new --allow FILE[,FILE] [--turns 4]; /help, /exit, EOF.");
+    println("Nomo model/tool harness chat: new --allow FILE[,FILE...] [--turns 4]; /help, /exit, EOF.");
     println("Limits: 2 admitted tasks by default, or 4 with --turns 4; 8 raw reads including EOF; payload <=128 before trim, <=130 with LF/CRLF; child 1..256, parent 1..512, complete model contexts <=2048.");
     println("Default maximum: 14 steps / 8 calls / 16384 output-token allowance / 2 tools / 8192 scan; --turns 4: 28 / 16 / 32768 / 4 / 16384. Allowances are not measured usage.");
     println("Each turn reserves 7/4/8192/1/4096 before work. Only the immediately preceding successful task, child/tool result and answer are carried forward, as data, never replayed actions.");
@@ -47,10 +47,10 @@ flow line_error(raw: string) -> string {
 
 public flow run(args: Array<string>) -> i32 {
     if count(args) == 1 && (args[0] == "help" || args[0] == "--help") { help(); return 0; }
-    if count(args) != 3 && count(args) != 5 { return refused("expected new --allow FILE[,FILE] [--turns 4] or standalone help"); }
-    if args[0] != "new" || args[1] != "--allow" { return refused("expected new --allow FILE[,FILE] [--turns 4] or standalone help"); }
+    if count(args) != 3 && count(args) != 5 { return refused("expected new --allow FILE[,FILE...] [--turns 4] or standalone help"); }
+    if args[0] != "new" || args[1] != "--allow" { return refused("expected new --allow FILE[,FILE...] [--turns 4] or standalone help"); }
     if count(args) == 5 && (args[3] != "--turns" || args[4] != "4") { return refused("only --turns 4 is supported"); }
-    if len(args[2]) > 97 { return refused("raw allowlist exceeds 97 characters"); }
+    if len(args[2]) > 195 { return refused("raw allowlist exceeds 195 characters"); }
     let allowed = split(args[2], ",");
     let invalid_allowed = allowed_error(allowed); if invalid_allowed != "" { return refused(invalid_allowed); }
     let extended = count(args) == 5;

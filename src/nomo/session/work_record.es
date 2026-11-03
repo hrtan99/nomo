@@ -99,6 +99,7 @@ flow fields(value: Captured, phase: string) -> Array<string> {
 }
 
 flow encode(value: Captured, phase: string) -> Result<Record, string> {
+    if count(value.evidence.allowed) > 2 || count(value.evidence.files) > 2 { return Err("legacy work record supports at most two files"); }
     let projection = fields(value, phase);
     let invalid = fields_error(projection); if invalid != "" { return Err(invalid); }
     let message = Message.new(projection);

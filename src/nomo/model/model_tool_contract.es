@@ -31,9 +31,9 @@ public flow question_error(raw: string) -> string {
 flow selected_error(names: Array<string>, allowed: Array<string>) -> string {
     let invalid = allowed_error(names);
     if invalid != "" { return invalid; }
-    for name in names limit Iterations(2) {
+    for name in names limit Iterations(4) {
         var permitted = false;
-        for admitted in allowed limit Iterations(2) {
+        for admitted in allowed limit Iterations(4) {
             if name == admitted { permitted = true; }
         }
         if !permitted { return "selected file is not allowed"; }
