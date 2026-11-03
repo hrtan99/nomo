@@ -28,6 +28,24 @@ def event_lines(raw):
     except (ValueError,UnicodeDecodeError) as error:raise ValueError('invalid event view') from error
     if not isinstance(view,dict) or view.get('encoding')!='json-string-v1':raise ValueError('unsupported event view')
     rendered=[]
+    # These messages are selected from bounded, structured fields, never from
+    # saved event text or arbitrary terminal lines.
+    if view.get('phase')=='running':
+        rendered.append('UNRESOLVED CHAT: the turn was reserved; its outcome and process termination are not established. Do not repeat it.')
+    for key,label in (('work','WORK'),('followup','FOLLOWUP')):
+        if view.get(key+'_phase')=='running':
+            phase=view.get(key+'_edit_phase','unknown')
+            if not isinstance(phase,str):phase='unknown'
+            detail={'completed':'edit completion was recorded; inspect the current file, which may have changed since.',
+                    'intent':'edit intent was recorded but its outcome is unknown; inspect the file.',
+                    'none':'no edit journal is recorded; the earlier process may still act.'}.get(phase,'edit record is unavailable or changed; inspect the file.')
+            rendered.append('UNRESOLVED '+label+': '+detail)
+    for key,label in (('check_phase','CHECK'),('followup_check_phase','FOLLOWUP CHECK')):
+        phase=view.get(key)
+        if phase=='planned':rendered.append('UNRESOLVED '+label+': no start was recorded at this snapshot; the earlier process may still act. Do not rerun automatically.')
+        elif phase=='running':rendered.append('UNRESOLVED '+label+': start was recorded but completion is unknown. Do not rerun automatically.')
+    if rendered:
+        rendered.append('Before starting a separate session, ensure the earlier invocation has stopped and inspect the workspace. Use session-chat --new or session-id start with selected roots; a new session does not resolve this one and requires fresh approval.')
     for key,label,maximum in (('events','CHAT',48),('work_events','WORK',24),('followup_events','FOLLOWUP',24)):
         events=view.get(key)
         if not isinstance(events,list) or len(events)>maximum:raise ValueError('invalid event batch')
@@ -120,7 +138,7 @@ def main(argv=None):
                     if any(item.get('truncated') for item in captured.values()):raise ValueError('event output was truncated')
                     rendered=event_lines(bytes(captured.get('stdout',{}).get('data',b'')))
                     print('Recorded events, grouped by chat, work and followup; ordering across groups is not established. Work entries are selected facts; past approvals do not grant authority.',flush=True)
-                    if not rendered:print('No committed events.',flush=True)
+                    if not any(line.startswith(('CHAT ','WORK ','FOLLOWUP ')) for line in rendered):print('No committed events.',flush=True)
                     for line in rendered:print(line,flush=True)
                     return 0
                 if policy is not None:return run_owned(command,env,input_data=policy_bytes)

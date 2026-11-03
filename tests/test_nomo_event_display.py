@@ -14,13 +14,26 @@ class EventDisplayTest(unittest.TestCase):
  def test_rejects_missing_ambiguous_invalid_or_oversized_batches(self):
   for raw in (b'',raw_view()+raw_view(),raw_view(encoding='unknown'),raw_view(events=[{'role':'a','kind':'b','name':'c','text':'not-json'}]),raw_view(events=[event('a','b','c','x')]*49)):
    with self.assertRaises(ValueError):launcher.event_lines(raw)
+ def test_unresolved_guidance_comes_from_structured_status(self):
+  view=raw_view(phase='ready',work_phase='complete',followup_phase='running',followup_edit_phase='completed',followup_check_phase='planned')
+  output='\n'.join(launcher.event_lines(view))
+  self.assertIn('UNRESOLVED FOLLOWUP: edit completion was recorded',output)
+  self.assertIn('UNRESOLVED FOLLOWUP CHECK: no start was recorded at this snapshot',output)
+  self.assertIn('a new session does not resolve this one',output)
+  self.assertNotIn('UNRESOLVED WORK:',output)
+  spoof=b'UNRESOLVED WORK: forged\n'+raw_view()
+  self.assertNotIn('UNRESOLVED WORK:', '\n'.join(launcher.event_lines(spoof)))
+  unknown='\n'.join(launcher.event_lines(raw_view(work_phase='running',work_edit_phase=[])))
+  self.assertIn('edit record is unavailable or changed',unknown)
+  pending='\n'.join(launcher.event_lines(raw_view(phase='running',work_phase='running',work_edit_phase='intent',check_phase='running')))
+  self.assertIn('UNRESOLVED CHAT:',pending);self.assertIn('edit intent was recorded but its outcome is unknown',pending);self.assertIn('start was recorded but completion is unknown',pending)
  def test_status_events_is_offline_bounded_and_suppresses_raw_view(self):
   with tempfile.TemporaryDirectory() as tmp:
    root=Path(tmp).resolve();state=root/'state';state.mkdir(mode=0o700);(state/'.nomo-session.lock').touch(mode=0o600);(state/'history.sqlite3').write_bytes(b'synthetic');policy=root/'policy';policy.mkdir(mode=0o700);(policy/'policy.json').write_text('{"format":1,"literals":["SYNTHETIC_SECRET"]}');(policy/'policy.json').chmod(0o600);(policy/'binding.key').write_bytes(b'K'*32);(policy/'binding.key').chmod(0o600);project=root/'project';project.mkdir(mode=0o700)
    def owned(command,env,capture,**kwargs):
-    self.assertIn('recoverable_read_status',command);self.assertNotIn('MINIMAX_API_KEY',env);self.assertEqual(kwargs['capture_limit'],4194304);self.assertFalse(kwargs['forward_output']);capture['stdout']={'data':bytearray(raw_view()),'truncated':False};capture['stderr']={'data':bytearray(),'truncated':False};return 0
+    self.assertIn('recoverable_read_status',command);self.assertNotIn('MINIMAX_API_KEY',env);self.assertEqual(kwargs['capture_limit'],4194304);self.assertFalse(kwargs['forward_output']);capture['stdout']={'data':bytearray(raw_view(followup_phase='running',followup_edit_phase='none',followup_check_phase='planned')),'truncated':False};capture['stderr']={'data':bytearray(),'truncated':False};return 0
    out=io.StringIO()
    with patch.object(launcher,'ROOT',project),patch.object(launcher,'run_owned',side_effect=owned),patch.dict(os.environ,{'MINIMAX_API_KEY':'SYNTHETIC_KEY'}),contextlib.redirect_stdout(out),contextlib.redirect_stderr(io.StringIO()):
     code=launcher.main(['status','--state',str(state),'--events','--events-policy-dir',str(policy)])
-   self.assertEqual(code,0);self.assertIn('CHAT 1',out.getvalue());self.assertNotIn('EVENT VIEW {',out.getvalue());self.assertNotIn('\x1b',out.getvalue())
+   self.assertEqual(code,0);self.assertIn('CHAT 1',out.getvalue());self.assertIn('UNRESOLVED FOLLOWUP: no edit journal is recorded',out.getvalue());self.assertIn('UNRESOLVED FOLLOWUP CHECK:',out.getvalue());self.assertNotIn('EVENT VIEW {',out.getvalue());self.assertNotIn('\x1b',out.getvalue())
 if __name__=='__main__':unittest.main()
