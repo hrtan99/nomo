@@ -53,11 +53,13 @@ public flow load(policy: Policy, binding: string) -> Result<Option<MemoryEntry<s
             if item.key != "followup" { return Err("recoverable followup key mismatch"); }
             let error = frame_error(item.value, policy, binding); if error != "" { return Err(error); }
             let parent_work = match load_parent_work(policy, binding) { Ok(Some(value)) => value, _ => { return Err("first work missing"); } };
-            if parent_work.value.work.phase != "complete" || parent_work.version.opaque != item.value.parent_work_version || parent_work.value.work.id == item.value.work.id { return Err("first work changed"); }
+            if (parent_work.value.work.phase != "complete" && parent_work.value.work.phase != "abandoned") || parent_work.version.opaque != item.value.parent_work_version || parent_work.value.work.id == item.value.work.id { return Err("first work changed"); }
+            if parent_work.value.work.phase == "complete" {
             let parent_edit = match inspect_parent_edit(parent_work.value.work.id, parent_work.value.work.workspace, parent_work.value.work.path) { Ok(Some(value)) => value, _ => { return Err("first edit missing"); } };
             if parent_edit.phase != "completed" { return Err("first edit unresolved"); }
+            }
             let parent_check = match load_parent_check(policy, binding) { Ok(value) => value, Err(error) => { return Err(error); } };
-            let check_version = match parent_check { Some(value) => { if value.value.check.phase != "complete" { return Err("first check unresolved"); } value.version.opaque }, None() => "" };
+            let check_version = match parent_check { Some(value) => { if value.value.check.phase != "complete" && !(parent_work.value.work.phase == "abandoned" && value.value.check.phase == "planned") { return Err("first check unresolved"); } value.version.opaque }, None() => "" };
             if check_version != item.value.parent_check_version { return Err("first check changed"); }
         }
         None() => {}
@@ -98,11 +100,13 @@ public flow admit(id: string, workspace: string, path: string, request: string, 
     let row = Record { format = 2, phase = "running", id = id, workspace = workspace, path = path,
         request = request, history_version = chat.version.opaque, reserved = full(), settled = None(), summary = "" };
     let parent_work = match load_parent_work(policy, binding) { Ok(Some(item)) => item, _ => { return Err("completed first work required"); } };
-    if parent_work.value.work.phase != "complete" || parent_work.value.work.id == id { return Err("completed distinct first work required"); }
+    if (parent_work.value.work.phase != "complete" && parent_work.value.work.phase != "abandoned") || parent_work.value.work.id == id { return Err("completed distinct first work required"); }
+    if parent_work.value.work.phase == "complete" {
     let first_edit = match inspect_parent_edit(parent_work.value.work.id, parent_work.value.work.workspace, parent_work.value.work.path) { Ok(Some(item)) => item, _ => { return Err("completed first edit required"); } };
     if first_edit.phase != "completed" { return Err("completed first edit required"); }
+    }
     let parent_check = match load_parent_check(policy, binding) { Ok(item) => item, Err(error) => { return Err(error); } };
-    let check_version = match parent_check { Some(item) => { if item.value.check.phase != "complete" { return Err("first check unresolved"); } item.version.opaque }, None() => "" };
+    let check_version = match parent_check { Some(item) => { if item.value.check.phase != "complete" && !(parent_work.value.work.phase == "abandoned" && item.value.check.phase == "planned") { return Err("first check unresolved"); } item.version.opaque }, None() => "" };
     let frame = Frame { format = 1, policy_binding = binding, parent_work_version = parent_work.version.opaque, parent_check_version = check_version, work = row, events = empty_events() };
     let version = match write(frame, None(), policy, binding) { Ok(item) => item, Err(error) => { return Err(error); } };
     return Ok(Ticket { frame = frame, version = version, chat = chat });

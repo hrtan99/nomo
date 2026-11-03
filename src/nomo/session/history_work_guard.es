@@ -22,11 +22,11 @@ alias Schema = MemoryRegion<{ Rows: Store<string, Record> }>;
 let Runs = std.memory.region<Schema>(stable_id = "nomo-history-work-v1", store = "history-work");
 flow read() -> Option<MemoryEntry<string, Record>> { return get_entry(Runs.Rows, "work"); }
 public flow invalid(value: Record) -> string {
-    if (value.format != 1 && value.format != 2) || (value.phase != "running" && value.phase != "complete") { return "invalid history-work phase"; }
+    if (value.format != 1 && value.format != 2) || (value.phase != "running" && value.phase != "complete" && value.phase != "abandoned") { return "invalid history-work phase"; }
     let selected = selector_error(value.id, value.workspace, value.path); if selected != "" { return selected; }
     let question = question_error(value.request); if question != "" { return question; }
     if value.history_version == "" || len(value.history_version) > 512 { return "invalid history version"; }
-    if value.phase == "running" {
+    if value.phase == "running" || value.phase == "abandoned" {
         let expected = if value.format == 1 { full() } else { Budget { steps = 13, calls = 7, generation = 51200, native_tokens = 196608 } };
         if value.summary != "" || value.reserved != expected || value.settled != None() { return "invalid running work reservation"; }
     } else {

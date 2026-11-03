@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 """A terminal loop over an existing ID-addressed session."""
 import argparse
+import fcntl
+import stat
 import importlib.util
 import os
 import re
 import secrets
+import signal
 import shlex
 import select
 import time
@@ -124,6 +127,44 @@ def show_status_hint(args, identifier):
     if args.events_policy_dir is not None:
         command.append('--events-policy-dir=' + args.events_policy_dir)
     print('Inspect status: ' + shlex.join(command), file=sys.stderr, flush=True)
+
+def abandon_stopped_work(args, operation_id):
+    # Called only by the live owner after the matching transport returned 130.
+    registry_spec = importlib.util.spec_from_file_location('session_id', ROOT / 'scripts/nomo-session-id.py')
+    registry = importlib.util.module_from_spec(registry_spec); registry_spec.loader.exec_module(registry)
+    policy_spec = importlib.util.spec_from_file_location('event_policy', ROOT / 'scripts/nomo-event-policy.py')
+    policy = importlib.util.module_from_spec(policy_spec); policy_spec.loader.exec_module(policy)
+    base, root_fd = registry.registry(args.sessions_dir)
+    try: state = registry.session(root_fd, base, args.id, False)
+    finally: os.close(root_fd)
+    policy_dir, _, binding = policy.read_private(args.events_policy_dir)
+    fd = os.open(state / '.nomo-session.lock', os.O_RDWR | os.O_NOFOLLOW | os.O_CLOEXEC)
+    try:
+        st = os.fstat(fd)
+        if not stat.S_ISREG(st.st_mode) or st.st_uid != os.getuid() or st.st_nlink != 1 or stat.S_IMODE(st.st_mode) != 0o600: raise ValueError('invalid session lock')
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        env = {k:v for k,v in os.environ.items() if not k.startswith('ETAS_HOST_') and k not in ('MINIMAX_API_KEY', 'NOMO_QWEN_SERVER_API_KEY')}
+        env.update(NOMO_SESSION_STATE=str(state), NOMO_EVENT_POLICY_DIR=str(policy_dir), NOMO_ETAS_VERSION='0.2.5')
+        compose = ['docker', 'compose', '--env-file', '/dev/null']
+        for name in ('compose.yaml', 'config/etas-025-official-compose.yaml', 'config/etas-runtime-cache-compose.yaml', 'config/nomo-read-session-compose.yaml', 'config/nomo-event-policy-work-compose.yaml'):
+            compose += ['--file', str(ROOT / name)]
+        native = ['python3', '-B', '/workspace/scripts/nomo-event-policy-mount-bootstrap.py', binding, 'run', '/workspace', '--flow', 'recoverable_work_abandon', '--profile', 'nomo-read-events-status', '--allow-effects', '--args', binding, operation_id]
+        command = [sys.executable, str(ROOT / 'scripts/terminal-transport.py'), *compose, 'run', '--rm', '--no-deps', '--pull', 'never', '--tty=false', '--workdir', '/session-state', 'dev', *native]
+        return edit.run_owned(command, env)
+    finally: os.close(fd)
+
+def recovery_ready(code, signals, proof, closed):
+    return code == 130 and signals == [signal.SIGINT] and proof == b'clean-sigint\n' and closed
+
+def offer_recovery(args, operation_id):
+    print('The interrupted edit may have taken effect. Inspect the file before continuing; the old work and its full reserved budget will remain recorded.', flush=True)
+    try: answer = input('Abandon this interrupted work and continue this session? [y/N] ').strip().lower()
+    except (EOFError, KeyboardInterrupt): return False
+    if answer not in ('y', 'yes'): return False
+    try: return abandon_stopped_work(args, operation_id) == 0
+    except (OSError, ValueError) as error:
+        print('Recovery decision was not confirmed: ' + str(error), file=sys.stderr, flush=True)
+        return False
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
@@ -281,16 +322,31 @@ def main(argv=None):
             print('The agent could not finish the additional read; no further edit was made. Specify the selected file and exact change, then try again' + (' in a new session.' if observer.deferred == 'limit' else '.'), flush=True)
         if natural and observer.route is not None:
             action, path = observer.route
+            operation_id = 'auto-' + secrets.token_hex(8)
             command = [sys.executable, str(ROOT / 'scripts/nomo-session-id.py'), action,
                        '--sessions-dir', args.sessions_dir, '--id', args.id, '--read-root', args.root,
-                       '--root', args.root, '--operation-id=auto-' + secrets.token_hex(8),
+                       '--root', args.root, '--operation-id=' + operation_id,
                        '--path=' + path, '--allow=' + args.allow, '--once=' + question]
             if args.events_policy_dir is not None:command += ['--events-policy-dir', args.events_policy_dir]
             command += ['--interactive-check']
             if args.check is not None:command += ['--check', *args.check]
             print('Selected ' + path + ' for a proposed edit; review the preview and confirm before writing.', flush=True)
-            code = edit.run_owned(command, dict(os.environ))
+            proof_read, proof_write = os.pipe()
+            env = dict(os.environ, NOMO_CLEANUP_PROOF_FD=str(proof_write)); signals = []
+            try:
+                code = edit.run_owned(command, env, signal_state=signals)
+            finally:
+                os.close(proof_write)
+            os.set_blocking(proof_read, False)
+            try:
+                proof = os.read(proof_read, 64)
+                closed = os.read(proof_read, 1) == b''
+            except BlockingIOError: proof, closed = b'', False
+            finally: os.close(proof_read)
             if code:
+                if recovery_ready(code, signals, proof, closed) and action == 'work' and args.events_policy_dir is not None and offer_recovery(args, operation_id):
+                    print('Continue with a new request; a new edit requires fresh confirmations.', flush=True)
+                    continue
                 print('Work stopped; inspect session status before continuing.', file=sys.stderr, flush=True)
                 show_status_hint(args, args.id)
                 return code

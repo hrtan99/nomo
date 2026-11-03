@@ -2,6 +2,7 @@ import contextlib
 import importlib.util
 import io
 import shlex
+import signal
 from pathlib import Path
 import unittest
 from unittest.mock import patch
@@ -32,10 +33,16 @@ class SessionChatTest(unittest.TestCase):
             code = module.main(args)
         return code, output.getvalue(), error.getvalue(), call
 
+    def test_recovery_requires_user_interrupt_and_closed_cleanup_proof(self):
+        self.assertFalse(module.recovery_ready(130, [0], b'', True))
+        self.assertFalse(module.recovery_ready(130, [signal.SIGINT], b'', True))
+        self.assertFalse(module.recovery_ready(130, [signal.SIGINT], b'clean-sigint\n', False))
+        self.assertTrue(module.recovery_ready(130, [signal.SIGINT], b'clean-sigint\n', True))
+
     def test_multiple_turns_and_exit(self):
         code, out, _, calls = self.run_chat('/help\nfirst\nsecond\n/exit\n', codes=(0, 0))
         self.assertEqual(code, 0)
-        self.assertEqual([c.args[0][-1] for c in calls.call_args_list], ['--once=first', '--once=second'])
+        self.assertEqual([next(arg for arg in c.args[0] if arg.startswith('--once=')) for c in calls.call_args_list], ['--once=first', '--once=second'])
         self.assertIn('SESSION ID ' + '1' * 32, out)
         self.assertIn('Resume: nomo-read.sh session-id resume', out)
 
@@ -57,7 +64,7 @@ class SessionChatTest(unittest.TestCase):
     def test_option_like_and_unicode_are_one_argument(self):
         code, _, _, calls = self.run_chat('--help\n--root x\n-n\n空 格\n/exit\n', codes=(0, 0, 0, 0))
         self.assertEqual(code, 0)
-        self.assertEqual([c.args[0][-1] for c in calls.call_args_list],
+        self.assertEqual([next(arg for arg in c.args[0] if arg.startswith('--once=')) for c in calls.call_args_list],
                          ['--once=--help', '--once=--root x', '--once=-n', '--once=空 格'])
 
     def test_failure_or_cancellation_stops_loop(self):

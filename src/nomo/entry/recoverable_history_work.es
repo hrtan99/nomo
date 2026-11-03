@@ -15,7 +15,7 @@ import nomo.entry.harness_work_entry.{prepare_expanded_unicode, finish_edit, fin
 import nomo.session.event_policy.{PolicyRoot, load as load_policy};
 import nomo.session.chat_history.load as load_legacy;
 import nomo.session.recoverable_chat_store.load as load_chat;
-import nomo.session.recoverable_work_store.{admit, claim, finish};
+import nomo.session.recoverable_work_store.{admit, claim, finish, abandon as abandon_work};
 import nomo.session.recoverable_check_store.{plan as plan_check, load as load_check};
 import nomo.session.work_fact_events.capture;
 import nomo.session.history_work_guard.inspect as inspect_legacy_work;
@@ -96,4 +96,10 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
     match finish(ticket, summary.answer, summary.state, records, policy, binding) { Ok(_) => {} Err(error) => { return refused("edit completed; " + error); } }
     display("FINAL ", summary.answer); println("SAVED event work facts; no grant or root identity is persisted.");
     ledger(summary.state); return 0;
+}
+
+public flow abandon(args: Array<string>) -> i32 ![Console, Memory, Fs.read<PolicyRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {
+    if count(args) != 2 { return refused("recovery requires binding and operation ID"); }
+    let policy = match load_policy() { Ok(value) => value, Err(error) => { return refused(error); } };
+    match abandon_work(args[1], policy, args[0]) { Ok(_) => { println("RECORDED user decision: abandoned; prior outcome remains unknown and budget remains reserved."); return 0; } Err(error) => { return refused(error); } }
 }

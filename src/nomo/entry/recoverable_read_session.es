@@ -192,6 +192,7 @@ public flow status(args: Array<string>) -> i32 ![Console, Memory, Fs.read<Policy
     let pending = saved.value.chat.phase == "running";
     if pending { println("UNRESOLVED CHAT: the turn was reserved; its outcome and process termination are not established. Do not repeat it."); }
     if work_phase == "running" { show_edit_status("WORK", work_edit_phase); }
+    if work_phase == "abandoned" { println("ABANDONED WORK: user chose to continue; the prior effect remains unknown and its full reservation is retained."); }
     if followup_phase == "running" { show_edit_status("FOLLOWUP", followup_edit_phase); }
     if check_phase == "planned" { println("UNRESOLVED CHECK: no start was recorded at this snapshot; the earlier process may still act. Do not rerun automatically."); }
     else if check_phase == "running" { println("UNRESOLVED CHECK: start was recorded but completion is unknown. Do not rerun automatically."); }

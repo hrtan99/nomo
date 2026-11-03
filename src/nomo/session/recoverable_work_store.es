@@ -27,7 +27,7 @@ flow frame_error(value: Frame, policy: Policy, binding: string) -> string {
     if value.format != 1 || value.policy_binding != binding { return "invalid recoverable work format or policy binding"; }
     let work_error = invalid_work(value.work); if work_error != "" { return work_error; }
     let event_error = invalid_events(value.events, policy); if event_error != "" { return event_error; }
-    if (value.work.phase == "running" && value.events.turns != 0) || (value.work.phase == "complete" && value.events.turns != 1) {
+    if ((value.work.phase == "running" || value.work.phase == "abandoned") && value.events.turns != 0) || (value.work.phase == "complete" && value.events.turns != 1) {
         return "work phase and event boundary differ";
     }
     for field in [value.work.id, value.work.workspace, value.work.path, value.work.request, value.work.summary] limit Iterations(5) {
@@ -118,4 +118,14 @@ public flow finish(ticket: Ticket, summary: string, spent: Ledger, records: Arra
     let current = match load(policy, binding) { Ok(Some(item)) => item, _ => { return Err("recoverable work missing or invalid"); } };
     if current.value != ticket.frame || current.version.opaque != ticket.version.opaque { return Err("recoverable work reservation changed; no retry"); }
     match write(frame, Some(current), policy, binding) { Ok(_) => Ok(true), Err(error) => Err(error) }
+}
+
+// Only the owner which observed successful cleanup may call this decision flow.
+public flow abandon(id: string, policy: Policy, binding: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+    let current = match load(policy, binding) { Ok(Some(value)) => value, _ => { return Err("interrupted work missing"); } };
+    let old = current.value.work;
+    if old.id != id || old.phase != "running" { return Err("interrupted work identity or phase differs"); }
+    let row = Record { format = old.format, phase = "abandoned", id = old.id, workspace = old.workspace, path = old.path, request = old.request, history_version = old.history_version, reserved = old.reserved, settled = old.settled, summary = old.summary };
+    let frame = Frame { format = current.value.format, policy_binding = binding, work = row, events = current.value.events };
+    return match write(frame, Some(current), policy, binding) { Ok(_) => Ok(true), Err(error) => Err(error) };
 }

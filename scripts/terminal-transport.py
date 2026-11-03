@@ -236,6 +236,10 @@ def main(arguments):
         print('terminal transport owned cleanup is unconfirmed; inspect retained work before further action', file=sys.stderr)
         return 125
     if requested[0]:
+        proof = os.environ.get('NOMO_CLEANUP_PROOF_FD')
+        if requested[0] == signal.SIGINT and proof is not None:
+            try: os.write(int(proof), b'clean-sigint\n')
+            except (OSError, ValueError): pass
         return 128 + requested[0]
     return code if code >= 0 else 128 - code
 

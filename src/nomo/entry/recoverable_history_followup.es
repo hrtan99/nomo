@@ -135,7 +135,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
     let history = match load_chat(policy, binding) { Ok(Some(value)) => value, _ => { return refused("saved event chat required"); } };
     if history.value.chat.phase == "running" { return refused("chat turn unresolved"); }
     let first_work = match inspect_first_work(policy, binding) { Ok(Some(value)) => value, _ => { return refused("completed first work required"); } };
-    if first_work.value.work.phase != "complete" { return refused("first work unresolved"); }
+    if first_work.value.work.phase != "complete" && first_work.value.work.phase != "abandoned" { return refused("first work unresolved"); }
     match load_followup(policy, binding) {
         Ok(Some(_)) => { return more(input, history.value.chat.last_request, history.value.chat.invocation.prior, first_work.value.work.id, check_digest, policy, binding); }
         Ok(None()) => {}
@@ -146,11 +146,13 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
     var first_output: Option<CheckOutput> = None(); var checked = "not requested"; var exit = "";
     match first_check {
         Some(value) => {
+            if first_work.value.work.phase == "abandoned" && value.value.check.phase == "planned" { checked = "not started after abandoned work"; } else {
             if value.value.check.phase != "complete" { return refused("first check outcome unresolved"); }
             let out = match decode(value.value.stdout, policy) { Ok(item) => item, Err(error) => { return refused(error); } };
             let err = match decode(value.value.stderr, policy) { Ok(item) => item, Err(error) => { return refused(error); } };
             first_output = Some(CheckOutput { stdout = out, stderr = err, stdout_truncated = value.value.stdout_truncated, stderr_truncated = value.value.stderr_truncated });
             checked = value.value.check.outcome; exit = value.value.check.exit_code;
+            }
         }
         None() => {}
     }
@@ -166,7 +168,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
     if has_check { match plan_check(ticket, check_digest, policy, binding) { Ok(_) => {} Err(error) => { return refused(error); } } }
     println("RESERVED event followup; interruption or uncertain effects cannot be retried automatically.");
     let prior_request = history.value.chat.last_request; let previous = history.value.chat.invocation.prior;
-    let prior_work = PriorWork { request = first_work.value.work.request, summary = first_work.value.work.summary, summary_source = origin, selection = chosen, check = checked, exit_code = exit, output = first_output, history = [] };
+    let prior_work = PriorWork { request = first_work.value.work.request, summary = if first_work.value.work.phase == "abandoned" { "User abandoned interrupted work; its effect is unknown. Inspect the file before a new edit." } else { first_work.value.work.summary }, summary_source = if first_work.value.work.phase == "abandoned" { "system" } else { origin }, selection = chosen, check = checked, exit_code = exit, output = first_output, history = [] };
     let pending = match prepare_history(input, prior_request, previous, prior_work) { Ok(value) => value, Err(failure) => { ledger(failure.state); return refused(failure.error); } };
     let selected = match confirm_current(pending.selected, pending.prepared) { Ok(value) => value, Err(error) => { return refused(error); } };
     match claim(ticket, policy, binding) { Ok(_) => {} Err(error) => { return refused(error); } }

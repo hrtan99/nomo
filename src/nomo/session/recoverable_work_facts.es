@@ -46,7 +46,12 @@ public flow snapshot(policy: Policy, binding: string) -> Result<Facts, string> {
             match first_check { Some(_) => { return Err("orphan first check"); } None() => {} }
         }
         Some(item) => {
-            let work = item.value.work; if work.phase != "complete" { return Err("first work unresolved"); }
+            let work = item.value.work;
+            if work.phase == "abandoned" {
+                calls = work.reserved.calls; generation = work.reserved.generation;
+                first_facts = Some(WorkFacts { id = work.id, summary = "User abandoned interrupted work; its effect is unknown. Inspect the file before a new edit.", summary_source = "system", selection = None(), check = "unknown", exit_code = "", output = None() });
+            } else {
+            if work.phase != "complete" { return Err("first work unresolved"); }
             let edit = match inspect_edit(work.id, work.workspace, work.path) { Ok(Some(value)) => value, _ => { return Err("completed first edit required"); } };
             if edit.phase != "completed" { return Err("first edit unresolved"); }
             let spent = match work.settled { Some(value) => value, None() => { return Err("first work budget missing"); } };
@@ -60,6 +65,7 @@ public flow snapshot(policy: Policy, binding: string) -> Result<Facts, string> {
             let origin = match summary_source(item.value.events, work.summary, policy) { Ok(value) => value, Err(error) => { return Err(error); } };
             let chosen = match selection(item.value.events.events, policy) { Ok(value) => value, Err(error) => { return Err(error); } };
             first_facts = Some(WorkFacts { id = work.id, summary = work.summary, summary_source = origin, selection = chosen, check = outcome, exit_code = exit, output = output });
+            }
         }
     }
     match followup {

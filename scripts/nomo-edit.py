@@ -234,7 +234,7 @@ class RuntimeDiagnostic:
             print('The observed text may indicate a blank or over-limit summary. The edit may already be applied; inspect the file and session status before deciding what to do. Do not automatically retry.', file=sys.stderr, flush=True)
 
 
-def run_owned(command, env, capture=None, input_data=None, diagnostic=None, *, capture_limit=4096, forward_output=True):
+def run_owned(command, env, capture=None, input_data=None, diagnostic=None, *, capture_limit=4096, forward_output=True, signal_state=None):
     """Forward interruption and wait for the owned terminal helper's cleanup."""
     requested = [0, 0.0]
     child = None
@@ -255,7 +255,11 @@ def run_owned(command, env, capture=None, input_data=None, diagnostic=None, *, c
             old[number] = signal.signal(number, interrupted)
         if requested[0]:
             return 128 + requested[0]
-        child = subprocess.Popen(command, env=env, start_new_session=True,
+        proof = env.get('NOMO_CLEANUP_PROOF_FD')
+        proof_fd = int(proof) if proof is not None else None
+        if proof_fd is not None and (proof_fd < 3 or not stat.S_ISFIFO(os.fstat(proof_fd).st_mode)):
+            raise ValueError('invalid cleanup proof descriptor')
+        child = subprocess.Popen(command, env=env, start_new_session=True, pass_fds=() if proof_fd is None else (proof_fd,),
                                  stdin=subprocess.PIPE if input_data is not None else None,
                                  stdout=subprocess.PIPE if capture is not None or diagnostic is not None else None,
                                  stderr=subprocess.PIPE if capture is not None or diagnostic is not None else None)
@@ -385,6 +389,7 @@ def run_owned(command, env, capture=None, input_data=None, diagnostic=None, *, c
             pass
         return 125
     finally:
+        if signal_state is not None: signal_state.append(requested[0])
         if selector is not None:
             for key in list(selector.get_map().values()):
                 key.fileobj.close()
