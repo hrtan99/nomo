@@ -36,6 +36,13 @@ class SessionIDTest(unittest.TestCase):
   with patch.object(module._edit,'run_owned',return_value=0) as launch:
    code,_,_=self.call(['status','--sessions-dir',str(self.base),'--id',self.identifier,'--outputs']);self.assertEqual(code,0);self.assertIn('--outputs',launch.call_args.args[0])
    launch.reset_mock();code,_,_=self.call(['resume','--sessions-dir',str(self.base),'--id',self.identifier,'--root','/root','--allow','x','--once','q','--outputs']);self.assertNotEqual(code,0);launch.assert_not_called()
+ def test_events_requires_policy_and_is_only_forwarded_for_status(self):
+  (self.base/self.identifier).mkdir(mode=0o700)
+  with patch.object(module._edit,'run_owned',return_value=0) as launch:
+   args=['status','--sessions-dir',str(self.base),'--id',self.identifier,'--events']
+   self.assertNotEqual(self.call(args)[0],0);launch.assert_not_called()
+   self.assertEqual(self.call(args+['--events-policy-dir','/policy'])[0],0);self.assertIn('--events',launch.call_args.args[0])
+   launch.reset_mock();self.assertNotEqual(self.call(args+['--events-policy-dir','/policy','--outputs'])[0],0);launch.assert_not_called()
  def test_followup_routes_to_separate_launcher(self):
   (self.base/self.identifier).mkdir(mode=0o700)
   args=['followup','--sessions-dir',str(self.base),'--id',self.identifier,'--read-root','/read','--root','/edit','--operation-id','op2','--path','note.txt','--allow','context.txt','--once','change again','--check','/bin/true']

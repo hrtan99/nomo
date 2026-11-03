@@ -86,6 +86,13 @@ class SessionChatTest(unittest.TestCase):
         self.assertIn('status', command)
         self.assertIn('--outputs', command)
 
+    def test_events_requires_policy_and_routes_offline_status(self):
+        code,_,err,calls=self.run_chat('/events\n/exit\n')
+        self.assertEqual(code,0);self.assertIn('requires event-recording mode',err);calls.assert_not_called()
+        self.args+=['--events-policy-dir','/policy']
+        code,_,_,calls=self.run_chat('/events\n/exit\n')
+        self.assertEqual(code,0);command=calls.call_args.args[0];self.assertIn('status',command);self.assertIn('--events',command);self.assertIn('--events-policy-dir',command)
+
     def test_event_chat_routes_work_followup_and_check_with_policy(self):
         self.args += ['--events-policy-dir', '/private-policy']
         code, _, err, calls = self.run_chat('/work op /tmp/edit file.txt "change" --check true\n/followup op2 /tmp/edit file.txt "change"\n/status\n/exit\n', codes=(0,0,0))

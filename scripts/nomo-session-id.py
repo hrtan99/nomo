@@ -34,13 +34,16 @@ def main(argv=None):
     parser.add_argument('action',choices=('start','resume','status','work','followup','decision'));parser.add_argument('--sessions-dir',required=True)
     parser.add_argument('--id');parser.add_argument('--root');parser.add_argument('--allow');parser.add_argument('--once')
     parser.add_argument('--outputs',action='store_true')
+    parser.add_argument('--events',action='store_true')
     parser.add_argument('--events-policy-dir')
     parser.add_argument('--read-root');parser.add_argument('--operation-id');parser.add_argument('--path');parser.add_argument('--target',choices=('work','check','followup','followup-check'));parser.add_argument('--check',nargs=argparse.REMAINDER)
     args=parser.parse_args(argv)
     try:
         if args.action=='start' and args.id is not None:raise ValueError('a new session ID is generated automatically')
         if args.action!='start' and args.id is None:raise ValueError('select an existing session ID')
-        if args.outputs and args.action!='status':raise ValueError('--outputs is only available for status')
+        if (args.outputs or args.events) and args.action!='status':raise ValueError('--outputs and --events are only available for status')
+        if args.events and args.events_policy_dir is None:raise ValueError('--events requires event-recording mode and its policy')
+        if args.events and args.outputs:raise ValueError('--events and --outputs cannot be combined')
         if args.events_policy_dir is not None and args.action not in ('start','resume','status','work','followup'):raise ValueError('event-recording sessions do not yet support decisions')
         if args.events_policy_dir is not None and args.outputs:raise ValueError('--outputs is unavailable for event-recording sessions')
         if args.id=='latest':raise ValueError('latest compatible session is unavailable: workspace identity continuity cannot yet be verified')
@@ -75,6 +78,7 @@ def main(argv=None):
             command=[sys.executable,str(ROOT/'scripts/nomo-read-session.py'),mode,'--state',str(state)]
             if mode!='status':command+=['--root',args.root,'--allow='+args.allow,'--once='+args.once]
             elif args.outputs:command+=['--outputs']
+            elif args.events:command+=['--events']
             if args.events_policy_dir is not None:command+=['--events-policy-dir',args.events_policy_dir]
         code=_edit.run_owned(command,dict(os.environ))
         if code:print('Session state is retained; inspect it before another action.',file=sys.stderr,flush=True)

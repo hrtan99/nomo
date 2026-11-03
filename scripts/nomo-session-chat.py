@@ -126,7 +126,7 @@ def main(argv=None):
         else:
             print('Work requires a completed first turn.', flush=True)
     if tty and args.once is None:
-        print('Enter a question, /help, /status, /outputs, /work, /followup or /exit.', flush=True)
+        print('Enter a question, /help, /status, /events, /outputs, /work, /followup or /exit.', flush=True)
     while True:
         if args.once is not None:
             question = args.once
@@ -143,6 +143,7 @@ def main(argv=None):
                 return 0
             if question == '/help':
                 print('Read turns use the selected root and allowlist. /status inspects recorded state; /outputs shows recorded check output.')
+                if args.events_policy_dir is not None:print('/events displays committed events grouped by chat, work and followup.')
                 if args.events_policy_dir is None:
                     print('/work OP_ID EDIT_ROOT PATH "TASK" [--check COMMAND ARG ...] runs one explicitly confirmed work operation.')
                     print('/followup OP_ID EDIT_ROOT PATH "TASK" [--check COMMAND ARG ...] runs the second bounded work operation.')
@@ -151,16 +152,20 @@ def main(argv=None):
                     print('/followup OP_ID EDIT_ROOT PATH "TASK" [--check COMMAND ARG ...] runs one additional confirmed work operation.')
                 print('Quote arguments containing spaces. No shell interprets the check arguments. /exit leaves the session.')
                 continue
-            if question == '/status' or question == '/outputs':
+            if question in ('/status','/events','/outputs'):
                 if args.id is None:
                     print('REFUSED enter a first question to start the session.', file=sys.stderr, flush=True)
                     continue
                 if question == '/outputs' and args.events_policy_dir is not None:
                     print('REFUSED /outputs is unavailable in event-recording mode; /status shows bounded recorded check output.',file=sys.stderr,flush=True)
                     continue
+                if question == '/events' and args.events_policy_dir is None:
+                    print('REFUSED /events requires event-recording mode and its policy.',file=sys.stderr,flush=True)
+                    continue
                 command = [sys.executable, str(ROOT / 'scripts/nomo-session-id.py'), 'status',
                            '--sessions-dir', args.sessions_dir, '--id', args.id]
                 if question == '/outputs':command += ['--outputs']
+                if question == '/events':command += ['--events']
                 if args.events_policy_dir is not None:command += ['--events-policy-dir',args.events_policy_dir]
                 code = edit.run_owned(command, dict(os.environ))
                 if code:

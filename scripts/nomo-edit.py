@@ -209,7 +209,7 @@ class RuntimeDiagnostic:
             print('The observed text may indicate a blank or over-limit summary. The edit may already be applied; inspect the file and session status before deciding what to do. Do not automatically retry.', file=sys.stderr, flush=True)
 
 
-def run_owned(command, env, capture=None, input_data=None, diagnostic=None):
+def run_owned(command, env, capture=None, input_data=None, diagnostic=None, *, capture_limit=4096, forward_output=True):
     """Forward interruption and wait for the owned terminal helper's cleanup."""
     requested = [0, 0.0]
     child = None
@@ -218,6 +218,8 @@ def run_owned(command, env, capture=None, input_data=None, diagnostic=None):
     input_errors = []
     forwarded = False
     old = {}
+    if not isinstance(capture_limit,int) or not 1 <= capture_limit <= 524288:
+        raise ValueError('invalid capture limit')
 
     def interrupted(number, _frame):
         if not requested[0]:
@@ -258,23 +260,24 @@ def run_owned(command, env, capture=None, input_data=None, diagnostic=None):
                 # Write directly after flushing prior output: a failed buffered
                 # flush can otherwise be retried by Python at interpreter exit
                 # and replace the intended uncertain-status exit code.
-                target.flush()
-                try:
-                    output_fd = target.fileno()
-                except (io.UnsupportedOperation, AttributeError):
-                    target.write(data)
+                if forward_output:
                     target.flush()
-                else:
-                    view = memoryview(data)
-                    while view:
-                        written = os.write(output_fd, view)
-                        if written <= 0:
-                            raise OSError('terminal output did not advance')
-                        view = view[written:]
+                    try:
+                        output_fd = target.fileno()
+                    except (io.UnsupportedOperation, AttributeError):
+                        target.write(data)
+                        target.flush()
+                    else:
+                        view = memoryview(data)
+                        while view:
+                            written = os.write(output_fd, view)
+                            if written <= 0:
+                                raise OSError('terminal output did not advance')
+                            view = view[written:]
                 if diagnostic is not None:
                     diagnostic.feed(label, data)
                 if capture is not None:
-                    saved = capture[label]; room = max(0, 4096 - len(saved['data']))
+                    saved = capture[label]; room = max(0, capture_limit - len(saved['data']))
                     saved['data'].extend(data[:room])
                     if len(data) > room: saved['truncated'] = True
         while child.poll() is None:

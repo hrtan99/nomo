@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Run or inspect a bounded, durable read-only conversation."""
-import argparse, fcntl, importlib.util, os, stat, sys
+import argparse, fcntl, importlib.util, json, os, stat, sys
 from pathlib import Path
 
 ROOT=Path(__file__).resolve().parent.parent
@@ -19,17 +19,40 @@ def directory(value,label):
     if not path.is_dir():raise ValueError(label+' must be a directory')
     return path
 
+def event_lines(raw):
+    """Decode the bounded status view without trusting text as terminal control."""
+    if len(raw)>524288:raise ValueError('event view exceeds display bound')
+    lines=[line[len(b'EVENT VIEW '):] for line in raw.splitlines() if line.startswith(b'EVENT VIEW {')]
+    if len(lines)!=1:raise ValueError('event view missing or ambiguous')
+    try:view=json.loads(lines[0])
+    except (ValueError,UnicodeDecodeError) as error:raise ValueError('invalid event view') from error
+    if not isinstance(view,dict) or view.get('encoding')!='json-string-v1':raise ValueError('unsupported event view')
+    rendered=[]
+    for key,label,maximum in (('events','CHAT',48),('work_events','WORK',24),('followup_events','FOLLOWUP',24)):
+        events=view.get(key)
+        if not isinstance(events,list) or len(events)>maximum:raise ValueError('invalid event batch')
+        for index,item in enumerate(events,1):
+            if not isinstance(item,dict):raise ValueError('invalid event')
+            fields=[item.get(name) for name in ('role','kind','name','text')]
+            if any(not isinstance(value,str) for value in fields):raise ValueError('invalid event fields')
+            try:text=json.loads(fields[3])
+            except ValueError as error:raise ValueError('invalid event text encoding') from error
+            if not isinstance(text,str) or len(text)>2048 or any(len(value)>128 for value in fields[:3]):raise ValueError('event text or metadata exceeds bound')
+            values=[json.dumps(value,ensure_ascii=True) for value in (*fields[:3],text)]
+            rendered.append(label+' '+str(index)+' role='+values[0]+' kind='+values[1]+' name='+values[2]+' text='+values[3])
+    return rendered
+
 def main(argv=None):
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('action',choices=('new','continue','status'));parser.add_argument('--state',required=True)
-    parser.add_argument('--root');parser.add_argument('--allow');parser.add_argument('--once');parser.add_argument('--outputs',action='store_true');parser.add_argument('--events-policy-dir')
+    parser.add_argument('--root');parser.add_argument('--allow');parser.add_argument('--once');parser.add_argument('--outputs',action='store_true');parser.add_argument('--events',action='store_true');parser.add_argument('--events-policy-dir')
     args=parser.parse_args(argv)
     try:
         status=args.action=='status';state=directory(args.state,'state');context=None
         if status:
             if args.root is not None or args.allow is not None or args.once is not None:raise ValueError('status accepts only --state')
         else:
-            if args.outputs:raise ValueError('--outputs is only available for status')
+            if args.outputs or args.events:raise ValueError('--outputs and --events are only available for status')
             if args.root is None or args.allow is None or args.once is None:raise ValueError('select --root, --allow and --once for each turn')
             context=directory(args.root,'read root')
             if context==state or context in state.parents or state in context.parents:raise ValueError('read root and state must not overlap')
@@ -39,6 +62,8 @@ def main(argv=None):
             if args.outputs:raise ValueError('--outputs is unavailable for event-recording sessions')
             policy,policy_bytes,policy_binding=_policy.read_private(args.events_policy_dir)
             if policy==state or policy in state.parents or state in policy.parents or (context is not None and (policy==context or policy in context.parents or context in policy.parents)):raise ValueError('event policy directory must not overlap state or workspace')
+        if args.events and policy is None:raise ValueError('--events requires event-recording mode and its policy')
+        if args.events and args.outputs:raise ValueError('--events and --outputs cannot be combined')
         version=os.environ.get('NOMO_ETAS_VERSION','0.2.5')
         if version not in ('0.2.4','0.2.5'):raise ValueError('read sessions require ETAS 0.2.4 or 0.2.5')
         if policy is not None and version!='0.2.5':raise ValueError('event-recording sessions require ETAS 0.2.5')
@@ -89,6 +114,15 @@ def main(argv=None):
             native=['python3','-B',runner,'run','/workspace','--flow',flow,'--profile',profile,'--allow-effects',*native_args]
             command=[sys.executable,str(ROOT/'scripts/terminal-transport.py'),*compose,'run','--rm','--no-deps','--pull','never','--tty=false','--workdir','/session-state','dev',*native]
             if status:
+                if args.events:
+                    captured={};code=run_owned(command,env,captured,input_data=policy_bytes,capture_limit=524288,forward_output=False)
+                    if code:return code
+                    if any(item.get('truncated') for item in captured.values()):raise ValueError('event output was truncated')
+                    rendered=event_lines(bytes(captured.get('stdout',{}).get('data',b'')))
+                    print('Recorded events, grouped by chat, work and followup; ordering across groups is not established. Work entries are selected facts; past approvals do not grant authority.',flush=True)
+                    if not rendered:print('No committed events.',flush=True)
+                    for line in rendered:print(line,flush=True)
+                    return 0
                 if policy is not None:return run_owned(command,env,input_data=policy_bytes)
                 return run_owned(command,env)
             diagnostic=_edit_launcher.RuntimeDiagnostic()
