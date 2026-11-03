@@ -15,7 +15,7 @@ Usage:
   nomo-read.sh session-id resume --sessions-dir PRIVATE_DIRECTORY --id SESSION_ID --root DIR --allow FILE[,FILE] --once QUESTION
   nomo-read.sh session-id status --sessions-dir PRIVATE_DIRECTORY --id SESSION_ID [--outputs]
   nomo-read.sh session-id decision --sessions-dir PRIVATE_DIRECTORY --id SESSION_ID --operation-id ID --target work|check|followup|followup-check
-  nomo-read.sh session-chat --sessions-dir PRIVATE_DIRECTORY --id SESSION_ID --root DIR --allow FILE[,FILE] [--once QUESTION]
+  nomo-read.sh session-chat --sessions-dir PRIVATE_DIRECTORY (--new | --id SESSION_ID) --root DIR --allow FILE[,FILE] [--events-policy-dir PRIVATE_DIRECTORY] [--once QUESTION]
   Event-recording read-only sessions accept --events-policy-dir PRIVATE_DIRECTORY on start, resume, status and session-chat.
   nomo-read.sh event-policy-init --directory PRIVATE_DIRECTORY
   nomo-read.sh session-id work --sessions-dir PRIVATE_DIRECTORY --id SESSION_ID --read-root DIR --root PRIVATE_DIRECTORY --operation-id ID --path FILE --allow FILE[,FILE] --once TASK [--check COMMAND ARG ...]

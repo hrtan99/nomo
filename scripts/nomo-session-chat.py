@@ -3,6 +3,7 @@
 import argparse
 import importlib.util
 import os
+import re
 import shlex
 import select
 import time
@@ -51,10 +52,52 @@ def piped_question(stream):
         raise ValueError('piped question must be non-empty')
     return question
 
+class StartIdObserver:
+    """Capture only the first line produced by our session-id start process."""
+    def __init__(self):
+        self.pending = bytearray()
+        self.identifier = None
+        self.finished = False
+
+    def feed(self, stream, data):
+        if stream != 'stdout' or self.finished:
+            return
+        line, separator, _rest = data.partition(b'\n')
+        self.pending.extend(line)
+        if len(self.pending) > 64:
+            self.finished = True
+            self.pending.clear()
+            return
+        if separator:
+            match = re.fullmatch(rb'SESSION ID ([0-9a-f]{32})\r?', self.pending)
+            if match:
+                self.identifier = match.group(1).decode('ascii')
+            self.pending.clear()
+            self.finished = True
+
+
+def show_resume(args, *, show_id):
+    if show_id:
+        print('SESSION ID ' + args.id, flush=True)
+    if args.events_policy_dir is None:
+        print('Read turns and bounded work use this session; each edit requires fresh confirmations.', flush=True)
+    else:
+        print('Event recording supports read-only turns and status; work/check is not available in this mode.', flush=True)
+    policy = '' if args.events_policy_dir is None else ' --events-policy-dir ' + shlex.quote(args.events_policy_dir)
+    print('Resume: nomo-read.sh session-id resume --sessions-dir ' + shlex.quote(args.sessions_dir)
+          + ' --id ' + shlex.quote(args.id) + ' --root DIR --allow FILE' + policy + ' --once QUESTION', flush=True)
+    interactive = [str(ROOT / 'scripts/nomo-read.sh'), 'session-chat', '--sessions-dir=' + args.sessions_dir,
+                   '--id=' + args.id, '--root=' + args.root, '--allow=' + args.allow]
+    if args.events_policy_dir is not None:
+        interactive.append('--events-policy-dir=' + args.events_policy_dir)
+    print('Resume interactive: ' + shlex.join(interactive), flush=True)
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--sessions-dir', required=True)
-    parser.add_argument('--id', required=True)
+    selection = parser.add_mutually_exclusive_group(required=True)
+    selection.add_argument('--id')
+    selection.add_argument('--new', action='store_true', help='create a session on the first read turn')
     parser.add_argument('--root', required=True)
     parser.add_argument('--allow', required=True)
     parser.add_argument('--events-policy-dir')
@@ -74,16 +117,14 @@ def main(argv=None):
         except KeyboardInterrupt:
             print('Input cancelled.', file=sys.stderr)
             return 130
-    prefix = [sys.executable, str(ROOT / 'scripts/nomo-session-id.py'), 'resume',
-              '--sessions-dir', args.sessions_dir, '--id', args.id, '--root', args.root,
-              '--allow=' + args.allow]
-    if args.events_policy_dir is not None:prefix += ['--events-policy-dir',args.events_policy_dir]
-    print('SESSION ID ' + args.id, flush=True)
-    if args.events_policy_dir is None:print('Read turns and bounded work use this session; each edit requires fresh confirmations.', flush=True)
-    else:print('Event recording supports read-only turns and status; work/check is not available in this mode.', flush=True)
-    print('Resume: nomo-read.sh session-id resume --sessions-dir ' + shlex.quote(args.sessions_dir)
-          + ' --id ' + shlex.quote(args.id) + ' --root DIR --allow FILE --once QUESTION'
-          + (' --events-policy-dir ' + shlex.quote(args.events_policy_dir) if args.events_policy_dir is not None else ''), flush=True)
+    if args.id is not None:
+        show_resume(args, show_id=True)
+    else:
+        print('New session: the first question starts a read turn.', flush=True)
+        if args.events_policy_dir is not None:
+            print('Event recording supports read-only turns and status; work/check is not available in this mode.', flush=True)
+        else:
+            print('Work requires a completed first turn.', flush=True)
     if tty and args.once is None:
         print('Enter a question, /help, /status, /outputs, /work, /followup or /exit.', flush=True)
     while True:
@@ -109,6 +150,9 @@ def main(argv=None):
                 print('Quote arguments containing spaces. No shell interprets the check arguments. /exit leaves the session.')
                 continue
             if question == '/status' or question == '/outputs':
+                if args.id is None:
+                    print('REFUSED enter a first question to start the session.', file=sys.stderr, flush=True)
+                    continue
                 if question == '/outputs' and args.events_policy_dir is not None:
                     print('REFUSED event-recording sessions do not have work/check output.',file=sys.stderr,flush=True)
                     continue
@@ -122,6 +166,9 @@ def main(argv=None):
                     return code
                 continue
             if question == '/work' or question.startswith('/work ') or question == '/followup' or question.startswith('/followup '):
+                if args.id is None:
+                    print('REFUSED enter a first question to start the session.', file=sys.stderr, flush=True)
+                    continue
                 if args.events_policy_dir is not None:
                     print('REFUSED event-recording sessions currently support read-only chat and status only.',file=sys.stderr,flush=True)
                     continue
@@ -148,12 +195,28 @@ def main(argv=None):
             if args.once is not None:
                 return 64
             continue
-        command = prefix + ['--once=' + question]
-        # Non-TTY children get immediate EOF, never extra piped lines.
-        code = edit.run_owned(command, dict(os.environ)) if tty else edit.run_owned(command, dict(os.environ), input_data=b'')
+        starting = args.id is None
+        command = [sys.executable, str(ROOT / 'scripts/nomo-session-id.py'), 'start' if starting else 'resume',
+                   '--sessions-dir', args.sessions_dir]
+        if not starting:
+            command += ['--id', args.id]
+        command += ['--root', args.root, '--allow=' + args.allow, '--once=' + question]
+        if args.events_policy_dir is not None:
+            command += ['--events-policy-dir', args.events_policy_dir]
+        options = {} if tty else {'input_data': b''}
+        observer = StartIdObserver() if starting else None
+        if observer is not None:
+            options['diagnostic'] = observer
+        code = edit.run_owned(command, dict(os.environ), **options)
         if code:
             print('Turn stopped; inspect session status before continuing.', file=sys.stderr, flush=True)
             return code
+        if observer is not None:
+            if observer.identifier is None:
+                print('Session ID could not be confirmed; inspect retained state before continuing.', file=sys.stderr, flush=True)
+                return 1
+            args.id = observer.identifier
+            show_resume(args, show_id=False)
         if args.once is not None:
             return 0
 
