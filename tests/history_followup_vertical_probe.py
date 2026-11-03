@@ -38,8 +38,8 @@ class Fake(BaseHTTPRequestHandler):
             elif i==17:
                 assert ctx['current']['edit']['after']=='before gold\n';value='Second edit completed using current context.'
             elif i==18:
-                assert ctx['work']=={'id':'edit1','summary':'Edit completed using current context.','check':'passed','exit_code':'0'}
-                assert ctx['followup']=={'id':'edit2','summary':'Second edit completed using current context.','check':self.server.expected_check,'exit_code':self.server.expected_exit}
+                assert ctx['work']=={'id':'edit1','summary':'Edit completed using current context.','check':'passed','exit_code':'0','output':{'name':'Some','fields':[{'stdout':'FIRST_CHECK_OK','stderr':'','stdout_truncated':False,'stderr_truncated':False}]}}
+                assert ctx['followup']=={'id':'edit2','summary':'Second edit completed using current context.','check':self.server.expected_check,'exit_code':self.server.expected_exit,'output':{'name':'Some','fields':[{'stdout':'SECOND_CHECK_OK','stderr':'','stdout_truncated':False,'stderr_truncated':False}]}}
                 assert ctx['budget']=={'work_calls':14,'work_generation':94208,'chat_used_calls':4,'chat_used_generation':8192,'chat_reserved_calls':4,'chat_reserved_generation':8192};value=['delegate','Read context.txt']
             elif i==19:value=['read','context.txt']
             elif i==20:value=['final','blue CEDAR42']
@@ -73,7 +73,7 @@ def main():
         first=subprocess.run([str(project/'scripts/nomo-read.sh'),'session-new','--root',str(context),'--state',str(state),'--allow','context.txt','--once','Read the color and include CEDAR42'],env=env,capture_output=True,timeout=120)
         (out/'first.stdout').write_bytes(first.stdout);(out/'first.stderr').write_bytes(first.stderr)
         assert first.returncode==0 and b'FINAL blue CEDAR42' in first.stdout and server.phases==list(range(4))
-        cmd=[str(project/'scripts/nomo-read.sh'),'session-work','--read-root',str(current),'--root',str(workspace),'--state',str(state),'--id','edit1','--path','note.txt','--allow','context.txt','--once','Change old to green using context','--check','/bin/sh','-c','test "$(cat note.txt)" = "before green"']
+        cmd=[str(project/'scripts/nomo-read.sh'),'session-work','--read-root',str(current),'--root',str(workspace),'--state',str(state),'--id','edit1','--path','note.txt','--allow','context.txt','--once','Change old to green using context','--check','/bin/sh','-c','test "$(cat note.txt)" = "before green" && printf FIRST_CHECK_OK']
         master,slave=pty.openpty();settings=termios.tcgetattr(slave);settings[3]&=~(termios.ECHO|termios.ECHONL);termios.tcsetattr(slave,termios.TCSANOW,settings)
         proc=subprocess.Popen(cmd,stdin=slave,stdout=slave,stderr=slave,env=env,start_new_session=True);os.close(slave)
         output=bytearray();native=False;application=False;deadline=time.monotonic()+120
@@ -103,7 +103,7 @@ def main():
             edit_phase=next(x['value']['value'] for x in json.loads(rows['nomo-edit-operation-v1'])['fields'] if x['name']=='phase')
             assert work_phase=='complete' and edit_phase=='completed' and c.execute('pragma integrity_check').fetchone()==('ok',)
         os.close(master); master=None
-        cmd=[str(project/'scripts/nomo-read.sh'),'session-followup','--read-root',str(current),'--root',str(workspace),'--state',str(state),'--id','edit2','--path','note.txt','--allow','context.txt','--once','Change green to gold using context','--check','/bin/sh','-c','test "$(cat note.txt)" = "before gold"']
+        cmd=[str(project/'scripts/nomo-read.sh'),'session-followup','--read-root',str(current),'--root',str(workspace),'--state',str(state),'--id','edit2','--path','note.txt','--allow','context.txt','--once','Change green to gold using context','--check','/bin/sh','-c','test "$(cat note.txt)" = "before gold" && printf SECOND_CHECK_OK']
         master,slave=pty.openpty();settings=termios.tcgetattr(slave);settings[3]&=~(termios.ECHO|termios.ECHONL);termios.tcsetattr(slave,termios.TCSANOW,settings)
         proc=subprocess.Popen(cmd,stdin=slave,stdout=slave,stderr=slave,env=env,start_new_session=True);os.close(slave)
         output=bytearray();native=False;application=False;deadline=time.monotonic()+120

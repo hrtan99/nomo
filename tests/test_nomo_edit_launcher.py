@@ -50,7 +50,7 @@ class EditLauncherTests(unittest.TestCase):
         self.assertIn(str(self.project / 'config/nomo-check-compose.yaml'), check)
         self.assertIn('--tty=false', check)
         self.assertEqual(check[check.index('--workdir') + 1], '/edit-fixture')
-        self.assertEqual(check[-4:], ['60s', 'python3', '-m', 'unittest'])
+        self.assertEqual(check[-7:], ['60s', 'python3', '-B', '/workspace/scripts/nomo-bounded-check.py', 'python3', '-m', 'unittest'])
 
     def test_explicit_023_applies_to_edit_and_check(self):
         self.args.check = ['true']

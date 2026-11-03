@@ -24,7 +24,7 @@ def main():
         (out/'first.stdout').write_bytes(first.stdout);(out/'first.stderr').write_bytes(first.stderr)
         assert first.returncode==0 and b'FINAL blue CEDAR42' in first.stdout and server.phases==list(range(4))
         ids=re.findall(rb'^SESSION ID ([0-9a-f]{32})$',first.stdout,re.M);assert len(ids)==1;session_id=ids[0].decode();state=sessions/session_id
-        cmd=[str(project/'scripts/nomo-read.sh'),'session-id','work','--sessions-dir',str(sessions),'--id',session_id,'--read-root',str(current),'--root',str(workspace),'--operation-id','edit1','--path','note.txt','--allow','context.txt','--once','Change old to green using context','--check','/bin/sh','-c','test "$(cat note.txt)" = "before green"']
+        cmd=[str(project/'scripts/nomo-read.sh'),'session-id','work','--sessions-dir',str(sessions),'--id',session_id,'--read-root',str(current),'--root',str(workspace),'--operation-id','edit1','--path','note.txt','--allow','context.txt','--once','Change old to green using context','--check','/bin/sh','-c','test "$(cat note.txt)" = "before green" && printf FIRST_CHECK_OK']
         master,slave=pty.openpty();settings=termios.tcgetattr(slave);settings[3]&=~(termios.ECHO|termios.ECHONL);termios.tcsetattr(slave,termios.TCSANOW,settings)
         proc=subprocess.Popen(cmd,stdin=slave,stdout=slave,stderr=slave,env=env,start_new_session=True);os.close(slave)
         output=bytearray();native=False;application=False;deadline=time.monotonic()+120

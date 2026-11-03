@@ -74,21 +74,26 @@ def main(argv=None):
             offline=['docker','compose','--env-file','/dev/null','--file',str(ROOT/'compose.yaml'),
                 '--file',str(ROOT/overlay),'--file',str(ROOT/'config/etas-runtime-cache-compose.yaml'),
                 '--file',str(ROOT/'config/nomo-read-session-compose.yaml')]
-            def checkpoint(action,*extra):
+            def checkpoint(action,*extra,input_data=None):
                 native_check=['python3','-B','/workspace/scripts/nomo-verified-etas.py','run','/workspace','--flow','history_followup_check',
                     '--profile','nomo-read-session-status','--allow-effects','--args',action,args.id,check_ref,*extra]
                 command_check=[sys.executable,str(ROOT/'scripts/terminal-transport.py'),*offline,'run','--rm','--no-deps','--pull','never',
                     '--tty=false','--workdir','/session-state','dev',*native_check]
+                if input_data is not None:return edit.run_owned(command_check,internal_env,input_data=input_data)
                 return edit.run_owned(command_check,internal_env)
             if checkpoint('start'):
                 print('Check was not started; inspect recorded status.',file=sys.stderr,flush=True);return 1
             print('Running the requested check offline in the edited workspace (60-second limit; stdin is closed).',flush=True)
-            code=edit.run_owned(check,check_env)
+            capture={key:{'data':bytearray(),'truncated':False} for key in ('stdout','stderr')}
+            code=edit.run_owned(check,check_env,capture)
             if code<0 or code>=124:
                 print('Check outcome is uncertain; recorded running state is retained, without retry.',file=sys.stderr,flush=True);return code or 1
             outcome='passed' if code==0 else 'failed'
             if checkpoint('finish',outcome,str(code)):
                 print('Check finished but its outcome was not confirmed in session state.',file=sys.stderr,flush=True);return 1
+            stdout=edit.format_check_capture(capture['stdout'],env);stderr=edit.format_check_capture(capture['stderr'],env)
+            if checkpoint('output',str(capture['stdout']['truncated']).lower(),str(capture['stderr']['truncated']).lower(),input_data=(json.dumps([stdout,stderr],ensure_ascii=True)+'\n').encode()):
+                print('Check completed but its diagnostic output was not recorded.',file=sys.stderr,flush=True);return 1
             if code:
                 print('Check failed (exit '+str(code)+').',file=sys.stderr,flush=True);return code
             print('Check passed.',flush=True);return 0

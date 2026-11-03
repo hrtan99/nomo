@@ -1,0 +1,23 @@
+[package]
+name = "nomo-command-result-025"
+version = "0.1.0"
+edition = "2026"
+
+[source]
+root = "src"
+
+[[bin]]
+name = "command-result-025"
+module = "app.main"
+flow = "main"
+profile = "allowed"
+
+[runtime.profiles.allowed]
+boundary_policy = "nomo-command-result-025"
+
+[runtime.profiles.allowed.command]
+allow = ["/bin/sh"]
+
+[runtime.profiles.allowed.policy]
+mode = "local-static"
+rules = ["command=allow", "console=allow"]

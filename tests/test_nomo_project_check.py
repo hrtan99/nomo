@@ -55,7 +55,7 @@ sys.exit(int(os.environ.get('NOMO_TEST_EXIT', '0')))
         self.assertNotIn(str(ROOT / 'config/nomo-model-edit-compose.yaml'), call['args'])
         self.assertNotIn(str(ROOT / 'config/edit-operation-compose.yaml'), call['args'])
         self.assertIn('--tty=false', call['args'])
-        self.assertEqual(call['args'][-7:], ['/usr/bin/timeout', '--signal=TERM', '--kill-after=2s', '60s', 'python3', '-c', 'print("ok")'])
+        self.assertEqual(call['args'][-10:], ['/usr/bin/timeout', '--signal=TERM', '--kill-after=2s', '60s', 'python3', '-B', '/workspace/scripts/nomo-bounded-check.py', 'python3', '-c', 'print("ok")'])
         self.assertIn(b'Check passed.', result.stdout)
 
     def test_024_check_uses_the_selected_overlay(self):

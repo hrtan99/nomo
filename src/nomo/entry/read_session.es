@@ -10,7 +10,8 @@ import std.collections.len as count;
 import nomo.model.model_tool_contract.allowed_error;
 import nomo.model.read_protocol.question_error;
 import nomo.harness.read_tool_chat.run_private_turn as run_turn;
-import nomo.harness.history_continue_model.{WorkFacts, BudgetFacts, run_turn as run_after_work, run_after_followup};
+import nomo.harness.history_continue_model.{WorkFacts, CheckOutput, BudgetFacts, run_turn as run_after_work, run_after_followup};
+import nomo.session.check_output.load as load_check_output;
 import nomo.session.chat_session_contract.{fresh, begin, complete};
 import nomo.session.chat_history.{load, save, save_completed};
 import nomo.session.history_work_guard.{chat_available, inspect as inspect_work};
@@ -40,12 +41,15 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyR
             let edit = match inspect_edit(work.id, work.workspace, work.path) { Ok(Some(value)) => value, _ => { println("REFUSED completed edit record required"); return 1; } };
             if edit.phase != "completed" { println("REFUSED edit outcome unresolved"); return 1; }
             let check = match inspect_check() { Ok(value) => value, Err(error) => { println("REFUSED " + error); return 1; } };
-            var outcome = "not requested"; var exit = "";
+            var outcome = "not requested"; var exit = ""; var output: Option<CheckOutput> = None();
             match check {
-                Some(value) => { if value.id != work.id { println("REFUSED check work identity differs"); return 1; } if value.phase != "complete" { println("REFUSED check outcome unresolved"); return 1; } outcome = value.outcome; exit = value.exit_code; }
+                Some(value) => { if value.id != work.id { println("REFUSED check work identity differs"); return 1; } if value.phase != "complete" { println("REFUSED check outcome unresolved"); return 1; } outcome = value.outcome; exit = value.exit_code;
+                    let saved = match load_check_output("first", value.id, value.digest) { Ok(item) => item, Err(error) => { println("REFUSED " + error); return 1; } };
+                    match saved { Some(item) => { output = Some(CheckOutput { stdout = item.stdout, stderr = item.stderr, stdout_truncated = item.stdout_truncated, stderr_truncated = item.stderr_truncated }); } None() => {} }
+                }
                 None() => {}
             }
-            work_facts = Some(WorkFacts { id = work.id, summary = work.summary, check = outcome, exit_code = exit });
+            work_facts = Some(WorkFacts { id = work.id, summary = work.summary, check = outcome, exit_code = exit, output = output });
         }
     }
     let following = match inspect_followup() { Ok(value) => value, Err(error) => { println("REFUSED " + error); return 1; } };
@@ -62,16 +66,19 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyR
             match work_facts { None() => { println("REFUSED first work facts missing"); return 1; } Some(_) => {} }
             let edit = match inspect_followup_edit(item.id, item.workspace, item.path) { Ok(Some(value)) => value, _ => { println("REFUSED completed followup edit required"); return 1; } };
             if edit.phase != "completed" { println("REFUSED followup edit outcome unresolved"); return 1; }
-            var outcome = "not requested"; var exit = "";
+            var outcome = "not requested"; var exit = ""; var output: Option<CheckOutput> = None();
             match following_check {
-                Some(value) => { if value.id != item.id || value.phase != "complete" { println("REFUSED followup check outcome unresolved"); return 1; } outcome = value.outcome; exit = value.exit_code; }
+                Some(value) => { if value.id != item.id || value.phase != "complete" { println("REFUSED followup check outcome unresolved"); return 1; } outcome = value.outcome; exit = value.exit_code;
+                    let saved = match load_check_output("followup", value.id, value.digest) { Ok(found) => found, Err(error) => { println("REFUSED " + error); return 1; } };
+                    match saved { Some(found) => { output = Some(CheckOutput { stdout = found.stdout, stderr = found.stderr, stdout_truncated = found.stdout_truncated, stderr_truncated = found.stderr_truncated }); } None() => {} }
+                }
                 None() => {}
             }
             let first = match item.parent.work.settled { Some(value) => value, None() => { println("REFUSED first work ledger missing"); return 1; } };
             let second = match item.settled { Some(value) => value, None() => { println("REFUSED followup ledger missing"); return 1; } };
             work_calls = first.read.calls + first.edit.calls + second.read.calls + second.edit.calls;
             work_generation = first.read.tokens + first.edit.tokens + second.read.tokens + second.edit.tokens;
-            followup_facts = Some(WorkFacts { id = item.id, summary = item.summary, check = outcome, exit_code = exit });
+            followup_facts = Some(WorkFacts { id = item.id, summary = item.summary, check = outcome, exit_code = exit, output = output });
         }
     }
     let existing = match load() { Ok(value) => value, Err(error) => { println("REFUSED " + error); return 1; } };

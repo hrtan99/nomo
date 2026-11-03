@@ -11,6 +11,9 @@ import nomo.harness.harness_work_contract.fresh as fresh_ledger;
 import nomo.harness.harness_model_tools.work_child_turn;
 import nomo.harness.legacy_string_stages.{LegacyStringStages, LegacyEditStages};
 import nomo.harness.history_followup_model.{read_main, plan, child, aggregate, PriorWork};
+import nomo.harness.history_continue_model.CheckOutput;
+import nomo.session.history_check_guard.inspect as inspect_first_check;
+import nomo.session.check_output.load as load_check_output;
 import nomo.harness.harness_tool_chat_contract.Previous;
 import nomo.entry.harness_work_entry.{prepare, finish_edit, finish_summary, ledger, Pending, Failure, Completed, Summary};
 import nomo.session.chat_history.load as load_chat;
@@ -57,15 +60,27 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
     if input.edit.help { return refused("select a current read root, private edit root, target and task"); }
     match available() { Ok(_) => {} Err(error) => { return refused(error); } }
     let history = match load_chat() { Ok(Some(value)) => value, _ => { return refused("a saved prior chat turn is required"); } };
+    let first_check = match inspect_first_check() { Ok(value) => value, Err(error) => { return refused(error); } };
+    var first_output: Option<CheckOutput> = None();
+    match first_check {
+        Some(value) => {
+            if value.phase != "complete" { return refused("first check outcome unresolved"); }
+            let saved = match load_check_output("first", value.id, value.digest) { Ok(found) => found, Err(error) => { return refused(error); } };
+            match saved { Some(found) => { first_output = Some(CheckOutput { stdout = found.stdout, stderr = found.stderr, stdout_truncated = found.stdout_truncated, stderr_truncated = found.stderr_truncated }); } None() => {} }
+        }
+        None() => {}
+    }
     let ticket = match admit(input.edit.id, input.edit.workspace, input.edit.path, input.edit.request, history) {
         Ok(value) => value, Err(error) => { return refused(error); }
     };
+    if ticket.record.parent.check != first_check { return refused("first check changed before followup; no retry"); }
     match claim(ticket) { Ok(_) => {} Err(error) => { return refused(error); } }
     if has_check { match plan_check(ticket, check_digest) { Ok(_) => {} Err(error) => { return refused(error); } } }
     println("RESERVED history-followup; failure or interruption cannot be retried automatically.");
     let prior_request = history.value.last_request; let previous = history.value.invocation.prior;
     let checked = match ticket.record.parent.check { Some(value) => value.outcome, None() => "not requested" };
-    let prior_work = PriorWork { request = ticket.record.parent.work.request, summary = ticket.record.parent.work.summary, check = checked };
+    let exit = match ticket.record.parent.check { Some(value) => value.exit_code, None() => "" };
+    let prior_work = PriorWork { request = ticket.record.parent.work.request, summary = ticket.record.parent.work.summary, check = checked, exit_code = exit, output = first_output };
     let pending = match prepare_history(input, prior_request, previous, prior_work) { Ok(value) => value, Err(failure) => { ledger(failure.state); return refused(failure.error); } };
     let selected = match confirm_current(pending.selected, pending.prepared) { Ok(value) => value, Err(error) => { return refused(error); } };
     match claim(ticket) { Ok(_) => {} Err(error) => { return refused(error); } }

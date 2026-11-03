@@ -32,16 +32,16 @@ class HistoryFollowupLauncherTest(unittest.TestCase):
             self.assertNotEqual(self.invoke(),0);run.assert_not_called()
 
     def test_success_records_check_before_and_after_offline_command(self):
-        with patch.object(launcher.edit,'run_owned',side_effect=[0,0,0,0]) as run:
+        with patch.object(launcher.edit,'run_owned',side_effect=[0,0,0,0,0]) as run:
             self.assertEqual(self.invoke(),0)
-        self.assertEqual(run.call_count,4);work,start,check,finish=run.call_args_list
+        self.assertEqual(run.call_count,5);work,start,check,finish,output=run.call_args_list
         self.assertIn('--check-ref',work.args[0]);self.assertIn('history_followup_check',start.args[0]);self.assertIn('start',start.args[0]);self.assertIn('finish',finish.args[0]);self.assertIn('passed',finish.args[0])
         for call in (start,check,finish):self.assertNotIn('MINIMAX_API_KEY',call.args[1])
         self.assertFalse(any('nomo-minimax-model-compose.yaml' in p for p in start.args[0]))
     def test_default_025_is_used_for_all_phases(self):
         with patch.dict(os.environ,{},clear=False):
             os.environ.pop('NOMO_ETAS_VERSION',None)
-            with patch.object(launcher.edit,'run_owned',side_effect=[0,0,0,0]) as run:
+            with patch.object(launcher.edit,'run_owned',side_effect=[0,0,0,0,0]) as run:
                 self.assertEqual(self.invoke(),0)
         for call in run.call_args_list:
             self.assertTrue(any('etas-025-official-compose.yaml' in str(part) for part in call.args[0]))
@@ -56,7 +56,7 @@ class HistoryFollowupLauncherTest(unittest.TestCase):
                 self.assertNotEqual(self.invoke(),0);run.assert_not_called()
     def test_session_lock_covers_model_and_check_transitions(self):
         seen=[]
-        def owned(command,env):
+        def owned(command,env,*args,**kwargs):
             fd=os.open(self.state/'.nomo-session.lock',os.O_RDWR)
             try:
                 with self.assertRaises(BlockingIOError):fcntl.flock(fd,fcntl.LOCK_EX|fcntl.LOCK_NB)
@@ -64,7 +64,7 @@ class HistoryFollowupLauncherTest(unittest.TestCase):
             seen.append(command)
             return 0
         with patch.object(launcher.edit,'run_owned',side_effect=owned):self.assertEqual(self.invoke(),0)
-        self.assertEqual(len(seen),4)
+        self.assertEqual(len(seen),5)
         fd=os.open(self.state/'.nomo-session.lock',os.O_RDWR)
         try:fcntl.flock(fd,fcntl.LOCK_EX|fcntl.LOCK_NB)
         finally:os.close(fd)
@@ -77,9 +77,9 @@ class HistoryFollowupLauncherTest(unittest.TestCase):
             self.assertEqual(self.invoke(),143)
         self.assertEqual(run.call_count,1)
     def test_known_check_failure_is_recorded_with_exit(self):
-        with patch.object(launcher.edit,'run_owned',side_effect=[0,0,7,0]) as run:
+        with patch.object(launcher.edit,'run_owned',side_effect=[0,0,7,0,0]) as run:
             self.assertEqual(self.invoke(),7)
-        self.assertEqual(run.call_count,4);self.assertIn('failed',run.call_args_list[-1].args[0]);self.assertIn('7',run.call_args_list[-1].args[0])
+        self.assertEqual(run.call_count,5);self.assertIn('failed',run.call_args_list[-2].args[0]);self.assertIn('7',run.call_args_list[-2].args[0])
     def test_timeout_leaves_check_uncertain(self):
         with patch.object(launcher.edit,'run_owned',side_effect=[0,0,124]) as run:
             self.assertEqual(self.invoke(),124)

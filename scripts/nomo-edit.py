@@ -3,14 +3,32 @@
 import argparse
 import os
 import re
+import selectors
 import signal
 from pathlib import Path
 import stat
 import subprocess
 import sys
+import threading
 import time
 
 ROOT = Path(__file__).resolve().parent.parent
+
+
+def format_check_capture(entry, env):
+    """Render a bounded diagnostic prefix; known configured keys are removed."""
+    text = bytes(entry['data']).decode('utf-8', errors='backslashreplace')
+    for name in ('MINIMAX_API_KEY', 'NOMO_QWEN_SERVER_API_KEY', 'ETAS_HOST_MODEL_API_KEY'):
+        value = env.get(name, '')
+        if value:
+            text = text.replace(value, '[REDACTED]')
+            if entry['truncated']:
+                for length in range(min(len(value) - 1, len(text)), 3, -1):
+                    if text.endswith(value[:length]):
+                        text = text[:-length] + '[REDACTED]'
+                        break
+    text = ''.join(ch if ch in '\n\t' or ord(ch) >= 32 and ord(ch) != 127 else '\\x%02x' % ord(ch) for ch in text)
+    return text
 
 
 def directory(raw, name):
@@ -126,14 +144,18 @@ def prepare(args, stdin_tty, stdout_tty):
         check = [sys.executable, str(ROOT / 'scripts/terminal-transport.py'), '--nomo-check-gate', *compose,
                  '--file', str(ROOT / 'config/nomo-check-compose.yaml'), 'run', '--rm', '--no-deps', '--pull', 'never', '--tty=false',
                  '--workdir', '/edit-fixture', 'dev', '/usr/bin/timeout',
-                 '--signal=TERM', '--kill-after=2s', '60s', *args.check]
+                 '--signal=TERM', '--kill-after=2s', '60s',
+                 'python3', '-B', '/workspace/scripts/nomo-bounded-check.py', *args.check]
     return command, check, env
 
 
-def run_owned(command, env):
+def run_owned(command, env, capture=None, input_data=None):
     """Forward interruption and wait for the owned terminal helper's cleanup."""
     requested = [0, 0.0]
     child = None
+    selector = None
+    writer = None
+    input_errors = []
     forwarded = False
     old = {}
 
@@ -146,7 +168,36 @@ def run_owned(command, env):
             old[number] = signal.signal(number, interrupted)
         if requested[0]:
             return 128 + requested[0]
-        child = subprocess.Popen(command, env=env, start_new_session=True)
+        child = subprocess.Popen(command, env=env, start_new_session=True,
+                                 stdin=subprocess.PIPE if input_data is not None else None,
+                                 stdout=subprocess.PIPE if capture is not None else None,
+                                 stderr=subprocess.PIPE if capture is not None else None)
+        if input_data is not None:
+            def write_input():
+                try:
+                    child.stdin.write(input_data); child.stdin.close()
+                except (OSError, ValueError) as error:
+                    input_errors.append(error)
+            writer = threading.Thread(target=write_input, daemon=True)
+            writer.start()
+        if capture is not None:
+            selector = selectors.DefaultSelector()
+            for label, pipe, target in (('stdout', child.stdout, sys.stdout.buffer), ('stderr', child.stderr, sys.stderr.buffer)):
+                capture[label] = {'data': bytearray(), 'truncated': False}
+                selector.register(pipe, selectors.EVENT_READ, (label, target))
+        def drain(timeout):
+            if selector is None:
+                time.sleep(timeout)
+                return
+            for key, _ in selector.select(timeout):
+                data = os.read(key.fileobj.fileno(), 65536)
+                if not data:
+                    selector.unregister(key.fileobj); key.fileobj.close(); continue
+                label, target = key.data
+                target.write(data); target.flush()
+                saved = capture[label]; room = max(0, 4096 - len(saved['data']))
+                saved['data'].extend(data[:room])
+                if len(data) > room: saved['truncated'] = True
         while child.poll() is None:
             if requested[0] and not forwarded:
                 try:
@@ -171,13 +222,29 @@ def run_owned(command, env):
                     pass
                 print('Terminal cleanup is unconfirmed; inspect the operation before continuing.', file=sys.stderr, flush=True)
                 return 125
-            time.sleep(.05)
+            drain(.05)
+        if selector is not None:
+            deadline = time.monotonic() + 3
+            while selector.get_map() and time.monotonic() < deadline:
+                drain(.05)
+            if selector.get_map():
+                print('Check output collection did not finish; inspect the operation.', file=sys.stderr, flush=True)
+                return 125
+        if writer is not None:
+            writer.join(timeout=3)
+            if writer.is_alive() or input_errors:
+                print('Check output transfer was not confirmed.', file=sys.stderr, flush=True)
+                return 125
         code = child.returncode
         if code == 125 or code < 0:
             print('Terminal cleanup is unconfirmed; inspect the operation before continuing.', file=sys.stderr, flush=True)
             return 125
         return 128 + requested[0] if requested[0] else code
     finally:
+        if selector is not None:
+            for key in list(selector.get_map().values()):
+                key.fileobj.close()
+            selector.close()
         for number, handler in old.items():
             signal.signal(number, handler)
         if requested[0]:
@@ -208,7 +275,8 @@ def prepare_project_check(root, check, version=None):
                '--file', str(ROOT / overlay), '--file', str(ROOT / 'config/nomo-project-check-compose.yaml'),
                'run', '--rm', '--no-deps', '--pull', 'never', '--tty=false',
                '--workdir', '/edit-fixture', 'dev', '/usr/bin/timeout',
-               '--signal=TERM', '--kill-after=2s', '60s', *check]
+               '--signal=TERM', '--kill-after=2s', '60s',
+               'python3', '-B', '/workspace/scripts/nomo-bounded-check.py', *check]
     return command, env
 
 
