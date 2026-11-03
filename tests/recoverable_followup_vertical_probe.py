@@ -11,6 +11,8 @@ class Fake(BaseHTTPRequestHandler):
             assert self.path=='/v1/chat/completions' and self.headers.get('Authorization')=='Bearer SYNTHETIC_ONLY'
             req=json.loads(self.rfile.read(int(self.headers['Content-Length'])));ctx=json.loads(req['messages'][1]['content']);i=len(self.server.phases)
             assert i<22 and req['max_tokens']==[2048,2048,2048,2048,2048,2048,2048,2048,4096,32768,2048,2048,2048,2048,2048,4096,32768,2048,2048,2048,2048,2048][i]
+            if i==12 and self.server.fail_read:
+                self.server.phases.append(i);self.send_error(503);return
             if i==0:value=['delegate','Read context.txt']
             elif i==1:value=['read','context.txt']
             elif i==2:value=['final','blue CEDAR42']
@@ -67,7 +69,9 @@ def omitted_check():
     return 'test "$(cat note.txt)" = "before green" || exit 1; i=0; while [ "$i" -lt 4500 ]; do printf X; i=$((i+1)); done'
 
 def main():
-    omitted=len(sys.argv)>1 and sys.argv[1]=='omitted'
+    mode=sys.argv[1] if len(sys.argv)>1 else 'success'
+    assert mode in ('success','omitted','status-pre-edit','status-post-edit')
+    omitted=mode=='omitted'
     out=Path(tempfile.mkdtemp(prefix='nomo-event-followup-',dir='/private/tmp'));project=out/'project'
     shutil.copytree(ROOT,project,ignore=shutil.ignore_patterns('.etas','__pycache__'));(project/'.etas').mkdir(mode=0o700)
     context=out/'context';context.mkdir(mode=0o700);(context/'context.txt').write_text('blue\n')
@@ -76,7 +80,7 @@ def main():
     state=out/'state';state.mkdir(mode=0o700);policy=out/'policy';policy.mkdir(mode=0o700)
     (policy/'policy.json').write_text('{"format":1,"literals":["SYNTHETIC_NEVER_PRESENT"]}');(policy/'policy.json').chmod(0o600)
     (policy/'binding.key').write_bytes(b'K'*32);(policy/'binding.key').chmod(0o600)
-    server=HTTPServer(('127.0.0.1',0),Fake);server.phases=[];server.failed=False;server.fail_summary=False;server.expected_check='passed';server.expected_exit='0';server.omitted=omitted
+    server=HTTPServer(('127.0.0.1',0),Fake);server.phases=[];server.failed=False;server.fail_summary=False;server.fail_read=False;server.expected_check='passed';server.expected_exit='0';server.omitted=omitted
     thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start();proc=None;master=None
     try:
         manifest=project/'etas.toml';text=manifest.read_text()
@@ -112,27 +116,48 @@ def main():
                 if not data:break
                 output.extend(data)
             (out/(action+'.output')).write_bytes(output);os.close(master);master=None
-            assert proc.returncode==0 and native and application and b'Check passed.' in output,action+' failed'
-            assert (workspace/'note.txt').read_text()=='before '+after+'\n'
+            if action=='session-followup' and mode=='status-pre-edit':
+                assert proc.returncode!=0 and not native and not application and b'PREVIEW ' not in output
+                assert (workspace/'note.txt').read_text()=='before green\n'
+            elif action=='session-followup' and mode=='status-post-edit':
+                assert proc.returncode!=0 and native and application and b'APPLIED edit2' in output and b'Check passed.' not in output
+                assert (workspace/'note.txt').read_text()=='before gold\n'
+            else:
+                assert proc.returncode==0 and native and application and b'Check passed.' in output,action+' failed'
+                assert (workspace/'note.txt').read_text()=='before '+after+'\n'
         run_work('session-work','edit1','old','green')
         assert server.phases==list(range(11))
+        server.fail_read=mode=='status-pre-edit';server.fail_summary=mode=='status-post-edit'
         run_work('session-followup','edit2','green','gold')
-        assert not server.failed and server.phases==list(range(18))
-        status=subprocess.run([str(project/'scripts/nomo-read.sh'),'session-status','--state',str(state),'--events-policy-dir',str(policy)],env=env,capture_output=True,timeout=120)
-        (out/'status.stdout').write_bytes(status.stdout);(out/'status.stderr').write_bytes(status.stderr)
-        assert status.returncode==0 and b'RECORDED FOLLOWUP complete' in status.stdout and b'RECORDED FOLLOWUP CHECK complete' in status.stdout
-        views=[json.loads(line.removeprefix(b'EVENT VIEW ')) for line in status.stdout.splitlines() if line.startswith(b'EVENT VIEW {')];assert len(views)==1;view=views[0]
-        assert view['work_settled_calls']==7 and view['followup_settled_calls']==7 and view['followup_settled_tokens']==47104
-        assert view['check_outcome']=='passed' and view['followup_check_outcome']=='passed' and view['followup_check_id']=='edit2' and json.loads(view['followup_check_stdout'])=='SECOND_CHECK_OK'
-        if omitted:assert view['check_stdout_omitted'] and view['check_stdout_truncated'] and json.loads(view['check_stdout'])==''
-        with sqlite3.connect(state/'history.sqlite3') as db:
-            assert db.execute('pragma integrity_check').fetchone()==('ok',)
-            names={x[0] for x in db.execute("select region from memory_entries")}
-            assert {'nomo-recoverable-work-v1','nomo-recoverable-check-v1','nomo-recoverable-followup-v1','nomo-recoverable-followup-check-v1','nomo-edit-operation-v1','nomo-edit-followup-v1'}<=names
-        resumed=subprocess.run([str(project/'scripts/nomo-read.sh'),'session-continue','--root',str(current),'--state',str(state),'--allow','context.txt','--once','Explain recorded results','--events-policy-dir',str(policy)],env=env,capture_output=True,timeout=120)
-        (out/'resume.stdout').write_bytes(resumed.stdout);(out/'resume.stderr').write_bytes(resumed.stderr)
-        assert resumed.returncode==0 and not server.failed and server.phases==list(range(22)) and b'SAVED chat and event records together' in resumed.stdout
-        result={'status':'passed','scope':'local fake two separately confirmed work/check rounds and read continuation with persisted selected facts; no root identity or real provider','fake_requests':22,'first_check_omitted':omitted,'fresh_confirmations_twice':True,'check_slots_and_budgets_preserved':True,'resume_received_both_checks':True}
+        assert not server.failed and server.phases==list(range(13 if mode=='status-pre-edit' else 18))
+        if mode.startswith('status-'):
+            with sqlite3.connect(state/'history.sqlite3') as db: before=list(db.iterdump())
+            status=subprocess.run([str(project/'scripts/nomo-read.sh'),'session-status','--state',str(state),'--events-policy-dir',str(policy)],env=env,capture_output=True,timeout=120)
+            views=[json.loads(line.removeprefix(b'EVENT VIEW ')) for line in status.stdout.splitlines() if line.startswith(b'EVENT VIEW {')]
+            assert status.returncode==0 and len(views)==1
+            view=views[0]; expected='none' if mode=='status-pre-edit' else 'completed'
+            assert view['work_phase']=='complete' and view['check_phase']=='complete' and view['check_outcome']=='passed'
+            assert view['followup_phase']=='running' and view['followup_edit_phase']==expected and view['followup_check_phase']=='planned'
+            assert b'UNRESOLVED FOLLOWUP CHECK: no start was recorded at this snapshot' in status.stdout and b'a new session does not resolve this one' in status.stdout
+            assert (b'no edit journal is recorded' if expected=='none' else b'edit completion was recorded') in status.stdout
+            with sqlite3.connect(state/'history.sqlite3') as db: assert before==list(db.iterdump())
+            result={'status':'passed','scope':'synthetic second work failure with read-only status; no real provider or replay','case':mode,'fake_requests':len(server.phases),'followup_edit_phase':expected,'followup_check_phase':view['followup_check_phase']}
+        else:
+            status=subprocess.run([str(project/'scripts/nomo-read.sh'),'session-status','--state',str(state),'--events-policy-dir',str(policy)],env=env,capture_output=True,timeout=120)
+            (out/'status.stdout').write_bytes(status.stdout);(out/'status.stderr').write_bytes(status.stderr)
+            assert status.returncode==0 and b'RECORDED FOLLOWUP complete' in status.stdout and b'RECORDED FOLLOWUP CHECK complete' in status.stdout
+            views=[json.loads(line.removeprefix(b'EVENT VIEW ')) for line in status.stdout.splitlines() if line.startswith(b'EVENT VIEW {')];assert len(views)==1;view=views[0]
+            assert view['work_settled_calls']==7 and view['followup_settled_calls']==7 and view['followup_settled_tokens']==47104
+            assert view['check_outcome']=='passed' and view['followup_check_outcome']=='passed' and view['followup_check_id']=='edit2' and json.loads(view['followup_check_stdout'])=='SECOND_CHECK_OK'
+            if omitted:assert view['check_stdout_omitted'] and view['check_stdout_truncated'] and json.loads(view['check_stdout'])==''
+            with sqlite3.connect(state/'history.sqlite3') as db:
+                assert db.execute('pragma integrity_check').fetchone()==('ok',)
+                names={x[0] for x in db.execute("select region from memory_entries")}
+                assert {'nomo-recoverable-work-v1','nomo-recoverable-check-v1','nomo-recoverable-followup-v1','nomo-recoverable-followup-check-v1','nomo-edit-operation-v1','nomo-edit-followup-v1'}<=names
+            resumed=subprocess.run([str(project/'scripts/nomo-read.sh'),'session-continue','--root',str(current),'--state',str(state),'--allow','context.txt','--once','Explain recorded results','--events-policy-dir',str(policy)],env=env,capture_output=True,timeout=120)
+            (out/'resume.stdout').write_bytes(resumed.stdout);(out/'resume.stderr').write_bytes(resumed.stderr)
+            assert resumed.returncode==0 and not server.failed and server.phases==list(range(22)) and b'SAVED chat and event records together' in resumed.stdout
+            result={'status':'passed','scope':'local fake two separately confirmed work/check rounds and read continuation with persisted selected facts; no root identity or real provider','fake_requests':22,'first_check_omitted':omitted,'fresh_confirmations_twice':True,'check_slots_and_budgets_preserved':True,'resume_received_both_checks':True}
     except BaseException as error:result={'status':'failed','failure_type':type(error).__name__,'phases':server.phases,'work_exit':proc.poll() if proc else None,'error':str(error)}
     finally:
         if proc and proc.poll() is None:
