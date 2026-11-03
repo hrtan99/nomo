@@ -81,7 +81,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
     let prior_request = history.value.last_request; let previous = history.value.invocation.prior;
     let checked = match ticket.record.parent.check { Some(value) => value.outcome, None() => "not requested" };
     let exit = match ticket.record.parent.check { Some(value) => value.exit_code, None() => "" };
-    let prior_work = PriorWork { request = ticket.record.parent.work.request, summary = ticket.record.parent.work.summary, summary_source = "unknown", selection = None(), check = checked, exit_code = exit, output = first_output };
+    let prior_work = PriorWork { request = ticket.record.parent.work.request, summary = ticket.record.parent.work.summary, summary_source = "unknown", selection = None(), check = checked, exit_code = exit, output = first_output, history = [] };
     let pending = match prepare_history(input, prior_request, previous, prior_work) { Ok(value) => value, Err(failure) => { ledger(failure.state); return refused(failure.error); } };
     let selected = match confirm_current(pending.selected, pending.prepared) { Ok(value) => value, Err(error) => { return refused(error); } };
     match claim(ticket) { Ok(_) => {} Err(error) => { return refused(error); } }

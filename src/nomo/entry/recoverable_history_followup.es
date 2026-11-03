@@ -1,6 +1,8 @@
 module nomo.entry.recoverable_history_followup;
 
 import nomo.session.work_fact_events.{summary_source, selection};
+import nomo.session.recoverable_work_facts.snapshot as work_snapshot;
+import nomo.harness.history_continue_model.WorkFacts;
 
 import std.io.println;
 import std.collections.len as count;
@@ -12,7 +14,7 @@ import nomo.harness.harness_work_contract.Ledger;
 import nomo.harness.harness_work_contract.fresh as fresh_ledger;
 import nomo.harness.read_model_tools.{expanded_work_child_turn as work_child_turn};
 import nomo.harness.legacy_string_stages.{LegacyStringStages, LegacyEditStages};
-import nomo.harness.history_followup_model.{read_main, plan, child, aggregate, PriorWork};
+import nomo.harness.history_followup_model.{read_main, plan, child, aggregate, PriorWork, HistoryWork};
 import nomo.harness.history_continue_model.CheckOutput;
 import nomo.session.event_policy.{PolicyRoot, load as load_policy};
 import nomo.session.recoverable_check_store.load as inspect_first_check;
@@ -56,6 +58,9 @@ flow summarize_history(value: Completed, prior_request: string, previous: Previo
     };
 }
 flow refused(error: string) -> i32 { println("REFUSED " + error); return 1; }
+flow historical(value: WorkFacts) -> HistoryWork {
+    return HistoryWork { id = value.id, summary = value.summary, summary_source = value.summary_source, selection = value.selection, check = value.check, exit_code = value.exit_code };
+}
 
 // Subsequent operations use a single durable append-only book. Earlier fixed
 // work/check records remain in place and continue to provide session history.
@@ -76,7 +81,12 @@ flow more(input: Work, prior_request: string, previous: Previous, first_id: stri
     } None() => {} }
     let origin = match summary_source(second.value.events, work.summary, policy) { Ok(value) => value, Err(error) => { return refused(error); } };
     let chosen = match selection(second.value.events.events, policy) { Ok(value) => value, Err(error) => { return refused(error); } };
-    var prior = PriorWork { request = work.request, summary = work.summary, summary_source = origin, selection = chosen, check = checked, exit_code = exit, output = output };
+    let facts = match work_snapshot(policy, binding) { Ok(value) => value, Err(error) => { return refused(error); } };
+    var history: Array<HistoryWork> = [];
+    match facts.first { Some(value) => { history = history.push(historical(value)); } None() => {} }
+    match facts.followup { Some(value) => { history = history.push(historical(value)); } None() => {} }
+    for value in facts.additional limit Iterations(32) { history = history.push(historical(value)); }
+    var prior = PriorWork { request = work.request, summary = work.summary, summary_source = origin, selection = chosen, check = checked, exit_code = exit, output = output, history = history };
     let extra = match load_extra(binding) { Ok(value) => value, Err(error) => { return refused(error); } };
     match extra { Some(value) => {
         let item = value.value.current;
@@ -89,7 +99,7 @@ flow more(input: Work, prior_request: string, previous: Previous, first_id: stri
         }
         let chosen = match selection(item.result.events, policy) { Ok(value) => value, Err(error) => { return refused(error); } };
         prior = PriorWork { request = item.core.request, summary = item.result.summary, summary_source = item.result.source, selection = chosen,
-            check = if item.check.phase == "none" { "not requested" } else { item.check.outcome }, exit_code = item.check.exit_code, output = prior_output };
+            check = if item.check.phase == "none" { "not requested" } else { item.check.outcome }, exit_code = item.check.exit_code, output = prior_output, history = history };
     } None() => {} }
     let ticket = match admit_extra(binding, input.edit.id, input.edit.workspace, input.edit.path, input.edit.request, check_digest, policy) { Ok(value) => value, Err(error) => { return refused(error); } };
     println("RESERVED additional work: 7 calls, 51200 output tokens; interruption leaves this work unresolved.");
@@ -156,7 +166,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
     if has_check { match plan_check(ticket, check_digest, policy, binding) { Ok(_) => {} Err(error) => { return refused(error); } } }
     println("RESERVED event followup; interruption or uncertain effects cannot be retried automatically.");
     let prior_request = history.value.chat.last_request; let previous = history.value.chat.invocation.prior;
-    let prior_work = PriorWork { request = first_work.value.work.request, summary = first_work.value.work.summary, summary_source = origin, selection = chosen, check = checked, exit_code = exit, output = first_output };
+    let prior_work = PriorWork { request = first_work.value.work.request, summary = first_work.value.work.summary, summary_source = origin, selection = chosen, check = checked, exit_code = exit, output = first_output, history = [] };
     let pending = match prepare_history(input, prior_request, previous, prior_work) { Ok(value) => value, Err(failure) => { ledger(failure.state); return refused(failure.error); } };
     let selected = match confirm_current(pending.selected, pending.prepared) { Ok(value) => value, Err(error) => { return refused(error); } };
     match claim(ticket, policy, binding) { Ok(_) => {} Err(error) => { return refused(error); } }

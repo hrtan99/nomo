@@ -80,11 +80,14 @@ class Fake(BaseHTTPRequestHandler):
             elif i==16:value=['edit','green','gold']
             elif i==17:value=SECOND_SUMMARY
             elif MODE=='third' and i==18:
-                assert ctx['prior_work']['summary']==SECOND_SUMMARY and ctx['prior_work']['selection']==SEARCH_SELECTION;value=['delegate','Read context.txt']
+                assert ctx['prior_work']['summary']==SECOND_SUMMARY and ctx['prior_work']['selection']==SEARCH_SELECTION
+                assert ctx['prior_work']['history']==[{'id':'edit1','selection':FIRST_SELECTION},{'id':'edit2','selection':SEARCH_SELECTION}];value=['delegate','Read context.txt']
             elif MODE=='third' and i==19:value=['read','context.txt']
             elif MODE=='third' and i==20:value=['final',CHILD]
             elif MODE=='third' and i==21:value=READ_SUMMARY
-            elif MODE=='third' and i==22:value=['delegate','Replace gold with plum']
+            elif MODE=='third' and i==22:
+                history=ctx['prior_work']['history'];assert [item['id'] for item in history]==['edit1','edit2'] and [item['summary'] for item in history]==[FIRST_SUMMARY,SECOND_SUMMARY] and [item['selection'] for item in history]==[FIRST_SELECTION,SEARCH_SELECTION]
+                value=['delegate','Replace gold with plum']
             elif MODE=='third' and i==23:value=['edit','gold','plum']
             elif MODE=='third' and i==24:value='第三次编辑完成'
             elif MODE=='third' and i==25:
