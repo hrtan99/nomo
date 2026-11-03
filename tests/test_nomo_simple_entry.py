@@ -76,6 +76,24 @@ class SimpleEntryTests(unittest.TestCase):
                 with self.assertRaises(SystemExit): module.main()
                 execute.assert_not_called()
 
+    def test_status_uses_offline_session_route_without_workspace(self):
+        with tempfile.TemporaryDirectory(prefix='nomo-status-') as tmp:
+            base = Path(tmp).resolve(); workspace = base/'workspace'; workspace.mkdir(); state = base/'state'
+            with patch.dict(os.environ, {'NOMO_STATE_DIR': str(state)}), patch.object(module.os, 'execv') as execute:
+                with patch.object(module.sys, 'argv', ['nomo', '--root', str(workspace)]): module.main()
+                with patch.object(module.sys, 'argv', ['nomo', '--status', '--id', 'a'*32, '--root', str(base/'missing')]):
+                    module.main(); command = execute.call_args.args[1]
+                    self.assertEqual(command[1:3], ['session-id', 'status'])
+                    self.assertEqual(command[command.index('--id')+1], 'a'*32)
+                    self.assertNotIn('--root', command); self.assertNotIn('--once', command)
+
+    def test_status_rejects_missing_id_and_incompatible_options(self):
+        for options in ([], ['--once', 'q'], ['--page', '0'], ['--allow', 'a'], ['--check', 'true']):
+            args = ['nomo', '--status'] + ([] if not options else ['--id', 'a'*32, *options])
+            with self.subTest(args=args), patch.object(module.sys, 'argv', args), patch.object(module.os, 'execv') as execute:
+                with self.assertRaises(SystemExit): module.main()
+                execute.assert_not_called()
+
     def test_resume_missing_state_and_overlapping_workspace_do_not_create_state(self):
         with tempfile.TemporaryDirectory(prefix='nomo-entry-') as tmp:
             base = Path(tmp).resolve(); workspace = base/'workspace'; workspace.mkdir()
