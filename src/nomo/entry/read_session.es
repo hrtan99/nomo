@@ -105,7 +105,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyR
                     let budget = BudgetFacts { work_calls = work_calls, work_generation = work_generation,
                         chat_used_calls = running.invocation.usage.calls, chat_used_generation = running.invocation.usage.tokens,
                         chat_reserved_calls = 4, chat_reserved_generation = 8192 };
-                    run_after_followup(request, allowed, running.invocation, value, second, budget)
+                    run_after_followup(request, allowed, running.invocation, value, second, [], budget)
                 }
                 None() => run_after_work(request, allowed, running.invocation, value),
             }

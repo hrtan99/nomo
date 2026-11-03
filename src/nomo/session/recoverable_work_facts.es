@@ -11,8 +11,20 @@ import nomo.session.recoverable_followup_store.load as load_followup;
 import nomo.session.recoverable_followup_check_store.load as load_followup_check;
 import nomo.session.edit_operation_store.{inspect as inspect_edit, available as edit_available};
 import nomo.session.history_followup_edit_store.{inspect as inspect_followup_edit, available as followup_edit_available};
+import nomo.session.continuous_work.{Entry, load as load_continuous};
 
-public type Facts = { first: Option<WorkFacts>, followup: Option<WorkFacts>, calls: i32, generation: i32 };
+public type Facts = { first: Option<WorkFacts>, followup: Option<WorkFacts>, additional: Array<WorkFacts>, calls: i32, generation: i32 };
+flow extra_fact(item: Entry, policy: Policy) -> Result<WorkFacts, string> {
+    if item.result.phase != "complete" || (item.check.phase != "none" && item.check.phase != "complete") { return Err("continuous work unresolved"); }
+    var output: Option<CheckOutput> = None();
+    if item.check.phase == "complete" {
+        let out = match decode(item.check.stdout, policy) { Ok(value) => value, Err(error) => { return Err(error); } };
+        let err = match decode(item.check.stderr, policy) { Ok(value) => value, Err(error) => { return Err(error); } };
+        output = Some(CheckOutput { stdout = out, stderr = err, stdout_truncated = item.check.stdout_truncated, stderr_truncated = item.check.stderr_truncated });
+    }
+    return Ok(WorkFacts { id = item.core.id, summary = item.result.summary, summary_source = item.result.source,
+        check = if item.check.phase == "none" { "not requested" } else { item.check.outcome }, exit_code = item.check.exit_code, output = output });
+}
 // Only completed recorded actions become untrusted model context. An uncertain
 // edit or check is not retried and cannot be represented as a successful fact.
 flow check_values(value: Option<CheckFrame>, policy: Policy) -> Result<CheckOutput, string> {
@@ -73,5 +85,15 @@ public flow snapshot(policy: Policy, binding: string) -> Result<Facts, string> {
             second_facts = Some(WorkFacts { id = work.id, summary = work.summary, summary_source = origin, check = outcome, exit_code = exit, output = output });
         }
     }
-    return Ok(Facts { first = first_facts, followup = second_facts, calls = calls, generation = generation });
+    var additional: Array<WorkFacts> = [];
+    let extra = match load_continuous(binding) { Ok(value) => value, Err(error) => { return Err(error); } };
+    match extra { Some(value) => {
+        match second_facts { None() => { return Err("followup facts missing"); } Some(_) => {} }
+        let items = value.value.history.push(value.value.current);
+        for item in items limit Iterations(32) {
+            let fact = match extra_fact(item, policy) { Ok(value) => value, Err(error) => { return Err(error); } };
+            additional = additional.push(fact); calls = calls + item.result.calls; generation = generation + item.result.generation;
+        }
+    } None() => {} }
+    return Ok(Facts { first = first_facts, followup = second_facts, additional = additional, calls = calls, generation = generation });
 }

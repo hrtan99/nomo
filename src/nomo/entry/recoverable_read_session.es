@@ -1,7 +1,7 @@
 module nomo.entry.recoverable_read_session;
 
 import std.io.println;
-import std.text.{len, split};
+import std.text.{len, split, to_string_i32};
 import std.bytes.len as byte_count;
 import std.codec.text.utf8_encode;
 import std.agent.message.Message;
@@ -12,6 +12,7 @@ import nomo.model.read_protocol.question_error;
 import nomo.harness.read_tool_chat.run_private_turn;
 import nomo.harness.history_continue_model.{BudgetFacts, run_turn as run_after_work, run_after_followup};
 import nomo.session.recoverable_work_facts.snapshot as work_facts;
+import nomo.session.continuous_work.{Entry as ExtraEntry, load as load_continuous};
 import nomo.session.event_policy.load as load_policy;
 import nomo.session.chat_history.load as load_legacy;
 import nomo.session.recoverable_chat_store.{create, load, reserve, finish};
@@ -69,7 +70,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyR
             Some(second) => {
                 let usage = running.value.chat.invocation.usage;
                 let budget = BudgetFacts { work_calls = facts.calls, work_generation = facts.generation, chat_used_calls = usage.calls, chat_used_generation = usage.tokens, chat_reserved_calls = 4, chat_reserved_generation = 8192 };
-                run_after_followup(args[4], allowed, running.value.chat.invocation, first, second, budget)
+                run_after_followup(args[4], allowed, running.value.chat.invocation, first, second, facts.additional, budget)
             }
             None() => run_after_work(args[4], allowed, running.value.chat.invocation, first),
         } }
@@ -98,7 +99,8 @@ public type View = { format: i32, encoding: string, phase: string, turns: i32, f
     check_stdout: string, check_stderr: string, check_stdout_truncated: bool, check_stderr_truncated: bool, check_stdout_omitted: bool, check_stderr_omitted: bool,
     followup_phase: string, followup_edit_phase: string, followup_reserved_calls: i32, followup_reserved_tokens: i32, followup_settled_calls: i32, followup_settled_tokens: i32, followup_events: Array<Event>,
     followup_check_phase: string, followup_check_id: string, followup_check_digest: string, followup_check_outcome: string, followup_check_exit: string,
-    followup_check_stdout: string, followup_check_stderr: string, followup_check_stdout_truncated: bool, followup_check_stderr_truncated: bool, followup_check_stdout_omitted: bool, followup_check_stderr_omitted: bool };
+    followup_check_stdout: string, followup_check_stderr: string, followup_check_stdout_truncated: bool, followup_check_stderr_truncated: bool, followup_check_stdout_omitted: bool, followup_check_stderr_omitted: bool,
+    additional_work: Array<ExtraEntry> };
 
 public flow status(args: Array<string>) -> i32 ![Console, Memory, Fs.read<PolicyRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {
     if count(args) != 2 || args[0] != "--policy-binding" { println("REFUSED recoverable status requires policy binding"); return 1; }
@@ -109,6 +111,14 @@ public flow status(args: Array<string>) -> i32 ![Console, Memory, Fs.read<Policy
     let check = match load_recoverable_check(policy, args[1]) { Ok(item) => item, Err(error) => { println("REFUSED " + error); return 1; } };
     let followup = match load_recoverable_followup(policy, args[1]) { Ok(item) => item, Err(error) => { println("REFUSED " + error); return 1; } };
     let followup_check = match load_recoverable_followup_check(policy, args[1]) { Ok(item) => item, Err(error) => { println("REFUSED " + error); return 1; } };
+    let extra = match load_continuous(args[1]) { Ok(item) => item, Err(error) => { println("REFUSED " + error); return 1; } };
+    var additional: Array<ExtraEntry> = [];
+    match extra { Some(item) => { additional = item.value.history.push(item.value.current); } None() => {} }
+    for item in additional limit Iterations(32) {
+        println("ADDITIONAL WORK " + item.core.id + " phase=" + item.result.phase + " edit=" + item.edit.phase + " check=" + item.check.phase +
+            " settled_calls=" + to_string_i32(item.result.calls) + " settled_generation=" + to_string_i32(item.result.generation) +
+            if item.result.phase == "running" { " reserved_calls=7 reserved_generation=51200" } else { " reserved_calls=0 reserved_generation=0" });
+    }
     var followup_phase = "none"; var followup_edit_phase = "none"; var followup_reserved_calls: i32 = 0; var followup_reserved_tokens: i32 = 0;
     var followup_settled_calls: i32 = 0; var followup_settled_tokens: i32 = 0; var followup_events: Array<Event> = [];
     match followup { Some(item) => {
@@ -182,7 +192,7 @@ public flow status(args: Array<string>) -> i32 ![Console, Memory, Fs.read<Policy
         followup_settled_calls = followup_settled_calls, followup_settled_tokens = followup_settled_tokens, followup_events = followup_events,
         followup_check_phase = followup_check_phase, followup_check_id = followup_check_id, followup_check_digest = followup_check_digest,
         followup_check_outcome = followup_check_outcome, followup_check_exit = followup_check_exit, followup_check_stdout = followup_check_stdout,
-        followup_check_stderr = followup_check_stderr, followup_check_stdout_truncated = followup_check_stdout_truncated, followup_check_stderr_truncated = followup_check_stderr_truncated, followup_check_stdout_omitted = followup_check_stdout_omitted, followup_check_stderr_omitted = followup_check_stderr_omitted };
+        followup_check_stderr = followup_check_stderr, followup_check_stdout_truncated = followup_check_stdout_truncated, followup_check_stderr_truncated = followup_check_stderr_truncated, followup_check_stdout_omitted = followup_check_stdout_omitted, followup_check_stderr_omitted = followup_check_stderr_omitted, additional_work = additional };
     let converted: Option<Message<JsonValue>> = Message.new(view).cast<JsonValue>();
     let value = match converted { Some(item) => item.body, None() => { println("REFUSED event view conversion"); return 1; } };
     let raw = match stringify(value) { Ok(item) => item, Err(_) => { println("REFUSED event view encoding"); return 1; } };

@@ -23,6 +23,10 @@ import nomo.harness.harness_tool_chat_contract.Previous;
 import nomo.entry.harness_work_entry.{prepare_expanded_unicode, finish_edit, finish_history_summary, expanded_ledger as ledger, Pending, Failure, Completed, Summary};
 import nomo.session.recoverable_chat_store.load as load_chat;
 import nomo.session.recoverable_followup_store.{admit, claim, finish};
+import nomo.session.recoverable_followup_store.load as load_followup;
+import nomo.session.history_followup_edit_store.inspect as inspect_followup_edit;
+import nomo.session.continuous_work.{load as load_extra, admit as admit_extra, edit_intent, edit_complete, finish as finish_extra};
+import nomo.session.redaction.Policy;
 import nomo.session.recoverable_followup_check_store.{plan as plan_check, load as load_followup_check};
 import nomo.session.work_fact_events.capture;
 import nomo.session.history_followup_edit_store.{available, begin, complete};
@@ -53,6 +57,55 @@ flow summarize_history(value: Completed, prior_request: string, previous: Previo
 }
 flow refused(error: string) -> i32 { println("REFUSED " + error); return 1; }
 
+// Subsequent operations use a single durable append-only book. Earlier fixed
+// work/check records remain in place and continue to provide session history.
+flow more(input: Work, prior_request: string, previous: Previous, first_id: string, check_digest: string, policy: Policy, binding: string) -> i32 {
+    let second = match load_followup(policy, binding) { Ok(Some(value)) => value, _ => { return refused("completed followup required"); } };
+    let work = second.value.work;
+    if work.phase != "complete" || input.edit.id == first_id || input.edit.id == work.id { return refused("distinct completed prior works required"); }
+    let second_edit = match inspect_followup_edit(work.id, work.workspace, work.path) { Ok(Some(value)) => value, _ => { return refused("completed followup edit required"); } };
+    if second_edit.phase != "completed" { return refused("followup edit unresolved"); }
+    let check = match load_followup_check(policy, binding) { Ok(value) => value, Err(error) => { return refused(error); } };
+    var checked = "not requested"; var exit = ""; var output: Option<CheckOutput> = None();
+    match check { Some(value) => {
+        if value.value.check.phase != "complete" { return refused("followup check unresolved"); }
+        let out = match decode(value.value.stdout, policy) { Ok(value) => value, Err(error) => { return refused(error); } };
+        let err = match decode(value.value.stderr, policy) { Ok(value) => value, Err(error) => { return refused(error); } };
+        output = Some(CheckOutput { stdout = out, stderr = err, stdout_truncated = value.value.stdout_truncated, stderr_truncated = value.value.stderr_truncated });
+        checked = value.value.check.outcome; exit = value.value.check.exit_code;
+    } None() => {} }
+    let origin = match summary_source(second.value.events, work.summary, policy) { Ok(value) => value, Err(error) => { return refused(error); } };
+    var prior = PriorWork { request = work.request, summary = work.summary, summary_source = origin, check = checked, exit_code = exit, output = output };
+    let extra = match load_extra(binding) { Ok(value) => value, Err(error) => { return refused(error); } };
+    match extra { Some(value) => {
+        let item = value.value.current;
+        if item.result.phase != "complete" || (item.check.phase != "none" && item.check.phase != "complete") { return refused("previous work unresolved"); }
+        var prior_output: Option<CheckOutput> = None();
+        if item.check.phase == "complete" {
+            let out = match decode(item.check.stdout, policy) { Ok(value) => value, Err(error) => { return refused(error); } };
+            let err = match decode(item.check.stderr, policy) { Ok(value) => value, Err(error) => { return refused(error); } };
+            prior_output = Some(CheckOutput { stdout = out, stderr = err, stdout_truncated = item.check.stdout_truncated, stderr_truncated = item.check.stderr_truncated });
+        }
+        prior = PriorWork { request = item.core.request, summary = item.result.summary, summary_source = item.result.source,
+            check = if item.check.phase == "none" { "not requested" } else { item.check.outcome }, exit_code = item.check.exit_code, output = prior_output };
+    } None() => {} }
+    let ticket = match admit_extra(binding, input.edit.id, input.edit.workspace, input.edit.path, input.edit.request, check_digest, policy) { Ok(value) => value, Err(error) => { return refused(error); } };
+    println("RESERVED additional work: 7 calls, 51200 output tokens; interruption leaves this work unresolved.");
+    let pending = match prepare_history(input, prior_request, previous, prior) { Ok(value) => value, Err(failure) => { ledger(failure.state); return refused(failure.error); } };
+    let selected = match confirm_current(pending.selected, pending.prepared) { Ok(value) => value, Err(error) => { return refused(error); } };
+    let intent = match edit_intent(ticket, selected) { Ok(value) => value, Err(error) => { return refused(error); } };
+    println("INTENT durable " + selected.id);
+    match apply(pending.prepared) { Ok(_) => {} Err(error) => { return refused(error); } }
+    let edited = match edit_complete(intent) { Ok(value) => value, Err(error) => { return refused("edit may have completed; " + error); } };
+    println("APPLIED " + selected.id);
+    let confirmed = Confirmed { binding = selected, after = pending.prepared.proposal.after };
+    let captured = match finish_edit(pending, confirmed) { Ok(value) => value, Err(failure) => { return refused(failure.error); } };
+    let summary = match summarize_history(captured, prior_request, previous, prior) { Ok(value) => value, Err(failure) => { return refused(failure.error); } };
+    let records = match capture(pending, confirmed, summary) { Ok(value) => value, Err(error) => { return refused(error); } };
+    match finish_extra(edited, summary.answer, if summary.model_generated { "model" } else { "system" }, summary.state, records, policy) { Ok(_) => {} Err(error) => { return refused("edit completed; " + error); } }
+    display("FINAL ", summary.answer); println("SAVED additional work facts"); ledger(summary.state); return 0;
+}
+
 // Current roots and current approval are supplied by this invocation. Saved
 // history is only model input, never proof of a current root or consent.
 public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read<PolicyRoot>, Fs.read<ReadOnlyRoot>, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {
@@ -67,10 +120,16 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
     let input = match parse(work_args) { Ok(value) => value, Err(error) => { return refused(error); } };
     if input.edit.help { return refused("select a current read root, private edit root, target and task"); }
     let policy = match load_policy() { Ok(item) => item, Err(error) => { return refused(error); } };
-    match available() { Ok(_) => {} Err(error) => { return refused(error); } }
     let history = match load_chat(policy, binding) { Ok(Some(value)) => value, _ => { return refused("saved event chat required"); } };
+    if history.value.chat.phase == "running" { return refused("chat turn unresolved"); }
     let first_work = match inspect_first_work(policy, binding) { Ok(Some(value)) => value, _ => { return refused("completed first work required"); } };
     if first_work.value.work.phase != "complete" { return refused("first work unresolved"); }
+    match load_followup(policy, binding) {
+        Ok(Some(_)) => { return more(input, history.value.chat.last_request, history.value.chat.invocation.prior, first_work.value.work.id, check_digest, policy, binding); }
+        Ok(None()) => {}
+        Err(error) => { return refused(error); }
+    }
+    match available() { Ok(_) => {} Err(error) => { return refused(error); } }
     let first_check = match inspect_first_check(policy, binding) { Ok(value) => value, Err(error) => { return refused(error); } };
     var first_output: Option<CheckOutput> = None(); var checked = "not requested"; var exit = "";
     match first_check {

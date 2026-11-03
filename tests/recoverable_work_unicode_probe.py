@@ -33,6 +33,7 @@ class Fake(BaseHTTPRequestHandler):
             assert self.path=='/v1/chat/completions' and self.headers.get('Authorization')=='Bearer SYNTHETIC_ONLY'
             req=json.loads(self.rfile.read(int(self.headers['Content-Length'])));ctx=json.loads(req['messages'][1]['content']);i=len(self.server.phases)
             limits=[2048,2048,2048,2048,2048,4096,4096,2048,4096,32768,2048,2048,4096,4096,2048,4096,32768,2048,2048,2048,2048,2048]
+            if MODE=='third':limits=limits[:18]+[2048,4096,4096,2048,4096,32768,2048,2048,2048,2048,2048]
             if BASELINE:limits[5:7]=[2048,2048]
             assert req['max_tokens']==limits[i]
             if MULTI and i in (1,5,12,19):assert ctx['allowed']==FILES
@@ -72,6 +73,20 @@ class Fake(BaseHTTPRequestHandler):
                 assert ctx['prior_work']['summary']==FIRST_SUMMARY and ctx['prior_work']['summary_source']==FIRST_SOURCE and ctx['current']['evidence']['summary']==READ_SUMMARY;value=['delegate','Replace green with gold']
             elif i==16:value=['edit','green','gold']
             elif i==17:value=SECOND_SUMMARY
+            elif MODE=='third' and i==18:
+                assert ctx['prior_work']['summary']==SECOND_SUMMARY;value=['delegate','Read context.txt']
+            elif MODE=='third' and i==19:value=['read','context.txt']
+            elif MODE=='third' and i==20:value=['final',CHILD]
+            elif MODE=='third' and i==21:value=READ_SUMMARY
+            elif MODE=='third' and i==22:value=['delegate','Replace gold with plum']
+            elif MODE=='third' and i==23:value=['edit','gold','plum']
+            elif MODE=='third' and i==24:value='第三次编辑完成'
+            elif MODE=='third' and i==25:
+                assert ctx['budget']['work_calls']==21 and ctx['budget']['work_generation']==153600
+                assert ctx['additional'][0]['id']=='edit3' and ctx['additional'][0]['summary']=='第三次编辑完成';value=['delegate','Read context.txt']
+            elif MODE=='third' and i==26:value=['read','context.txt']
+            elif MODE=='third' and i==27:value=['final','记录完整']
+            elif MODE=='third' and i==28:value='三次编辑均已记录'
             elif i==18:
                 assert ctx['budget']['work_calls']==14 and ctx['budget']['work_generation']==(98304 if BASELINE else 102400)
                 assert ctx['work']['summary']==FIRST_SUMMARY and ctx['work']['summary_source']==FIRST_SOURCE and ctx['followup']['summary']==SECOND_SUMMARY and ctx['followup']['summary_source']=='model';value=['delegate',LONG_TASK if MODE=='chat-long' else 'Read context.txt']
@@ -174,12 +189,18 @@ def main():
             cmd=[str(selected/'scripts/nomo-read.sh'),action,'--read-root',str(current),'--root',str(workspace),'--state',str(state),'--id',identifier,'--path','note.txt','--allow',allowed,'--once',task,'--events-policy-dir',str(policy),'--check','/bin/sh','-c',check]
             work(cmd,env,before,after);assert (workspace/'note.txt').read_text()=='before '+after+'\n' and not server.failed
         assert server.phases==list(range(18))
+        if MODE=='third':
+            check='test "$(cat note.txt)" = "before plum" && printf CHECK_OK'
+            cmd=[str(project/'scripts/nomo-read.sh'),'session-followup','--read-root',str(current),'--root',str(workspace),'--state',str(state),'--id','edit3','--path','note.txt','--allow',allowed,'--once','Change gold to plum using context','--events-policy-dir',str(policy),'--check','/bin/sh','-c',check]
+            work(cmd,env,'gold','plum');assert (workspace/'note.txt').read_text()=='before plum\n' and not server.failed
+            assert server.phases==list(range(25))
         status=subprocess.run([str(project/'scripts/nomo-read.sh'),'session-status','--state',str(state),'--events-policy-dir',str(policy)],env=env,capture_output=True,timeout=120)
         views=[json.loads(line.removeprefix(b'EVENT VIEW ')) for line in status.stdout.splitlines() if line.startswith(b'EVENT VIEW {')]
         assert status.returncode==0 and len(views)==1;view=views[0]
         assert view['work_phase']=='complete' and view['followup_phase']=='complete' and view['check_outcome']=='passed' and view['followup_check_outcome']=='passed'
         assert view['work_settled_calls']==7 and view['followup_settled_calls']==7
         assert view['work_settled_tokens']==(47104 if BASELINE else 51200) and view['followup_settled_tokens']==51200
+        if MODE=='third':assert len(view['additional_work'])==1 and view['additional_work'][0]['check']['phase']=='complete' and view['additional_work'][0]['result']['generation']==51200
         if MODE=='chat-long':assert any(event['kind']=='delegate' and json.loads(event['text'])==LONG_TASK for event in view['events'])
         contents=[json.loads(event['text']) for event in view['work_events']]
         assert FIRST_TASK in contents and FIRST_SUMMARY in contents and CHILD in contents and READ_SUMMARY in contents and any('绿色' in value for value in contents)
@@ -200,8 +221,9 @@ def main():
         if resumed.returncode:
             markers=[line.decode('utf-8','replace') for line in (resumed.stdout+resumed.stderr).splitlines() if line.startswith((b'REFUSED ',b'error[',b'Runtime diagnostic'))]
             raise AssertionError('synthetic continuation exit='+str(resumed.returncode)+' phases='+str(server.phases)+' markers='+str(markers[-4:]))
-        assert resumed.returncode==0 and server.phases==list(range(22)) and not server.failed
-        print(json.dumps({'status':'passed','scope':'synthetic UTF-8 chat, work, followup and continuation','fake_requests':22,'fresh_confirmations':2,'workspace':'before gold','checks':'passed','followup_context_bytes':server.read_context_bytes}))
+        expected=29 if MODE=='third' else 22
+        assert resumed.returncode==0 and server.phases==list(range(expected)) and not server.failed
+        print(json.dumps({'status':'passed','scope':'synthetic UTF-8 chat, work, followup and continuation','fake_requests':expected,'fresh_confirmations':3 if MODE=='third' else 2,'workspace':'before plum' if MODE=='third' else 'before gold','checks':'passed','followup_context_bytes':server.read_context_bytes}))
     finally:server.shutdown();server.server_close();thread.join(timeout=5);shutil.rmtree(out)
 
 if __name__=='__main__':main()

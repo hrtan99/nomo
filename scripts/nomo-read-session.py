@@ -72,6 +72,11 @@ def event_lines(raw):
             encoding=getattr(sys.stdout,'encoding',None) or 'utf-8'
             values=[display_json_string(value,encoding) for value in (*fields[:3],text)]
             rendered.append(label+' '+str(index)+' role='+values[0]+' kind='+values[1]+' name='+values[2]+' text='+values[3])
+    for number,item in enumerate(view.get('additional_work',[]),3):
+        for index,event in enumerate(item['result']['events'],1):
+            text=json.loads(event['text'])
+            values=[display_json_string(value,getattr(sys.stdout,'encoding',None) or 'utf-8') for value in (event['role'],event['kind'],event['name'],text)]
+            rendered.append('WORK '+str(number)+'.'+str(index)+' role='+values[0]+' kind='+values[1]+' name='+values[2]+' text='+values[3])
     return rendered
 
 def main(argv=None):

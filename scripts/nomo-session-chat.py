@@ -82,7 +82,7 @@ def show_resume(args, *, show_id):
     if args.events_policy_dir is None:
         print('Read turns and bounded work use this session; each edit requires fresh confirmations.', flush=True)
     else:
-        print('Event recording supports two confirmed work operations, each with an optional check; each needs fresh approval.', flush=True)
+        print('Event recording supports successive work operations, each with an optional check and fresh approval.', flush=True)
     policy = '' if args.events_policy_dir is None else ' --events-policy-dir ' + shlex.quote(args.events_policy_dir)
     print('Resume: nomo-read.sh session-id resume --sessions-dir ' + shlex.quote(args.sessions_dir)
           + ' --id ' + shlex.quote(args.id) + ' --root DIR --allow FILE' + policy + ' --once QUESTION', flush=True)
@@ -132,7 +132,7 @@ def main(argv=None):
     else:
         print('New session: the first question starts a read turn.', flush=True)
         if args.events_policy_dir is not None:
-            print('Event recording supports two confirmed work operations, each with an optional check; each needs fresh approval.', flush=True)
+            print('Event recording supports successive work operations, each with an optional check and fresh approval.', flush=True)
         else:
             print('Work requires a completed first turn.', flush=True)
     if tty and args.once is None:
@@ -161,7 +161,7 @@ def main(argv=None):
                     print('/followup OP_ID EDIT_ROOT PATH "TASK" [--check COMMAND ARG ...] runs the second bounded work operation.')
                 else:
                     print('/work OP_ID EDIT_ROOT PATH "TASK" [--check COMMAND ARG ...] runs one confirmed work operation.')
-                    print('/followup OP_ID EDIT_ROOT PATH "TASK" [--check COMMAND ARG ...] runs one additional confirmed work operation.')
+                    print('/followup OP_ID EDIT_ROOT PATH "TASK" [--check COMMAND ARG ...] runs another confirmed work operation (up to 32 additional rounds).')
                 print('Quote arguments containing spaces. Check arguments are passed directly, without implicit shell expansion. /exit leaves the session.')
                 continue
             if question in ('/status','/events','/outputs'):

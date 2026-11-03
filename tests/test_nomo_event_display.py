@@ -21,6 +21,9 @@ class EventDisplayTest(unittest.TestCase):
   text=' '*3000+'["delegate","Read context"]'
   output='\n'.join(launcher.event_lines(raw_view(events=[event('main','plan','',text)])))
   self.assertIn('Read context',output)
+ def test_additional_work_events_remain_visible(self):
+  output='\n'.join(launcher.event_lines(raw_view(additional_work=[{'result':{'events':[event('assistant','answer','','third work')]}}])))
+  self.assertIn('WORK 3.1',output);self.assertIn('third work',output)
  def test_rejects_missing_ambiguous_invalid_or_oversized_batches(self):
   for raw in (b'',raw_view()+raw_view(),raw_view(encoding='unknown'),raw_view(events=[{'role':'a','kind':'b','name':'c','text':'not-json'}]),raw_view(events=[event('a','b','c','x')]*49)):
    with self.assertRaises(ValueError):launcher.event_lines(raw)
