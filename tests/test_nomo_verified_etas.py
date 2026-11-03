@@ -88,6 +88,24 @@ class VerifiedEtas(unittest.TestCase):
         self.lock.write_text('different lock\n')
         self.assertFalse(self.verify('latest025'))
 
+    def test_same_version_graphs_require_distinct_binary_and_lock(self):
+        self.cli.write_text('#!/bin/sh\nprintf "etas 0.2.6\\n"\n# old\n')
+        self.write_config()
+        old = json.loads(self.config.read_text()); old['selector'] = 'latest026'
+        self.config.write_text(json.dumps(old))
+        self.assertTrue(self.verify('latest026'))
+        self.assertFalse(self.verify('latest026v68'))
+        self.cli.write_text('#!/bin/sh\nprintf "etas 0.2.6\\n"\n# new\n')
+        self.assertFalse(self.verify('latest026'))
+        self.lock.write_text('new graph lock\n')
+        self.write_config()
+        new = json.loads(self.config.read_text()); new['selector'] = 'latest026v68'
+        self.config.write_text(json.dumps(new))
+        self.assertTrue(self.verify('latest026v68'))
+        self.assertFalse(self.verify('latest026'))
+        self.lock.write_text('synthetic lock\n')
+        self.assertFalse(self.verify('latest026v68'))
+
     def test_invalid_configuration_never_executes_cli(self):
         self.config.write_text('{}')
         self.assertFalse(self.verify())

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Record an explicit decision to abandon an unresolved operation."""
-import argparse,fcntl,importlib.util,os,stat,sys
+import argparse,importlib.util,os,stat,sys
 from pathlib import Path
 ROOT=Path(__file__).resolve().parent.parent
 spec=importlib.util.spec_from_file_location('edit_launcher',ROOT/'scripts/nomo-edit.py');edit=importlib.util.module_from_spec(spec);spec.loader.exec_module(edit)
@@ -16,15 +16,9 @@ def main(argv=None):
   if version!='0.2.6':raise ValueError('this Nomo revision requires ETAS 0.2.6; use an earlier Nomo revision for older ETAS')
   fd=os.open(state/'.nomo-session.lock',os.O_RDWR|os.O_NOFOLLOW|os.O_CLOEXEC)
   try:
-   info=os.fstat(fd)
-   if not stat.S_ISREG(info.st_mode) or info.st_uid!=os.getuid() or info.st_nlink!=1 or stat.S_IMODE(info.st_mode)!=0o600:raise ValueError('session lock must be a private regular file')
-   try:fcntl.flock(fd,fcntl.LOCK_EX|fcntl.LOCK_NB)
-   except BlockingIOError:raise ValueError('session already in use')
+   edit.check_history_lock(fd)
    storage.prepare(state)
-   cache=ROOT/'.etas'
-   if cache.is_symlink():raise ValueError('project .etas mountpoint must not be a symlink')
-   cache.mkdir(mode=0o700,exist_ok=True)
-   if cache.is_symlink() or not cache.is_dir():raise ValueError('project .etas mountpoint must be a directory')
+   edit.ensure_cache(ROOT)
    env={k:v for k,v in os.environ.items() if not k.startswith('ETAS_HOST_') and k not in ('MINIMAX_API_KEY','NOMO_QWEN_SERVER_API_KEY','NOMO_MODEL_REQUEST_DEADLINE_MS')}
    env.update(NOMO_SESSION_STATE=str(state),NOMO_ETAS_VERSION=version)
    overlay='config/etas-'+version.replace('.','')+'-official-compose.yaml'

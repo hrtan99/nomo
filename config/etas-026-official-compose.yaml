@@ -1,7 +1,7 @@
 services:
   dev:
     environment:
-      NOMO_NORMAL_GRAPH: latest026
+      NOMO_NORMAL_GRAPH: "${NOMO_ETAS_GRAPH:-026-20261103-a}"
       CARGO_BUILD_JOBS: "1"
       CARGO_TARGET_DIR: /home/nomo/.cargo/etas-026/target
       PYTHONDONTWRITEBYTECODE: "1"
@@ -12,7 +12,7 @@ services:
         read_only: true
   dependency:
     environment:
-      NOMO_NORMAL_GRAPH: latest026
+      NOMO_NORMAL_GRAPH: "${NOMO_ETAS_GRAPH:-026-20261103-a}"
       CARGO_BUILD_JOBS: "1"
       CARGO_TARGET_DIR: /home/nomo/.cargo/etas-026/target
       PYTHONDONTWRITEBYTECODE: "1"
@@ -23,4 +23,4 @@ services:
         read_only: true
 volumes:
   cargo-cache:
-    name: nomo-cargo-026-20261103-a
+    name: "nomo-cargo-${NOMO_ETAS_GRAPH:-026-20261103-a}"

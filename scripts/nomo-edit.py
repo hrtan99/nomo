@@ -72,6 +72,13 @@ def owned_workspace(raw):
     return workspace
 
 
+def ensure_cache(project_root):
+    cache=project_root/'.etas'
+    if cache.is_symlink():raise ValueError('project .etas mountpoint must not be a symlink')
+    cache.mkdir(mode=0o700,exist_ok=True)
+    if cache.is_symlink() or not cache.is_dir():raise ValueError('project .etas mountpoint must be a directory')
+
+
 def history_work_roots(args, project_root):
     if not sys.stdin.isatty() or not sys.stdout.isatty():raise ValueError('editing requires an interactive terminal for both confirmations')
     if args.check==[]:raise ValueError('--check requires a command')
@@ -80,10 +87,7 @@ def history_work_roots(args, project_root):
         if item==state or item in state.parents or state in item.parents:raise ValueError('state must not overlap read or edit roots')
     info=state.stat()
     if info.st_uid!=os.getuid() or stat.S_IMODE(info.st_mode)!=0o700:raise ValueError('state must be owned by you with mode 0700')
-    cache=project_root/'.etas'
-    if cache.is_symlink():raise ValueError('project .etas mountpoint must not be a symlink')
-    cache.mkdir(mode=0o700,exist_ok=True)
-    if cache.is_symlink() or not cache.is_dir():raise ValueError('project .etas mountpoint must be a directory')
+    ensure_cache(project_root)
     version=os.environ.get('NOMO_ETAS_VERSION','0.2.6')
     if version!='0.2.6':raise ValueError('this Nomo revision requires ETAS 0.2.6; use an earlier Nomo revision for older ETAS')
     return context, workspace, state, version
@@ -100,11 +104,24 @@ def history_environment(state, workspace, context, version, root, overlay):
     return env, compose
 
 
-def check_history_lock(fd):
+def session_graph(fd, *, create=False):
+    graph=os.environ.get('NOMO_ETAS_GRAPH','026-20261103-a')
+    if graph not in ('026-20261103-a','026-v68'):raise ValueError('unknown ETAS graph; select 026-20261103-a or 026-v68')
+    saved=os.pread(fd,9,0)
+    if create and graph=='026-v68':
+        if saved:raise ValueError('new session graph identity already exists')
+        if os.pwrite(fd,b'026-v68\n',0)!=8:raise OSError('session graph identity write incomplete')
+        os.fsync(fd);saved=b'026-v68\n'
+    if saved not in (b'',b'026-v68\n'):raise ValueError('unrecognized session graph identity')
+    required='026-v68' if saved else '026-20261103-a'
+    if graph!=required:raise ValueError('session requires ETAS graph '+required+'; set NOMO_ETAS_GRAPH accordingly')
+
+def check_history_lock(fd, *, verify=True):
     lock = os.fstat(fd)
     if not stat.S_ISREG(lock.st_mode) or lock.st_uid != os.getuid() or lock.st_nlink != 1 or stat.S_IMODE(lock.st_mode) != 0o600: raise ValueError('session lock must be a private regular file')
     try: fcntl.flock(fd, fcntl.LOCK_EX|fcntl.LOCK_NB)
     except BlockingIOError: raise ValueError('session already in use')
+    if verify:session_graph(fd)
 
 
 def validate_history_work(args, workspace, path_maximum):

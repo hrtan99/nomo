@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Run or inspect a bounded, durable read-only conversation."""
-import argparse, fcntl, importlib.util, json, os, stat, sys
+import argparse, importlib.util, json, os, stat, sys
 from pathlib import Path
 
 ROOT=Path(__file__).resolve().parent.parent
@@ -102,22 +102,16 @@ def main(argv=None):
         if policy is not None and version not in ('0.2.5','0.2.6'):raise ValueError('event-recording sessions require ETAS 0.2.5')
         st=state.stat()
         if st.st_uid!=os.getuid() or stat.S_IMODE(st.st_mode)!=0o700:raise ValueError('state must be owned by you with mode 0700')
-        cache=ROOT/'.etas'
-        if cache.is_symlink():raise ValueError('project .etas mountpoint must not be a symlink')
-        cache.mkdir(mode=0o700,exist_ok=True)
-        if cache.is_symlink() or not cache.is_dir():raise ValueError('project .etas mountpoint must be a directory')
+        _edit_launcher.ensure_cache(ROOT)
         flags=os.O_RDWR|os.O_NOFOLLOW|os.O_CLOEXEC
         if args.action=='new':flags|=os.O_CREAT
         fd=os.open(state/'.nomo-session.lock',flags,0o600)
         try:
-            lock=os.fstat(fd)
-            if not stat.S_ISREG(lock.st_mode) or lock.st_uid!=os.getuid() or lock.st_nlink!=1 or stat.S_IMODE(lock.st_mode)!=0o600:
-                raise ValueError('session lock must be a private regular file')
-            try:fcntl.flock(fd,fcntl.LOCK_EX|fcntl.LOCK_NB)
-            except BlockingIOError:raise ValueError('session already in use')
+            _edit_launcher.check_history_lock(fd,verify=False)
             names={p.name for p in state.iterdir()}
             if args.action=='new' and names!={'.nomo-session.lock'}:raise ValueError('new session state must otherwise be empty')
             if args.action!='new' and 'history.sqlite3' not in names:raise ValueError('existing session history is missing')
+            _edit_launcher.session_graph(fd,create=args.action=='new')
             _storage.prepare(state,create=args.action=='new')
             env=dict(os.environ,NOMO_SESSION_STATE=str(state),NOMO_ETAS_VERSION=version)
             env.pop('NOMO_QWEN_SERVER_API_KEY',None)

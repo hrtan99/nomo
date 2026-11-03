@@ -52,7 +52,7 @@ def state_paths(resume, workspace):
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__, epilog='Set NOMO_STATE_DIR to select a private state directory. --id resumes only that ID; it does not verify workspace identity.')
+    parser = argparse.ArgumentParser(description=__doc__, epilog='Set NOMO_STATE_DIR to select a private state directory. --id resumes only that ID; it does not verify workspace identity. Set NOMO_ETAS_GRAPH=026-v68 for new-graph sessions; existing sessions retain their original graph.')
     parser.add_argument('--root', default=os.getcwd(), help='workspace directory (default: current directory)')
     parser.add_argument('--id', help='resume this exact session ID')
     parser.add_argument('--once', help='run one read-only question')

@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 """A terminal loop over an existing ID-addressed session."""
 import argparse
-import fcntl
-import stat
 import importlib.util
 import os
 import re
@@ -144,9 +142,7 @@ def abandon_stopped_work(args, operation_id, action):
     policy_dir, _, binding = policy.read_private(args.events_policy_dir)
     fd = os.open(state / '.nomo-session.lock', os.O_RDWR | os.O_NOFOLLOW | os.O_CLOEXEC)
     try:
-        st = os.fstat(fd)
-        if not stat.S_ISREG(st.st_mode) or st.st_uid != os.getuid() or st.st_nlink != 1 or stat.S_IMODE(st.st_mode) != 0o600: raise ValueError('invalid session lock')
-        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        edit.check_history_lock(fd)
         env = {k:v for k,v in os.environ.items() if not k.startswith('ETAS_HOST_') and k not in ('MINIMAX_API_KEY', 'NOMO_QWEN_SERVER_API_KEY')}
         env.update(NOMO_SESSION_STATE=str(state), NOMO_EVENT_POLICY_DIR=str(policy_dir), NOMO_ETAS_VERSION=os.environ.get('NOMO_ETAS_VERSION', '0.2.6'))
         compose = ['docker', 'compose', '--env-file', '/dev/null']

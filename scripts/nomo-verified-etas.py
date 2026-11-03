@@ -10,7 +10,7 @@ import sys
 CLI = Path('/home/nomo/.cargo/bin/etas')
 SPEC = Path('/workspace/config/etas-022-official.json')
 LOCK = Path('/workspace/config/etas-022-official.Cargo.lock')
-VERSIONS = {'latest022': '0.2.2', 'latest023': '0.2.3', 'latest024': '0.2.4', 'latest025': '0.2.5', 'latest026': '0.2.6'}
+VERSIONS = {'latest022': '0.2.2', 'latest023': '0.2.3', 'latest024': '0.2.4', 'latest025': '0.2.5', 'latest026': '0.2.6', 'latest026v68': '0.2.6'}
 
 
 def digest(path):
@@ -35,8 +35,8 @@ def verify(cli, spec_path, lock_path, selected):
 
 
 def main():
-    selected = os.environ.get('NOMO_NORMAL_GRAPH')
-    suffix = {'latest022': '022', 'latest023': '023', 'latest024': '024', 'latest025': '025', 'latest026': '026'}.get(selected)
+    selected = {'026-20261103-a': 'latest026', '026-v68': 'latest026v68'}.get(os.environ.get('NOMO_NORMAL_GRAPH'), os.environ.get('NOMO_NORMAL_GRAPH'))
+    suffix = {'latest022': '022', 'latest023': '023', 'latest024': '024', 'latest025': '025', 'latest026': '026', 'latest026v68': '026-v68'}.get(selected)
     spec = Path('/workspace/config/etas-' + suffix + '-official.json') if suffix else SPEC
     lock = Path('/workspace/config/etas-' + suffix + '-official.Cargo.lock') if suffix else LOCK
     if not verify(CLI, spec, lock, selected):
