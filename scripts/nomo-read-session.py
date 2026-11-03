@@ -9,6 +9,8 @@ _edit_launcher=importlib.util.module_from_spec(_spec);_spec.loader.exec_module(_
 run_owned=_edit_launcher.run_owned
 _storage_spec=importlib.util.spec_from_file_location('nomo_session_storage',ROOT/'scripts/nomo-session-storage.py')
 _storage=importlib.util.module_from_spec(_storage_spec);_storage_spec.loader.exec_module(_storage)
+_policy_spec=importlib.util.spec_from_file_location('nomo_event_policy',ROOT/'scripts/nomo-event-policy.py')
+_policy=importlib.util.module_from_spec(_policy_spec);_policy_spec.loader.exec_module(_policy)
 
 def directory(value,label):
     path=Path(value)
@@ -20,7 +22,7 @@ def directory(value,label):
 def main(argv=None):
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('action',choices=('new','continue','status'));parser.add_argument('--state',required=True)
-    parser.add_argument('--root');parser.add_argument('--allow');parser.add_argument('--once');parser.add_argument('--outputs',action='store_true')
+    parser.add_argument('--root');parser.add_argument('--allow');parser.add_argument('--once');parser.add_argument('--outputs',action='store_true');parser.add_argument('--events-policy-dir')
     args=parser.parse_args(argv)
     try:
         status=args.action=='status';state=directory(args.state,'state');context=None
@@ -32,8 +34,14 @@ def main(argv=None):
             context=directory(args.root,'read root')
             if context==state or context in state.parents or state in context.parents:raise ValueError('read root and state must not overlap')
             if not os.environ.get('MINIMAX_API_KEY'):raise ValueError('set MINIMAX_API_KEY before starting MiniMax')
+        policy=None;policy_bytes=None;policy_binding=None
+        if args.events_policy_dir is not None:
+            if args.outputs:raise ValueError('--outputs is unavailable for event-recording sessions')
+            policy,policy_bytes,policy_binding=_policy.read_private(args.events_policy_dir)
+            if policy==state or policy in state.parents or state in policy.parents or (context is not None and (policy==context or policy in context.parents or context in policy.parents)):raise ValueError('event policy directory must not overlap state or workspace')
         version=os.environ.get('NOMO_ETAS_VERSION','0.2.5')
         if version not in ('0.2.4','0.2.5'):raise ValueError('read sessions require ETAS 0.2.4 or 0.2.5')
+        if policy is not None and version!='0.2.5':raise ValueError('event-recording sessions require ETAS 0.2.5')
         st=state.stat()
         if st.st_uid!=os.getuid() or stat.S_IMODE(st.st_mode)!=0o700:raise ValueError('state must be owned by you with mode 0700')
         cache=ROOT/'.etas'
@@ -66,15 +74,26 @@ def main(argv=None):
                 flow='read_session';native_args=['--args',args.action,'--allow',args.allow,'--once',args.once]
                 compose+=['--file',str(ROOT/'config/local-tryout-compose.yaml'),'--file',str(ROOT/'config/nomo-minimax-read-compose.yaml')]
                 print('Current read root and allowlist are newly selected. Saved history is untrusted context and may be sent to MiniMax.',flush=True)
-                print('Conversation snapshots may retain request, tool-result and answer text; event labels omit free text. Full secret redaction is not available.',flush=True)
+                if policy is None:print('Conversation snapshots may retain request, tool-result and answer text; event labels omit free text. Full secret redaction is not available.',flush=True)
+                else:print('Event records retain bounded conversation and tool-result text. Only supplied exact literals are filtered; unknown secrets and live terminal output are not comprehensively filtered.',flush=True)
                 print('MiniMax thinking counts against output limits; ETAS 0.2.4 does not expose the provider finish reason.',flush=True)
                 print('A running or uncertain turn cannot be retried; this does not establish workspace identity continuity.',flush=True)
+            if policy is not None:
+                profile='nomo-read-events-status' if status else ('nomo-read-events-new' if args.action=='new' else 'nomo-read-events-existing')
+                flow='recoverable_read_status' if status else 'recoverable_read_session'
+                if status:native_args=['--args','--policy-binding',policy_binding]
+                else:native_args+=['--policy-binding',policy_binding]
+                print('Event recording is read-only and opt-in; policy filters only supplied exact literals. Unknown secrets may remain. Keep the same private policy and binding key; workspace identity is not established.',flush=True)
             compose+=['--file',str(ROOT/'config/nomo-read-session-compose.yaml')]
-            native=['python3','-B','/workspace/scripts/nomo-verified-etas.py','run','/workspace','--flow',flow,'--profile',profile,'--allow-effects',*native_args]
+            runner='/workspace/scripts/nomo-event-policy-bootstrap.py' if policy is not None else '/workspace/scripts/nomo-verified-etas.py'
+            native=['python3','-B',runner,'run','/workspace','--flow',flow,'--profile',profile,'--allow-effects',*native_args]
             command=[sys.executable,str(ROOT/'scripts/terminal-transport.py'),*compose,'run','--rm','--no-deps','--pull','never','--tty=false','--workdir','/session-state','dev',*native]
-            if status:return run_owned(command,env)
+            if status:
+                if policy is not None:return run_owned(command,env,input_data=policy_bytes)
+                return run_owned(command,env)
             diagnostic=_edit_launcher.RuntimeDiagnostic()
-            code=run_owned(command,env,diagnostic=diagnostic)
+            if policy is not None:code=run_owned(command,env,diagnostic=diagnostic,input_data=policy_bytes)
+            else:code=run_owned(command,env,diagnostic=diagnostic)
             if code:diagnostic.report(code)
             return code
         finally:os.close(fd)

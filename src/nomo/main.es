@@ -17,6 +17,7 @@ import nomo.entry.read_model_tools_entry.run as run_read_model_tools;
 import nomo.entry.harness_model_tools_chat.run as run_harness_model_tools_chat;
 import nomo.entry.read_model_tools_chat.run as run_read_model_tools_chat;
 import nomo.entry.read_session.run as run_read_session;
+import nomo.entry.recoverable_read_session.{run as run_recoverable_read_session, status as run_recoverable_read_status};
 import nomo.entry.history_work.run as run_history_work;
 import nomo.entry.history_followup.run as run_history_followup;
 import nomo.entry.history_followup_check.run as run_history_followup_check;
@@ -191,6 +192,18 @@ flow history_work(args: Array<string>) -> i32 {
 flow read_session(args: Array<string>) -> i32 {
     let status = run_read_session(args);
     if status != 0 { abort("Nomo read session stopped; inspect the saved reservation"); }
+    return 0;
+}
+
+flow recoverable_read_session(args: Array<string>) -> i32 {
+    let status = run_recoverable_read_session(args);
+    if status != 0 { abort("Nomo recoverable read session stopped; inspect recorded state"); }
+    return 0;
+}
+
+flow recoverable_read_status(args: Array<string>) -> i32 {
+    let status = run_recoverable_read_status(args);
+    if status != 0 { abort("Nomo recoverable read status refused"); }
     return 0;
 }
 

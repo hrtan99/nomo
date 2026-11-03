@@ -762,3 +762,95 @@ name = "nomo-history-followup-check"
 module = "nomo.main"
 flow = "history_followup_check"
 profile = "nomo-read-session-status"
+
+[runtime.profiles.nomo-read-events-new]
+boundary_policy = "nomo-model-readonly"
+[runtime.profiles.nomo-read-events-new.memory]
+backend = "sqlite"
+path = "history.sqlite3"
+[runtime.profiles.nomo-read-events-new.model]
+adapter = "openai"
+model = "MiniMax-M3.1-Flash"
+base_url = "https://api.minimax.cn/v1"
+api_key_env = "MINIMAX_API_KEY"
+allow_private = false
+[runtime.profiles.nomo-read-events-new.model.timeout]
+request_deadline_ms = 120000
+connect_timeout_ms = 2000
+[runtime.profiles.nomo-read-events-new.model.retry]
+attempts = 1
+delay_ms = 0
+[runtime.profiles.nomo-read-events-new.filesystem.regions."nomo.tools.workspace.ReadOnlyRoot"]
+root = "/model-tool-fixture"
+read = true
+write = false
+[runtime.profiles.nomo-read-events-new.policy]
+mode = "local-static"
+rules = ["console=allow", "memory=allow", "model=allow", "filesystem=allow"]
+[runtime.profiles.nomo-read-events-new.approval]
+mode = "deny"
+
+[runtime.profiles.nomo-read-events-new.filesystem.regions."nomo.session.event_policy.PolicyRoot"]
+root = "/tmp/nomo-event-policy"
+read = true
+write = false
+
+[runtime.profiles.nomo-read-events-existing]
+boundary_policy = "nomo-model-readonly"
+[runtime.profiles.nomo-read-events-existing.memory]
+backend = "sqlite"
+path = "file:history.sqlite3?mode=rw"
+[runtime.profiles.nomo-read-events-existing.model]
+adapter = "openai"
+model = "MiniMax-M3.1-Flash"
+base_url = "https://api.minimax.cn/v1"
+api_key_env = "MINIMAX_API_KEY"
+allow_private = false
+[runtime.profiles.nomo-read-events-existing.model.timeout]
+request_deadline_ms = 120000
+connect_timeout_ms = 2000
+[runtime.profiles.nomo-read-events-existing.model.retry]
+attempts = 1
+delay_ms = 0
+[runtime.profiles.nomo-read-events-existing.filesystem.regions."nomo.tools.workspace.ReadOnlyRoot"]
+root = "/model-tool-fixture"
+read = true
+write = false
+[runtime.profiles.nomo-read-events-existing.policy]
+mode = "local-static"
+rules = ["console=allow", "memory=allow", "model=allow", "filesystem=allow"]
+[runtime.profiles.nomo-read-events-existing.approval]
+mode = "deny"
+
+[runtime.profiles.nomo-read-events-existing.filesystem.regions."nomo.session.event_policy.PolicyRoot"]
+root = "/tmp/nomo-event-policy"
+read = true
+write = false
+
+[runtime.profiles.nomo-read-events-status]
+boundary_policy = "nomo-read-events-status"
+[runtime.profiles.nomo-read-events-status.memory]
+backend = "sqlite"
+path = "file:history.sqlite3?mode=rw"
+[runtime.profiles.nomo-read-events-status.policy]
+mode = "local-static"
+rules = ["console=allow", "memory=allow", "filesystem:Fs.read=allow"]
+[runtime.profiles.nomo-read-events-status.approval]
+mode = "deny"
+
+[runtime.profiles.nomo-read-events-status.filesystem.regions."nomo.session.event_policy.PolicyRoot"]
+root = "/tmp/nomo-event-policy"
+read = true
+write = false
+
+[[bin]]
+name = "nomo-read-events"
+module = "nomo.main"
+flow = "recoverable_read_session"
+profile = "nomo-read-events-new"
+
+[[bin]]
+name = "nomo-read-events-status"
+module = "nomo.main"
+flow = "recoverable_read_status"
+profile = "nomo-read-events-status"

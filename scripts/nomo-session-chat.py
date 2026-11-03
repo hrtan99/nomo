@@ -57,6 +57,7 @@ def main(argv=None):
     parser.add_argument('--id', required=True)
     parser.add_argument('--root', required=True)
     parser.add_argument('--allow', required=True)
+    parser.add_argument('--events-policy-dir')
     parser.add_argument('--once', help='run exactly one read-only turn')
     args = parser.parse_args(argv)
     stdin_tty = sys.stdin.isatty()
@@ -76,10 +77,13 @@ def main(argv=None):
     prefix = [sys.executable, str(ROOT / 'scripts/nomo-session-id.py'), 'resume',
               '--sessions-dir', args.sessions_dir, '--id', args.id, '--root', args.root,
               '--allow=' + args.allow]
+    if args.events_policy_dir is not None:prefix += ['--events-policy-dir',args.events_policy_dir]
     print('SESSION ID ' + args.id, flush=True)
-    print('Read turns and bounded work use this session; each edit requires fresh confirmations.', flush=True)
+    if args.events_policy_dir is None:print('Read turns and bounded work use this session; each edit requires fresh confirmations.', flush=True)
+    else:print('Event recording supports read-only turns and status; work/check is not available in this mode.', flush=True)
     print('Resume: nomo-read.sh session-id resume --sessions-dir ' + shlex.quote(args.sessions_dir)
-          + ' --id ' + shlex.quote(args.id) + ' --root DIR --allow FILE --once QUESTION', flush=True)
+          + ' --id ' + shlex.quote(args.id) + ' --root DIR --allow FILE --once QUESTION'
+          + (' --events-policy-dir ' + shlex.quote(args.events_policy_dir) if args.events_policy_dir is not None else ''), flush=True)
     if tty and args.once is None:
         print('Enter a question, /help, /status, /outputs, /work, /followup or /exit.', flush=True)
     while True:
@@ -98,20 +102,29 @@ def main(argv=None):
                 return 0
             if question == '/help':
                 print('Read turns use the selected root and allowlist. /status inspects recorded state; /outputs shows recorded check output.')
-                print('/work OP_ID EDIT_ROOT PATH "TASK" [--check COMMAND ARG ...] runs one explicitly confirmed work operation.')
-                print('/followup OP_ID EDIT_ROOT PATH "TASK" [--check COMMAND ARG ...] runs the second bounded work operation.')
+                if args.events_policy_dir is None:
+                    print('/work OP_ID EDIT_ROOT PATH "TASK" [--check COMMAND ARG ...] runs one explicitly confirmed work operation.')
+                    print('/followup OP_ID EDIT_ROOT PATH "TASK" [--check COMMAND ARG ...] runs the second bounded work operation.')
+                else:print('Event-recording mode currently supports read-only chat and status only.')
                 print('Quote arguments containing spaces. No shell interprets the check arguments. /exit leaves the session.')
                 continue
             if question == '/status' or question == '/outputs':
+                if question == '/outputs' and args.events_policy_dir is not None:
+                    print('REFUSED event-recording sessions do not have work/check output.',file=sys.stderr,flush=True)
+                    continue
                 command = [sys.executable, str(ROOT / 'scripts/nomo-session-id.py'), 'status',
                            '--sessions-dir', args.sessions_dir, '--id', args.id]
                 if question == '/outputs':command += ['--outputs']
+                if args.events_policy_dir is not None:command += ['--events-policy-dir',args.events_policy_dir]
                 code = edit.run_owned(command, dict(os.environ))
                 if code:
                     print('Status failed; inspect session state before continuing.', file=sys.stderr, flush=True)
                     return code
                 continue
             if question == '/work' or question.startswith('/work ') or question == '/followup' or question.startswith('/followup '):
+                if args.events_policy_dir is not None:
+                    print('REFUSED event-recording sessions currently support read-only chat and status only.',file=sys.stderr,flush=True)
+                    continue
                 try:
                     words = shlex.split(question)
                     action = words[0][1:]

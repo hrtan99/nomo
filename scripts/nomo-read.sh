@@ -16,6 +16,8 @@ Usage:
   nomo-read.sh session-id status --sessions-dir PRIVATE_DIRECTORY --id SESSION_ID [--outputs]
   nomo-read.sh session-id decision --sessions-dir PRIVATE_DIRECTORY --id SESSION_ID --operation-id ID --target work|check|followup|followup-check
   nomo-read.sh session-chat --sessions-dir PRIVATE_DIRECTORY --id SESSION_ID --root DIR --allow FILE[,FILE] [--once QUESTION]
+  Event-recording read-only sessions accept --events-policy-dir PRIVATE_DIRECTORY on start, resume, status and session-chat.
+  nomo-read.sh event-policy-init --directory PRIVATE_DIRECTORY
   nomo-read.sh session-id work --sessions-dir PRIVATE_DIRECTORY --id SESSION_ID --read-root DIR --root PRIVATE_DIRECTORY --operation-id ID --path FILE --allow FILE[,FILE] --once TASK [--check COMMAND ARG ...]
   nomo-read.sh session-followup --read-root ABSOLUTE_DIRECTORY --allow FILE[,FILE] --root PRIVATE_DIRECTORY --state PRIVATE_DIRECTORY --id ID --path FILE --once TASK [--check COMMAND ARG ...]
   nomo-read.sh session-work --read-root ABSOLUTE_DIRECTORY --allow FILE[,FILE] --root PRIVATE_DIRECTORY --state PRIVATE_DIRECTORY --id ID --path FILE --once TASK [--check COMMAND ARG ...]
@@ -58,6 +60,13 @@ must be separate from both. Work allows up to 7 model calls and 47,104 requested
 output tokens, not a measured usage or cost limit.
 For model editing, NOMO_MODEL_REQUEST_DEADLINE_MS sets each request deadline
 from 2000 to 3600000 milliseconds (default 120000); there are no automatic retries.
+For opt-in read-only event recording, create a private 0700 policy directory,
+run event-policy-init for its private binding key, and create a 0600 policy.json
+with {"format":1,"literals":["YOUR_SENSITIVE_LITERAL"]}. Do not put actual
+secrets in shell arguments. This filters exact known literals only, not unknown
+secrets, and does not bind the workspace. Keep policy bytes and binding.key
+unchanged for the session; a mismatch refuses resume. Existing sessions are not
+automatically migrated, and event-recording mode does not support work/check.
 Checks run offline and may modify the selected private workspace.
 Edit status is recorded data only; it does not inspect the current file.
 Use status only after the operation stops; SQLite may update state bookkeeping.
@@ -65,6 +74,7 @@ HELP
 }
 if [[ $# -eq 0 || ( $# -eq 1 && ( "$1" == help || "$1" == --help ) ) ]]; then usage; exit 0; fi
 action="$1"; shift
+if [[ "$action" == event-policy-init ]]; then exec python3 "$root/scripts/nomo-event-policy-init.py" "$@"; fi
 if [[ "$action" == session-chat ]]; then exec python3 "$root/scripts/nomo-session-chat.py" "$@"; fi
 if [[ "$action" == session-decision ]]; then exec python3 "$root/scripts/nomo-recovery-decision.py" "$@"; fi
 if [[ "$action" == session-id ]]; then exec python3 "$root/scripts/nomo-session-id.py" "$@"; fi

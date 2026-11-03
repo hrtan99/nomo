@@ -50,6 +50,47 @@ class ReadSessionLauncherTest(unittest.TestCase):
                 name='config/etas-'+version.replace('.','')+'-official-compose.yaml'
                 self.assertIn(str(self.project/name),run.call_args.args[0])
 
+    def test_event_policy_routes_read_only_flow_without_exposing_literal_in_arguments(self):
+        policy=self.root/'policy';policy.mkdir(mode=0o700);file=policy/'policy.json';file.write_text('{"format":1,"literals":["SYNTHETIC_SECRET"]}');file.chmod(0o600);key=policy/'binding.key';key.write_bytes(b'K'*32);key.chmod(0o600)
+        with patch.object(launcher,'run_owned',return_value=0) as run:
+            self.assertEqual(self.invoke(self.newargs()+['--events-policy-dir',str(policy)]),0)
+        cmd,env=run.call_args.args[:2]
+        self.assertIn('recoverable_read_session',cmd);self.assertIn('nomo-read-events-new',cmd)
+        self.assertIn('/workspace/scripts/nomo-event-policy-bootstrap.py',cmd)
+        self.assertEqual(run.call_args.kwargs['input_data'],file.read_bytes())
+        self.assertNotIn('NOMO_EVENT_POLICY_DIR',env)
+        self.assertFalse(any('SYNTHETIC_SECRET' in value for value in cmd))
+
+    def test_event_recording_discloses_retained_text_and_limited_filtering(self):
+        policy=self.root/'policy';policy.mkdir(mode=0o700);file=policy/'policy.json';file.write_text('{"format":1,"literals":["SYNTHETIC_SECRET"]}');file.chmod(0o600);key=policy/'binding.key';key.write_bytes(b'K'*32);key.chmod(0o600)
+        out=io.StringIO()
+        with patch.object(launcher,'run_owned',return_value=0),contextlib.redirect_stdout(out),contextlib.redirect_stderr(io.StringIO()):
+            self.assertEqual(launcher.main(self.newargs()+['--events-policy-dir',str(policy)]),0)
+        self.assertIn('Event records retain bounded conversation and tool-result text',out.getvalue())
+        self.assertIn('unknown secrets and live terminal output are not comprehensively filtered',out.getvalue())
+        self.assertNotIn('event labels omit free text',out.getvalue())
+
+    def test_event_policy_requires_private_regular_single_link_file(self):
+        policy=self.root/'policy';policy.mkdir(mode=0o700);file=policy/'policy.json';file.write_text('{}');file.chmod(0o644);key=policy/'binding.key';key.write_bytes(b'K'*32);key.chmod(0o600)
+        with patch.object(launcher,'run_owned') as run:
+            self.assertNotEqual(self.invoke(self.newargs()+['--events-policy-dir',str(policy)]),0);run.assert_not_called()
+            file.chmod(0o600);link=self.root/'linked';os.link(file,link)
+            self.assertNotEqual(self.invoke(self.newargs()+['--events-policy-dir',str(policy)]),0);run.assert_not_called()
+            link.unlink();file.unlink();file.symlink_to(self.context)
+            self.assertNotEqual(self.invoke(self.newargs()+['--events-policy-dir',str(policy)]),0);run.assert_not_called()
+
+    def test_event_status_is_offline_and_policy_must_not_overlap_state(self):
+        self.existing();policy=self.root/'policy';policy.mkdir(mode=0o700);file=policy/'policy.json';file.write_text('{}');file.chmod(0o600);key=policy/'binding.key';key.write_bytes(b'K'*32);key.chmod(0o600)
+        with patch.object(launcher,'run_owned',return_value=0) as run:
+            self.assertEqual(self.invoke(['status','--state',str(self.state),'--events-policy-dir',str(policy)]),0)
+            cmd,env=run.call_args.args[:2];self.assertIn('recoverable_read_status',cmd);self.assertNotIn('MINIMAX_API_KEY',env)
+            run.reset_mock();self.assertNotEqual(self.invoke(['status','--state',str(self.state),'--events-policy-dir',str(self.state)]),0);run.assert_not_called()
+
+    def test_event_recording_rejects_unverified_024(self):
+        policy=self.root/'policy';policy.mkdir(mode=0o700);file=policy/'policy.json';file.write_text('{}');file.chmod(0o600);key=policy/'binding.key';key.write_bytes(b'K'*32);key.chmod(0o600)
+        with patch.dict(os.environ,{'NOMO_ETAS_VERSION':'0.2.4'}),patch.object(launcher,'run_owned') as run:
+            self.assertNotEqual(self.invoke(self.newargs()+['--events-policy-dir',str(policy)]),0);run.assert_not_called()
+
     def test_status_outputs_stays_offline_and_is_explicit(self):
         self.existing()
         with patch.object(launcher,'run_owned',return_value=0) as run:
