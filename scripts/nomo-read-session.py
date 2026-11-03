@@ -71,7 +71,11 @@ def main(argv=None):
             compose+=['--file',str(ROOT/'config/nomo-read-session-compose.yaml')]
             native=['python3','-B','/workspace/scripts/nomo-verified-etas.py','run','/workspace','--flow',flow,'--profile',profile,'--allow-effects',*native_args]
             command=[sys.executable,str(ROOT/'scripts/terminal-transport.py'),*compose,'run','--rm','--no-deps','--pull','never','--tty=false','--workdir','/session-state','dev',*native]
-            return run_owned(command,env)
+            if status:return run_owned(command,env)
+            diagnostic=_edit_launcher.RuntimeDiagnostic()
+            code=run_owned(command,env,diagnostic=diagnostic)
+            if code:diagnostic.report(code)
+            return code
         finally:os.close(fd)
     except (ValueError,OSError) as error:
         print('REFUSED '+str(error),file=sys.stderr);return 1

@@ -64,8 +64,10 @@ def main(argv=None):
             print('Additional reservation: up to 7 model calls and 47104 output tokens; together both work rounds reserve up to 14 calls and 94208 output tokens, plus chat.',flush=True)
             print('Context, task, history and file may be sent to MiniMax. A new preview and two confirmations are required.',flush=True)
             if version=='0.2.4':print('ETAS 0.2.4 does not expose the provider finish reason.',flush=True)
-            code=edit.run_owned(command,env)
+            diagnostic=edit.RuntimeDiagnostic()
+            code=edit.run_owned(command,env,diagnostic=diagnostic)
             if code!=0:
+                diagnostic.report(code)
                 print('Work stopped. Inspect the edit and durable state before any further action; the outcome may be uncertain.',file=sys.stderr,flush=True);return code
             if not args.check:
                 print('Edit completed; no check was requested.',flush=True);return 0

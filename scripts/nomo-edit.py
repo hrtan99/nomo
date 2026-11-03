@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Launch the existing confirmed edit flow for an exclusive private workspace."""
 import argparse
+import io
 import os
 import re
 import selectors
@@ -149,7 +150,58 @@ def prepare(args, stdin_tty, stdout_tty):
     return command, check, env
 
 
-def run_owned(command, env, capture=None, input_data=None):
+class RuntimeDiagnostic:
+    """Bounded, advisory classification of known terminal diagnostics.
+
+    The stream is untrusted: these observations never authorize a retry or a
+    recovery decision. Keep only an enum and stage, not transcript content.
+    """
+    _length = b'error[analysis::UnhandledRuntimeError]: model generation failed: IncompleteResponse: OpenAI-compatible generation is incomplete (finish_reason=length)'
+    _provider_503 = b'error[analysis::UnhandledRuntimeError]: model host boundary failed: OpenAI-compatible endpoint returned an error status (status=503)'
+    _stages = (b'read-plan', b'read-child', b'read-aggregate', b'edit-plan', b'edit-child', b'edit-aggregate')
+
+    def __init__(self):
+        self.stage = None
+        self.categories = set()
+        self.buffers = {'stdout': bytearray(), 'stderr': bytearray()}
+        self.discard = {'stdout': False, 'stderr': False}
+
+    def feed(self, stream, data):
+        for byte in data:
+            if byte == 10:
+                if not self.discard[stream]:
+                    self._line(bytes(self.buffers[stream]).removesuffix(b'\r'))
+                self.buffers[stream].clear()
+                self.discard[stream] = False
+            elif not self.discard[stream]:
+                if len(self.buffers[stream]) >= 512:
+                    self.buffers[stream].clear()
+                    self.discard[stream] = True
+                else:
+                    self.buffers[stream].append(byte)
+
+    def _line(self, line):
+        chat = re.fullmatch(rb'TURN [1-9][0-9]* STAGE (plan|child|aggregate) steps=[0-9]+ calls=[0-9]+ tokens=[0-9]+ tools=[0-9]+ scan=[0-9]+ reserved_steps=[0-9]+ reserved_calls=[0-9]+ reserved_tokens=[0-9]+ reserved_tools=[0-9]+ reserved_scan=[0-9]+', line)
+        if chat:
+            self.stage = 'chat-' + chat.group(1).decode('ascii')
+        for stage in self._stages:
+            if line == b'STAGE ' + stage or line.startswith(b'STAGE ' + stage + b' child-1 '):
+                self.stage = stage.decode('ascii')
+        if line == self._length:
+            self.categories.add('incomplete_response_length')
+        elif line == self._provider_503:
+            self.categories.add('provider_http_503')
+
+    def report(self, exit_code):
+        if exit_code != 3:
+            return
+        category = next(iter(self.categories)) if len(self.categories) == 1 else 'unknown'
+        print('Runtime diagnostic (observed terminal text, untrusted): last_stage_text=' +
+              (self.stage or 'unknown') + ' text_marker=' + category +
+              '. Inspect retained state; this is not a retry decision.', file=sys.stderr, flush=True)
+
+
+def run_owned(command, env, capture=None, input_data=None, diagnostic=None):
     """Forward interruption and wait for the owned terminal helper's cleanup."""
     requested = [0, 0.0]
     child = None
@@ -170,8 +222,8 @@ def run_owned(command, env, capture=None, input_data=None):
             return 128 + requested[0]
         child = subprocess.Popen(command, env=env, start_new_session=True,
                                  stdin=subprocess.PIPE if input_data is not None else None,
-                                 stdout=subprocess.PIPE if capture is not None else None,
-                                 stderr=subprocess.PIPE if capture is not None else None)
+                                 stdout=subprocess.PIPE if capture is not None or diagnostic is not None else None,
+                                 stderr=subprocess.PIPE if capture is not None or diagnostic is not None else None)
         if input_data is not None:
             def write_input():
                 try:
@@ -180,10 +232,11 @@ def run_owned(command, env, capture=None, input_data=None):
                     input_errors.append(error)
             writer = threading.Thread(target=write_input, daemon=True)
             writer.start()
-        if capture is not None:
+        if capture is not None or diagnostic is not None:
             selector = selectors.DefaultSelector()
             for label, pipe, target in (('stdout', child.stdout, sys.stdout.buffer), ('stderr', child.stderr, sys.stderr.buffer)):
-                capture[label] = {'data': bytearray(), 'truncated': False}
+                if capture is not None:
+                    capture[label] = {'data': bytearray(), 'truncated': False}
                 selector.register(pipe, selectors.EVENT_READ, (label, target))
         def drain(timeout):
             if selector is None:
@@ -194,10 +247,28 @@ def run_owned(command, env, capture=None, input_data=None):
                 if not data:
                     selector.unregister(key.fileobj); key.fileobj.close(); continue
                 label, target = key.data
-                target.write(data); target.flush()
-                saved = capture[label]; room = max(0, 4096 - len(saved['data']))
-                saved['data'].extend(data[:room])
-                if len(data) > room: saved['truncated'] = True
+                # Write directly after flushing prior output: a failed buffered
+                # flush can otherwise be retried by Python at interpreter exit
+                # and replace the intended uncertain-status exit code.
+                target.flush()
+                try:
+                    output_fd = target.fileno()
+                except (io.UnsupportedOperation, AttributeError):
+                    target.write(data)
+                    target.flush()
+                else:
+                    view = memoryview(data)
+                    while view:
+                        written = os.write(output_fd, view)
+                        if written <= 0:
+                            raise OSError('terminal output did not advance')
+                        view = view[written:]
+                if diagnostic is not None:
+                    diagnostic.feed(label, data)
+                if capture is not None:
+                    saved = capture[label]; room = max(0, 4096 - len(saved['data']))
+                    saved['data'].extend(data[:room])
+                    if len(data) > room: saved['truncated'] = True
         while child.poll() is None:
             if requested[0] and not forwarded:
                 try:
@@ -240,6 +311,43 @@ def run_owned(command, env, capture=None, input_data=None):
             print('Terminal cleanup is unconfirmed; inspect the operation before continuing.', file=sys.stderr, flush=True)
             return 125
         return 128 + requested[0] if requested[0] else code
+    except BaseException:
+        # A failed output sink, selector or observer must not let the owner
+        # return while its terminal helper can still be executing an edit.
+        # Ask that helper to run its normal container cleanup, and drain its
+        # pipes without forwarding while waiting. If that cannot complete,
+        # force-stop the helper and retain the uncertain result (125).
+        if child is not None and child.poll() is None:
+            try:
+                os.killpg(child.pid, signal.SIGTERM)
+            except OSError:
+                pass
+            deadline = time.monotonic() + 18
+            while child.poll() is None and time.monotonic() < deadline:
+                if selector is None:
+                    time.sleep(.05)
+                    continue
+                try:
+                    for key, _ in selector.select(.05):
+                        if not os.read(key.fileobj.fileno(), 65536):
+                            selector.unregister(key.fileobj)
+                            key.fileobj.close()
+                except (OSError, ValueError):
+                    time.sleep(.05)
+            if child.poll() is None:
+                try:
+                    os.killpg(child.pid, signal.SIGKILL)
+                except OSError:
+                    pass
+                try:
+                    child.wait(timeout=3)
+                except subprocess.TimeoutExpired:
+                    pass
+        try:
+            os.write(sys.stderr.fileno(), b'Terminal output or collection failed; cleanup and outcome may be uncertain. Inspect retained state before continuing.\n')
+        except (OSError, ValueError, AttributeError):
+            pass
+        return 125
     finally:
         if selector is not None:
             for key in list(selector.get_map().values()):
@@ -248,7 +356,10 @@ def run_owned(command, env, capture=None, input_data=None):
         for number, handler in old.items():
             signal.signal(number, handler)
         if requested[0]:
-            print('Cancellation was requested.', file=sys.stderr, flush=True)
+            try:
+                print('Cancellation was requested.', file=sys.stderr, flush=True)
+            except (OSError, ValueError):
+                pass
 
 
 

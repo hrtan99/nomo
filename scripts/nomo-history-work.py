@@ -63,8 +63,10 @@ def main(argv=None):
             print('Prior conversation is untrusted model context. Current read and edit roots are newly selected; no prior approval is reused.',flush=True)
             print('Context, task, history and file may be sent to MiniMax. A new preview and two confirmations are required.',flush=True)
             if version=='0.2.4':print('ETAS 0.2.4 does not expose the provider finish reason.',flush=True)
-            code=edit.run_owned(command,env)
+            diagnostic=edit.RuntimeDiagnostic()
+            code=edit.run_owned(command,env,diagnostic=diagnostic)
             if code!=0:
+                diagnostic.report(code)
                 print('Work stopped. Inspect the edit and durable state before any further action; the outcome may be uncertain.',file=sys.stderr,flush=True);return code
             if not args.check:
                 print('Edit completed; no check was requested.',flush=True);return 0

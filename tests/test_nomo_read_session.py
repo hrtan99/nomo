@@ -21,7 +21,7 @@ class ReadSessionLauncherTest(unittest.TestCase):
         (self.state/'.nomo-session.lock').touch(mode=0o600);(self.state/'history.sqlite3').write_bytes(b'synthetic')
     def test_first_session_creates_private_cache_before_start(self):
         self.assertFalse((self.project/'.etas').exists())
-        def owned(command,env):
+        def owned(command,env,**kwargs):
             cache=self.project/'.etas';self.assertTrue(cache.is_dir());self.assertFalse(cache.is_symlink())
             self.assertEqual(cache.stat().st_mode & 0o777,0o700);return 0
         with patch.object(launcher,'run_owned',side_effect=owned) as run:

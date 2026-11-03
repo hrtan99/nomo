@@ -23,7 +23,7 @@ class HistoryFollowupLauncherTest(unittest.TestCase):
         self.assertIn('--root PRIVATE_DIRECTORY --state PRIVATE_DIRECTORY --id ID',result.stdout)
     def test_fresh_cache_created_before_launch(self):
         self.assertFalse((self.project/'.etas').exists())
-        def owned(command,env):
+        def owned(command,env,**kwargs):
             self.assertTrue((self.project/'.etas').is_dir());return 143
         with patch.object(launcher.edit,'run_owned',side_effect=owned):self.assertEqual(self.invoke(),143)
     def test_cache_symlink_refused_before_launch(self):
