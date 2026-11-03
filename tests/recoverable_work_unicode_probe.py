@@ -173,7 +173,7 @@ def main():
             for name in FILES[1:]: (root/name).write_text(((SEARCH_LITERAL+' marker ') if name=='fourth.txt' else ('marker ' if MODE!='third' else 'no match '))+name+'\n')
     workspace=out/'workspace';workspace.mkdir(mode=0o700);(workspace/'note.txt').write_text('before old\n')
     if MODE=='diagnostic':
-        (workspace/'test_check.py').write_text('import sys, unittest\nclass Check(unittest.TestCase):\n def test_failure(self):\n  sys.stdout.write("CHECK_BEGIN SYNTHETIC_NEVER_PRESENT " + "x"*20000 + " FAILURE_TAIL_MARKER\\n")\n  self.fail("FAILURE_ERROR_MARKER")\n')
+        (workspace/'test_check.py').write_text('import sys, unittest\nclass Check(unittest.TestCase):\n def test_failure(self):\n  sys.stdout.write("CHECK_BEGIN SYNTHETIC_NEVER_PRESENT " + "x"*200000 + " FAILURE_TAIL_MARKER\\n")\n  self.fail("FAILURE_ERROR_MARKER")\n')
     state=out/'state';state.mkdir(mode=0o700);policy=out/'policy';policy.mkdir(mode=0o700)
     (policy/'policy.json').write_text(json.dumps({'format':1,'literals':[SEARCH_LITERAL if MODE=='third' else 'SYNTHETIC_NEVER_PRESENT']}));(policy/'policy.json').chmod(0o600)
     (policy/'binding.key').write_bytes(b'K'*32);(policy/'binding.key').chmod(0o600)

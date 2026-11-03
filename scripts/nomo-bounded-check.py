@@ -9,6 +9,8 @@ STREAM_LIMIT = 64 * 1024
 
 
 def main(argv):
+    stream_limit = 4 * 1024 * 1024 if argv[:1] == ['--nomo-long-capture'] else STREAM_LIMIT
+    if argv[:1] == ['--nomo-long-capture']:argv = argv[1:]
     if not argv:
         print('A check command is required.', file=sys.stderr)
         return 64
@@ -17,9 +19,9 @@ def main(argv):
                                  stderr=subprocess.PIPE, close_fds=True)
     except OSError as error:
         message = ('Cannot execute check: ' + str(error) + '\n').encode('utf-8', errors='backslashreplace')
-        sys.stderr.buffer.write(message[:STREAM_LIMIT])
-        if len(message) > STREAM_LIMIT:
-            sys.stderr.buffer.write(('\n[nomo: stderr truncated after ' + str(STREAM_LIMIT) + ' bytes]\n').encode())
+        sys.stderr.buffer.write(message[:stream_limit])
+        if len(message) > stream_limit:
+            sys.stderr.buffer.write(('\n[nomo: stderr truncated after ' + str(stream_limit) + ' bytes]\n').encode())
         sys.stderr.buffer.flush()
         return 127
     selector = selectors.DefaultSelector()
@@ -37,13 +39,13 @@ def main(argv):
                     stream.close()
                     continue
                 target, shown, truncated, name = outputs[stream]
-                prefix = data[:max(0, STREAM_LIMIT - shown)]
+                prefix = data[:max(0, stream_limit - shown)]
                 if prefix:
                     target.write(prefix)
                     target.flush()
                 shown += len(prefix)
                 if len(prefix) < len(data) and not truncated:
-                    target.write(('\n[nomo: ' + name + ' truncated after ' + str(STREAM_LIMIT) + ' bytes]\n').encode())
+                    target.write(('\n[nomo: ' + name + ' truncated after ' + str(stream_limit) + ' bytes]\n').encode())
                     target.flush()
                     truncated = True
                 outputs[stream] = [target, shown, truncated, name]

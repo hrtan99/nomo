@@ -36,11 +36,12 @@ def safe_path(value, maximum=128):
         all(ord(c) >= 128 or c in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-' for c in part) for part in parts)
 
 
-def format_check_capture(entry, env):
+def format_check_capture(entry, env, literals=(), excerpt=False):
     """Render a bounded diagnostic prefix; known configured keys are removed."""
+    if excerpt and entry['truncated']:return '',True
     text = bytes(entry['data']).decode('utf-8', errors='backslashreplace')
-    for name in ('MINIMAX_API_KEY', 'NOMO_QWEN_SERVER_API_KEY', 'ETAS_HOST_MODEL_API_KEY'):
-        value = env.get(name, '')
+    values = [env.get(name, '') for name in ('MINIMAX_API_KEY', 'NOMO_QWEN_SERVER_API_KEY', 'ETAS_HOST_MODEL_API_KEY')] + list(literals)
+    for value in values:
         if value:
             text = text.replace(value, '[REDACTED]')
             if entry['truncated']:
@@ -49,7 +50,11 @@ def format_check_capture(entry, env):
                         text = text[:-length] + '[REDACTED]'
                         break
     text = ''.join(ch if ch in '\n\t' or ord(ch) >= 32 and ord(ch) != 127 else '\\x%02x' % ord(ch) for ch in text)
-    return text
+    if not excerpt:return text
+    if any(value and value in text for value in values):raise ValueError('filtered check output contains a sensitive literal')
+    raw = text.encode('utf-8')
+    if len(raw) <= 4096:return text,False
+    return raw[:2000].decode('utf-8',errors='ignore')+'\n[... output omitted ...]\n'+raw[-2000:].decode('utf-8',errors='ignore'),True
 
 
 def directory(raw, name):
@@ -59,15 +64,22 @@ def directory(raw, name):
     return path.resolve(strict=True)
 
 
+def owned_workspace(raw):
+    workspace = directory(raw, 'workspace')
+    info = workspace.stat()
+    if info.st_uid != os.getuid() or stat.S_IMODE(info.st_mode) & 0o022:
+        raise ValueError('workspace must be owned by you and not writable by group or others')
+    return workspace
+
+
 def history_work_roots(args, project_root):
     if not sys.stdin.isatty() or not sys.stdout.isatty():raise ValueError('editing requires an interactive terminal for both confirmations')
     if args.check==[]:raise ValueError('--check requires a command')
-    context=directory(args.read_root,'read root');workspace=directory(args.root,'workspace');state=directory(args.state,'state')
+    context=directory(args.read_root,'read root');workspace=owned_workspace(args.root);state=directory(args.state,'state')
     for item in (context,workspace):
         if item==state or item in state.parents or state in item.parents:raise ValueError('state must not overlap read or edit roots')
-    info=state.stat();workinfo=workspace.stat()
+    info=state.stat()
     if info.st_uid!=os.getuid() or stat.S_IMODE(info.st_mode)!=0o700:raise ValueError('state must be owned by you with mode 0700')
-    if workinfo.st_uid!=os.getuid() or stat.S_IMODE(workinfo.st_mode)&0o022:raise ValueError('workspace must be owned by you and not writable by group or others')
     cache=project_root/'.etas'
     if cache.is_symlink():raise ValueError('project .etas mountpoint must not be a symlink')
     cache.mkdir(mode=0o700,exist_ok=True)
@@ -114,11 +126,8 @@ def validate_history_work(args, workspace, path_maximum):
 def prepare(args, stdin_tty, stdout_tty):
     if not stdin_tty or not stdout_tty:
         raise ValueError('editing requires an interactive terminal for both confirmation prompts')
-    workspace = directory(args.root, 'workspace')
+    workspace = owned_workspace(args.root)
     state = directory(args.state, 'state')
-    workspace_info = workspace.stat()
-    if workspace_info.st_uid != os.getuid() or stat.S_IMODE(workspace_info.st_mode) & 0o022:
-        raise ValueError('workspace must be owned by you and not writable by group or others')
     if workspace == state or workspace in state.parents or state in workspace.parents:
         raise ValueError('state and workspace must be separate, non-overlapping directories')
     info = state.stat()
@@ -466,12 +475,9 @@ def run_owned(command, env, capture=None, input_data=None, diagnostic=None, *, c
 
 
 
-def prepare_project_check(root, check, version=None):
+def prepare_project_check(root, check, version=None, long_capture=False):
     """Prepare a user-selected check without opening an edit operation store."""
-    workspace = directory(root, 'workspace')
-    info = workspace.stat()
-    if info.st_uid != os.getuid() or stat.S_IMODE(info.st_mode) & 0o022:
-        raise ValueError('workspace must be owned by you and not writable by group or others')
+    workspace = owned_workspace(root)
     if not check or not check[0]:
         raise ValueError('provide a check command')
     version = version if version is not None else os.environ.get('NOMO_ETAS_VERSION', '0.2.6')
@@ -490,7 +496,7 @@ def prepare_project_check(root, check, version=None):
                'run', '--rm', '--no-deps', '--pull', 'never', '--tty=false',
                '--workdir', '/edit-fixture', 'dev', '/usr/bin/timeout',
                '--signal=TERM', '--kill-after=2s', '60s',
-               'python3', '-B', '/workspace/scripts/nomo-bounded-check.py', *check]
+               'python3', '-B', '/workspace/scripts/nomo-bounded-check.py', *(['--nomo-long-capture'] if long_capture else []), *check]
     return command, env
 
 

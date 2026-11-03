@@ -11,6 +11,13 @@ import nomo.tools.edit_encoding.digest;
 import nomo.harness.model_plan_diagnostic.response_error;
 import nomo.session.edit_operation.{Binding, selector_error, binding_error};
 
+// Shared serialization bound for historical model inputs.
+public flow history_bound(converted: Option<Message<JsonValue>>, maximum: usize, kind: string) -> unit {
+    let data = match converted { Some(item) => item.body, None() => { abort("history " + kind + " context conversion refused"); } };
+    let raw = match stringify(data) { Ok(item) => item, Err(_) => { abort("history " + kind + " context encoding refused"); } };
+    if byte_count(utf8_encode(raw)) > maximum { abort(if kind == "read" { "history read context exceeds 262144 bytes" } else { "history edit context exceeds 524288 bytes" }); }
+}
+
 public type Child = { target: string, replacement: string };
 public type Context = { phase: string, request: string, task: string, id: string, workspace: string, path: string,
     before: string, after: string, request_digest: string, before_digest: string, after_digest: string,

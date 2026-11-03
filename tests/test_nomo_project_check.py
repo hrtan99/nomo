@@ -72,7 +72,7 @@ sys.exit(int(os.environ.get('NOMO_TEST_EXIT', '0')))
     def test_invalid_requests_never_launch(self):
         self.assertEqual(self.invoke('--root', self.workspace, '--').returncode, 64)
         self.assertFalse(self.log.exists())
-        self.workspace.chmod(0o755)
+        self.workspace.chmod(0o775)
         self.assertEqual(self.invoke('--root', self.workspace, '--', 'true').returncode, 64)
         self.assertFalse(self.log.exists())
         self.workspace.chmod(0o700)

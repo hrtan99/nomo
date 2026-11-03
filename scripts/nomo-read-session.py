@@ -12,12 +12,7 @@ _storage=importlib.util.module_from_spec(_storage_spec);_storage_spec.loader.exe
 _policy_spec=importlib.util.spec_from_file_location('nomo_event_policy',ROOT/'scripts/nomo-event-policy.py')
 _policy=importlib.util.module_from_spec(_policy_spec);_policy_spec.loader.exec_module(_policy)
 
-def directory(value,label):
-    path=Path(value)
-    if not path.is_absolute() or path.is_symlink():raise ValueError(label+' must be an absolute directory with a non-symlink leaf')
-    path=path.resolve(strict=True)
-    if not path.is_dir():raise ValueError(label+' must be a directory')
-    return path
+directory=_edit_launcher.directory
 
 def display_json_string(value, encoding):
     """Keep readable Unicode while escaping controls and unencodable characters."""

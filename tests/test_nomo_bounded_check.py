@@ -72,6 +72,34 @@ class BoundedCheckTest(unittest.TestCase):
         entry = {'data': bytearray(('x' + key + 'y' + key[:8]).encode()), 'truncated': True}
         self.assertEqual(edit.format_check_capture(entry, env), 'x[REDACTED]y[REDACTED]')
 
+    def test_complete_large_capture_filters_before_head_and_tail(self):
+        secret = 'SYNTHETIC_SECRET'
+        text = 'HEAD ' + 'a' * 1988 + secret + 'x' * 199000 + secret + ' TAIL'
+        entry = {'data': bytearray(text.encode()), 'truncated': False}
+        excerpt, clipped = edit.format_check_capture(entry, {}, [secret], True)
+        self.assertTrue(clipped)
+        self.assertIn('HEAD ', excerpt)
+        self.assertIn(' TAIL', excerpt)
+        self.assertIn('[... output omitted ...]', excerpt)
+        self.assertNotIn(secret, excerpt)
+        self.assertLessEqual(len(excerpt.encode()), 4096)
+        self.assertEqual(edit.format_check_capture({'data':bytearray(secret.encode()),'truncated':True}, {}, [secret], True), ('', True))
+
+    def test_long_capture_never_persists_partial_secret_on_overflow(self):
+        capture = {}
+        result = edit.run_owned([sys.executable, '-c', 'import sys;sys.stdout.buffer.write(b"x"*(4*1024*1024)+b"SECRET_AT_END")'],
+                                dict(os.environ), capture, capture_limit=4 * 1024 * 1024, forward_output=False)
+        self.assertEqual(result, 0)
+        self.assertTrue(capture['stdout']['truncated'])
+        self.assertEqual(edit.format_check_capture(capture['stdout'], {}, ['SECRET_AT_END'], True), ('', True))
+
+    def test_long_capture_mode_keeps_tail_beyond_normal_bound(self):
+        result = subprocess.run([sys.executable, str(SCRIPT), '--nomo-long-capture', sys.executable, '-c',
+                                 'import sys;sys.stdout.write("a"*200000+" TAIL")'], capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0)
+        self.assertTrue(result.stdout.endswith(b' TAIL'))
+        self.assertEqual(len(result.stdout), 200005)
+
     def test_private_input_is_not_part_of_child_arguments(self):
         out, err, capture = Output(), Output(), {}
         command = [sys.executable, '-c', 'import sys; print(len(sys.stdin.buffer.read()))']

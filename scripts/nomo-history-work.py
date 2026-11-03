@@ -21,9 +21,12 @@ def main(argv=None):
         if args.event_followup and args.events_policy_dir is None:raise ValueError('event followup requires an event policy')
         if args.legacy_followup and args.events_policy_dir is not None:raise ValueError('legacy followup cannot use event policy')
         context,workspace,state,version=edit.history_work_roots(args,ROOT)
-        policy=None;binding=None
+        policy=None;binding=None;literals=[]
         if args.events_policy_dir is not None:
-            policy,_,binding=policy_module.read_private(args.events_policy_dir)
+            policy,policy_data,binding=policy_module.read_private(args.events_policy_dir)
+            data=json.loads(policy_data)
+            literals=data.get('literals') if isinstance(data,dict) else None
+            if not isinstance(literals,list) or not all(isinstance(item,str) and item for item in literals):raise ValueError('invalid event policy literals')
             for item in (context,workspace,state):
                 if policy==item or policy in item.parents or item in policy.parents:raise ValueError('event policy directory must not overlap state or workspace')
         overlay='config/etas-'+version.replace('.','')+'-official-compose.yaml'
@@ -58,7 +61,7 @@ def main(argv=None):
                 print('Work stopped. Inspect the edit and durable state before any further action; the outcome may be uncertain.',file=sys.stderr,flush=True);return code
             if not args.check:
                 print('Edit completed; no check was requested.',flush=True);return 0
-            check,check_env=edit.prepare_project_check(str(workspace),args.check,version=version)
+            check,check_env=edit.prepare_project_check(str(workspace),args.check,version=version,long_capture=policy is not None)
             internal_env={k:v for k,v in env.items() if not k.startswith('ETAS_HOST_') and k not in ('MINIMAX_API_KEY','NOMO_QWEN_SERVER_API_KEY','NOMO_MODEL_REQUEST_DEADLINE_MS')}
             offline=['docker','compose','--env-file','/dev/null','--file',str(ROOT/'compose.yaml'),
                 '--file',str(ROOT/overlay),'--file',str(ROOT/'config/etas-runtime-cache-compose.yaml'),
@@ -80,16 +83,15 @@ def main(argv=None):
                 print('Check was not started; inspect recorded status.',file=sys.stderr,flush=True);return 1
             print('Running the requested check offline in the edited workspace (60-second limit; stdin is closed).',flush=True)
             capture={key:{'data':bytearray(),'truncated':False} for key in ('stdout','stderr')}
-            code=edit.run_owned(check,check_env,capture,capture_limit=65536 if policy is not None else 4096)
+            code=edit.run_owned(check,check_env,capture,capture_limit=4194304 if policy is not None else 4096,forward_output=policy is None)
             if code<0 or code>=124:
                 print('Check outcome is uncertain; recorded running state is retained, without retry.',file=sys.stderr,flush=True);return code or 1
             outcome='passed' if code==0 else 'failed'
             if policy is not None:
-                stdout=edit.format_check_capture(capture['stdout'],env);stderr=edit.format_check_capture(capture['stderr'],env)
-                out_truncated=capture['stdout']['truncated'] or len(stdout.encode('utf-8'))>65536
-                err_truncated=capture['stderr']['truncated'] or len(stderr.encode('utf-8'))>65536
-                if out_truncated:stdout=''
-                if err_truncated:stderr=''
+                stdout,out_truncated=edit.format_check_capture(capture['stdout'],env,literals,True)
+                stderr,err_truncated=edit.format_check_capture(capture['stderr'],env,literals,True)
+                for name,value in (('stdout',stdout),('stderr',stderr)):
+                    if value:print('Check '+name+':\n'+value,flush=True)
                 print('Complete captured streams are filtered before saving up to 4096 UTF-8 bytes, with the middle omitted when necessary; incomplete streams are omitted and marked truncated.',flush=True)
                 payload=(json.dumps([stdout,stderr],ensure_ascii=True)+'\n').encode()
                 if checkpoint('finish',outcome,str(code),str(out_truncated).lower(),str(err_truncated).lower(),input_data=payload):
