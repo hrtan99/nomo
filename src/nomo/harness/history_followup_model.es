@@ -20,7 +20,7 @@ flow bounded_read(value: ReadInput) -> ReadInput {
     let message = Message.new(value); let converted: Option<Message<JsonValue>> = message.cast<JsonValue>();
     let data = match converted { Some(item) => item.body, None() => { abort("history read context conversion refused"); } };
     let raw = match stringify(data) { Ok(item) => item, Err(_) => { abort("history read context encoding refused"); } };
-    if byte_count(utf8_encode(raw)) > 8192 { abort("history read context exceeds 8192 bytes"); }
+    if byte_count(utf8_encode(raw)) > 16384 { abort("history read context exceeds 16384 bytes"); }
     return value;
 }
 flow bounded_edit(value: EditInput) -> EditInput {
