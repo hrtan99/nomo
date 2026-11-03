@@ -3,7 +3,7 @@ module nomo.agent.read_tool;
 import nomo.model.model_tool_contract.{Session, Limits, Context};
 import nomo.tools.workspace.{read_file, search_files};
 import nomo.tools.read_contract.ReadTools;
-import nomo.agent.read_tool_controller.{run_loop_controller, run_private_loop_controller, run_private_work_loop_controller};
+import nomo.agent.read_tool_controller.{run_loop_controller, run_private_loop_controller, run_private_work_loop_controller, run_chat_loop_controller};
 import nomo.harness.legacy_string_stages.LegacyChildModel;
 public import nomo.model.model_tool_contract.LoopTurn;
 
@@ -45,6 +45,14 @@ public flow run_private_loop(raw: string, allowed: Array<string>, limits: Limits
 
 public flow run_private_work_loop(raw: string, allowed: Array<string>, limits: Limits, previous: Session) -> LoopTurn {
     return run_private_work_loop_controller(raw, allowed, limits, previous) with {
+        LegacyChildModel.infer(context) => { resume ToolModel.run(context); }
+        ReadTools.read(name) => { resume read_file(name); }
+        ReadTools.search(names, literal) => { resume search_files(names, literal); }
+    };
+}
+
+public flow run_chat_loop(raw: string, allowed: Array<string>, limits: Limits, previous: Session, private_progress: bool) -> LoopTurn {
+    return run_chat_loop_controller(raw, allowed, limits, previous, private_progress) with {
         LegacyChildModel.infer(context) => { resume ToolModel.run(context); }
         ReadTools.read(name) => { resume read_file(name); }
         ReadTools.search(names, literal) => { resume search_files(names, literal); }

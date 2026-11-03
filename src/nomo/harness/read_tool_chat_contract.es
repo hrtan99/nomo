@@ -13,7 +13,7 @@ import nomo.core.read_text.{bounded, safe};
 import nomo.model.read_protocol.question_error;
 import std.codec.text.utf8_encode;
 import std.bytes.len as byte_count;
-import nomo.harness.read_tool_contract.{Ledger, Observed, inspect, ledger_error};
+import nomo.harness.read_tool_contract.{Ledger, Observed, inspect_work, ledger_error};
 import nomo.harness.read_tool_contract.fresh as fresh_ledger;
 
 // Only validated successful selected data crosses a turn boundary.
@@ -26,7 +26,7 @@ public flow prior_error(prior: Previous) -> string {
         }
         return "";
     }
-    if question_error(prior.task) != "" || !bounded(prior.result, 256) || !bounded(prior.answer, 512) {
+    if !bounded(prior.task, 512) || !bounded(prior.result, 256) || !bounded(prior.answer, 512) {
         return "invalid selected prior result";
     }
     if prior.tool == "" {
@@ -42,7 +42,7 @@ public flow context_error(context: Context) -> string {
     let conversion: Option<Message<JsonValue>> = message.cast<JsonValue>();
     let json = match conversion { Some(value) => value.body, None() => { return "context conversion refused"; } };
     let encoded = match stringify(json) { Ok(value) => value, Err(_) => { return "context JSON refused"; } };
-    if byte_count(utf8_encode(encoded)) > 2048 { return "model context exceeds 2048 serialized characters"; }
+    if byte_count(utf8_encode(encoded)) > 8192 { return "model context exceeds 8192 serialized bytes"; }
     return "";
 }
 
@@ -86,7 +86,7 @@ public flow inspect_turn(child: Session, status: i32, request: string, task: str
             return Err("invalid unattempted child context refusal");
         }
         let context = ChildContext { history = input.events, allowed = allowed, final_only = false };
-        if question_error(request) != "" || question_error(task) != "" ||
+        if question_error(request) != "" || !bounded(task, 512) ||
             child_context_error(context) != events[2].text {
             return Err("unproven child context refusal");
         }
@@ -94,7 +94,7 @@ public flow inspect_turn(child: Session, status: i32, request: string, task: str
     }
     let state = State { events = normalized.events, characters = normalized.characters,
         spent = child.history.spent, stopped = child.history.stopped };
-    return inspect(Session { history = state, calls = child.calls, tokens = child.tokens,
+    return inspect_work(Session { history = state, calls = child.calls, tokens = child.tokens,
         tools = child.tools, scan = child.scan }, status, request, task, allowed);
 }
 

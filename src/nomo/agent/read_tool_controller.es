@@ -40,7 +40,7 @@ flow capacity(session: Session, slots: usize, characters: usize) -> string {
 
 // Retain all task, parent, tool and confirmed outcome events. Only controller
 // Model-text history is optional; state history/accounting is never rewritten.
-flow bounded_model_context(input: Context) -> Result<Context, string> {
+flow bounded_model_context(input: Context, maximum: usize) -> Result<Context, string> {
     var policies: Array<EventPolicy> = [];
     for event in input.history limit Iterations(32) {
         var policy = EventPolicy.Required;
@@ -48,7 +48,7 @@ flow bounded_model_context(input: Context) -> Result<Context, string> {
         if event.role == "user" && event.kind == "input" { policy = EventPolicy.Task; }
         policies = policies.push(policy);
     }
-    let selected = match select_context(input, policies, 2048) {
+    let selected = match select_context(input, policies, maximum) {
         Ok(value) => value,
         Err(error) => {
             let message = match error {
@@ -56,7 +56,7 @@ flow bounded_model_context(input: Context) -> Result<Context, string> {
                 SelectionRefusal.InvalidContext => "invalid bounded model context",
                 SelectionRefusal.InvalidLimit => "invalid model context byte limit",
                 SelectionRefusal.Encoding => "model context encoding refused",
-                SelectionRefusal.RequiredTooLarge => "required model context exceeds 2048 encoded UTF-8 bytes",
+                SelectionRefusal.RequiredTooLarge => if maximum == 2048 { "required model context exceeds 2048 encoded UTF-8 bytes" } else { "required model context exceeds 8192 encoded UTF-8 bytes" },
             };
             return Err(message);
         },
@@ -69,17 +69,17 @@ flow bounded_model_context(input: Context) -> Result<Context, string> {
 
 // Reserve the attempted model event and its largest final/action/error output.
 // The context includes all preceding events, never the not-yet-made request.
-flow model_attempt(previous: Session, allowed: Array<string>, limits: Limits, final_only: bool, private_progress: bool) -> Result<ModelAttempt, LoopTurn> {
+flow model_attempt(previous: Session, allowed: Array<string>, limits: Limits, final_only: bool, private_progress: bool, chat: bool) -> Result<ModelAttempt, LoopTurn> {
     var session = previous;
     let full = capacity(session, 2, 518);
     if full != "" {
         return Err(failed(history(session, stop(session.history)), full, 4));
     }
     let original = Context { history = session.history.events, allowed = allowed, final_only = final_only };
-    let context = match bounded_model_context(original) {
+    let context = match bounded_model_context(original, if chat { 8192 } else { 2048 }) {
         Ok(value) => value, Err(error) => { return Err(failed(session, error, 4)); }
     };
-    var error = context_error(context);
+    var error = if chat { "" } else { context_error(context) };
     if error == "" { error = budget_error(session, limits, false); }
     if error != "" {
         return Err(failed(session, error, 4));
@@ -90,7 +90,7 @@ flow model_attempt(previous: Session, allowed: Array<string>, limits: Limits, fi
 }
 
 // This same controller is used by scoped production and deterministic handlers.
-flow run_mode(raw: string, allowed: Array<string>, limits: Limits, previous: Session, work: bool, inspect_all: bool, private_progress: bool) -> LoopTurn {
+flow run_mode(raw: string, allowed: Array<string>, limits: Limits, previous: Session, work: bool, inspect_all: bool, private_progress: bool, chat: bool) -> LoopTurn {
     if previous.history.stopped { return LoopTurn { state = previous, status = 4 }; }
     let full = capacity(previous, 1, if work { 512 } else { 128 });
     if full != "" { return failed(history(previous, stop(previous.history)), full, 4); }
@@ -98,7 +98,7 @@ flow run_mode(raw: string, allowed: Array<string>, limits: Limits, previous: Ses
     if invalid == "" { invalid = allowed_error(allowed); }
     if invalid != "" { return failed(previous, invalid, 2); }
     var session = history(previous, emit_mode(previous.history, "user", "input", "", raw, private_progress));
-    let first = match model_attempt(session, allowed, limits, false, private_progress) { Ok(value) => value, Err(error) => { return error; } };
+    let first = match model_attempt(session, allowed, limits, false, private_progress, chat) { Ok(value) => value, Err(error) => { return error; } };
     // Host failure aborts here, without a recoverable source error event.
     if private_progress { println("CHILD STAGE model-action"); }
     let first_raw = perform LegacyChildModel.infer(first.context);
@@ -130,7 +130,7 @@ flow run_mode(raw: string, allowed: Array<string>, limits: Limits, previous: Ses
         return LoopTurn { state = history(session, emit_mode(session.history, "tool", "error", action.operation, data, private_progress)), status = 3 };
     }
     session = history(session, emit_mode(session.history, "tool", "complete", action.operation, data, private_progress));
-    let second = match model_attempt(session, allowed, limits, true, private_progress) { Ok(value) => value, Err(error) => { return error; } };
+    let second = match model_attempt(session, allowed, limits, true, private_progress, chat) { Ok(value) => value, Err(error) => { return error; } };
     if private_progress { println("CHILD STAGE model-final"); }
     let second_raw = perform LegacyChildModel.infer(second.context);
     if inspect_all { println(response_text(second_raw, "read-child-final", "lab-qwen-", 1152)); }
@@ -143,11 +143,17 @@ flow run_mode(raw: string, allowed: Array<string>, limits: Limits, previous: Ses
 }
 
 public flow run_loop_controller(raw: string, allowed: Array<string>, limits: Limits, previous: Session, work: bool, inspect_all: bool) -> LoopTurn {
-    return run_mode(raw, allowed, limits, previous, work, inspect_all, false);
+    return run_mode(raw, allowed, limits, previous, work, inspect_all, false, false);
 }
 public flow run_private_loop_controller(raw: string, allowed: Array<string>, limits: Limits, previous: Session) -> LoopTurn {
-    return run_mode(raw, allowed, limits, previous, false, false, true);
+    return run_mode(raw, allowed, limits, previous, false, false, true, false);
 }
 public flow run_private_work_loop_controller(raw: string, allowed: Array<string>, limits: Limits, previous: Session) -> LoopTurn {
-    return run_mode(raw, allowed, limits, previous, true, false, true);
+    return run_mode(raw, allowed, limits, previous, true, false, true, false);
+}
+
+// Chat accepts the same bounded task as work, retaining a larger explicitly
+// measured context for prior-turn evidence and JSON escaping.
+public flow run_chat_loop_controller(raw: string, allowed: Array<string>, limits: Limits, previous: Session, private_progress: bool) -> LoopTurn {
+    return run_mode(raw, allowed, limits, previous, true, false, private_progress, true);
 }

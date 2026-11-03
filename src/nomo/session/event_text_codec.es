@@ -16,7 +16,7 @@ public type Encoded = { value: string, replacements: usize };
 
 public flow encode(text: string, policy: Policy) -> Result<Encoded, string> {
     let clean = match redact(text, policy) { Ok(item) => item, Err(error) => { return Err(error); } };
-    if len(clean.value) > 2048 || byte_count(utf8_encode(clean.value)) > 2048 { return Err("event text exceeds decoded bound"); }
+    if len(clean.value) > 4096 || byte_count(utf8_encode(clean.value)) > 4096 { return Err("event text exceeds decoded bound"); }
     let converted: Option<Message<JsonValue>> = Message.new(clean.value).cast<JsonValue>();
     let value = match converted { Some(item) => item.body, None() => { return Err("event text JSON conversion refused"); } };
     let encoded = match stringify(value) { Ok(item) => item, Err(_) => { return Err("event text JSON encoding refused"); } };

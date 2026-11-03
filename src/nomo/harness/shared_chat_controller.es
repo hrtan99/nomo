@@ -10,7 +10,7 @@ import nomo.harness.harness_tool_chat_contract.{Previous, Context, Invocation, L
     context_error, seed, inspect_turn, turn_error, combine};
 import nomo.harness.legacy_chat_stages.LegacyChatStages;
 import nomo.model.read_protocol.question_error as unicode_question_error;
-import nomo.model.read_protocol.decode_plan as unicode_decode_plan;
+import nomo.model.read_protocol.decode_work_plan as unicode_decode_plan;
 import nomo.core.read_text.bounded as unicode_bounded;
 import nomo.harness.read_tool_chat_contract.prior_error as unicode_prior_error;
 import nomo.harness.read_tool_chat_contract.context_error as unicode_context_error;

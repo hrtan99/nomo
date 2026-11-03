@@ -8,13 +8,21 @@ ROOT=Path(__file__).resolve().parent.parent
 class Fake(BaseHTTPRequestHandler):
     def log_message(self,*_): pass
     def do_POST(self):
-        self.rfile.read(int(self.headers['Content-Length']))
+        request=json.loads(self.rfile.read(int(self.headers['Content-Length'])))
         index=self.server.calls; self.server.calls+=1
         if self.server.mode=='http503':
             self.send_error(503);return
-        values={'success':['["delegate","Read context.txt"]','["read","context.txt"]','["final","blue"]','blue'],
+        action=['["read","context.txt"]','["final","blue"]','blue']
+        values={'success':['["delegate","Read context.txt"]',*action],
+                'long512':[json.dumps(['delegate','x'*512]),*action],
+                'unicode512':[json.dumps(['delegate','界'*170+'aa']),*action],
+                'padded':[(' '*3000)+'["delegate","Read context.txt"]',*action],
+                'long513':[json.dumps(['delegate','x'*513])],
                 'frame':['synthetic invalid framing'], 'json':['["delegate","task",]'],
                 'task':['["other","task"]']}
+        if index==1 and self.server.mode in ('long512','unicode512'):
+            context=json.loads(request['messages'][1]['content'])
+            assert context['history'][-1]['text']==('x'*512 if self.server.mode=='long512' else '界'*170+'aa')
         content=values[self.server.mode][index]
         body=json.dumps({'choices':[{'message':{'role':'assistant','content':content},'finish_reason':'stop'}],
                          'usage':{'prompt_tokens':10,'completion_tokens':10,'total_tokens':20}}).encode()
@@ -37,23 +45,24 @@ def main():
     env={'PATH':os.environ['PATH'],'HOME':os.environ['HOME'],'MINIMAX_API_KEY':'SYNTHETIC_ONLY'}
     observed={}
     try:
-        for mode in ('success','frame','json','task','http503'):
+        successes=('success','long512','unicode512','padded')
+        for mode in (*successes,'long513','frame','json','task','http503'):
             server.mode=mode;server.calls=0
             registry=out/('sessions-'+mode);registry.mkdir(mode=0o700)
             cmd=[str(project/'scripts/nomo-read.sh'),'session-chat','--sessions-dir',str(registry),'--new',
                  '--root',str(context),'--allow','context.txt','--once','Read the color','--events-policy-dir',str(policy)]
             run=subprocess.run(cmd,env=env,capture_output=True,timeout=180)
             combined=run.stdout+b'\n'+run.stderr
-            if (mode=='success' and run.returncode!=0) or (mode!='success' and run.returncode!=3):
+            if (mode in successes and run.returncode!=0) or (mode not in successes and run.returncode!=3):
                 print(json.dumps({'mode':mode,'exit':run.returncode,'requests':server.calls,'synthetic_tail':combined[-3000:].decode('utf-8','replace')}),flush=True)
             expected={'frame':b'text_marker=bounded_json_frame_refused','json':b'text_marker=invalid_json_refused',
-                      'task':b'text_marker=delegated_task_refused','http503':b'text_marker=provider_http_503'}
-            if mode=='success':assert run.returncode==0 and server.calls==4 and b'FINAL blue' in combined
+                      'task':b'text_marker=delegated_task_refused','long513':b'text_marker=delegated_task_refused','http503':b'text_marker=provider_http_503'}
+            if mode in successes:assert run.returncode==0 and server.calls==4 and b'FINAL blue' in combined
             else:
                 assert run.returncode==3 and server.calls==1 and expected[mode] in combined
                 assert b'last_stage_text=chat-plan' in combined and b'Resume interactive:' not in combined
                 assert len(re.findall(rb'^SESSION ID [0-9a-f]{32}\r?$',run.stdout,re.MULTILINE))==1
-            observed[mode]={'exit':run.returncode,'requests':server.calls,'classified':mode=='success' or expected[mode] in combined}
+            observed[mode]={'exit':run.returncode,'requests':server.calls,'classified':mode in successes or expected[mode] in combined}
         assert (context/'context.txt').read_text()=='blue\n'
     finally:
         server.shutdown();server.server_close();thread.join(timeout=5);shutil.rmtree(out)
