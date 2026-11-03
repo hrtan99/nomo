@@ -4,6 +4,7 @@ import argparse,fcntl,hashlib,importlib.util,json,os,re,stat,sys
 from pathlib import Path
 ROOT=Path(__file__).resolve().parent.parent
 spec=importlib.util.spec_from_file_location('nomo_edit_launcher',ROOT/'scripts/nomo-edit.py');edit=importlib.util.module_from_spec(spec);spec.loader.exec_module(edit)
+storage_spec=importlib.util.spec_from_file_location('nomo_session_storage',ROOT/'scripts/nomo-session-storage.py');storage=importlib.util.module_from_spec(storage_spec);storage_spec.loader.exec_module(storage)
 
 def main(argv=None):
     parser=argparse.ArgumentParser(description=__doc__)
@@ -46,13 +47,7 @@ def main(argv=None):
             if not stat.S_ISREG(lock.st_mode) or lock.st_uid!=os.getuid() or lock.st_nlink!=1 or stat.S_IMODE(lock.st_mode)!=0o600:raise ValueError('session lock must be a private regular file')
             try:fcntl.flock(fd,fcntl.LOCK_EX|fcntl.LOCK_NB)
             except BlockingIOError:raise ValueError('session already in use')
-            if not (state/'history.sqlite3').is_file():raise ValueError('existing session history is missing')
-            for suffix in ('','-wal','-shm','-journal'):
-                path=state/('history.sqlite3'+suffix)
-                if path.is_symlink():raise ValueError('session database and sidecars must not be symlinks')
-                if path.exists():
-                    st=path.stat()
-                    if not stat.S_ISREG(st.st_mode) or st.st_nlink!=1:raise ValueError('session database and sidecars must not be hardlinked')
+            storage.prepare(state)
             env={k:v for k,v in os.environ.items() if not k.startswith('ETAS_HOST_')}
             env.pop('NOMO_QWEN_SERVER_API_KEY',None)
             env.update(NOMO_SESSION_STATE=str(state),NOMO_EDIT_WORKSPACE_DIR=str(workspace),NOMO_WORK_CONTEXT_DIR=str(context),NOMO_ETAS_VERSION=version)

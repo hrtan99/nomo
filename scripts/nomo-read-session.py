@@ -7,6 +7,8 @@ ROOT=Path(__file__).resolve().parent.parent
 _spec=importlib.util.spec_from_file_location('nomo_edit_launcher',ROOT/'scripts/nomo-edit.py')
 _edit_launcher=importlib.util.module_from_spec(_spec);_spec.loader.exec_module(_edit_launcher)
 run_owned=_edit_launcher.run_owned
+_storage_spec=importlib.util.spec_from_file_location('nomo_session_storage',ROOT/'scripts/nomo-session-storage.py')
+_storage=importlib.util.module_from_spec(_storage_spec);_storage_spec.loader.exec_module(_storage)
 
 def directory(value,label):
     path=Path(value)
@@ -49,12 +51,7 @@ def main(argv=None):
             names={p.name for p in state.iterdir()}
             if args.action=='new' and names!={'.nomo-session.lock'}:raise ValueError('new session state must otherwise be empty')
             if args.action!='new' and 'history.sqlite3' not in names:raise ValueError('existing session history is missing')
-            for suffix in ('','-wal','-shm','-journal'):
-                p=state/('history.sqlite3'+suffix)
-                if p.is_symlink():raise ValueError('session database and sidecars must not be symlinks')
-                if p.exists():
-                    info=p.stat()
-                    if not stat.S_ISREG(info.st_mode) or info.st_nlink!=1:raise ValueError('session database and sidecars must be regular files without hardlinks')
+            _storage.prepare(state,create=args.action=='new')
             env=dict(os.environ,NOMO_SESSION_STATE=str(state),NOMO_ETAS_VERSION=version)
             env.pop('NOMO_QWEN_SERVER_API_KEY',None)
             compose=['docker','compose','--env-file','/dev/null','--file',str(ROOT/'compose.yaml'),

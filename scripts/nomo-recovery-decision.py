@@ -4,6 +4,7 @@ import argparse,fcntl,importlib.util,os,stat,sys
 from pathlib import Path
 ROOT=Path(__file__).resolve().parent.parent
 spec=importlib.util.spec_from_file_location('edit_launcher',ROOT/'scripts/nomo-edit.py');edit=importlib.util.module_from_spec(spec);spec.loader.exec_module(edit)
+storage_spec=importlib.util.spec_from_file_location('nomo_session_storage',ROOT/'scripts/nomo-session-storage.py');storage=importlib.util.module_from_spec(storage_spec);storage_spec.loader.exec_module(storage)
 def main(argv=None):
  parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--state',required=True);parser.add_argument('--id',required=True);parser.add_argument('--target',choices=('work','check','followup','followup-check'),required=True);args=parser.parse_args(argv)
  try:
@@ -19,13 +20,7 @@ def main(argv=None):
    if not stat.S_ISREG(info.st_mode) or info.st_uid!=os.getuid() or info.st_nlink!=1 or stat.S_IMODE(info.st_mode)!=0o600:raise ValueError('session lock must be a private regular file')
    try:fcntl.flock(fd,fcntl.LOCK_EX|fcntl.LOCK_NB)
    except BlockingIOError:raise ValueError('session already in use')
-   if not (state/'history.sqlite3').is_file():raise ValueError('existing session history is missing')
-   for suffix in ('','-wal','-shm','-journal'):
-    path=state/('history.sqlite3'+suffix)
-    if path.is_symlink():raise ValueError('session database and sidecars must not be symlinks')
-    if path.exists():
-     info=path.stat()
-     if not stat.S_ISREG(info.st_mode) or info.st_nlink!=1:raise ValueError('session database and sidecars must be regular files without hardlinks')
+   storage.prepare(state)
    cache=ROOT/'.etas'
    if cache.is_symlink():raise ValueError('project .etas mountpoint must not be a symlink')
    cache.mkdir(mode=0o700,exist_ok=True)
