@@ -1,9 +1,9 @@
 module nomo.agent.read_tool_controller;
 
-import std.text.{len, to_string_usize, contains};
+import std.text.{len, to_string_usize, contains, starts_with, trim};
 import std.io.println;
 import nomo.core.read_text.{safe, bounded};
-import nomo.harness.model_plan_diagnostic.response_text;
+import nomo.harness.model_plan_diagnostic.{response_text, response_error};
 import nomo.core.conversation.{State, stop, charge};
 import nomo.agent.model_tool_controller.{capacity, history, failed};
 import nomo.agent.loop.emit;
@@ -82,6 +82,11 @@ flow model_attempt(previous: Session, allowed: Array<string>, limits: Limits, fi
     return Ok(ModelAttempt { state = session, context = context });
 }
 
+flow child_rejection(raw: string, phase: string, error: string) -> string {
+    let text = trim(raw); let category = if len(raw) > 1152 { "limit" } else { if starts_with(text, "```") { "fence" } else { if starts_with(text, "{") { "object" } else { if starts_with(text, "[") { "frame" } else { "prose" } } } };
+    return error + "; " + response_error(raw, phase, category, 1152);
+}
+
 flow tool_failure(result: Outcome) -> string {
     if contains(result.text, "file is not UTF-8") { return "non-UTF-8 file"; }
     if contains(result.text, "file exceeds 16384 bytes") || contains(result.text, "file exceeds 2048 bytes") { return "per-file byte limit"; }
@@ -105,7 +110,7 @@ flow run_multistep(raw: string, allowed: Array<string>, previous: Session, priva
         calls = calls + 1;
         if private_progress { println("CHILD STAGE model-action"); }
         let response = perform LegacyChildModel.infer(context);
-        let action = match decode_child(response, allowed, tools == 3) { Ok(value) => value, Err(error) => { return failed(session, error, 3); } };
+        let action = match decode_child(response, allowed, tools == 3) { Ok(value) => value, Err(error) => { return failed(session, child_rejection(response, if tools == 3 { "read-child-final" } else { "read-child-action" }, error), 3); } };
         if action.operation == "final" { return LoopTurn { state = history(session, emit_mode(session.history, "assistant", "final", "", action.text, private_progress)), status = 0 }; }
         session = history(session, emit_mode(session.history, "model", "request", action.operation, compact_frame(response), private_progress));
         session = Session { history = charge(session.history), calls = session.calls, tokens = session.tokens, tools = session.tools + 1, scan = session.scan + 4194560 };
@@ -142,7 +147,7 @@ flow run_mode(raw: string, allowed: Array<string>, limits: Limits, previous: Ses
     let decoded = decode_child(first_raw, allowed, false);
     let action = match decoded {
         Ok(action) => action,
-        Err(error) => { return failed(session, error, 3); }
+        Err(error) => { return failed(session, child_rejection(first_raw, "read-child-action", error), 3); }
     };
     if action.operation == "final" {
         return LoopTurn { state = history(session, emit_mode(session.history, "assistant", "final", "", action.text, private_progress)), status = 0 };
@@ -173,7 +178,7 @@ flow run_mode(raw: string, allowed: Array<string>, limits: Limits, previous: Ses
     let decoded_final = decode_child(second_raw, allowed, true);
     let final = match decoded_final {
         Ok(action) => action,
-        Err(error) => { return failed(second.state, error, 3); }
+        Err(error) => { return failed(second.state, child_rejection(second_raw, "read-child-final", error), 3); }
     };
     return LoopTurn { state = history(second.state, emit_mode(second.state.history, "assistant", "final", "", final.text, private_progress)), status = 0 };
 }

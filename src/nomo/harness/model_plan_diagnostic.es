@@ -10,7 +10,7 @@ flow phase_name(value: string) -> string {
     return "unknown";
 }
 flow category_name(value: string) -> string {
-    for known in ["limit", "control", "frame", "json", "shape", "arity", "verb", "task", "target", "replacement", "summary", "proposal", "field", "files", "literal", "result", "answer"] limit Iterations(17) { if value == known { return value; } }
+    for known in ["limit", "control", "frame", "json", "shape", "arity", "verb", "task", "target", "replacement", "summary", "proposal", "field", "files", "literal", "result", "answer", "fence", "object", "prose"] limit Iterations(20) { if value == known { return value; } }
     return "unknown";
 }
 flow limit(maximum: usize) -> usize { return if maximum > 0 && maximum <= 32768 { maximum } else { 384 }; }
