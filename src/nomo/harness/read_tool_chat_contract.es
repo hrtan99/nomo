@@ -168,3 +168,26 @@ public flow extended_combine(previous: Ledger, local: Ledger) -> Result<Ledger, 
     let bad_total = extended_ledger_error(value); if bad_total != "" { return Err(bad_total); }
     return Ok(value);
 }
+
+// Persistent event sessions reserve a bounded series of turns without
+// resetting any already charged usage.
+public flow session_maximum() -> Ledger { return Ledger { steps = 224, calls = 128, tokens = 262144, tools = 32, scan = 131072 }; }
+public flow session_invocation() -> Invocation { return Invocation { usage = fresh_ledger(), maximum = session_maximum(), admitted = 0, prior = empty() }; }
+public flow session_turn_error(value: Invocation) -> string {
+    if value.maximum != session_maximum() || value.admitted < 0 || value.admitted > 31 { return "session turn limit reached"; }
+    let used = value.usage; let turns = value.admitted;
+    if used.tools < 0 || used.tools > turns || used.steps != turns * 5 + used.tools * 2 ||
+        used.calls != turns * 3 + used.tools || used.tokens != used.calls * 2048 || used.scan != used.tools * 4096 { return "invalid session ledger"; }
+    let problem = prior_error(value.prior); if problem != "" { return problem; }
+    if (turns == 0 && value.prior.task != "") || (turns > 0 && value.prior.task == "") { return "invalid session prior"; }
+    let last_tool = if value.prior.tool == "" { 0 } else { 1 };
+    if turns > 0 && (used.tools < last_tool || used.tools - last_tool > turns - 1) { return "invalid session prior tool"; }
+    return "";
+}
+public flow session_combine(previous: Ledger, local: Ledger) -> Result<Ledger, string> {
+    let error = ledger_error(local); if error != "" { return Err(error); }
+    let value = Ledger { steps = previous.steps + local.steps, calls = previous.calls + local.calls,
+        tokens = previous.tokens + local.tokens, tools = previous.tools + local.tools, scan = previous.scan + local.scan };
+    if value.steps > 224 || value.calls > 128 || value.tokens > 262144 || value.tools > 32 || value.scan > 131072 { return Err("session allowance exhausted"); }
+    return Ok(value);
+}

@@ -17,6 +17,7 @@ Usage:
   nomo-read.sh session-id decision --sessions-dir PRIVATE_DIRECTORY --id SESSION_ID --operation-id ID --target work|check|followup|followup-check
   nomo-read.sh session-chat --sessions-dir PRIVATE_DIRECTORY (--new | --id SESSION_ID) --root DIR --allow FILE[,FILE...] [--events-policy-dir PRIVATE_DIRECTORY] [--once QUESTION]
   Event-recording sessions accept --events-policy-dir PRIVATE_DIRECTORY on start, resume, status, work and session-chat.
+  Event sessions support up to 32 saved read turns, with prior usage retained.
   This mode supports two work operations plus up to 32 additional followups, each freshly confirmed with an optional offline check.
   nomo-read.sh event-policy-init --directory PRIVATE_DIRECTORY
   nomo-read.sh session-id work --sessions-dir PRIVATE_DIRECTORY --id SESSION_ID --read-root DIR --root PRIVATE_DIRECTORY --operation-id ID --path FILE --allow FILE[,FILE...] --once TASK [--check COMMAND ARG ...]

@@ -17,6 +17,7 @@ import nomo.harness.read_tool_chat_contract.context_error as unicode_context_err
 import nomo.harness.read_tool_chat_contract.inspect_turn as unicode_inspect_turn;
 import nomo.harness.read_tool_chat_contract.turn_error as unicode_turn_error;
 import nomo.harness.read_tool_chat_contract.{is_extended, extended_turn_error, extended_combine};
+import nomo.harness.read_tool_chat_contract.{session_maximum, session_turn_error, session_combine};
 
 flow refused(usage: Ledger, error: string, resolved: bool) -> LocalTurn {
     println("REFUSED " + error);
@@ -60,7 +61,7 @@ flow stage(turn: i32, phase: string, before: Ledger, local: Ledger) -> unit {
 // Fresh local counters are a subledger of the already checked global reservation.
 flow execute(request: string, allowed: Array<string>, prior: Previous, before: Ledger, turn: i32, unicode: bool, private_progress: bool) -> LocalTurn {
     var state = fresh();
-    if turn < 1 || turn > 4 || (turn == 1 && prior.task != "") || (turn > 1 && prior.task == "") {
+    if turn < 1 || turn > 32 || (turn == 1 && prior.task != "") || (turn > 1 && prior.task == "") {
         return refused(state, "invalid turn selection", true);
     }
     let invalid = if unicode { unicode_question_error(request) } else { question_error(request) }; if invalid != "" { return refused(state, invalid, true); }
@@ -114,17 +115,18 @@ flow execute(request: string, allowed: Array<string>, prior: Previous, before: L
 }
 
 flow run_mode(request: string, allowed: Array<string>, invocation: Invocation, unicode: bool, private_progress: bool) -> TurnResult {
+    let session = unicode && invocation.maximum == session_maximum();
     let extended = unicode && is_extended(invocation.maximum);
-    let invalid = if extended { extended_turn_error(invocation) } else { if unicode { unicode_turn_error(invocation) } else { turn_error(invocation) } };
+    let invalid = if session { session_turn_error(invocation) } else { if extended { extended_turn_error(invocation) } else { if unicode { unicode_turn_error(invocation) } else { turn_error(invocation) } } };
     if invalid != "" { println("REFUSED " + invalid); return TurnResult { status = 1, state = invocation, resolved = true, completed = None() }; }
-    let last_admission = if extended { 3 } else { 1 };
+    let last_admission = if session { 31 } else { if extended { 3 } else { 1 } };
     if invocation.admitted < 0 || invocation.admitted > last_admission {
         println("REFUSED turn limit reached"); return TurnResult { status = 1, state = invocation, resolved = true, completed = None() };
     }
     let turn = invocation.admitted + 1;
     let local = execute(request, allowed, invocation.prior, invocation.usage, turn, unicode, private_progress);
     if !local.resolved { return TurnResult { status = 1, state = invocation, resolved = false, completed = None() }; }
-    let combined = if extended { extended_combine(invocation.usage, local.usage) } else { combine(invocation.usage, local.usage, invocation.maximum) };
+    let combined = if session { session_combine(invocation.usage, local.usage) } else { if extended { extended_combine(invocation.usage, local.usage) } else { combine(invocation.usage, local.usage, invocation.maximum) } };
     let usage = match combined {
         Ok(value) => value, Err(error) => { println("REFUSED " + error); return TurnResult { status = 1, state = invocation, resolved = false, completed = None() }; }
     };

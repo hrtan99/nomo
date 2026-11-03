@@ -29,6 +29,20 @@ class Fake(BaseHTTPRequestHandler):
                 value=['read','four.txt']
             elif i==6:value=['final','Fourth selected file is green']
             elif i==7:value='Old results and the fourth file were retained.'
+            elif i==8:
+                assert data['current']['phase']=='plan'
+                history=' '.join(item['text'] for item in data['history'])
+                assert 'Find both markers' in history and 'Two old files matched.' in history and 'Old results and the fourth file were retained.' in history
+                value=['delegate','Read four.txt']
+            elif i==9:value=['read','four.txt']
+            elif i==10:value=['final','Fourth selected file is green']
+            elif i==11:value='Third turn completed.'
+            elif i==12:
+                assert 'Third turn completed.' in ' '.join(item['text'] for item in data['history'])
+                value=['delegate','Read one.txt']
+            elif i==13:value=['read','one.txt']
+            elif i==14:value=['final','First file has marker']
+            elif i==15:value='Fourth turn completed.'
             else:raise ValueError('unexpected request')
             content=json.dumps(value,separators=(',',':')) if isinstance(value,list) else value
             body=json.dumps({'choices':[{'message':{'role':'assistant','content':content},'finish_reason':'stop'}],
@@ -67,14 +81,18 @@ def main():
                     '--allow',','.join(allowed),'--once',question,'--events-policy-dir',str(policy)],env=env,capture_output=True,timeout=120)
             first=run(old,'session-new',FILES[:2],'Find both markers')
             if first.returncode or server.calls!=list(range(4)):raise AssertionError('old first turn failed: '+(first.stdout+first.stderr).decode('utf-8','replace')[-1500:])
-            resumed=run(new,'session-continue',FILES,'Read the fourth file and recall the old results')
-            if resumed.returncode or server.calls!=list(range(8)) or server.failed:raise AssertionError('new continuation failed: '+(resumed.stdout+resumed.stderr).decode('utf-8','replace')[-1500:])
+            resumed=run(old,'session-continue',FILES,'Read the fourth file and recall the old results')
+            if resumed.returncode or server.calls!=list(range(8)) or server.failed:raise AssertionError('old second turn failed: '+(resumed.stdout+resumed.stderr).decode('utf-8','replace')[-1500:])
+            for question,expected in [('Recall both earlier answers',12),('Continue with first file',16)]:
+                resumed=run(new,'session-continue',FILES,question)
+                if resumed.returncode or server.calls!=list(range(expected)) or server.failed:raise AssertionError('new continuation failed: '+(resumed.stdout+resumed.stderr).decode('utf-8','replace')[-2000:])
             status=subprocess.run([str(new/'scripts/nomo-read.sh'),'session-status','--state',str(state),'--events-policy-dir',str(policy)],env=env,capture_output=True,timeout=120)
             views=[json.loads(line.removeprefix(b'EVENT VIEW ')) for line in status.stdout.splitlines() if line.startswith(b'EVENT VIEW {')]
-            assert status.returncode==0 and len(views)==1 and views[0]['turns']==2 and views[0]['phase']=='complete'
+            assert status.returncode==0 and len(views)==1 and views[0]['turns']==4 and views[0]['phase']=='ready'
+            assert views[0]['used_calls']==16 and views[0]['used_tokens']==32768 and views[0]['used_tools']==4
             text=' '.join(json.loads(item['text']) for item in views[0]['events'])
             assert 'one.txt:1' in text and 'two.txt:1' in text and 'four.txt' in text
         finally:server.shutdown();server.server_close();thread.join(timeout=5)
-    print(json.dumps({'status':'passed','scope':'old synthetic two-file session continued by new product with four selected files','fake_requests':8,'old_results_preserved':True}))
+    print(json.dumps({'status':'passed','scope':'old two-turn synthetic session continued twice by new product','fake_requests':16,'old_results_preserved':True}))
 
 if __name__=='__main__':main()

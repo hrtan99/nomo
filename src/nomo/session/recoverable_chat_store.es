@@ -2,7 +2,7 @@ module nomo.session.recoverable_chat_store;
 
 import std.memory.{get_entry, prepare_put, operation_ref, commit, MemoryEntry, MemoryVersion,
     WriteCondition, WriteOutcome, MemoryWriteChange, StorageDurability, Missing, Match};
-import nomo.session.chat_session_contract.{Session, fresh, invalid as invalid_chat, begin, complete};
+import nomo.session.chat_session_contract.{Session, fresh_events, invalid as invalid_chat, begin, complete, extend};
 import nomo.harness.harness_tool_chat_contract.TurnResult;
 import nomo.session.redaction.{Policy, policy_error, text as redact};
 import nomo.session.recoverable_events.{Frame as EventFrame, empty as empty_events, invalid as invalid_events, append};
@@ -32,7 +32,7 @@ flow frame_error(value: Frame, policy: Policy, binding: string) -> string {
     if value.format != 1 || value.encoding != "json-string-v1" || value.policy_binding != binding { return "invalid recoverable chat format, encoding or policy binding"; }
     let chat_error = invalid_chat(value.chat); if chat_error != "" { return chat_error; }
     let event_error = invalid_events(value.events, policy); if event_error != "" { return event_error; }
-    for item in value.events.events limit Iterations(48) {
+    for item in value.events.events limit Iterations(768) {
         match decode(item.text, policy) { Ok(_) => {} Err(error) => { return error; } }
     }
     if value.chat.invocation.admitted != value.events.turns { return "chat and event turns differ"; }
@@ -83,12 +83,14 @@ flow write(value: Frame, expected: Option<MemoryEntry<string, Frame>>, policy: P
 }
 
 public flow create(policy: Policy, binding: string) -> Result<MemoryVersion, string> ![Memory, Error<StorageError>, Error<IndexError>] {
-    return write(Frame { format = 1, encoding = "json-string-v1", policy_binding = binding, chat = fresh(), events = empty_events() }, None(), policy, binding);
+    return write(Frame { format = 1, encoding = "json-string-v1", policy_binding = binding, chat = fresh_events(), events = empty_events() }, None(), policy, binding);
 }
 
 public flow reserve(expected: MemoryEntry<string, Frame>, request: string, policy: Policy, binding: string) -> Result<MemoryVersion, string> ![Memory, Error<StorageError>, Error<IndexError>] {
     let error = frame_error(expected.value, policy, binding); if error != "" { return Err(error); }
-    let pending = match begin(expected.value.chat, request) { Ok(item) => item, Err(problem) => { return Err(problem); } };
+    let saved = expected.value.chat;
+    let current = if saved.format == 3 && saved.phase == "complete" { match extend(saved) { Ok(item) => item, Err(problem) => { return Err(problem); } } } else { saved };
+    let pending = match begin(current, request) { Ok(item) => item, Err(problem) => { return Err(problem); } };
     return write(Frame { format = 1, encoding = "json-string-v1", policy_binding = binding, chat = pending, events = expected.value.events }, Some(expected), policy, binding);
 }
 

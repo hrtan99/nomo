@@ -1,7 +1,7 @@
 module nomo.session.chat_session_contract;
 
 import nomo.harness.harness_tool_chat_contract.{Invocation, TurnResult, Previous, fresh_invocation};
-import nomo.harness.read_tool_chat_contract.{prior_error, turn_error};
+import nomo.harness.read_tool_chat_contract.{prior_error, turn_error, session_maximum, session_invocation, session_turn_error};
 import nomo.model.read_protocol.question_error;
 
 // Persistent conversation data never carries filesystem authority or consent.
@@ -11,13 +11,17 @@ public type Session = { format: i32, phase: string, invocation: Invocation, last
 public flow fresh() -> Session {
     return Session { format = 3, phase = "ready", invocation = fresh_invocation(), last_request = "", pending = "" };
 }
+public flow fresh_events() -> Session {
+    return Session { format = 4, phase = "ready", invocation = session_invocation(), last_request = "", pending = "" };
+}
 
 public flow invalid(value: Session) -> string {
-    if (value.format != 1 && value.format != 2 && value.format != 3) || (value.phase != "ready" && value.phase != "running" && value.phase != "complete") {
+    if (value.format != 1 && value.format != 2 && value.format != 3 && value.format != 4) || (value.phase != "ready" && value.phase != "running" && value.phase != "complete") {
         return "invalid chat session format or phase";
     }
-    let state = value.invocation; let used = state.usage; let standard = fresh_invocation();
-    if state.maximum != standard.maximum || state.admitted < 0 || state.admitted > 2 { return "invalid chat session limits"; }
+    let state = value.invocation; let used = state.usage; let standard = if value.format == 4 { session_invocation() } else { fresh_invocation() };
+    let maximum = if value.format == 4 { 32 } else { 2 };
+    if state.maximum != standard.maximum || state.admitted < 0 || state.admitted > maximum { return "invalid chat session limits"; }
     if state.admitted == 0 {
         if state != standard || value.last_request != "" { return "invalid initial chat session"; }
     } else {
@@ -29,16 +33,27 @@ public flow invalid(value: Session) -> string {
             used.steps != state.admitted * 5 + used.tools * 2 || used.calls != state.admitted * 3 + used.tools ||
             used.tokens != used.calls * 2048 || used.scan != used.tools * 4096 { return "invalid chat session ledger"; }
     }
-    if state.admitted == 2 {
+    if state.admitted == maximum {
         if value.phase != "complete" || value.pending != "" { return "finished session cannot run another turn"; }
     } else {
         if value.phase == "complete" { return "unfinished session cannot be complete"; }
-        let turn = turn_error(state); if turn != "" { return turn; }
+        let turn = if value.format == 4 { session_turn_error(state) } else { turn_error(state) }; if turn != "" { return turn; }
         if value.phase == "running" {
             if question_error(value.pending) != "" { return "invalid pending request"; }
         } else if value.pending != "" { return "ready session has pending request"; }
     }
     return "";
+}
+
+// Upgrade only an already completed legacy event session; charge no new turn
+// until begin() reserves it and retain the old cumulative usage and prior.
+public flow extend(value: Session) -> Result<Session, string> {
+    let error = invalid(value); if error != "" { return Err(error); }
+    if value.format != 3 || value.phase != "complete" { return Err("completed event session required"); }
+    let old = value.invocation;
+    let invocation = Invocation { usage = old.usage, maximum = session_maximum(), admitted = old.admitted, prior = old.prior };
+    let next = Session { format = 4, phase = "ready", invocation = invocation, last_request = value.last_request, pending = "" };
+    let problem = invalid(next); if problem != "" { return Err(problem); } return Ok(next);
 }
 
 public flow begin(value: Session, request: string) -> Result<Session, string> {
@@ -65,7 +80,7 @@ public flow complete(value: Session, result: TurnResult) -> Result<Session, stri
         next.usage.steps != previous.usage.steps + 5 + tools * 2 || next.usage.calls != previous.usage.calls + 3 + tools ||
         next.usage.tokens != previous.usage.tokens + (3 + tools) * 2048 || next.usage.tools != previous.usage.tools + tools ||
         next.usage.scan != previous.usage.scan + tools * 4096 { return Err("completed chat ledger changed"); }
-    let session = Session { format = value.format, phase = if next.admitted == 2 { "complete" } else { "ready" },
+    let session = Session { format = value.format, phase = if next.admitted == (if value.format == 4 { 32 } else { 2 }) { "complete" } else { "ready" },
         invocation = next, last_request = value.pending, pending = "" };
     let problem = invalid(session); if problem != "" { return Err(problem); }
     return Ok(session);

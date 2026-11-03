@@ -9,11 +9,14 @@ import std.json.{JsonValue, stringify};
 import std.collections.len as count;
 import nomo.model.model_tool_contract.allowed_error;
 import nomo.model.read_protocol.question_error;
-import nomo.harness.read_tool_chat.run_private_turn;
+import nomo.harness.read_tool_chat.{run_private_turn, run_with_history};
 import nomo.harness.history_continue_model.{BudgetFacts, run_turn as run_after_work, run_after_followup};
 import nomo.session.recoverable_work_facts.snapshot as work_facts;
 import nomo.session.continuous_work.{Entry as ExtraEntry, load as load_continuous};
 import nomo.session.event_policy.load as load_policy;
+import nomo.session.event_text_codec.decode;
+import nomo.session.redaction.Policy;
+import nomo.session.recoverable_events.Frame as EventFrame;
 import nomo.session.chat_history.load as load_legacy;
 import nomo.session.recoverable_chat_store.{create, load, reserve, finish};
 import nomo.session.recoverable_work_store.load as load_recoverable_work;
@@ -39,6 +42,18 @@ import nomo.session.event_policy.PolicyRoot;
 
 // Explicit opt-in path. It does not silently migrate v1-v3, establish a
 // workspace identity, or claim comprehensive secret redaction.
+flow conversation(frame: EventFrame, policy: Policy) -> Result<Array<Event>, string> {
+    var selected: Array<Event> = [];
+    for event in frame.events limit Iterations(768) {
+        if (event.role == "user" && event.kind == "request") ||
+            (event.role == "model" && event.kind == "request") ||
+            (event.role == "main" && (event.kind == "consume" || event.kind == "tool" || event.kind == "answer")) {
+            let value = match decode(event.text, policy) { Ok(item) => item, Err(error) => { return Err(error); } };
+            selected = selected.push(Event { role = event.role, kind = event.kind, name = event.name, text = value });
+        }
+    }
+    return Ok(selected);
+}
 public flow run(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyRoot>, Fs.read<PolicyRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {
     if count(args) != 7 || (args[0] != "new" && args[0] != "continue") || args[1] != "--allow" || args[3] != "--once" || args[5] != "--policy-binding" {
         println("REFUSED expected new|continue --allow FILE[,FILE...] --once QUESTION"); return 1;
@@ -60,6 +75,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyR
     } else { match existing { Some(_) => {} None() => { println("REFUSED recoverable session missing"); return 1; } } }
     let current = match load(policy, binding) { Ok(Some(item)) => item, _ => { println("REFUSED recoverable session missing or invalid"); return 1; } };
     let facts = match work_facts(policy, binding) { Ok(item) => item, Err(error) => { println("REFUSED " + error); return 1; } };
+    let history = match conversation(current.value.events, policy) { Ok(item) => item, Err(error) => { println("REFUSED " + error); return 1; } };
     let version = match reserve(current, args[4], policy, binding) { Ok(item) => item, Err(error) => { println("REFUSED " + error); return 1; } };
     let running = match load(policy, binding) { Ok(Some(item)) => item, _ => { println("REFUSED reservation missing"); return 1; } };
     if running.version.opaque != version.opaque || running.value.chat.phase != "running" { println("REFUSED reservation changed"); return 1; }
@@ -70,11 +86,12 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyR
             Some(second) => {
                 let usage = running.value.chat.invocation.usage;
                 let budget = BudgetFacts { work_calls = facts.calls, work_generation = facts.generation, chat_used_calls = usage.calls, chat_used_generation = usage.tokens, chat_reserved_calls = 4, chat_reserved_generation = 8192 };
-                run_after_followup(args[4], allowed, running.value.chat.invocation, first, second, facts.additional, budget)
+                run_after_followup(args[4], allowed, running.value.chat.invocation, first, second, facts.additional, history, budget)
             }
-            None() => run_after_work(args[4], allowed, running.value.chat.invocation, first),
+            None() => run_after_work(args[4], allowed, running.value.chat.invocation, first, history),
         } }
-        None() => run_private_turn(args[4], allowed, running.value.chat.invocation),
+        None() => if running.value.chat.invocation.admitted >= 2 { run_with_history(args[4], allowed, running.value.chat.invocation, history) }
+            else { run_private_turn(args[4], allowed, running.value.chat.invocation) },
     };
     if result.status != 0 || !result.resolved { println("REFUSED chat turn unresolved; inspect without retry"); return 1; }
     match finish(running, result, policy, binding) { Ok(_) => {} Err(error) => { println("REFUSED " + error); return 1; } }

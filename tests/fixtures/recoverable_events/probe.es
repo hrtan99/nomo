@@ -24,7 +24,8 @@ public flow recoverable_events_probe(args: Array<string>) -> i32 {
         abort("event order or tool results changed");
     }
     match append(one.frame, 1, second, policy) { Ok(_) => { abort("reordered batch accepted"); } Err(_) => {} }
-    match append(two.frame, 3, second, policy) { Ok(_) => { abort("third batch accepted"); } Err(_) => {} }
+    let three = match append(two.frame, 3, second, policy) { Ok(value) => value, Err(_) => { abort("third batch refused"); } };
+    if three.frame.turns != 3 || three.frame.events[5].text != "Check that result" { abort("third batch lost"); }
     let changed = Policy { format = 1, literals = ["port=4321"] };
     if invalid(one.frame, changed) == "" { abort("newly sensitive existing data accepted"); }
     let unsafe_event = [Event { role = "tool", kind = "result", name = "read", text = "line\nbreak" }];
@@ -32,7 +33,7 @@ public flow recoverable_events_probe(args: Array<string>) -> i32 {
     let metadata = [Event { role = "VERY_SECRET_123", kind = "result", name = "", text = "ok" }];
     match append(empty(), 1, metadata, policy) { Ok(_) => { abort("sensitive metadata accepted"); } Err(_) => {} }
     var long = ""; var i: usize = 0;
-    while i < 2049 limit Iterations(2049) { long = long + "a"; i = i + 1; }
+    while i < 8193 limit Iterations(8193) { long = long + "a"; i = i + 1; }
     match append(empty(), 1, [Event { role = "tool", kind = "result", name = "read", text = long }], policy) {
         Ok(_) => { abort("oversized text accepted"); } Err(_) => {}
     }

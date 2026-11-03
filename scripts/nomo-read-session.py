@@ -59,7 +59,7 @@ def event_lines(raw):
         elif phase=='running':rendered.append('UNRESOLVED '+label+': start was recorded but completion is unknown. Do not rerun automatically.')
     if rendered:
         rendered.append('Before starting a separate session, ensure the earlier invocation has stopped and inspect the workspace. Use session-chat --new or session-id start with selected roots; a new session does not resolve this one and requires fresh approval.')
-    for key,label,maximum in (('events','CHAT',48),('work_events','WORK',24),('followup_events','FOLLOWUP',24)):
+    for key,label,maximum in (('events','CHAT',768),('work_events','WORK',24),('followup_events','FOLLOWUP',24)):
         events=view.get(key)
         if not isinstance(events,list) or len(events)>maximum:raise ValueError('invalid event batch')
         for index,item in enumerate(events,1):
