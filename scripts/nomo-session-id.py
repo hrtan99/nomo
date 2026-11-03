@@ -36,10 +36,11 @@ def main(argv=None):
     parser.add_argument('--outputs',action='store_true')
     parser.add_argument('--events',action='store_true')
     parser.add_argument('--events-policy-dir')
-    parser.add_argument('--read-root');parser.add_argument('--operation-id');parser.add_argument('--path');parser.add_argument('--target',choices=('work','check','followup','followup-check'));parser.add_argument('--natural-work',action='store_true');parser.add_argument('--check',nargs=argparse.REMAINDER)
+    parser.add_argument('--read-root');parser.add_argument('--operation-id');parser.add_argument('--path');parser.add_argument('--target',choices=('work','check','followup','followup-check'));parser.add_argument('--natural-work',action='store_true');parser.add_argument('--interactive-check',action='store_true',help=argparse.SUPPRESS);parser.add_argument('--check',nargs=argparse.REMAINDER)
     args=parser.parse_args(argv)
     try:
         if args.natural_work and args.action not in ('start','resume'):raise ValueError('natural work routing requires a read turn')
+        if args.interactive_check and args.action not in ('work','followup'):raise ValueError('interactive check requires a work action')
         if args.action=='start' and args.id is not None:raise ValueError('a new session ID is generated automatically')
         if args.action!='start' and args.id is None:raise ValueError('select an existing session ID')
         if (args.outputs or args.events) and args.action!='status':raise ValueError('--outputs and --events are only available for status')
@@ -73,6 +74,7 @@ def main(argv=None):
         elif args.action in ('work','followup'):
             command=[sys.executable,str(ROOT/('scripts/nomo-history-followup.py' if args.action=='followup' else 'scripts/nomo-history-work.py')),'--state',str(state),'--read-root',args.read_root,'--root',args.root,'--id='+args.operation_id,'--path='+args.path,'--allow='+args.allow,'--once='+args.once]
             if args.events_policy_dir is not None:command+=['--events-policy-dir',args.events_policy_dir]
+            if args.interactive_check:command+=['--interactive-check']
             if args.check is not None:command+=['--check',*args.check]
         else:
             mode={'start':'new','resume':'continue','status':'status'}[args.action]

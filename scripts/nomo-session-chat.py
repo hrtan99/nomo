@@ -221,7 +221,7 @@ def main(argv=None):
                                '--read-root', args.root, '--root', words[2], '--operation-id=' + words[1],
                                '--path=' + words[3], '--allow=' + args.allow, '--once=' + words[4]]
                     if args.events_policy_dir is not None:command += ['--events-policy-dir',args.events_policy_dir]
-                    command += words[5:]
+                    command += ['--interactive-check', *words[5:]]
                 except ValueError as error:
                     print('REFUSED ' + str(error), file=sys.stderr, flush=True)
                     continue
@@ -269,6 +269,7 @@ def main(argv=None):
                        '--root', args.root, '--operation-id=auto-' + secrets.token_hex(8),
                        '--path=' + path, '--allow=' + args.allow, '--once=' + question]
             if args.events_policy_dir is not None:command += ['--events-policy-dir', args.events_policy_dir]
+            command += ['--interactive-check']
             if args.check is not None:command += ['--check', *args.check]
             print('Selected ' + path + ' for a proposed edit; review the preview and confirm before writing.', flush=True)
             code = edit.run_owned(command, dict(os.environ))

@@ -16,6 +16,7 @@ def main(argv=None):
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--read-root',required=True);parser.add_argument('--root',required=True);parser.add_argument('--state',required=True)
     parser.add_argument('--id',required=True);parser.add_argument('--path',required=True);parser.add_argument('--allow',required=True);parser.add_argument('--once',required=True)
+    parser.add_argument('--interactive-check',action='store_true',help=argparse.SUPPRESS)
     parser.add_argument('--check',nargs=argparse.REMAINDER)
     args=parser.parse_args(argv)
     try:
@@ -103,7 +104,7 @@ def main(argv=None):
             if checkpoint('output',str(capture['stdout']['truncated']).lower(),str(capture['stderr']['truncated']).lower(),input_data=(json.dumps([stdout,stderr],ensure_ascii=True)+'\n').encode()):
                 print('Check completed but its diagnostic output was not recorded.',file=sys.stderr,flush=True);return 1
             if code:
-                print('Check failed (exit '+str(code)+').',file=sys.stderr,flush=True);return code
+                print('Check failed (exit '+str(code)+'); ask for a fix or inspect status.',file=sys.stderr,flush=True);return 0 if args.interactive_check else code
             print('Check passed.',flush=True);return 0
         finally:os.close(fd)
     except (OSError,ValueError) as error:

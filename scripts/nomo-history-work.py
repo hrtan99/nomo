@@ -13,6 +13,7 @@ def main(argv=None):
     parser.add_argument('--id',required=True);parser.add_argument('--path',required=True);parser.add_argument('--allow',required=True);parser.add_argument('--once',required=True)
     parser.add_argument('--events-policy-dir')
     parser.add_argument('--event-followup',action='store_true',help=argparse.SUPPRESS)
+    parser.add_argument('--interactive-check',action='store_true',help=argparse.SUPPRESS)
     parser.add_argument('--check',nargs=argparse.REMAINDER)
     args=parser.parse_args(argv)
     try:
@@ -125,7 +126,7 @@ def main(argv=None):
                 payload=(json.dumps([stdout,stderr],ensure_ascii=True)+'\n').encode()
                 if checkpoint('finish',outcome,str(code),str(out_truncated).lower(),str(err_truncated).lower(),input_data=payload):
                     print('Check finished but its result and selected output were not confirmed in session state.',file=sys.stderr,flush=True);return 1
-                if code:print('Check failed (exit '+str(code)+').',file=sys.stderr,flush=True);return code
+                if code:print('Check failed (exit '+str(code)+'); ask for a fix or inspect status.',file=sys.stderr,flush=True);return 0 if args.interactive_check else code
                 print('Check passed.',flush=True);return 0
             if checkpoint('finish',outcome,str(code)):
                 print('Check finished but its outcome was not confirmed in session state.',file=sys.stderr,flush=True);return 1
@@ -133,7 +134,7 @@ def main(argv=None):
             if checkpoint('output',str(capture['stdout']['truncated']).lower(),str(capture['stderr']['truncated']).lower(),input_data=(json.dumps([stdout,stderr],ensure_ascii=True)+'\n').encode()):
                 print('Check completed but its diagnostic output was not recorded.',file=sys.stderr,flush=True);return 1
             if code:
-                print('Check failed (exit '+str(code)+').',file=sys.stderr,flush=True);return code
+                print('Check failed (exit '+str(code)+'); ask for a fix or inspect status.',file=sys.stderr,flush=True);return 0 if args.interactive_check else code
             print('Check passed.',flush=True);return 0
         finally:os.close(fd)
     except (OSError,ValueError) as error:
