@@ -19,7 +19,7 @@ public type Ticket = { frame: Frame, version: MemoryVersion, chat: MemoryEntry<s
 alias Schema = MemoryRegion<{ Rows: Store<string, Frame> }>;
 let Runs = std.memory.region<Schema>(stable_id = "nomo-recoverable-work-v1", store = "recoverable-work");
 
-flow full() -> Budget { return Budget { steps = 13, calls = 7, generation = 51200, native_tokens = 196608 }; }
+flow full(wide: bool) -> Budget { return Budget { steps = 13, calls = 7, generation = if wide { 61440 } else { 51200 }, native_tokens = 196608 }; }
 flow zero() -> Budget { return Budget { steps = 0, calls = 0, generation = 0, native_tokens = 0 }; }
 
 flow frame_error(value: Frame, policy: Policy, binding: string) -> string {
@@ -84,8 +84,9 @@ public flow admit(id: string, workspace: string, path: string, request: string, 
         return Err("completed unchanged recoverable chat required");
     }
     match load(policy, binding) { Ok(None()) => {} Ok(Some(_)) => { return Err("recoverable work already admitted; no retry"); } Err(error) => { return Err(error); } }
-    let row = Record { format = 2, phase = "running", id = id, workspace = workspace, path = path,
-        request = request, history_version = chat.version.opaque, reserved = full(), settled = None(), summary = "" };
+    let wide = chat.value.chat.format == 13;
+    let row = Record { format = if wide { 3 } else { 2 }, phase = "running", id = id, workspace = workspace, path = path,
+        request = request, history_version = chat.version.opaque, reserved = full(wide), settled = None(), summary = "" };
     let frame = Frame { format = 1, policy_binding = binding, work = row, events = empty_events() };
     let version = match write(frame, None(), policy, binding) { Ok(item) => item, Err(error) => { return Err(error); } };
     return Ok(Ticket { frame = frame, version = version, chat = chat });

@@ -9,7 +9,7 @@ import nomo.cli.harness_work_args.{Work, parse_unicode as parse};
 import nomo.harness.harness_work_contract.Ledger;
 import nomo.harness.read_model_tools.{expanded_work_child_turn as work_child_turn};
 import nomo.harness.legacy_string_stages.{LegacyStringStages, LegacyEditStages};
-import nomo.harness.history_work_model.{read_main, plan, child, aggregate};
+import nomo.harness.history_work_model.{read_main, plan, child, aggregate, wide_read_main, wide_plan, wide_aggregate};
 import nomo.harness.harness_tool_chat_contract.Previous;
 import nomo.entry.harness_work_entry.{prepare_expanded_unicode, finish_edit, finish_history_summary, expanded_ledger as ledger, Pending, Failure, Completed, Summary};
 import nomo.session.event_policy.{PolicyRoot, load as load_policy};
@@ -29,24 +29,24 @@ import nomo.entry.edit_context.display;
 import nomo.tools.workspace.ReadOnlyRoot;
 import nomo.tools.edit_file.{EditableRoot, apply};
 
-flow stage(name: string, value: Ledger) -> unit { println("STAGE " + name); ledger(value); }
-flow prepare_history(input: Work, prior_request: string, previous: Previous) -> Result<Pending, Failure> {
+flow stage(name: string, value: Ledger, wide: bool) -> unit { println("STAGE " + name); ledger(value, wide); }
+flow prepare_history(input: Work, prior_request: string, previous: Previous, wide: bool) -> Result<Pending, Failure> {
     let original = (value: string) => "";
-    let log = (name: string, state: Ledger) => stage(name, state);
-    return prepare_expanded_unicode(input, original, log) with {
-        LegacyStringStages.main(value) => { resume read_main(value, prior_request, previous); }
+    let log = (name: string, state: Ledger) => stage(name, state, wide);
+    return prepare_expanded_unicode(input, original, log, wide) with {
+        LegacyStringStages.main(value) => { resume if wide { wide_read_main(value, prior_request, previous) } else { read_main(value, prior_request, previous) }; }
         LegacyStringStages.child(task, files, selected) => { resume work_child_turn(task, files, selected); }
-        LegacyEditStages.plan(value) => { resume plan(value, prior_request, previous); }
+        LegacyEditStages.plan(value) => { resume if wide { wide_plan(value, prior_request, previous) } else { plan(value, prior_request, previous) }; }
         LegacyEditStages.child(value) => { resume child(value, prior_request, previous); }
-        LegacyEditStages.aggregate(value) => { resume aggregate(value, prior_request, previous); }
+        LegacyEditStages.aggregate(value) => { resume if wide { wide_aggregate(value, prior_request, previous) } else { aggregate(value, prior_request, previous) }; }
     };
 }
-flow summarize_history(value: Completed, prior_request: string, previous: Previous) -> Result<Summary, Failure> {
-    let log = (name: string, state: Ledger) => stage(name, state);
+flow summarize_history(value: Completed, prior_request: string, previous: Previous, wide: bool) -> Result<Summary, Failure> {
+    let log = (name: string, state: Ledger) => stage(name, state, wide);
     return finish_history_summary(value, log) with {
-        LegacyEditStages.plan(item) => { resume plan(item, prior_request, previous); }
+        LegacyEditStages.plan(item) => { resume if wide { wide_plan(item, prior_request, previous) } else { plan(item, prior_request, previous) }; }
         LegacyEditStages.child(item) => { resume child(item, prior_request, previous); }
-        LegacyEditStages.aggregate(item) => { resume aggregate(item, prior_request, previous); }
+        LegacyEditStages.aggregate(item) => { resume if wide { wide_aggregate(item, prior_request, previous) } else { aggregate(item, prior_request, previous) }; }
     };
 }
 flow refused(error: string) -> i32 { println("REFUSED " + error); return 1; }
@@ -77,7 +77,8 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
     if has_check { match plan_check(ticket, check_digest, policy, binding) { Ok(_) => {} Err(error) => { return refused(error); } } }
     println("RESERVED event work; interruption or uncertain effects cannot be retried automatically.");
     let prior_request = history.value.chat.last_request; let previous = history.value.chat.invocation.prior;
-    let pending = match prepare_history(input, prior_request, previous) { Ok(value) => value, Err(failure) => { ledger(failure.state); return refused(failure.error); } };
+    let wide = ticket.frame.work.format == 3;
+    let pending = match prepare_history(input, prior_request, previous, wide) { Ok(value) => value, Err(failure) => { ledger(failure.state, wide); return refused(failure.error); } };
     let selected = match confirm_current(pending.selected, pending.prepared) { Ok(value) => value, Err(error) => { return refused(error); } };
     match claim(ticket, policy, binding) { Ok(_) => {} Err(error) => { return refused(error); } }
     let intent = match begin(selected) { Ok(value) => value, Err(error) => { return refused(error); } };
@@ -89,13 +90,13 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
     println("POST_EDIT context");
     let completed = match finish_edit(pending, confirmed) { Ok(value) => value, Err(failure) => { return refused(failure.error); } };
     println("POST_EDIT aggregate");
-    let summary = match summarize_history(completed, prior_request, previous) { Ok(value) => value, Err(failure) => { return refused(failure.error); } };
+    let summary = match summarize_history(completed, prior_request, previous, wide) { Ok(value) => value, Err(failure) => { return refused(failure.error); } };
     println("POST_EDIT events");
     let records = match capture(pending, confirmed, summary) { Ok(value) => value, Err(error) => { return refused("edit completed; " + error); } };
     println("POST_EDIT persist");
     match finish(ticket, summary.answer, summary.state, records, policy, binding) { Ok(_) => {} Err(error) => { return refused("edit completed; " + error); } }
     display("FINAL ", summary.answer); println("SAVED event work facts; no grant or root identity is persisted.");
-    ledger(summary.state); return 0;
+    ledger(summary.state, wide); return 0;
 }
 
 public flow abandon(args: Array<string>) -> i32 ![Console, Memory, Fs.read<PolicyRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {

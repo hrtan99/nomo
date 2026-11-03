@@ -109,7 +109,7 @@ def show_resume(args, *, show_id):
     if args.events_policy_dir is None:
         print('Read turns and bounded work use this session; each edit requires fresh confirmations.', flush=True)
     else:
-        print('Event recording supports successive work operations, each with an optional check and fresh approval.', flush=True)
+        print('Event recording supports successive work operations, each with an optional check and fresh approval; each new-session work reserves up to 7 model calls and 61440 output tokens.', flush=True)
     policy = '' if args.events_policy_dir is None else ' --events-policy-dir ' + shlex.quote(args.events_policy_dir)
     print('Resume: nomo-read.sh session-id resume --sessions-dir ' + shlex.quote(args.sessions_dir)
           + ' --id ' + shlex.quote(args.id) + ' --root DIR --allow FILE' + policy + ' --once QUESTION', flush=True)
@@ -215,7 +215,7 @@ def main(argv=None):
     else:
         print('New session: the first question starts a read turn.', flush=True)
         if args.events_policy_dir is not None:
-            print('Event recording supports successive work operations, each with an optional check and fresh approval.', flush=True)
+            print('Event recording supports successive work operations, each with an optional check and fresh approval; each new-session work reserves up to 7 model calls and 61440 output tokens.', flush=True)
         else:
             print('Work requires a completed first turn.', flush=True)
     if tty and args.once is None:

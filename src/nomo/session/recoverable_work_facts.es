@@ -109,7 +109,7 @@ public flow snapshot(policy: Policy, binding: string) -> Result<Facts, string> {
         let items = value.value.history.push(value.value.current);
         for item in items limit Iterations(32) {
             let fact = match extra_fact(item, policy) { Ok(value) => value, Err(error) => { return Err(error); } };
-            additional = additional.push(fact); calls = calls + if item.result.phase == "abandoned" { 7 } else { item.result.calls }; generation = generation + if item.result.phase == "abandoned" { 51200 } else { item.result.generation };
+            additional = additional.push(fact); calls = calls + if item.result.phase == "abandoned" { 7 } else { item.result.calls }; generation = generation + if item.result.phase == "abandoned" { if item.result.source == "wide" { 61440 } else { 51200 } } else { item.result.generation };
         }
     } None() => {} }
     return Ok(Facts { first = first_facts, followup = second_facts, additional = additional, calls = calls, generation = generation });

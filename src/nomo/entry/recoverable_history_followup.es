@@ -13,7 +13,7 @@ import nomo.cli.harness_work_args.{Work, parse_unicode as parse};
 import nomo.harness.harness_work_contract.Ledger;
 import nomo.harness.read_model_tools.{expanded_work_child_turn as work_child_turn};
 import nomo.harness.legacy_string_stages.{LegacyStringStages, LegacyEditStages};
-import nomo.harness.history_followup_model.{read_main, plan, child, aggregate, PriorWork, HistoryWork};
+import nomo.harness.history_followup_model.{read_main, plan, child, aggregate, wide_read_main, wide_plan, wide_aggregate, PriorWork, HistoryWork};
 import nomo.harness.history_continue_model.CheckOutput;
 import nomo.session.event_policy.{PolicyRoot, load as load_policy};
 import nomo.session.recoverable_check_store.load as inspect_first_check;
@@ -35,24 +35,24 @@ import nomo.entry.edit_context.display;
 import nomo.tools.workspace.ReadOnlyRoot;
 import nomo.tools.edit_file.{EditableRoot, apply};
 
-flow stage(name: string, value: Ledger) -> unit { println("STAGE " + name); ledger(value); }
-flow prepare_history(input: Work, prior_request: string, previous: Previous, prior_work: PriorWork) -> Result<Pending, Failure> {
+flow stage(name: string, value: Ledger, wide: bool) -> unit { println("STAGE " + name); ledger(value, wide); }
+flow prepare_history(input: Work, prior_request: string, previous: Previous, prior_work: PriorWork, wide: bool) -> Result<Pending, Failure> {
     let original = (value: string) => "";
-    let log = (name: string, state: Ledger) => stage(name, state);
-    return prepare_expanded_unicode(input, original, log) with {
-        LegacyStringStages.main(value) => { resume read_main(value, prior_request, previous, prior_work); }
+    let log = (name: string, state: Ledger) => stage(name, state, wide);
+    return prepare_expanded_unicode(input, original, log, wide) with {
+        LegacyStringStages.main(value) => { resume if wide { wide_read_main(value, prior_request, previous, prior_work) } else { read_main(value, prior_request, previous, prior_work) }; }
         LegacyStringStages.child(task, files, selected) => { resume work_child_turn(task, files, selected); }
-        LegacyEditStages.plan(value) => { resume plan(value, prior_request, previous, prior_work); }
+        LegacyEditStages.plan(value) => { resume if wide { wide_plan(value, prior_request, previous, prior_work) } else { plan(value, prior_request, previous, prior_work) }; }
         LegacyEditStages.child(value) => { resume child(value, prior_request, previous, prior_work); }
-        LegacyEditStages.aggregate(value) => { resume aggregate(value, prior_request, previous, prior_work); }
+        LegacyEditStages.aggregate(value) => { resume if wide { wide_aggregate(value, prior_request, previous, prior_work) } else { aggregate(value, prior_request, previous, prior_work) }; }
     };
 }
-flow summarize_history(value: Completed, prior_request: string, previous: Previous, prior_work: PriorWork) -> Result<Summary, Failure> {
-    let log = (name: string, state: Ledger) => stage(name, state);
+flow summarize_history(value: Completed, prior_request: string, previous: Previous, prior_work: PriorWork, wide: bool) -> Result<Summary, Failure> {
+    let log = (name: string, state: Ledger) => stage(name, state, wide);
     return finish_history_summary(value, log) with {
-        LegacyEditStages.plan(item) => { resume plan(item, prior_request, previous, prior_work); }
+        LegacyEditStages.plan(item) => { resume if wide { wide_plan(item, prior_request, previous, prior_work) } else { plan(item, prior_request, previous, prior_work) }; }
         LegacyEditStages.child(item) => { resume child(item, prior_request, previous, prior_work); }
-        LegacyEditStages.aggregate(item) => { resume aggregate(item, prior_request, previous, prior_work); }
+        LegacyEditStages.aggregate(item) => { resume if wide { wide_aggregate(item, prior_request, previous, prior_work) } else { aggregate(item, prior_request, previous, prior_work) }; }
     };
 }
 flow refused(error: string) -> i32 { println("REFUSED " + error); return 1; }
@@ -62,7 +62,7 @@ flow historical(value: WorkFacts) -> HistoryWork {
 
 // Subsequent operations use a single durable append-only book. Earlier fixed
 // work/check records remain in place and continue to provide session history.
-flow more(input: Work, prior_request: string, previous: Previous, first_id: string, check_digest: string, policy: Policy, binding: string) -> i32 {
+flow more(input: Work, prior_request: string, previous: Previous, first_id: string, check_digest: string, policy: Policy, binding: string, wide: bool) -> i32 {
     let second = match load_followup(policy, binding) { Ok(Some(value)) => value, _ => { return refused("completed followup required"); } };
     let work = second.value.work;
     if input.edit.id == first_id || input.edit.id == work.id { return refused("distinct work ID required"); }
@@ -75,9 +75,9 @@ flow more(input: Work, prior_request: string, previous: Previous, first_id: stri
     let extra = match load_extra(binding) { Ok(value) => value, Err(error) => { return refused(error); } };
     match extra { Some(value) => { request = value.value.current.core.request; } None() => {} }
     let prior = PriorWork { request = request, summary = latest.summary, summary_source = latest.summary_source, selection = latest.selection, check = latest.check, exit_code = latest.exit_code, output = latest.output, history = history };
-    let ticket = match admit_extra(binding, input.edit.id, input.edit.workspace, input.edit.path, input.edit.request, check_digest, policy) { Ok(value) => value, Err(error) => { return refused(error); } };
-    println("RESERVED additional work: 7 calls, 51200 output tokens; interruption leaves this work unresolved.");
-    let pending = match prepare_history(input, prior_request, previous, prior) { Ok(value) => value, Err(failure) => { ledger(failure.state); return refused(failure.error); } };
+    let ticket = match admit_extra(binding, input.edit.id, input.edit.workspace, input.edit.path, input.edit.request, check_digest, policy, wide) { Ok(value) => value, Err(error) => { return refused(error); } };
+    println(if wide { "RESERVED additional work: 7 calls, 61440 output tokens; interruption leaves this work unresolved." } else { "RESERVED additional work: 7 calls, 51200 output tokens; interruption leaves this work unresolved." });
+    let pending = match prepare_history(input, prior_request, previous, prior, wide) { Ok(value) => value, Err(failure) => { ledger(failure.state, wide); return refused(failure.error); } };
     let selected = match confirm_current(pending.selected, pending.prepared) { Ok(value) => value, Err(error) => { return refused(error); } };
     let intent = match edit_intent(ticket, selected) { Ok(value) => value, Err(error) => { return refused(error); } };
     println("INTENT durable " + selected.id);
@@ -86,10 +86,10 @@ flow more(input: Work, prior_request: string, previous: Previous, first_id: stri
     println("APPLIED " + selected.id);
     let confirmed = Confirmed { binding = selected, after = pending.prepared.proposal.after };
     let captured = match finish_edit(pending, confirmed) { Ok(value) => value, Err(failure) => { return refused(failure.error); } };
-    let summary = match summarize_history(captured, prior_request, previous, prior) { Ok(value) => value, Err(failure) => { return refused(failure.error); } };
+    let summary = match summarize_history(captured, prior_request, previous, prior, wide) { Ok(value) => value, Err(failure) => { return refused(failure.error); } };
     let records = match capture(pending, confirmed, summary) { Ok(value) => value, Err(error) => { return refused(error); } };
     match finish_extra(edited, summary.answer, if summary.model_generated { "model" } else { "system" }, summary.state, records, policy) { Ok(_) => {} Err(error) => { return refused("edit completed; " + error); } }
-    display("FINAL ", summary.answer); println("SAVED additional work facts"); ledger(summary.state); return 0;
+    display("FINAL ", summary.answer); println("SAVED additional work facts"); ledger(summary.state, wide); return 0;
 }
 
 // Current roots and current approval are supplied by this invocation. Saved
@@ -111,7 +111,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
     let first_work = match inspect_first_work(policy, binding) { Ok(Some(value)) => value, _ => { return refused("completed first work required"); } };
     if first_work.value.work.phase != "complete" && first_work.value.work.phase != "abandoned" { return refused("first work unresolved"); }
     match load_followup(policy, binding) {
-        Ok(Some(_)) => { return more(input, history.value.chat.last_request, history.value.chat.invocation.prior, first_work.value.work.id, check_digest, policy, binding); }
+        Ok(Some(_)) => { return more(input, history.value.chat.last_request, history.value.chat.invocation.prior, first_work.value.work.id, check_digest, policy, binding, history.value.chat.format == 13); }
         Ok(None()) => {}
         Err(error) => { return refused(error); }
     }
@@ -143,7 +143,8 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
     println("RESERVED event followup; interruption or uncertain effects cannot be retried automatically.");
     let prior_request = history.value.chat.last_request; let previous = history.value.chat.invocation.prior;
     let prior_work = PriorWork { request = first_work.value.work.request, summary = if first_work.value.work.phase == "abandoned" { "User abandoned interrupted work; its effect is unknown. Inspect the file before a new edit." } else { first_work.value.work.summary }, summary_source = if first_work.value.work.phase == "abandoned" { "system" } else { origin }, selection = chosen, check = checked, exit_code = exit, output = first_output, history = [] };
-    let pending = match prepare_history(input, prior_request, previous, prior_work) { Ok(value) => value, Err(failure) => { ledger(failure.state); return refused(failure.error); } };
+    let wide = ticket.frame.work.format == 3;
+    let pending = match prepare_history(input, prior_request, previous, prior_work, wide) { Ok(value) => value, Err(failure) => { ledger(failure.state, wide); return refused(failure.error); } };
     let selected = match confirm_current(pending.selected, pending.prepared) { Ok(value) => value, Err(error) => { return refused(error); } };
     match claim(ticket, policy, binding) { Ok(_) => {} Err(error) => { return refused(error); } }
     let intent = match begin(selected) { Ok(value) => value, Err(error) => { return refused(error); } };
@@ -155,13 +156,13 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
     println("POST_EDIT context");
     let captured = match finish_edit(pending, confirmed) { Ok(value) => value, Err(failure) => { return refused(failure.error); } };
     println("POST_EDIT aggregate");
-    let summary = match summarize_history(captured, prior_request, previous, prior_work) { Ok(value) => value, Err(failure) => { return refused(failure.error); } };
+    let summary = match summarize_history(captured, prior_request, previous, prior_work, wide) { Ok(value) => value, Err(failure) => { return refused(failure.error); } };
     println("POST_EDIT events");
     let records = match capture(pending, confirmed, summary) { Ok(value) => value, Err(error) => { return refused("edit completed; " + error); } };
     println("POST_EDIT persist");
     match finish(ticket, summary.answer, summary.state, records, policy, binding) { Ok(_) => {} Err(error) => { return refused("edit completed; " + error); } }
     display("FINAL ", summary.answer); println("SAVED event followup facts; no grant or root identity is persisted.");
-    ledger(summary.state); return 0;
+    ledger(summary.state, wide); return 0;
 }
 
 public flow abandon(args: Array<string>) -> i32 ![Console, Memory, Fs.read<PolicyRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {

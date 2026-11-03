@@ -7,7 +7,7 @@ import nomo.session.edit_operation.Binding;
 import nomo.session.redaction.{Policy, text as redact};
 import nomo.session.event_text_codec.{encode, encode_prefix};
 import nomo.session.recoverable_events.{empty, append};
-import nomo.harness.harness_work_contract.Ledger;
+import nomo.harness.harness_work_contract.{Ledger, ledger_error};
 
 // All additional rounds share one append-only history and one current slot.
 // Each current edit/check transition is durable before its external effect.
@@ -40,7 +40,7 @@ flow write(book: Book, previous: Option<Stored>) -> Result<Stored, string> ![Mem
 flow put(previous: Stored, item: Entry) -> Result<Stored, string> ![Memory, Error<StorageError>, Error<IndexError>] {
     return write(Book { binding = previous.value.binding, history = previous.value.history, current = item }, Some(previous));
 }
-public flow admit(binding: string, id: string, workspace: string, path: string, request: string, digest: string, policy: Policy) -> Result<Stored, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+public flow admit(binding: string, id: string, workspace: string, path: string, request: string, digest: string, policy: Policy, wide: bool) -> Result<Stored, string> ![Memory, Error<StorageError>, Error<IndexError>] {
     let previous = match load(binding) { Ok(item) => item, Err(error) => { return Err(error); } };
     var history: Array<Entry> = [];
     match previous { Some(item) => {
@@ -57,7 +57,7 @@ public flow admit(binding: string, id: string, workspace: string, path: string, 
     }
     let clean = match redact(request, policy) { Ok(value) => value.value, Err(error) => { return Err(error); } };
     let item = Entry { core = Core { id = id, request = clean }, edit = Edit { phase = "none", binding = None() },
-        result = ResultData { phase = "running", summary = "", source = "", calls = 0, generation = 0, events = [] },
+        result = ResultData { phase = "running", summary = "", source = if wide { "wide" } else { "" }, calls = 0, generation = 0, events = [] },
         check = Check { phase = if digest == "" { "none" } else { "planned" }, digest = digest, outcome = "", exit_code = "", stdout = "", stderr = "", stdout_truncated = false, stderr_truncated = false } };
     return write(Book { binding = binding, history = history, current = item }, previous);
 }
@@ -72,6 +72,7 @@ public flow edit_complete(ticket: Stored) -> Result<Stored, string> ![Memory, Er
 }
 public flow finish(ticket: Stored, summary: string, source: string, spent: Ledger, records: Array<Event>, policy: Policy) -> Result<Stored, string> ![Memory, Error<StorageError>, Error<IndexError>] {
     let item = ticket.value.current; if item.edit.phase != "completed" || item.result.phase != "running" { return Err("completed work edit required"); }
+    if ledger_error(spent) != "" || spent.read.calls + spent.edit.calls != 7 || spent.read.tokens + spent.edit.tokens != (if item.result.source == "wide" { 61440 } else { 51200 }) { return Err("additional work ledger differs from reservation"); }
     let cleaned = match redact(summary, policy) { Ok(value) => value.value, Err(error) => { return Err(error); } };
     var encoded: Array<Event> = [];
     for event in records limit Iterations(24) {

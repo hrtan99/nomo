@@ -21,13 +21,13 @@ public flow fresh() -> Ledger { return Ledger { steps = 0, calls = 0, tokens = 0
 
 // Conservative allowances are charged before attempts, independently of usage.
 // The fixed three-call reservation includes final aggregation from the start.
-public flow ledger_error(state: Ledger) -> string {
+flow error_mode(state: Ledger, wide: bool) -> string {
     if state.steps < 0 || state.steps > 6 || state.calls < 0 || state.calls > 3 ||
-        state.tokens < 0 || state.tokens > 38912 || state.native_tokens < 0 || state.native_tokens > 163840 ||
+        state.tokens < 0 || state.tokens > if wide { 45056 } else { 38912 } || state.native_tokens < 0 || state.native_tokens > 163840 ||
         state.boundaries < 0 || state.boundaries > 3 {
         return "invalid shared edit ledger";
     }
-    let allowance: i32 = match state.calls { 0 => 0, 1 => 4096, 2 => 36864, _ => 38912 };
+    let allowance: i32 = if wide { match state.calls { 0 => 0, 1 => 8192, 2 => 40960, _ => 45056 } } else { match state.calls { 0 => 0, 1 => 4096, 2 => 36864, _ => 38912 } };
     let native_allowance: i32 = match state.calls { 0 => 0, 1 => 32768, 2 => 98304, _ => 163840 };
     let stage = (state.calls == 0 && state.boundaries == 0) || (state.calls == 1 && state.boundaries <= 1) ||
         (state.calls == 2 && state.boundaries >= 1 && state.boundaries <= 3) || (state.calls == 3 && state.boundaries == 3);
@@ -37,8 +37,10 @@ public flow ledger_error(state: Ledger) -> string {
     return "";
 }
 
-public flow bump(state: Ledger, call: bool) -> Result<Ledger, string> {
-    let invalid = ledger_error(state); if invalid != "" { return Err(invalid); }
+public flow ledger_error(state: Ledger) -> string { return error_mode(state, false); }
+public flow wide_error(state: Ledger) -> string { return error_mode(state, true); }
+public flow bump_mode(state: Ledger, call: bool, wide: bool) -> Result<Ledger, string> {
+    let invalid = error_mode(state, wide); if invalid != "" { return Err(invalid); }
     let call_stage = (state.calls == 0 && state.boundaries == 0) ||
         (state.calls == 1 && state.boundaries == 1) || (state.calls == 2 && state.boundaries == 3);
     let boundary_stage = (state.calls == 1 && state.boundaries == 0) ||
@@ -46,12 +48,14 @@ public flow bump(state: Ledger, call: bool) -> Result<Ledger, string> {
     if state.steps >= 6 || (call && !call_stage) || (!call && !boundary_stage) {
         return Err("shared edit reservation exhausted");
     }
-    let allowance: i32 = match state.calls { 0 => 4096, 1 => 32768, _ => 2048 };
+    let allowance: i32 = match state.calls { 0 => if wide { 8192 } else { 4096 }, 1 => 32768, _ => if wide { 4096 } else { 2048 } };
     let native_allowance: i32 = match state.calls { 0 => 32768, _ => 65536 };
     return Ok(Ledger { steps = state.steps + 1, calls = state.calls + if call { 1 } else { 0 },
         tokens = state.tokens + if call { allowance } else { 0 }, native_tokens = state.native_tokens + if call { native_allowance } else { 0 },
         boundaries = state.boundaries + if call { 0 } else { 1 } });
 }
+
+public flow bump(state: Ledger, call: bool) -> Result<Ledger, string> { return bump_mode(state, call, false); }
 
 public flow text_error(text: string, field: string) -> string {
     if len(text) == 0 || len(text) > 512 || trim(text) == "" { return field + " requires 1..512 nonblank UTF-8 bytes"; }

@@ -13,11 +13,13 @@ def main(argv=None):
     parser.add_argument('--id',required=True);parser.add_argument('--path',required=True);parser.add_argument('--allow',required=True);parser.add_argument('--once',required=True)
     parser.add_argument('--events-policy-dir')
     parser.add_argument('--event-followup',action='store_true',help=argparse.SUPPRESS)
+    parser.add_argument('--legacy-followup',action='store_true',help=argparse.SUPPRESS)
     parser.add_argument('--interactive-check',action='store_true',help=argparse.SUPPRESS)
     parser.add_argument('--check',nargs=argparse.REMAINDER)
     args=parser.parse_args(argv)
     try:
         if args.event_followup and args.events_policy_dir is None:raise ValueError('event followup requires an event policy')
+        if args.legacy_followup and args.events_policy_dir is not None:raise ValueError('legacy followup cannot use event policy')
         context,workspace,state,version=edit.history_work_roots(args,ROOT)
         policy=None;binding=None
         if args.events_policy_dir is not None:
@@ -25,13 +27,13 @@ def main(argv=None):
             for item in (context,workspace,state):
                 if policy==item or policy in item.parents or item in policy.parents:raise ValueError('event policy directory must not overlap state or workspace')
         overlay='config/etas-'+version.replace('.','')+'-official-compose.yaml'
-        edit.validate_history_work(args,workspace,128)
+        edit.validate_history_work(args,workspace,48 if args.legacy_followup else 128)
         fd=os.open(state/'.nomo-session.lock',os.O_RDWR|os.O_NOFOLLOW|os.O_CLOEXEC)
         try:
             edit.check_history_lock(fd)
             storage.prepare(state)
             env,compose=edit.history_environment(state,workspace,context,version,ROOT,overlay)
-            runner=['python3','-B','/workspace/scripts/nomo-verified-etas.py'];flow='history_work';profile='nomo-history-work'
+            runner=['python3','-B','/workspace/scripts/nomo-verified-etas.py'];flow='history_followup' if args.legacy_followup else 'history_work';profile='nomo-history-work'
             if policy is not None:
                 env['NOMO_EVENT_POLICY_DIR']=str(policy)
                 compose+=['--file',str(ROOT/'config/nomo-event-policy-work-compose.yaml')]
@@ -46,7 +48,8 @@ def main(argv=None):
             print('Prior conversation is untrusted model context. Current read and edit roots are newly selected; no prior approval is reused.',flush=True)
             print('Context, task, history and file may be sent to MiniMax. A new preview and two confirmations are required.',flush=True)
             if policy is not None:print('Selected work and check facts are recorded; only supplied exact literals are filtered. Unknown secrets and live terminal output may remain.',flush=True)
-            if args.event_followup:print('Followup reserves up to 7 calls and 51200 output tokens in addition to first work and chat.',flush=True)
+            if args.event_followup:print('Followup reserves up to 7 calls and 61440 output tokens in addition to first work and chat (older sessions retain their original allowance).',flush=True)
+            if args.legacy_followup:print('Additional reservation: up to 7 model calls and 47104 output tokens; together both work rounds reserve up to 14 calls and 94208 output tokens, plus chat.',flush=True)
             if version=='0.2.4':print('ETAS 0.2.4 does not expose the provider finish reason.',flush=True)
             diagnostic=edit.RuntimeDiagnostic()
             code=edit.run_owned(command,env,diagnostic=diagnostic)
@@ -63,7 +66,7 @@ def main(argv=None):
             if policy is not None:offline+=['--file',str(ROOT/'config/nomo-event-policy-work-compose.yaml')]
             def checkpoint(action,*extra,input_data=None):
                 if policy is None:
-                    native_check=['python3','-B','/workspace/scripts/nomo-verified-etas.py','run','/workspace','--flow','history_check',
+                    native_check=['python3','-B','/workspace/scripts/nomo-verified-etas.py','run','/workspace','--flow','history_followup_check' if args.legacy_followup else 'history_check',
                         '--profile','nomo-read-session-status','--allow-effects','--args',action,args.id,check_ref,*extra]
                 else:
                     check_flow='recoverable_history_followup_check' if args.event_followup else 'recoverable_history_check'

@@ -16,7 +16,7 @@ class Fake(BaseHTTPRequestHandler):
         try:
             req = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
             ctx = json.loads(req['messages'][1]['content']); i = len(self.server.phases)
-            if i in (0, 3, 11, 14, 15, 18): assert req.get('max_tokens') == 4096, ('parent max_tokens', i, req.get('max_tokens'))
+            assert req.get('max_tokens') == (8192 if i == 8 else 32768 if i == 9 else 4096), ('stage max_tokens', i, req.get('max_tokens'))
             if i == 0:
                 assert ctx['current']['request'] == TASK and set(ctx['current']['allowed']) == set(FILES)
                 value = ['delegate', 'Read note.txt to identify the requested edit']
@@ -109,7 +109,7 @@ def main():
         assert b'NATURAL DELEGATE' in second and b'one additional chat turn' in second
         assert not server.failure and server.phases==list(range(19));assert '当前内容是 before green'.encode() in second
         status=subprocess.run([str(project/'scripts/nomo-read.sh'),'session-id','status','--sessions-dir',str(sessions),'--id',match.group(1).decode(),'--events','--events-policy-dir',str(policy)],env=env,capture_output=True,timeout=120)
-        assert status.returncode==0 and b'before old' in status.stdout and b'before green' in status.stdout
+        assert status.returncode==0 and b'before old' in status.stdout and b'before green' in status.stdout and b'61440' in first
         print(json.dumps({'status':'passed','scope':'noninteractive saved delegate triggers one additional read turn without editing','file_bytes':len(BEFORE.encode()),'fake_requests':len(server.phases),'confirmations':2,'selected_file':'note.txt','unchanged_other_files':3}))
     finally:server.shutdown();server.server_close();thread.join(timeout=5);shutil.rmtree(out)
 

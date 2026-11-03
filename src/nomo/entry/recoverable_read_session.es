@@ -88,7 +88,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyR
         Some(first) => { match facts.followup {
             Some(second) => {
                 let usage = running.value.chat.invocation.usage;
-                let budget = BudgetFacts { work_calls = facts.calls, work_generation = facts.generation, chat_used_calls = usage.calls, chat_used_generation = usage.tokens, chat_reserved_calls = if running.value.chat.format == 5 || running.value.chat.format == 7 || running.value.chat.format == 9 || running.value.chat.format == 11 { 6 } else { 4 }, chat_reserved_generation = if running.value.chat.format == 11 { 24576 } else { if running.value.chat.format == 9 { 20480 } else { if running.value.chat.format == 5 || running.value.chat.format == 7 { 12288 } else { 8192 } } } };
+                let budget = BudgetFacts { work_calls = facts.calls, work_generation = facts.generation, chat_used_calls = usage.calls, chat_used_generation = usage.tokens, chat_reserved_calls = if running.value.chat.format == 5 || running.value.chat.format == 7 || running.value.chat.format == 9 || (running.value.chat.format == 11 || running.value.chat.format == 13) { 6 } else { 4 }, chat_reserved_generation = if (running.value.chat.format == 11 || running.value.chat.format == 13) { 24576 } else { if running.value.chat.format == 9 { 20480 } else { if running.value.chat.format == 5 || running.value.chat.format == 7 { 12288 } else { 8192 } } } };
                 run_after_followup(args[4], allowed, running.value.chat.invocation, first, second, facts.additional, history, budget)
             }
             None() => run_after_work(args[4], allowed, running.value.chat.invocation, first, history),
@@ -139,7 +139,7 @@ public flow status(args: Array<string>) -> i32 ![Console, Memory, Fs.read<Policy
     for item in additional limit Iterations(32) {
         println("ADDITIONAL WORK " + item.core.id + " phase=" + item.result.phase + " edit=" + item.edit.phase + " check=" + item.check.phase +
             " settled_calls=" + to_string_i32(item.result.calls) + " settled_generation=" + to_string_i32(item.result.generation) +
-            if item.result.phase == "running" || item.result.phase == "abandoned" { " reserved_calls=7 reserved_generation=51200" } else { " reserved_calls=0 reserved_generation=0" });
+            if item.result.phase == "running" || item.result.phase == "abandoned" { if item.result.source == "wide" { " reserved_calls=7 reserved_generation=61440" } else { " reserved_calls=7 reserved_generation=51200" } } else { " reserved_calls=0 reserved_generation=0" });
         if item.check.phase == "abandoned" { println("ABANDONED CHECK: outcome unknown; inspect the workspace before further action."); }
     }
     var followup_phase = "none"; var followup_edit_phase = "none"; var followup_reserved_calls: i32 = 0; var followup_reserved_tokens: i32 = 0;
@@ -207,7 +207,7 @@ public flow status(args: Array<string>) -> i32 ![Console, Memory, Fs.read<Policy
     let view = View { format = 1, encoding = saved.value.encoding, phase = saved.value.chat.phase,
         turns = saved.value.events.turns, first_count = saved.value.events.first_count,
         used_calls = used.calls, used_tokens = used.tokens, used_tools = used.tools, used_scan = used.scan,
-        reserved_calls = if pending { if saved.value.chat.format == 5 || saved.value.chat.format == 7 || saved.value.chat.format == 9 || saved.value.chat.format == 11 { 6 } else { 4 } } else { 0 }, reserved_tokens = if pending { if saved.value.chat.format == 11 { 24576 } else { if saved.value.chat.format == 9 { 20480 } else { if saved.value.chat.format == 5 || saved.value.chat.format == 7 { 12288 } else { 8192 } } } } else { 0 },
+        reserved_calls = if pending { if saved.value.chat.format == 5 || saved.value.chat.format == 7 || saved.value.chat.format == 9 || (saved.value.chat.format == 11 || saved.value.chat.format == 13) { 6 } else { 4 } } else { 0 }, reserved_tokens = if pending { if (saved.value.chat.format == 11 || saved.value.chat.format == 13) { 24576 } else { if saved.value.chat.format == 9 { 20480 } else { if saved.value.chat.format == 5 || saved.value.chat.format == 7 { 12288 } else { 8192 } } } } else { 0 },
         events = saved.value.events.events, work_phase = work_phase, work_edit_phase = work_edit_phase, work_reserved_calls = work_reserved_calls,
         work_reserved_tokens = work_reserved_tokens, work_settled_calls = work_settled_calls,
         work_settled_tokens = work_settled_tokens, work_events = work_events,

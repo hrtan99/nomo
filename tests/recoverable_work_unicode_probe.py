@@ -9,6 +9,8 @@ MODE=os.environ.get('SYNTHETIC_SUMMARY_MODE','full')
 BASELINE=os.environ.get('SYNTHETIC_BUDGET_BASELINE')
 SELECTION_BASELINE=os.environ.get('SYNTHETIC_SELECTION_BASELINE')
 OLD=BASELINE or SELECTION_BASELINE
+V11=os.environ.get('SYNTHETIC_V11_BASELINE')
+OLD_PROJECT=V11 or OLD
 FILES=['context.txt','second.txt','third.txt','fourth.txt']
 FIRST_TASK=('Change old to green '+ '\\'*108) if MODE=='escaped' else '请将 old 替换为 green'
 SECOND_TASK=('Change green to gold '+ '\\'*107) if MODE=='escaped' else 'Change green to gold using context'
@@ -41,6 +43,10 @@ class Fake(BaseHTTPRequestHandler):
             limits=[2048,2048,2048,2048,2048,4096,4096,2048,4096,32768,2048,2048,4096,4096,2048,4096,32768,2048,2048,2048,2048,2048]
             if MODE=='third':limits=limits[:18]+[2048,4096,4096,2048,4096,32768,2048,2048,2048,2048,2048]
             if BASELINE:limits[5:7]=[2048,2048]
+            if V11:limits=[4096]*4+[2048,4096,4096,2048,4096,32768,2048]*2+[4096]*4
+            if not OLD_PROJECT:limits=[4096]*4+[4096,4096,4096,4096,8192,32768,4096]*2+[4096]*4
+            if MODE=='third' and not OLD_PROJECT:limits=[4096]*4+[4096,4096,4096,4096,8192,32768,4096]*3+[4096]*4
+            if MODE=='third' and V11:limits=[4096]*4+[2048,4096,4096,2048,4096,32768,2048]*3+[4096]*4
             assert req['max_tokens']==limits[i]
             if MULTI and i in (1,5,12,19):assert ctx['allowed']==FILES
             if (MODE=='resume-action' and i==19) or (MODE=='resume-final' and i==20):
@@ -91,14 +97,14 @@ class Fake(BaseHTTPRequestHandler):
             elif MODE=='third' and i==23:value=['edit','gold','plum']
             elif MODE=='third' and i==24:value='第三次编辑完成'
             elif MODE=='third' and i==25:
-                assert ctx['budget']['work_calls']==21 and ctx['budget']['work_generation']==153600
+                assert ctx['budget']['work_calls']==21 and ctx['budget']['work_generation']==(153600 if OLD_PROJECT else 184320)
                 assert ctx['work']['selection']==FIRST_SELECTION and ctx['followup']['selection']==SEARCH_SELECTION
                 assert ctx['additional'][0]['id']=='edit3' and ctx['additional'][0]['summary']=='第三次编辑完成' and ctx['additional'][0]['selection']==READ_SELECTION;value=['delegate','Read context.txt']
             elif MODE=='third' and i==26:value=['read','context.txt']
             elif MODE=='third' and i==27:value=['final','记录完整']
             elif MODE=='third' and i==28:value='三次编辑均已记录'
             elif i==18:
-                assert ctx['budget']['work_calls']==14 and ctx['budget']['work_generation']==(98304 if BASELINE else 102400)
+                assert ctx['budget']['work_calls']==14 and ctx['budget']['work_generation']==(98304 if BASELINE else 102400 if OLD_PROJECT else 122880)
                 assert ctx['work']['selection']==FIRST_SELECTION and ctx['followup']['selection']==(SEARCH_SELECTION if MULTI else READ_SELECTION)
                 assert ctx['work']['summary']==FIRST_SUMMARY and ctx['work']['summary_source']==FIRST_SOURCE and ctx['followup']['summary']==SECOND_SUMMARY and ctx['followup']['summary_source']=='model';value=['delegate',LONG_TASK if MODE=='chat-long' else 'Read context.txt']
             elif i==19:
@@ -150,8 +156,8 @@ def main():
     out=Path(tempfile.mkdtemp(prefix='nomo-work-unicode-'));project=out/'project'
     shutil.copytree(ROOT,project,ignore=shutil.ignore_patterns('.git','.etas','tmp','__pycache__','.pytest_cache'));(project/'.etas').mkdir(mode=0o700)
     old=out/'old'
-    if OLD:
-        shutil.copytree(Path(OLD),old,ignore=shutil.ignore_patterns('.git','.etas','tmp','__pycache__','.pytest_cache'));(old/'.etas').mkdir(mode=0o700)
+    if OLD_PROJECT:
+        shutil.copytree(Path(OLD_PROJECT),old,ignore=shutil.ignore_patterns('.git','.etas','tmp','__pycache__','.pytest_cache'));(old/'.etas').mkdir(mode=0o700)
     else:old=project
     context=out/'context';context.mkdir(mode=0o700);(context/'context.txt').write_text('\\'*120 if MODE=='escaped' else '蓝色 blue\n')
     current=out/'current';current.mkdir(mode=0o700);(current/'context.txt').write_text('绿色 green\n')
@@ -165,13 +171,13 @@ def main():
     server=HTTPServer(('127.0.0.1',0),Fake);server.phases=[];server.failed=False
     thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start()
     try:
-        for selected in (project,old) if OLD else (project,):
+        for selected in (project,old) if OLD_PROJECT else (project,):
             manifest=selected/'etas.toml';text=manifest.read_text()
             for name in ('nomo-read-events-new','nomo-read-events-existing','nomo-history-events-work'):
                 start=text.index('[runtime.profiles.'+name+'.model]');end=text.index('[runtime.profiles.'+name+'.model.timeout]',start)
                 part=text[start:end].replace('https://api.minimax.cn/v1','http://host.docker.internal:%d/v1'%server.server_port).replace('allow_private = false','allow_private = true');text=text[:start]+part+text[end:]
             manifest.write_text(text)
-        env={'PATH':os.environ['PATH'],'HOME':os.environ['HOME'],'MINIMAX_API_KEY':'SYNTHETIC_ONLY','NOMO_ETAS_VERSION':'0.2.5'}
+        env={'PATH':os.environ['PATH'],'HOME':os.environ['HOME'],'MINIMAX_API_KEY':'SYNTHETIC_ONLY','NOMO_ETAS_VERSION':'0.2.6'}
         allowed=','.join(FILES) if MULTI else 'context.txt'
         first=subprocess.run([str(old/'scripts/nomo-read.sh'),'session-new','--root',str(context),'--state',str(state),'--allow',allowed,'--once',INITIAL_QUESTION,'--events-policy-dir',str(policy)],env=env,capture_output=True,timeout=120)
         if first.returncode:raise AssertionError('synthetic initial chat failed: '+first.stderr.decode('utf-8','replace')[-2000:])
@@ -210,8 +216,8 @@ def main():
         assert status.returncode==0 and len(views)==1;view=views[0]
         assert view['work_phase']=='complete' and view['followup_phase']=='complete' and view['check_outcome']=='passed' and view['followup_check_outcome']=='passed'
         assert view['work_settled_calls']==7 and view['followup_settled_calls']==7
-        assert view['work_settled_tokens']==(47104 if BASELINE else 51200) and view['followup_settled_tokens']==51200
-        if MODE=='third':assert len(view['additional_work'])==1 and view['additional_work'][0]['check']['phase']=='complete' and view['additional_work'][0]['result']['generation']==51200
+        assert view['work_settled_tokens']==(47104 if BASELINE else 51200 if OLD_PROJECT else 61440) and view['followup_settled_tokens']==(51200 if OLD_PROJECT else 61440)
+        if MODE=='third':assert len(view['additional_work'])==1 and view['additional_work'][0]['check']['phase']=='complete' and view['additional_work'][0]['result']['generation']==(51200 if OLD_PROJECT else 61440)
         if MODE=='third':
             request_events=[event for event in view['followup_events'] if event['role']=='tool' and event['kind']=='request']
             assert len(request_events)==1 and json.loads(request_events[0]['text'])==SEARCH_SELECTION['fields'][0]

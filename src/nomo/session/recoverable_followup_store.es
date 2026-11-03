@@ -22,7 +22,7 @@ public type Ticket = { frame: Frame, version: MemoryVersion, chat: MemoryEntry<s
 alias Schema = MemoryRegion<{ Rows: Store<string, Frame> }>;
 let Runs = std.memory.region<Schema>(stable_id = "nomo-recoverable-followup-v1", store = "recoverable-followup");
 
-flow full() -> Budget { return Budget { steps = 13, calls = 7, generation = 51200, native_tokens = 196608 }; }
+flow full(wide: bool) -> Budget { return Budget { steps = 13, calls = 7, generation = if wide { 61440 } else { 51200 }, native_tokens = 196608 }; }
 flow zero() -> Budget { return Budget { steps = 0, calls = 0, generation = 0, native_tokens = 0 }; }
 
 flow frame_error(value: Frame, policy: Policy, binding: string) -> string {
@@ -96,8 +96,9 @@ public flow admit(id: string, workspace: string, path: string, request: string, 
         return Err("completed unchanged recoverable chat required");
     }
     match load(policy, binding) { Ok(None()) => {} Ok(Some(_)) => { return Err("recoverable followup already admitted; no retry"); } Err(error) => { return Err(error); } }
-    let row = Record { format = 2, phase = "running", id = id, workspace = workspace, path = path,
-        request = request, history_version = chat.version.opaque, reserved = full(), settled = None(), summary = "" };
+    let wide = chat.value.chat.format == 13;
+    let row = Record { format = if wide { 3 } else { 2 }, phase = "running", id = id, workspace = workspace, path = path,
+        request = request, history_version = chat.version.opaque, reserved = full(wide), settled = None(), summary = "" };
     let parent_work = match load_parent_work(policy, binding) { Ok(Some(item)) => item, _ => { return Err("completed first work required"); } };
     if (parent_work.value.work.phase != "complete" && parent_work.value.work.phase != "abandoned") || parent_work.value.work.id == id { return Err("completed distinct first work required"); }
     if parent_work.value.work.phase == "complete" {

@@ -8,7 +8,7 @@ import nomo.agent.read_tool.{LoopTurn, run_loop, run_private_loop, run_work_loop
 import nomo.core.read_text.bounded;
 import nomo.model.read_protocol.{question_error, decode_plan, decode_work_plan, work_plan_rejection};
 import nomo.harness.read_tool_contract.{Context, Ledger, Observed, fresh, bump, settle, inspect, inspect_work, context_error};
-import nomo.harness.harness_tool_contract.{work_bump, work_settle};
+import nomo.harness.harness_tool_contract.{work_bump, wide_bump, work_settle};
 import nomo.harness.model_plan_diagnostic.{returned_text, response_text};
 import nomo.harness.legacy_string_stages.LegacyStringStages;
 import nomo.harness.legacy_stage_contracts.ReadMainStage;
@@ -30,17 +30,17 @@ agent MainModel(input: Context) -> string ~ ReadMainStage {
         .data(input));
 }
 
-flow stage(phase: string, state: Ledger, prefix: string, expanded: bool) -> unit {
+flow stage(phase: string, state: Ledger, prefix: string, expanded: bool, wide: bool) -> unit {
     var steps: i32 = 0;
     if phase == "plan" { steps = 6; }
     if phase == "child" { steps = 5; }
     let calls = if phase == "aggregate" { 0 } else { 3 };
     let tools = if phase == "aggregate" { 0 } else { 1 };
     perform HarnessProgress.write("STAGE " + prefix + phase + " child-1 " + numbers(state) + " reserved_steps=" + to_string_i32(steps) +
-        " reserved_calls=" + to_string_i32(calls) + " reserved_tokens=" + to_string_i32(if expanded && phase != "aggregate" { 10240 } else { calls * 2048 }) +
+        " reserved_calls=" + to_string_i32(calls) + " reserved_tokens=" + to_string_i32(if wide && phase != "aggregate" { 12288 } else { if expanded && phase != "aggregate" { 10240 } else { calls * 2048 } }) +
         " reserved_tools=" + to_string_i32(tools) + " reserved_scan=" + to_string_i32(tools * 16384));
     if phase == "child" {
-        perform HarnessProgress.write(if expanded { "RESERVATION child-1 steps=3 calls=2 tokens=8192 tools=1 scan=16384 tail_steps=2 tail_calls=1 tail_tokens=2048 unresolved=true" } else { "RESERVATION child-1 steps=3 calls=2 tokens=4096 tools=1 scan=16384 tail_steps=2 tail_calls=1 tail_tokens=2048 unresolved=true" });
+        perform HarnessProgress.write(if wide { "RESERVATION child-1 steps=3 calls=2 tokens=8192 tools=1 scan=16384 tail_steps=2 tail_calls=1 tail_tokens=4096 unresolved=true" } else { if expanded { "RESERVATION child-1 steps=3 calls=2 tokens=8192 tools=1 scan=16384 tail_steps=2 tail_calls=1 tail_tokens=2048 unresolved=true" } else { "RESERVATION child-1 steps=3 calls=2 tokens=4096 tools=1 scan=16384 tail_steps=2 tail_calls=1 tail_tokens=2048 unresolved=true" } });
     }
 }
 
@@ -90,14 +90,14 @@ flow failed(state: Ledger, error: string, resolved: bool) -> Result<Report, Fail
 // A caller owns the supplied read reservation and receives typed selected data.
 // Native aborts do not become resolved source returns or a fresh reservation.
 flow run_context_mode(request: string, allowed: Array<string>, initial: Ledger,
-    prefix: string, require_tool: bool, compatible_plan: bool, inspect_plan: bool, inspect_all: bool, expanded: bool) -> Result<Report, Failure> {
+    prefix: string, require_tool: bool, compatible_plan: bool, inspect_plan: bool, inspect_all: bool, expanded: bool, wide: bool) -> Result<Report, Failure> {
     var state = initial;
     let invalid = question_error(request); if invalid != "" { return failed(state, invalid, true); }
     let invalid_allowed = allowed_error(allowed); if invalid_allowed != "" { return failed(state, invalid_allowed, true); }
     let plan = Context { phase = "plan", request = request, task = "", result = "", tool = "", outcome = "", allowed = allowed };
     let invalid_plan = context_error(plan); if invalid_plan != "" { return failed(state, invalid_plan, true); }
-    state = match if expanded { work_bump(state, true) } else { bump(state, true) } { Ok(value) => value, Err(error) => { return failed(state, error, true); } };
-    stage("plan", state, prefix, expanded);
+    state = match if wide { wide_bump(state, true) } else { if expanded { work_bump(state, true) } else { bump(state, true) } } { Ok(value) => value, Err(error) => { return failed(state, error, true); } };
+    stage("plan", state, prefix, expanded, wide);
     let raw = perform LegacyStringStages.main(plan);
     if inspect_plan { perform HarnessProgress.write(returned_text(raw, "lab-qwen-")); }
     else if inspect_all { perform HarnessProgress.write(response_text(raw, "read-plan", "lab-qwen-", 384)); }
@@ -107,11 +107,11 @@ flow run_context_mode(request: string, allowed: Array<string>, initial: Ledger,
         return failed(state, error, true);
     } };
     if inspect_plan { return failed(state, "read-plan inspection complete; no child, File or edit attempted", true); }
-    state = match if expanded { work_bump(state, false) } else { bump(state, false) } { Ok(value) => value, Err(error) => { return failed(state, error, true); } };
+    state = match if wide { wide_bump(state, false) } else { if expanded { work_bump(state, false) } else { bump(state, false) } } { Ok(value) => value, Err(error) => { return failed(state, error, true); } };
     perform HarnessProgress.write("EVENT main -> child-1 request child-1: " + task);
     let empty = fresh_loop();
     let selected = add(empty.history, Event { role = "user", kind = "context", name = "original", text = request });
-    stage("child", state, prefix, expanded);
+    stage("child", state, prefix, expanded, wide);
     let child = perform LegacyStringStages.child(task, allowed, selected);
     let inspected = if require_tool { inspect_work(child.state, child.status, request, task, allowed) } else { inspect(child.state, child.status, request, task, allowed) };
     let observed = match inspected {
@@ -119,20 +119,20 @@ flow run_context_mode(request: string, allowed: Array<string>, initial: Ledger,
     };
     state = match if expanded { work_settle(state, child.state) } else { settle(state, child.state) } { Ok(value) => value, Err(error) => { return failed(state, error, false); } };
     perform HarnessProgress.write("SETTLED child-1 " + numbers(state) + " released_steps=" + to_string_i32(5 - state.steps) +
-        " released_calls=" + to_string_i32(3 - state.calls) + " released_tokens=" + to_string_i32((if expanded { 10240 } else { 6144 }) - state.tokens) +
+        " released_calls=" + to_string_i32(3 - state.calls) + " released_tokens=" + to_string_i32((if wide { 12288 } else { if expanded { 10240 } else { 6144 } }) - state.tokens) +
         " released_tools=" + to_string_i32(1 - state.tools) + " released_scan=" + to_string_i32(16384 - state.scan) + " unresolved=false");
     if child.status != 0 { return failed(state, "child returned failure; no aggregation", true); }
     if require_tool && child.state.tools != 1 { return failed(state, "work requires a successful read or search child", true); }
     if !bounded(observed.result, 256) { return failed(state, "invalid bounded child result", true); }
     perform HarnessProgress.write("EVENT child-1 -> main result child-1: " + observed.result);
-    state = match if expanded { work_bump(state, false) } else { bump(state, false) } { Ok(value) => value, Err(error) => { return failed(state, error, true); } };
+    state = match if wide { wide_bump(state, false) } else { if expanded { work_bump(state, false) } else { bump(state, false) } } { Ok(value) => value, Err(error) => { return failed(state, error, true); } };
     perform HarnessProgress.write("EVENT main -> main consume child-1: " + observed.result);
     if observed.tool != "" { perform HarnessProgress.write("EVENT main -> main tool " + observed.tool + ": " + observed.outcome); }
     let aggregate = Context { phase = "aggregate", request = request, task = task, result = observed.result,
         tool = observed.tool, outcome = observed.outcome, allowed = allowed };
     let invalid_aggregate = context_error(aggregate); if invalid_aggregate != "" { return failed(state, invalid_aggregate, true); }
-    state = match if expanded { work_bump(state, true) } else { bump(state, true) } { Ok(value) => value, Err(error) => { return failed(state, error, true); } };
-    stage("aggregate", state, prefix, expanded);
+    state = match if wide { wide_bump(state, true) } else { if expanded { work_bump(state, true) } else { bump(state, true) } } { Ok(value) => value, Err(error) => { return failed(state, error, true); } };
+    stage("aggregate", state, prefix, expanded, wide);
     let answer = perform LegacyStringStages.main(aggregate);
     if inspect_all { perform HarnessProgress.write(response_text(answer, "read-aggregate", "lab-qwen-", 512)); }
     var invalid_answer = "";
@@ -144,10 +144,10 @@ flow run_context_mode(request: string, allowed: Array<string>, initial: Ledger,
 
 public flow run_context_with(request: string, allowed: Array<string>, initial: Ledger,
     prefix: string, require_tool: bool, compatible_plan: bool, inspect_plan: bool, inspect_all: bool) -> Result<Report, Failure> {
-    return run_context_mode(request, allowed, initial, prefix, require_tool, compatible_plan, inspect_plan, inspect_all, false);
+    return run_context_mode(request, allowed, initial, prefix, require_tool, compatible_plan, inspect_plan, inspect_all, false, false);
 }
-public flow run_expanded_context(request: string, allowed: Array<string>, initial: Ledger) -> Result<Report, Failure> {
-    return run_context_mode(request, allowed, initial, "read-", true, false, false, false, true) with {
+public flow run_expanded_context(request: string, allowed: Array<string>, initial: Ledger, wide: bool) -> Result<Report, Failure> {
+    return run_context_mode(request, allowed, initial, "read-", true, false, false, false, true, wide) with {
         HarnessProgress.write(line) => { resume write_progress(line); }
     };
 }

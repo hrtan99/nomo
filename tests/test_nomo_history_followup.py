@@ -5,6 +5,7 @@ from pathlib import Path
 from unittest.mock import patch
 ROOT=Path(__file__).resolve().parent.parent
 spec=importlib.util.spec_from_file_location('history_work_launcher',ROOT/'scripts/nomo-history-followup.py');launcher=importlib.util.module_from_spec(spec);spec.loader.exec_module(launcher)
+wrapper=launcher;launcher=wrapper.work
 class TTY(io.StringIO):
     def isatty(self):return True
 class HistoryFollowupLauncherTest(unittest.TestCase):
@@ -16,7 +17,7 @@ class HistoryFollowupLauncherTest(unittest.TestCase):
         self.env=patch.dict(os.environ,{'MINIMAX_API_KEY':'SYNTHETIC_KEY','NOMO_ETAS_VERSION':'0.2.6'});self.env.start();self.addCleanup(self.env.stop);self.addCleanup(self.tmp.cleanup)
     def args(self):return ['--read-root',str(self.context),'--root',str(self.workspace),'--state',str(self.state),'--id','id1','--path','note.txt','--allow','context.txt','--once','change it','--check','/bin/true']
     def invoke(self):
-        with patch.object(launcher.sys,'stdin',TTY()),contextlib.redirect_stdout(TTY()),contextlib.redirect_stderr(io.StringIO()):return launcher.main(self.args())
+        with patch.object(launcher.sys,'stdin',TTY()),contextlib.redirect_stdout(TTY()),contextlib.redirect_stderr(io.StringIO()):return launcher.main(['--legacy-followup',*self.args()])
     def test_help_lists_session_work_and_its_current_roots(self):
         result=subprocess.run(['bash',str(ROOT/'scripts/nomo-read.sh'),'--help'],capture_output=True,text=True,check=True)
         self.assertIn('session-followup --read-root',result.stdout)
