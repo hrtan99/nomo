@@ -82,7 +82,7 @@ def main():
             events=[(item['role'],item['kind'],json.loads(item['text'])) for item in view['work_events']]
             assert (('system','notice',expected) if fallback else ('assistant','answer',expected)) in events
             shown=subprocess.run([str(project/'scripts/nomo-read.sh'),'session-status','--state',str(state),'--events','--events-policy-dir',str(policy)],env=env,capture_output=True,timeout=120)
-            assert shown.returncode==0 and json.dumps(expected,ensure_ascii=True).encode() in shown.stdout and not any(b<32 and b not in (10,13) for b in shown.stdout)
+            assert shown.returncode==0 and json.dumps(expected,ensure_ascii=False).encode() in shown.stdout and not any(b<32 and b not in (10,13) for b in shown.stdout)
         else:
             assert view['work_phase']=='running' and view['work_edit_phase']=='completed' and view['work_reserved_calls']==7 and view['work_reserved_tokens']==47104 and view['check_phase']=='planned'
             assert b'edit completion was recorded' in status.stdout and b'no start was recorded at this snapshot' in status.stdout and b'a new session does not resolve this one' in status.stdout
