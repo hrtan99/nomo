@@ -97,6 +97,8 @@ class NaturalObserver(StartIdObserver):
             except UnicodeDecodeError: continue
             if len(fields)==4 and fields[:2]==['NATURAL','WORK'] and fields[2] in ('work','followup') and (edit.safe_path(fields[3]) and (fields[3] in self.allowed or '*' in self.allowed)):
                 self.route = (fields[2], fields[3])
+            elif fields == ['NATURAL','PAGE']:self.deferred = 'page'
+            elif fields == ['NATURAL','PAGE','LIMIT']:self.deferred = 'page-limit'
             elif fields == ['NATURAL','DELEGATE']:self.deferred = 'read'
             elif fields == ['NATURAL','DELEGATE','LIMIT']:self.deferred = 'limit'
 
@@ -113,6 +115,7 @@ def show_resume(args, *, show_id):
           + ' --id ' + shlex.quote(args.id) + ' --root DIR --allow FILE' + policy + ' --once QUESTION', flush=True)
     interactive = [str(ROOT / 'scripts/nomo-read.sh'), 'session-chat', '--sessions-dir=' + args.sessions_dir,
                    '--id=' + args.id, '--root=' + args.root, '--discover' if args.discover else '--allow=' + args.allow]
+    if args.discover: interactive.append('--page=' + str(args.page))
     if args.events_policy_dir is not None:
         interactive.append('--events-policy-dir=' + args.events_policy_dir)
     if args.check is not None:
@@ -177,12 +180,14 @@ def main(argv=None):
     files = parser.add_mutually_exclusive_group(required=True)
     files.add_argument('--allow')
     files.add_argument('--discover', action='store_true')
+    parser.add_argument('--page', type=int, default=0, choices=range(4), help='discovery page, 0..3')
     parser.add_argument('--events-policy-dir')
     parser.add_argument('--once', help='run exactly one read-only turn')
     parser.add_argument('--check', nargs=argparse.REMAINDER, help='optional command after each natural-language edit')
     args = parser.parse_args(argv)
     if args.check == []:parser.error('--check requires a command')
-    if args.discover: args.allow = '*'
+    if args.page and not args.discover: parser.error('--page requires --discover')
+    if args.discover: args.allow = '*' + str(args.page)
     stdin_tty = sys.stdin.isatty()
     tty = stdin_tty and sys.stdout.isatty()
     if args.once is None and not tty:
@@ -198,7 +203,8 @@ def main(argv=None):
             print('Input cancelled.', file=sys.stderr)
             return 130
     if args.discover:
-        print('Discovery covers up to four directory levels, 64 directories and 256 files; unsupported paths and file types are excluded.', flush=True)
+        print('Discovery uses pages of 256 files, up to four automatic pages, four directory levels and 64 directories; each directory is limited to 1024 entries and 131072 name bytes. Unsupported paths and file types are excluded.', flush=True)
+        print('Each automatic page uses another bounded chat turn: up to 6 calls and 20480 output tokens. Page contents may change between turns.', flush=True)
         print('Excluded: .git/.hg/.svn/.bzr, dependency and build directories, .venv/.tox/.cache/.mypy_cache/.pytest_cache, .ssh/.aws/.gnupg/.netrc, and .env files except .env.example/.env.sample.', flush=True)
         print('Dotfiles and project configuration in scope may be sent to the model.', flush=True)
         print('A link outside the selected workspace stops discovery; choose a narrower root.', flush=True)
@@ -213,7 +219,7 @@ def main(argv=None):
             print('Work requires a completed first turn.', flush=True)
     if tty and args.once is None:
         saved = '/events' if args.events_policy_dir is not None else '/outputs'
-        print('Enter a question or an edit request, /help, /status, ' + saved + ', /work, /followup or /exit.', flush=True)
+        print('Enter a question or an edit request, /help, /status, ' + saved + ', /work, /followup, /page N or /exit.', flush=True)
     while True:
         if args.once is not None:
             question = args.once
@@ -228,6 +234,14 @@ def main(argv=None):
                 return 130
             if question == '/exit':
                 return 0
+            if question.startswith('/page '):
+                choice = question[6:]
+                if not args.discover or choice not in ('0','1','2','3'):
+                    print('REFUSED /page requires discovery and a page from 0 to 3.', file=sys.stderr, flush=True)
+                else:
+                    args.page = int(choice); args.allow = '*' + choice
+                    print('Selected discovery page ' + choice + '; the next request uses a fresh traversal.', flush=True)
+                continue
             if question == '/help':
                 print('Read turns use the selected root and allowlist. /status inspects recorded state.')
                 print('Natural-language edits target selected files in the current root; each requires preview and fresh confirmation. The root must be owned by you and not writable by group or others.')
@@ -302,7 +316,7 @@ def main(argv=None):
         natural = tty and args.once is None
         if natural:command += ['--natural-work']
         options = {} if tty else {'input_data': b''}
-        observer = NaturalObserver(args.allow.split(',')) if natural else (StartIdObserver() if starting else None)
+        observer = NaturalObserver(['*'] if args.discover else args.allow.split(',')) if natural else (StartIdObserver() if starting else None)
         if observer is not None:
             options['diagnostic'] = observer
         code = edit.run_owned(command, dict(os.environ), **options)
@@ -316,20 +330,26 @@ def main(argv=None):
                 return 1
             args.id = observer.identifier
             show_resume(args, show_id=False)
-        if natural and observer.deferred == 'read':
-            print('The agent is gathering more evidence using one additional chat turn (up to 6 calls and 20480 output tokens).', flush=True)
+        extra_read = False
+        while natural and (observer.deferred == 'page' or observer.deferred == 'read' and not extra_read):
+            if observer.deferred == 'page':
+                args.page += 1; args.allow = '*' + str(args.page)
+                print('The agent is inspecting discovery page ' + str(args.page) + ' using another bounded chat turn.', flush=True)
+            else:
+                extra_read = True
+                print('The agent is gathering more evidence using one additional chat turn (up to 6 calls and 20480 output tokens).', flush=True)
             command = [sys.executable, str(ROOT / 'scripts/nomo-session-id.py'), 'resume',
                        '--sessions-dir', args.sessions_dir, '--id', args.id, '--root', args.root,
                        '--allow=' + args.allow, '--once=' + question, '--natural-work']
             if args.events_policy_dir is not None:command += ['--events-policy-dir', args.events_policy_dir]
-            observer = NaturalObserver(args.allow.split(','))
+            observer = NaturalObserver(['*'] if args.discover else args.allow.split(','))
             code = edit.run_owned(command, dict(os.environ), diagnostic=observer)
             if code:
                 print('Additional read stopped; inspect session status before continuing.', file=sys.stderr, flush=True)
                 show_status_hint(args, args.id)
                 return code
         if natural and observer.deferred is not None:
-            print('The agent could not finish the additional read; no further edit was made. Specify the selected file and exact change, then try again' + (' in a new session.' if observer.deferred == 'limit' else '.'), flush=True)
+            print('The agent could not continue discovery or the additional read; no further edit was made. Refine the scope or inspect the session before continuing.', flush=True)
         if natural and observer.route is not None:
             action, path = observer.route
             operation_id = 'auto-' + secrets.token_hex(8)

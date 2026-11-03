@@ -35,20 +35,24 @@ flow excluded(name: string) -> bool {
     }
     return false;
 }
-public flow discover() -> Result<Array<string>, string> ![Console, Fs.list<ReadOnlyRoot>, Fs.stat<ReadOnlyRoot>, Error<FileError>, Error<ConsoleError>, Error<IndexError>] {
+public type Discovery = { files: Array<string>, page: usize, more: bool };
+public flow discover(page: usize) -> Result<Discovery, string> ![Console, Fs.list<ReadOnlyRoot>, Fs.stat<ReadOnlyRoot>, Error<FileError>, Error<ConsoleError>, Error<IndexError>] {
     return handle {
         var dirs: Array<WorkspacePath<ReadOnlyRoot>> = [root<ReadOnlyRoot>()]; var depths: Array<usize> = [0]; var files: Array<string> = []; var i: usize = 0;
-        var deep = false; var unsupported = false;
-        while i < count(dirs) limit Iterations(64) {
-            let entries = list_limited(dirs[i], 256, 32768);
-            for entry in entries limit Iterations(256) {
+        var deep = false; var unsupported = false; var seen: usize = 0; var more = false;
+        while i < count(dirs) && !more limit Iterations(64) {
+            let entries = list_limited(dirs[i], 1024, 131072);
+            for entry in entries limit Iterations(1024) {
                 let name = relative_name(entry);
                 if !excluded(name) {
                     if !valid_path(name) { unsupported = true; }
                     else {
                         let projected: Option<Message<DiscoveredFileInfo>> = Message.new(stat(entry)).cast<DiscoveredFileInfo>();
                         let info = match projected { Some(value) => value.body, None() => { return Err("file metadata unavailable"); } };
-                        if info.is_file { if count(files) >= 256 { return Err("discovery exceeds 256 files; select a narrower root"); } files = files.push(name); }
+                        if info.is_file {
+                            if seen >= page * 256 { if count(files) == 256 { more = true; break; } files = files.push(name); }
+                            seen = seen + 1;
+                        }
                         else if info.is_dir && depths[i] < 4 { if count(dirs) >= 64 { return Err("discovery exceeds 64 directories; select a narrower root"); } dirs = dirs.push(entry); depths = depths.push(depths[i] + 1); }
                         else if info.is_dir { deep = true; } else { unsupported = true; }
                     }
@@ -58,8 +62,21 @@ public flow discover() -> Result<Array<string>, string> ![Console, Fs.list<ReadO
         }
         if deep { println("DISCOVERY INCOMPLETE: directories beyond four levels were not visited."); }
         if unsupported { println("DISCOVERY INCOMPLETE: unsupported names or file types were omitted."); }
-        return Ok(files);
-    } with { Error<ListLimitError>.raise(_) => { finish Err("directory exceeds discovery limit; select a narrower root"); } };
+        if count(files) == 0 { return Err("discovery page is empty"); }
+        println("DISCOVERY PAGE " + to_string_usize(page) + (if more { ": more candidates remain." } else { ": no later candidates found within discovery bounds." }));
+        return Ok(Discovery { files = files, page = page, more = more });
+    } with { Error<ListLimitError>.raise(_) => { finish Err("directory exceeds 1024 entries or 131072 name bytes; select a narrower root"); } };
+}
+
+// Select an explicit list or a bounded discovery page. All membership is revalidated per turn.
+public flow selection(raw: string) -> Result<Discovery, string> {
+    if raw == "*" || raw == "*0" { return discover(0); }
+    if raw == "*1" { return discover(1); }
+    if raw == "*2" { return discover(2); }
+    if raw == "*3" { return discover(3); }
+    let names = split(raw, ",");
+    if count(names) > 4 { return Err("explicit selection supports up to four files"); }
+    return Ok(Discovery { files = names, page = 0, more = false });
 }
 
 // The Host enforces the byte cap while reading; overflow never returns a prefix.

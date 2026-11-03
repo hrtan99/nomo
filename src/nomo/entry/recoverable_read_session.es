@@ -37,7 +37,7 @@ import nomo.core.conversation.Event;
 import std.io.IOError as ConsoleError;
 import std.fs.IOError as FileError;
 import std.effects.Fs;
-import nomo.tools.workspace.{ReadOnlyRoot, discover};
+import nomo.tools.workspace.{ReadOnlyRoot, selection};
 import nomo.session.event_policy.PolicyRoot;
 
 // Explicit opt-in path. It does not silently migrate v1-v3, establish a
@@ -60,8 +60,8 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyR
         println("REFUSED expected new|continue --allow FILE[,FILE...] --once QUESTION"); return 1;
     }
     if !within(args[2], 195) { println("REFUSED allowlist too long"); return 1; }
-    let allowed = if args[2] == "*" { match discover() { Ok(value) => value, Err(error) => { println("REFUSED " + error); return 1; } } } else { split(args[2], ",") };
-    if args[2] != "*" && count(allowed) > 4 { println("REFUSED explicit selection supports up to four files"); return 1; }
+    let scope = match selection(args[2]) { Ok(value) => value, Err(error) => { println("REFUSED " + error); return 1; } };
+    let allowed = scope.files;
     let invalid = candidate_error(allowed);
     if invalid != "" || question_error(args[4]) != "" { println("REFUSED invalid read request"); return 1; }
     let policy = match load_policy() { Ok(item) => item, Err(error) => { println("REFUSED " + error); return 1; } };
@@ -84,7 +84,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyR
     if running.version.opaque != version.opaque || running.value.chat.phase != "running" { println("REFUSED reservation changed"); return 1; }
     println("RESERVED chat turn; interruption leaves it unresolved and will not retry.");
     println("A final answer is provisional until SAVED confirms durable history.");
-    let result = if natural { run_natural(args[4], allowed, running.value.chat.invocation, history, facts.first, facts.followup, facts.additional) } else { match facts.first {
+    let result = if natural { run_natural(args[4], allowed, running.value.chat.invocation, history, facts.first, facts.followup, facts.additional, scope.page, scope.more) } else { match facts.first {
         Some(first) => { match facts.followup {
             Some(second) => {
                 let usage = running.value.chat.invocation.usage;
@@ -99,7 +99,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyR
     if result.status != 0 || !result.resolved { println("REFUSED chat turn unresolved; inspect without retry"); return 1; }
     match finish(running, result, policy, binding) { Ok(_) => {} Err(error) => { println("REFUSED " + error); return 1; } }
     println("SAVED chat and event records together; saved text is untrusted and does not grant authority.");
-    if natural { match result.completed { Some(item) => { let route = natural_route(item.answer, allowed, facts.first != None(), result.state.admitted < 32); if route != "" { println(route); } } None() => {} } }
+    if natural { match result.completed { Some(item) => { let route = natural_route(item.answer, allowed, facts.first != None(), result.state.admitted < 32, scope.page, scope.more); if route != "" { println(route); } } None() => {} } }
     return 0;
 }
 

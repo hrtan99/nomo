@@ -6,7 +6,7 @@ import std.io.println;
 import std.io.IOError as ConsoleError;
 import std.fs.IOError as FileError;
 import std.effects.Fs;
-import nomo.tools.workspace.{ReadOnlyRoot, discover};
+import nomo.tools.workspace.{ReadOnlyRoot, selection};
 import std.text.{split, to_string_i32};
 import std.collections.len as count;
 import nomo.model.model_tool_contract.candidate_error;
@@ -34,8 +34,8 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyR
         println("REFUSED expected new|continue --allow FILE[,FILE...] --once QUESTION"); return 1;
     }
     if !within(args[2], 195) { println("REFUSED allowlist too long"); return 1; }
-    let allowed = if args[2] == "*" { match discover() { Ok(value) => value, Err(error) => { println("REFUSED " + error); return 1; } } } else { split(args[2], ",") };
-    if args[2] != "*" && count(allowed) > 4 { println("REFUSED explicit selection supports up to four files"); return 1; }
+    let scope = match selection(args[2]) { Ok(value) => value, Err(error) => { println("REFUSED " + error); return 1; } };
+    let allowed = scope.files;
     let paths = candidate_error(allowed); if paths != "" { println("REFUSED " + paths); return 1; }
     let request = args[4]; let question = question_error(request); if question != "" { println("REFUSED " + question); return 1; }
     let past_work = match inspect_work() { Ok(value) => value, Err(error) => { println("REFUSED " + error); return 1; } };
@@ -102,7 +102,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyR
     if reserved.value != running || reserved.version.opaque != version.opaque { println("REFUSED reservation changed"); return 1; }
     println("RESERVED chat turn; interruption leaves it unresolved and will not retry.");
     println("A final answer is provisional until SAVED confirms durable history.");
-    let result = if natural { run_natural(request, allowed, running.invocation, [], work_facts, followup_facts, []) } else { match work_facts {
+    let result = if natural { run_natural(request, allowed, running.invocation, [], work_facts, followup_facts, [], scope.page, scope.more) } else { match work_facts {
         Some(value) => {
             match followup_facts {
                 Some(second) => {
@@ -121,7 +121,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyR
     let completed = match result.completed { Some(item) => item, None() => { println("REFUSED completed event batch missing"); return 1; } };
     match save_completed(next, Some(reserved), completed.records) { Ok(_) => {} Err(error) => { println("REFUSED " + error); return 1; } }
     println("SAVED chat history; prior data is not a grant or workspace identity.");
-    if natural { let route = natural_route(completed.answer, allowed, work_facts != None(), result.state.admitted < 2); if route != "" { println(route); } }
+    if natural { let route = natural_route(completed.answer, allowed, work_facts != None(), result.state.admitted < 2, scope.page, scope.more); if route != "" { println(route); } }
     return 0;
 }
 

@@ -20,34 +20,9 @@ def main(argv=None):
     parser.add_argument('--check',nargs=argparse.REMAINDER)
     args=parser.parse_args(argv)
     try:
-        if not sys.stdin.isatty() or not sys.stdout.isatty():raise ValueError('editing requires an interactive terminal for both confirmations')
-        if args.check==[]:raise ValueError('--check requires a command')
-        context=edit.directory(args.read_root,'read root');workspace=edit.directory(args.root,'workspace');state=edit.directory(args.state,'state')
-        for item in (context,workspace):
-            if item==state or item in state.parents or state in item.parents:raise ValueError('state must not overlap read or edit roots')
-        info=state.stat();workinfo=workspace.stat()
-        if info.st_uid!=os.getuid() or stat.S_IMODE(info.st_mode)!=0o700:raise ValueError('state must be owned by you with mode 0700')
-        if workinfo.st_uid!=os.getuid() or stat.S_IMODE(workinfo.st_mode)&0o022:raise ValueError('workspace must be owned by you and not writable by group or others')
-        cache=ROOT/'.etas'
-        if cache.is_symlink():raise ValueError('project .etas mountpoint must not be a symlink')
-        cache.mkdir(mode=0o700,exist_ok=True)
-        if cache.is_symlink() or not cache.is_dir():raise ValueError('project .etas mountpoint must be a directory')
-        version=os.environ.get('NOMO_ETAS_VERSION','0.2.6')
-        if version!='0.2.6':raise ValueError('this Nomo revision requires ETAS 0.2.6; use an earlier Nomo revision for older ETAS')
+        context,workspace,state,version=edit.history_work_roots(args,ROOT)
         overlay='config/etas-'+version.replace('.','')+'-official-compose.yaml'
-        if not os.environ.get('MINIMAX_API_KEY'):raise ValueError('set MINIMAX_API_KEY to the M Plan key')
-        deadline=os.environ.get('NOMO_MODEL_REQUEST_DEADLINE_MS','120000')
-        if not deadline.isascii() or not deadline.isdigit() or len(deadline)>7 or not 2000<=int(deadline)<=3600000:raise ValueError('model request deadline must be an integer from 2000 to 3600000')
-        names=args.allow.split(',')
-        if not 1<=len(names)<=4 or len(set(names))!=len(names) or any(not edit.safe_path(n, 48) for n in names) or len(args.allow.encode('utf-8'))>195:raise ValueError('allow must name one to four distinct safe relative files')
-        if not edit.safe_read_question(args.once):raise ValueError('work task must be 1..128 safe nonblank UTF-8 bytes')
-        selected=Path(args.path)
-        if not args.id or not edit.safe_path(args.path):raise ValueError('select an ID and relative workspace file')
-        current=workspace
-        for part in selected.parts:
-            current=current/part
-            if current.is_symlink():raise ValueError('selected file path must not contain symlinks')
-        if not current.is_file():raise ValueError('selected file must be an existing regular file')
+        edit.validate_history_work(args,workspace,48)
         fd=os.open(state/'.nomo-session.lock',os.O_RDWR|os.O_NOFOLLOW|os.O_CLOEXEC)
         try:
             lock=os.fstat(fd)
