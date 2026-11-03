@@ -2,7 +2,7 @@ module nomo.agent.read_tool_controller;
 
 import std.text.{len, to_string_usize};
 import std.io.println;
-import nomo.core.read_text.safe;
+import nomo.core.read_text.{safe, bounded};
 import nomo.harness.model_plan_diagnostic.response_text;
 import nomo.core.conversation.{State, capacity_error, stop};
 import nomo.agent.loop.{emit, failure};
@@ -92,9 +92,9 @@ flow model_attempt(previous: Session, allowed: Array<string>, limits: Limits, fi
 // This same controller is used by scoped production and deterministic handlers.
 flow run_mode(raw: string, allowed: Array<string>, limits: Limits, previous: Session, work: bool, inspect_all: bool, private_progress: bool) -> LoopTurn {
     if previous.history.stopped { return LoopTurn { state = previous, status = 4 }; }
-    let full = capacity(previous, 1, 128);
+    let full = capacity(previous, 1, if work { 512 } else { 128 });
     if full != "" { return failed(history(previous, stop(previous.history)), full, 4); }
-    var invalid = question_error(raw);
+    var invalid = if work && !bounded(raw, 512) { "work delegation requires 1..512 safe UTF-8 bytes" } else { if work { "" } else { question_error(raw) } };
     if invalid == "" { invalid = allowed_error(allowed); }
     if invalid != "" { return failed(previous, invalid, 2); }
     var session = history(previous, emit_mode(previous.history, "user", "input", "", raw, private_progress));
@@ -144,4 +144,7 @@ public flow run_loop_controller(raw: string, allowed: Array<string>, limits: Lim
 }
 public flow run_private_loop_controller(raw: string, allowed: Array<string>, limits: Limits, previous: Session) -> LoopTurn {
     return run_mode(raw, allowed, limits, previous, false, false, true);
+}
+public flow run_private_work_loop_controller(raw: string, allowed: Array<string>, limits: Limits, previous: Session) -> LoopTurn {
+    return run_mode(raw, allowed, limits, previous, true, false, true);
 }

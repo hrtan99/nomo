@@ -5,10 +5,11 @@ import std.text.{len, split};
 import nomo.cli.harness_edit_args.Input;
 import nomo.cli.harness_edit_args.parse as edit_args;
 import nomo.model.model_tool_contract.{question_error, allowed_error};
+import nomo.model.read_protocol.question_error as unicode_question_error;
 
 public type Work = { edit: Input, allowed: Array<string> };
 
-public flow parse(args: Array<string>) -> Result<Work, string> {
+flow parse_with(args: Array<string>, unicode: bool) -> Result<Work, string> {
     if count(args) == 1 && (args[0] == "help" || args[0] == "--help") {
         let edit = match edit_args(args) { Ok(value) => value, Err(error) => { return Err(error); } };
         return Ok(Work { edit = edit, allowed = [] });
@@ -25,8 +26,10 @@ public flow parse(args: Array<string>) -> Result<Work, string> {
     }
     if !supplied || len(raw) > 97 { return Err("expected one bounded --allow FILE[,FILE]"); }
     let edit = match edit_args(selected) { Ok(value) => value, Err(error) => { return Err(error); } };
-    let request = question_error(edit.request); if request != "" { return Err(request); }
+    let request = if unicode { unicode_question_error(edit.request) } else { question_error(edit.request) }; if request != "" { return Err(request); }
     let allowed = split(raw, ",");
     let invalid = allowed_error(allowed); if invalid != "" { return Err(invalid); }
     return Ok(Work { edit = edit, allowed = allowed });
 }
+public flow parse(args: Array<string>) -> Result<Work, string> { return parse_with(args, false); }
+public flow parse_unicode(args: Array<string>) -> Result<Work, string> { return parse_with(args, true); }

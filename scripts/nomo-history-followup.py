@@ -39,7 +39,7 @@ def main(argv=None):
         if not deadline.isascii() or not deadline.isdigit() or len(deadline)>7 or not 2000<=int(deadline)<=3600000:raise ValueError('model request deadline must be an integer from 2000 to 3600000')
         names=args.allow.split(',')
         if not 1<=len(names)<=2 or len(set(names))!=len(names) or any(not 1<=len(n)<=48 or len(n.split('/'))>8 or any(p in ('','.','..') or not re.fullmatch(r'[A-Za-z0-9._-]+',p) for p in n.split('/')) for n in names):raise ValueError('allow must name one or two distinct safe relative files')
-        if not args.once.strip() or len(args.once)>128 or not all(32<=ord(c)<=126 for c in args.once):raise ValueError('work task must be 1..128 printable ASCII characters')
+        if not edit.safe_read_question(args.once):raise ValueError('work task must be 1..128 safe nonblank UTF-8 bytes')
         selected=Path(args.path)
         if not args.id or not args.path or selected.is_absolute() or '..' in selected.parts or '\\' in args.path or '\0' in args.path:raise ValueError('select an ID and relative workspace file')
         current=workspace

@@ -39,9 +39,9 @@ flow same(event: Event, role: string, kind: string, name: string, text: string) 
 
 // Only the six ordinary return shapes reachable from our fresh seeded loop are admitted.
 // Host aborts never reach this function and cannot be represented as settled returns.
-public flow inspect(child: Session, status: i32, request: string, task: string, allowed: Array<string>) -> Result<Observed, string> {
+flow inspect_mode(child: Session, status: i32, request: string, task: string, allowed: Array<string>, work: bool) -> Result<Observed, string> {
     let invalid = child_ledger_error(child); if invalid != "" { return Err(invalid); }
-    if !bounded(request, 128) || !bounded(task, 128) || allowed_error(allowed) != "" { return Err("invalid selected child context"); }
+    if !bounded(request, 128) || !bounded(task, if work { 512 } else { 128 }) || allowed_error(allowed) != "" { return Err("invalid selected child context"); }
     let events = child.history.events;
     let size = count(events);
     if size < 4 || size > 7 || child.history.stopped || child.history.characters > 8192 { return Err("invalid child history"); }
@@ -91,4 +91,11 @@ public flow inspect(child: Session, status: i32, request: string, task: string, 
         return Err("invalid child refusal event");
     }
     return Ok(Observed { result = "", tool = "", outcome = "" });
+}
+
+public flow inspect(child: Session, status: i32, request: string, task: string, allowed: Array<string>) -> Result<Observed, string> {
+    return inspect_mode(child, status, request, task, allowed, false);
+}
+public flow inspect_work(child: Session, status: i32, request: string, task: string, allowed: Array<string>) -> Result<Observed, string> {
+    return inspect_mode(child, status, request, task, allowed, true);
 }

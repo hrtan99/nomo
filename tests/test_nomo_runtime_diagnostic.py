@@ -68,6 +68,13 @@ class DiagnosticTests(unittest.TestCase):
                 other.feed('stdout',line+b' extra\n')
                 self.assertIn('text_marker=unknown',self.report(other))
 
+    def test_utf8_work_rejection_is_finite_and_advisory(self):
+        for reason in ('blank','length','unsafe'):
+            observer=edit.RuntimeDiagnostic();observer.feed('stdout',('READ_PLAN_REJECTION '+reason+'\n').encode())
+            self.assertIn('plan_rejection_text='+reason,self.report(observer));self.assertIn('untrusted',self.report(observer))
+        observer=edit.RuntimeDiagnostic();observer.feed('stdout',b'READ_PLAN_REJECTION blank\nREAD_PLAN_REJECTION length\n')
+        self.assertIn('plan_rejection_text=unknown',self.report(observer))
+
 
 if __name__ == '__main__':
     unittest.main()

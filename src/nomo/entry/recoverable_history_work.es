@@ -5,13 +5,13 @@ import std.collections.len as count;
 import std.io.IOError as ConsoleError;
 import std.fs.IOError as FileError;
 import std.effects.Fs;
-import nomo.cli.harness_work_args.{Work, parse};
+import nomo.cli.harness_work_args.{Work, parse_unicode as parse};
 import nomo.harness.harness_work_contract.Ledger;
-import nomo.harness.harness_model_tools.work_child_turn;
+import nomo.harness.read_model_tools.{private_work_child_turn as work_child_turn};
 import nomo.harness.legacy_string_stages.{LegacyStringStages, LegacyEditStages};
 import nomo.harness.history_work_model.{read_main, plan, child, aggregate};
 import nomo.harness.harness_tool_chat_contract.Previous;
-import nomo.entry.harness_work_entry.{prepare, finish_edit, finish_summary, ledger, Pending, Failure, Completed, Summary};
+import nomo.entry.harness_work_entry.{prepare_unicode, finish_edit, finish_summary, ledger, Pending, Failure, Completed, Summary};
 import nomo.session.event_policy.{PolicyRoot, load as load_policy};
 import nomo.session.chat_history.load as load_legacy;
 import nomo.session.recoverable_chat_store.load as load_chat;
@@ -33,7 +33,7 @@ flow stage(name: string, value: Ledger) -> unit { println("STAGE " + name); ledg
 flow prepare_history(input: Work, prior_request: string, previous: Previous) -> Result<Pending, Failure> {
     let original = (value: string) => "";
     let log = (name: string, state: Ledger) => stage(name, state);
-    return prepare(input, original, log, false, false, false) with {
+    return prepare_unicode(input, original, log) with {
         LegacyStringStages.main(value) => { resume read_main(value, prior_request, previous); }
         LegacyStringStages.child(task, files, selected) => { resume work_child_turn(task, files, selected); }
         LegacyEditStages.plan(value) => { resume plan(value, prior_request, previous); }

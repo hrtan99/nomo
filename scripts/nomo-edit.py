@@ -15,6 +15,14 @@ import time
 
 ROOT = Path(__file__).resolve().parent.parent
 
+def safe_read_question(value):
+    """Mirror the read protocol's UTF-8 byte and terminal-safety bounds."""
+    try:
+        if not value.strip() or len(value.encode('utf-8')) > 128:return False
+    except UnicodeEncodeError:return False
+    return all(not (ord(c) < 32 or 127 <= ord(c) <= 159 or 0x200b <= ord(c) <= 0x200f or
+                   0x2028 <= ord(c) <= 0x202e or 0x2060 <= ord(c) <= 0x2069 or ord(c) == 0xfeff) for c in value)
+
 
 def format_check_capture(entry, env):
     """Render a bounded diagnostic prefix; known configured keys are removed."""
@@ -170,6 +178,7 @@ class RuntimeDiagnostic:
     def __init__(self):
         self.stage = None
         self.post_edit = None
+        self.plan_rejection = None
         self.categories = set()
         self.buffers = {'stdout': bytearray(), 'stderr': bytearray()}
         self.discard = {'stdout': False, 'stderr': False}
@@ -189,6 +198,10 @@ class RuntimeDiagnostic:
                     self.buffers[stream].append(byte)
 
     def _line(self, line):
+        if line in (b'READ_PLAN_REJECTION blank', b'READ_PLAN_REJECTION length', b'READ_PLAN_REJECTION unsafe'):
+            value = line[len(b'READ_PLAN_REJECTION '):].decode('ascii')
+            if self.plan_rejection is None:self.plan_rejection = value
+            elif self.plan_rejection != value:self.plan_rejection = 'unknown'
         if line in (b'POST_EDIT context', b'POST_EDIT aggregate', b'POST_EDIT events', b'POST_EDIT persist'):
             self.post_edit = line[len(b'POST_EDIT '):].decode('ascii')
         chat = re.fullmatch(rb'TURN [1-9][0-9]* STAGE (plan|child|aggregate) steps=[0-9]+ calls=[0-9]+ tokens=[0-9]+ tools=[0-9]+ scan=[0-9]+ reserved_steps=[0-9]+ reserved_calls=[0-9]+ reserved_tokens=[0-9]+ reserved_tools=[0-9]+ reserved_scan=[0-9]+', line)
@@ -211,7 +224,7 @@ class RuntimeDiagnostic:
             return
         category = next(iter(self.categories)) if len(self.categories) == 1 else 'unknown'
         print('Runtime diagnostic (observed terminal text, untrusted): last_stage_text=' +
-              (self.stage or 'unknown') + ' text_marker=' + category + ' post_edit_text=' + (self.post_edit or 'unknown') +
+              (self.stage or 'unknown') + ' text_marker=' + category + ' post_edit_text=' + (self.post_edit or 'unknown') + ' plan_rejection_text=' + (self.plan_rejection or 'unknown') +
               '. Inspect retained state; this is not a retry decision.', file=sys.stderr, flush=True)
         if category == 'summary_blank_or_over_limit' and self.post_edit == 'aggregate':
             print('The observed text may indicate a blank or over-limit summary. The edit may already be applied; inspect the file and session status before deciding what to do. Do not automatically retry.', file=sys.stderr, flush=True)

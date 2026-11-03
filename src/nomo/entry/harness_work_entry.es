@@ -8,7 +8,9 @@ import std.text.to_string_i32;
 import nomo.harness.model_plan_diagnostic.{response_error, response_text};
 import nomo.cli.harness_work_args.{Work, parse};
 import nomo.harness.harness_work_contract.{Context, Evidence, Ledger, fresh, ledger_error, bump_edit, native_tokens, collect, finish_evidence, context_error};
-import nomo.harness.harness_model_tools.{run_context as read_context, work_child_turn, chain_child_turn};
+import nomo.harness.harness_model_tools.{run_context as read_context, work_child_turn, chain_child_turn, Report as ReadReport, Failure as ReadFailure};
+import nomo.harness.read_model_tools.run_context as unicode_read_context;
+import nomo.harness.harness_tool_contract.Ledger as ReadLedger;
 import nomo.harness.legacy_string_stages.{LegacyStringStages, LegacyEditStages};
 import nomo.harness.edit_original.EditOriginal;
 import nomo.harness.harness_work_model.{read_main, edit_plan, edit_child, aggregate};
@@ -51,13 +53,22 @@ public type Completed = { context: Context, state: Ledger };
 public type Summary = { answer: string, state: Ledger };
 flow failed(state: Ledger, error: string) -> Result<Pending, Failure> { return Err(Failure { state = state, error = error }); }
 
+flow unicode_read(request: string, allowed: Array<string>, state: ReadLedger) -> Result<ReadReport, ReadFailure> {
+    return match unicode_read_context(request, allowed, state, "read-", true, false, false, false) {
+        Ok(value) => Ok(ReadReport { request = value.request, task = value.task, allowed = value.allowed, child = value.child,
+            status = value.status, observed = value.observed, answer = value.answer, ledger = value.ledger }),
+        Err(error) => Err(ReadFailure { state = error.state, error = error.error, resolved = error.resolved }),
+    };
+}
+
 // Callers admit the unused edit slot before this shared Model/File preparation.
-public flow prepare_with(input: Work, original_error: (string) -> string, stage_log: (string, Ledger) -> unit, chain_read: bool, inspect_plan: bool, inspect_all: bool) -> Result<Pending, Failure> {
+flow prepare_mode_with(input: Work, original_error: (string) -> string, stage_log: (string, Ledger) -> unit, chain_read: bool, inspect_plan: bool, inspect_all: bool, unicode: bool) -> Result<Pending, Failure> {
     var state = fresh();
     let selected = Selector { id = input.edit.id, workspace = input.edit.workspace, path = input.edit.path };
     let invalid = ledger_error(state); if invalid != "" { return failed(state, invalid); }
     println("RESERVATION work13 steps/7 calls/47104 generation/196608 native; edit tail6 steps/3 calls/38912 generation/163840 native; one read/search and one atomic maximum");
-    let read_result = read_context(input.edit.request, input.allowed, state.read, "read-", true, chain_read, inspect_plan, inspect_all);
+    let read_result = if unicode { unicode_read(input.edit.request, input.allowed, state.read) }
+        else { read_context(input.edit.request, input.allowed, state.read, "read-", true, chain_read, inspect_plan, inspect_all) };
     let read = match read_result {
         Ok(value) => value,
         Err(failure) => {
@@ -94,6 +105,16 @@ public flow prepare_with(input: Work, original_error: (string) -> string, stage_
     let prepared = match prepare_original(selected.path, before, request.target, request.replacement) { Ok(value) => value, Err(error) => { return failed(state, if chain_read { response_error(edit_raw, "edit-child", "proposal", 32768) } else { error }); } };
     state = match bump_edit(state, false) { Ok(value) => value, Err(error) => { return failed(state, error); } };
     return Ok(Pending { selected = selected, prepared = prepared, evidence = evidence, request = input.edit.request, task = task, state = state });
+}
+
+public flow prepare_with(input: Work, original_error: (string) -> string, stage_log: (string, Ledger) -> unit, chain_read: bool, inspect_plan: bool, inspect_all: bool) -> Result<Pending, Failure> {
+    return prepare_mode_with(input, original_error, stage_log, chain_read, inspect_plan, inspect_all, false);
+}
+
+public flow prepare_unicode(input: Work, original_error: (string) -> string, stage_log: (string, Ledger) -> unit) -> Result<Pending, Failure> {
+    return prepare_mode_with(input, original_error, stage_log, false, false, false, true) with {
+        EditOriginal.read(path) => { resume read_original(path); }
+    };
 }
 
 // The production facade binds the original native reader once; exceptions and

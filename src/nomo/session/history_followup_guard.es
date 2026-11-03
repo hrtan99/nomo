@@ -9,7 +9,7 @@ import nomo.session.history_work_guard.{Record as WorkRecord, inspect as inspect
 import nomo.session.history_check_guard.{Record as CheckRecord, inspect as inspect_check};
 import nomo.session.edit_operation_store.inspect as inspect_edit;
 import nomo.session.edit_operation.{selector_error, Record as EditRecord};
-import nomo.model.model_tool_contract.question_error;
+import nomo.model.read_protocol.question_error;
 import nomo.harness.harness_edit_contract.text_error;
 import nomo.harness.harness_work_contract.{Ledger, ledger_error, native_tokens};
 

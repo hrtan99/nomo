@@ -5,7 +5,7 @@ import std.memory.{get_entry, prepare_put, operation_ref, commit, WriteCondition
 import nomo.session.chat_session_contract.Session;
 import nomo.session.chat_history.{Entry, load as load_chat};
 import nomo.session.edit_operation.selector_error;
-import nomo.model.model_tool_contract.question_error;
+import nomo.model.read_protocol.question_error;
 import nomo.harness.harness_edit_contract.text_error;
 import std.text.len;
 import nomo.harness.harness_work_contract.{Ledger, ledger_error, native_tokens};

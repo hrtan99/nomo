@@ -4,10 +4,10 @@ import std.io.println;
 import std.text.to_string_i32;
 import nomo.core.conversation.{Event, State, add};
 import nomo.model.model_tool_contract.{Session, fresh_loop, default_limits, allowed_error};
-import nomo.agent.read_tool.{LoopTurn, run_loop, run_private_loop};
+import nomo.agent.read_tool.{LoopTurn, run_loop, run_private_loop, run_work_loop, run_private_work_loop};
 import nomo.core.read_text.bounded;
-import nomo.model.read_protocol.{question_error, decode_plan};
-import nomo.harness.read_tool_contract.{Context, Ledger, Observed, fresh, bump, settle, inspect, context_error};
+import nomo.model.read_protocol.{question_error, decode_plan, decode_work_plan, work_plan_rejection};
+import nomo.harness.read_tool_contract.{Context, Ledger, Observed, fresh, bump, settle, inspect, inspect_work, context_error};
 import nomo.harness.harness_work_model.read_main;
 import nomo.harness.model_plan_diagnostic.{returned_text, response_text};
 import nomo.harness.legacy_string_stages.LegacyStringStages;
@@ -67,6 +67,14 @@ public flow private_child_turn(task: string, allowed: Array<string>, selected: S
     let seeded = Session { history = selected, calls = 0, tokens = 0, tools = 0, scan = 0 };
     return run_private_loop(task, allowed, default_limits(), seeded);
 }
+public flow work_child_turn(task: string, allowed: Array<string>, selected: State) -> LoopTurn ~ ChatChildStage<ReadOnlyRoot> {
+    let seeded = Session { history = selected, calls = 0, tokens = 0, tools = 0, scan = 0 };
+    return run_work_loop(task, allowed, default_limits(), seeded);
+}
+public flow private_work_child_turn(task: string, allowed: Array<string>, selected: State) -> LoopTurn ~ ChatChildStage<ReadOnlyRoot> {
+    let seeded = Session { history = selected, calls = 0, tokens = 0, tools = 0, scan = 0 };
+    return run_private_work_loop(task, allowed, default_limits(), seeded);
+}
 
 flow failed(state: Ledger, error: string, resolved: bool) -> Result<Report, Failure> {
     return Err(Failure { state = state, error = error, resolved = resolved });
@@ -86,8 +94,11 @@ public flow run_context_with(request: string, allowed: Array<string>, initial: L
     let raw = perform LegacyStringStages.main(plan);
     if inspect_plan { perform HarnessProgress.write(returned_text(raw, "lab-qwen-")); }
     else if inspect_all { perform HarnessProgress.write(response_text(raw, "read-plan", "lab-qwen-", 384)); }
-    let decoded = decode_plan(raw);
-    let task = match decoded { Ok(value) => value, Err(error) => { return failed(state, error, true); } };
+    let decoded = if require_tool { decode_work_plan(raw) } else { decode_plan(raw) };
+    let task = match decoded { Ok(value) => value, Err(error) => {
+        if require_tool && error == "invalid bounded delegated task" { perform HarnessProgress.write("READ_PLAN_REJECTION " + work_plan_rejection(raw)); }
+        return failed(state, error, true);
+    } };
     if inspect_plan { return failed(state, "read-plan inspection complete; no child, File or edit attempted", true); }
     state = match bump(state, false) { Ok(value) => value, Err(error) => { return failed(state, error, true); } };
     perform HarnessProgress.write("EVENT main -> child-1 request child-1: " + task);
@@ -95,7 +106,8 @@ public flow run_context_with(request: string, allowed: Array<string>, initial: L
     let selected = add(empty.history, Event { role = "user", kind = "context", name = "original", text = request });
     stage("child", state, prefix);
     let child = perform LegacyStringStages.child(task, allowed, selected);
-    let observed = match inspect(child.state, child.status, request, task, allowed) {
+    let inspected = if require_tool { inspect_work(child.state, child.status, request, task, allowed) } else { inspect(child.state, child.status, request, task, allowed) };
+    let observed = match inspected {
         Ok(value) => value, Err(error) => { return failed(state, error, false); }
     };
     state = match settle(state, child.state) { Ok(value) => value, Err(error) => { return failed(state, error, false); } };

@@ -5,10 +5,10 @@ import std.collections.len as count;
 import std.io.IOError as ConsoleError;
 import std.fs.IOError as FileError;
 import std.effects.Fs;
-import nomo.cli.harness_work_args.{Work, parse};
+import nomo.cli.harness_work_args.{Work, parse_unicode as parse};
 import nomo.harness.harness_work_contract.Ledger;
 import nomo.harness.harness_work_contract.fresh as fresh_ledger;
-import nomo.harness.harness_model_tools.work_child_turn;
+import nomo.harness.read_model_tools.{private_work_child_turn as work_child_turn};
 import nomo.harness.legacy_string_stages.{LegacyStringStages, LegacyEditStages};
 import nomo.harness.history_followup_model.{read_main, plan, child, aggregate, PriorWork};
 import nomo.harness.history_continue_model.CheckOutput;
@@ -18,7 +18,7 @@ import nomo.session.recoverable_work_store.load as inspect_first_work;
 import nomo.session.event_text_codec.decode;
 
 import nomo.harness.harness_tool_chat_contract.Previous;
-import nomo.entry.harness_work_entry.{prepare, finish_edit, finish_summary, ledger, Pending, Failure, Completed, Summary};
+import nomo.entry.harness_work_entry.{prepare_unicode, finish_edit, finish_summary, ledger, Pending, Failure, Completed, Summary};
 import nomo.session.recoverable_chat_store.load as load_chat;
 import nomo.session.recoverable_followup_store.{admit, claim, finish};
 import nomo.session.recoverable_followup_check_store.{plan as plan_check, load as load_followup_check};
@@ -33,7 +33,7 @@ flow stage(name: string, value: Ledger) -> unit { println("STAGE " + name); ledg
 flow prepare_history(input: Work, prior_request: string, previous: Previous, prior_work: PriorWork) -> Result<Pending, Failure> {
     let original = (value: string) => "";
     let log = (name: string, state: Ledger) => stage(name, state);
-    return prepare(input, original, log, false, false, false) with {
+    return prepare_unicode(input, original, log) with {
         LegacyStringStages.main(value) => { resume read_main(value, prior_request, previous, prior_work); }
         LegacyStringStages.child(task, files, selected) => { resume work_child_turn(task, files, selected); }
         LegacyEditStages.plan(value) => { resume plan(value, prior_request, previous, prior_work); }

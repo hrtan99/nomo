@@ -6,9 +6,11 @@ import std.bytes.len as byte_count;
 import std.codec.text.utf8_encode;
 import std.json.{JsonValue, stringify};
 import std.agent.message.Message;
-import nomo.model.model_tool_contract.{Session, allowed_error, decode_reply};
-import nomo.harness.harness_model_contract.bounded;
-import nomo.harness.harness_tool_contract.{inspect, settle};
+import nomo.model.model_tool_contract.{Session, allowed_error};
+import nomo.model.read_protocol.decode_child as decode_reply;
+import nomo.core.read_text.bounded;
+import nomo.harness.read_tool_contract.inspect_work as inspect;
+import nomo.harness.harness_tool_contract.settle;
 import nomo.harness.harness_tool_contract.Ledger as ReadLedger;
 import nomo.harness.harness_tool_contract.fresh as read_fresh;
 import nomo.harness.harness_tool_contract.bump as read_bump;
@@ -59,7 +61,7 @@ public flow bump_edit(state: Ledger, call: bool) -> Result<Ledger, string> {
 }
 
 flow selected_error(value: Evidence, complete: bool) -> string {
-    if !bounded(value.request, 128) || !bounded(value.task, 128) || !bounded(value.result, 256) ||
+    if !bounded(value.request, 128) || !bounded(value.task, 512) || !bounded(value.result, 256) ||
         !bounded(value.outcome, 266) || !starts_with(value.outcome, "complete: ") { return "invalid read evidence text"; }
     let allowed = allowed_error(value.allowed); if allowed != "" { return allowed; }
     let files = allowed_error(value.files); if files != "" { return files; }

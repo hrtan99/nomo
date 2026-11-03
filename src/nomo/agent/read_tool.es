@@ -3,7 +3,7 @@ module nomo.agent.read_tool;
 import nomo.model.model_tool_contract.{Session, Limits, Context};
 import nomo.tools.workspace.{read_file, search_files};
 import nomo.tools.read_contract.ReadTools;
-import nomo.agent.read_tool_controller.{run_loop_controller, run_private_loop_controller};
+import nomo.agent.read_tool_controller.{run_loop_controller, run_private_loop_controller, run_private_work_loop_controller};
 import nomo.harness.legacy_string_stages.LegacyChildModel;
 public import nomo.model.model_tool_contract.LoopTurn;
 
@@ -20,6 +20,11 @@ public flow run_loop(raw: string, allowed: Array<string>, limits: Limits, previo
         LegacyChildModel.infer(context) => { resume ToolModel.run(context); }
     };
 }
+public flow run_work_loop(raw: string, allowed: Array<string>, limits: Limits, previous: Session) -> LoopTurn {
+    return run_loop_with(raw, allowed, limits, previous, true, false) with {
+        LegacyChildModel.infer(context) => { resume ToolModel.run(context); }
+    };
+}
 
 // Compatibility composition: callers may still supply the Model handler.
 // The reusable controller receives both operations without native bindings.
@@ -32,6 +37,14 @@ public flow run_loop_with(raw: string, allowed: Array<string>, limits: Limits, p
 
 public flow run_private_loop(raw: string, allowed: Array<string>, limits: Limits, previous: Session) -> LoopTurn {
     return run_private_loop_controller(raw, allowed, limits, previous) with {
+        LegacyChildModel.infer(context) => { resume ToolModel.run(context); }
+        ReadTools.read(name) => { resume read_file(name); }
+        ReadTools.search(names, literal) => { resume search_files(names, literal); }
+    };
+}
+
+public flow run_private_work_loop(raw: string, allowed: Array<string>, limits: Limits, previous: Session) -> LoopTurn {
+    return run_private_work_loop_controller(raw, allowed, limits, previous) with {
         LegacyChildModel.infer(context) => { resume ToolModel.run(context); }
         ReadTools.read(name) => { resume read_file(name); }
         ReadTools.search(names, literal) => { resume search_files(names, literal); }

@@ -16,12 +16,12 @@ public flow question_error(raw: string) -> string {
 // This protocol is scoped to the new non-durable read-only entry. Limits are
 // UTF-8 bytes, including serialized JSON, rather than just scalar counts.
 flow frame(raw: string, maximum: usize) -> bool {
-    if raw == "" || maximum == 0 || maximum > 2048 || len(raw) > maximum || byte_count(utf8_encode(raw)) > maximum { return false; }
+    if raw == "" || maximum == 0 || maximum > 4096 || len(raw) > maximum || byte_count(utf8_encode(raw)) > maximum { return false; }
     var opened = false; var closed = false; var quoted = false; var escaped = false;
     var leaves: usize = 0; let slash = split("\\/", "")[1];
-    for character in split(raw, "") limit Iterations(1154) {
+    for character in split(raw, "") limit Iterations(4098) {
         if quoted {
-            if character != "" && !safe(character, maximum) { return false; }
+            if character != "" && !safe(character, 4) { return false; }
             if escaped { escaped = false; }
             else if character == slash { escaped = true; }
             else if character == "\"" { quoted = false; }
@@ -71,6 +71,26 @@ public flow decode_plan(raw: string) -> Result<string, string> {
     }
     return Ok(values[1]);
 }
+
+// Work can carry a longer delegation while the original read/chat limit stays 128 bytes.
+public flow decode_work_plan(raw: string) -> Result<string, string> {
+    let values = match fields(raw, 4096) { Ok(item) => item, Err(error) => { return Err(error); } };
+    if count(values) != 2 || values[0] != "delegate" || !bounded(values[1], 512) {
+        return Err("invalid bounded delegated task");
+    }
+    return Ok(values[1]);
+}
+
+// Classify only the violated bound; do not expose the rejected response.
+public flow work_plan_rejection(raw: string) -> string {
+    let values = match fields(raw, 4096) { Ok(item) => item, Err(_) => { return "unknown"; } };
+    if count(values) != 2 || values[0] != "delegate" { return "unknown"; }
+    if values[1] == "" || trim(values[1]) == "" { return "blank"; }
+    if len(values[1]) > 512 || byte_count(utf8_encode(values[1])) > 512 { return "length"; }
+    if !safe(values[1], 512) { return "unsafe"; }
+    return "unknown";
+}
+
 
 public flow answer(raw: string) -> Result<string, string> {
     if !bounded(raw, 512) { return Err("invalid bounded final answer"); }

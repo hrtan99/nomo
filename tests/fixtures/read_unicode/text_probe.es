@@ -8,7 +8,7 @@ import std.json.{parse, JsonValue};
 import std.agent.message.Message;
 import nomo.core.read_text.{safe, bounded};
 import nomo.cli.read_cli.{parse_args, parse_line};
-import nomo.model.read_protocol.{decode_plan, decode_child, compact_frame, answer};
+import nomo.model.read_protocol.{decode_plan, decode_work_plan, decode_child, compact_frame, answer};
 import nomo.tools.read_contract.outcome;
 import nomo.tools.read_display.display;
 import nomo.tools.read_contract.ReadTools;
@@ -61,6 +61,14 @@ flow decoded(code: string) -> string {
 }
 
 public flow read_unicode_text_probe(args: Array<string>) -> i32 {
+    var long_task = ""; var index: usize = 0;
+    while index < 170 limit Iterations(171) { long_task = long_task + "港"; index = index + 1; }
+    long_task = long_task + "ab";
+    let exact = "[\"delegate\",\"" + long_task + "\"]";
+    match decode_work_plan(exact) { Ok(value) => { if value != long_task { abort("work delegation changed"); } } Err(_) => { abort("512-byte work delegation refused"); } }
+    match decode_work_plan("[\"delegate\",\"" + long_task + "x\"]") { Ok(_) => { abort("513-byte work delegation accepted"); } Err(_) => {} }
+    match decode_plan(exact) { Ok(_) => { abort("ordinary chat delegation limit changed"); } Err(_) => {} }
+    match decode_work_plan("[\"delegate\",\" \"]") { Ok(_) => { abort("blank work delegation accepted"); } Err(_) => {} }
     if !bounded("读取中文", 12) || bounded("读取中文", 11) || !bounded("A🙂", 5) || bounded("A🙂", 4) { abort("UTF-8 byte limit failed"); }
     if !bounded("hello world", 11) || bounded("   ", 3) { abort("basic text validation failed"); }
     let esc = decoded("u001b");
