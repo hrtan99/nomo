@@ -86,15 +86,16 @@ class SessionChatTest(unittest.TestCase):
         self.assertIn('status', command)
         self.assertIn('--outputs', command)
 
-    def test_event_chat_routes_work_and_check_and_refuses_followup(self):
+    def test_event_chat_routes_work_followup_and_check_with_policy(self):
         self.args += ['--events-policy-dir', '/private-policy']
-        code, _, err, calls = self.run_chat('/followup op /tmp/edit file.txt "change"\n/work op /tmp/edit file.txt "change" --check true\n/status\n/exit\n', codes=(0,0))
+        code, _, err, calls = self.run_chat('/work op /tmp/edit file.txt "change" --check true\n/followup op2 /tmp/edit file.txt "change"\n/status\n/exit\n', codes=(0,0,0))
         self.assertEqual(code, 0)
-        self.assertIn('does not yet support followup', err)
-        self.assertEqual(calls.call_count, 2)
+        self.assertEqual(err, '')
+        self.assertEqual(calls.call_count, 3)
         for call in calls.call_args_list:self.assertIn('--events-policy-dir', call.args[0])
         self.assertIn('work', calls.call_args_list[0].args[0])
         self.assertEqual(calls.call_args_list[0].args[0][-2:],['--check','true'])
+        self.assertIn('followup', calls.call_args_list[1].args[0])
 
     def test_followup_routes_with_fresh_inputs(self):
         code, _, _, calls = self.run_chat('/followup op2 "/tmp/edit dir" file.txt "change again" --check python3 -m pytest\n/exit\n')

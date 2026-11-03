@@ -80,10 +80,26 @@ def main():
             assert 'nomo-recoverable-work-v1' in rows and 'nomo-recoverable-check-v1' in rows and 'nomo-edit-operation-v1' in rows and 'nomo-history-work-v1' not in rows
             assert 'SYNTHETIC_NEVER_PRESENT' not in rows['nomo-recoverable-work-v1']
             assert 'SYNTHETIC_NEVER_PRESENT' not in rows['nomo-recoverable-check-v1']
-        resumed=subprocess.run([str(project/'scripts/nomo-read.sh'),'session-continue','--root',str(current),'--state',str(state),'--allow','context.txt','--once','continue','--events-policy-dir',str(policy)],env=env,capture_output=True,timeout=120)
-        (out/'resume.stdout').write_bytes(resumed.stdout);(out/'resume.stderr').write_bytes(resumed.stderr)
-        assert resumed.returncode!=0 and server.phases==list(range(11)) and (workspace/'note.txt').read_text()=='before green\n', 'continuation was not refused'
-        result={'status':'passed','scope':'synthetic event-chat, confirmed work and actual offline check; selected facts only; no followup, root identity or real provider','check_mode':mode,'fake_requests':len(server.phases),'native_and_application_confirmed_exact_preview':True,'file_and_work_frame_complete':True,'check_phase':phase,'continuation_refused_without_model':True}
+        if mode in ('interrupt','storagefail'):
+            resumed=subprocess.run([str(project/'scripts/nomo-read.sh'),'session-continue','--root',str(current),'--state',str(state),'--allow','context.txt','--once','continue','--events-policy-dir',str(policy)],env=env,capture_output=True,timeout=120)
+            (out/'resume.stdout').write_bytes(resumed.stdout);(out/'resume.stderr').write_bytes(resumed.stderr)
+            assert resumed.returncode!=0 and server.phases==list(range(11)) and (workspace/'note.txt').read_text()=='before green\n', 'unresolved continuation was not refused'
+            os.close(master);master=None
+            follow=[str(project/'scripts/nomo-read.sh'),'session-followup','--read-root',str(current),'--root',str(workspace),'--state',str(state),'--id','edit2','--path','note.txt','--allow','context.txt','--once','Change green to gold','--events-policy-dir',str(policy)]
+            master,slave=pty.openpty();next_proc=subprocess.Popen(follow,stdin=slave,stdout=slave,stderr=slave,env=env,start_new_session=True);os.close(slave);next_output=bytearray();until=time.monotonic()+90
+            while next_proc.poll() is None:
+                if time.monotonic()>until:os.killpg(next_proc.pid,signal.SIGTERM);next_proc.wait(timeout=10);raise TimeoutError('followup refusal')
+                if select.select([master],[],[],.1)[0]:
+                    try:next_output.extend(os.read(master,65536))
+                    except OSError:pass
+            while select.select([master],[],[],0)[0]:
+                try:data=os.read(master,65536)
+                except OSError:break
+                if not data:break
+                next_output.extend(data)
+            (out/'followup-refused.output').write_bytes(next_output)
+            assert next_proc.returncode!=0 and not server.failed and server.phases==list(range(11)) and b'PREVIEW ' not in next_output and (workspace/'note.txt').read_text()=='before green\n', 'unresolved followup was not refused before model'
+        result={'status':'passed','scope':'synthetic event-chat, confirmed work and actual offline check; selected facts only; no root identity or real provider','check_mode':mode,'fake_requests':len(server.phases),'native_and_application_confirmed_exact_preview':True,'file_and_work_frame_complete':True,'check_phase':phase,'unresolved_continuation_refused':mode in ('interrupt','storagefail')}
     except BaseException as error:result={'status':'failed','failure_type':type(error).__name__,'phases':server.phases,'work_exit':proc.poll() if proc else None,'error':str(error)}
     finally:
         if proc and proc.poll() is None:

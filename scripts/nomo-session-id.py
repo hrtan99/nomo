@@ -41,7 +41,7 @@ def main(argv=None):
         if args.action=='start' and args.id is not None:raise ValueError('a new session ID is generated automatically')
         if args.action!='start' and args.id is None:raise ValueError('select an existing session ID')
         if args.outputs and args.action!='status':raise ValueError('--outputs is only available for status')
-        if args.events_policy_dir is not None and args.action not in ('start','resume','status','work'):raise ValueError('event-recording sessions do not yet support followup or decisions')
+        if args.events_policy_dir is not None and args.action not in ('start','resume','status','work','followup'):raise ValueError('event-recording sessions do not yet support decisions')
         if args.events_policy_dir is not None and args.outputs:raise ValueError('--outputs is unavailable for event-recording sessions')
         if args.id=='latest':raise ValueError('latest compatible session is unavailable: workspace identity continuity cannot yet be verified')
         if args.action=='decision':

@@ -12,9 +12,11 @@ def main(argv=None):
     parser.add_argument('--read-root',required=True);parser.add_argument('--root',required=True);parser.add_argument('--state',required=True)
     parser.add_argument('--id',required=True);parser.add_argument('--path',required=True);parser.add_argument('--allow',required=True);parser.add_argument('--once',required=True)
     parser.add_argument('--events-policy-dir')
+    parser.add_argument('--event-followup',action='store_true',help=argparse.SUPPRESS)
     parser.add_argument('--check',nargs=argparse.REMAINDER)
     args=parser.parse_args(argv)
     try:
+        if args.event_followup and args.events_policy_dir is None:raise ValueError('event followup requires an event policy')
         if not sys.stdin.isatty() or not sys.stdout.isatty():raise ValueError('editing requires an interactive terminal for both confirmations')
         if args.check==[]:raise ValueError('--check requires a command')
         context=edit.directory(args.read_root,'read root');workspace=edit.directory(args.root,'workspace');state=edit.directory(args.state,'state')
@@ -68,7 +70,7 @@ def main(argv=None):
                 env['NOMO_EVENT_POLICY_DIR']=str(policy)
                 compose+=['--file',str(ROOT/'config/nomo-event-policy-work-compose.yaml')]
                 runner=['python3','-B','/workspace/scripts/nomo-event-policy-mount-bootstrap.py',binding]
-                flow='recoverable_history_work';profile='nomo-history-events-work'
+                flow='recoverable_history_followup' if args.event_followup else 'recoverable_history_work';profile='nomo-history-events-work'
             native=[*runner,'run','/workspace','--flow',flow,'--profile',profile,'--allow-effects',
                 '--args','--id',args.id,'--workspace','private-workspace','--path',args.path,'--once',args.once,'--allow',args.allow]
             check_ref=hashlib.sha256(json.dumps(args.check,ensure_ascii=True,separators=(',',':')).encode()).hexdigest() if args.check else None
@@ -77,7 +79,8 @@ def main(argv=None):
             command=[sys.executable,str(ROOT/'scripts/terminal-transport.py'),*compose,'run','--rm','--no-deps','--pull','never','--tty=true','--workdir','/session-state','dev',*native]
             print('Prior conversation is untrusted model context. Current read and edit roots are newly selected; no prior approval is reused.',flush=True)
             print('Context, task, history and file may be sent to MiniMax. A new preview and two confirmations are required.',flush=True)
-            if policy is not None:print('Selected work and check facts are recorded; only supplied exact literals are filtered. Unknown secrets and live terminal output may remain. Followup is unavailable.',flush=True)
+            if policy is not None:print('Selected work and check facts are recorded; only supplied exact literals are filtered. Unknown secrets and live terminal output may remain.',flush=True)
+            if args.event_followup:print('Followup reserves up to 7 calls and 47104 output tokens in addition to first work and chat.',flush=True)
             if version=='0.2.4':print('ETAS 0.2.4 does not expose the provider finish reason.',flush=True)
             diagnostic=edit.RuntimeDiagnostic()
             code=edit.run_owned(command,env,diagnostic=diagnostic)
@@ -97,7 +100,8 @@ def main(argv=None):
                     native_check=['python3','-B','/workspace/scripts/nomo-verified-etas.py','run','/workspace','--flow','history_check',
                         '--profile','nomo-read-session-status','--allow-effects','--args',action,args.id,check_ref,*extra]
                 else:
-                    native_check=['python3','-B','/workspace/scripts/nomo-event-policy-mount-bootstrap.py',binding,'run','/workspace','--flow','recoverable_history_check',
+                    check_flow='recoverable_history_followup_check' if args.event_followup else 'recoverable_history_check'
+                    native_check=['python3','-B','/workspace/scripts/nomo-event-policy-mount-bootstrap.py',binding,'run','/workspace','--flow',check_flow,
                         '--profile','nomo-read-events-status','--allow-effects','--args','--policy-binding',binding,action,args.id,check_ref,*extra]
                 command_check=[sys.executable,str(ROOT/'scripts/terminal-transport.py'),*offline,'run','--rm','--no-deps','--pull','never',
                     '--tty=false','--workdir','/session-state','dev',*native_check]

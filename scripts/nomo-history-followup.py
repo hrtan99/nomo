@@ -7,6 +7,12 @@ spec=importlib.util.spec_from_file_location('nomo_edit_launcher',ROOT/'scripts/n
 storage_spec=importlib.util.spec_from_file_location('nomo_session_storage',ROOT/'scripts/nomo-session-storage.py');storage=importlib.util.module_from_spec(storage_spec);storage_spec.loader.exec_module(storage)
 
 def main(argv=None):
+    argv=list(sys.argv[1:] if argv is None else argv)
+    options=argv[:argv.index('--check')] if '--check' in argv else argv
+    if any(item=='--events-policy-dir' or item.startswith('--events-policy-dir=') for item in options):
+        followup_spec=importlib.util.spec_from_file_location('nomo_event_work_launcher',ROOT/'scripts/nomo-history-work.py')
+        followup=importlib.util.module_from_spec(followup_spec);followup_spec.loader.exec_module(followup)
+        return followup.main(['--event-followup',*argv])
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--read-root',required=True);parser.add_argument('--root',required=True);parser.add_argument('--state',required=True)
     parser.add_argument('--id',required=True);parser.add_argument('--path',required=True);parser.add_argument('--allow',required=True);parser.add_argument('--once',required=True)

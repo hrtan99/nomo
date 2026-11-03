@@ -82,7 +82,7 @@ def show_resume(args, *, show_id):
     if args.events_policy_dir is None:
         print('Read turns and bounded work use this session; each edit requires fresh confirmations.', flush=True)
     else:
-        print('Event recording supports read turns, status and one confirmed work operation with an optional check; followup is unavailable.', flush=True)
+        print('Event recording supports two confirmed work operations, each with an optional check; each needs fresh approval.', flush=True)
     policy = '' if args.events_policy_dir is None else ' --events-policy-dir ' + shlex.quote(args.events_policy_dir)
     print('Resume: nomo-read.sh session-id resume --sessions-dir ' + shlex.quote(args.sessions_dir)
           + ' --id ' + shlex.quote(args.id) + ' --root DIR --allow FILE' + policy + ' --once QUESTION', flush=True)
@@ -122,7 +122,7 @@ def main(argv=None):
     else:
         print('New session: the first question starts a read turn.', flush=True)
         if args.events_policy_dir is not None:
-            print('Event recording supports read turns, status and one confirmed work operation with an optional check; followup is unavailable.', flush=True)
+            print('Event recording supports two confirmed work operations, each with an optional check; each needs fresh approval.', flush=True)
         else:
             print('Work requires a completed first turn.', flush=True)
     if tty and args.once is None:
@@ -146,7 +146,9 @@ def main(argv=None):
                 if args.events_policy_dir is None:
                     print('/work OP_ID EDIT_ROOT PATH "TASK" [--check COMMAND ARG ...] runs one explicitly confirmed work operation.')
                     print('/followup OP_ID EDIT_ROOT PATH "TASK" [--check COMMAND ARG ...] runs the second bounded work operation.')
-                else:print('/work OP_ID EDIT_ROOT PATH "TASK" [--check COMMAND ARG ...] runs one confirmed work operation. Followup is unavailable.')
+                else:
+                    print('/work OP_ID EDIT_ROOT PATH "TASK" [--check COMMAND ARG ...] runs one confirmed work operation.')
+                    print('/followup OP_ID EDIT_ROOT PATH "TASK" [--check COMMAND ARG ...] runs one additional confirmed work operation.')
                 print('Quote arguments containing spaces. No shell interprets the check arguments. /exit leaves the session.')
                 continue
             if question == '/status' or question == '/outputs':
@@ -174,7 +176,6 @@ def main(argv=None):
                     action = words[0][1:]
                     if len(words) < 5 or (len(words) > 5 and (words[5] != '--check' or len(words) == 6)):
                         raise ValueError('expected /work or /followup OP_ID EDIT_ROOT PATH "TASK" [--check COMMAND ARG ...]')
-                    if args.events_policy_dir is not None and action != 'work':raise ValueError('event work does not yet support followup')
                     command = [sys.executable, str(ROOT / 'scripts/nomo-session-id.py'), action,
                                '--sessions-dir', args.sessions_dir, '--id', args.id,
                                '--read-root', args.root, '--root', words[2], '--operation-id=' + words[1],
