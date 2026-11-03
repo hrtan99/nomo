@@ -5,7 +5,7 @@ import selectors
 import subprocess
 import sys
 
-STREAM_LIMIT = 16 * 1024
+STREAM_LIMIT = 64 * 1024
 
 
 def main(argv):
@@ -19,7 +19,7 @@ def main(argv):
         message = ('Cannot execute check: ' + str(error) + '\n').encode('utf-8', errors='backslashreplace')
         sys.stderr.buffer.write(message[:STREAM_LIMIT])
         if len(message) > STREAM_LIMIT:
-            sys.stderr.buffer.write(b'\n[nomo: stderr truncated after 16384 bytes]\n')
+            sys.stderr.buffer.write(('\n[nomo: stderr truncated after ' + str(STREAM_LIMIT) + ' bytes]\n').encode())
         sys.stderr.buffer.flush()
         return 127
     selector = selectors.DefaultSelector()

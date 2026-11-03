@@ -33,12 +33,12 @@ class BoundedCheckTest(unittest.TestCase):
     def test_large_both_streams_are_drained_but_bounded(self):
         result = self.run_check('import os; os.write(1,b"a"*2000000); os.write(2,b"b"*2000000)')
         self.assertEqual(result.returncode, 0)
-        self.assertTrue(result.stdout.startswith(b'a' * 16384))
-        self.assertIn(b'stdout truncated after 16384 bytes', result.stdout)
-        self.assertTrue(result.stderr.startswith(b'b' * 16384))
-        self.assertIn(b'stderr truncated after 16384 bytes', result.stderr)
-        self.assertLess(len(result.stdout), 16500)
-        self.assertLess(len(result.stderr), 16500)
+        self.assertTrue(result.stdout.startswith(b'a' * 65536))
+        self.assertIn(b'stdout truncated after 65536 bytes', result.stdout)
+        self.assertTrue(result.stderr.startswith(b'b' * 65536))
+        self.assertIn(b'stderr truncated after 65536 bytes', result.stderr)
+        self.assertLess(len(result.stdout), 65650)
+        self.assertLess(len(result.stderr), 65650)
 
     def test_check_receives_eof_and_missing_command_is_error(self):
         result = self.run_check('import sys; print(repr(sys.stdin.read()))')
@@ -47,11 +47,11 @@ class BoundedCheckTest(unittest.TestCase):
         self.assertEqual(missing.returncode, 127)
 
     def test_long_launch_error_obeys_stderr_limit(self):
-        result = subprocess.run([sys.executable, str(SCRIPT), '/' + 'x' * 20000], capture_output=True, timeout=10)
+        result = subprocess.run([sys.executable, str(SCRIPT), '/' + 'x' * 100000], capture_output=True, timeout=10)
         self.assertEqual(result.returncode, 127)
         self.assertEqual(result.stdout, b'')
-        self.assertLess(len(result.stderr), 16500)
-        self.assertIn(b'stderr truncated after 16384 bytes', result.stderr)
+        self.assertLess(len(result.stderr), 65650)
+        self.assertIn(b'stderr truncated after 65536 bytes', result.stderr)
 
     def test_owned_capture_forwards_real_streams_and_limits_record(self):
         out, err, capture = Output(), Output(), {}

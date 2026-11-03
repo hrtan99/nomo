@@ -34,15 +34,21 @@ public flow decode(encoded: string, policy: Policy) -> Result<string, string> {
     return Ok(raw);
 }
 
-// Filter the complete bounded stream before taking a display prefix. If the
+// Filter the complete bounded stream before taking an excerpt. If the
 // host cannot transfer the complete capture, it supplies an empty stream and
 // the truncation flag instead of a potentially sensitive partial literal.
 public type Prefix = { value: string, truncated: bool };
 public flow encode_prefix(text: string, truncated: bool, policy: Policy) -> Result<Prefix, string> {
     let clean = match redact(text, policy) { Ok(item) => item.value, Err(error) => { return Err(error); } };
-    var selected = ""; var seen: usize = 0; var clipped = truncated;
-    for character in split(clean, "") limit Iterations(10242) {
-        if character != "" { if seen < 128 { selected = selected + character; } else { clipped = true; } seen = seen + 1; }
+    let size = byte_count(utf8_encode(clean)); let clipped = truncated || size > 4096;
+    var selected = ""; var seen: usize = 0; var marked = false;
+    for character in split(clean, "") limit Iterations(262146) {
+        if character != "" {
+            let width = byte_count(utf8_encode(character));
+            if size <= 4096 || seen + width <= 2000 || seen >= size - 2000 { selected = selected + character; }
+            else if !marked { selected = selected + "\n[... output omitted ...]\n"; marked = true; }
+            seen = seen + width;
+        }
     }
     let encoded = match encode(selected, policy) { Ok(item) => item.value, Err(error) => { return Err(error); } };
     return Ok(Prefix { value = encoded, truncated = clipped });

@@ -82,6 +82,11 @@ class Fake(BaseHTTPRequestHandler):
             elif i==14:
                 assert ctx['current']['result']==CHILD and ('fourth.txt:1' if MULTI else '绿色') in ctx['current']['outcome'];value=READ_SUMMARY
             elif i==15:
+                if MODE=='diagnostic':
+                    prior=ctx['prior_work']; output=prior['output']['fields'][0]
+                    assert prior['check']=='failed' and prior['exit_code']=='1'
+                    assert output['stdout'].startswith('CHECK_BEGIN [REDACTED] ') and 'FAILURE_TAIL_MARKER' in output['stdout'] and '[... output omitted ...]' in output['stdout'], (repr(output['stdout'][:100]),repr(output['stdout'][-100:]))
+                    assert len(output['stdout'].encode()) <= 4096 and output['stdout_truncated'] is True and 'FAILURE_ERROR_MARKER' in output['stderr'] and 'SYNTHETIC_NEVER_PRESENT' not in output['stdout'], (len(output['stdout'].encode()),output['stdout_truncated'],repr(output['stderr'][-300:]))
                 assert ctx['prior_work']['summary']==FIRST_SUMMARY and ctx['prior_work']['summary_source']==FIRST_SOURCE and ctx['prior_work']['selection']==FIRST_SELECTION and ctx['current']['evidence']['summary']==READ_SUMMARY;value=['delegate','Replace green with gold']
             elif i==16:value=['edit','green','gold']
             elif i==17:value=SECOND_SUMMARY
@@ -120,12 +125,14 @@ class Fake(BaseHTTPRequestHandler):
             data=json.dumps({'choices':[{'message':{'role':'assistant','content':content},'finish_reason':'stop'}],
                              'usage':usage},ensure_ascii=False).encode()
             self.server.phases.append(i);self.send_response(200);self.send_header('Content-Length',str(len(data)));self.end_headers();self.wfile.write(data)
-        except Exception:
+        except Exception as error:
+            self.server.failure_detail=(i,repr(error))
+            print("fake failure",self.server.failure_detail,flush=True)
             self.server.failed=True
             try:self.send_error(500)
             except OSError:pass
 
-def work(command,env,before,after):
+def work(command,env,before,after,expected=0):
     master,slave=pty.openpty();settings=termios.tcgetattr(slave);settings[3]&=~(termios.ECHO|termios.ECHONL);termios.tcsetattr(slave,termios.TCSANOW,settings)
     proc=subprocess.Popen(command,stdin=slave,stdout=slave,stderr=slave,env=env,start_new_session=True);os.close(slave)
     output=bytearray();native=application=False;deadline=time.monotonic()+120
@@ -146,8 +153,8 @@ def work(command,env,before,after):
             except OSError:break
             if not data:break
             output.extend(data)
-        if proc.returncode!=0:raise AssertionError('synthetic work failed at marker '+str([x.decode('ascii','replace') for x in bytes(output).splitlines() if x.startswith((b'STAGE ',b'REFUSED ',b'error['))][-4:]))
-        assert native and application and b'Check passed.' in output
+        if proc.returncode!=expected:raise AssertionError('synthetic work failed at marker '+str([x.decode('ascii','replace') for x in bytes(output).splitlines() if x.startswith((b'STAGE ',b'REFUSED ',b'error['))][-4:]))
+        assert native and application and (b'Check passed.' in output if expected == 0 else b'Check failed (exit 1)' in output)
     finally:
         if proc.poll() is None:os.killpg(proc.pid,signal.SIGTERM);proc.wait(timeout=25)
         os.close(master)
@@ -165,6 +172,8 @@ def main():
         for root in (context,current):
             for name in FILES[1:]: (root/name).write_text(((SEARCH_LITERAL+' marker ') if name=='fourth.txt' else ('marker ' if MODE!='third' else 'no match '))+name+'\n')
     workspace=out/'workspace';workspace.mkdir(mode=0o700);(workspace/'note.txt').write_text('before old\n')
+    if MODE=='diagnostic':
+        (workspace/'test_check.py').write_text('import sys, unittest\nclass Check(unittest.TestCase):\n def test_failure(self):\n  sys.stdout.write("CHECK_BEGIN SYNTHETIC_NEVER_PRESENT " + "x"*20000 + " FAILURE_TAIL_MARKER\\n")\n  self.fail("FAILURE_ERROR_MARKER")\n')
     state=out/'state';state.mkdir(mode=0o700);policy=out/'policy';policy.mkdir(mode=0o700)
     (policy/'policy.json').write_text(json.dumps({'format':1,'literals':[SEARCH_LITERAL if MODE=='third' else 'SYNTHETIC_NEVER_PRESENT']}));(policy/'policy.json').chmod(0o600)
     (policy/'binding.key').write_bytes(b'K'*32);(policy/'binding.key').chmod(0o600)
@@ -203,8 +212,9 @@ def main():
         for action,identifier,before,after,task in [('session-work','edit1','old','green',FIRST_TASK),('session-followup','edit2','green','gold',SECOND_TASK)]:
             check='test "$(cat note.txt)" = "before '+after+'" && printf CHECK_OK'
             selected=old if action=='session-work' else project
-            cmd=[str(selected/'scripts/nomo-read.sh'),action,'--read-root',str(current),'--root',str(workspace),'--state',str(state),'--id',identifier,'--path','note.txt','--allow',allowed,'--once',task,'--events-policy-dir',str(policy),'--check','/bin/sh','-c',check]
-            work(cmd,env,before,after);assert (workspace/'note.txt').read_text()=='before '+after+'\n' and not server.failed
+            selected_check=['python3','-m','unittest','test_check'] if MODE=='diagnostic' and action=='session-work' else ['/bin/sh','-c',check]
+            cmd=[str(selected/'scripts/nomo-read.sh'),action,'--read-root',str(current),'--root',str(workspace),'--state',str(state),'--id',identifier,'--path','note.txt','--allow',allowed,'--once',task,'--events-policy-dir',str(policy),'--check',*selected_check]
+            work(cmd,env,before,after,1 if MODE=='diagnostic' and action=='session-work' else 0);assert (workspace/'note.txt').read_text()=='before '+after+'\n' and not server.failed
         assert server.phases==list(range(18))
         if MODE=='third':
             check='test "$(cat note.txt)" = "before plum" && printf CHECK_OK'
@@ -214,8 +224,10 @@ def main():
         status=subprocess.run([str(project/'scripts/nomo-read.sh'),'session-status','--state',str(state),'--events-policy-dir',str(policy)],env=env,capture_output=True,timeout=120)
         views=[json.loads(line.removeprefix(b'EVENT VIEW ')) for line in status.stdout.splitlines() if line.startswith(b'EVENT VIEW {')]
         assert status.returncode==0 and len(views)==1;view=views[0]
-        assert view['work_phase']=='complete' and view['followup_phase']=='complete' and view['check_outcome']=='passed' and view['followup_check_outcome']=='passed'
+        assert view['work_phase']=='complete' and view['followup_phase']=='complete' and view['check_outcome']==('failed' if MODE=='diagnostic' else 'passed') and view['followup_check_outcome']=='passed'
         assert view['work_settled_calls']==7 and view['followup_settled_calls']==7
+        if MODE=='diagnostic':
+            saved=json.loads(view['check_stdout']); assert saved.startswith('CHECK_BEGIN [REDACTED] ') and 'FAILURE_TAIL_MARKER' in saved and '[... output omitted ...]' in saved and view['check_stdout_truncated']
         assert view['work_settled_tokens']==(47104 if BASELINE else 51200 if OLD_PROJECT else 61440) and view['followup_settled_tokens']==(51200 if OLD_PROJECT else 61440)
         if MODE=='third':assert len(view['additional_work'])==1 and view['additional_work'][0]['check']['phase']=='complete' and view['additional_work'][0]['result']['generation']==(51200 if OLD_PROJECT else 61440)
         if MODE=='third':
@@ -245,7 +257,7 @@ def main():
             raise AssertionError('synthetic continuation exit='+str(resumed.returncode)+' phases='+str(server.phases)+' markers='+str(markers[-4:]))
         expected=29 if MODE=='third' else 22
         assert resumed.returncode==0 and server.phases==list(range(expected)) and not server.failed
-        print(json.dumps({'status':'passed','scope':'synthetic UTF-8 chat, work, followup and continuation','fake_requests':expected,'fresh_confirmations':3 if MODE=='third' else 2,'workspace':'before plum' if MODE=='third' else 'before gold','checks':'passed','followup_context_bytes':server.read_context_bytes}))
+        print(json.dumps({'status':'passed','scope':'synthetic UTF-8 chat, work, followup and continuation','fake_requests':expected,'fresh_confirmations':3 if MODE=='third' else 2,'workspace':'before plum' if MODE=='third' else 'before gold','checks':'first failed as intended; followup passed' if MODE=='diagnostic' else 'passed','followup_context_bytes':server.read_context_bytes}))
     finally:server.shutdown();server.server_close();thread.join(timeout=5);shutil.rmtree(out)
 
 if __name__=='__main__':main()

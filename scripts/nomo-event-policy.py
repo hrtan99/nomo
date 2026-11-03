@@ -44,3 +44,16 @@ def read_private(directory):
         binding = hmac.new(key, b'nomo-event-policy-v1\0' + policy, hashlib.sha256).hexdigest()
         return path, policy, binding
     finally:os.close(root)
+
+
+def write_tmp(directory, data):
+    target = Path(directory)
+    target.mkdir(mode=0o700)
+    fd = os.open(target / 'policy.json', os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | os.O_CLOEXEC, 0o600)
+    try:
+        view = memoryview(data)
+        while view:
+            written = os.write(fd, view)
+            if written <= 0:raise OSError('private policy transfer failed')
+            view = view[written:]
+    finally:os.close(fd)

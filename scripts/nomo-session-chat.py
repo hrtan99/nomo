@@ -170,6 +170,17 @@ def offer_recovery(args, operation_id, action):
         print('Recovery decision was not confirmed: ' + str(error), file=sys.stderr, flush=True)
         return False
 
+def chat_turn(args, question, starting, natural, tty):
+    command = [sys.executable, str(ROOT / 'scripts/nomo-session-id.py'), 'start' if starting else 'resume', '--sessions-dir', args.sessions_dir]
+    if not starting: command += ['--id', args.id]
+    command += ['--root', args.root, '--allow=' + args.allow, '--once=' + question]
+    if args.events_policy_dir is not None: command += ['--events-policy-dir', args.events_policy_dir]
+    if natural: command += ['--natural-work']
+    observer = NaturalObserver(['*'] if args.discover else args.allow.split(','))
+    code = edit.run_owned(command, dict(os.environ), diagnostic=observer, **({} if tty else {'input_data': b''}))
+    return code, observer
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--sessions-dir', required=True)
@@ -307,20 +318,8 @@ def main(argv=None):
                 return 64
             continue
         starting = args.id is None
-        command = [sys.executable, str(ROOT / 'scripts/nomo-session-id.py'), 'start' if starting else 'resume',
-                   '--sessions-dir', args.sessions_dir]
-        if not starting:
-            command += ['--id', args.id]
-        command += ['--root', args.root, '--allow=' + args.allow, '--once=' + question]
-        if args.events_policy_dir is not None:
-            command += ['--events-policy-dir', args.events_policy_dir]
         natural = tty and args.once is None
-        if natural:command += ['--natural-work']
-        options = {} if tty else {'input_data': b''}
-        observer = NaturalObserver(['*'] if args.discover else args.allow.split(','))
-        if observer is not None:
-            options['diagnostic'] = observer
-        code = edit.run_owned(command, dict(os.environ), **options)
+        code, observer = chat_turn(args, question, starting, natural, tty)
         if code:
             print('Turn stopped; inspect session status before continuing.', file=sys.stderr, flush=True)
             show_status_hint(args, observer.identifier if starting else args.id)
@@ -339,13 +338,7 @@ def main(argv=None):
             else:
                 extra_read = True
                 print('The agent is gathering more evidence using one additional chat turn (up to 6 calls and 24576 output tokens for new sessions).', flush=True)
-            command = [sys.executable, str(ROOT / 'scripts/nomo-session-id.py'), 'resume',
-                       '--sessions-dir', args.sessions_dir, '--id', args.id, '--root', args.root,
-                       '--allow=' + args.allow, '--once=' + question]
-            if natural:command += ['--natural-work']
-            if args.events_policy_dir is not None:command += ['--events-policy-dir', args.events_policy_dir]
-            observer = NaturalObserver(['*'] if args.discover else args.allow.split(','))
-            code = edit.run_owned(command, dict(os.environ), diagnostic=observer, **({} if tty else {'input_data': b''}))
+            code, observer = chat_turn(args, question, False, natural, tty)
             if code:
                 print('Additional read stopped; inspect session status before continuing.', file=sys.stderr, flush=True)
                 show_status_hint(args, args.id)

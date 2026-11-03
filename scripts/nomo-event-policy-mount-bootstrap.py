@@ -18,16 +18,7 @@ def prepare(source, target, expected):
     _, data, actual = policy.read_private(source)
     if not hmac.compare_digest(actual, expected):
         raise ValueError('event policy changed before dispatch')
-    target = Path(target)
-    target.mkdir(mode=0o700)
-    fd = os.open(target / 'policy.json', os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | os.O_CLOEXEC, 0o600)
-    try:
-        view = memoryview(data)
-        while view:
-            count = os.write(fd, view)
-            if count <= 0:raise OSError('private policy transfer failed')
-            view = view[count:]
-    finally:os.close(fd)
+    policy.write_tmp(target, data)
 
 
 def main():

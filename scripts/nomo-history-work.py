@@ -80,17 +80,17 @@ def main(argv=None):
                 print('Check was not started; inspect recorded status.',file=sys.stderr,flush=True);return 1
             print('Running the requested check offline in the edited workspace (60-second limit; stdin is closed).',flush=True)
             capture={key:{'data':bytearray(),'truncated':False} for key in ('stdout','stderr')}
-            code=edit.run_owned(check,check_env,capture)
+            code=edit.run_owned(check,check_env,capture,capture_limit=65536 if policy is not None else 4096)
             if code<0 or code>=124:
                 print('Check outcome is uncertain; recorded running state is retained, without retry.',file=sys.stderr,flush=True);return code or 1
             outcome='passed' if code==0 else 'failed'
             if policy is not None:
                 stdout=edit.format_check_capture(capture['stdout'],env);stderr=edit.format_check_capture(capture['stderr'],env)
-                out_truncated=capture['stdout']['truncated'] or len(stdout.encode('utf-8'))>8192
-                err_truncated=capture['stderr']['truncated'] or len(stderr.encode('utf-8'))>8192
+                out_truncated=capture['stdout']['truncated'] or len(stdout.encode('utf-8'))>65536
+                err_truncated=capture['stderr']['truncated'] or len(stderr.encode('utf-8'))>65536
                 if out_truncated:stdout=''
                 if err_truncated:stderr=''
-                print('Complete captured streams are filtered before saving at most 128 characters; incomplete streams are omitted and marked truncated.',flush=True)
+                print('Complete captured streams are filtered before saving up to 4096 UTF-8 bytes, with the middle omitted when necessary; incomplete streams are omitted and marked truncated.',flush=True)
                 payload=(json.dumps([stdout,stderr],ensure_ascii=True)+'\n').encode()
                 if checkpoint('finish',outcome,str(code),str(out_truncated).lower(),str(err_truncated).lower(),input_data=payload):
                     print('Check finished but its result and selected output were not confirmed in session state.',file=sys.stderr,flush=True);return 1
