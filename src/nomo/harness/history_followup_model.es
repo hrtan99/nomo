@@ -4,7 +4,6 @@ import nomo.harness.harness_tool_contract.Context as ReadContext;
 import nomo.harness.harness_work_contract.Context as WorkContext;
 import nomo.harness.harness_work_model.{plan_system, child_system, history_aggregate_system};
 import nomo.harness.harness_tool_chat_contract.Previous;
-import nomo.harness.legacy_stage_contracts.{ReadMainStage, EditTextStage};
 import std.agent.message.Message;
 import std.json.{JsonValue, stringify};
 import std.codec.text.utf8_encode;

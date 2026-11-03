@@ -2,7 +2,6 @@ module nomo.session.history_work_guard;
 
 import std.memory.{get_entry, prepare_put, operation_ref, commit, WriteCondition, MemoryVersion, MemoryEntry,
     WriteOutcome, MemoryWriteChange, StorageDurability, Missing, Match};
-import nomo.session.chat_session_contract.Session;
 import nomo.session.chat_history.{Entry, load as load_chat};
 import nomo.session.edit_operation.selector_error;
 import nomo.model.read_protocol.question_error;

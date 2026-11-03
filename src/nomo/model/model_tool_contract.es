@@ -6,9 +6,8 @@ import std.json.{JsonValue, parse, stringify};
 import std.agent.message.Message;
 import nomo.core.text.printable;
 import nomo.harness.model_plan_diagnostic.response_error;
-import nomo.tools.path_policy.valid_path;
 public import nomo.model.tool_context.{Context, allowed_error, candidate_error};
-import nomo.core.conversation.{Event, State, fresh, charge};
+import nomo.core.conversation.{State, fresh, charge};
 
 public type Action = { operation: string, files: Array<string>, literal: string, text: string };
 public type Session = { history: State, calls: usize, tokens: usize, tools: usize, scan: usize };

@@ -107,7 +107,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyR
                 Some(second) => {
                     let budget = BudgetFacts { work_calls = work_calls, work_generation = work_generation,
                         chat_used_calls = running.invocation.usage.calls, chat_used_generation = running.invocation.usage.tokens,
-                        chat_reserved_calls = if running.format == 6 { 6 } else { 4 }, chat_reserved_generation = if running.format == 6 { 12288 } else { 8192 } };
+                        chat_reserved_calls = if running.format == 6 || running.format == 8 { 6 } else { 4 }, chat_reserved_generation = if running.format == 6 || running.format == 8 { 12288 } else { 8192 } };
                     run_after_followup(request, allowed, running.invocation, value, second, [], [], budget)
                 }
                 None() => run_after_work(request, allowed, running.invocation, value, []),
@@ -138,8 +138,8 @@ public flow status(args: Array<string>) -> i32 ![Console, Memory, Error<StorageE
         else { println("EVENTS recorded turns=" + to_string_i32(saved.invocation.admitted) + "; free text redacted, atomically stored with chat"); }
         for event in entry.events limit Iterations(48) { println("EVENT " + event.role + " " + event.kind + " " + event.name + " " + event.text); }
     }
-    let pending_calls = if saved.phase == "running" { if saved.format == 6 { 6 } else { 4 } } else { 0 };
-    let pending_generation = if saved.phase == "running" { if saved.format == 6 { 12288 } else { 8192 } } else { 0 };
+    let pending_calls = if saved.phase == "running" { if saved.format == 6 || saved.format == 8 { 6 } else { 4 } } else { 0 };
+    let pending_generation = if saved.phase == "running" { if saved.format == 6 || saved.format == 8 { 12288 } else { 8192 } } else { 0 };
     println("CHAT BUDGET used_calls=" + to_string_i32(saved.invocation.usage.calls) + " used_generation=" +
         to_string_i32(saved.invocation.usage.tokens) + " reserved_calls=" + to_string_i32(pending_calls) +
         " reserved_generation=" + to_string_i32(pending_generation));

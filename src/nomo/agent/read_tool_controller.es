@@ -1,15 +1,16 @@
 module nomo.agent.read_tool_controller;
 
-import std.text.{len, to_string_usize};
+import std.text.{len, to_string_usize, contains};
 import std.io.println;
 import nomo.core.read_text.{safe, bounded};
 import nomo.harness.model_plan_diagnostic.response_text;
-import nomo.core.conversation.{State, capacity_error, stop, charge};
+import nomo.core.conversation.{State, stop, charge};
+import nomo.agent.model_tool_controller.capacity;
 import nomo.agent.loop.{emit, failure};
 import nomo.agent.conversation_events.emit as emit_event;
 import nomo.model.conversation_output.ConversationOutput;
 import nomo.model.model_tool_contract.{Session, Limits, Context, candidate_error, context_error, budget_error, charge_action, default_limits};
-import nomo.tools.read_contract.{outcome, ReadTools};
+import nomo.tools.read_contract.{outcome, Outcome, ReadTools};
 import nomo.tools.read_display.display;
 import nomo.model.read_protocol.{question_error, decode_child, compact_frame};
 import nomo.context.selection.{EventPolicy, SelectionRefusal, select as select_context};
@@ -32,10 +33,6 @@ flow history(session: Session, state: State) -> Session {
 flow failed(session: Session, message: string, status: i32) -> LoopTurn {
     let result = failure(session.history, message, status);
     return LoopTurn { state = history(session, result.state), status = status };
-}
-
-flow capacity(session: Session, slots: usize, characters: usize) -> string {
-    return capacity_error(session.history, slots, characters);
 }
 
 // Retain all task, parent, tool and confirmed outcome events. Only controller
@@ -94,6 +91,14 @@ flow model_attempt(previous: Session, allowed: Array<string>, limits: Limits, fi
     return Ok(ModelAttempt { state = session, context = context });
 }
 
+flow tool_failure(result: Outcome) -> string {
+    if contains(result.text, "file is not UTF-8") { return "non-UTF-8 file"; }
+    if contains(result.text, "file exceeds 16384 bytes") || contains(result.text, "file exceeds 2048 bytes") { return "per-file byte limit"; }
+    if contains(result.text, "file exceeds remaining scan allowance") { return "scan allowance"; }
+    if result.status == "truncated" { return "match limit"; }
+    return if result.status == "unsupported" { "unsupported output" } else { if result.status == "refused" { "refused input or limit" } else { "invalid tool outcome" } };
+}
+
 // A chat child may inspect several explicit candidates under a reserved limit.
 flow run_multistep(raw: string, allowed: Array<string>, previous: Session, private_progress: bool) -> LoopTurn {
     if previous.history.stopped { return LoopTurn { state = previous, status = 4 }; }
@@ -112,14 +117,18 @@ flow run_multistep(raw: string, allowed: Array<string>, previous: Session, priva
         let action = match decode_child(response, allowed, tools == 3) { Ok(value) => value, Err(error) => { return failed(session, error, 3); } };
         if action.operation == "final" { return LoopTurn { state = history(session, emit_mode(session.history, "assistant", "final", "", action.text, private_progress)), status = 0 }; }
         session = history(session, emit_mode(session.history, "model", "request", action.operation, compact_frame(response), private_progress));
-        session = Session { history = charge(session.history), calls = session.calls, tokens = session.tokens, tools = session.tools + 1, scan = session.scan + 16384 };
+        session = Session { history = charge(session.history), calls = session.calls, tokens = session.tokens, tools = session.tools + 1, scan = session.scan + 4194560 };
         tools = tools + 1;
         if private_progress { println("CHILD STAGE tool"); }
-        let result = if action.operation == "read" { display(perform ReadTools.read(action.files[0])) } else { display(perform ReadTools.search(action.files, action.literal)) };
-        if result.status != "complete" || !safe(result.text, 65536) {
+        var files = action.files;
+        if action.operation == "search" && files[0] == "*" { for name in allowed limit Iterations(256) { files = files.push(name); } }
+        let result = if action.operation == "read" { display(perform ReadTools.read(files[0])) } else { display(perform ReadTools.search(files, action.literal)) };
+        if result.status == "incomplete" { println("Search incomplete: results are partial; some candidates were skipped or the match limit was reached."); }
+        if (result.status != "complete" && !(action.operation == "search" && result.status == "incomplete")) || !safe(result.text, 65536) {
+            println("CHILD TOOL FAILURE operation=" + action.operation + " category=" + tool_failure(result));
             return LoopTurn { state = history(session, emit_mode(session.history, "tool", "error", action.operation, result.status + ": " + result.text, private_progress)), status = 3 };
         }
-        session = history(session, emit_mode(session.history, "tool", "complete", action.operation, "complete: " + result.text, private_progress));
+        session = history(session, emit_mode(session.history, "tool", "complete", action.operation, result.status + ": " + result.text, private_progress));
     }
     return failed(session, "child model reservation exhausted", 4);
 }
@@ -147,6 +156,7 @@ flow run_mode(raw: string, allowed: Array<string>, limits: Limits, previous: Ses
     if action.operation == "final" {
         return LoopTurn { state = history(session, emit_mode(session.history, "assistant", "final", "", action.text, private_progress)), status = 0 };
     }
+    if action.operation == "search" && action.files[0] == "*" { return failed(session, "whole-scope search requires a multi-step reservation", 3); }
     // Selected request + bounded actual outcome, with a separate terminal reserve.
     let tool_full = capacity(session, 2, len(first_raw) + 65556);
     if tool_full != "" { return failed(history(session, stop(session.history)), tool_full, 4); }

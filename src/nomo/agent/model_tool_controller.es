@@ -21,7 +21,7 @@ flow failed(session: Session, message: string, status: i32) -> LoopTurn {
     return LoopTurn { state = history(session, result.state), status = status };
 }
 
-flow capacity(session: Session, slots: usize, characters: usize) -> string {
+public flow capacity(session: Session, slots: usize, characters: usize) -> string {
     return capacity_error(session.history, slots, characters);
 }
 

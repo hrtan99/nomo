@@ -7,7 +7,6 @@ import std.fs.IOError as FileError;
 import std.effects.Fs;
 import nomo.cli.harness_work_args.{Work, parse_unicode as parse};
 import nomo.harness.harness_work_contract.Ledger;
-import nomo.harness.harness_work_contract.fresh as fresh_ledger;
 import nomo.harness.read_model_tools.work_child_turn;
 import nomo.harness.legacy_string_stages.{LegacyStringStages, LegacyEditStages};
 import nomo.harness.history_work_model.{read_main, plan, child, aggregate};

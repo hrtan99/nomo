@@ -197,7 +197,7 @@ def main(argv=None):
             print('Input cancelled.', file=sys.stderr)
             return 130
     if args.discover: print('Discovery searches up to four directory levels, 64 directories and 256 files; hidden paths, unsupported names and common dependency/build directories are excluded.', flush=True)
-    print('A read turn may reserve up to 6 model calls, 12288 output tokens and 3 read/search operations.', flush=True)
+    print('A read turn may reserve up to 6 model calls, 12288 output tokens and 3 read/search operations, with up to 4 MiB delivered and 256 overflow-probe bytes per operation.', flush=True)
     if args.id is not None:
         show_resume(args, show_id=True)
     else:

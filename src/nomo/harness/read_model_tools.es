@@ -9,7 +9,6 @@ import nomo.core.read_text.bounded;
 import nomo.model.read_protocol.{question_error, decode_plan, decode_work_plan, work_plan_rejection};
 import nomo.harness.read_tool_contract.{Context, Ledger, Observed, fresh, bump, settle, inspect, inspect_work, context_error};
 import nomo.harness.harness_tool_contract.{work_bump, work_settle};
-import nomo.harness.harness_work_model.read_main;
 import nomo.harness.model_plan_diagnostic.{returned_text, response_text};
 import nomo.harness.legacy_string_stages.LegacyStringStages;
 import nomo.harness.legacy_stage_contracts.ReadMainStage;

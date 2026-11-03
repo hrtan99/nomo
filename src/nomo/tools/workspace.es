@@ -7,7 +7,8 @@ import std.text.{len, split, contains, starts_with, to_string_usize};
 import std.agent.message.Message;
 import std.collections.len as count;
 import nomo.core.text.printable;
-import nomo.tools.path_policy.valid_path as canonical_path;
+public import nomo.tools.path_policy.valid_path;
+import nomo.model.tool_context.candidate_error;
 import std.fs.IOError as FileError;
 import std.effects.Fs;
 import nomo.tools.read_contract.{NomoRead, NomoSearch};
@@ -15,11 +16,6 @@ public import nomo.tools.read_contract.{Outcome, outcome, display};
 
 public type ReadOnlyRoot;
 impl ReadOnlyRoot ~ Region;
-// Conservative, canonical relative names only; the Host still enforces the region.
-public flow valid_path(name: string) -> bool {
-    return canonical_path(name);
-}
-
 flow target(name: string) -> WorkspacePath<ReadOnlyRoot> {
     let checked: Result<WorkspacePath<ReadOnlyRoot>, IOError> = path<ReadOnlyRoot>(name);
     return match checked {
@@ -96,29 +92,22 @@ public flow list_directory(name: string) -> Outcome {
 // files and 16384 delivered bytes total, with 16384 lines/file and 8 matches.
 // A Host overflow check may probe one additional byte, never return a prefix.
 flow search_with(names: Array<string>, literal: string, maximum: usize) -> Outcome ![Fs.read<ReadOnlyRoot>, Error<FileError>, Error<IndexError>] {
-    if count(names) == 0 || count(names) > 4 { return outcome("refused", "search requires 1..4 explicit files", 0); }
+    if count(names) == 0 || count(names) > (if maximum == 4194304 { 256 } else { 4 }) { return outcome("refused", "search file count exceeds scope", 0); }
     if len(literal) == 0 || len(literal) > 64 || !printable(literal) { return outcome("refused", "literal must be 1..64 printable ASCII characters", 0); }
-    for name in names limit Iterations(4) {
-        if !valid_path(name) { return outcome("refused", "invalid relative path", 0); }
-    }
-    var i: usize = 0;
-    while i < count(names) limit Iterations(4) {
-        var j = i + 1;
-        while j < count(names) limit Iterations(4) {
-            if names[i] == names[j] { return outcome("refused", "duplicate search file", 0); }
-            j = j + 1;
-        }
-        i = i + 1;
-    }
+    let invalid = candidate_error(names); if invalid != "" { return outcome("refused", invalid, 0); }
     var output = "";
     var scanned: usize = 0;
-    var matches: usize = 0;
-    for name in names limit Iterations(4) {
+    var matches: usize = 0; var skipped: usize = 0; var skipped_names = "";
+    for name in names limit Iterations(256) {
         let remaining = maximum - scanned;
         let per_file = if maximum == 4096 { 2048 } else { 16384 };
         let bound = if remaining < per_file { remaining } else { per_file };
         let file = read_bounded(name, bound);
-        if file.status != "complete" { return outcome(file.status, name + ": " + file.text, scanned); }
+        if file.status != "complete" {
+            if maximum != 4194304 { return outcome(file.status, name + ": " + file.text, scanned); }
+            skipped = skipped + 1;
+            if len(skipped_names) + len(name) < 1024 { skipped_names = skipped_names + name + "\n"; }
+        } else {
         let lines = split(file.text, "\n");
         let line_limit = if maximum == 4096 { 128 } else { 16385 };
         if count(lines) > line_limit { return outcome("refused", "file exceeds line limit", scanned); }
@@ -128,16 +117,24 @@ flow search_with(names: Array<string>, literal: string, maximum: usize) -> Outco
             line = line + 1;
             if contains(text, literal) {
                 let entry = name + ":" + to_string_usize(line) + "\n";
-                if matches >= 8 || len(output) + len(entry) > 1024 { return outcome("truncated", output, scanned); }
+                if matches >= 8 || len(output) + len(entry) > 1024 { return outcome(if maximum == 4194304 { "incomplete" } else { "truncated" }, if maximum == 4194304 { "match limit reached; partial results\n" + output } else { output }, scanned); }
                 output = output + entry;
                 matches = matches + 1;
             }
         }
+        }
     }
+    if skipped > 0 { return outcome("incomplete", "skipped " + to_string_usize(skipped) + " unsupported or oversized files; partial results; skipped names (may be partial):\n" + skipped_names + "matches:\n" + output, scanned); }
     return outcome("complete", output, scanned);
 }
 
 public flow search_files(names: Array<string>, literal: string) -> Outcome ![Fs.read<ReadOnlyRoot>, Error<FileError>, Error<IndexError>] ~ NomoSearch<ReadOnlyRoot> {
+    if count(names) > 0 && names[0] == "*" {
+        if count(names) > 257 { return outcome("refused", "search file count exceeds scope", 0); }
+        var selected: Array<string> = []; var i: usize = 1;
+        while i < count(names) limit Iterations(256) { selected = selected.push(names[i]); i = i + 1; }
+        return search_with(selected, literal, 4194304);
+    }
     return search_with(names, literal, 16384);
 }
 public flow search_legacy(names: Array<string>, literal: string) -> Outcome ![Fs.read<ReadOnlyRoot>, Error<FileError>, Error<IndexError>] ~ NomoSearch<ReadOnlyRoot> {

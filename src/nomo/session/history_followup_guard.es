@@ -3,7 +3,6 @@ module nomo.session.history_followup_guard;
 import std.memory.{get_entry, prepare_put, operation_ref, commit, WriteCondition, MemoryVersion, MemoryEntry,
     WriteOutcome, MemoryWriteChange, StorageDurability, Missing, Match};
 import std.text.len;
-import nomo.session.chat_session_contract.Session;
 import nomo.session.chat_history.{Entry, load as load_chat};
 import nomo.session.history_work_guard.{Record as WorkRecord, inspect as inspect_work};
 import nomo.session.history_check_guard.{Record as CheckRecord, inspect as inspect_check};

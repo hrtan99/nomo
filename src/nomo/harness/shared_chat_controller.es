@@ -51,9 +51,9 @@ flow stage(turn: i32, phase: string, before: Ledger, local: Ledger, multi: bool)
     println("TURN " + to_string_i32(turn) + " STAGE " + phase + " " + numbers(total(before, local)) +
         " reserved_steps=" + to_string_i32(steps) + " reserved_calls=" + to_string_i32(calls) +
         " reserved_tokens=" + to_string_i32(calls * 2048) + " reserved_tools=" + to_string_i32(tools) +
-        " reserved_scan=" + to_string_i32(tools * 16384));
+        " reserved_scan=" + to_string_i32(tools * if multi { 4194560 } else { 16384 }));
     if phase == "child" {
-        println(if multi { "RESERVATION child-1 steps=7 calls=4 tokens=8192 tools=3 scan=49152 tail_steps=2 tail_calls=1 tail_tokens=2048 unresolved=true" } else { "RESERVATION child-1 steps=3 calls=2 tokens=4096 tools=1 scan=16384 tail_steps=2 tail_calls=1 tail_tokens=2048 unresolved=true" });
+        println(if multi { "RESERVATION child-1 steps=7 calls=4 tokens=8192 tools=3 scan=12583680 tail_steps=2 tail_calls=1 tail_tokens=2048 unresolved=true" } else { "RESERVATION child-1 steps=3 calls=2 tokens=4096 tools=1 scan=16384 tail_steps=2 tail_calls=1 tail_tokens=2048 unresolved=true" });
     }
 }
 
@@ -89,7 +89,7 @@ flow execute(request: string, allowed: Array<string>, prior: Previous, before: L
     }
     println("SETTLED child-1 " + numbers(total(before, state)) + " released_steps=" + to_string_i32((if multi { 9 } else { 5 }) - state.steps) +
         " released_calls=" + to_string_i32((if multi { 5 } else { 3 }) - state.calls) + " released_tokens=" + to_string_i32((if multi { 10240 } else { 6144 }) - state.tokens) +
-        " released_tools=" + to_string_i32((if multi { 3 } else { 1 }) - state.tools) + " released_scan=" + to_string_i32((if multi { 49152 } else { 16384 }) - state.scan) + " unresolved=false");
+        " released_tools=" + to_string_i32((if multi { 3 } else { 1 }) - state.tools) + " released_scan=" + to_string_i32((if multi { 12583680 } else { 16384 }) - state.scan) + " unresolved=false");
     if child.status != 0 { return refused(state, "child returned failure; no aggregation", true); }
     if !(if unicode { unicode_bounded(observed.result, 256) } else { bounded(observed.result, 256) }) { return refused(state, "invalid bounded child result", true); }
     if private_progress { println("EVENT child-1 -> main result child-1: [REDACTED]"); }

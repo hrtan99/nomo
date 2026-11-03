@@ -73,7 +73,7 @@ public flow seed(request: string, prior: Previous) -> State {
     return state;
 }
 
-flow same(left: Event, right: Event) -> bool {
+public flow same(left: Event, right: Event) -> bool {
     return left.role == right.role && left.kind == right.kind && left.name == right.name && left.text == right.text;
 }
 
