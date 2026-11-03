@@ -142,7 +142,7 @@ public flow session_combine(previous: Ledger, local: Ledger) -> Result<Ledger, s
 
 // Check every seed and completed tool action before admitting a multi-step result.
 public flow inspect_multi_turn(child: Session, status: i32, request: string, task: string, allowed: Array<string>, prior: Previous) -> Result<Observed, string> {
-    if prior_error(prior) != "" || candidate_error(allowed) != "" || !bounded(request, 128) || !bounded(task, 512) { return Err("invalid child context"); }
+    if prior_error(prior) != "" || candidate_error(allowed) != "" || !bounded(request, 512) || !bounded(task, 512) { return Err("invalid child context"); }
     let tool_failure = status == 3 && child.tools > 0 && child.calls == child.tools;
     if (status != 0 && status != 3) || child.history.stopped || child.tools > 3 || (!tool_failure && child.calls != child.tools + 1) || child.tokens != child.calls * 4096 || child.scan != child.tools * 4194560 { return Err("invalid multi-step child ledger"); }
     let steps: i32 = if child.tools == 3 { 7 } else { if child.tools == 2 { 5 } else { if child.tools == 1 { 3 } else { 1 } } };

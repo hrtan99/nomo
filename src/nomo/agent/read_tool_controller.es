@@ -12,7 +12,7 @@ import nomo.model.conversation_output.ConversationOutput;
 import nomo.model.model_tool_contract.{Session, Limits, Context, candidate_error, context_error, budget_error, charge_action, default_limits};
 import nomo.tools.read_contract.{outcome, Outcome, ReadTools};
 import nomo.tools.read_display.display;
-import nomo.model.read_protocol.{question_error, decode_child, compact_frame};
+import nomo.model.read_protocol.{decode_child, compact_frame};
 import nomo.harness.legacy_string_stages.LegacyChildModel;
 public import nomo.model.model_tool_contract.LoopTurn;
 type ModelAttempt = { state: Session, context: Context };
@@ -104,7 +104,7 @@ flow run_mode(raw: string, allowed: Array<string>, limits: Limits, previous: Ses
     if previous.history.stopped { return LoopTurn { state = previous, status = 4 }; }
     let full = capacity(previous, 1, if work { 512 } else { 128 });
     if full != "" { return failed(history(previous, stop(previous.history)), full, 4); }
-    var invalid = if work && !bounded(raw, 512) { "work delegation requires 1..512 safe UTF-8 bytes" } else { if work { "" } else { question_error(raw) } };
+    var invalid = if work && !bounded(raw, 512) { "work delegation requires 1..512 safe UTF-8 bytes" } else { if work || bounded(raw, 128) { "" } else { "question requires 1..128 safe UTF-8 bytes, not only spaces" } };
     if invalid == "" { invalid = candidate_error(allowed); }
     if invalid != "" { return failed(previous, invalid, 2); }
     var session = history(previous, emit_mode(previous.history, "user", "input", "", raw, private_progress));

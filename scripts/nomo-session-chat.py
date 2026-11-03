@@ -20,7 +20,7 @@ spec.loader.exec_module(edit)
 
 # A producer that leaves stdin open must not keep a one-shot run waiting forever.
 PIPE_INPUT_TIMEOUT = 2.0
-PIPE_PAYLOAD_BYTES = 128
+PIPE_PAYLOAD_BYTES = 512
 
 
 def piped_question(stream):
@@ -37,13 +37,13 @@ def piped_question(stream):
             break
         data.extend(chunk)
         if len(data) > PIPE_PAYLOAD_BYTES + 2:
-            raise ValueError('piped question exceeds 128 UTF-8 bytes')
+            raise ValueError('piped question exceeds 512 UTF-8 bytes')
     if data.endswith(b'\n'):
         del data[-1:]
         if data.endswith(b'\r'):
             del data[-1:]
     if len(data) > PIPE_PAYLOAD_BYTES:
-        raise ValueError('piped question exceeds 128 UTF-8 bytes')
+        raise ValueError('piped question exceeds 512 UTF-8 bytes')
     if any(byte < 32 or byte == 127 for byte in data):
         raise ValueError('piped input must contain exactly one printable line')
     try:
@@ -362,8 +362,8 @@ def main(argv=None):
                     show_status_hint(args, args.id)
                     return code
                 continue
-        if not question.strip():
-            print('Enter a non-empty question.', file=sys.stderr)
+        if not edit.safe_read_question(question):
+            print('REFUSED question requires 1..512 safe UTF-8 bytes and non-empty text.', file=sys.stderr)
             if args.once is not None:
                 return 64
             continue

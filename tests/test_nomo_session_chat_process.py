@@ -14,11 +14,11 @@ class ProcessTests(unittest.TestCase):
  def test_pipe_one_line_and_eof_run_one_read_only_turn(self):
   p=self.run_pipe('提问 test\r\n'.encode());self.assertEqual(0,p.returncode,p.stderr);rec=json.loads(self.record.read_text());self.assertIn('--once=提问 test',rec['args']);self.assertEqual(0,rec['stdin_bytes']);self.assertIn(b'SYNTHETIC RESUME COMPLETED',p.stdout)
  def test_empty_extra_lines_invalid_utf8_and_too_long_refused(self):
-  for raw in (b'',b'\n',b'  \n',b'one\ntwo\n',b'one\n\n',b'\xff\n',b'a'*129+b'\n','é'.encode()*65+b'\n',b'a\rb\n',b'a\x00b\n'):
+  for raw in (b'',b'\n',b'  \n',b'one\ntwo\n',b'one\n\n',b'\xff\n',b'a'*513+b'\n','é'.encode()*257+b'\n',b'a\rb\n',b'a\x00b\n'):
    with self.subTest(raw=raw):
     p=self.run_pipe(raw);self.assertEqual(64,p.returncode);self.assertIn(b'REFUSED',p.stderr);self.assertFalse(self.record.exists())
  def test_exact_limit_and_no_newline(self):
-  p=self.run_pipe(b'a'*128);self.assertEqual(0,p.returncode);self.assertEqual(0,json.loads(self.record.read_text())['stdin_bytes'])
+  p=self.run_pipe(b'a'*512);self.assertEqual(0,p.returncode);self.assertEqual(0,json.loads(self.record.read_text())['stdin_bytes'])
  def test_missing_eof_times_out_and_never_dispatches(self):
   p=subprocess.Popen(self.cmd,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,env=self.env)
   try:

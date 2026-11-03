@@ -110,7 +110,7 @@ public flow same(event: Event, role: string, kind: string, name: string, text: s
 // Host aborts never reach this function and cannot be represented as settled returns.
 public flow inspect_shared(child: Session, status: i32, request: string, task: string, allowed: Array<string>, work: bool, unicode: bool) -> Result<Observed, string> {
     let invalid = child_ledger_error(child, work); if invalid != "" { return Err(invalid); }
-    if !(if unicode { utf8_bounded(request, 128) } else { bounded(request, 128) }) || !(if unicode { utf8_bounded(task, if work { 512 } else { 128 }) } else { bounded(task, 128) }) || (if unicode { candidate_error(allowed) } else { allowed_error(allowed) }) != "" { return Err("invalid selected child context"); }
+    if !(if unicode { utf8_bounded(request, 512) } else { bounded(request, 128) }) || !(if unicode { utf8_bounded(task, if work { 512 } else { 128 }) } else { bounded(task, 128) }) || (if unicode { candidate_error(allowed) } else { allowed_error(allowed) }) != "" { return Err("invalid selected child context"); }
     let events = child.history.events;
     let size = count(events);
     if size < 4 || size > 7 || child.history.stopped || child.history.characters > (if unicode { 262144 } else { 8192 }) { return Err("invalid child history"); }

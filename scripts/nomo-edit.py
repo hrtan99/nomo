@@ -26,7 +26,7 @@ def safe_text(value, maximum):
 
 
 def safe_read_question(value):
-    return bool(value.strip()) and safe_text(value, 128)
+    return bool(value.strip()) and safe_text(value, 512)
 
 
 def safe_path(value, maximum=128):
@@ -140,7 +140,7 @@ def validate_history_work(args, workspace, path_maximum):
     if not deadline.isascii() or not deadline.isdigit() or len(deadline)>7 or not 2000<=int(deadline)<=3600000:raise ValueError('model request deadline must be an integer from 2000 to 3600000')
     names=args.allow.split(',')
     if not 1<=len(names)<=4 or len(set(names))!=len(names) or any(not safe_path(n, path_maximum) for n in names) or len(args.allow.encode('utf-8'))>195:raise ValueError('allow must name one to four distinct safe relative files')
-    if not safe_read_question(args.once):raise ValueError('work task must be 1..128 safe nonblank UTF-8 bytes')
+    if not safe_read_question(args.once):raise ValueError('work task must be 1..512 safe nonblank UTF-8 bytes')
     selected=Path(args.path)
     if not args.id or not safe_path(args.path):raise ValueError('select an ID and relative workspace file')
     current=workspace

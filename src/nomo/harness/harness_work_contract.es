@@ -61,7 +61,7 @@ public flow bump_edit(state: Ledger, call: bool) -> Result<Ledger, string> {
 }
 
 flow selected_error(value: Evidence, complete: bool) -> string {
-    if !bounded(value.request, 128) || !bounded(value.task, 512) || !bounded(value.result, 256) ||
+    if !bounded(value.request, 512) || !bounded(value.task, 512) || !bounded(value.result, 256) ||
         !bounded(value.outcome, 65546) || !starts_with(value.outcome, "complete: ") { return "invalid read evidence text"; }
     let allowed = allowed_error(value.allowed); if allowed != "" { return allowed; }
     let files = allowed_error(value.files); if files != "" { return files; }

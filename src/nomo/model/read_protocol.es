@@ -10,7 +10,7 @@ import nomo.core.read_text.{safe, bounded};
 import nomo.model.model_tool_contract.{Action, candidate_error, read_selection_error};
 
 public flow question_error(raw: string) -> string {
-    return if bounded(raw, 128) { "" } else { "question requires 1..128 safe UTF-8 bytes, not only spaces" };
+    return if bounded(raw, 512) { "" } else { "question requires 1..512 safe UTF-8 bytes, not only spaces" };
 }
 
 // This protocol is scoped to the new non-durable read-only entry. Limits are

@@ -127,6 +127,15 @@ class SessionChatTest(unittest.TestCase):
         self.assertIn('non-empty', err)
         calls.assert_not_called()
 
+    def test_invalid_question_keeps_prompt_and_does_not_dispatch(self):
+        long_chinese = '中' * 171
+        accepted = '中' * 170 + 'ab'
+        code, _, err, calls = self.run_chat(long_chinese + '\n' + accepted + '\n/exit\n')
+        self.assertEqual(code, 0)
+        self.assertIn('512', err)
+        calls.assert_called_once()
+        self.assertIn('--once=' + accepted, calls.call_args.args[0])
+
     def test_non_tty_requires_explicit_one_shot(self):
         code, _, _, calls = self.run_chat('first\nsecond\n', tty=False)
         self.assertEqual(code, 64)
