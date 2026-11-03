@@ -11,6 +11,7 @@ import std.collections.len as count;
 import nomo.model.model_tool_contract.allowed_error;
 import nomo.model.read_protocol.question_error;
 import nomo.harness.read_tool_chat.run_private_turn as run_turn;
+import nomo.harness.natural_work_chat.{run as run_natural, target as natural_target};
 import nomo.harness.history_continue_model.{WorkFacts, CheckOutput, BudgetFacts, run_turn as run_after_work, run_after_followup};
 import nomo.session.check_output.load as load_check_output;
 import nomo.session.check_output_display.render as render_check_output;
@@ -27,7 +28,8 @@ import nomo.session.history_followup_check_guard.inspect as inspect_followup_che
 // Each entry requires an independently selected current read root and grant.
 // Saved conversation is untrusted context; a running reservation never resumes.
 public flow run(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {
-    if count(args) != 5 || (args[0] != "new" && args[0] != "continue") || args[1] != "--allow" || args[3] != "--once" {
+    let natural = count(args) == 6 && args[5] == "--natural-work";
+    if (count(args) != 5 && !natural) || (args[0] != "new" && args[0] != "continue") || args[1] != "--allow" || args[3] != "--once" {
         println("REFUSED expected new|continue --allow FILE[,FILE...] --once QUESTION"); return 1;
     }
     if len(args[2]) > 195 { println("REFUSED allowlist too long"); return 1; }
@@ -98,7 +100,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyR
     if reserved.value != running || reserved.version.opaque != version.opaque { println("REFUSED reservation changed"); return 1; }
     println("RESERVED chat turn; interruption leaves it unresolved and will not retry.");
     println("A final answer is provisional until SAVED confirms durable history.");
-    let result = match work_facts {
+    let result = if natural { run_natural(request, allowed, running.invocation, [], work_facts, followup_facts, []) } else { match work_facts {
         Some(value) => {
             match followup_facts {
                 Some(second) => {
@@ -111,12 +113,14 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyR
             }
         }
         None() => run_turn(request, allowed, running.invocation),
-    };
+    } };
     if result.status != 0 || !result.resolved { println("REFUSED chat turn unresolved; inspect session, do not retry"); return 1; }
     let next = match complete(running, result) { Ok(value) => value, Err(error) => { println("REFUSED " + error); return 1; } };
     let completed = match result.completed { Some(item) => item, None() => { println("REFUSED completed event batch missing"); return 1; } };
     match save_completed(next, Some(reserved), completed.records) { Ok(_) => {} Err(error) => { println("REFUSED " + error); return 1; } }
-    println("SAVED chat history; prior data is not a grant or workspace identity."); return 0;
+    println("SAVED chat history; prior data is not a grant or workspace identity.");
+    if natural { match natural_target(completed.answer, allowed) { Some(path) => { println("NATURAL WORK " + (match work_facts { None() => "work", Some(_) => "followup" }) + " " + path); } None() => {} } }
+    return 0;
 }
 
 // Status is recorded data only. It performs no model or workspace action.

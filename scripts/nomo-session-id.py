@@ -36,9 +36,10 @@ def main(argv=None):
     parser.add_argument('--outputs',action='store_true')
     parser.add_argument('--events',action='store_true')
     parser.add_argument('--events-policy-dir')
-    parser.add_argument('--read-root');parser.add_argument('--operation-id');parser.add_argument('--path');parser.add_argument('--target',choices=('work','check','followup','followup-check'));parser.add_argument('--check',nargs=argparse.REMAINDER)
+    parser.add_argument('--read-root');parser.add_argument('--operation-id');parser.add_argument('--path');parser.add_argument('--target',choices=('work','check','followup','followup-check'));parser.add_argument('--natural-work',action='store_true');parser.add_argument('--check',nargs=argparse.REMAINDER)
     args=parser.parse_args(argv)
     try:
+        if args.natural_work and args.action not in ('start','resume'):raise ValueError('natural work routing requires a read turn')
         if args.action=='start' and args.id is not None:raise ValueError('a new session ID is generated automatically')
         if args.action!='start' and args.id is None:raise ValueError('select an existing session ID')
         if (args.outputs or args.events) and args.action!='status':raise ValueError('--outputs and --events are only available for status')
@@ -80,6 +81,7 @@ def main(argv=None):
             elif args.outputs:command+=['--outputs']
             elif args.events:command+=['--events']
             if args.events_policy_dir is not None:command+=['--events-policy-dir',args.events_policy_dir]
+            if args.natural_work:command+=['--natural-work']
         code=_edit.run_owned(command,dict(os.environ))
         if code:print('Session state is retained; inspect it before another action.',file=sys.stderr,flush=True)
         return code

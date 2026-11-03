@@ -4,6 +4,7 @@ import argparse
 import importlib.util
 import os
 import re
+import secrets
 import shlex
 import select
 import time
@@ -75,6 +76,23 @@ class StartIdObserver:
             self.pending.clear()
             self.finished = True
 
+class NaturalObserver(StartIdObserver):
+    def __init__(self, allowed):
+        super().__init__()
+        self.allowed = allowed
+        self.buffer = bytearray()
+        self.route = None
+
+    def feed(self, stream, data):
+        super().feed(stream, data)
+        if stream != 'stdout':return
+        self.buffer.extend(data)
+        while b'\n' in self.buffer:
+            line, _, remainder = self.buffer.partition(b'\n');self.buffer = bytearray(remainder)
+            fields = line.decode('utf-8', 'replace').rstrip('\r').split(' ')
+            if len(fields)==4 and fields[:2]==['NATURAL','WORK'] and fields[2] in ('work','followup') and fields[3] in self.allowed:
+                self.route = (fields[2], fields[3])
+
 
 def show_resume(args, *, show_id):
     if show_id:
@@ -112,7 +130,9 @@ def main(argv=None):
     parser.add_argument('--allow', required=True)
     parser.add_argument('--events-policy-dir')
     parser.add_argument('--once', help='run exactly one read-only turn')
+    parser.add_argument('--check', nargs=argparse.REMAINDER, help='optional command after each natural-language edit')
     args = parser.parse_args(argv)
+    if args.check == []:parser.error('--check requires a command')
     stdin_tty = sys.stdin.isatty()
     tty = stdin_tty and sys.stdout.isatty()
     if args.once is None and not tty:
@@ -137,7 +157,7 @@ def main(argv=None):
             print('Work requires a completed first turn.', flush=True)
     if tty and args.once is None:
         saved = '/events' if args.events_policy_dir is not None else '/outputs'
-        print('Enter a question, /help, /status, ' + saved + ', /work, /followup or /exit.', flush=True)
+        print('Enter a question or an edit request, /help, /status, ' + saved + ', /work, /followup or /exit.', flush=True)
     while True:
         if args.once is not None:
             question = args.once
@@ -154,6 +174,7 @@ def main(argv=None):
                 return 0
             if question == '/help':
                 print('Read turns use the selected root and allowlist. /status inspects recorded state.')
+                print('Natural-language edits target selected files in the current root; each requires preview and fresh confirmation. The root must be private and owned by you.')
                 if args.events_policy_dir is not None:print('/events displays committed events grouped by chat, work and followup; /status shows bounded check output.')
                 else:print('/outputs shows recorded check output.')
                 if args.events_policy_dir is None:
@@ -222,8 +243,10 @@ def main(argv=None):
         command += ['--root', args.root, '--allow=' + args.allow, '--once=' + question]
         if args.events_policy_dir is not None:
             command += ['--events-policy-dir', args.events_policy_dir]
+        natural = tty and args.once is None
+        if natural:command += ['--natural-work']
         options = {} if tty else {'input_data': b''}
-        observer = StartIdObserver() if starting else None
+        observer = NaturalObserver(args.allow.split(',')) if natural else (StartIdObserver() if starting else None)
         if observer is not None:
             options['diagnostic'] = observer
         code = edit.run_owned(command, dict(os.environ), **options)
@@ -231,12 +254,26 @@ def main(argv=None):
             print('Turn stopped; inspect session status before continuing.', file=sys.stderr, flush=True)
             show_status_hint(args, observer.identifier if starting else args.id)
             return code
-        if observer is not None:
+        if starting:
             if observer.identifier is None:
                 print('Session ID could not be confirmed; inspect retained state before continuing.', file=sys.stderr, flush=True)
                 return 1
             args.id = observer.identifier
             show_resume(args, show_id=False)
+        if natural and observer.route is not None:
+            action, path = observer.route
+            command = [sys.executable, str(ROOT / 'scripts/nomo-session-id.py'), action,
+                       '--sessions-dir', args.sessions_dir, '--id', args.id, '--read-root', args.root,
+                       '--root', args.root, '--operation-id=auto-' + secrets.token_hex(8),
+                       '--path=' + path, '--allow=' + args.allow, '--once=' + question]
+            if args.events_policy_dir is not None:command += ['--events-policy-dir', args.events_policy_dir]
+            if args.check is not None:command += ['--check', *args.check]
+            print('Selected ' + path + ' for a proposed edit; review the preview and confirm before writing.', flush=True)
+            code = edit.run_owned(command, dict(os.environ))
+            if code:
+                print('Work stopped; inspect session status before continuing.', file=sys.stderr, flush=True)
+                show_status_hint(args, args.id)
+                return code
         if args.once is not None:
             return 0
 

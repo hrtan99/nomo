@@ -15,7 +15,7 @@ Usage:
   nomo-read.sh session-id resume --sessions-dir PRIVATE_DIRECTORY --id SESSION_ID --root DIR --allow FILE[,FILE...] --once QUESTION
   nomo-read.sh session-id status --sessions-dir PRIVATE_DIRECTORY --id SESSION_ID [--outputs | --events --events-policy-dir PRIVATE_DIRECTORY]
   nomo-read.sh session-id decision --sessions-dir PRIVATE_DIRECTORY --id SESSION_ID --operation-id ID --target work|check|followup|followup-check
-  nomo-read.sh session-chat --sessions-dir PRIVATE_DIRECTORY (--new | --id SESSION_ID) --root DIR --allow FILE[,FILE...] [--events-policy-dir PRIVATE_DIRECTORY] [--once QUESTION]
+  nomo-read.sh session-chat --sessions-dir PRIVATE_DIRECTORY (--new | --id SESSION_ID) --root DIR --allow FILE[,FILE...] [--events-policy-dir PRIVATE_DIRECTORY] [--once QUESTION] [--check COMMAND ARG ...]
   Event-recording sessions accept --events-policy-dir PRIVATE_DIRECTORY on start, resume, status, work and session-chat.
   Event sessions support up to 32 saved read turns, with prior usage retained.
   This mode supports two work operations plus up to 32 additional followups, each freshly confirmed with an optional offline check.
@@ -45,6 +45,10 @@ http://host.docker.internal:PORT/v1 rather than 127.0.0.1.
 Session-chat accepts one piped UTF-8 question (at most 128 bytes); the input
 must reach EOF within 2 seconds and contain no extra lines. With terminal input
 and redirected output, specify --once QUESTION.
+Interactive session-chat can propose an edit to a selected file from a natural
+language request; the selected root must also satisfy the private edit workspace
+requirements. Each edit requires preview and fresh confirmation. Optionally pass
+--check COMMAND ARG ... last to run that check after each natural-language edit.
 Chat supports two tasks by default, or four with --turns 4, in one process.
 Only the immediately preceding successful task/result/answer is carried forward;
 this is not a durable session. Four-turn maximum: 16 model calls and 32,768
