@@ -33,6 +33,31 @@ class SessionChatTest(unittest.TestCase):
             code = module.main(args)
         return code, output.getvalue(), error.getvalue(), call
 
+    def test_interactive_automatic_check_can_be_set_viewed_and_cleared(self):
+        self.args += ['--events-policy-dir', '/private-policy']
+        source = Terminal('/check python3 -c "assert 2 == 2"\n/check\nedit one\n/check --clear\nedit two\n/exit\n')
+        output, error = Terminal(), io.StringIO()
+        def owned(command, env, **kwargs):
+            if 'diagnostic' in kwargs:
+                kwargs['diagnostic'].feed('stdout', b'NATURAL WORK work file.txt\n')
+            return 0
+        with patch.object(module.sys, 'stdin', source), patch.object(module.sys, 'stdout', output), \
+             patch.object(module.sys, 'stderr', error), patch.object(module.edit, 'run_owned', side_effect=owned) as calls:
+            self.assertEqual(module.main(self.args), 0)
+        self.assertEqual(error.getvalue(), '')
+        first, second = [call.args[0] for call in calls.call_args_list if 'work' in call.args[0]]
+        self.assertEqual(first[-4:], ['--check', 'python3', '-c', 'assert 2 == 2'])
+        self.assertNotIn('--check', second)
+        self.assertIn("Automatic check for future natural edits: python3 -c 'assert 2 == 2'", output.getvalue())
+        self.assertIn('Automatic check for future natural edits: none', output.getvalue())
+
+    def test_bad_interactive_check_keeps_existing_command(self):
+        code, out, error, calls = self.run_chat('/check python3 -m unittest\n/check "unterminated\n/check\n/exit\n')
+        self.assertEqual(code, 0)
+        self.assertIn('REFUSED', error)
+        self.assertEqual(out.count('Automatic check for future natural edits: python3 -m unittest'), 2)
+        calls.assert_not_called()
+
     def test_unicode_path_routing_preserves_bounds_and_rejects_unsafe_paths(self):
         self.assertTrue(module.edit.safe_path('文档/说明.txt'))
         self.assertTrue(module.edit.safe_path('中' * 42 + 'ab'))

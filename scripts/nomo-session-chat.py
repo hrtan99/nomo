@@ -181,6 +181,16 @@ def chat_turn(args, question, starting, natural, tty):
     return code, observer
 
 
+def work_command(args, action, root, operation_id, path, task, check):
+    command = [sys.executable, str(ROOT / 'scripts/nomo-session-id.py'), action,
+               '--sessions-dir', args.sessions_dir, '--id', args.id, '--read-root', args.root,
+               '--root', root, '--operation-id=' + operation_id,
+               '--path=' + path, '--allow=' + (path if args.discover else args.allow), '--once=' + task, '--interactive-check']
+    if args.events_policy_dir is not None:command += ['--events-policy-dir', args.events_policy_dir]
+    if check is not None:command += ['--check', *check]
+    return command
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--sessions-dir', required=True)
@@ -231,7 +241,7 @@ def main(argv=None):
             print('Work requires a completed first turn.', flush=True)
     if tty and args.once is None:
         saved = '/events' if args.events_policy_dir is not None else '/outputs'
-        print('Enter a question or an edit request, /help, /status, ' + saved + ', /work, /followup, /page N or /exit.', flush=True)
+        print('Enter a question or an edit request, /help, /status, ' + saved + ', /check, /work, /followup, /page N or /exit.', flush=True)
     while True:
         if args.once is not None:
             question = args.once
@@ -255,7 +265,7 @@ def main(argv=None):
                     print('Selected discovery page ' + choice + '; the next request uses a fresh traversal.', flush=True)
                 continue
             if question == '/help':
-                print('Read turns use the selected root and allowlist. /status inspects recorded state.')
+                print('Read turns use the selected root and allowlist. /status inspects recorded state. /check [COMMAND ARG ... | --clear] shows, sets or clears the automatic check for future natural-language edits until exit.')
                 print('Natural-language edits target selected files in the current root; each requires preview and fresh confirmation. The root must be owned by you and not writable by group or others.')
                 if args.events_policy_dir is not None:print('/events displays committed events grouped by chat, work and followup; /status shows bounded check output.')
                 else:print('/outputs shows recorded check output.')
@@ -287,21 +297,21 @@ def main(argv=None):
                     print('Status failed; inspect session state before continuing.', file=sys.stderr, flush=True)
                     return code
                 continue
-            if question == '/work' or question.startswith('/work ') or question == '/followup' or question.startswith('/followup '):
-                if args.id is None:
-                    print('REFUSED enter a first question to start the session.', file=sys.stderr, flush=True)
-                    continue
+            if any(question == '/' + name or question.startswith('/' + name + ' ') for name in ('check','work','followup')):
                 try:
                     words = shlex.split(question)
                     action = words[0][1:]
+                    if action == 'check':
+                        if words[1:] == ['--clear']: args.check = None
+                        elif len(words) > 1:
+                            if not words[1]: raise ValueError('check command must not be empty')
+                            args.check = words[1:]
+                        print('Automatic check for future natural edits: ' + (shlex.join(args.check) if args.check else 'none'), flush=True)
+                        continue
+                    if args.id is None: raise ValueError('enter a first question to start the session')
                     if len(words) < 5 or (len(words) > 5 and (words[5] != '--check' or len(words) == 6)):
                         raise ValueError('expected /work or /followup OP_ID EDIT_ROOT PATH "TASK" [--check COMMAND ARG ...]')
-                    command = [sys.executable, str(ROOT / 'scripts/nomo-session-id.py'), action,
-                               '--sessions-dir', args.sessions_dir, '--id', args.id,
-                               '--read-root', args.root, '--root', words[2], '--operation-id=' + words[1],
-                               '--path=' + words[3], '--allow=' + (words[3] if args.discover else args.allow), '--once=' + words[4]]
-                    if args.events_policy_dir is not None:command += ['--events-policy-dir',args.events_policy_dir]
-                    command += ['--interactive-check', *words[5:]]
+                    command = work_command(args, action, words[2], words[1], words[3], words[4], words[6:] if len(words) > 5 else None)
                 except ValueError as error:
                     print('REFUSED ' + str(error), file=sys.stderr, flush=True)
                     continue
@@ -349,13 +359,7 @@ def main(argv=None):
         if natural and observer.route is not None:
             action, path = observer.route
             operation_id = 'auto-' + secrets.token_hex(8)
-            command = [sys.executable, str(ROOT / 'scripts/nomo-session-id.py'), action,
-                       '--sessions-dir', args.sessions_dir, '--id', args.id, '--read-root', args.root,
-                       '--root', args.root, '--operation-id=' + operation_id,
-                       '--path=' + path, '--allow=' + (path if args.discover else args.allow), '--once=' + question]
-            if args.events_policy_dir is not None:command += ['--events-policy-dir', args.events_policy_dir]
-            command += ['--interactive-check']
-            if args.check is not None:command += ['--check', *args.check]
+            command = work_command(args, action, args.root, operation_id, path, question, args.check)
             print('Selected ' + path + ' for a proposed edit; review the preview and confirm before writing.', flush=True)
             proof_read, proof_write = os.pipe()
             env = dict(os.environ, NOMO_CLEANUP_PROOF_FD=str(proof_write)); signals = []

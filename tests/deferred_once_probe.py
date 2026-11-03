@@ -57,7 +57,9 @@ def interactive(command, env, question, editing):
                 try: output.extend(os.read(master, 65536))
                 except OSError: pass
             text = bytes(output)
-            if not asked and b'nomo> ' in text: os.write(master, question.encode()+b'\n');asked = True
+            if not asked and b'nomo> ' in text:
+                if editing:os.write(master,b'/check /bin/sh -c \'grep -qx "before green" note.txt\'\n')
+                os.write(master, question.encode()+b'\n');asked = True
             if editing and not native and b'Type `yes` to approve:' in text:
                 previews = [line.removeprefix(b'PREVIEW ') for line in text.splitlines() if line.startswith(b'PREVIEW ')]
                 assert len(previews)==1; preview=json.loads(previews[0]);assert preview['path']=='note.txt' and preview['before']==BEFORE and preview['after']==AFTER
@@ -98,9 +100,9 @@ def main():
             part=text[start:end].replace('https://api.minimax.cn/v1','http://host.docker.internal:%d/v1'%server.server_port).replace('allow_private = false','allow_private = true');text=text[:start]+part+text[end:]
         manifest.write_text(text)
         env={'PATH':os.environ['PATH'],'HOME':os.environ['HOME'],'MINIMAX_API_KEY':'SYNTHETIC_ONLY','NOMO_ETAS_VERSION':'0.2.6'}
-        command=[str(project/'scripts/nomo-read.sh'),'session-chat','--sessions-dir',str(sessions),'--new','--root',str(workspace),'--allow',','.join(FILES),'--events-policy-dir',str(policy),'--check','/bin/sh','-c','grep -qx "before green" note.txt']
+        command=[str(project/'scripts/nomo-read.sh'),'session-chat','--sessions-dir',str(sessions),'--new','--root',str(workspace),'--allow',','.join(FILES),'--events-policy-dir',str(policy)]
         first=interactive(command,env,TASK,True);match=re.search(rb'SESSION ID ([0-9a-f]{32})',first);assert match
-        assert (workspace/'note.txt').read_text()==AFTER and all((workspace/f).read_text()=='unrelated context\n' for f in FILES[:-1])
+        assert b'Automatic check for future natural edits:' in first and (workspace/'note.txt').read_text()==AFTER and all((workspace/f).read_text()=='unrelated context\n' for f in FILES[:-1])
         assert stat.S_IMODE(workspace.stat().st_mode)==0o755
         command=[str(project/'scripts/nomo-read.sh'),'session-chat','--sessions-dir',str(sessions),'--id',match.group(1).decode(),'--root',str(workspace),'--allow',','.join(FILES),'--events-policy-dir',str(policy)]
         resume=subprocess.run(command+['--once','现在文件的颜色是什么？'],env=env,stdin=subprocess.DEVNULL,capture_output=True,timeout=180)
