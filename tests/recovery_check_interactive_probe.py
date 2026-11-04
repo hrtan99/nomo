@@ -53,7 +53,7 @@ try:
   elif step==1 and v.count(b'Type `yes` to approve:')>=1:os.write(master,b'yes\n');step=2
   elif step==2 and v.count(b'CONFIRM Apply this exact preview?')>=1:os.write(master,b'yes\n');step=3
   elif step==3 and b'\r\nCHECK_STARTED\r\n' in v:os.kill(proc.pid,signal.SIGINT);step=4
-  elif step==4 and b'Abandon this interrupted operation and continue this session?' in v:os.write(master,b'yes\n');step=5
+  elif step==4 and b'Abandon this stopped operation and continue this session?' in v:os.write(master,b'yes\n');step=5
   elif step==5 and b'Continue with a new request' in v:os.write(master,b'Change green to gold in note.txt\n');step=6
   elif step==6 and v.count(b'Type `yes` to approve:')>=2:os.write(master,b'yes\n');step=7
   elif step==7 and v.count(b'CONFIRM Apply this exact preview?')>=2:os.write(master,b'yes\n');step=8

@@ -204,6 +204,19 @@ class SessionChatTest(unittest.TestCase):
         self.assertFalse(module.recovery_ready(130, [signal.SIGINT], b'clean-sigint\n', False))
         self.assertTrue(module.recovery_ready(130, [signal.SIGINT], b'clean-sigint\n', True))
 
+    def test_failed_work_recovery_requires_closed_single_cleanup_proof(self):
+        self.assertTrue(module.recovery_ready(1, [0], b'clean-exit\n', True))
+        for code, signals, proof, closed in ((0, [0], b'clean-exit\n', True), (125, [0], b'clean-exit\n', True),
+                (130, [0], b'clean-exit\n', True), (1, [signal.SIGINT], b'clean-exit\n', True),
+                (1, [0], b'', True), (1, [0], b'clean-exit\nclean-exit\n', True), (1, [0], b'clean-exit\n', False)):
+            self.assertFalse(module.recovery_ready(code, signals, proof, closed))
+
+    def test_abandonment_requires_explicit_confirmation(self):
+        for answer in ('', 'no', 'yes'):
+            with patch('builtins.input', return_value=answer), patch.object(module, 'abandon_stopped_work', return_value=0) as abandon:
+                self.assertEqual(module.offer_recovery(None, 'operation', 'work'), answer == 'yes')
+                self.assertEqual(abandon.called, answer == 'yes')
+
     def test_multiple_turns_and_exit(self):
         code, out, _, calls = self.run_chat('/help\nfirst\nsecond\n/exit\n', codes=(0, 0))
         self.assertEqual(code, 0)

@@ -58,6 +58,8 @@ if args and args[0]=='compose':
         value=state();value['exists']=False;write(state_path,value)
     raise SystemExit(int(os.environ.get('NOMO_TERMINAL_TEST_EXIT','0')))
 if args and args[0]=='inspect':
+    if os.environ.get('NOMO_TERMINAL_TEST_FAIL_INSPECT'):
+        print('daemon unavailable',file=sys.stderr);raise SystemExit(1)
     value=state();target=args[-1];event({'kind':'inspect','target':target})
     if os.environ.get('NOMO_TERMINAL_TEST_CLEANUP_INSPECT'):
         history=list(map(json.loads,events_path.read_text().splitlines()))
@@ -233,6 +235,23 @@ print(sys.argv[4])
     def test_owned_completed_client_releases_only_its_exact_container(self):
         observed=self.launch('terminal',self.fixture,*self.arguments,NOMO_TERMINAL_TEST_RETAIN='1')
         self.assertEqual(observed.returncode,0,observed.stderr.decode());self.assert_owned_cleanup()
+
+    def test_cleanup_proof_only_after_failed_client_is_reconciled(self):
+        for status, inspect_failed, expected, expected_code in (('0', False, b'', 0), ('37', False, b'clean-exit\n', 37), ('37', True, b'', 125)):
+            read_fd, write_fd = os.pipe()
+            try:
+                env=self.environment_with({'NOMO_TERMINAL_TEST_EXIT':status, 'NOMO_TERMINAL_TEST_RETAIN':'1', 'NOMO_CLEANUP_PROOF_FD':str(write_fd)})
+                if inspect_failed: env['NOMO_TERMINAL_TEST_FAIL_INSPECT']='1'
+                result=subprocess.run([sys.executable, str(HELPER), 'docker', 'compose', 'run', '--rm', 'dev'], env=env,
+                                      stdin=subprocess.DEVNULL, capture_output=True, pass_fds=(write_fd,), timeout=20)
+                os.close(write_fd); write_fd=-1
+                self.assertEqual(result.returncode, expected_code, result.stderr)
+                self.assertEqual(os.read(read_fd, 64), expected)
+                if not inspect_failed: self.assert_owned_cleanup()
+                self.events.unlink()
+            finally:
+                os.close(read_fd)
+                if write_fd >= 0: os.close(write_fd)
 
     def test_foreign_ownership_is_never_stopped_or_removed(self):
         observed=self.launch('terminal',self.fixture,*self.arguments,NOMO_TERMINAL_TEST_RETAIN='1',

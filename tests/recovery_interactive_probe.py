@@ -31,7 +31,7 @@ manifest=project/'etas.toml';text=manifest.read_text()
 for name in ('nomo-read-events-new','nomo-read-events-existing','nomo-history-events-work'):
  start=text.index('[runtime.profiles.'+name+'.model]');end=text.index('[runtime.profiles.'+name+'.model.timeout]',start);part=text[start:end].replace('https://api.minimax.cn/v1','http://host.docker.internal:%d/v1'%server.server_port).replace('allow_private = false','allow_private = true');text=text[:start]+part+text[end:]
 manifest.write_text(text)
-env={'PATH':'/Applications/Docker.app/Contents/Resources/bin:'+os.environ['PATH'],'HOME':os.environ['HOME'],'MINIMAX_API_KEY':'SYNTHETIC_ONLY','NOMO_ETAS_VERSION':'0.2.6'}
+env={'PATH':'/Applications/Docker.app/Contents/Resources/bin:'+os.environ['PATH'],'HOME':os.environ['HOME'],'MINIMAX_API_KEY':'SYNTHETIC_ONLY','NOMO_ETAS_VERSION':'0.2.6','NOMO_ETAS_GRAPH':'026-v68'}
 cmd=[str(project/'scripts/nomo-read.sh'),'session-chat','--sessions-dir',str(sessions),'--new','--root',str(workspace),'--allow','note.txt','--events-policy-dir',str(policy)]
 master,slave=pty.openpty();setting=termios.tcgetattr(slave);setting[3]&=~(termios.ECHO|termios.ECHONL);termios.tcsetattr(slave,termios.TCSANOW,setting)
 proc=subprocess.Popen(cmd,stdin=slave,stdout=slave,stderr=slave,env=env,start_new_session=True);os.close(slave);log=bytearray();step=0;deadline=time.monotonic()+240
@@ -46,7 +46,7 @@ try:
   v=bytes(log)
   if step==0 and b'nomo> ' in v:os.write(master,b'Change old to green in note.txt\n');step=1
   elif step==1 and b'Type `yes` to approve:' in v:os.kill(proc.pid,signal.SIGINT);step=2
-  elif step==2 and b'Abandon this interrupted operation and continue this session?' in v:os.write(master,b'yes\n');step=3
+  elif step==2 and b'Abandon this stopped operation and continue this session?' in v:os.write(master,b'yes\n');step=3
   elif step==3 and b'Continue with a new request' in v:os.write(master,b'Change old to green in note.txt now\n');step=4
   elif step==4 and v.count(b'Type `yes` to approve:')>=2:os.write(master,b'yes\n');step=5
   elif step==5 and b'CONFIRM Apply this exact preview?' in v:os.write(master,b'yes\n');step=6
@@ -65,7 +65,7 @@ try:
  (out/'status.log').write_bytes(status.stdout+status.stderr)
  assert status.returncode==0,status.stderr.decode('utf8','replace')
  views=[json.loads(line[len(b'EVENT VIEW '):]) for line in status.stdout.splitlines() if line.startswith(b'EVENT VIEW {')]
- assert len(views)==1 and views[0]['work_phase']=='abandoned' and views[0]['work_reserved_calls']==7 and views[0]['work_reserved_tokens']==51200 and views[0]['followup_phase']=='complete',views
+ assert len(views)==1 and views[0]['work_phase']=='abandoned' and views[0]['work_reserved_calls']==7 and views[0]['work_reserved_tokens']==61440 and views[0]['followup_phase']=='complete',views
  print(json.dumps({'status':'passed','scope':'normal SIGINT after preview; explicit abandon; same session and new confirmed edit','fake_http':len(server.seen),'result_dir':str(out)}))
 except Exception as e:
  (out/'terminal.log').write_bytes(log);print(json.dumps({'status':'failed','step':step,'error':repr(e),'server_error':server.error,'phases':server.seen,'result_dir':str(out),'tail':bytes(log).decode('utf8','replace')[-4000:]}));raise

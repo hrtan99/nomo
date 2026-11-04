@@ -168,11 +168,11 @@ def abandon_stopped_work(args, operation_id, action):
     finally: os.close(fd)
 
 def recovery_ready(code, signals, proof, closed):
-    return code == 130 and signals == [signal.SIGINT] and proof == b'clean-sigint\n' and closed
+    return closed and ((code == 130 and signals == [signal.SIGINT] and proof == b'clean-sigint\n') or (code not in (0, 125, 130) and signals == [0] and proof == b'clean-exit\n'))
 
 def offer_recovery(args, operation_id, action):
-    print('The interrupted edit or check may have had effects. Inspect the workspace before continuing; saved records and budgets remain.', flush=True)
-    try: answer = input('Abandon this interrupted operation and continue this session? [y/N] ').strip().lower()
+    print('The stopped edit or check may have had effects. Inspect the workspace before continuing; saved records and budgets remain.', flush=True)
+    try: answer = input('Abandon this stopped operation and continue this session? [y/N] ').strip().lower()
     except (EOFError, KeyboardInterrupt): return False
     if answer not in ('y', 'yes'): return False
     try: return abandon_stopped_work(args, operation_id, action) == 0
