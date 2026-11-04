@@ -276,7 +276,7 @@ def main(argv=None):
             print('Input cancelled.', file=sys.stderr)
             return 130
     if args.discover: show_discovery()
-    print('A read turn may reserve up to 6 calls and 278528 output tokens for new event sessions (older sessions retain their allowance): up to 4 child calls at 4096 each and 2 parent calls at up to 4096 each; at most 1179648 configured native tokens in total; up to 3 read/search operations reserve 4 MiB plus 256 probe bytes each.', flush=True)
+    print('A read turn in a new event session may reserve up to 6 calls and 278528 output tokens: up to 4 child calls at 4096 each and 2 parent calls at 131072 each; at most 3048576 configured native tokens in total; up to 3 read/search operations reserve 4 MiB plus 256 probe bytes each. Older sessions retain their original allowance.', flush=True)
     if args.once is not None: print('An unfinished delegated answer may use one additional read turn with the same limits.', flush=True)
     if args.id is not None:
         show_resume(args, show_id=True)
