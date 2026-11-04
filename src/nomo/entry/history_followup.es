@@ -2,11 +2,10 @@ module nomo.entry.history_followup;
 
 
 import std.io.println;
-import std.collections.len as count;
 import std.io.IOError as ConsoleError;
 import std.fs.IOError as FileError;
 import std.effects.Fs;
-import nomo.cli.harness_work_args.{Work, parse_unicode as parse};
+import nomo.cli.harness_work_args.{Work, parse_recorded};
 import nomo.harness.harness_work_contract.Ledger;
 import nomo.harness.read_model_tools.work_child_turn;
 import nomo.harness.legacy_string_stages.{LegacyStringStages, LegacyEditStages};
@@ -50,13 +49,8 @@ flow refused(error: string) -> i32 { println("REFUSED " + error); return 1; }
 // Current roots and current approval are supplied by this invocation. Saved
 // history is only model input, never proof of a current root or consent.
 public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read<ReadOnlyRoot>, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {
-    var work_args: Array<string> = []; var check_digest = ""; var i: usize = 0;
-    let has_check = count(args) >= 2 && args[count(args) - 2] == "--check-ref";
-    if has_check { check_digest = args[count(args) - 1]; }
-    let limit = if has_check { count(args) - 2 } else { count(args) };
-    while i < limit limit Iterations(32) { work_args = work_args.push(args[i]); i = i + 1; }
-    if has_check && check_digest == "" { return refused("invalid check reference"); }
-    let input = match parse(work_args) { Ok(value) => value, Err(error) => { return refused(error); } };
+    let parsed = match parse_recorded(args, 0, true) { Ok(value) => value, Err(error) => { return refused(error); } };
+    let input = parsed.input;
     if input.edit.help { return refused("select a current read root, owned edit root, target and task"); }
     match available() { Ok(_) => {} Err(error) => { return refused(error); } }
     let history = match load_chat() { Ok(Some(value)) => value, _ => { return refused("a saved prior chat turn is required"); } };
@@ -75,7 +69,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
     };
     if ticket.record.parent.check != first_check { return refused("first check changed before followup; no retry"); }
     match claim(ticket) { Ok(_) => {} Err(error) => { return refused(error); } }
-    if has_check { match plan_check(ticket, check_digest) { Ok(_) => {} Err(error) => { return refused(error); } } }
+    if parsed.has_check { match plan_check(ticket, parsed.digest) { Ok(_) => {} Err(error) => { return refused(error); } } }
     println("RESERVED history-followup; failure or interruption cannot be retried automatically.");
     let prior_request = history.value.last_request; let previous = history.value.invocation.prior;
     let checked = match ticket.record.parent.check { Some(value) => value.outcome, None() => "not requested" };

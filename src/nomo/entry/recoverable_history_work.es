@@ -5,7 +5,7 @@ import std.collections.len as count;
 import std.io.IOError as ConsoleError;
 import std.fs.IOError as FileError;
 import std.effects.Fs;
-import nomo.cli.harness_work_args.{Work, parse_unicode as parse};
+import nomo.cli.harness_work_args.{Work, parse_recorded};
 import nomo.harness.harness_work_contract.Ledger;
 import nomo.harness.read_model_tools.{expanded_work_child_turn as work_child_turn};
 import nomo.harness.legacy_string_stages.{LegacyStringStages, LegacyEditStages};
@@ -53,12 +53,9 @@ flow refused(error: string) -> i32 { println("REFUSED " + error); return 1; }
 
 public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read<PolicyRoot>, Fs.read<ReadOnlyRoot>, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {
     if count(args) < 2 || args[count(args) - 2] != "--policy-binding" { return refused("event work requires a policy binding"); }
-    let binding = args[count(args) - 1]; var work_args: Array<string> = []; var i: usize = 0;
-    let has_check = count(args) >= 4 && args[count(args) - 4] == "--check-ref";
-    let check_digest = if has_check { args[count(args) - 3] } else { "" };
-    let end = if has_check { count(args) - 4 } else { count(args) - 2 };
-    while i < end limit Iterations(32) { work_args = work_args.push(args[i]); i = i + 1; }
-    let input = match parse(work_args) { Ok(value) => value, Err(error) => { return refused(error); } };
+    let binding = args[count(args) - 1];
+    let parsed = match parse_recorded(args, 2, false) { Ok(value) => value, Err(error) => { return refused(error); } };
+    let input = parsed.input;
     if input.edit.help { return refused("select a current read root, owned edit root, target and task"); }
     let policy = match load_policy() { Ok(value) => value, Err(error) => { return refused(error); } };
     match load_legacy() { Ok(None()) => {} _ => { return refused("legacy session cannot be migrated automatically"); } }
@@ -74,7 +71,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
         Ok(value) => value, Err(error) => { return refused(error); }
     };
     match claim(ticket, policy, binding) { Ok(_) => {} Err(error) => { return refused(error); } }
-    if has_check { match plan_check(ticket, check_digest, policy, binding) { Ok(_) => {} Err(error) => { return refused(error); } } }
+    if parsed.has_check { match plan_check(ticket, parsed.digest, policy, binding) { Ok(_) => {} Err(error) => { return refused(error); } } }
     println("RESERVED event work; interruption or uncertain effects cannot be retried automatically.");
     let prior_request = history.value.chat.last_request; let previous = history.value.chat.invocation.prior;
     let wide = ticket.frame.work.format == 3 || ticket.frame.work.format == 4;

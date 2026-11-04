@@ -9,7 +9,7 @@ import std.collections.len as count;
 import std.io.IOError as ConsoleError;
 import std.fs.IOError as FileError;
 import std.effects.Fs;
-import nomo.cli.harness_work_args.{Work, parse_unicode as parse};
+import nomo.cli.harness_work_args.{Work, parse_recorded};
 import nomo.harness.harness_work_contract.Ledger;
 import nomo.harness.read_model_tools.{expanded_work_child_turn as work_child_turn};
 import nomo.harness.legacy_string_stages.{LegacyStringStages, LegacyEditStages};
@@ -98,13 +98,8 @@ flow more(input: Work, prior_request: string, previous: Previous, first_id: stri
 public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read<PolicyRoot>, Fs.read<ReadOnlyRoot>, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {
     if count(args) < 2 || args[count(args) - 2] != "--policy-binding" { return refused("event followup requires policy binding"); }
     let binding = args[count(args) - 1];
-    var work_args: Array<string> = []; var check_digest = ""; var i: usize = 0;
-    let has_check = count(args) >= 4 && args[count(args) - 4] == "--check-ref";
-    if has_check { check_digest = args[count(args) - 3]; }
-    let limit = if has_check { count(args) - 4 } else { count(args) - 2 };
-    while i < limit limit Iterations(32) { work_args = work_args.push(args[i]); i = i + 1; }
-    if has_check && check_digest == "" { return refused("invalid check reference"); }
-    let input = match parse(work_args) { Ok(value) => value, Err(error) => { return refused(error); } };
+    let parsed = match parse_recorded(args, 2, true) { Ok(value) => value, Err(error) => { return refused(error); } };
+    let input = parsed.input;
     if input.edit.help { return refused("select a current read root, owned edit root, target and task"); }
     let policy = match load_policy() { Ok(item) => item, Err(error) => { return refused(error); } };
     let history = match load_chat(policy, binding) { Ok(Some(value)) => value, _ => { return refused("saved event chat required"); } };
@@ -112,7 +107,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
     let first_work = match inspect_first_work(policy, binding) { Ok(Some(value)) => value, _ => { return refused("completed first work required"); } };
     if first_work.value.work.phase != "complete" && first_work.value.work.phase != "abandoned" { return refused("first work unresolved"); }
     match load_followup(policy, binding) {
-        Ok(Some(_)) => { return more(input, history.value.chat.last_request, history.value.chat.invocation.prior, first_work.value.work.id, check_digest, policy, binding, history.value.chat.format == 13); }
+        Ok(Some(_)) => { return more(input, history.value.chat.last_request, history.value.chat.invocation.prior, first_work.value.work.id, parsed.digest, policy, binding, history.value.chat.format == 13); }
         Ok(None()) => {}
         Err(error) => { return refused(error); }
     }
@@ -140,7 +135,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
     if ticket.frame.parent_work_version != first_work.version.opaque { return refused("first work changed before followup"); }
     match first_check { Some(value) => { if ticket.frame.parent_check_version != value.version.opaque { return refused("first check changed before followup"); } } None() => { if ticket.frame.parent_check_version != "" { return refused("first check changed before followup"); } } }
     match claim(ticket, policy, binding) { Ok(_) => {} Err(error) => { return refused(error); } }
-    if has_check { match plan_check(ticket, check_digest, policy, binding) { Ok(_) => {} Err(error) => { return refused(error); } } }
+    if parsed.has_check { match plan_check(ticket, parsed.digest, policy, binding) { Ok(_) => {} Err(error) => { return refused(error); } } }
     println("RESERVED event followup; interruption or uncertain effects cannot be retried automatically.");
     let prior_request = history.value.chat.last_request; let previous = history.value.chat.invocation.prior;
     let prior_work = PriorWork { request = first_work.value.work.request, summary = if first_work.value.work.phase == "abandoned" { "User abandoned interrupted work; its effect is unknown. Inspect the file before a new edit." } else { first_work.value.work.summary }, summary_source = if first_work.value.work.phase == "abandoned" { "system" } else { origin }, selection = chosen, check = checked, exit_code = exit, output = first_output, history = [] };

@@ -182,6 +182,42 @@ class SessionChatTest(unittest.TestCase):
             self.assertEqual(module.main(self.args),0)
         work.assert_called_once();check.assert_not_called();chat.assert_called_once()
 
+    def test_two_file_request_then_one_confirmed_check(self):
+        self.args[self.args.index('--allow')+1]='file.txt,second.txt'
+        self.args += ['--events-policy-dir','/private-policy']
+        first=module.NaturalObserver(['file.txt','second.txt']);first.feed('stdout',b'NATURAL WORK_MORE_CHECK work file.txt\n')
+        second=module.NaturalObserver(['file.txt','second.txt']);second.feed('stdout',b'NATURAL WORK followup second.txt\n')
+        proposed=module.NaturalObserver(['file.txt','second.txt']);proposed.feed('stdout',b'NATURAL CHECK python3 verify.py\n')
+        summary=module.NaturalObserver(['file.txt','second.txt']);summary.feed('stdout',b'FINAL check failed\n')
+        with patch.object(module.sys,'stdin',Terminal('edit both and test\nyes\n/exit\n')),patch.object(module.sys,'stdout',Terminal()), \
+             patch.object(module.sys,'stderr',io.StringIO()),patch.object(module,'chat_turn',side_effect=[(0,first),(0,second),(0,proposed),(0,summary)]) as chat, \
+             patch.object(module,'run_with_proof',return_value=(0,[],b'',True)) as work,patch.object(module,'run_recorded_check',return_value=0) as check:
+            self.assertEqual(module.main(self.args),0)
+        self.assertEqual(work.call_count,2);check.assert_called_once();self.assertEqual(chat.call_count,4)
+        self.assertIn('--path=file.txt',work.call_args_list[0].args[0]);self.assertIn('--path=second.txt',work.call_args_list[1].args[0])
+        self.assertTrue(chat.call_args_list[1].args[3]);self.assertIn('completed edit auto-',chat.call_args_list[1].args[1])
+
+    def test_multi_file_limit_reports_partial_without_check(self):
+        self.args += ['--events-policy-dir','/private-policy']
+        observers=[]
+        for action in ('work','followup','followup'):
+            item=module.NaturalObserver(['file.txt']);item.feed('stdout',('NATURAL WORK_MORE_CHECK '+action+' file.txt\n').encode());observers.append((0,item))
+        with patch.object(module.sys,'stdin',Terminal('edit all and test\n/exit\n')),patch.object(module.sys,'stdout',Terminal()) as output, \
+             patch.object(module.sys,'stderr',io.StringIO()),patch.object(module,'chat_turn',side_effect=observers) as chat, \
+             patch.object(module,'run_with_proof',return_value=(0,[],b'',True)) as work,patch.object(module,'run_recorded_check') as check:
+            self.assertEqual(module.main(self.args),0)
+        self.assertEqual(work.call_count,3);self.assertEqual(chat.call_count,3);check.assert_not_called();self.assertIn('Further requested edits remain',output.getvalue())
+
+    def test_abandoning_interrupted_multi_edit_does_not_replay(self):
+        self.args += ['--events-policy-dir','/private-policy']
+        first=module.NaturalObserver(['file.txt']);first.feed('stdout',b'NATURAL WORK_MORE work file.txt\n')
+        with patch.object(module.sys,'stdin',Terminal('edit both\n/exit\n')),patch.object(module.sys,'stdout',Terminal()), \
+             patch.object(module.sys,'stderr',io.StringIO()),patch.object(module,'chat_turn',return_value=(0,first)) as chat, \
+             patch.object(module,'run_with_proof',return_value=(130,[signal.SIGINT],b'clean-sigint\n',True)) as work, \
+             patch.object(module,'offer_recovery',return_value=True):
+            self.assertEqual(module.main(self.args),0)
+        work.assert_called_once();chat.assert_called_once()
+
     def test_confirmed_check_summarizes_once_in_read_only_mode(self):
         self.args += ['--events-policy-dir', '/private-policy']
         proposal = module.NaturalObserver(['file.txt']); proposal.feed('stdout', b'NATURAL CHECK python3 -m unittest\n')

@@ -36,3 +36,18 @@ flow parse_with(args: Array<string>, unicode: bool) -> Result<Work, string> {
 }
 public flow parse(args: Array<string>) -> Result<Work, string> { return parse_with(args, false); }
 public flow parse_unicode(args: Array<string>) -> Result<Work, string> { return parse_with(args, true); }
+
+// Share bounded work/check argument decoding while retaining caller-specific admission rules.
+public type RecordedWork = { input: Work, has_check: bool, digest: string };
+public flow parse_recorded(args: Array<string>, trailer: usize, reject_empty: bool) -> Result<RecordedWork, string> {
+    if count(args) < trailer { return Err("invalid work argument trailer"); }
+    let end = count(args) - trailer;
+    let has_check = end >= 2 && args[end - 2] == "--check-ref";
+    let digest = if has_check { args[end - 1] } else { "" };
+    if has_check && reject_empty && digest == "" { return Err("invalid check reference"); }
+    let limit = if has_check { end - 2 } else { end };
+    var selected: Array<string> = []; var index: usize = 0;
+    while index < limit limit Iterations(32) { selected = selected.push(args[index]); index = index + 1; }
+    let input = match parse_unicode(selected) { Ok(value) => value, Err(error) => { return Err(error); } };
+    return Ok(RecordedWork { input = input, has_check = has_check, digest = digest });
+}
