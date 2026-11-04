@@ -84,6 +84,8 @@ class NaturalObserver(StartIdObserver):
         self.buffer = bytearray()
         self.route = None
         self.deferred = None
+        self.check = None
+        self.check_invalid = False
 
     def feed(self, stream, data):
         super().feed(stream, data)
@@ -91,8 +93,14 @@ class NaturalObserver(StartIdObserver):
         self.buffer.extend(data)
         while b'\n' in self.buffer:
             line, _, remainder = self.buffer.partition(b'\n');self.buffer = bytearray(remainder)
-            try: fields = line.decode('utf-8', 'strict').rstrip('\r').split(' ', 3)
+            try: decoded = line.decode('utf-8', 'strict').rstrip('\r'); fields = decoded.split(' ', 3)
             except UnicodeDecodeError: continue
+            if decoded.startswith('NATURAL CHECK '):
+                try:
+                    command = shlex.split(decoded[len('NATURAL CHECK '):])
+                    if self.check is not None or not 1 <= len(command) <= 16 or not command[0] or sum(len(arg.encode('utf-8')) for arg in command) > 512 or any(not all(c.isprintable() for c in arg) for arg in command): raise ValueError('invalid check proposal')
+                    self.check = command
+                except (ValueError, UnicodeEncodeError): self.check_invalid = True
             if len(fields)==4 and fields[:2]==['NATURAL','WORK'] and fields[2] in ('work','followup') and (edit.safe_path(fields[3]) and (fields[3] in self.allowed or '*' in self.allowed)):
                 self.route = (fields[2], fields[3])
             elif fields == ['NATURAL','PAGE']:self.deferred = 'page'
@@ -179,6 +187,13 @@ def chat_turn(args, question, starting, natural, tty):
     observer = NaturalObserver(['*'] if args.discover else args.allow.split(','))
     code = edit.run_owned(command, dict(os.environ), diagnostic=observer, **({} if tty else {'input_data': b''}))
     return code, observer
+
+
+def run_recorded_check(args, command):
+    state = session_state(args)
+    request = [sys.executable, str(ROOT/'scripts/nomo-history-work.py'), '--independent-check', '--state', str(state), '--root', args.root,
+               '--id', 'check-' + secrets.token_hex(16), '--events-policy-dir', args.events_policy_dir, '--check', *command]
+    return edit.run_owned(request, dict(os.environ))
 
 
 def work_command(args, action, root, operation_id, path, task, check):
@@ -289,6 +304,7 @@ def main(argv=None):
             if question == '/help':
                 print('Read turns use the selected root and allowlist. /scope shows it; /allow FILES selects up to four files; /discover [N] enables bounded discovery. /status inspects recorded state. /check [COMMAND ARG ... | --clear] shows, sets or clears the automatic check; /check --run runs it now; event sessions save filtered output for later model context.')
                 print('Natural-language edits target selected files in the current root; each requires preview and fresh confirmation. The root must be owned by you and not writable by group or others.')
+                print('For an explicitly requested check, review the proposed command and approve it; commands may modify workspace files.')
                 if args.events_policy_dir is not None:print('/events displays committed events in the recorded timeline and work of unknown order; /status shows bounded check output.')
                 else:print('/outputs shows recorded check output.')
                 if args.events_policy_dir is None:
@@ -332,10 +348,7 @@ def main(argv=None):
                                     show_status_hint(args, observer.identifier); return code or 1
                                 args.id = observer.identifier; show_resume(args, show_id=False)
                             if args.id is not None and args.events_policy_dir is not None:
-                                state = session_state(args)
-                                command = [sys.executable, str(ROOT/'scripts/nomo-history-work.py'), '--independent-check', '--state', str(state), '--root', args.root,
-                                           '--id', 'check-' + secrets.token_hex(16), '--events-policy-dir', args.events_policy_dir, '--check', *args.check]
-                                code = edit.run_owned(command, dict(os.environ))
+                                code = run_recorded_check(args, args.check)
                                 if code: return code
                             else:
                                 print('Running the configured check now; its output is not saved in session history or sent to the model.', flush=True)
@@ -396,6 +409,28 @@ def main(argv=None):
         if observer.deferred is not None:
             print('The agent could not continue discovery or the additional read; no further edit was made. Refine the scope or inspect the session before continuing.', flush=True)
             if args.once is not None: return 1
+        if natural and (observer.check_invalid or (observer.check is not None and observer.route is not None)):
+            print('REFUSED invalid or ambiguous proposed check; no command was run.', file=sys.stderr, flush=True)
+            continue
+        if natural and observer.check is not None:
+            if args.events_policy_dir is None:
+                print('REFUSED proposed checks require event recording; use /check to run a selected command.', file=sys.stderr, flush=True)
+                continue
+            print('Proposed check: ' + shlex.join(observer.check) + '\nRuns offline in the selected workspace and may modify its files. Filtered output is saved and may be sent to the model.', flush=True)
+            try: approval = input('Run this exact command? [y/N] ').strip().lower()
+            except EOFError: approval = ''
+            except KeyboardInterrupt: print('\nCheck cancelled.', file=sys.stderr, flush=True); return 130
+            if approval not in ('y', 'yes'):
+                print('Check declined; no command was run.', flush=True)
+                continue
+            try: code = run_recorded_check(args, observer.check)
+            except (OSError, ValueError) as error:
+                print('Check could not be started or recorded: ' + str(error), file=sys.stderr, flush=True); return 1
+            if code:
+                print('Check stopped or its result was not recorded; inspect the workspace and session before continuing.', file=sys.stderr, flush=True)
+                return code
+            print('Recorded check output is available to the next request; it will not run again automatically.', flush=True)
+            continue
         if natural and observer.route is not None:
             action, path = observer.route
             operation_id = 'auto-' + secrets.token_hex(8)

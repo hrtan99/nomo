@@ -34,23 +34,21 @@ public flow empty() -> Previous {
     return Previous { task = "", result = "", tool = "", outcome = "", answer = "" };
 }
 
-public flow prior_error(prior: Previous) -> string {
+public flow prior_error_mode(prior: Previous, unicode: bool) -> string {
     if prior.task == "" {
-        if prior.result != "" || prior.tool != "" || prior.outcome != "" || prior.answer != "" {
-            return "invalid empty prior selection";
-        }
+        if prior.result != "" || prior.tool != "" || prior.outcome != "" || prior.answer != "" { return "invalid empty prior selection"; }
         return "";
     }
-    if question_error(prior.task) != "" || !bounded(prior.result, 256) || !bounded(prior.answer, 512) {
-        return "invalid selected prior result";
-    }
+    let invalid = if unicode { !utf8_bounded(prior.task, 512) || !utf8_bounded(prior.result, 256) || !utf8_bounded(prior.answer, 512) }
+        else { question_error(prior.task) != "" || !bounded(prior.result, 256) || !bounded(prior.answer, 512) };
+    if invalid { return "invalid selected prior result"; }
     if prior.tool == "" {
         if prior.outcome != "" { return "prior outcome without tool"; }
-    } else if (prior.tool != "read" && prior.tool != "search") || !bounded(prior.outcome, 266) || !starts_with(prior.outcome, "complete: ") {
-        return "invalid selected prior tool";
-    }
+    } else if (prior.tool != "read" && prior.tool != "search") || !(if unicode { utf8_bounded(prior.outcome, 262154) } else { bounded(prior.outcome, 266) }) ||
+        !(starts_with(prior.outcome, "complete: ") || (unicode && prior.tool == "search" && starts_with(prior.outcome, "incomplete: "))) { return "invalid selected prior tool"; }
     return "";
 }
+public flow prior_error(prior: Previous) -> string { return prior_error_mode(prior, false); }
 
 public flow context_error(context: Context) -> string {
     let message = Message.new(context);
@@ -144,9 +142,9 @@ public flow admission_error(state: Ledger, maximum: Ledger) -> string {
     return "";
 }
 
-public flow turn_error(invocation: Invocation) -> string {
+public flow turn_error_shared(invocation: Invocation, selected: string) -> string {
     let invalid = admission_error(invocation.usage, invocation.maximum); if invalid != "" { return invalid; }
-    let selected = prior_error(invocation.prior); if selected != "" { return selected; }
+    if selected != "" { return selected; }
     let used = invocation.usage;
     if invocation.admitted == 0 {
         if invocation.prior.task != "" || used.steps != 0 || used.calls != 0 || used.tokens != 0 || used.tools != 0 || used.scan != 0 {
@@ -161,6 +159,8 @@ public flow turn_error(invocation: Invocation) -> string {
     } else { return "turn limit reached"; }
     return "";
 }
+
+public flow turn_error(invocation: Invocation) -> string { return turn_error_shared(invocation, prior_error(invocation.prior)); }
 
 public flow combine(state: Ledger, usage: Ledger, maximum: Ledger) -> Result<Ledger, string> {
     let invalid = admission_error(state, maximum); if invalid != "" { return Err(invalid); }

@@ -96,6 +96,45 @@ class SessionChatTest(unittest.TestCase):
         self.assertEqual(out.count('Automatic check for future natural edits: python3 -m unittest'), 2)
         calls.assert_not_called()
 
+    def test_proposed_check_requires_confirmation_and_preserves_argv(self):
+        self.args += ['--events-policy-dir', '/private-policy']
+        for answer, expected in [('n', False), ('y', True)]:
+            observer = module.NaturalObserver(['file.txt'])
+            observer.feed('stdout', b'NATURAL CHECK python3 -c "print(1)"\n')
+            source, output, error = Terminal('run test\n' + answer + '\n/exit\n'), Terminal(), io.StringIO()
+            with patch.object(module.sys, 'stdin', source), patch.object(module.sys, 'stdout', output), \
+                 patch.object(module.sys, 'stderr', error), patch.object(module, 'chat_turn', return_value=(0, observer)), \
+                 patch.object(module, 'run_recorded_check', return_value=0) as check:
+                self.assertEqual(module.main(self.args), 0)
+            self.assertIn("Proposed check: python3 -c 'print(1)'", output.getvalue())
+            self.assertEqual(check.called, expected)
+            if expected: self.assertEqual(check.call_args.args[1], ['python3', '-c', 'print(1)'])
+            else: self.assertIn('no command was run', output.getvalue())
+
+    def test_proposed_check_failure_does_not_retry(self):
+        self.args += ['--events-policy-dir', '/private-policy']
+        observer = module.NaturalObserver(['file.txt']); observer.feed('stdout', b'NATURAL CHECK python3 -m unittest\n')
+        with patch.object(module.sys, 'stdin', Terminal('run test\ny\n')), patch.object(module.sys, 'stdout', Terminal()), \
+             patch.object(module.sys, 'stderr', io.StringIO()) as error, patch.object(module, 'chat_turn', return_value=(0, observer)), \
+             patch.object(module, 'run_recorded_check', return_value=125) as check:
+            self.assertEqual(module.main(self.args), 125)
+        check.assert_called_once(); self.assertIn('inspect the workspace', error.getvalue())
+
+    def test_proposed_check_setup_error_is_reported(self):
+        self.args += ['--events-policy-dir', '/private-policy']
+        observer = module.NaturalObserver(['file.txt']); observer.feed('stdout', b'NATURAL CHECK python3 -m unittest\n')
+        with patch.object(module.sys, 'stdin', Terminal('run test\ny\n')), patch.object(module.sys, 'stdout', Terminal()), \
+             patch.object(module.sys, 'stderr', io.StringIO()) as error, patch.object(module, 'chat_turn', return_value=(0, observer)), \
+             patch.object(module, 'run_recorded_check', side_effect=OSError('unavailable')) as check:
+            self.assertEqual(module.main(self.args), 1)
+        check.assert_called_once(); self.assertIn('could not be started or recorded', error.getvalue())
+
+    def test_proposed_check_rejects_unsafe_and_ambiguous_markers(self):
+        for payload in (b'NATURAL CHECK python3 "unterminated\n', b'NATURAL CHECK python3 a\x1bb\n',
+                        b'NATURAL CHECK one\nNATURAL CHECK two\n'):
+            observer = module.NaturalObserver(['file.txt']); observer.feed('stdout', payload)
+            self.assertTrue(observer.check_invalid)
+
     def test_unicode_path_routing_preserves_bounds_and_rejects_unsafe_paths(self):
         self.assertTrue(module.edit.safe_path('文档/说明.txt'))
         self.assertTrue(module.edit.safe_path('project docs/说明 文件.txt'))

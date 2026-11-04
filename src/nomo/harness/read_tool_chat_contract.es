@@ -14,25 +14,9 @@ import nomo.harness.read_tool_contract.fresh as fresh_ledger;
 
 // Only validated successful selected data crosses a turn boundary.
 public import nomo.harness.harness_tool_chat_contract.{Previous, Context, Invocation, Completed, LocalTurn, TurnResult, default_maximum, fresh_invocation, empty, seed, invocation_error, admission_error, combine};
-import nomo.harness.harness_tool_chat_contract.{inspect_turn_shared, same};
+import nomo.harness.harness_tool_chat_contract.{inspect_turn_shared, same, turn_error_shared, prior_error_mode};
 
-public flow prior_error(prior: Previous) -> string {
-    if prior.task == "" {
-        if prior.result != "" || prior.tool != "" || prior.outcome != "" || prior.answer != "" {
-            return "invalid empty prior selection";
-        }
-        return "";
-    }
-    if !bounded(prior.task, 512) || !bounded(prior.result, 256) || !bounded(prior.answer, 512) {
-        return "invalid selected prior result";
-    }
-    if prior.tool == "" {
-        if prior.outcome != "" { return "prior outcome without tool"; }
-    } else if (prior.tool != "read" && prior.tool != "search") || !bounded(prior.outcome, 262154) || !(starts_with(prior.outcome, "complete: ") || (prior.tool == "search" && starts_with(prior.outcome, "incomplete: "))) {
-        return "invalid selected prior tool";
-    }
-    return "";
-}
+public flow prior_error(prior: Previous) -> string { return prior_error_mode(prior, true); }
 
 public flow context_error(context: Context) -> string {
     let message = Message.new(context);
@@ -46,23 +30,7 @@ public flow inspect_turn(child: Session, status: i32, request: string, task: str
     return inspect_turn_shared(child, status, request, task, allowed, prior, true);
 }
 
-public flow turn_error(invocation: Invocation) -> string {
-    let invalid = admission_error(invocation.usage, invocation.maximum); if invalid != "" { return invalid; }
-    let selected = prior_error(invocation.prior); if selected != "" { return selected; }
-    let used = invocation.usage;
-    if invocation.admitted == 0 {
-        if invocation.prior.task != "" || used.steps != 0 || used.calls != 0 || used.tokens != 0 || used.tools != 0 || used.scan != 0 {
-            return "first turn must own an empty invocation";
-        }
-    } else if invocation.admitted == 1 {
-        let tools = if invocation.prior.tool == "" { 0 } else { 1 };
-        if invocation.prior.task == "" || used.steps != 5 + tools * 2 || used.calls != 3 + tools ||
-            used.tokens != (3 + tools) * 2048 || used.tools != tools || (used.scan != tools * 4096 && used.scan != tools * 16384) {
-            return "prior selection and invocation ledger disagree";
-        }
-    } else { return "turn limit reached"; }
-    return "";
-}
+public flow turn_error(invocation: Invocation) -> string { return turn_error_shared(invocation, prior_error(invocation.prior)); }
 
 // The opt-in four-turn budget is separate from the legacy two-turn contract.
 // Amounts are reservations in application accounting, not measured usage.
