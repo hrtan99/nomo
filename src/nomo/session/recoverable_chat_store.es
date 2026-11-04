@@ -27,7 +27,7 @@ flow frame_error(value: Frame, policy: Policy, binding: string) -> string {
     if value.format != 1 || value.encoding != "json-string-v1" || value.policy_binding != binding { return "invalid recoverable chat format, encoding or policy binding"; }
     let chat_error = invalid_chat(value.chat); if chat_error != "" { return chat_error; }
     let event_error = invalid_events(value.events, policy); if event_error != "" { return event_error; }
-    for item in value.events.events limit Iterations(768) {
+    for item in value.events.events limit Iterations(4096) {
         match decode(item.text, policy) { Ok(_) => {} Err(error) => { return error; } }
     }
     if value.chat.invocation.admitted != value.events.turns { return "chat and event turns differ"; }

@@ -15,13 +15,13 @@ flow completed(request: string, maximum: Ledger, tokens: i32) -> TurnResult {
 }
 public flow probe(args: Array<string>) -> i32 ![Console, Error<std.io.IOError>, Error<IndexError>] {
     let new = fresh_events();
-    if new.format != 11 || new.invocation.maximum != multi_wide_maximum(32) || invalid(new) != "" { abort("new event session changed"); }
+    if new.format != 14 || new.invocation.maximum != multi_wide_maximum(48) || invalid(new) != "" { abort("new event session changed"); }
     let mismatched = Session { format = 11, phase = "ready", invocation = Invocation { usage = fresh_ledger(), maximum = multi_maximum(32), admitted = 0, prior = empty() }, last_request = "", pending = "" };
     if invalid(mismatched) == "" { abort("new format with old allowance accepted"); }
     let reserved = match begin(new, "question") { Ok(value) => value, Err(_) => { abort("new reservation refused"); } };
     match begin(reserved, "repeat") { Ok(_) => { abort("running reservation retried"); } Err(_) => {} }
-    match complete(reserved, completed("question", multi_wide_maximum(32), 8192)) { Ok(_) => { abort("undercharged new model accepted"); } Err(_) => {} }
-    let saved = match complete(reserved, completed("question", multi_wide_maximum(32), 12288)) { Ok(value) => value, Err(_) => { abort("new accounting refused"); } };
+    match complete(reserved, completed("question", multi_wide_maximum(48), 8192)) { Ok(_) => { abort("undercharged new model accepted"); } Err(_) => {} }
+    let saved = match complete(reserved, completed("question", multi_wide_maximum(48), 12288)) { Ok(value) => value, Err(_) => { abort("new accounting refused"); } };
     if saved.invocation.usage.tokens != 12288 || saved.phase != "ready" { abort("new usage changed"); }
     let legacy_invocation = Invocation { usage = fresh_ledger(), maximum = multi_maximum(32), admitted = 0, prior = empty() };
     let legacy = Session { format = 9, phase = "ready", invocation = legacy_invocation, last_request = "", pending = "" };
@@ -31,6 +31,19 @@ public flow probe(args: Array<string>) -> i32 ![Console, Error<std.io.IOError>, 
     if old.format != 9 || old.invocation.maximum != multi_maximum(32) { abort("legacy allowance changed"); }
     let old_saved = match complete(old, completed("question", multi_maximum(32), 8192)) { Ok(value) => value, Err(_) => { abort("legacy accounting refused"); } };
     if old_saved.invocation.usage.tokens != 8192 { abort("legacy usage changed"); }
+    let prior = Previous { task = "Read", result = "Answer", tool = "read", outcome = "complete: data", answer = "Answer" };
+    let late_usage = Ledger { steps = 517, calls = 282, tokens = 1155072, tools = 141, scan = 591432960 };
+    let late = Session { format = 14, phase = "ready", invocation = Invocation { usage = late_usage, maximum = multi_wide_maximum(48), admitted = 47, prior = prior }, last_request = "question", pending = "" };
+    if invalid(late) != "" { abort("47th turn refused"); }
+    let last = match begin(late, "last") { Ok(value) => value, Err(_) => { abort("48th turn refused"); } };
+    let done_usage = Ledger { steps = 528, calls = 288, tokens = 1179648, tools = 144, scan = 604016640 };
+    let done_invocation = Invocation { usage = done_usage, maximum = multi_wide_maximum(48), admitted = 48, prior = prior };
+    let done = Completed { request = "last", task = prior.task, result = prior.result, tool = prior.tool, outcome = prior.outcome, answer = prior.answer, records = [] };
+    let final = match complete(last, TurnResult { status = 0, state = done_invocation, resolved = true, completed = Some(done) }) { Ok(value) => value, Err(_) => { abort("48th completion refused"); } };
+    if final.phase != "complete" || final.invocation.maximum.tokens != 1179648 { abort("new lifetime limit changed"); }
+    match begin(final, "overflow") { Ok(_) => { abort("49th turn accepted"); } Err(_) => {} }
+    let old32 = Session { format = 13, phase = "ready", invocation = Invocation { usage = fresh_ledger(), maximum = multi_wide_maximum(32), admitted = 0, prior = empty() }, last_request = "", pending = "" };
+    if invalid(old32) != "" { abort("legacy 32-turn session refused"); }
     if fresh().format != 12 { abort("new two-turn format missing"); }
     println("PASS new and legacy reservations"); return 0;
 }

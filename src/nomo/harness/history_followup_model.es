@@ -66,16 +66,15 @@ agent EditAggregate(input: EditInput) -> string {
 agent WideEditAggregate(input: EditInput) -> string {
     return perform infer<string>(Prompt.new().system(Trusted(editaggregate_system())).data(input));
 }
-flow read_main_mode(value: ReadContext, request: string, previous: Previous, prior_work: PriorWork, wide: bool) -> string {
+public flow read_main_mode(value: ReadContext, request: string, previous: Previous, prior_work: PriorWork, wide: bool) -> string {
     var earlier: Array<ReadWork> = [];
-    for item in prior_work.history limit Iterations(34) { earlier = earlier.push(ReadWork { id = item.id, selection = item.selection }); }
+    for item in prior_work.history limit Iterations(50) { earlier = earlier.push(ReadWork { id = item.id, selection = item.selection }); }
     let history = ReadPriorWork { request = prior_work.request, summary = prior_work.summary, summary_source = prior_work.summary_source, selection = prior_work.selection, check = prior_work.check, history = earlier };
     let input = bounded_read(ReadInput { current = value, previous_request = request, previous = previous, prior_work = history });
     if value.phase == "plan" { return if wide { WideReadPlan.run(input) } else { ReadPlan.run(input) }; }
     return if wide { WideReadAggregate.run(input) } else { ReadAggregate.run(input) };
 }
 public flow read_main(value: ReadContext, request: string, previous: Previous, prior_work: PriorWork) -> string { return read_main_mode(value, request, previous, prior_work, false); }
-public flow wide_read_main(value: ReadContext, request: string, previous: Previous, prior_work: PriorWork) -> string { return read_main_mode(value, request, previous, prior_work, true); }
 public flow plan(value: WorkContext, request: string, previous: Previous, prior_work: PriorWork) -> string { return EditPlan.run(bounded_edit(EditInput { current = value, previous_request = request, previous = previous, prior_work = prior_work })); }
 public flow wide_plan(value: WorkContext, request: string, previous: Previous, prior_work: PriorWork) -> string { return WideEditPlan.run(bounded_edit(EditInput { current = value, previous_request = request, previous = previous, prior_work = prior_work })); }
 public flow child(value: WorkContext, request: string, previous: Previous, prior_work: PriorWork) -> string { return EditChild.run(bounded_edit(EditInput { current = value, previous_request = request, previous = previous, prior_work = prior_work })); }

@@ -23,7 +23,7 @@ agent MainWide(input: Input) -> string {
 }
 public flow run(request: string, allowed: Array<string>, invocation: Invocation, history: Array<Event>, work: Option<WorkFacts>, followup: Option<WorkFacts>, additional: Array<WorkFacts>, page: usize, more_pages: bool) -> TurnResult {
     return run_private_turn_controller(request, allowed, invocation) with {
-        LegacyChatStages.main(context) => { resume if invocation.maximum == multi_wide_maximum(2) || invocation.maximum == multi_wide_maximum(32) { MainWide.run(Input { current = context, history = history, work = work, followup = followup, additional = additional, page = page, more_pages = more_pages }) } else { Main.run(Input { current = context, history = history, work = work, followup = followup, additional = additional, page = page, more_pages = more_pages }) }; }
+        LegacyChatStages.main(context) => { resume if invocation.maximum == multi_wide_maximum(2) || invocation.maximum == multi_wide_maximum(32) || invocation.maximum == multi_wide_maximum(48) { MainWide.run(Input { current = context, history = history, work = work, followup = followup, additional = additional, page = page, more_pages = more_pages }) } else { Main.run(Input { current = context, history = history, work = work, followup = followup, additional = additional, page = page, more_pages = more_pages }) }; }
         LegacyChatStages.child(task, files, selected, multi) => { resume private_chat_child_turn(task, files, selected, multi); }
     };
 }

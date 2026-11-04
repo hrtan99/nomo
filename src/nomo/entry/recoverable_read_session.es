@@ -44,7 +44,7 @@ import nomo.session.event_policy.PolicyRoot;
 // workspace identity, or claim comprehensive secret redaction.
 flow conversation(frame: EventFrame, policy: Policy) -> Result<Array<Event>, string> {
     var selected: Array<Event> = [];
-    for event in frame.events limit Iterations(768) {
+    for event in frame.events limit Iterations(4096) {
         if (event.role == "user" && event.kind == "request") ||
             (event.role == "model" && event.kind == "request") ||
             (event.role == "tool" && event.kind == "check") ||
@@ -91,7 +91,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyR
         Some(first) => { match facts.followup {
             Some(second) => {
                 let usage = running.value.chat.invocation.usage;
-                let budget = BudgetFacts { work_calls = facts.calls, work_generation = facts.generation, chat_used_calls = usage.calls, chat_used_generation = usage.tokens, chat_reserved_calls = if running.value.chat.format == 5 || running.value.chat.format == 7 || running.value.chat.format == 9 || (running.value.chat.format == 11 || running.value.chat.format == 13) { 6 } else { 4 }, chat_reserved_generation = if (running.value.chat.format == 11 || running.value.chat.format == 13) { 24576 } else { if running.value.chat.format == 9 { 20480 } else { if running.value.chat.format == 5 || running.value.chat.format == 7 { 12288 } else { 8192 } } } };
+                let budget = BudgetFacts { work_calls = facts.calls, work_generation = facts.generation, chat_used_calls = usage.calls, chat_used_generation = usage.tokens, chat_reserved_calls = if running.value.chat.format == 5 || running.value.chat.format == 7 || running.value.chat.format == 9 || (running.value.chat.format == 11 || running.value.chat.format >= 13) { 6 } else { 4 }, chat_reserved_generation = if (running.value.chat.format == 11 || running.value.chat.format >= 13) { 24576 } else { if running.value.chat.format == 9 { 20480 } else { if running.value.chat.format == 5 || running.value.chat.format == 7 { 12288 } else { 8192 } } } };
                 run_after_followup(args[4], allowed, running.value.chat.invocation, first, second, facts.additional, history, budget)
             }
             None() => run_after_work(args[4], allowed, running.value.chat.invocation, first, history),
@@ -102,7 +102,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyR
     if result.status != 0 || !result.resolved { println("REFUSED chat turn unresolved; inspect without retry"); return 1; }
     match finish(running, result, policy, binding) { Ok(_) => {} Err(error) => { println("REFUSED " + error); return 1; } }
     println("SAVED chat and event records together; saved text is untrusted and does not grant authority.");
-    match result.completed { Some(item) => { let route = if natural { natural_route(item.answer, allowed, facts.first != None(), result.state.admitted < 32, scope.page, scope.more) } else { delegate_route(item.answer, result.state.admitted < 32) }; if route != "" { println(route); } } None() => {} }
+    match result.completed { Some(item) => { let route = if natural { natural_route(item.answer, allowed, facts.first != None(), result.state.admitted < if running.value.chat.format == 14 { 48 } else { 32 }, scope.page, scope.more) } else { delegate_route(item.answer, result.state.admitted < if running.value.chat.format == 14 { 48 } else { 32 }) }; if route != "" { println(route); } } None() => {} }
     return 0;
 }
 
@@ -145,18 +145,18 @@ public flow status(args: Array<string>) -> i32 ![Console, Memory, Fs.read<Policy
     var additional: Array<ExtraEntry> = [];
     match extra { Some(item) => { additional = item.value.history.push(item.value.current); } None() => {} }
     var chat_reservations: i32 = 0; var native_configured: i32 = 0; var legacy_native_unknown = false;
-    for event in saved.value.events.events limit Iterations(768) { if event.role == "system" && event.kind == "native-budget" && event.name == "chat" { chat_reservations = chat_reservations + 1; } }
+    for event in saved.value.events.events limit Iterations(4096) { if event.role == "system" && event.kind == "native-budget" && event.name == "chat" { chat_reservations = chat_reservations + 1; } }
     native_configured = chat_reservations * 1179648;
     let completed_new = if saved.value.chat.phase == "running" && chat_reservations > 0 { chat_reservations - 1 } else { chat_reservations };
     if saved.value.chat.invocation.admitted > completed_new { legacy_native_unknown = true; }
-    match work { Some(item) => { if item.value.work.format >= 4 { native_configured = native_configured + 1335296; } else { legacy_native_unknown = true; } } None() => {} }
-    match followup { Some(item) => { if item.value.work.format >= 4 { native_configured = native_configured + 1335296; } else { legacy_native_unknown = true; } } None() => {} }
-    for item in additional limit Iterations(32) { if item.result.source == "v2" || ends_with(item.result.source, "-v2") { native_configured = native_configured + 1335296; } else { legacy_native_unknown = true; } }
+    match work { Some(item) => { if item.value.work.format >= 4 { native_configured = native_configured + if item.value.work.format == 6 { 2073152 } else { 1335296 }; } else { legacy_native_unknown = true; } } None() => {} }
+    match followup { Some(item) => { if item.value.work.format >= 4 { native_configured = native_configured + if item.value.work.format == 6 { 2073152 } else { 1335296 }; } else { legacy_native_unknown = true; } } None() => {} }
+    for item in additional limit Iterations(48) { if ends_with(item.result.source, "-v3") { native_configured = native_configured + 2073152; } else { if item.result.source == "v2" || ends_with(item.result.source, "-v2") { native_configured = native_configured + 1335296; } else { legacy_native_unknown = true; } } }
     println("NATIVE configured cumulative reservation=" + to_string_i32(native_configured) + "; actual provider usage unknown; legacy native budget " + if legacy_native_unknown { "unknown" } else { "not present" });
-    for item in additional limit Iterations(32) {
+    for item in additional limit Iterations(48) {
         println("ADDITIONAL WORK " + item.core.id + " phase=" + item.result.phase + " edit=" + item.edit.phase + " check=" + item.check.phase +
             " settled_calls=" + to_string_i32(item.result.calls) + " settled_generation=" + to_string_i32(item.result.generation) +
-            if item.result.phase == "running" || item.result.phase == "abandoned" { if item.result.source == "wide" || item.result.source == "wide-v2" { " reserved_calls=7 reserved_generation=61440" } else { " reserved_calls=7 reserved_generation=51200" } } else { " reserved_calls=0 reserved_generation=0" });
+            if item.result.phase == "running" || item.result.phase == "abandoned" { if item.result.source == "wide-v3" { " reserved_calls=7 reserved_generation=188416" } else { if item.result.source == "wide" || item.result.source == "wide-v2" { " reserved_calls=7 reserved_generation=61440" } else { " reserved_calls=7 reserved_generation=51200" } } } else { " reserved_calls=0 reserved_generation=0" });
         if item.check.phase == "abandoned" { println("ABANDONED CHECK: outcome unknown; inspect the workspace before further action."); }
     }
     var followup_phase = "none"; var followup_edit_phase = "none"; var followup_reserved_calls: i32 = 0; var followup_reserved_tokens: i32 = 0;
@@ -224,7 +224,7 @@ public flow status(args: Array<string>) -> i32 ![Console, Memory, Fs.read<Policy
     let view = View { format = 1, encoding = saved.value.encoding, phase = saved.value.chat.phase,
         turns = saved.value.events.turns, first_count = saved.value.events.first_count,
         used_calls = used.calls, used_tokens = used.tokens, used_tools = used.tools, used_scan = used.scan,
-        reserved_calls = if pending { if saved.value.chat.format == 5 || saved.value.chat.format == 7 || saved.value.chat.format == 9 || (saved.value.chat.format == 11 || saved.value.chat.format == 13) { 6 } else { 4 } } else { 0 }, reserved_tokens = if pending { if (saved.value.chat.format == 11 || saved.value.chat.format == 13) { 24576 } else { if saved.value.chat.format == 9 { 20480 } else { if saved.value.chat.format == 5 || saved.value.chat.format == 7 { 12288 } else { 8192 } } } } else { 0 },
+        reserved_calls = if pending { if saved.value.chat.format == 5 || saved.value.chat.format == 7 || saved.value.chat.format == 9 || (saved.value.chat.format == 11 || saved.value.chat.format >= 13) { 6 } else { 4 } } else { 0 }, reserved_tokens = if pending { if (saved.value.chat.format == 11 || saved.value.chat.format >= 13) { 24576 } else { if saved.value.chat.format == 9 { 20480 } else { if saved.value.chat.format == 5 || saved.value.chat.format == 7 { 12288 } else { 8192 } } } } else { 0 },
         events = saved.value.events.events, work_phase = work_phase, work_edit_phase = work_edit_phase, work_reserved_calls = work_reserved_calls,
         work_reserved_tokens = work_reserved_tokens, work_settled_calls = work_settled_calls,
         work_settled_tokens = work_settled_tokens, work_events = work_events,

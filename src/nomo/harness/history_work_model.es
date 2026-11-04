@@ -61,13 +61,12 @@ agent EditAggregate(input: EditInput) -> string {
 agent WideEditAggregate(input: EditInput) -> string {
     return perform infer<string>(Prompt.new().system(Trusted(editaggregate_system())).data(input));
 }
-flow read_main_mode(value: ReadContext, request: string, previous: Previous, wide: bool) -> string {
+public flow read_main_mode(value: ReadContext, request: string, previous: Previous, wide: bool) -> string {
     let input = bounded_read(ReadInput { current = value, previous_request = request, previous = previous });
     if value.phase == "plan" { return if wide { WideReadPlan.run(input) } else { ReadPlan.run(input) }; }
     return if wide { WideReadAggregate.run(input) } else { ReadAggregate.run(input) };
 }
 public flow read_main(value: ReadContext, request: string, previous: Previous) -> string { return read_main_mode(value, request, previous, false); }
-public flow wide_read_main(value: ReadContext, request: string, previous: Previous) -> string { return read_main_mode(value, request, previous, true); }
 public flow plan(value: WorkContext, request: string, previous: Previous) -> string { return EditPlan.run(bounded_edit(EditInput { current = value, previous_request = request, previous = previous })); }
 public flow wide_plan(value: WorkContext, request: string, previous: Previous) -> string { return WideEditPlan.run(bounded_edit(EditInput { current = value, previous_request = request, previous = previous })); }
 public flow child(value: WorkContext, request: string, previous: Previous) -> string { return EditChild.run(bounded_edit(EditInput { current = value, previous_request = request, previous = previous })); }

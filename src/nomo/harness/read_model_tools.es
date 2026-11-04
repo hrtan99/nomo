@@ -14,7 +14,7 @@ import nomo.harness.legacy_string_stages.LegacyStringStages;
 import nomo.harness.legacy_stage_contracts.ReadMainStage;
 import nomo.model.harness_progress.HarnessProgress;
 import nomo.agent.console_progress.write as write_progress;
-import nomo.harness.legacy_chat_stages.ChatChildStage;
+import nomo.harness.legacy_chat_stages.{ChatChildStage, WideChatChildStage};
 import nomo.tools.workspace.ReadOnlyRoot;
 public import nomo.harness.read_tool_contract.numbers;
 
@@ -37,10 +37,10 @@ flow stage(phase: string, state: Ledger, prefix: string, expanded: bool, wide: b
     let calls = if phase == "aggregate" { 0 } else { 3 };
     let tools = if phase == "aggregate" { 0 } else { 1 };
     perform HarnessProgress.write("STAGE " + prefix + phase + " child-1 " + numbers(state) + " reserved_steps=" + to_string_i32(steps) +
-        " reserved_calls=" + to_string_i32(calls) + " reserved_tokens=" + to_string_i32(if wide && phase != "aggregate" { 12288 } else { if expanded && phase != "aggregate" { 10240 } else { calls * 2048 } }) +
+        " reserved_calls=" + to_string_i32(calls) + " reserved_tokens=" + to_string_i32(if wide && phase != "aggregate" { 139264 } else { if expanded && phase != "aggregate" { 10240 } else { calls * 2048 } }) +
         " reserved_tools=" + to_string_i32(tools) + " reserved_scan=" + to_string_i32(tools * if expanded { 65540 } else { 16384 }));
     if phase == "child" {
-        perform HarnessProgress.write(if wide { "RESERVATION child-1 steps=3 calls=2 tokens=8192 tools=1 scan=65540 tail_steps=2 tail_calls=1 tail_tokens=4096 unresolved=true" } else { if expanded { "RESERVATION child-1 steps=3 calls=2 tokens=8192 tools=1 scan=65540 tail_steps=2 tail_calls=1 tail_tokens=2048 unresolved=true" } else { "RESERVATION child-1 steps=3 calls=2 tokens=4096 tools=1 scan=16384 tail_steps=2 tail_calls=1 tail_tokens=2048 unresolved=true" } });
+        perform HarnessProgress.write(if wide { "RESERVATION child-1 steps=3 calls=2 tokens=135168 tools=1 scan=65540 tail_steps=2 tail_calls=1 tail_tokens=4096 unresolved=true" } else { if expanded { "RESERVATION child-1 steps=3 calls=2 tokens=8192 tools=1 scan=65540 tail_steps=2 tail_calls=1 tail_tokens=2048 unresolved=true" } else { "RESERVATION child-1 steps=3 calls=2 tokens=4096 tools=1 scan=16384 tail_steps=2 tail_calls=1 tail_tokens=2048 unresolved=true" } });
     }
 }
 
@@ -79,8 +79,8 @@ public flow private_chat_child_turn(task: string, allowed: Array<string>, select
     return if multi { run_multi_chat_loop(task, allowed, seed(selected), true) } else { run_chat_loop(task, allowed, default_limits(), seed(selected), true) };
 }
 
-public flow expanded_work_child_turn(task: string, allowed: Array<string>, selected: State) -> LoopTurn ~ ChatChildStage<ReadOnlyRoot> {
-    return run_expanded_work_loop(task, allowed, seed(selected));
+public flow expanded_work_child_turn(task: string, allowed: Array<string>, selected: State, wide: bool) -> LoopTurn ~ WideChatChildStage<ReadOnlyRoot> {
+    return run_expanded_work_loop(task, allowed, seed(selected), wide);
 }
 
 flow failed(state: Ledger, error: string, resolved: bool) -> Result<Report, Failure> {
@@ -119,7 +119,7 @@ flow run_context_mode(request: string, allowed: Array<string>, initial: Ledger,
     };
     state = match if expanded { work_settle(state, child.state) } else { settle(state, child.state) } { Ok(value) => value, Err(error) => { return failed(state, error, false); } };
     perform HarnessProgress.write("SETTLED child-1 " + numbers(state) + " released_steps=" + to_string_i32(5 - state.steps) +
-        " released_calls=" + to_string_i32(3 - state.calls) + " released_tokens=" + to_string_i32((if wide { 12288 } else { if expanded { 10240 } else { 6144 } }) - state.tokens) +
+        " released_calls=" + to_string_i32(3 - state.calls) + " released_tokens=" + to_string_i32((if wide { 139264 } else { if expanded { 10240 } else { 6144 } }) - state.tokens) +
         " released_tools=" + to_string_i32(1 - state.tools) + " released_scan=" + to_string_i32((if expanded { 65540 } else { 16384 }) - state.scan) + " unresolved=false");
     if child.status != 0 { return failed(state, "child returned failure; no aggregation", true); }
     if require_tool && child.state.tools != 1 { return failed(state, "work requires a successful read or search child", true); }

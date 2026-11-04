@@ -2,6 +2,10 @@ module nomo.session.recoverable_work_facts;
 
 import nomo.session.work_fact_events.{summary_source, selection};
 import std.collections.len as count;
+import std.memory.MemoryEntry;
+import nomo.session.history_work_guard.Record;
+import nomo.session.recoverable_events.Frame as EventFrame;
+import nomo.session.recoverable_check_store.Frame as CheckFrame;
 import std.text.split;
 
 import nomo.session.redaction.Policy;
@@ -24,7 +28,7 @@ flow extra_fact(item: Entry, policy: Policy) -> Result<WorkFacts, string> {
         output = Some(match check_values(item.check.stdout, item.check.stderr, item.check.stdout_truncated, item.check.stderr_truncated, policy) { Ok(value) => value, Err(error) => { return Err(error); } });
     }
     let chosen = match selection(item.result.events, policy) { Ok(value) => value, Err(error) => { return Err(error); } };
-    return Ok(WorkFacts { id = item.core.id, summary = item.result.summary, summary_source = if item.result.source == "model-v2" { "model" } else { if item.result.source == "system-v2" { "system" } else { item.result.source } }, selection = chosen,
+    return Ok(WorkFacts { id = item.core.id, summary = item.result.summary, summary_source = if (item.result.source == "model-v2" || item.result.source == "model-v3") { "model" } else { if (item.result.source == "system-v2" || item.result.source == "system-v3") { "system" } else { item.result.source } }, selection = chosen,
         check = if item.check.phase == "none" { "not requested" } else { if item.check.phase == "abandoned" { "abandoned; outcome unknown" } else { item.check.outcome } }, exit_code = item.check.exit_code, output = output });
 }
 // Keep older diagnostics at the original per-stream context bound; the stored
@@ -48,6 +52,18 @@ flow check_values(stdout: string, stderr: string, out_truncated: bool, err_trunc
     let err = match decode(stderr, policy) { Ok(item) => item, Err(error) => { return Err(error); } };
     return Ok(CheckOutput { stdout = out, stderr = err, stdout_truncated = out_truncated, stderr_truncated = err_truncated });
 }
+flow completed_fact(work: Record, events: EventFrame, check: Option<MemoryEntry<string, CheckFrame>>, policy: Policy, label: string) -> Result<WorkFacts, string> {
+    var outcome = "not requested"; var exit = ""; var output: Option<CheckOutput> = None();
+    match check { Some(value) => {
+        if value.value.check.phase == "abandoned" { outcome = "abandoned; outcome unknown"; } else {
+        if value.value.check.phase != "complete" { return Err(label + " check unresolved"); }
+        outcome = value.value.check.outcome; exit = value.value.check.exit_code;
+        output = Some(match check_values(value.value.stdout, value.value.stderr, value.value.stdout_truncated, value.value.stderr_truncated, policy) { Ok(item) => item, Err(error) => { return Err(error); } }); }
+    } None() => {} }
+    let origin = match summary_source(events, work.summary, policy) { Ok(value) => value, Err(error) => { return Err(error); } };
+    let chosen = match selection(events.events, policy) { Ok(value) => value, Err(error) => { return Err(error); } };
+    return Ok(WorkFacts { id = work.id, summary = work.summary, summary_source = origin, selection = chosen, check = outcome, exit_code = exit, output = output });
+}
 public flow snapshot(policy: Policy, binding: string) -> Result<Facts, string> {
     let first = match load_work(policy, binding) { Ok(item) => item, Err(error) => { return Err(error); } };
     let first_check = match load_check(policy, binding) { Ok(item) => item, Err(error) => { return Err(error); } };
@@ -70,16 +86,7 @@ public flow snapshot(policy: Policy, binding: string) -> Result<Facts, string> {
             if edit.phase != "completed" { return Err("first edit unresolved"); }
             let spent = match work.settled { Some(value) => value, None() => { return Err("first work budget missing"); } };
             calls = spent.read.calls + spent.edit.calls; generation = spent.read.tokens + spent.edit.tokens;
-            var outcome = "not requested"; var exit = ""; var output: Option<CheckOutput> = None();
-            match first_check { Some(value) => {
-                if value.value.check.phase == "abandoned" { outcome = "abandoned; outcome unknown"; } else {
-                if value.value.check.phase != "complete" { return Err("first check unresolved"); }
-                outcome = value.value.check.outcome; exit = value.value.check.exit_code;
-                output = Some(match check_values(value.value.stdout, value.value.stderr, value.value.stdout_truncated, value.value.stderr_truncated, policy) { Ok(item) => item, Err(error) => { return Err(error); } }); }
-            } None() => {} }
-            let origin = match summary_source(item.value.events, work.summary, policy) { Ok(value) => value, Err(error) => { return Err(error); } };
-            let chosen = match selection(item.value.events.events, policy) { Ok(value) => value, Err(error) => { return Err(error); } };
-            first_facts = Some(WorkFacts { id = work.id, summary = work.summary, summary_source = origin, selection = chosen, check = outcome, exit_code = exit, output = output });
+            first_facts = Some(match completed_fact(work, item.value.events, first_check, policy, "first") { Ok(value) => value, Err(error) => { return Err(error); } });
             }
         }
     }
@@ -100,16 +107,7 @@ public flow snapshot(policy: Policy, binding: string) -> Result<Facts, string> {
             if edit.phase != "completed" { return Err("followup edit unresolved"); }
             let spent = match work.settled { Some(value) => value, None() => { return Err("followup budget missing"); } };
             calls = calls + spent.read.calls + spent.edit.calls; generation = generation + spent.read.tokens + spent.edit.tokens;
-            var outcome = "not requested"; var exit = ""; var output: Option<CheckOutput> = None();
-            match second_check { Some(value) => {
-                if value.value.check.phase == "abandoned" { outcome = "abandoned; outcome unknown"; } else {
-                if value.value.check.phase != "complete" { return Err("followup check unresolved"); }
-                outcome = value.value.check.outcome; exit = value.value.check.exit_code;
-                output = Some(match check_values(value.value.stdout, value.value.stderr, value.value.stdout_truncated, value.value.stderr_truncated, policy) { Ok(item) => item, Err(error) => { return Err(error); } }); }
-            } None() => {} }
-            let origin = match summary_source(item.value.events, work.summary, policy) { Ok(value) => value, Err(error) => { return Err(error); } };
-            let chosen = match selection(item.value.events.events, policy) { Ok(value) => value, Err(error) => { return Err(error); } };
-            second_facts = Some(WorkFacts { id = work.id, summary = work.summary, summary_source = origin, selection = chosen, check = outcome, exit_code = exit, output = output });
+            second_facts = Some(match completed_fact(work, item.value.events, second_check, policy, "followup") { Ok(value) => value, Err(error) => { return Err(error); } });
             }
         }
     }
@@ -119,9 +117,9 @@ public flow snapshot(policy: Policy, binding: string) -> Result<Facts, string> {
         match second_facts { None() => { return Err("followup facts missing"); } Some(_) => {} }
         let items = value.value.history.push(value.value.current);
         var index: usize = 0;
-        for item in items limit Iterations(32) {
+        for item in items limit Iterations(48) {
             let fact = match extra_fact(item, policy) { Ok(value) => value, Err(error) => { return Err(error); } };
-            additional = additional.push(if index + 2 < count(items) { compact(fact) } else { fact }); index = index + 1; calls = calls + if item.result.phase == "abandoned" { 7 } else { item.result.calls }; generation = generation + if item.result.phase == "abandoned" { if item.result.source == "wide" || item.result.source == "wide-v2" { 61440 } else { 51200 } } else { item.result.generation };
+            additional = additional.push(if index + 2 < count(items) { compact(fact) } else { fact }); index = index + 1; calls = calls + if item.result.phase == "abandoned" { 7 } else { item.result.calls }; generation = generation + if item.result.phase == "abandoned" { if item.result.source == "wide-v3" { 188416 } else { if item.result.source == "wide" || item.result.source == "wide-v2" { 61440 } else { 51200 } } } else { item.result.generation };
         }
     } None() => {} }
     if count(additional) >= 1 { first_facts = match first_facts { Some(value) => Some(compact(value)), None() => None() }; }

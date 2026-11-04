@@ -21,18 +21,18 @@ alias Schema = MemoryRegion<{ Rows: Store<string, Record> }>;
 let Runs = std.memory.region<Schema>(stable_id = "nomo-history-work-v1", store = "history-work");
 flow read() -> Option<MemoryEntry<string, Record>> { return get_entry(Runs.Rows, "work"); }
 public flow invalid(value: Record) -> string {
-    if (value.format < 1 || value.format > 5) || (value.phase != "running" && value.phase != "complete" && value.phase != "abandoned") { return "invalid history-work phase"; }
+    if (value.format < 1 || value.format > 6) || (value.phase != "running" && value.phase != "complete" && value.phase != "abandoned") { return "invalid history-work phase"; }
     let selected = selector_error(value.id, value.workspace, value.path); if selected != "" { return selected; }
     let question = question_error(value.request); if question != "" { return question; }
     if value.history_version == "" || len(value.history_version) > 512 { return "invalid history version"; }
     if value.phase == "running" || value.phase == "abandoned" {
-        let expected = if value.format == 1 { full() } else { Budget { steps = 13, calls = 7, generation = if value.format == 3 || value.format == 4 { 61440 } else { 51200 }, native_tokens = if value.format >= 4 { 1335296 } else { 196608 } } };
+        let expected = if value.format == 1 { full() } else { Budget { steps = 13, calls = 7, generation = if value.format == 6 { 188416 } else { if value.format == 3 || value.format == 4 { 61440 } else { 51200 } }, native_tokens = if value.format == 6 { 2073152 } else { if value.format >= 4 { 1335296 } else { 196608 } } } };
         if value.summary != "" || value.reserved != expected || value.settled != None() { return "invalid running work reservation"; }
     } else {
         if history_summary_error(value.summary, "summary") != "" || value.reserved != zero() { return "invalid completed work summary or reservation"; }
         let spent = match value.settled { Some(item) => item, None() => { return "missing settled work ledger"; } };
         if ledger_error(spent) != "" || spent.read.steps + spent.edit.steps != 13 || spent.read.calls + spent.edit.calls != 7 ||
-            spent.read.tokens + spent.edit.tokens != (if value.format == 1 { 47104 } else { if value.format == 3 || value.format == 4 { 61440 } else { 51200 } }) || (if value.format >= 4 { native_budget(spent) != 1335296 || spent.read.scan != 65540 } else { native_tokens(spent) != 196608 }) { return "invalid settled work ledger"; }
+            spent.read.tokens + spent.edit.tokens != (if value.format == 1 { 47104 } else { if value.format == 6 { 188416 } else { if value.format == 3 || value.format == 4 { 61440 } else { 51200 } } }) || (if value.format >= 4 { native_budget(spent) != if value.format == 6 { 2073152 } else { 1335296 } || spent.read.scan != 65540 } else { native_tokens(spent) != 196608 }) { return "invalid settled work ledger"; }
     }
     return "";
 }

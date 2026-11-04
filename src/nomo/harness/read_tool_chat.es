@@ -39,21 +39,21 @@ agent HistoryChatMainWide(input: ConversationInput) -> string {
 
 public flow run_turn(request: string, allowed: Array<string>, invocation: Invocation) -> TurnResult {
     return run_turn_controller(request, allowed, invocation) with {
-        LegacyChatStages.main(context) => { resume if invocation.maximum == multi_wide_maximum(2) || invocation.maximum == multi_wide_maximum(32) { ChatMainWide.run(context) } else { ChatMain.run(context) }; }
+        LegacyChatStages.main(context) => { resume if invocation.maximum == multi_wide_maximum(2) || invocation.maximum == multi_wide_maximum(32) || invocation.maximum == multi_wide_maximum(48) { ChatMainWide.run(context) } else { ChatMain.run(context) }; }
         LegacyChatStages.child(task, files, selected, multi) => { resume chat_child_turn(task, files, selected, multi); }
     };
 }
 
 public flow run_private_turn(request: string, allowed: Array<string>, invocation: Invocation) -> TurnResult {
     return run_private_turn_controller(request, allowed, invocation) with {
-        LegacyChatStages.main(context) => { resume if invocation.maximum == multi_wide_maximum(2) || invocation.maximum == multi_wide_maximum(32) { ChatMainWide.run(context) } else { ChatMain.run(context) }; }
+        LegacyChatStages.main(context) => { resume if invocation.maximum == multi_wide_maximum(2) || invocation.maximum == multi_wide_maximum(32) || invocation.maximum == multi_wide_maximum(48) { ChatMainWide.run(context) } else { ChatMain.run(context) }; }
         LegacyChatStages.child(task, files, selected, multi) => { resume private_chat_child_turn(task, files, selected, multi); }
     };
 }
 
 public flow run_with_history(request: string, allowed: Array<string>, invocation: Invocation, history: Array<Event>) -> TurnResult {
     return run_private_turn_controller(request, allowed, invocation) with {
-        LegacyChatStages.main(context) => { resume if invocation.maximum == multi_wide_maximum(2) || invocation.maximum == multi_wide_maximum(32) { HistoryChatMainWide.run(ConversationInput { current = context, history = history }) } else { HistoryChatMain.run(ConversationInput { current = context, history = history }) }; }
+        LegacyChatStages.main(context) => { resume if invocation.maximum == multi_wide_maximum(2) || invocation.maximum == multi_wide_maximum(32) || invocation.maximum == multi_wide_maximum(48) { HistoryChatMainWide.run(ConversationInput { current = context, history = history }) } else { HistoryChatMain.run(ConversationInput { current = context, history = history }) }; }
         LegacyChatStages.child(task, files, selected, multi) => { resume private_chat_child_turn(task, files, selected, multi); }
     };
 }

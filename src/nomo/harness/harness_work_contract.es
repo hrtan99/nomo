@@ -31,27 +31,27 @@ public type Ledger = { read: ReadLedger, edit: EditLedger };
 public flow fresh() -> Ledger { return Ledger { read = read_fresh(), edit = edit_fresh() }; }
 
 flow read_complete(value: ReadLedger) -> bool {
-    return value.steps == 7 && value.calls == 4 && (value.tokens == 8192 || value.tokens == 12288 || value.tokens == 16384) && value.tools == 1 && (value.scan == 4096 || value.scan == 16384 || value.scan == 65540);
+    return value.steps == 7 && value.calls == 4 && (value.tokens == 8192 || value.tokens == 12288 || value.tokens == 16384 || value.tokens == 20480 || value.tokens == 143360) && value.tools == 1 && (value.scan == 4096 || value.scan == 16384 || value.scan == 65540);
 }
 
 // Historical ledger allowance; it is not the interpreter total-token cap.
 public flow native_tokens(state: Ledger) -> i32 {
-    if read_error(state.read) != "" || (if state.read.tokens == 16384 { wide_error(state.edit) } else { edit_error(state.edit) }) != "" { return 0; }
+    if read_error(state.read) != "" || (if (state.read.tokens == 16384 || state.read.tokens == 20480 || state.read.tokens == 143360) { wide_error(state.edit) } else { edit_error(state.edit) }) != "" { return 0; }
     return state.read.calls * 8192 + state.edit.native_tokens;
 }
 
 // New event-work stages reserve interpreter-enforced total-token maxima.
 public flow native_budget(state: Ledger) -> i32 {
     let read = match state.read.calls { 0 => 0, 1 => 8192, 2 => 24576, 3 => 286720, _ => 548864 };
-    return read + state.edit.calls * 262144;
+    return read + state.edit.calls * 262144 + if state.read.tokens >= 139264 { 737856 } else { 0 };
 }
 
 public flow ledger_error(state: Ledger) -> string {
     let read = read_error(state.read); if read != "" { return read; }
-    let edit = if state.read.tokens == 16384 { wide_error(state.edit) } else { edit_error(state.edit) }; if edit != "" { return edit; }
+    let edit = if (state.read.tokens == 16384 || state.read.tokens == 20480 || state.read.tokens == 143360) { wide_error(state.edit) } else { edit_error(state.edit) }; if edit != "" { return edit; }
     if state.edit.steps != 0 && !read_complete(state.read) { return "edit tail requires settled read work"; }
     if state.read.steps + state.edit.steps > 13 || state.read.calls + state.edit.calls > 7 ||
-        state.read.tokens + state.edit.tokens > 61440 || native_tokens(state) > 196608 || native_budget(state) > 1335296 {
+        state.read.tokens + state.edit.tokens > 188416 || native_tokens(state) > 196608 || native_budget(state) > 2073152 {
         return "shared work reservation exhausted";
     }
     return "";
@@ -62,7 +62,7 @@ public flow ledger_error(state: Ledger) -> string {
 public flow bump_edit(state: Ledger, call: bool) -> Result<Ledger, string> {
     let invalid = ledger_error(state); if invalid != "" { return Err(invalid); }
     if !read_complete(state.read) { return Err("edit tail requires settled read work"); }
-    let edit = match edit_bump(state.edit, call, state.read.tokens == 16384) { Ok(value) => value, Err(error) => { return Err(error); } };
+    let edit = match edit_bump(state.edit, call, (state.read.tokens == 16384 || state.read.tokens == 20480 || state.read.tokens == 143360)) { Ok(value) => value, Err(error) => { return Err(error); } };
     return Ok(Ledger { read = state.read, edit = edit });
 }
 
@@ -84,7 +84,7 @@ flow selected_error(value: Evidence, complete: bool) -> string {
     let invalid = read_error(value.ledger); if invalid != "" { return invalid; }
     if complete {
         if !read_complete(value.ledger) || !bounded(value.summary, 512) { return "read evidence is not settled"; }
-    } else if value.summary != "" || value.ledger.steps != 5 || value.ledger.calls != 3 || (value.ledger.tokens != 6144 && value.ledger.tokens != 10240 && value.ledger.tokens != 12288) ||
+    } else if value.summary != "" || value.ledger.steps != 5 || value.ledger.calls != 3 || (value.ledger.tokens != 6144 && value.ledger.tokens != 10240 && value.ledger.tokens != 12288 && value.ledger.tokens != 16384 && value.ledger.tokens != 139264) ||
         value.ledger.tools != 1 || (value.ledger.scan != 4096 && value.ledger.scan != 16384 && value.ledger.scan != 65540) { return "invalid pending read evidence"; }
     return "";
 }
@@ -109,7 +109,7 @@ public flow collect(child: Session, status: i32, request: string, task: string, 
 // Model call, then compares the returned ledger with its invocation ledger.
 public flow finish_evidence(value: Evidence, summary: string) -> Result<Evidence, string> {
     let invalid = selected_error(value, false); if invalid != "" { return Err(invalid); }
-    let wide = value.ledger.tokens == 12288;
+    let wide = value.ledger.tokens == 12288 || value.ledger.tokens == 16384 || value.ledger.tokens == 139264;
     let consumed = match if wide { wide_bump(value.ledger, false) } else { read_bump(value.ledger, false) } { Ok(item) => item, Err(error) => { return Err(error); } };
     let ledger = match if wide { wide_bump(consumed, true) } else { read_bump(consumed, true) } { Ok(item) => item, Err(error) => { return Err(error); } };
     let result = Evidence { request = value.request, task = value.task, operation = value.operation, files = value.files,

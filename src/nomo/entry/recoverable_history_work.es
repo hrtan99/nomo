@@ -9,7 +9,7 @@ import nomo.cli.harness_work_args.{Work, parse_recorded};
 import nomo.harness.harness_work_contract.Ledger;
 import nomo.harness.read_model_tools.{expanded_work_child_turn as work_child_turn};
 import nomo.harness.legacy_string_stages.{LegacyStringStages, LegacyEditStages};
-import nomo.harness.history_work_model.{read_main, plan, child, aggregate, wide_read_main, wide_plan, wide_aggregate};
+import nomo.harness.history_work_model.{plan, child, aggregate, read_main_mode, wide_plan, wide_aggregate};
 import nomo.harness.harness_tool_chat_contract.Previous;
 import nomo.entry.harness_work_entry.{prepare_expanded_unicode, finish_edit, finish_history_summary, expanded_ledger as ledger, Pending, Failure, Completed, Summary};
 import nomo.session.event_policy.{PolicyRoot, load as load_policy};
@@ -34,8 +34,8 @@ flow prepare_history(input: Work, prior_request: string, previous: Previous, wid
     let original = (value: string) => "";
     let log = (name: string, state: Ledger) => stage(name, state, wide);
     return prepare_expanded_unicode(input, original, log, wide) with {
-        LegacyStringStages.main(value) => { resume if wide { wide_read_main(value, prior_request, previous) } else { read_main(value, prior_request, previous) }; }
-        LegacyStringStages.child(task, files, selected) => { resume work_child_turn(task, files, selected); }
+        LegacyStringStages.main(value) => { resume read_main_mode(value, prior_request, previous, wide); }
+        LegacyStringStages.child(task, files, selected) => { resume work_child_turn(task, files, selected, wide); }
         LegacyEditStages.plan(value) => { resume if wide { wide_plan(value, prior_request, previous) } else { plan(value, prior_request, previous) }; }
         LegacyEditStages.child(value) => { resume child(value, prior_request, previous); }
         LegacyEditStages.aggregate(value) => { resume if wide { wide_aggregate(value, prior_request, previous) } else { aggregate(value, prior_request, previous) }; }
@@ -74,7 +74,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
     if parsed.has_check { match plan_check(ticket, parsed.digest, policy, binding) { Ok(_) => {} Err(error) => { return refused(error); } } }
     println("RESERVED event work; interruption or uncertain effects cannot be retried automatically.");
     let prior_request = history.value.chat.last_request; let previous = history.value.chat.invocation.prior;
-    let wide = ticket.frame.work.format == 3 || ticket.frame.work.format == 4;
+    let wide = ticket.frame.work.format == 3 || ticket.frame.work.format == 4 || ticket.frame.work.format == 6;
     let pending = match prepare_history(input, prior_request, previous, wide) { Ok(value) => value, Err(failure) => { ledger(failure.state, wide); return refused(failure.error); } };
     let selected = match confirm_current(pending.selected, pending.prepared) { Ok(value) => value, Err(error) => { return refused(error); } };
     match claim(ticket, policy, binding) { Ok(_) => {} Err(error) => { return refused(error); } }

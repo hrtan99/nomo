@@ -61,7 +61,7 @@ flow stage(turn: i32, phase: string, before: Ledger, local: Ledger, multi: bool,
 // Fresh local counters are a subledger of the already checked global reservation.
 flow execute(request: string, allowed: Array<string>, prior: Previous, before: Ledger, turn: i32, unicode: bool, private_progress: bool, multi: bool, wide: bool) -> LocalTurn {
     var state = fresh();
-    if turn < 1 || turn > 32 || (turn == 1 && prior.task != "") || (turn > 1 && prior.task == "") {
+    if turn < 1 || turn > 48 || (turn == 1 && prior.task != "") || (turn > 1 && prior.task == "") {
         return refused(state, "invalid turn selection", true);
     }
     let invalid = if unicode { unicode_question_error(request) } else { question_error(request) }; if invalid != "" { return refused(state, invalid, true); }
@@ -115,13 +115,13 @@ flow execute(request: string, allowed: Array<string>, prior: Previous, before: L
 }
 
 flow run_mode(request: string, allowed: Array<string>, invocation: Invocation, unicode: bool, private_progress: bool) -> TurnResult {
-    let wide = unicode && (invocation.maximum == multi_wide_maximum(2) || invocation.maximum == multi_wide_maximum(32));
+    let wide = unicode && (invocation.maximum == multi_wide_maximum(2) || invocation.maximum == multi_wide_maximum(32) || invocation.maximum == multi_wide_maximum(48));
     let multi = wide || (unicode && (invocation.maximum == multi_maximum(2) || invocation.maximum == multi_maximum(32)));
     let session = unicode && invocation.maximum == session_maximum();
     let extended = unicode && is_extended(invocation.maximum);
-    let invalid = if multi { multi_turn_error(invocation, if invocation.maximum == multi_maximum(32) || invocation.maximum == multi_wide_maximum(32) { 32 } else { 2 }) } else { if session { session_turn_error(invocation) } else { if extended { extended_turn_error(invocation) } else { if unicode { unicode_turn_error(invocation) } else { turn_error(invocation) } } } };
+    let invalid = if multi { multi_turn_error(invocation, if invocation.maximum == multi_wide_maximum(48) { 48 } else { if invocation.maximum == multi_maximum(32) || invocation.maximum == multi_wide_maximum(32) { 32 } else { 2 } }) } else { if session { session_turn_error(invocation) } else { if extended { extended_turn_error(invocation) } else { if unicode { unicode_turn_error(invocation) } else { turn_error(invocation) } } } };
     if invalid != "" { println("REFUSED " + invalid); return TurnResult { status = 1, state = invocation, resolved = true, completed = None() }; }
-    let last_admission = if multi && (invocation.maximum == multi_maximum(32) || invocation.maximum == multi_wide_maximum(32)) { 31 } else { if session { 31 } else { if extended { 3 } else { 1 } } };
+    let last_admission = if invocation.maximum == multi_wide_maximum(48) { 47 } else { if multi && (invocation.maximum == multi_maximum(32) || invocation.maximum == multi_wide_maximum(32)) { 31 } else { if session { 31 } else { if extended { 3 } else { 1 } } } };
     if invocation.admitted < 0 || invocation.admitted > last_admission {
         println("REFUSED turn limit reached"); return TurnResult { status = 1, state = invocation, resolved = true, completed = None() };
     }

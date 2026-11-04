@@ -10,6 +10,7 @@ import nomo.model.model_tool_contract.LoopTurn;
 
 public spec ChatMainStage: callable Context => string ![];
 public spec ChatChildStage<R ~ Region>: callable (string, Array<string>, State) => LoopTurn ![Fs.read<R>, Error<ConsoleError>, Error<FileError>, Error<IndexError>];
+public spec WideChatChildStage<R ~ Region>: callable (string, Array<string>, State, bool) => LoopTurn ![Fs.read<R>, Error<ConsoleError>, Error<FileError>, Error<IndexError>];
 public effect LegacyChatStages {
     action main(context: Context) -> string;
     action child(task: string, allowed: Array<string>, selected: State, multi: bool) -> LoopTurn;

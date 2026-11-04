@@ -25,7 +25,7 @@ agent ContinueMainWide(input: Input) -> string {
 
 public flow run_turn(request: string, allowed: Array<string>, invocation: Invocation, work: WorkFacts, history: Array<Event>) -> TurnResult {
     return run_private_turn_controller(request, allowed, invocation) with {
-        LegacyChatStages.main(context) => { resume if invocation.maximum == multi_wide_maximum(2) || invocation.maximum == multi_wide_maximum(32) { ContinueMainWide.run(Input { current = context, work = work, history = history }) } else { ContinueMain.run(Input { current = context, work = work, history = history }) }; }
+        LegacyChatStages.main(context) => { resume if invocation.maximum == multi_wide_maximum(2) || invocation.maximum == multi_wide_maximum(32) || invocation.maximum == multi_wide_maximum(48) { ContinueMainWide.run(Input { current = context, work = work, history = history }) } else { ContinueMain.run(Input { current = context, work = work, history = history }) }; }
         LegacyChatStages.child(task, files, selected, multi) => { resume private_chat_child_turn(task, files, selected, multi); }
     };
 }
@@ -44,7 +44,7 @@ agent ContinueAfterFollowupWide(input: FollowupInput) -> string {
 }
 public flow run_after_followup(request: string, allowed: Array<string>, invocation: Invocation, work: WorkFacts, followup: WorkFacts, additional: Array<WorkFacts>, history: Array<Event>, budget: BudgetFacts) -> TurnResult {
     return run_private_turn_controller(request, allowed, invocation) with {
-        LegacyChatStages.main(context) => { resume if invocation.maximum == multi_wide_maximum(2) || invocation.maximum == multi_wide_maximum(32) { ContinueAfterFollowupWide.run(FollowupInput { current = context, work = work, followup = followup, additional = additional, history = history, budget = budget }) } else { ContinueAfterFollowup.run(FollowupInput { current = context, work = work, followup = followup, additional = additional, history = history, budget = budget }) }; }
+        LegacyChatStages.main(context) => { resume if invocation.maximum == multi_wide_maximum(2) || invocation.maximum == multi_wide_maximum(32) || invocation.maximum == multi_wide_maximum(48) { ContinueAfterFollowupWide.run(FollowupInput { current = context, work = work, followup = followup, additional = additional, history = history, budget = budget }) } else { ContinueAfterFollowup.run(FollowupInput { current = context, work = work, followup = followup, additional = additional, history = history, budget = budget }) }; }
         LegacyChatStages.child(task, files, selected, multi) => { resume private_chat_child_turn(task, files, selected, multi); }
     };
 }

@@ -49,15 +49,15 @@ public flow admit(binding: string, id: string, workspace: string, path: string, 
         else if last.result.phase != "complete" || (last.check.phase != "none" && last.check.phase != "complete" && last.check.phase != "abandoned") { return Err("previous work or check is unfinished"); }
         history = item.value.history.push(last);
     } None() => {} }
-    if count(history) >= 32 { return Err("continuous session history limit reached"); }
-    for item in history limit Iterations(32) { if item.core.id == id { return Err("work ID already used"); } }
+    if count(history) >= 48 { return Err("continuous session history limit reached"); }
+    for item in history limit Iterations(48) { if item.core.id == id { return Err("work ID already used"); } }
     for field in [id, workspace, path] limit Iterations(3) {
         let value = match redact(field, policy) { Ok(item) => item, Err(error) => { return Err(error); } };
         if value.replacements != 0 { return Err("work identity contains a known sensitive literal"); }
     }
     let clean = match redact(request, policy) { Ok(value) => value.value, Err(error) => { return Err(error); } };
     let item = Entry { core = Core { id = id, request = clean }, edit = Edit { phase = "none", binding = None() },
-        result = ResultData { phase = "running", summary = "", source = if wide { "wide-v2" } else { "v2" }, calls = 0, generation = 0, events = [] },
+        result = ResultData { phase = "running", summary = "", source = if wide { "wide-v3" } else { "v2" }, calls = 0, generation = 0, events = [] },
         check = Check { phase = if digest == "" { "none" } else { "planned" }, digest = digest, outcome = "", exit_code = "", stdout = "", stderr = "", stdout_truncated = false, stderr_truncated = false } };
     return write(Book { binding = binding, history = history, current = item }, previous);
 }
@@ -72,11 +72,11 @@ public flow edit_complete(ticket: Stored) -> Result<Stored, string> ![Memory, Er
 }
 public flow finish(ticket: Stored, summary: string, source: string, spent: Ledger, records: Array<Event>, policy: Policy) -> Result<Stored, string> ![Memory, Error<StorageError>, Error<IndexError>] {
     let item = ticket.value.current; if item.edit.phase != "completed" || item.result.phase != "running" { return Err("completed work edit required"); }
-    if ledger_error(spent) != "" || spent.read.calls + spent.edit.calls != 7 || spent.read.tokens + spent.edit.tokens != (if item.result.source == "wide" || item.result.source == "wide-v2" { 61440 } else { 51200 }) { return Err("additional work ledger differs from reservation"); }
-    if (item.result.source == "wide-v2" || item.result.source == "v2") && (native_budget(spent) != 1335296 || spent.read.scan != 65540) { return Err("additional work native reservation differs"); }
+    if ledger_error(spent) != "" || spent.read.calls + spent.edit.calls != 7 || spent.read.tokens + spent.edit.tokens != (if item.result.source == "wide-v3" { 188416 } else { if item.result.source == "wide" || item.result.source == "wide-v2" { 61440 } else { 51200 } }) { return Err("additional work ledger differs from reservation"); }
+    if (item.result.source == "wide-v3" || item.result.source == "wide-v2" || item.result.source == "v2") && (native_budget(spent) != if item.result.source == "wide-v3" { 2073152 } else { 1335296 } || spent.read.scan != 65540) { return Err("additional work native reservation differs"); }
     let cleaned = match redact(summary, policy) { Ok(value) => value.value, Err(error) => { return Err(error); } };
     let saved = match work_batch(records, policy) { Ok(value) => value.events, Err(error) => { return Err(error); } };
-    let result = ResultData { phase = "complete", summary = cleaned, source = if item.result.source == "wide-v2" || item.result.source == "v2" { source + "-v2" } else { source }, calls = spent.read.calls + spent.edit.calls, generation = spent.read.tokens + spent.edit.tokens, events = saved };
+    let result = ResultData { phase = "complete", summary = cleaned, source = if item.result.source == "wide-v3" { source + "-v3" } else { if item.result.source == "wide-v2" || item.result.source == "v2" { source + "-v2" } else { source } }, calls = spent.read.calls + spent.edit.calls, generation = spent.read.tokens + spent.edit.tokens, events = saved };
     return put(ticket, Entry { core = item.core, edit = item.edit, result = result, check = item.check });
 }
 public flow start_check(binding: string, id: string, digest: string) -> Result<Stored, string> ![Memory, Error<StorageError>, Error<IndexError>] {

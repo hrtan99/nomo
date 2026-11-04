@@ -27,7 +27,7 @@ flow emit_mode(state: State, role: string, kind: string, name: string, text: str
 
 // Reserve the attempted model event and its largest final/action/error output.
 // The context includes all preceding events, never the not-yet-made request.
-flow model_attempt(previous: Session, allowed: Array<string>, limits: Limits, final_only: bool, private_progress: bool, chat: bool, expanded: bool) -> Result<ModelAttempt, LoopTurn> {
+flow model_attempt(previous: Session, allowed: Array<string>, limits: Limits, final_only: bool, private_progress: bool, chat: bool, expanded: bool, wide: bool) -> Result<ModelAttempt, LoopTurn> {
     var session = previous;
     let full = capacity(session, 2, 518);
     if full != "" {
@@ -46,7 +46,7 @@ flow model_attempt(previous: Session, allowed: Array<string>, limits: Limits, fi
     if error != "" {
         return Err(failed(session, error, 4));
     }
-    if expanded { session = Session { history = charge(session.history), calls = session.calls + 1, tokens = session.tokens + 4096, tools = session.tools, scan = session.scan }; }
+    if expanded { session = Session { history = charge(session.history), calls = session.calls + 1, tokens = session.tokens + if final_only && wide { 131072 } else { 4096 }, tools = session.tools, scan = session.scan }; }
     else { session = charge_action(session, false, limits); }
     session = history(session, emit_mode(session.history, "model", "text", "qwen", "", private_progress));
     return Ok(ModelAttempt { state = session, context = context });
@@ -100,7 +100,7 @@ flow run_multistep(raw: string, allowed: Array<string>, previous: Session, priva
 }
 
 // This same controller is used by scoped production and deterministic handlers.
-flow run_mode(raw: string, allowed: Array<string>, limits: Limits, previous: Session, work: bool, inspect_all: bool, private_progress: bool, chat: bool, expanded: bool) -> LoopTurn {
+flow run_mode(raw: string, allowed: Array<string>, limits: Limits, previous: Session, work: bool, inspect_all: bool, private_progress: bool, chat: bool, expanded: bool, wide: bool) -> LoopTurn {
     if previous.history.stopped { return LoopTurn { state = previous, status = 4 }; }
     let full = capacity(previous, 1, if work { 512 } else { 128 });
     if full != "" { return failed(history(previous, stop(previous.history)), full, 4); }
@@ -108,7 +108,7 @@ flow run_mode(raw: string, allowed: Array<string>, limits: Limits, previous: Ses
     if invalid == "" { invalid = candidate_error(allowed); }
     if invalid != "" { return failed(previous, invalid, 2); }
     var session = history(previous, emit_mode(previous.history, "user", "input", "", raw, private_progress));
-    let first = match model_attempt(session, allowed, limits, false, private_progress, chat, expanded) { Ok(value) => value, Err(error) => { return error; } };
+    let first = match model_attempt(session, allowed, limits, false, private_progress, chat, expanded, wide) { Ok(value) => value, Err(error) => { return error; } };
     // Host failure aborts here, without a recoverable source error event.
     if private_progress { println("CHILD STAGE model-action"); }
     let first_raw = perform LegacyChildModel.infer(first.context);
@@ -141,7 +141,7 @@ flow run_mode(raw: string, allowed: Array<string>, limits: Limits, previous: Ses
         return LoopTurn { state = history(session, emit_mode(session.history, "tool", "error", action.operation, data, private_progress)), status = 3 };
     }
     session = history(session, emit_mode(session.history, "tool", "complete", action.operation, data, private_progress));
-    let second = match model_attempt(session, allowed, limits, true, private_progress, chat, expanded) { Ok(value) => value, Err(error) => { return error; } };
+    let second = match model_attempt(session, allowed, limits, true, private_progress, chat, expanded, wide) { Ok(value) => value, Err(error) => { return error; } };
     if private_progress { println("CHILD STAGE model-final"); }
     let second_raw = perform LegacyChildModel.infer(second.context);
     if inspect_all { println(response_text(second_raw, "read-child-final", "lab-qwen-", 1152)); }
@@ -154,22 +154,22 @@ flow run_mode(raw: string, allowed: Array<string>, limits: Limits, previous: Ses
 }
 
 public flow run_loop_controller(raw: string, allowed: Array<string>, limits: Limits, previous: Session, work: bool, inspect_all: bool) -> LoopTurn {
-    return run_mode(raw, allowed, limits, previous, work, inspect_all, false, false, false);
+    return run_mode(raw, allowed, limits, previous, work, inspect_all, false, false, false, false);
 }
 public flow run_private_loop_controller(raw: string, allowed: Array<string>, limits: Limits, previous: Session) -> LoopTurn {
-    return run_mode(raw, allowed, limits, previous, false, false, true, false, false);
+    return run_mode(raw, allowed, limits, previous, false, false, true, false, false, false);
 }
 public flow run_private_work_loop_controller(raw: string, allowed: Array<string>, limits: Limits, previous: Session) -> LoopTurn {
-    return run_mode(raw, allowed, limits, previous, true, false, true, false, false);
+    return run_mode(raw, allowed, limits, previous, true, false, true, false, false, false);
 }
 
 // Chat accepts the same bounded task as work, retaining a larger explicitly
 // measured context for prior-turn evidence and JSON escaping.
 public flow run_chat_loop_controller(raw: string, allowed: Array<string>, limits: Limits, previous: Session, private_progress: bool) -> LoopTurn {
-    return run_mode(raw, allowed, limits, previous, true, false, private_progress, true, false);
+    return run_mode(raw, allowed, limits, previous, true, false, private_progress, true, false, false);
 }
-public flow run_expanded_work_loop_controller(raw: string, allowed: Array<string>, previous: Session) -> LoopTurn {
-    return run_mode(raw, allowed, default_limits(), previous, true, false, true, false, true);
+public flow run_expanded_work_loop_controller(raw: string, allowed: Array<string>, previous: Session, wide: bool) -> LoopTurn {
+    return run_mode(raw, allowed, default_limits(), previous, true, false, true, false, true, wide);
 }
 
 public flow run_multi_chat_loop_controller(raw: string, allowed: Array<string>, previous: Session, private_progress: bool) -> LoopTurn {

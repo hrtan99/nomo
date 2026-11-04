@@ -32,14 +32,14 @@ flow event_error(item: Event, policy: Policy) -> string {
 public flow invalid(frame: Frame, policy: Policy) -> string {
     let policy_problem = policy_error(policy); if policy_problem != "" { return policy_problem; }
     let n = count(frame.events);
-    if (frame.format != 1 && frame.format != 2) || frame.turns < 0 || frame.turns > 32 || n > 768 { return "invalid recoverable event frame"; }
+    if (frame.format != 1 && frame.format != 2) || frame.turns < 0 || frame.turns > 48 || n > 4096 { return "invalid recoverable event frame"; }
     if frame.turns == 0 && (frame.first_count != 0 || (frame.format == 1 && n != 0)) { return "invalid empty event frame"; }
     if frame.turns == 1 && (frame.first_count == 0 || frame.first_count > (if frame.format == 2 { 768 } else { 24 }) || frame.first_count > n || (frame.format == 1 && frame.first_count != n)) { return "invalid first event boundary"; }
     if frame.turns >= 2 && (frame.first_count == 0 || frame.first_count > (if frame.format == 2 { 768 } else { 24 }) || frame.first_count >= n) {
         return "invalid later event boundary";
     }
     var bytes: usize = 0;
-    for item in frame.events limit Iterations(768) {
+    for item in frame.events limit Iterations(4096) {
         let error = event_error(item, policy); if error != "" { return error; }
         bytes = bytes + byte_count(utf8_encode(item.role)) + byte_count(utf8_encode(item.kind)) +
             byte_count(utf8_encode(item.name)) + byte_count(utf8_encode(item.text));
@@ -50,7 +50,7 @@ public flow invalid(frame: Frame, policy: Policy) -> string {
 
 public flow append(before: Frame, turn: i32, input: Array<Event>, policy: Policy) -> Result<Advance, string> {
     let error = invalid(before, policy); if error != "" { return Err(error); }
-    if turn != before.turns + 1 || turn > 32 || count(input) == 0 || count(input) > 24 { return Err("invalid recoverable event batch order or size"); }
+    if turn != before.turns + 1 || turn > 48 || count(input) == 0 || count(input) > 24 { return Err("invalid recoverable event batch order or size"); }
     var records = before.events; var replacements: usize = 0;
     for item in input limit Iterations(24) {
         if !safe(item.role, 128) || !safe(item.kind, 128) || !safe(item.name, 128) { return Err("invalid event metadata"); }

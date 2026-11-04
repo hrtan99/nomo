@@ -81,8 +81,8 @@ public flow admit(id: string, workspace: string, path: string, request: string, 
         return Err("completed unchanged recoverable chat required");
     }
     match load(policy, binding) { Ok(None()) => {} Ok(Some(_)) => { return Err("recoverable followup already admitted; no retry"); } Err(error) => { return Err(error); } }
-    let wide = chat.value.chat.format == 13;
-    let row = Record { format = if wide { 4 } else { 5 }, phase = "running", id = id, workspace = workspace, path = path,
+    let wide = chat.value.chat.format >= 13;
+    let row = Record { format = if wide { 6 } else { 5 }, phase = "running", id = id, workspace = workspace, path = path,
         request = request, history_version = chat.version.opaque, reserved = full(wide), settled = None(), summary = "" };
     let parent_work = match load_parent_work(policy, binding) { Ok(Some(item)) => item, _ => { return Err("completed first work required"); } };
     if (parent_work.value.work.phase != "complete" && parent_work.value.work.phase != "abandoned") || parent_work.value.work.id == id { return Err("completed distinct first work required"); }
