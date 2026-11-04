@@ -88,15 +88,16 @@ def main(argv=None):
             print('Running the requested check offline (60-second limit; stdin is closed).' + (' Filtered output may be sent to the model.' if independent else ''),flush=True)
             capture={key:{'data':bytearray(),'truncated':False} for key in ('stdout','stderr')}
             code=edit.run_owned(check,check_env,capture,capture_limit=4194304 if policy is not None else 4096,forward_output=policy is None)
-            if code<0 or code>=124:
-                print('Check outcome is uncertain; ' + ('no result was recorded' if independent else 'recorded running state is retained') + ', without retry.',file=sys.stderr,flush=True);return code or 1
-            outcome='passed' if code==0 else 'failed'
-            if policy is not None:
+            if policy is not None and (0 <= code < 124 or code == 127):
                 stdout,out_truncated=edit.format_check_capture(capture['stdout'],os.environ,literals,True)
                 stderr,err_truncated=edit.format_check_capture(capture['stderr'],os.environ,literals,True)
                 for name,value in (('stdout',stdout),('stderr',stderr)):
                     if value:print('Check '+name+':\n'+value,flush=True)
-                print('Complete captured streams are filtered before saving up to 4096 UTF-8 bytes, with the middle omitted when necessary; incomplete streams are omitted and marked truncated.',flush=True)
+                print('Complete captured streams are filtered before saving up to 4096 UTF-8 bytes, with the middle omitted when necessary; incomplete streams are omitted and marked truncated.' if code != 127 else 'Filtered check output is shown for diagnosis only; the result is uncertain and was not recorded.',flush=True)
+            if code<0 or code>=124:
+                print('Check outcome is uncertain; ' + ('no result was recorded' if independent else 'recorded running state is retained') + ', without retry.',file=sys.stderr,flush=True);return code or 1
+            outcome='passed' if code==0 else 'failed'
+            if policy is not None:
                 payload=(json.dumps([stdout,stderr],ensure_ascii=True)+'\n').encode()
                 if checkpoint('independent' if independent else 'finish',outcome,str(code),str(out_truncated).lower(),str(err_truncated).lower(),input_data=payload):
                     print('Check finished but its result and selected output were not confirmed in session state.',file=sys.stderr,flush=True);return 1

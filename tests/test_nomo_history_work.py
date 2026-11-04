@@ -66,4 +66,23 @@ class HistoryWorkLauncherTest(unittest.TestCase):
         with patch.object(launcher.edit,'run_owned',side_effect=[0,0,124]) as run:
             self.assertEqual(self.invoke(),124)
         self.assertEqual(run.call_count,3)
+
+    def test_uncertain_independent_check_shows_only_complete_filtered_diagnostics(self):
+        policy=self.root/'policy';policy.mkdir(mode=0o700)
+        args=['--independent-check','--root',str(self.workspace),'--state',str(self.state),'--id','check-id',
+              '--events-policy-dir',str(policy),'--check','missing-tool']
+        for code,truncated,visible in ((127,False,True),(127,True,False),(125,False,False)):
+            output=TTY();error=io.StringIO()
+            def owned(command,env,capture=None,**kwargs):
+                capture['stderr']['data'].extend(b'Cannot execute SYNTHETIC_SECRET SYNTHETIC_KEY')
+                capture['stderr']['truncated']=truncated
+                return code
+            with patch.object(launcher.policy_module,'read_private',return_value=(policy,b'{"literals":["SYNTHETIC_SECRET"]}','binding')), \
+                 patch.object(launcher.sys,'stdin',TTY()),contextlib.redirect_stdout(output),contextlib.redirect_stderr(error), \
+                 patch.object(launcher.edit,'run_owned',side_effect=owned) as run:
+                self.assertEqual(launcher.main(args),code)
+            self.assertEqual(run.call_count,1)
+            self.assertEqual('Cannot execute' in output.getvalue(),visible)
+            self.assertNotIn('SYNTHETIC_SECRET',output.getvalue());self.assertNotIn('SYNTHETIC_KEY',output.getvalue())
+            self.assertIn('no result was recorded',error.getvalue())
 if __name__=='__main__':unittest.main()
