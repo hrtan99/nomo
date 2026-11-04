@@ -1,6 +1,6 @@
 module nomo.tools.edit_proposal;
 
-import std.text.{len, split};
+import std.text.{len, split, join, contains};
 import std.collections.len as count;
 import std.bytes.len as byte_count;
 import std.codec.text.utf8_encode;
@@ -32,28 +32,15 @@ public flow propose(request: Request) -> Result<Proposal, string> {
     let replacement_bytes = match text_bytes(request.replacement, "replacement") { Ok(value) => value, Err(error) => { return Err(error); } };
     if target_bytes == 0 { return Err("target must not be empty"); }
 
-    // A native split finds non-overlapping matches; check overlapping starts
-    // around the sole match so repeated targets are never silently accepted.
+    // The first split selects the leftmost match. Search again after its first
+    // Unicode scalar to detect every later match, including overlapping ones.
     let parts = split(request.original, request.target);
     if count(parts) < 2 { return Err("literal target not found"); }
     if count(parts) > 2 { return Err("literal target is ambiguous"); }
-    let characters = split(request.original, "");
-    let target = split(request.target, "");
-    if count(characters) < 2 || count(target) < 3 { return Err("literal match framing invalid"); }
-    let size = count(characters) - 2; let target_size = count(target) - 2;
-    let position = count(split(parts[0], "")) - 2;
-    var start = if position >= target_size { position - target_size + 1 } else { 0 };
-    while start < size && start < position + target_size limit Iterations(65536) {
-        if start != position && target_size <= size - start {
-            var equal = true; var offset: usize = 0;
-            while offset < target_size && equal limit Iterations(65536) {
-                if characters[start + offset + 1] != target[offset + 1] { equal = false; }
-                offset = offset + 1;
-            }
-            if equal { return Err("literal target is ambiguous"); }
-        }
-        start = start + 1;
-    }
+    let characters = split(request.target, "");
+    if count(characters) < 3 { return Err("literal match framing invalid"); }
+    let tail = join(characters[2, count(characters)).to_array(), "");
+    if contains(tail + parts[1], request.target) { return Err("literal target is ambiguous"); }
     if request.target == request.replacement { return Err("replacement leaves original unchanged"); }
     // The exact match proves target_bytes <= original_bytes. Reject expansion
     // before constructing any output, then preserve untouched text in one pass.
