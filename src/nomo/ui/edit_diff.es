@@ -14,7 +14,7 @@ type Line = { text: string, terminated: bool };
 flow lines(value: string) -> Array<Line> {
     let parts = split(value, "\n");
     var output: Array<Line> = []; var index: usize = 0;
-    while index < count(parts) limit Iterations(16385) {
+    while index < count(parts) limit Iterations(65537) {
         if index + 1 < count(parts) {
             output = output.push(Line { text = parts[index], terminated = true });
         } else if parts[index] != "" {
@@ -33,7 +33,7 @@ flow same(left: Line, right: Line) -> bool {
 // emoji's two JSON surrogate escapes are kept together. Never slice an escape.
 flow line_text(raw: string) -> Result<string, string> {
     var selected = ""; var width: usize = 0; var clipped = false;
-    for character in split(raw, "") limit Iterations(16386) {
+    for character in split(raw, "") limit Iterations(65538) {
         if character != "" {
             let encoded = match json([character]) { Ok(value) => value, Err(error) => { return Err(error); } };
             let size = len(encoded) - 4;
@@ -96,12 +96,12 @@ public flow render(before: string, after: string) -> Result<string, string> {
     let original = lines(before); let replacement = lines(after);
     let old_size = count(original); let new_size = count(replacement);
     var prefix: usize = 0;
-    while prefix < old_size && prefix < new_size limit Iterations(16384) {
+    while prefix < old_size && prefix < new_size limit Iterations(65536) {
         if !same(original[prefix], replacement[prefix]) { break; }
         prefix = prefix + 1;
     }
     var suffix: usize = 0;
-    while suffix < old_size - prefix && suffix < new_size - prefix limit Iterations(16384) {
+    while suffix < old_size - prefix && suffix < new_size - prefix limit Iterations(65536) {
         if !same(original[old_size - suffix - 1], replacement[new_size - suffix - 1]) { break; }
         suffix = suffix + 1;
     }

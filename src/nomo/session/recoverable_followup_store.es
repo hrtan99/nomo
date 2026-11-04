@@ -3,13 +3,12 @@ module nomo.session.recoverable_followup_store;
 import std.memory.{get_entry, prepare_put, operation_ref, commit, MemoryEntry, MemoryVersion,
     WriteCondition, WriteOutcome, MemoryWriteChange, StorageDurability, Missing, Match};
 import nomo.core.conversation.Event;
-import nomo.session.redaction.{Policy, text as redact};
-import nomo.session.event_text_codec.decode;
-import nomo.session.recoverable_events.{Frame as EventFrame, empty as empty_events, invalid as invalid_events, work_batch};
+import nomo.session.redaction.Policy;
+import nomo.session.recoverable_events.{Frame as EventFrame, empty as empty_events, work_batch};
 import nomo.session.recoverable_chat_store.{Frame as ChatFrame, load as load_chat};
-import nomo.session.history_work_guard.{Record, Budget, invalid as invalid_work};
+import nomo.session.history_work_guard.{Record, Budget};
 import nomo.harness.harness_work_contract.Ledger;
-import nomo.session.recoverable_work_store.{Frame as ParentWork, load as load_parent_work};
+import nomo.session.recoverable_work_store.{Frame as ParentWork, load as load_parent_work, work_data_error, full, zero};
 import nomo.session.recoverable_check_store.{Frame as ParentCheck, load as load_parent_check};
 import nomo.session.edit_operation_store.inspect as inspect_parent_edit;
 
@@ -22,24 +21,10 @@ public type Ticket = { frame: Frame, version: MemoryVersion, chat: MemoryEntry<s
 alias Schema = MemoryRegion<{ Rows: Store<string, Frame> }>;
 let Runs = std.memory.region<Schema>(stable_id = "nomo-recoverable-followup-v1", store = "recoverable-followup");
 
-flow full(wide: bool) -> Budget { return Budget { steps = 13, calls = 7, generation = if wide { 61440 } else { 51200 }, native_tokens = 196608 }; }
-flow zero() -> Budget { return Budget { steps = 0, calls = 0, generation = 0, native_tokens = 0 }; }
 
 flow frame_error(value: Frame, policy: Policy, binding: string) -> string {
     if value.format != 1 || value.policy_binding != binding || value.parent_work_version == "" { return "invalid recoverable followup format or policy binding"; }
-    let work_error = invalid_work(value.work); if work_error != "" { return work_error; }
-    let event_error = invalid_events(value.events, policy); if event_error != "" { return event_error; }
-    if ((value.work.phase == "running" || value.work.phase == "abandoned") && value.events.turns != 0) || (value.work.phase == "complete" && value.events.turns != 1) {
-        return "work phase and event boundary differ";
-    }
-    for field in [value.work.id, value.work.workspace, value.work.path, value.work.request, value.work.summary] limit Iterations(5) {
-        let checked = match redact(field, policy) { Ok(item) => item, Err(error) => { return error; } };
-        if checked.replacements != 0 || checked.value != field { return "work data contains a known sensitive literal"; }
-    }
-    for item in value.events.events limit Iterations(48) {
-        match decode(item.text, policy) { Ok(_) => {} Err(error) => { return error; } }
-    }
-    return "";
+    return work_data_error(value.work, value.events, policy);
 }
 
 public flow load(policy: Policy, binding: string) -> Result<Option<MemoryEntry<string, Frame>>, string> {
@@ -97,7 +82,7 @@ public flow admit(id: string, workspace: string, path: string, request: string, 
     }
     match load(policy, binding) { Ok(None()) => {} Ok(Some(_)) => { return Err("recoverable followup already admitted; no retry"); } Err(error) => { return Err(error); } }
     let wide = chat.value.chat.format == 13;
-    let row = Record { format = if wide { 3 } else { 2 }, phase = "running", id = id, workspace = workspace, path = path,
+    let row = Record { format = if wide { 4 } else { 5 }, phase = "running", id = id, workspace = workspace, path = path,
         request = request, history_version = chat.version.opaque, reserved = full(wide), settled = None(), summary = "" };
     let parent_work = match load_parent_work(policy, binding) { Ok(Some(item)) => item, _ => { return Err("completed first work required"); } };
     if (parent_work.value.work.phase != "complete" && parent_work.value.work.phase != "abandoned") || parent_work.value.work.id == id { return Err("completed distinct first work required"); }

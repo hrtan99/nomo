@@ -5,21 +5,16 @@ import std.memory.{get_entry, prepare_put, operation_ref, commit, MemoryEntry, M
 import nomo.session.redaction.Policy;
 import nomo.session.event_text_codec.encode_prefix;
 import nomo.session.history_check_guard.Record;
-import nomo.session.recoverable_check_store.{Frame as SharedFrame, invalid as invalid_shared};
+public import nomo.session.recoverable_check_store.Frame;
+import nomo.session.recoverable_check_store.invalid;
 import nomo.session.recoverable_followup_store.{Ticket, claim, load as load_work};
 import nomo.session.history_followup_edit_store.inspect as inspect_edit;
 
 // The planned check is tied to a specific admitted work reservation. The
 // running and complete transitions are CAS commits; interruption never retries.
-public type Frame = { format: i32, policy_binding: string, work_history: string, workspace: string, path: string,
-    check: Record, stdout: string, stderr: string, stdout_truncated: bool, stderr_truncated: bool };
 alias Schema = MemoryRegion<{ Rows: Store<string, Frame> }>;
 let Checks = std.memory.region<Schema>(stable_id = "nomo-recoverable-followup-check-v1", store = "recoverable-followup-check");
 
-flow invalid(value: Frame, policy: Policy, binding: string) -> string {
-    let frame = SharedFrame { format = value.format, policy_binding = value.policy_binding, work_history = value.work_history, workspace = value.workspace, path = value.path, check = value.check, stdout = value.stdout, stderr = value.stderr, stdout_truncated = value.stdout_truncated, stderr_truncated = value.stderr_truncated };
-    return invalid_shared(frame, policy, binding);
-}
 public flow load(policy: Policy, binding: string) -> Result<Option<MemoryEntry<string, Frame>>, string> {
     let row = get_entry(Checks.Rows, "check");
     let work = match load_work(policy, binding) { Ok(Some(item)) => item, Ok(None()) => { if row != None() { return Err("check exists without work"); } return Ok(None()); } Err(problem) => { return Err(problem); } };

@@ -42,11 +42,11 @@ public flow bump(state: Ledger, call: bool) -> Result<Ledger, string> {
 
 flow child_ledger_error(child: Session, work: bool) -> string {
     if child.history.spent < 1 || child.history.spent > 3 || child.calls < 1 || child.calls > 2 ||
-        child.tokens > (if work { 8192 } else { 4096 }) || child.tools > 1 || child.scan > 16384 { return "invalid child ledger"; }
+        child.tokens > (if work { 8192 } else { 4096 }) || child.tools > 1 || child.scan > (if work { 65540 } else { 16384 }) { return "invalid child ledger"; }
     let calls: i32 = if child.calls == 2 { 2 } else { 1 };
     let tools: i32 = if child.tools == 1 { 1 } else { 0 };
     if child.history.spent != calls + tools || (child.tokens != child.calls * 2048 && !(work && child.tokens == child.calls * 4096)) ||
-        (child.scan != child.tools * 4096 && child.scan != child.tools * 16384) || (child.calls == 2 && child.tools != 1) { return "invalid child ledger"; }
+        (child.scan != child.tools * 4096 && child.scan != child.tools * 16384 && !(work && child.scan == child.tools * 65540)) || (child.calls == 2 && child.tools != 1) { return "invalid child ledger"; }
     return "";
 }
 
@@ -66,9 +66,9 @@ public flow settle(state: Ledger, child: Session) -> Result<Ledger, string> {
 // attempts, and one 2048-token parent aggregate. Legacy ledgers remain valid.
 public flow work_error(state: Ledger) -> string {
     if ledger_error(state) == "" { return ""; }
-    if state.steps >= 0 && state.steps <= 7 && state.calls >= 0 && state.calls <= 4 && state.tokens == state.calls * 4096 && state.tools >= 0 && state.tools <= 1 && (state.scan == state.tools * 4096 || state.scan == state.tools * 16384) && state.steps >= state.calls + state.tools && state.steps <= state.calls + state.tools + 2 { return ""; }
+    if state.steps >= 0 && state.steps <= 7 && state.calls >= 0 && state.calls <= 4 && state.tokens == state.calls * 4096 && state.tools >= 0 && state.tools <= 1 && (state.scan == state.tools * 4096 || state.scan == state.tools * 16384 || state.scan == state.tools * 65540) && state.steps >= state.calls + state.tools && state.steps <= state.calls + state.tools + 2 { return ""; }
     if state.steps < 0 || state.steps > 7 || state.calls < 2 || state.calls > 4 ||
-        state.tools < 0 || state.tools > 1 || (state.scan != state.tools * 4096 && state.scan != state.tools * 16384) ||
+        state.tools < 0 || state.tools > 1 || (state.scan != state.tools * 4096 && state.scan != state.tools * 16384 && state.scan != state.tools * 65540) ||
         state.steps < state.calls + state.tools || state.steps > state.calls + state.tools + 2 { return "invalid expanded work read ledger"; }
     let expected = if state.calls == 2 { 6144 } else { if state.calls == 3 { 10240 } else { 12288 } };
     return if state.tokens == expected { "" } else { "invalid expanded work read ledger" };
@@ -90,10 +90,10 @@ public flow work_settle(state: Ledger, child: Session) -> Result<Ledger, string>
     let expected = Ledger { steps = 2, calls = 1, tokens = if state.tokens == 4096 { 4096 } else { 2048 }, tools = 0, scan = 0 };
     if state != expected ||
         child.calls < 1 || child.calls > 2 || child.tokens != child.calls * 4096 || child.tools > 1 ||
-        (child.scan != child.tools * 4096 && child.scan != child.tools * 16384) || child.history.spent != (if child.calls == 2 { 2 } else { 1 }) + (if child.tools == 1 { 1 } else { 0 }) ||
+        (child.scan != child.tools * 4096 && child.scan != child.tools * 16384 && child.scan != child.tools * 65540) || child.history.spent != (if child.calls == 2 { 2 } else { 1 }) + (if child.tools == 1 { 1 } else { 0 }) ||
         (child.calls == 2 && child.tools != 1) { return Err("invalid expanded child ledger"); }
     let calls = if child.calls == 2 { 2 } else { 1 }; let tools = if child.tools == 1 { 1 } else { 0 };
-    let value = Ledger { steps = 2 + child.history.spent, calls = 1 + calls, tokens = state.tokens + calls * 4096, tools = tools, scan = if child.scan == 16384 { 16384 } else { tools * 4096 } };
+    let value = Ledger { steps = 2 + child.history.spent, calls = 1 + calls, tokens = state.tokens + calls * 4096, tools = tools, scan = if child.scan == 65540 { 65540 } else { if child.scan == 16384 { 16384 } else { tools * 4096 } } };
     let error = work_error(value); if error != "" { return Err(error); } return Ok(value);
 }
 
@@ -113,10 +113,10 @@ public flow inspect_shared(child: Session, status: i32, request: string, task: s
     if !(if unicode { utf8_bounded(request, 512) } else { bounded(request, 128) }) || !(if unicode { utf8_bounded(task, if work { 512 } else { 128 }) } else { bounded(task, 128) }) || (if unicode { candidate_error(allowed) } else { allowed_error(allowed) }) != "" { return Err("invalid selected child context"); }
     let events = child.history.events;
     let size = count(events);
-    if size < 4 || size > 7 || child.history.stopped || child.history.characters > (if unicode { 262144 } else { 8192 }) { return Err("invalid child history"); }
+    if size < 4 || size > 7 || child.history.stopped || child.history.characters > (if unicode { 1048576 } else { 8192 }) { return Err("invalid child history"); }
     var characters: usize = 0;
     for event in events limit Iterations(7) {
-        if len(event.name) > 8 || len(event.text) > (if unicode { 65546 } else { 512 }) || !printable(event.name) || !(if unicode { safe(event.text, 65546) } else { printable(event.text) }) {
+        if len(event.name) > 8 || len(event.text) > (if unicode { 262154 } else { 512 }) || !printable(event.name) || !(if unicode { safe(event.text, 262154) } else { printable(event.text) }) {
             return Err("invalid child event data");
         }
         characters = characters + len(event.name) + len(event.text);
@@ -138,7 +138,7 @@ public flow inspect_shared(child: Session, status: i32, request: string, task: s
                 return Err("invalid failed tool shape");
             }
         } else {
-            if events[4].kind != "complete" || !(if unicode { utf8_bounded(events[4].text, 65546) } else { bounded(events[4].text, 266) }) || !starts_with(events[4].text, "complete: ") {
+            if events[4].kind != "complete" || !(if unicode { utf8_bounded(events[4].text, 262154) } else { bounded(events[4].text, 266) }) || !starts_with(events[4].text, "complete: ") {
                 return Err("invalid completed tool outcome");
             }
             if size == 6 {

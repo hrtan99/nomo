@@ -1,6 +1,6 @@
 module nomo.entry.read_model_tools_entry;
 
-import nomo.core.read_text.within;
+import nomo.entry.harness_model_tools_entry.extract_allow;
 import std.io.println;
 import std.collections.len as count;
 import std.text.{split};
@@ -18,30 +18,11 @@ flow help() -> unit {
 
 public flow run(args: Array<string>) -> i32 {
     if count(args) == 0 || count(args) > 7 { return refused(fresh(), "expected bounded new --once TEXT --allow FILE[,FILE...]"); }
-    var remaining: Array<string> = [args[0]];
-    var supplied = false;
-    var allowed = "";
-    var index: usize = 1;
-    while index < count(args) limit Iterations(7) {
-        let flag = args[index];
-        if flag == "--allow" {
-            if supplied || index + 1 >= count(args) { return refused(fresh(), "expected exactly one --allow FILE[,FILE...]"); }
-            allowed = args[index + 1];
-            if !within(allowed, 195) { return refused(fresh(), "raw allowlist exceeds 195 UTF-8 bytes"); }
-            supplied = true;
-            index = index + 2;
-        } else {
-            remaining = remaining.push(flag);
-            index = index + 1;
-            if (flag == "--once" || flag == "--id") && index < count(args) {
-                remaining = remaining.push(args[index]); index = index + 1;
-            }
-        }
-    }
-    let request = match parse_args(remaining) { Ok(value) => value, Err(error) => { return refused(fresh(), error); } };
-    if request.kind == "help" { if supplied { return refused(fresh(), "help must be used alone"); } help(); return 0; }
+    let extracted = match extract_allow(args, true) { Ok(value) => value, Err(error) => { return refused(fresh(), error); } };
+    let request = match parse_args(extracted.remaining) { Ok(value) => value, Err(error) => { return refused(fresh(), error); } };
+    if request.kind == "help" { if extracted.supplied { return refused(fresh(), "help must be used alone"); } help(); return 0; }
     if request.kind != "new" { return refused(fresh(), "resume is unavailable in the model/tool harness"); }
     if !request.once_supplied { return refused(fresh(), "this entry requires new --once TEXT"); }
-    if !supplied { return refused(fresh(), "this entry requires --allow FILE[,FILE...]"); }
-    return coordinate(request.once, split(allowed, ","));
+    if !extracted.supplied { return refused(fresh(), "this entry requires --allow FILE[,FILE...]"); }
+    return coordinate(request.once, split(extracted.allowed, ","));
 }

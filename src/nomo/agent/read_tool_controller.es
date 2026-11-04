@@ -34,13 +34,13 @@ flow model_attempt(previous: Session, allowed: Array<string>, limits: Limits, fi
         return Err(failed(history(session, stop(session.history)), full, 4));
     }
     let original = Context { history = session.history.events, allowed = allowed, final_only = final_only };
-    let context = match bounded_model_context(original, 262144) {
+    let context = match bounded_model_context(original, 1048576) {
         Ok(value) => value, Err(error) => { return Err(failed(session, error, 4)); }
     };
     var error = if chat { "" } else { context_error(context) };
     if error == "" {
         if expanded {
-            if session.history.spent >= 3 || session.calls >= 2 || session.tokens != session.calls * 4096 || session.tools > 1 || session.scan > 16384 { error = "expanded work model reservation exhausted"; }
+            if session.history.spent >= 3 || session.calls >= 2 || session.tokens != session.calls * 4096 || session.tools > 1 || session.scan > 65540 { error = "expanded work model reservation exhausted"; }
         } else { error = budget_error(session, limits, false); }
     }
     if error != "" {
@@ -72,9 +72,9 @@ flow run_multistep(raw: string, allowed: Array<string>, previous: Session, priva
     var session = history(previous, emit_mode(previous.history, "user", "input", "", raw, private_progress));
     var calls: usize = 0; var tools: usize = 0;
     while calls < 4 limit Iterations(4) {
-        let full = capacity(session, 4, 66080); if full != "" { return failed(history(session, stop(session.history)), full, 4); }
+        let full = capacity(session, 4, 262688); if full != "" { return failed(history(session, stop(session.history)), full, 4); }
         let original = Context { history = session.history.events, allowed = allowed, final_only = tools == 3 };
-        let context = match bounded_model_context(original, 262144) { Ok(value) => value, Err(error) => { return failed(session, error, 4); } };
+        let context = match bounded_model_context(original, 1048576) { Ok(value) => value, Err(error) => { return failed(session, error, 4); } };
         session = Session { history = charge(session.history), calls = session.calls + 1, tokens = session.tokens + 4096, tools = session.tools, scan = session.scan };
         session = history(session, emit_mode(session.history, "model", "text", "qwen", "", private_progress));
         calls = calls + 1;
@@ -90,7 +90,7 @@ flow run_multistep(raw: string, allowed: Array<string>, previous: Session, priva
         if action.operation == "search" && files[0] == "*" { for name in allowed limit Iterations(256) { files = files.push(name); } }
         let result = if action.operation == "read" { display(perform ReadTools.read(files[0])) } else { display(perform ReadTools.search(files, action.literal)) };
         if result.status == "incomplete" { println("Search incomplete: results are partial; some candidates were skipped or the match limit was reached."); }
-        if (result.status != "complete" && !(action.operation == "search" && result.status == "incomplete")) || !safe(result.text, 65536) {
+        if (result.status != "complete" && !(action.operation == "search" && result.status == "incomplete")) || !safe(result.text, 262144) {
             println("CHILD TOOL FAILURE operation=" + action.operation + " category=" + tool_failure(result));
             return LoopTurn { state = history(session, emit_mode(session.history, "tool", "error", action.operation, result.status + ": " + result.text, private_progress)), status = 3 };
         }
@@ -129,13 +129,13 @@ flow run_mode(raw: string, allowed: Array<string>, limits: Limits, previous: Ses
     session = history(session, emit_mode(session.history, "model", "request", action.operation, compact_frame(first_raw), private_progress));
     let exhausted = if expanded { if session.tools != 0 || session.scan != 0 || session.history.spent >= 3 { "expanded work tool reservation exhausted" } else { "" } } else { budget_error(session, limits, true) };
     if exhausted != "" { return failed(session, exhausted, 4); }
-    session = charge_action(session, true, limits);
+    session = if expanded { Session { history = charge(session.history), calls = session.calls, tokens = session.tokens, tools = session.tools + 1, scan = session.scan + 65540 } } else { charge_action(session, true, limits) };
     var result = outcome("refused", "unsupported operation", 0);
     if private_progress { println("CHILD STAGE tool"); }
     if action.operation == "read" { result = display(perform ReadTools.read(action.files[0])); }
     else if action.operation == "search" { result = display(perform ReadTools.search(action.files, action.literal)); }
     // Smaller admission than scripted tools: retain the full result or refuse.
-    if !safe(result.text, 65536) { result = outcome("refused", "tool result exceeds 65536 display bytes", result.scanned); }
+    if !safe(result.text, 262144) { result = outcome("refused", "tool result exceeds 262144 display bytes", result.scanned); }
     let data = result.status + ": " + result.text;
     if result.status != "complete" {
         return LoopTurn { state = history(session, emit_mode(session.history, "tool", "error", action.operation, data, private_progress)), status = 3 };

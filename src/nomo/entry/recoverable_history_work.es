@@ -27,7 +27,7 @@ import nomo.session.edit_operation_store.{available, begin, complete};
 import nomo.entry.edit_coordinator.{Confirmed, confirm_current};
 import nomo.entry.edit_context.display;
 import nomo.tools.workspace.ReadOnlyRoot;
-import nomo.tools.edit_file.{EditableRoot, apply};
+import nomo.tools.edit_file.{EditableRoot, apply_wide as apply};
 
 flow stage(name: string, value: Ledger, wide: bool) -> unit { println("STAGE " + name); ledger(value, wide); }
 flow prepare_history(input: Work, prior_request: string, previous: Previous, wide: bool) -> Result<Pending, Failure> {
@@ -77,7 +77,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
     if has_check { match plan_check(ticket, check_digest, policy, binding) { Ok(_) => {} Err(error) => { return refused(error); } } }
     println("RESERVED event work; interruption or uncertain effects cannot be retried automatically.");
     let prior_request = history.value.chat.last_request; let previous = history.value.chat.invocation.prior;
-    let wide = ticket.frame.work.format == 3;
+    let wide = ticket.frame.work.format == 3 || ticket.frame.work.format == 4;
     let pending = match prepare_history(input, prior_request, previous, wide) { Ok(value) => value, Err(failure) => { ledger(failure.state, wide); return refused(failure.error); } };
     let selected = match confirm_current(pending.selected, pending.prepared) { Ok(value) => value, Err(error) => { return refused(error); } };
     match claim(ticket, policy, binding) { Ok(_) => {} Err(error) => { return refused(error); } }

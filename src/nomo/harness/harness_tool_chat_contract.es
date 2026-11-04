@@ -88,7 +88,7 @@ public flow inspect_turn_shared(child: Session, status: i32, request: string, ta
     var input = fresh();
     var characters: usize = 0;
     for event in child.history.events limit Iterations(12) {
-        if len(event.name) > 8 || len(event.text) > (if unicode { 65546 } else { 512 }) || !printable(event.name) || !(if unicode { safe(event.text, 65546) } else { printable(event.text) }) {
+        if len(event.name) > 8 || len(event.text) > (if unicode { 262154 } else { 512 }) || !printable(event.name) || !(if unicode { safe(event.text, 262154) } else { printable(event.text) }) {
             return Err("invalid selected history data");
         }
         characters = characters + len(event.name) + len(event.text);

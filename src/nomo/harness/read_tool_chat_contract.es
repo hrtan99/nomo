@@ -28,7 +28,7 @@ public flow prior_error(prior: Previous) -> string {
     }
     if prior.tool == "" {
         if prior.outcome != "" { return "prior outcome without tool"; }
-    } else if (prior.tool != "read" && prior.tool != "search") || !bounded(prior.outcome, 65546) || !(starts_with(prior.outcome, "complete: ") || (prior.tool == "search" && starts_with(prior.outcome, "incomplete: "))) {
+    } else if (prior.tool != "read" && prior.tool != "search") || !bounded(prior.outcome, 262154) || !(starts_with(prior.outcome, "complete: ") || (prior.tool == "search" && starts_with(prior.outcome, "incomplete: "))) {
         return "invalid selected prior tool";
     }
     return "";
@@ -36,7 +36,7 @@ public flow prior_error(prior: Previous) -> string {
 
 public flow context_error(context: Context) -> string {
     let message = Message.new(context);
-    return context_json_error(message.cast<JsonValue>(), 262144, true, "model context exceeds 262144 serialized bytes");
+    return context_json_error(message.cast<JsonValue>(), 1048576, true, "model context exceeds 1048576 serialized bytes");
 }
 
 // Check every prior event before projecting the unchanged one-shot validator's
@@ -151,7 +151,7 @@ public flow inspect_multi_turn(child: Session, status: i32, request: string, tas
     if count(events) != start + 1 + child.tools * 3 + if tool_failure { 0 } else { 2 } { return Err("invalid multi-step event count"); }
     var index: usize = 0; var characters: usize = 0;
     for event in events limit Iterations(18) {
-        if len(event.name) > 8 || len(event.text) > 65546 || !printable(event.name) || !safe(event.text, 65546) { return Err("invalid multi-step event"); }
+        if len(event.name) > 8 || len(event.text) > 262154 || !printable(event.name) || !safe(event.text, 262154) { return Err("invalid multi-step event"); }
         if index < start && !same(event, expected.events[index]) { return Err("selected prior history changed"); }
         characters = characters + len(event.name) + len(event.text); index = index + 1;
     }
@@ -163,7 +163,7 @@ public flow inspect_multi_turn(child: Session, status: i32, request: string, tas
         let request_event = events[cursor + 1]; let action = match decode_child(request_event.text, allowed, false) { Ok(value) => value, Err(error) => { return Err(error); } };
         let result = events[cursor + 2];
         if tool_failure && i + 1 == child.tools {
-            if request_event.role != "model" || request_event.kind != "request" || request_event.name != action.operation || (action.operation != "read" && action.operation != "search") || result.role != "tool" || result.kind != "error" || result.name != action.operation || !bounded(result.text, 65546) { return Err("invalid failed tool outcome"); }
+            if request_event.role != "model" || request_event.kind != "request" || request_event.name != action.operation || (action.operation != "read" && action.operation != "search") || result.role != "tool" || result.kind != "error" || result.name != action.operation || !bounded(result.text, 262154) { return Err("invalid failed tool outcome"); }
             return Ok(Observed { result = "", tool = "", outcome = "" });
         }
         if request_event.role != "model" || request_event.kind != "request" || request_event.name != action.operation ||

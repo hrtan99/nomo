@@ -28,7 +28,7 @@ flow encoded_measure(json: JsonValue, maximum_bytes: usize) -> Result<Measuremen
 // Measure the same concrete value the caller supplies to Prompt.data. Semantic
 // confirmation and the existing stage budget/admission guards remain required.
 public flow measure_context(context: Context, maximum_bytes: usize) -> Result<Measurement, Refusal> {
-    if maximum_bytes > 262144 { return Err(Refusal.InvalidLimit); }
+    if maximum_bytes > 1048576 { return Err(Refusal.InvalidLimit); }
     if bounded_context_error(context) != "" { return Err(Refusal.InvalidContext); }
     let message = Message.new(context);
     let conversion: Option<Message<JsonValue>> = message.cast<JsonValue>();

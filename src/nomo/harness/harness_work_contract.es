@@ -31,13 +31,19 @@ public type Ledger = { read: ReadLedger, edit: EditLedger };
 public flow fresh() -> Ledger { return Ledger { read = read_fresh(), edit = edit_fresh() }; }
 
 flow read_complete(value: ReadLedger) -> bool {
-    return value.steps == 7 && value.calls == 4 && (value.tokens == 8192 || value.tokens == 12288 || value.tokens == 16384) && value.tools == 1 && (value.scan == 4096 || value.scan == 16384);
+    return value.steps == 7 && value.calls == 4 && (value.tokens == 8192 || value.tokens == 12288 || value.tokens == 16384) && value.tools == 1 && (value.scan == 4096 || value.scan == 16384 || value.scan == 65540);
 }
 
-// This is a configured cumulative ceiling, never measured provider usage.
+// Historical ledger allowance; it is not the interpreter total-token cap.
 public flow native_tokens(state: Ledger) -> i32 {
     if read_error(state.read) != "" || (if state.read.tokens == 16384 { wide_error(state.edit) } else { edit_error(state.edit) }) != "" { return 0; }
     return state.read.calls * 8192 + state.edit.native_tokens;
+}
+
+// New event-work stages reserve interpreter-enforced total-token maxima.
+public flow native_budget(state: Ledger) -> i32 {
+    let read = match state.read.calls { 0 => 0, 1 => 8192, 2 => 24576, 3 => 286720, _ => 548864 };
+    return read + state.edit.calls * 262144;
 }
 
 public flow ledger_error(state: Ledger) -> string {
@@ -45,7 +51,7 @@ public flow ledger_error(state: Ledger) -> string {
     let edit = if state.read.tokens == 16384 { wide_error(state.edit) } else { edit_error(state.edit) }; if edit != "" { return edit; }
     if state.edit.steps != 0 && !read_complete(state.read) { return "edit tail requires settled read work"; }
     if state.read.steps + state.edit.steps > 13 || state.read.calls + state.edit.calls > 7 ||
-        state.read.tokens + state.edit.tokens > 61440 || native_tokens(state) > 196608 {
+        state.read.tokens + state.edit.tokens > 61440 || native_tokens(state) > 196608 || native_budget(state) > 1335296 {
         return "shared work reservation exhausted";
     }
     return "";
@@ -62,7 +68,7 @@ public flow bump_edit(state: Ledger, call: bool) -> Result<Ledger, string> {
 
 flow selected_error(value: Evidence, complete: bool) -> string {
     if !bounded(value.request, 512) || !bounded(value.task, 512) || !bounded(value.result, 256) ||
-        !bounded(value.outcome, 65546) || !starts_with(value.outcome, "complete: ") { return "invalid read evidence text"; }
+        !bounded(value.outcome, 262154) || !starts_with(value.outcome, "complete: ") { return "invalid read evidence text"; }
     let allowed = allowed_error(value.allowed); if allowed != "" { return allowed; }
     let files = allowed_error(value.files); if files != "" { return files; }
     var fields: Array<string> = [];
@@ -79,7 +85,7 @@ flow selected_error(value: Evidence, complete: bool) -> string {
     if complete {
         if !read_complete(value.ledger) || !bounded(value.summary, 512) { return "read evidence is not settled"; }
     } else if value.summary != "" || value.ledger.steps != 5 || value.ledger.calls != 3 || (value.ledger.tokens != 6144 && value.ledger.tokens != 10240 && value.ledger.tokens != 12288) ||
-        value.ledger.tools != 1 || (value.ledger.scan != 4096 && value.ledger.scan != 16384) { return "invalid pending read evidence"; }
+        value.ledger.tools != 1 || (value.ledger.scan != 4096 && value.ledger.scan != 16384 && value.ledger.scan != 65540) { return "invalid pending read evidence"; }
     return "";
 }
 
@@ -120,6 +126,6 @@ public flow context_error(value: Context) -> string {
     let conversion: Option<Message<JsonValue>> = message.cast<JsonValue>();
     let data = match conversion { Some(item) => item.body, None() => { return "work context conversion refused"; } };
     let encoded = match stringify(data) { Ok(item) => item, Err(_) => { return "work context JSON refused"; } };
-    if byte_count(utf8_encode(encoded)) > 524288 { return "work context exceeds 524288 serialized UTF-8 bytes"; }
+    if byte_count(utf8_encode(encoded)) > 1048576 { return "work context exceeds 1048576 serialized UTF-8 bytes"; }
     return "";
 }

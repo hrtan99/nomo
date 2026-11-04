@@ -33,7 +33,7 @@ import nomo.session.history_followup_edit_store.{available, begin, complete};
 import nomo.entry.edit_coordinator.{Confirmed, confirm_current};
 import nomo.entry.edit_context.display;
 import nomo.tools.workspace.ReadOnlyRoot;
-import nomo.tools.edit_file.{EditableRoot, apply};
+import nomo.tools.edit_file.{EditableRoot, apply_wide as apply};
 
 flow stage(name: string, value: Ledger, wide: bool) -> unit { println("STAGE " + name); ledger(value, wide); }
 flow prepare_history(input: Work, prior_request: string, previous: Previous, prior_work: PriorWork, wide: bool) -> Result<Pending, Failure> {
@@ -76,7 +76,7 @@ flow more(input: Work, prior_request: string, previous: Previous, first_id: stri
     match extra { Some(value) => { request = value.value.current.core.request; } None() => {} }
     let prior = PriorWork { request = request, summary = latest.summary, summary_source = latest.summary_source, selection = latest.selection, check = latest.check, exit_code = latest.exit_code, output = latest.output, history = history };
     let ticket = match admit_extra(binding, input.edit.id, input.edit.workspace, input.edit.path, input.edit.request, check_digest, policy, wide) { Ok(value) => value, Err(error) => { return refused(error); } };
-    println(if wide { "RESERVED additional work: 7 calls, 61440 output tokens; interruption leaves this work unresolved." } else { "RESERVED additional work: 7 calls, 51200 output tokens; interruption leaves this work unresolved." });
+    println(if wide { "RESERVED additional work: 7 calls, 61440 output tokens, 1335296 configured native tokens; interruption leaves this work unresolved." } else { "RESERVED additional work: 7 calls, 51200 output tokens, 1335296 configured native tokens; interruption leaves this work unresolved." });
     let pending = match prepare_history(input, prior_request, previous, prior, wide) { Ok(value) => value, Err(failure) => { ledger(failure.state, wide); return refused(failure.error); } };
     let selected = match confirm_current(pending.selected, pending.prepared) { Ok(value) => value, Err(error) => { return refused(error); } };
     let intent = match edit_intent(ticket, selected) { Ok(value) => value, Err(error) => { return refused(error); } };
@@ -144,7 +144,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
     println("RESERVED event followup; interruption or uncertain effects cannot be retried automatically.");
     let prior_request = history.value.chat.last_request; let previous = history.value.chat.invocation.prior;
     let prior_work = PriorWork { request = first_work.value.work.request, summary = if first_work.value.work.phase == "abandoned" { "User abandoned interrupted work; its effect is unknown. Inspect the file before a new edit." } else { first_work.value.work.summary }, summary_source = if first_work.value.work.phase == "abandoned" { "system" } else { origin }, selection = chosen, check = checked, exit_code = exit, output = first_output, history = [] };
-    let wide = ticket.frame.work.format == 3;
+    let wide = ticket.frame.work.format == 3 || ticket.frame.work.format == 4;
     let pending = match prepare_history(input, prior_request, previous, prior_work, wide) { Ok(value) => value, Err(failure) => { ledger(failure.state, wide); return refused(failure.error); } };
     let selected = match confirm_current(pending.selected, pending.prepared) { Ok(value) => value, Err(error) => { return refused(error); } };
     match claim(ticket, policy, binding) { Ok(_) => {} Err(error) => { return refused(error); } }

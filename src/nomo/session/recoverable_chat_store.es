@@ -86,7 +86,10 @@ public flow reserve(expected: MemoryEntry<string, Frame>, request: string, polic
     let saved = expected.value.chat;
     let current = if saved.format == 3 && saved.phase == "complete" { match extend(saved) { Ok(item) => item, Err(problem) => { return Err(problem); } } } else { saved };
     let pending = match begin(current, request) { Ok(item) => item, Err(problem) => { return Err(problem); } };
-    return write(Frame { format = 1, encoding = "json-string-v1", policy_binding = binding, chat = pending, events = expected.value.events }, Some(expected), policy, binding);
+    let marker = match encode("Reserved up to 1179648 configured native tokens for this chat turn; actual usage is unknown.", policy) { Ok(item) => item.value, Err(problem) => { return Err(problem); } };
+    let prior = expected.value.events;
+    let events = EventFrame { format = 2, turns = prior.turns, first_count = prior.first_count, events = prior.events.push(Event { role = "system", kind = "native-budget", name = "chat", text = marker }) };
+    return write(Frame { format = 1, encoding = "json-string-v1", policy_binding = binding, chat = pending, events = events }, Some(expected), policy, binding);
 }
 
 public flow finish(expected: MemoryEntry<string, Frame>, result: TurnResult, policy: Policy, binding: string) -> Result<MemoryVersion, string> ![Memory, Error<StorageError>, Error<IndexError>] {

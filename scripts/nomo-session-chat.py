@@ -107,7 +107,7 @@ def show_resume(args, *, show_id):
     if args.events_policy_dir is None:
         print('Read turns and bounded work use this session; each edit requires fresh confirmations.', flush=True)
     else:
-        print('Event recording supports successive work operations, each with an optional check and fresh approval; each new-session work reserves up to 7 model calls and 61440 output tokens.', flush=True)
+        print('Event recording supports successive work operations, each with an optional check and fresh approval; each new-session work reserves up to 7 model calls, 61440 output tokens, 1335296 configured native tokens, 65540 read/search bytes and three edit reads of up to 65537 bytes each; large-file read-model context is capped at 262144 tokens per call.', flush=True)
     policy = '' if args.events_policy_dir is None else ' --events-policy-dir ' + shlex.quote(args.events_policy_dir)
     print('Resume: nomo-read.sh session-id resume --sessions-dir ' + shlex.quote(args.sessions_dir)
           + ' --id ' + shlex.quote(args.id) + ' --root DIR --allow FILE' + policy + ' --once QUESTION', flush=True)
@@ -232,14 +232,14 @@ def main(argv=None):
             print('Input cancelled.', file=sys.stderr)
             return 130
     if args.discover: show_discovery()
-    print('A read turn may reserve up to 6 calls and 24576 output tokens for new sessions: up to 4 child calls at 4096 each and 2 parent calls at up to 4096 each; up to 3 read/search operations reserve 4 MiB plus 256 probe bytes each.', flush=True)
+    print('A read turn may reserve up to 6 calls and 24576 output tokens for new sessions: up to 4 child calls at 4096 each and 2 parent calls at up to 4096 each; at most 1179648 configured native tokens in total; up to 3 read/search operations reserve 4 MiB plus 256 probe bytes each.', flush=True)
     if args.once is not None: print('An unfinished delegated answer may use one additional read turn with the same limits.', flush=True)
     if args.id is not None:
         show_resume(args, show_id=True)
     else:
         print('New session: the first question starts a read turn.', flush=True)
         if args.events_policy_dir is not None:
-            print('Event recording supports successive work operations, each with an optional check and fresh approval; each new-session work reserves up to 7 model calls and 61440 output tokens.', flush=True)
+            print('Event recording supports successive work operations, each with an optional check and fresh approval; each new-session work reserves up to 7 model calls, 61440 output tokens, 1335296 configured native tokens, 65540 read/search bytes and three edit reads of up to 65537 bytes each; large-file read-model context is capped at 262144 tokens per call.', flush=True)
         else:
             print('Work requires a completed first turn.', flush=True)
     if tty and args.once is None:

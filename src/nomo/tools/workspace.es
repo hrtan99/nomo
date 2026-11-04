@@ -102,6 +102,8 @@ public flow read_file(name: string) -> Outcome ![Fs.read<ReadOnlyRoot>, Error<Fi
 }
 
 // Legacy scripted callers retain their original 2 KiB per-file scan reservation.
+public flow read_wide(name: string) -> Outcome ![Fs.read<ReadOnlyRoot>, Error<FileError>, Error<IndexError>] ~ NomoRead<ReadOnlyRoot> { return read_bounded(name, 65536); }
+
 public flow read_legacy(name: string) -> Outcome ![Fs.read<ReadOnlyRoot>, Error<FileError>, Error<IndexError>] ~ NomoRead<ReadOnlyRoot> {
     return read_bounded(name, 2048);
 }
@@ -128,7 +130,7 @@ flow search_with(names: Array<string>, literal: string, maximum: usize) -> Outco
     var matches: usize = 0; var skipped: usize = 0; var skipped_names = "";
     for name in names limit Iterations(256) {
         let remaining = maximum - consumed;
-        let per_file = if maximum == 4194304 { 65536 } else { if maximum == 4096 { 2048 } else { 16384 } };
+        let per_file = if maximum == 4194304 || maximum == 65536 { 65536 } else { if maximum == 4096 { 2048 } else { 16384 } };
         let bound = if remaining < per_file { remaining } else { per_file };
         let file = read_bounded(name, bound);
         if file.status != "complete" {
@@ -168,6 +170,8 @@ public flow search_files(names: Array<string>, literal: string) -> Outcome ![Fs.
     }
     return search_with(names, literal, 16384);
 }
+public flow search_wide(names: Array<string>, literal: string) -> Outcome ![Fs.read<ReadOnlyRoot>, Error<FileError>, Error<IndexError>] ~ NomoSearch<ReadOnlyRoot> { return search_with(names, literal, 65536); }
+
 public flow search_legacy(names: Array<string>, literal: string) -> Outcome ![Fs.read<ReadOnlyRoot>, Error<FileError>, Error<IndexError>] ~ NomoSearch<ReadOnlyRoot> {
     return search_with(names, literal, 4096);
 }

@@ -8,7 +8,7 @@ import std.text.to_string_i32;
 import nomo.cli.harness_edit_args.parse;
 import nomo.harness.harness_edit_contract.{Ledger, fresh, bump, context_error, decode_edit, decode_plan, text_error};
 import nomo.harness.harness_model_edit.{plan, propose, aggregate};
-import nomo.tools.edit_file.{EditableRoot, read_original, prepare_original};
+import nomo.tools.edit_file.{EditableRoot, read_original, prepare_original_legacy as prepare_original};
 import nomo.session.edit_operation_store.available;
 import nomo.entry.edit_coordinator.{Approval, Selector, execute};
 import nomo.harness.edit_context.{context, completed_context};

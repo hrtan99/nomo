@@ -28,7 +28,7 @@ public flow binding_error(value: Binding) -> string {
     if !hex_digest(value.request_digest) || !hex_digest(value.before_digest) || !hex_digest(value.after_digest) {
         return "invalid edit SHA-256 digest";
     }
-    if value.before_bytes == 0 || value.before_bytes > 16384 || value.after_bytes > 16384 {
+    if value.before_bytes == 0 || value.before_bytes > 65536 || value.after_bytes > 65536 {
         return "invalid edit byte lengths";
     }
     if value.before_digest == value.after_digest { return "edit digests do not describe a change"; }

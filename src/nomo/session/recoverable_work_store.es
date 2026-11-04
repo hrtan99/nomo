@@ -19,24 +19,28 @@ public type Ticket = { frame: Frame, version: MemoryVersion, chat: MemoryEntry<s
 alias Schema = MemoryRegion<{ Rows: Store<string, Frame> }>;
 let Runs = std.memory.region<Schema>(stable_id = "nomo-recoverable-work-v1", store = "recoverable-work");
 
-flow full(wide: bool) -> Budget { return Budget { steps = 13, calls = 7, generation = if wide { 61440 } else { 51200 }, native_tokens = 196608 }; }
-flow zero() -> Budget { return Budget { steps = 0, calls = 0, generation = 0, native_tokens = 0 }; }
+public flow full(wide: bool) -> Budget { return Budget { steps = 13, calls = 7, generation = if wide { 61440 } else { 51200 }, native_tokens = 1335296 }; }
+public flow zero() -> Budget { return Budget { steps = 0, calls = 0, generation = 0, native_tokens = 0 }; }
 
-flow frame_error(value: Frame, policy: Policy, binding: string) -> string {
-    if value.format != 1 || value.policy_binding != binding { return "invalid recoverable work format or policy binding"; }
-    let work_error = invalid_work(value.work); if work_error != "" { return work_error; }
-    let event_error = invalid_events(value.events, policy); if event_error != "" { return event_error; }
-    if ((value.work.phase == "running" || value.work.phase == "abandoned") && value.events.turns != 0) || (value.work.phase == "complete" && value.events.turns != 1) {
+public flow work_data_error(work: Record, events: EventFrame, policy: Policy) -> string {
+    let work_error = invalid_work(work); if work_error != "" { return work_error; }
+    let event_error = invalid_events(events, policy); if event_error != "" { return event_error; }
+    if ((work.phase == "running" || work.phase == "abandoned") && events.turns != 0) || (work.phase == "complete" && events.turns != 1) {
         return "work phase and event boundary differ";
     }
-    for field in [value.work.id, value.work.workspace, value.work.path, value.work.request, value.work.summary] limit Iterations(5) {
+    for field in [work.id, work.workspace, work.path, work.request, work.summary] limit Iterations(5) {
         let checked = match redact(field, policy) { Ok(item) => item, Err(error) => { return error; } };
         if checked.replacements != 0 || checked.value != field { return "work data contains a known sensitive literal"; }
     }
-    for item in value.events.events limit Iterations(48) {
+    for item in events.events limit Iterations(48) {
         match decode(item.text, policy) { Ok(_) => {} Err(error) => { return error; } }
     }
     return "";
+}
+
+flow frame_error(value: Frame, policy: Policy, binding: string) -> string {
+    if value.format != 1 || value.policy_binding != binding { return "invalid recoverable work format or policy binding"; }
+    return work_data_error(value.work, value.events, policy);
 }
 
 public flow load(policy: Policy, binding: string) -> Result<Option<MemoryEntry<string, Frame>>, string> {
@@ -85,7 +89,7 @@ public flow admit(id: string, workspace: string, path: string, request: string, 
     }
     match load(policy, binding) { Ok(None()) => {} Ok(Some(_)) => { return Err("recoverable work already admitted; no retry"); } Err(error) => { return Err(error); } }
     let wide = chat.value.chat.format == 13;
-    let row = Record { format = if wide { 3 } else { 2 }, phase = "running", id = id, workspace = workspace, path = path,
+    let row = Record { format = if wide { 4 } else { 5 }, phase = "running", id = id, workspace = workspace, path = path,
         request = request, history_version = chat.version.opaque, reserved = full(wide), settled = None(), summary = "" };
     let frame = Frame { format = 1, policy_binding = binding, work = row, events = empty_events() };
     let version = match write(frame, None(), policy, binding) { Ok(item) => item, Err(error) => { return Err(error); } };

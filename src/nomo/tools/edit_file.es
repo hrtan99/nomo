@@ -23,46 +23,60 @@ flow checked_path(name: string) -> Result<WorkspacePath<EditableRoot>, string> {
 
 // This stat is not lstat/inode identity or a concurrent-file guarantee. The
 // caller uses an owned regular-file tree without symlinks or concurrent writers.
-flow read_existing(name: string) -> Result<bytes, string> {
+flow read_existing(name: string, wide: bool) -> Result<bytes, string> {
     let target = match checked_path(name) { Ok(value) => value, Err(error) => { return Err(error); } };
     let message = Message.new(stat(target));
     let conversion: Option<Message<FileInfo>> = message.cast<FileInfo>();
     let info = match conversion { Some(value) => value.body, None() => { return Err("edit stat projection refused"); } };
     if !info.is_file || info.is_dir { return Err("edit requires an existing regular file"); }
-    if info.len > 16384 { return Err("edit file exceeds 16384 bytes"); }
+    if info.len > (if wide { 65536 } else { 16384 }) { return Err(if wide { "edit file exceeds 65536 bytes" } else { "edit file exceeds 16384 bytes" }); }
     return handle {
-        let bytes = read_bytes_limited(target, 16384);
-        if byte_count(bytes) > 16384 { return Err("edit file exceeds 16384 bytes after read"); }
+        let bytes = read_bytes_limited(target, if wide { 65536 } else { 16384 });
+        if byte_count(bytes) > (if wide { 65536 } else { 16384 }) { return Err(if wide { "edit file exceeds 65536 bytes after read" } else { "edit file exceeds 16384 bytes after read" }); }
         Ok(bytes)
     } with {
         Error<ReadLimitError>.raise(ReadLimitError.LimitExceeded(maximum)) => {
-            if maximum != 16384 { abort("unexpected edit read limit"); }
-            finish Err("edit file exceeds 16384 bytes after read");
+            if maximum != (if wide { 65536 } else { 16384 }) { abort("unexpected edit read limit"); }
+            finish Err(if wide { "edit file exceeds 65536 bytes after read" } else { "edit file exceeds 16384 bytes after read" });
         }
     };
 }
 
-public flow read_original(name: string) -> Result<string, string> ![Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Error<FileError>, Error<IndexError>] ~ OriginalReader<EditableRoot> {
-    let bytes = match read_existing(name) { Ok(value) => value, Err(error) => { return Err(error); } };
+flow read_original_with(name: string, wide: bool) -> Result<string, string> {
+    let bytes = match read_existing(name, wide) { Ok(value) => value, Err(error) => { return Err(error); } };
     let original = match utf8_decode(bytes, Strict) { Ok(value) => value, Err(_) => { return Err("edit file is not UTF-8"); } };
     match text_bytes(original, "original") { Ok(_) => {} Err(error) => { return Err(error); } }
     return Ok(original);
 }
 
+public flow read_original(name: string) -> Result<string, string> ![Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Error<FileError>, Error<IndexError>] ~ OriginalReader<EditableRoot> { return read_original_with(name, false); }
+public flow read_original_wide(name: string) -> Result<string, string> ![Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Error<FileError>, Error<IndexError>] ~ OriginalReader<EditableRoot> { return read_original_with(name, true); }
+
+public flow prepare_original_legacy(name: string, original: string, target: string, replacement: string) -> Result<Prepared, string> {
+    if byte_count(utf8_encode(original)) > 16384 || byte_count(utf8_encode(target)) > 16384 || byte_count(utf8_encode(replacement)) > 16384 { return Err("edit text exceeds 16384 UTF-8 bytes"); }
+    let prepared = match prepare_original(name, original, target, replacement) { Ok(value) => value, Err(error) => { return Err(error); } };
+    if byte_count(utf8_encode(prepared.proposal.after)) > 16384 { return Err("edit result exceeds 16384 UTF-8 bytes"); }
+    return Ok(prepared);
+}
+
 public flow prepare(name: string, target: string, replacement: string) -> Result<Prepared, string> {
     let original = match read_original(name) { Ok(value) => value, Err(error) => { return Err(error); } };
-    return prepare_original(name, original, target, replacement);
+    return prepare_original_legacy(name, original, target, replacement);
 }
 
 // Called once only after confirmed current consent and a durable intent. A File
 // exception can follow publication: no caller may infer rollback or retry it.
-public flow apply(prepared: Prepared) -> Result<bool, string> ![Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<FileError>, Error<IndexError>] {
+flow apply_with(prepared: Prepared, wide: bool) -> Result<bool, string> {
     let proposal = match validate(prepared.request, prepared.proposal) { Ok(value) => value, Err(error) => { return Err(error); } };
-    let before = match read_existing(proposal.path) { Ok(value) => value, Err(error) => { return Err(error); } };
+    if byte_count(utf8_encode(proposal.after)) > (if wide { 65536 } else { 16384 }) { return Err("edit result exceeds its byte limit"); }
+    let before = match read_existing(proposal.path, wide) { Ok(value) => value, Err(error) => { return Err(error); } };
     if before != utf8_encode(proposal.before) { return Err("edit original changed; intent retained, no write"); }
     let target = match checked_path(proposal.path) { Ok(value) => value, Err(error) => { return Err(error); } };
     atomic_replace(target, utf8_encode(proposal.after));
-    let observed = match read_existing(proposal.path) { Ok(value) => value, Err(error) => { return Err(error); } };
+    let observed = match read_existing(proposal.path, wide) { Ok(value) => value, Err(error) => { return Err(error); } };
     if observed != utf8_encode(proposal.after) { return Err("edit result readback mismatch; intent retained, no retry"); }
     return Ok(true);
 }
+
+public flow apply(prepared: Prepared) -> Result<bool, string> ![Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<FileError>, Error<IndexError>] { return apply_with(prepared, false); }
+public flow apply_wide(prepared: Prepared) -> Result<bool, string> ![Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<FileError>, Error<IndexError>] { return apply_with(prepared, true); }

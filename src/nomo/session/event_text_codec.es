@@ -16,16 +16,16 @@ public type Encoded = { value: string, replacements: usize };
 
 public flow encode(text: string, policy: Policy) -> Result<Encoded, string> {
     let clean = match redact(text, policy) { Ok(item) => item, Err(error) => { return Err(error); } };
-    if len(clean.value) > 65546 || byte_count(utf8_encode(clean.value)) > 65546 { return Err("event text exceeds decoded bound"); }
+    if len(clean.value) > 262154 || byte_count(utf8_encode(clean.value)) > 262154 { return Err("event text exceeds decoded bound"); }
     let converted: Option<Message<JsonValue>> = Message.new(clean.value).cast<JsonValue>();
     let value = match converted { Some(item) => item.body, None() => { return Err("event text JSON conversion refused"); } };
     let encoded = match stringify(value) { Ok(item) => item, Err(_) => { return Err("event text JSON encoding refused"); } };
-    if !safe(encoded, 262144) { return Err("encoded event text unsupported or exceeds bound"); }
+    if !safe(encoded, 524288) { return Err("encoded event text unsupported or exceeds bound"); }
     return Ok(Encoded { value = encoded, replacements = clean.replacements });
 }
 
 public flow decode(encoded: string, policy: Policy) -> Result<string, string> {
-    if !safe(encoded, 262144) { return Err("invalid encoded event text"); }
+    if !safe(encoded, 524288) { return Err("invalid encoded event text"); }
     let value = match parse(encoded) { Ok(item) => item, Err(_) => { return Err("invalid event text JSON"); } };
     let converted: Option<Message<string>> = Message.new(value).cast<string>();
     let raw = match converted { Some(item) => item.body, None() => { return Err("event text JSON is not a string"); } };

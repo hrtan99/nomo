@@ -2,7 +2,7 @@ module nomo.entry.recoverable_read_session;
 
 import nomo.core.read_text.within;
 import std.io.println;
-import std.text.{len, split, to_string_i32};
+import std.text.{len, split, ends_with, to_string_i32};
 import std.bytes.len as byte_count;
 import std.codec.text.utf8_encode;
 import std.agent.message.Message;
@@ -144,10 +144,19 @@ public flow status(args: Array<string>) -> i32 ![Console, Memory, Fs.read<Policy
     let extra = match load_continuous(args[1]) { Ok(item) => item, Err(error) => { println("REFUSED " + error); return 1; } };
     var additional: Array<ExtraEntry> = [];
     match extra { Some(item) => { additional = item.value.history.push(item.value.current); } None() => {} }
+    var chat_reservations: i32 = 0; var native_configured: i32 = 0; var legacy_native_unknown = false;
+    for event in saved.value.events.events limit Iterations(768) { if event.role == "system" && event.kind == "native-budget" && event.name == "chat" { chat_reservations = chat_reservations + 1; } }
+    native_configured = chat_reservations * 1179648;
+    let completed_new = if saved.value.chat.phase == "running" && chat_reservations > 0 { chat_reservations - 1 } else { chat_reservations };
+    if saved.value.chat.invocation.admitted > completed_new { legacy_native_unknown = true; }
+    match work { Some(item) => { if item.value.work.format >= 4 { native_configured = native_configured + 1335296; } else { legacy_native_unknown = true; } } None() => {} }
+    match followup { Some(item) => { if item.value.work.format >= 4 { native_configured = native_configured + 1335296; } else { legacy_native_unknown = true; } } None() => {} }
+    for item in additional limit Iterations(32) { if item.result.source == "v2" || ends_with(item.result.source, "-v2") { native_configured = native_configured + 1335296; } else { legacy_native_unknown = true; } }
+    println("NATIVE configured cumulative reservation=" + to_string_i32(native_configured) + "; actual provider usage unknown; legacy native budget " + if legacy_native_unknown { "unknown" } else { "not present" });
     for item in additional limit Iterations(32) {
         println("ADDITIONAL WORK " + item.core.id + " phase=" + item.result.phase + " edit=" + item.edit.phase + " check=" + item.check.phase +
             " settled_calls=" + to_string_i32(item.result.calls) + " settled_generation=" + to_string_i32(item.result.generation) +
-            if item.result.phase == "running" || item.result.phase == "abandoned" { if item.result.source == "wide" { " reserved_calls=7 reserved_generation=61440" } else { " reserved_calls=7 reserved_generation=51200" } } else { " reserved_calls=0 reserved_generation=0" });
+            if item.result.phase == "running" || item.result.phase == "abandoned" { if item.result.source == "wide" || item.result.source == "wide-v2" { " reserved_calls=7 reserved_generation=61440" } else { " reserved_calls=7 reserved_generation=51200" } } else { " reserved_calls=0 reserved_generation=0" });
         if item.check.phase == "abandoned" { println("ABANDONED CHECK: outcome unknown; inspect the workspace before further action."); }
     }
     var followup_phase = "none"; var followup_edit_phase = "none"; var followup_reserved_calls: i32 = 0; var followup_reserved_tokens: i32 = 0;

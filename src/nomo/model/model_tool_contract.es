@@ -155,7 +155,7 @@ public flow decode_work_reply(raw: string, allowed: Array<string>, final_only: b
 // whole serialized record, including escaped strings, metadata and both paths.
 public flow context_error(context: Context) -> string {
     let message = Message.new(context);
-    return context_json_error(message.cast<JsonValue>(), 262144, false, "model context exceeds 262144 serialized characters");
+    return context_json_error(message.cast<JsonValue>(), 1048576, false, "model context exceeds 1048576 serialized characters");
 }
 
 // Admission and charging are separate pure operations. The caller must perform

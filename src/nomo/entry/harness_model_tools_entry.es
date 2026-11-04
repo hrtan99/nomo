@@ -1,6 +1,7 @@
 module nomo.entry.harness_model_tools_entry;
 
 import std.io.println;
+import nomo.core.read_text.within;
 import std.collections.len as count;
 import std.text.{len, split};
 import nomo.cli.cli_request.parse_args;
@@ -15,8 +16,9 @@ flow help() -> unit {
     println("Complete model context <=2048. Read size checked after reading. One fresh serial child; no writes, commands, resume, line mode or persistence. Host aborts may leave reservations unresolved.");
 }
 
-public flow run(args: Array<string>) -> i32 {
-    if count(args) == 0 || count(args) > 7 { return refused(fresh(), "expected bounded new --once TEXT --allow FILE[,FILE]"); }
+public type AllowArgs = { remaining: Array<string>, supplied: bool, allowed: string };
+public flow extract_allow(args: Array<string>, unicode: bool) -> Result<AllowArgs, string> {
+    if count(args) == 0 || count(args) > 7 { return Err("expected bounded model/tool arguments"); }
     var remaining: Array<string> = [args[0]];
     var supplied = false;
     var allowed = "";
@@ -24,9 +26,10 @@ public flow run(args: Array<string>) -> i32 {
     while index < count(args) limit Iterations(7) {
         let flag = args[index];
         if flag == "--allow" {
-            if supplied || index + 1 >= count(args) { return refused(fresh(), "expected exactly one --allow FILE[,FILE]"); }
+            if supplied || index + 1 >= count(args) { return Err(if unicode { "expected exactly one --allow FILE[,FILE...]" } else { "expected exactly one --allow FILE[,FILE]" }); }
             allowed = args[index + 1];
-            if len(allowed) > 97 { return refused(fresh(), "raw allowlist exceeds 97 characters"); }
+            if unicode && !within(allowed, 195) { return Err("raw allowlist exceeds 195 UTF-8 bytes"); }
+            if !unicode && len(allowed) > 97 { return Err("raw allowlist exceeds 97 characters"); }
             supplied = true;
             index = index + 2;
         } else {
@@ -37,10 +40,16 @@ public flow run(args: Array<string>) -> i32 {
             }
         }
     }
-    let request = match parse_args(remaining) { Ok(value) => value, Err(error) => { return refused(fresh(), error); } };
-    if request.kind == "help" { if supplied { return refused(fresh(), "help must be used alone"); } help(); return 0; }
+    return Ok(AllowArgs { remaining = remaining, supplied = supplied, allowed = allowed });
+}
+
+public flow run(args: Array<string>) -> i32 {
+    if count(args) == 0 || count(args) > 7 { return refused(fresh(), "expected bounded new --once TEXT --allow FILE[,FILE]"); }
+    let extracted = match extract_allow(args, false) { Ok(value) => value, Err(error) => { return refused(fresh(), error); } };
+    let request = match parse_args(extracted.remaining) { Ok(value) => value, Err(error) => { return refused(fresh(), error); } };
+    if request.kind == "help" { if extracted.supplied { return refused(fresh(), "help must be used alone"); } help(); return 0; }
     if request.kind != "new" { return refused(fresh(), "resume is unavailable in the model/tool harness"); }
     if !request.once_supplied { return refused(fresh(), "this entry requires new --once TEXT"); }
-    if !supplied { return refused(fresh(), "this entry requires --allow FILE[,FILE]"); }
-    return coordinate(request.once, split(allowed, ","));
+    if !extracted.supplied { return refused(fresh(), "this entry requires --allow FILE[,FILE]"); }
+    return coordinate(request.once, split(extracted.allowed, ","));
 }
