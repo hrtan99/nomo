@@ -59,7 +59,7 @@ flow child_rejection(raw: string, phase: string, error: string) -> string {
 
 flow tool_failure(result: Outcome) -> string {
     if contains(result.text, "file is not UTF-8") { return "non-UTF-8 file"; }
-    if contains(result.text, "file exceeds 16384 bytes") || contains(result.text, "file exceeds 2048 bytes") { return "per-file byte limit"; }
+    if contains(result.text, "file exceeds 65536 bytes") || contains(result.text, "file exceeds 16384 bytes") || contains(result.text, "file exceeds 2048 bytes") { return "per-file byte limit"; }
     if contains(result.text, "file exceeds remaining scan allowance") { return "scan allowance"; }
     if result.status == "truncated" { return "match limit"; }
     return if result.status == "unsupported" { "unsupported output" } else { if result.status == "refused" { "refused input or limit" } else { "invalid tool outcome" } };

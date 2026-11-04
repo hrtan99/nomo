@@ -12,7 +12,7 @@ flow tool_system() -> string { return "You answer a question using up to three r
 @limits([Tokens(2048), ContextTokens(65536)])
 agent ToolModel(input: Context) -> string { return perform infer<string>(Prompt.new().system(Trusted(tool_system())).data(input)); }
 @limits([Tokens(4096), ContextTokens(262144)])
-agent MultiToolModel(input: Context) -> string { return perform infer<string>(Prompt.new().system(Trusted(tool_system())).data(input)); }
+agent MultiToolModel(input: Context) -> string { return perform infer<string>(Prompt.new().system(Trusted(tool_system() + " Explicit-file search supports up to 65536 bytes total across its selected files.")).data(input)); }
 
 @limits([Tokens(4096), ContextTokens(16384)])
 agent WorkToolAction(input: Context) -> string {
@@ -84,6 +84,6 @@ public flow run_multi_chat_loop(raw: string, allowed: Array<string>, previous: S
     return run_multi_chat_loop_controller(raw, allowed, previous, private_progress) with {
         LegacyChildModel.infer(context) => { resume MultiToolModel.run(context); }
         ReadTools.read(name) => { resume read_wide(name); }
-        ReadTools.search(names, literal) => { resume search_files(names, literal); }
+        ReadTools.search(names, literal) => { resume if names[0] == "*" { search_files(names, literal) } else { search_wide(names, literal) }; }
     };
 }
