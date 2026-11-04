@@ -43,4 +43,8 @@ class CombinedTests(unittest.TestCase):
  def test_piped_new_event_mode_keeps_policy(self):
   p=subprocess.run(self.base+['--new','--events-policy-dir',str(self.policy)],input=b'one question\n',stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=6)
   self.assertEqual(0,p.returncode,p.stderr);ids=re.findall(rb'^SESSION ID ([0-9a-f]{32})$',p.stdout,re.M);self.assertEqual(1,len(ids));events=(self.sessions/ids[0].decode()/'synthetic.jsonl').read_text().splitlines();self.assertEqual(str(self.policy),json.loads(events[0])['policy'])
+ def test_piped_invalid_input_does_not_create_a_session(self):
+  for payload in (b'first\nsecond\n', b'x'*513+b'\n', b'a\x00b\n', 'x\u202ey\n'.encode()):
+   p=subprocess.run(self.base+['--new'],input=payload,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=6)
+   self.assertEqual(64,p.returncode,p.stderr);self.assertFalse(list(self.sessions.iterdir()))
 if __name__=='__main__':unittest.main()

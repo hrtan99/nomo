@@ -42,16 +42,10 @@ def piped_question(stream):
         del data[-1:]
         if data.endswith(b'\r'):
             del data[-1:]
-    if len(data) > PIPE_PAYLOAD_BYTES:
-        raise ValueError('piped question exceeds 512 UTF-8 bytes')
-    if any(byte < 32 or byte == 127 for byte in data):
-        raise ValueError('piped input must contain exactly one printable line')
     try:
         question = data.decode('utf-8')
     except UnicodeDecodeError as error:
         raise ValueError('piped input must be valid UTF-8') from error
-    if not question.strip():
-        raise ValueError('piped question must be non-empty')
     return question
 
 class StartIdObserver:
@@ -149,7 +143,7 @@ def session_state(args):
 
 
 def abandon_stopped_work(args, operation_id, action):
-    # Called only by the live owner after the matching transport returned 130.
+    # Called only by the live owner after confirmed transport cleanup.
     state = session_state(args)
     policy_spec = importlib.util.spec_from_file_location('event_policy', ROOT / 'scripts/nomo-event-policy.py')
     policy = importlib.util.module_from_spec(policy_spec); policy_spec.loader.exec_module(policy)
@@ -167,15 +161,30 @@ def abandon_stopped_work(args, operation_id, action):
         return edit.run_owned(command, env)
     finally: os.close(fd)
 
+def run_with_proof(command):
+    proof_read, proof_write = os.pipe()
+    env = dict(os.environ, NOMO_CLEANUP_PROOF_FD=str(proof_write)); signals = []
+    try:
+        code = edit.run_owned(command, env, signal_state=signals)
+    finally:
+        os.close(proof_write)
+    os.set_blocking(proof_read, False)
+    try:
+        proof = os.read(proof_read, 64)
+        closed = os.read(proof_read, 1) == b''
+    except BlockingIOError: proof, closed = b'', False
+    finally: os.close(proof_read)
+    return code, signals, proof, closed
+
 def recovery_ready(code, signals, proof, closed):
     return closed and ((code == 130 and signals == [signal.SIGINT] and proof == b'clean-sigint\n') or (code not in (0, 125, 130) and signals == [0] and proof == b'clean-exit\n'))
 
 def offer_recovery(args, operation_id, action):
-    print('The stopped edit or check may have had effects. Inspect the workspace before continuing; saved records and budgets remain.', flush=True)
-    try: answer = input('Abandon this stopped operation and continue this session? [y/N] ').strip().lower()
+    print('The stopped edit or check may have had effects. Inspect the workspace before continuing; saved records and budgets remain.' if action != 'check' else 'The stopped check may have changed the workspace; its outcome may not be recorded. Inspect it before continuing. The command will not be repeated.', flush=True)
+    try: answer = input('Continue this session? [y/N] ' if action == 'check' else 'Abandon this stopped operation and continue this session? [y/N] ').strip().lower()
     except (EOFError, KeyboardInterrupt): return False
     if answer not in ('y', 'yes'): return False
-    try: return abandon_stopped_work(args, operation_id, action) == 0
+    try: return action == 'check' or abandon_stopped_work(args, operation_id, action) == 0
     except (OSError, ValueError) as error:
         print('Recovery decision was not confirmed: ' + str(error), file=sys.stderr, flush=True)
         return False
@@ -195,7 +204,9 @@ def run_recorded_check(args, command, check_id=None):
     state = session_state(args)
     request = [sys.executable, str(ROOT/'scripts/nomo-history-work.py'), '--independent-check', '--state', str(state), '--root', args.root,
                '--id', check_id or 'check-' + secrets.token_hex(16), '--events-policy-dir', args.events_policy_dir, '--check', *command]
-    return edit.run_owned(request, dict(os.environ))
+    code, signals, proof, closed = run_with_proof(request)
+    if recovery_ready(code, signals, proof, closed) and offer_recovery(args, None, 'check'): return None
+    return code
 
 
 def summarize_recorded_check(args, check_id, tty):
@@ -443,6 +454,7 @@ def main(argv=None):
             try: code = run_recorded_check(args, observer.check, check_id)
             except (OSError, ValueError) as error:
                 print('Check or summary could not start or complete; inspect the session: ' + str(error), file=sys.stderr, flush=True); return 1
+            if code is None: continue
             if code:
                 print('Check stopped or its result was not recorded; inspect the workspace and session before continuing.', file=sys.stderr, flush=True)
                 return code
@@ -454,18 +466,7 @@ def main(argv=None):
             operation_id = 'auto-' + secrets.token_hex(8)
             command = work_command(args, action, args.root, operation_id, path, question, args.check)
             print('Selected ' + path + ' for a proposed edit; review the preview and confirm before writing.', flush=True)
-            proof_read, proof_write = os.pipe()
-            env = dict(os.environ, NOMO_CLEANUP_PROOF_FD=str(proof_write)); signals = []
-            try:
-                code = edit.run_owned(command, env, signal_state=signals)
-            finally:
-                os.close(proof_write)
-            os.set_blocking(proof_read, False)
-            try:
-                proof = os.read(proof_read, 64)
-                closed = os.read(proof_read, 1) == b''
-            except BlockingIOError: proof, closed = b'', False
-            finally: os.close(proof_read)
+            code, signals, proof, closed = run_with_proof(command)
             if code:
                 if recovery_ready(code, signals, proof, closed) and args.events_policy_dir is not None and offer_recovery(args, operation_id, action):
                     print('Continue with a new request; a new edit requires fresh confirmations.', flush=True)

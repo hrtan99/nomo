@@ -217,6 +217,27 @@ class SessionChatTest(unittest.TestCase):
                 self.assertEqual(module.offer_recovery(None, 'operation', 'work'), answer == 'yes')
                 self.assertEqual(abandon.called, answer == 'yes')
 
+    def test_independent_stopped_check_requires_proof_and_confirmation(self):
+        self.args += ['--events-policy-dir', '/private-policy']
+        args=module.argparse.Namespace(root='/workspace',events_policy_dir='/private-policy')
+        for code,signals,proof,closed,answer,resumed in ((130,[signal.SIGINT],b'clean-sigint\n',True,'yes',True),
+                (127,[0],b'clean-exit\n',True,'yes',True), (130,[signal.SIGINT],b'',True,'yes',False),
+                (125,[0],b'clean-exit\n',True,'yes',False), (130,[signal.SIGINT],b'clean-sigint\n',True,'no',False)):
+            with patch.object(module,'session_state',return_value=Path('/private-session')), \
+                 patch.object(module,'run_with_proof',return_value=(code,signals,proof,closed)) as run, \
+                 patch('builtins.input',return_value=answer),patch.object(module,'abandon_stopped_work') as abandon:
+                self.assertEqual(module.run_recorded_check(args,['check'], 'check-id'),None if resumed else code)
+                run.assert_called_once();abandon.assert_not_called()
+
+    def test_stopped_proposed_check_does_not_summarize_or_repeat(self):
+        self.args += ['--events-policy-dir', '/private-policy']
+        proposal=module.NaturalObserver(['file.txt']);proposal.feed('stdout',b'NATURAL CHECK python3 verify.py\n')
+        with patch.object(module.sys,'stdin',Terminal('run check\ny\n/exit\n')), patch.object(module.sys,'stdout',Terminal()), \
+             patch.object(module.sys,'stderr',io.StringIO()),patch.object(module,'chat_turn',return_value=(0,proposal)) as chat, \
+             patch.object(module,'run_recorded_check',return_value=None) as check, patch.object(module,'summarize_recorded_check') as summary:
+            self.assertEqual(module.main(self.args),0)
+        chat.assert_called_once();check.assert_called_once();summary.assert_not_called()
+
     def test_multiple_turns_and_exit(self):
         code, out, _, calls = self.run_chat('/help\nfirst\nsecond\n/exit\n', codes=(0, 0))
         self.assertEqual(code, 0)
