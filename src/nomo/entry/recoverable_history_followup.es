@@ -9,7 +9,8 @@ import std.collections.len as count;
 import std.io.IOError as ConsoleError;
 import std.fs.IOError as FileError;
 import std.effects.Fs;
-import nomo.cli.harness_work_args.{Work, parse_recorded};
+import nomo.cli.harness_work_args.{parse_recorded, application};
+import nomo.application.work.request.WorkRequest;
 
 
 
@@ -32,7 +33,9 @@ import nomo.session.recoverable_followup_check_store.{plan as plan_check, load a
 import nomo.session.history_followup_edit_store.{Ticket as EditTicket, available, begin, complete};
 import nomo.core.conversation.Event;
 import nomo.session.edit_operation.Binding;
-import nomo.entry.work_controller.execute;
+import nomo.application.work.controller.execute;
+import nomo.bootstrap.work.{NativeWorkEditor, EventWorkTimeline, native_editor, event_timeline};
+import nomo.entry.terminal_work_output.TerminalWorkOutput;
 import nomo.application.work_contract.{WorkStages, WorkModelStages, WorkPersistence, Run};
 
 
@@ -68,10 +71,10 @@ flow historical(value: WorkFacts) -> HistoryWork {
 
 // Subsequent operations use a single durable append-only book. Earlier fixed
 // work/check records remain in place and continue to provide session history.
-flow more(input: Work, prior_request: string, previous: Previous, first_id: string, check_digest: string, policy: Policy, binding: string, wide: bool) -> i32 {
+flow more(input: WorkRequest, prior_request: string, previous: Previous, first_id: string, check_digest: string, policy: Policy, binding: string, wide: bool) -> i32 {
     let second = match load_followup(policy, binding) { Ok(Some(value)) => value, _ => { return refused("completed followup required"); } };
     let work = second.value.work;
-    if input.edit.id == first_id || input.edit.id == work.id { return refused("distinct work ID required"); }
+    if input.selected.id == first_id || input.selected.id == work.id { return refused("distinct work ID required"); }
     let facts = match work_snapshot(policy, binding) { Ok(value) => value, Err(error) => { return refused(error); } };
     var latest = match facts.followup { Some(value) => value, None() => { return refused("followup facts missing"); } };
     var request = work.request; var history: Array<HistoryWork> = [];
@@ -81,11 +84,11 @@ flow more(input: Work, prior_request: string, previous: Previous, first_id: stri
     let extra = match load_extra(binding) { Ok(value) => value, Err(error) => { return refused(error); } };
     match extra { Some(value) => { request = value.value.current.core.request; } None() => {} }
     let prior = PriorWork { request = request, summary = latest.summary, summary_source = latest.summary_source, selection = latest.selection, check = latest.check, exit_code = latest.exit_code, output = latest.output, history = history };
-    let ticket = match admit_extra(binding, input.edit.id, input.edit.workspace, input.edit.path, input.edit.request, check_digest, policy, wide) { Ok(value) => value, Err(error) => { return refused(error); } };
+    let ticket = match admit_extra(binding, input.selected.id, input.selected.workspace, input.selected.path, input.request, check_digest, policy, wide) { Ok(value) => value, Err(error) => { return refused(error); } };
     println(if wide { "RESERVED additional work: 7 calls, 286720 output tokens, 2811008 configured native tokens; interruption leaves this work unresolved." } else { "RESERVED additional work: 7 calls, 51200 output tokens, 1335296 configured native tokens; interruption leaves this work unresolved." });
     let stages = HistoryStages { prior_request = prior_request, previous = previous, prior_work = prior, wide = wide };
     let persistence = ContinuousPersistence { ticket = ticket, redaction = policy };
-    return execute<HistoryStages, Stored, Stored, ContinuousPersistence>(stages, persistence, input, Run { redaction = policy, binding = binding, wide = wide, saved = "SAVED additional work facts" });
+    return execute<HistoryStages, Stored, Stored, ContinuousPersistence, NativeWorkEditor, EventWorkTimeline, TerminalWorkOutput>(stages, persistence, native_editor(), event_timeline(), TerminalWorkOutput {}, input, Run { redaction = policy, binding = binding, wide = wide, saved = "SAVED additional work facts" });
 }
 
 // Current roots and current approval are supplied by this invocation. Saved
@@ -94,8 +97,9 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
     if count(args) < 2 || args[count(args) - 2] != "--policy-binding" { return refused("event followup requires policy binding"); }
     let binding = args[count(args) - 1];
     let parsed = match parse_recorded(args, 2, true) { Ok(value) => value, Err(error) => { return refused(error); } };
-    let input = parsed.input;
-    if input.edit.help { return refused("select a current read root, owned edit root, target and task"); }
+    let cli = parsed.input;
+    if cli.edit.help { return refused("select a current read root, owned edit root, target and task"); }
+    let input = application(cli);
     let policy = match load_policy() { Ok(item) => item, Err(error) => { return refused(error); } };
     let history = match load_chat(policy, binding) { Ok(Some(value)) => value, _ => { return refused("saved event chat required"); } };
     if history.value.chat.phase == "running" { return refused("chat turn unresolved"); }
@@ -124,7 +128,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
     match load_followup_check(policy, binding) { Ok(None()) => {} _ => { return refused("followup check exists or is invalid"); } }
     let origin = match summary_source(first_work.value.events, first_work.value.work.summary, policy) { Ok(value) => value, Err(error) => { return refused(error); } };
     let chosen = match selection(first_work.value.events.events, policy) { Ok(value) => value, Err(error) => { return refused(error); } };
-    let ticket = match admit(input.edit.id, input.edit.workspace, input.edit.path, input.edit.request, history, policy, binding) {
+    let ticket = match admit(input.selected.id, input.selected.workspace, input.selected.path, input.request, history, policy, binding) {
         Ok(value) => value, Err(error) => { return refused(error); }
     };
     if ticket.frame.parent_work_version != first_work.version.opaque { return refused("first work changed before followup"); }
@@ -137,7 +141,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
     let wide = ticket.frame.work.format == 3 || ticket.frame.work.format == 4 || ticket.frame.work.format == 6 || ticket.frame.work.format == 7;
     let stages = HistoryStages { prior_request = prior_request, previous = previous, prior_work = prior_work, wide = wide };
     let persistence = FollowupPersistence { ticket = ticket, redaction = policy, binding = binding };
-    return execute<HistoryStages, EditTicket, bool, FollowupPersistence>(stages, persistence, input, Run { redaction = policy, binding = binding, wide = wide, saved = "SAVED event followup facts; no grant or root identity is persisted." });
+    return execute<HistoryStages, EditTicket, bool, FollowupPersistence, NativeWorkEditor, EventWorkTimeline, TerminalWorkOutput>(stages, persistence, native_editor(), event_timeline(), TerminalWorkOutput {}, input, Run { redaction = policy, binding = binding, wide = wide, saved = "SAVED event followup facts; no grant or root identity is persisted." });
 }
 
 public flow abandon(args: Array<string>) -> i32 ![Console, Memory, Fs.read<PolicyRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {

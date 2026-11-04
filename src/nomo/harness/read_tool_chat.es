@@ -3,7 +3,7 @@ module nomo.harness.read_tool_chat;
 import nomo.harness.harness_tool_chat_contract.{Context, Invocation, TurnResult};
 import nomo.core.conversation.Event;
 import nomo.harness.read_model_tools.{chat_child_turn, private_chat_child_turn};
-import nomo.harness.chat_stages.{ReadStages, run as run_stages};
+import nomo.harness.chat_stages.{ReadStages, run_public, run_private};
 import nomo.harness.chat_budget_policy.{SelectedBudget, select};
 import nomo.model.model_tool_contract.LoopTurn;
 import nomo.core.conversation.State;
@@ -36,12 +36,15 @@ public flow infer_main(mode: MainMode, prompt: Prompt) -> string {
     return match mode { MainMode.Standard => StandardChatMain.run(prompt), MainMode.Wide => WideChatMain.run(prompt), MainMode.Large => LargeChatMain.run(prompt) };
 }
 
-type BasicStages = { mode: MainMode, private_progress: bool };
-impl BasicStages ~ ReadStages {
+type PublicStages = { mode: MainMode };
+impl PublicStages ~ ReadStages {
     flow main(self, context: Context) -> string ![] { return infer_main(self.mode, Prompt.new().system(Trusted(prompt_ChatMain())).data(context)); }
-    flow child(self, task: string, files: Array<string>, selected: State, multi: bool) -> LoopTurn {
-        return if self.private_progress { private_chat_child_turn(task, files, selected, multi) } else { chat_child_turn(task, files, selected, multi) };
-    }
+    flow child(self, task: string, files: Array<string>, selected: State, multi: bool) -> LoopTurn { return chat_child_turn(task, files, selected, multi); }
+}
+type PrivateStages = { mode: MainMode };
+impl PrivateStages ~ ReadStages {
+    flow main(self, context: Context) -> string ![] { return infer_main(self.mode, Prompt.new().system(Trusted(prompt_ChatMain())).data(context)); }
+    flow child(self, task: string, files: Array<string>, selected: State, multi: bool) -> LoopTurn { return private_chat_child_turn(task, files, selected, multi); }
 }
 type HistoryStages = { mode: MainMode, history: Array<Event> };
 impl HistoryStages ~ ReadStages {
@@ -50,11 +53,11 @@ impl HistoryStages ~ ReadStages {
 }
 
 public flow run_turn(request: string, allowed: Array<string>, invocation: Invocation) -> TurnResult {
-    return run_stages(BasicStages { mode = main_mode(invocation), private_progress = false }, request, allowed, invocation, false);
+    return run_public(PublicStages { mode = main_mode(invocation) }, request, allowed, invocation);
 }
 public flow run_private_turn(request: string, allowed: Array<string>, invocation: Invocation) -> TurnResult {
-    return run_stages(BasicStages { mode = main_mode(invocation), private_progress = true }, request, allowed, invocation, true);
+    return run_private(PrivateStages { mode = main_mode(invocation) }, request, allowed, invocation);
 }
 public flow run_with_history(request: string, allowed: Array<string>, invocation: Invocation, history: Array<Event>) -> TurnResult {
-    return run_stages(HistoryStages { mode = main_mode(invocation), history = history }, request, allowed, invocation, true);
+    return run_private(HistoryStages { mode = main_mode(invocation), history = history }, request, allowed, invocation);
 }

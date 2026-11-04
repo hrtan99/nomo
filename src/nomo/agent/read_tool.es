@@ -4,7 +4,7 @@ import nomo.model.model_tool_contract.{Session, Limits, Context};
 import nomo.tools.workspace.{ReadOnlyRoot, StandardFiles, WideFiles, MultiFiles};
 import nomo.tools.read_capabilities.{FileReader, LiteralSearcher};
 import nomo.tools.read_contract.ReadTools;
-import nomo.agent.read_tool_controller.{run_loop_controller, run_private_loop_controller, run_private_work_loop_controller, run_chat_loop_controller, run_expanded_work_loop_controller, run_multi_chat_loop_controller};
+import nomo.agent.read_tool_controller.{run_loop_controller, run_private_loop_controller, run_private_work_loop_controller, run_public_chat_loop_controller, run_private_chat_loop_controller, run_expanded_work_loop_controller, run_public_multi_chat_loop_controller, run_private_multi_chat_loop_controller};
 import nomo.harness.legacy_string_stages.LegacyChildModel;
 public import nomo.model.model_tool_contract.LoopTurn;
 
@@ -53,17 +53,17 @@ impl WorkModel ~ ChildModel {
 enum LoopMode {
     Public(limits: Limits, work: bool, inspect: bool),
     Private(limits: Limits, work: bool),
-    Chat(limits: Limits, private_progress: bool),
+    Chat(limits: Limits, redacted: bool),
     Expanded(wide: bool),
-    Multi(private_progress: bool),
+    Multi(redacted: bool),
 }
 flow selected(mode: LoopMode, raw: string, allowed: Array<string>, previous: Session) -> LoopTurn {
     return match mode {
         LoopMode.Public(limits, work, inspect) => run_loop_controller(raw, allowed, limits, previous, work, inspect),
         LoopMode.Private(limits, work) => if work { run_private_work_loop_controller(raw, allowed, limits, previous) } else { run_private_loop_controller(raw, allowed, limits, previous) },
-        LoopMode.Chat(limits, hidden) => run_chat_loop_controller(raw, allowed, limits, previous, hidden),
+        LoopMode.Chat(limits, hidden) => if hidden { run_private_chat_loop_controller(raw, allowed, limits, previous) } else { run_public_chat_loop_controller(raw, allowed, limits, previous) },
         LoopMode.Expanded(wide) => run_expanded_work_loop_controller(raw, allowed, previous, wide),
-        LoopMode.Multi(hidden) => run_multi_chat_loop_controller(raw, allowed, previous, hidden),
+        LoopMode.Multi(hidden) => if hidden { run_private_multi_chat_loop_controller(raw, allowed, previous) } else { run_public_multi_chat_loop_controller(raw, allowed, previous) },
     };
 }
 flow run_tools<F ~ FileReader<ReadOnlyRoot>, S ~ LiteralSearcher<ReadOnlyRoot>>(reader: F, searcher: S, mode: LoopMode, raw: string, allowed: Array<string>, previous: Session) -> LoopTurn {
@@ -93,12 +93,12 @@ public flow run_private_loop(raw: string, allowed: Array<string>, limits: Limits
 public flow run_private_work_loop(raw: string, allowed: Array<string>, limits: Limits, previous: Session) -> LoopTurn {
     return run_native(StandardModel {}, StandardFiles {}, StandardFiles {}, LoopMode.Private(limits, true), raw, allowed, previous);
 }
-public flow run_chat_loop(raw: string, allowed: Array<string>, limits: Limits, previous: Session, private_progress: bool) -> LoopTurn {
-    return run_native(StandardModel {}, StandardFiles {}, StandardFiles {}, LoopMode.Chat(limits, private_progress), raw, allowed, previous);
+public flow run_chat_loop(raw: string, allowed: Array<string>, limits: Limits, previous: Session, redacted: bool) -> LoopTurn {
+    return run_native(StandardModel {}, StandardFiles {}, StandardFiles {}, LoopMode.Chat(limits, redacted), raw, allowed, previous);
 }
 public flow run_expanded_work_loop(raw: string, allowed: Array<string>, previous: Session, wide: bool) -> LoopTurn {
     return run_native(WorkModel { wide = wide }, WideFiles {}, WideFiles {}, LoopMode.Expanded(wide), raw, allowed, previous);
 }
-public flow run_multi_chat_loop(raw: string, allowed: Array<string>, previous: Session, private_progress: bool) -> LoopTurn {
-    return run_native(MultiModel {}, WideFiles {}, MultiFiles {}, LoopMode.Multi(private_progress), raw, allowed, previous);
+public flow run_multi_chat_loop(raw: string, allowed: Array<string>, previous: Session, redacted: bool) -> LoopTurn {
+    return run_native(MultiModel {}, WideFiles {}, MultiFiles {}, LoopMode.Multi(redacted), raw, allowed, previous);
 }

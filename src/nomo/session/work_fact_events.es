@@ -1,8 +1,8 @@
 module nomo.session.work_fact_events;
 
 import nomo.core.conversation.Event;
-import nomo.entry.harness_work_entry.{Pending, Summary};
-import nomo.entry.edit_coordinator.Confirmed;
+import nomo.application.work.ports.{Pending, Summary};
+import nomo.tools.edit_contract.Confirmed;
 import nomo.tools.edit_binding.bind;
 import nomo.harness.harness_work_contract.ledger_error;
 import nomo.harness.harness_edit_contract.history_summary_error;

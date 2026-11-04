@@ -7,6 +7,8 @@ import nomo.cli.harness_edit_args.Input;
 import nomo.cli.harness_edit_args.parse as edit_args;
 import nomo.model.model_tool_contract.{question_error, allowed_error};
 import nomo.model.read_protocol.question_error as unicode_question_error;
+import nomo.application.work.request.WorkRequest;
+import nomo.tools.edit_contract.Selector;
 
 public type Work = { edit: Input, allowed: Array<string> };
 
@@ -36,6 +38,14 @@ flow parse_with(args: Array<string>, unicode: bool) -> Result<Work, string> {
 }
 public flow parse(args: Array<string>) -> Result<Work, string> { return parse_with(args, false); }
 public flow parse_unicode(args: Array<string>) -> Result<Work, string> { return parse_with(args, true); }
+
+public flow application(value: Work) -> WorkRequest {
+    return WorkRequest {
+        selected = Selector { id = value.edit.id, workspace = value.edit.workspace, path = value.edit.path },
+        request = value.edit.request,
+        allowed = value.allowed,
+    };
+}
 
 // Share bounded work/check argument decoding while retaining caller-specific admission rules.
 public type RecordedWork = { input: Work, has_check: bool, digest: string };

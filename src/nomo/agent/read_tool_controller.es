@@ -1,7 +1,6 @@
 module nomo.agent.read_tool_controller;
 
 import std.text.{len, contains};
-import std.io.println;
 import nomo.core.read_text.{safe};
 import nomo.harness.model_plan_diagnostic.{response_text};
 import nomo.core.conversation.{ stop};
@@ -10,7 +9,9 @@ import nomo.agent.model_context.{capacity, history, bounded_model_context};
 import nomo.agent.conversation_events.{emit, failure};
 import nomo.agent.console_events.{PublicChildEvents, RedactedChildEvents};
 import nomo.agent.console_progress.{ConsoleProgress, SilentProgress};
+import nomo.agent.console_diagnostics.ConsoleDiagnostics;
 import nomo.model.harness_progress.{HarnessProgress, ProgressSink};
+import nomo.model.diagnostic_output.{DiagnosticOutput, DiagnosticSink};
 import nomo.model.conversation_output.{ConversationOutput, ConversationSink};
 import nomo.model.model_tool_contract.{Session, Limits, Context};
 import nomo.tools.read_contract.{outcome, Outcome, ReadTools};
@@ -55,7 +56,7 @@ flow run_policy<P ~ ChildLoopPolicy, D ~ ToolActionDecoder>(policy: P, decoder: 
         let phase = if final_only { "read-child-final" } else { "read-child-action" };
         perform HarnessProgress.write(if final_only && shape.named_final { "CHILD STAGE model-final" } else { "CHILD STAGE model-action" });
         let response = perform LegacyChildModel.infer(context);
-        if inspect_all { println(response_text(response, phase, "lab-qwen-", if final_only { 1152 } else { 384 })); }
+        if inspect_all { perform DiagnosticOutput.write(response_text(response, phase, "lab-qwen-", if final_only { 1152 } else { 384 })); }
         let action = match decoder.decode(response, allowed, final_only) { Ok(value) => value, Err(error) => { return failed(session, error, 3); } };
         if action.operation == "final" { return LoopTurn { state = history(session, emit(session.history, "assistant", "final", "", action.text)), status = 0 }; }
         if action.operation == "search" && action.files[0] == "*" && !shape.whole_scope { return failed(session, "whole-scope search requires a multi-step reservation", 3); }
@@ -73,10 +74,10 @@ flow run_policy<P ~ ChildLoopPolicy, D ~ ToolActionDecoder>(policy: P, decoder: 
         if shape.result_characters == 256 {
             if len(result.text) > 256 { result = outcome("refused", "tool result exceeds 256 display characters", result.scanned); }
         } else if !safe(result.text, shape.result_characters) { result = outcome("refused", "tool result exceeds 262144 display bytes", result.scanned); }
-        if result.status == "incomplete" { println("Search incomplete: results are partial; some candidates were skipped or the match limit was reached."); }
+        if result.status == "incomplete" { perform DiagnosticOutput.write("Search incomplete: results are partial; some candidates were skipped or the match limit was reached."); }
         let complete = result.status == "complete" || (shape.partial_search && action.operation == "search" && result.status == "incomplete");
         if !complete {
-            if shape.partial_search { println("CHILD TOOL FAILURE operation=" + action.operation + " category=" + tool_failure(result)); }
+            if shape.partial_search { perform DiagnosticOutput.write("CHILD TOOL FAILURE operation=" + action.operation + " category=" + tool_failure(result)); }
             return LoopTurn { state = history(session, emit(session.history, "tool", "error", action.operation, result.status + ": " + result.text)), status = 3 };
         }
         session = history(session, emit(session.history, "tool", "complete", action.operation, result.status + ": " + result.text));
@@ -85,35 +86,38 @@ flow run_policy<P ~ ChildLoopPolicy, D ~ ToolActionDecoder>(policy: P, decoder: 
 }
 
 public flow run_loop_controller(raw: string, allowed: Array<string>, limits: Limits, previous: Session, work: bool, inspect_all: bool) -> LoopTurn {
-    return run_output(BoundedChild { limits = limits, work = work, chat = false }, UnicodeActions {}, PublicChildEvents {}, SilentProgress {}, raw, allowed, previous, inspect_all);
+    return run_output(BoundedChild { limits = limits, work = work, chat = false }, UnicodeActions {}, PublicChildEvents {}, SilentProgress {}, ConsoleDiagnostics {}, raw, allowed, previous, inspect_all);
 }
 public flow run_private_loop_controller(raw: string, allowed: Array<string>, limits: Limits, previous: Session) -> LoopTurn {
-    return run_output(BoundedChild { limits = limits, work = false, chat = false }, UnicodeActions {}, RedactedChildEvents {}, ConsoleProgress {}, raw, allowed, previous, false);
+    return run_output(BoundedChild { limits = limits, work = false, chat = false }, UnicodeActions {}, RedactedChildEvents {}, ConsoleProgress {}, ConsoleDiagnostics {}, raw, allowed, previous, false);
 }
 public flow run_private_work_loop_controller(raw: string, allowed: Array<string>, limits: Limits, previous: Session) -> LoopTurn {
-    return run_output(BoundedChild { limits = limits, work = true, chat = false }, UnicodeActions {}, RedactedChildEvents {}, ConsoleProgress {}, raw, allowed, previous, false);
+    return run_output(BoundedChild { limits = limits, work = true, chat = false }, UnicodeActions {}, RedactedChildEvents {}, ConsoleProgress {}, ConsoleDiagnostics {}, raw, allowed, previous, false);
 }
-public flow run_chat_loop_controller(raw: string, allowed: Array<string>, limits: Limits, previous: Session, private_progress: bool) -> LoopTurn {
-    return run_display(BoundedChild { limits = limits, work = true, chat = true }, raw, allowed, previous, private_progress);
+public flow run_public_chat_loop_controller(raw: string, allowed: Array<string>, limits: Limits, previous: Session) -> LoopTurn {
+    return run_output(BoundedChild { limits = limits, work = true, chat = true }, UnicodeActions {}, PublicChildEvents {}, SilentProgress {}, ConsoleDiagnostics {}, raw, allowed, previous, false);
+}
+public flow run_private_chat_loop_controller(raw: string, allowed: Array<string>, limits: Limits, previous: Session) -> LoopTurn {
+    return run_output(BoundedChild { limits = limits, work = true, chat = true }, UnicodeActions {}, RedactedChildEvents {}, ConsoleProgress {}, ConsoleDiagnostics {}, raw, allowed, previous, false);
 }
 public flow run_expanded_work_loop_controller(raw: string, allowed: Array<string>, previous: Session, wide: bool) -> LoopTurn {
-    return run_output(ExpandedChild { wide = wide }, UnicodeActions {}, RedactedChildEvents {}, ConsoleProgress {}, raw, allowed, previous, false);
+    return run_output(ExpandedChild { wide = wide }, UnicodeActions {}, RedactedChildEvents {}, ConsoleProgress {}, ConsoleDiagnostics {}, raw, allowed, previous, false);
 }
-public flow run_multi_chat_loop_controller(raw: string, allowed: Array<string>, previous: Session, private_progress: bool) -> LoopTurn {
-    return run_display(MultiChild {}, raw, allowed, previous, private_progress);
+public flow run_public_multi_chat_loop_controller(raw: string, allowed: Array<string>, previous: Session) -> LoopTurn {
+    return run_output(MultiChild {}, UnicodeActions {}, PublicChildEvents {}, SilentProgress {}, ConsoleDiagnostics {}, raw, allowed, previous, false);
+}
+public flow run_private_multi_chat_loop_controller(raw: string, allowed: Array<string>, previous: Session) -> LoopTurn {
+    return run_output(MultiChild {}, UnicodeActions {}, RedactedChildEvents {}, ConsoleProgress {}, ConsoleDiagnostics {}, raw, allowed, previous, false);
 }
 
-flow run_output<P ~ ChildLoopPolicy, D ~ ToolActionDecoder, S ~ ConversationSink, O ~ ProgressSink>(policy: P, decoder: D, sink: S, progress: O, raw: string, allowed: Array<string>, previous: Session, inspect_all: bool) -> LoopTurn {
+public flow run_output<P ~ ChildLoopPolicy, D ~ ToolActionDecoder, S ~ ConversationSink, O ~ ProgressSink, G ~ DiagnosticSink>(policy: P, decoder: D, sink: S, progress: O, diagnostics: G, raw: string, allowed: Array<string>, previous: Session, inspect_all: bool) -> LoopTurn {
     return run_policy(policy, decoder, raw, allowed, previous, inspect_all) with {
         ConversationOutput.publish(event) => { resume sink.publish(event); }
         HarnessProgress.write(line) => { resume progress.write(line); }
+        DiagnosticOutput.write(line) => { resume diagnostics.write(line); }
     };
-}
-flow run_display<P ~ ChildLoopPolicy>(policy: P, raw: string, allowed: Array<string>, previous: Session, private_progress: bool) -> LoopTurn {
-    if private_progress { return run_output(policy, UnicodeActions {}, RedactedChildEvents {}, ConsoleProgress {}, raw, allowed, previous, false); }
-    return run_output(policy, UnicodeActions {}, PublicChildEvents {}, SilentProgress {}, raw, allowed, previous, false);
 }
 
 public flow run_legacy_loop(raw: string, allowed: Array<string>, limits: Limits, previous: Session, work: bool, inspect_all: bool) -> LoopTurn {
-    return run_output(LegacyChild { limits = limits }, LegacyActions { work = work }, PublicChildEvents {}, SilentProgress {}, raw, allowed, previous, inspect_all);
+    return run_output(LegacyChild { limits = limits }, LegacyActions { work = work }, PublicChildEvents {}, SilentProgress {}, ConsoleDiagnostics {}, raw, allowed, previous, inspect_all);
 }

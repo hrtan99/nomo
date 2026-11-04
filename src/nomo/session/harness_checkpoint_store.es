@@ -2,7 +2,9 @@ module nomo.session.harness_checkpoint_store;
 
 import nomo.session.cas_rows.{Target, commit_native};
 import std.memory.{get_entry, WriteCondition, MemoryVersion, MemoryEntry, Missing, Match};
-import nomo.session.harness_checkpoint.{Identity, Checkpoint, identity_error, validate, encode, decode};
+import nomo.session.harness_checkpoint.{Identity, Checkpoint, identity_error, validate};
+import nomo.application.record_codec.{encode_record, decode_record};
+import nomo.session.harness_checkpoint_codec.{CheckpointEncoder, CheckpointCodec};
 
 public type Record = { format: i32, phase: string, identity: Identity, body: string };
 public type Binding = { checkpoint: Checkpoint, version: MemoryVersion, body: string };
@@ -47,7 +49,7 @@ public flow begin(identity: Identity) -> Result<bool, string> ![Memory, Error<St
 
 public flow publish(saved: Checkpoint) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
     match validate(saved, saved.identity) { Ok(_) => {} Err(error) => { return Err(error); } }
-    let body = match encode(saved) { Ok(value) => value, Err(error) => { return Err(error); } };
+    let body = match encode_record(CheckpointEncoder {}, saved) { Ok(value) => value, Err(error) => { return Err(error); } };
     match owner(saved.identity, "claimed") { Ok(_) => {} Err(error) => { return Err(error); } }
     let name = key(saved.identity);
     match read(name) { Some(_) => { return Err("checkpoint row already exists"); } None() => {} }
@@ -67,7 +69,7 @@ public flow binding(identity: Identity) -> Result<Binding, string> {
     let row = before.value;
     if before.key != name || row.format != 1 || row.identity != identity { return Err("checkpoint identity or format mismatch"); }
     if row.phase != "published" { return Err("checkpoint not published; no recovery or retry"); }
-    let saved = match decode(row.body) { Ok(value) => value, Err(error) => { return Err(error); } };
+    let saved = match decode_record(CheckpointCodec {}, row.body) { Ok(value) => value, Err(error) => { return Err(error); } };
     let checked = match validate(saved, identity) { Ok(value) => value, Err(error) => { return Err(error); } };
     let after = match read(name) { Some(value) => value, None() => { return Err("checkpoint disappeared during show"); } };
     if after.version.opaque != before.version.opaque || after.value != row { return Err("checkpoint changed during show"); }

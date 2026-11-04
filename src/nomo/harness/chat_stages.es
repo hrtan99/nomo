@@ -16,8 +16,15 @@ public spec ReadStages {
 }
 
 // The controller performs operations; the composition boundary installs one handler.
-public flow run<S ~ ReadStages>(stages: S, request: string, allowed: Array<string>, invocation: Invocation, private_progress: bool) -> TurnResult {
-    return (if private_progress { run_private_turn_controller(request, allowed, invocation) } else { run_turn_controller(request, allowed, invocation) }) with {
+public flow run_public<S ~ ReadStages>(stages: S, request: string, allowed: Array<string>, invocation: Invocation) -> TurnResult {
+    return run_turn_controller(request, allowed, invocation) with {
+        LegacyChatStages.main(context) => { resume stages.main(context); }
+        LegacyChatStages.child(task, files, selected, multi) => { resume stages.child(task, files, selected, multi); }
+    };
+}
+
+public flow run_private<S ~ ReadStages>(stages: S, request: string, allowed: Array<string>, invocation: Invocation) -> TurnResult {
+    return run_private_turn_controller(request, allowed, invocation) with {
         LegacyChatStages.main(context) => { resume stages.main(context); }
         LegacyChatStages.child(task, files, selected, multi) => { resume stages.child(task, files, selected, multi); }
     };

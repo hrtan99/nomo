@@ -1,8 +1,9 @@
 module nomo.harness.history_followup_model;
 
-import nomo.application.work_contract.{WorkStages, WorkModelStages, Pending, Failure, Completed, Summary};
-import nomo.cli.harness_work_args.Work;
-import nomo.harness.history_stages.{prepare as prepare_history, summarize as summarize_history};
+import nomo.application.work.ports.{WorkStages, Pending, Failure, Completed, Summary};
+import nomo.application.work.request.WorkRequest;
+import nomo.application.harness.work.ports.WorkModelStages;
+import nomo.application.harness.work.stages.{prepare as prepare_history, summarize as summarize_history};
 import nomo.harness.read_model_tools.expanded_work_child_turn as work_child_turn;
 import nomo.core.conversation.State;
 import nomo.model.model_tool_contract.LoopTurn;
@@ -33,7 +34,7 @@ flow edit_input(value: WorkContext, request: string, previous: Previous, prior_w
 }
 public type HistoryStages = { prior_request: string, previous: Previous, prior_work: PriorWork, wide: bool };
 impl HistoryStages ~ WorkStages {
-    flow prepare(self, input: Work) -> Result<Pending, Failure> { return prepare_history(self, input, self.wide); }
+    flow prepare(self, input: WorkRequest) -> Result<Pending, Failure> { return prepare_history(self, input, self.wide); }
     flow summarize(self, value: Completed) -> Result<Summary, Failure> { return summarize_history(self, value, self.wide); }
 }
 impl HistoryStages ~ WorkModelStages {

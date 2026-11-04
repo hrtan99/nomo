@@ -61,7 +61,7 @@ flow unicode_read(request: string, allowed: Array<string>, state: ReadLedger, ex
 }
 
 // Callers admit the unused edit slot before this shared Model/File preparation.
-flow prepare_policy<P ~ WorkBudgetPolicy>(policy: P, input: Work, original_error: (string) -> string, stage_log: (string, Ledger) -> unit, chain_read: bool, inspect_plan: bool, inspect_all: bool, unicode: bool) -> Result<Pending, Failure> {
+flow prepare_policy<P ~ WorkBudgetPolicy>(policy: P, input: Work, original_error: (string) -> string ![], stage_log: (string, Ledger) -> unit ![Error<ConsoleError>], chain_read: bool, inspect_plan: bool, inspect_all: bool, unicode: bool) -> Result<Pending, Failure> {
     let parameters = policy.parameters();
     let expanded = parameters.expanded; let wide = parameters.large;
     var state = fresh();
@@ -109,23 +109,23 @@ flow prepare_policy<P ~ WorkBudgetPolicy>(policy: P, input: Work, original_error
     return Ok(Pending { selected = selected, prepared = prepared, evidence = evidence, request = input.edit.request, task = task, state = state });
 }
 
-flow prepare_mode_with(input: Work, original_error: (string) -> string, stage_log: (string, Ledger) -> unit, chain_read: bool, inspect_plan: bool, inspect_all: bool, unicode: bool, expanded: bool, wide: bool) -> Result<Pending, Failure> {
+flow prepare_mode_with(input: Work, original_error: (string) -> string ![], stage_log: (string, Ledger) -> unit ![Error<ConsoleError>], chain_read: bool, inspect_plan: bool, inspect_all: bool, unicode: bool, expanded: bool, wide: bool) -> Result<Pending, Failure> {
     if wide { return prepare_policy(LargeWorkBudget {}, input, original_error, stage_log, chain_read, inspect_plan, inspect_all, unicode); }
     if expanded { return prepare_policy(ExpandedWorkBudget {}, input, original_error, stage_log, chain_read, inspect_plan, inspect_all, unicode); }
     return prepare_policy(HistoricalWorkBudget {}, input, original_error, stage_log, chain_read, inspect_plan, inspect_all, unicode);
 }
 
-public flow prepare_with(input: Work, original_error: (string) -> string, stage_log: (string, Ledger) -> unit, chain_read: bool, inspect_plan: bool, inspect_all: bool) -> Result<Pending, Failure> {
+public flow prepare_with(input: Work, original_error: (string) -> string ![], stage_log: (string, Ledger) -> unit ![Error<ConsoleError>], chain_read: bool, inspect_plan: bool, inspect_all: bool) -> Result<Pending, Failure> {
     return prepare_mode_with(input, original_error, stage_log, chain_read, inspect_plan, inspect_all, false, false, false);
 }
 
-public flow prepare_unicode(input: Work, original_error: (string) -> string, stage_log: (string, Ledger) -> unit) -> Result<Pending, Failure> {
+public flow prepare_unicode(input: Work, original_error: (string) -> string ![], stage_log: (string, Ledger) -> unit ![Error<ConsoleError>]) -> Result<Pending, Failure> {
     return prepare_mode_with(input, original_error, stage_log, false, false, false, true, false, false) with {
         EditOriginal.read(path) => { resume read_original(path); }
     };
 }
 
-public flow prepare_expanded_unicode(input: Work, original_error: (string) -> string, stage_log: (string, Ledger) -> unit, wide: bool) -> Result<Pending, Failure> {
+public flow prepare_expanded_unicode(input: Work, original_error: (string) -> string ![], stage_log: (string, Ledger) -> unit ![Error<ConsoleError>], wide: bool) -> Result<Pending, Failure> {
     return prepare_mode_with(input, original_error, stage_log, false, false, false, true, true, wide) with {
         EditOriginal.read(path) => { resume read_original_wide(path); }
     };
@@ -138,15 +138,15 @@ public flow expanded_ledger(state: Ledger, wide: bool) -> unit {
 
 // The production facade binds the original native reader once; exceptions and
 // the caller-supplied original validation remain at their original boundary.
-public flow prepare(input: Work, original_error: (string) -> string, stage_log: (string, Ledger) -> unit, chain_read: bool, inspect_plan: bool, inspect_all: bool) -> Result<Pending, Failure> {
+public flow prepare(input: Work, original_error: (string) -> string ![], stage_log: (string, Ledger) -> unit ![Error<ConsoleError>], chain_read: bool, inspect_plan: bool, inspect_all: bool) -> Result<Pending, Failure> {
     return prepare_with(input, original_error, stage_log, chain_read, inspect_plan, inspect_all) with {
         EditOriginal.read(path) => { resume read_original(path); }
     };
 }
 
 public flow prepare_work(input: Work) -> Result<Pending, Failure> {
-    let original = (value: string) => "";
-    let log = (name: string, state: Ledger) => stage(name, state);
+    let original: (string) -> string ![] = (value: string) => "";
+    let log: (string, Ledger) -> unit ![Error<ConsoleError>] = (name: string, state: Ledger) => stage(name, state);
     return prepare(input, original, log, false, false, false) with {
         LegacyStringStages.main(value) => { resume read_main(value); }
         LegacyStringStages.child(task, files, selected) => { resume work_child_turn(task, files, selected); }
@@ -156,8 +156,8 @@ public flow prepare_work(input: Work) -> Result<Pending, Failure> {
     };
 }
 flow prepare_chain_mode(input: Work, parent: Array<ParentFacts>, expected: Option<string>, inspect_plan: bool, inspect_all: bool, user_context: bool) -> Result<Pending, Failure> {
-    let original = (value: string) => match expected { Some(before) => if value == before { "" } else { "current original differs from confirmed parent result" }, None() => "" };
-    let log = (name: string, state: Ledger) => chain_stage(name, state, user_context);
+    let original: (string) -> string ![] = (value: string) => match expected { Some(before) => if value == before { "" } else { "current original differs from confirmed parent result" }, None() => "" };
+    let log: (string, Ledger) -> unit ![Error<ConsoleError>] = (name: string, state: Ledger) => chain_stage(name, state, user_context);
     return prepare(input, original, log, true, inspect_plan, inspect_all) with {
         LegacyStringStages.main(value) => { resume read_main(value); }
         LegacyStringStages.child(task, files, selected) => { resume chain_child_turn(task, files, selected, inspect_all); }
@@ -187,7 +187,7 @@ public flow finish_edit(pending: Pending, outcome: Confirmed) -> Result<Complete
     recorded(pending.selected); return completed_context_work(pending, outcome);
 }
 
-flow finish_summary_mode(completed: Completed, stage_log: (string, Ledger) -> unit, work: bool, inspect_all: bool, history: bool) -> Result<Summary, Failure> {
+flow finish_summary_mode(completed: Completed, stage_log: (string, Ledger) -> unit ![Error<ConsoleError>], work: bool, inspect_all: bool, history: bool) -> Result<Summary, Failure> {
     let state = match bump_edit(completed.state, true) { Ok(value) => value,
         Err(error) => { return Err(Failure { state = completed.state, error = "edit completed; " + error }); } };
     stage_log("edit-aggregate", state);
@@ -201,15 +201,15 @@ flow finish_summary_mode(completed: Completed, stage_log: (string, Ledger) -> un
     if error != "" { return Err(Failure { state = state, error = "edit completed; " + error }); }
     return Ok(Summary { answer = answer, state = state, model_generated = true });
 }
-public flow finish_summary(completed: Completed, stage_log: (string, Ledger) -> unit, work: bool, inspect_all: bool) -> Result<Summary, Failure> {
+public flow finish_summary(completed: Completed, stage_log: (string, Ledger) -> unit ![Error<ConsoleError>], work: bool, inspect_all: bool) -> Result<Summary, Failure> {
     return finish_summary_mode(completed, stage_log, work, inspect_all, false);
 }
-public flow finish_history_summary(completed: Completed, stage_log: (string, Ledger) -> unit) -> Result<Summary, Failure> {
+public flow finish_history_summary(completed: Completed, stage_log: (string, Ledger) -> unit ![Error<ConsoleError>]) -> Result<Summary, Failure> {
     return finish_summary_mode(completed, stage_log, false, false, true);
 }
 
 public flow summarize(completed: Completed) -> Result<Summary, Failure> {
-    let log = (name: string, state: Ledger) => stage(name, state);
+    let log: (string, Ledger) -> unit ![Error<ConsoleError>] = (name: string, state: Ledger) => stage(name, state);
     return finish_summary(completed, log, false, false) with {
         LegacyEditStages.plan(value) => { resume edit_plan(value); }
         LegacyEditStages.child(value) => { resume edit_child(value); }
@@ -217,7 +217,7 @@ public flow summarize(completed: Completed) -> Result<Summary, Failure> {
     };
 }
 flow summarize_chain_mode(completed: Completed, parent: Array<ParentFacts>, inspect_all: bool, user_context: bool) -> Result<Summary, Failure> {
-    let log = (name: string, state: Ledger) => chain_stage(name, state, user_context);
+    let log: (string, Ledger) -> unit ![Error<ConsoleError>] = (name: string, state: Ledger) => chain_stage(name, state, user_context);
     return finish_summary(completed, log, true, inspect_all) with {
         LegacyEditStages.plan(value) => { resume chain_plan(value, parent); }
         LegacyEditStages.child(value) => { resume chain_child(value, parent); }

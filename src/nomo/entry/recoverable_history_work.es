@@ -5,7 +5,7 @@ import std.collections.len as count;
 import std.io.IOError as ConsoleError;
 import std.fs.IOError as FileError;
 import std.effects.Fs;
-import nomo.cli.harness_work_args.parse_recorded;
+import nomo.cli.harness_work_args.{parse_recorded, application};
 
 
 
@@ -29,7 +29,9 @@ import nomo.session.edit_operation.Binding;
 import nomo.session.redaction.Policy;
 import nomo.session.check_lifecycle.FirstCheck;
 import nomo.application.check_contract.CheckLifecycle;
-import nomo.entry.work_controller.execute;
+import nomo.application.work.controller.execute;
+import nomo.bootstrap.work.{NativeWorkEditor, EventWorkTimeline, native_editor, event_timeline};
+import nomo.entry.terminal_work_output.TerminalWorkOutput;
 import nomo.application.work_contract.{WorkStages, WorkModelStages, WorkPersistence, Run};
 
 
@@ -57,8 +59,9 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
     if count(args) < 2 || args[count(args) - 2] != "--policy-binding" { return refused("event work requires a policy binding"); }
     let binding = args[count(args) - 1];
     let parsed = match parse_recorded(args, 2, false) { Ok(value) => value, Err(error) => { return refused(error); } };
-    let input = parsed.input;
-    if input.edit.help { return refused("select a current read root, owned edit root, target and task"); }
+    let cli = parsed.input;
+    if cli.edit.help { return refused("select a current read root, owned edit root, target and task"); }
+    let input = application(cli);
     let policy = match load_policy() { Ok(value) => value, Err(error) => { return refused(error); } };
     match load_legacy() { Ok(None()) => {} _ => { return refused("legacy session cannot be migrated automatically"); } }
     match inspect_legacy_work() { Ok(None()) => {} _ => { return refused("legacy work exists or is invalid"); } }
@@ -69,7 +72,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
     match available() { Ok(_) => {} Err(error) => { return refused(error); } }
     let history = match load_chat(policy, binding) { Ok(Some(value)) => value, _ => { return refused("saved event chat missing or invalid"); } };
     match load_check(policy, binding) { Ok(None()) => {} _ => { return refused("check already exists or is invalid"); } }
-    let ticket = match admit(input.edit.id, input.edit.workspace, input.edit.path, input.edit.request, history, policy, binding) {
+    let ticket = match admit(input.selected.id, input.selected.workspace, input.selected.path, input.request, history, policy, binding) {
         Ok(value) => value, Err(error) => { return refused(error); }
     };
     match claim(ticket, policy, binding) { Ok(_) => {} Err(error) => { return refused(error); } }
@@ -79,7 +82,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
     let wide = ticket.frame.work.format == 3 || ticket.frame.work.format == 4 || ticket.frame.work.format == 6 || ticket.frame.work.format == 7;
     let stages = HistoryStages { prior_request = prior_request, previous = previous, wide = wide };
     let persistence = FirstPersistence { ticket = ticket, redaction = policy, binding = binding };
-    return execute<HistoryStages, EditTicket, bool, FirstPersistence>(stages, persistence, input, Run { redaction = policy, binding = binding, wide = wide, saved = "SAVED event work facts; no grant or root identity is persisted." });
+    return execute<HistoryStages, EditTicket, bool, FirstPersistence, NativeWorkEditor, EventWorkTimeline, TerminalWorkOutput>(stages, persistence, native_editor(), event_timeline(), TerminalWorkOutput {}, input, Run { redaction = policy, binding = binding, wide = wide, saved = "SAVED event work facts; no grant or root identity is persisted." });
 }
 
 public flow abandon(args: Array<string>) -> i32 ![Console, Memory, Fs.read<PolicyRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {

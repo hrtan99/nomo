@@ -3,7 +3,7 @@ module nomo.harness.natural_work_chat;
 import nomo.harness.harness_tool_chat_contract.{Context, Invocation, TurnResult};
 import nomo.harness.history_continue_model.WorkFacts;
 import nomo.harness.read_model_tools.private_chat_child_turn;
-import nomo.harness.chat_stages.{ReadStages, run as run_stages};
+import nomo.harness.chat_stages.{ReadStages, run_private};
 import nomo.harness.read_tool_chat.{MainMode, main_mode, infer_main};
 import nomo.core.conversation.State;
 import nomo.model.model_tool_contract.LoopTurn;
@@ -23,7 +23,7 @@ impl NaturalStages ~ ReadStages {
 }
 public flow run(request: string, allowed: Array<string>, invocation: Invocation, history: Array<Event>, work: Option<WorkFacts>, followup: Option<WorkFacts>, additional: Array<WorkFacts>, page: usize, more_pages: bool) -> TurnResult {
     let stages = NaturalStages { mode = main_mode(invocation), history = history, work = work, followup = followup, additional = additional, page = page, more_pages = more_pages };
-    return run_stages(stages, request, allowed, invocation, true);
+    return run_private(stages, request, allowed, invocation);
 }
 public flow target(answer: string, allowed: Array<string>) -> Option<string> {
     let parts = split(answer, " ");

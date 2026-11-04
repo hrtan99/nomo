@@ -4,7 +4,7 @@ public import nomo.application.history_contract.{CheckOutput, WorkFacts, BudgetF
 
 import nomo.harness.harness_tool_chat_contract.{Context, Invocation, TurnResult};
 import nomo.harness.read_model_tools.private_chat_child_turn;
-import nomo.harness.chat_stages.{ReadStages, run as run_stages};
+import nomo.harness.chat_stages.{ReadStages, run_private};
 import nomo.harness.read_tool_chat.{MainMode, main_mode, infer_main};
 import nomo.core.conversation.State;
 import nomo.model.model_tool_contract.LoopTurn;
@@ -22,7 +22,7 @@ impl WorkStages ~ ReadStages {
     flow child(self, task: string, files: Array<string>, selected: State, multi: bool) -> LoopTurn { return private_chat_child_turn(task, files, selected, multi); }
 }
 public flow run_turn(request: string, allowed: Array<string>, invocation: Invocation, work: WorkFacts, history: Array<Event>) -> TurnResult {
-    return run_stages(WorkStages { mode = main_mode(invocation), work = work, history = history }, request, allowed, invocation, true);
+    return run_private(WorkStages { mode = main_mode(invocation), work = work, history = history }, request, allowed, invocation);
 }
 
 public type FollowupInput = { current: Context, work: WorkFacts, followup: WorkFacts, additional: Array<WorkFacts>, history: Array<Event>, budget: BudgetFacts };
@@ -35,5 +35,5 @@ impl FollowupStages ~ ReadStages {
 }
 public flow run_after_followup(request: string, allowed: Array<string>, invocation: Invocation, work: WorkFacts, followup: WorkFacts, additional: Array<WorkFacts>, history: Array<Event>, budget: BudgetFacts) -> TurnResult {
     let stages = FollowupStages { mode = main_mode(invocation), work = work, followup = followup, additional = additional, history = history, budget = budget };
-    return run_stages(stages, request, allowed, invocation, true);
+    return run_private(stages, request, allowed, invocation);
 }

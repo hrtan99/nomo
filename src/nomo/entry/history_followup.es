@@ -5,7 +5,7 @@ import std.io.println;
 import std.io.IOError as ConsoleError;
 import std.fs.IOError as FileError;
 import std.effects.Fs;
-import nomo.cli.harness_work_args.{Work, parse_recorded};
+import nomo.cli.harness_work_args.{parse_recorded, application};
 import nomo.harness.history_followup_model.{HistoryStages, PriorWork};
 import nomo.harness.history_stages.{prepare_legacy, summarize_legacy};
 import nomo.harness.history_continue_model.CheckOutput;
@@ -21,6 +21,10 @@ import nomo.entry.edit_coordinator.{Confirmed, confirm_current};
 import nomo.entry.edit_context.display;
 import nomo.tools.workspace.ReadOnlyRoot;
 import nomo.tools.edit_file.{EditableRoot, apply};
+import nomo.tools.edit_file.read_original;
+import nomo.harness.edit_original.EditOriginal;
+import nomo.model.harness_progress.HarnessProgress;
+import nomo.model.diagnostic_output.DiagnosticOutput;
 
 flow refused(error: string) -> i32 { println("REFUSED " + error); return 1; }
 
@@ -28,8 +32,9 @@ flow refused(error: string) -> i32 { println("REFUSED " + error); return 1; }
 // history is only model input, never proof of a current root or consent.
 public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read<ReadOnlyRoot>, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {
     let parsed = match parse_recorded(args, 0, true) { Ok(value) => value, Err(error) => { return refused(error); } };
-    let input = parsed.input;
-    if input.edit.help { return refused("select a current read root, owned edit root, target and task"); }
+    let cli = parsed.input;
+    if cli.edit.help { return refused("select a current read root, owned edit root, target and task"); }
+    let input = application(cli);
     match available() { Ok(_) => {} Err(error) => { return refused(error); } }
     let history = match load_chat() { Ok(Some(value)) => value, _ => { return refused("a saved prior chat turn is required"); } };
     let first_check = match inspect_first_check() { Ok(value) => value, Err(error) => { return refused(error); } };
@@ -42,7 +47,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
         }
         None() => {}
     }
-    let ticket = match admit(input.edit.id, input.edit.workspace, input.edit.path, input.edit.request, history) {
+    let ticket = match admit(input.selected.id, input.selected.workspace, input.selected.path, input.request, history) {
         Ok(value) => value, Err(error) => { return refused(error); }
     };
     if ticket.record.parent.check != first_check { return refused("first check changed before followup; no retry"); }
@@ -54,7 +59,12 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
     let exit = match ticket.record.parent.check { Some(value) => value.exit_code, None() => "" };
     let prior_work = PriorWork { request = ticket.record.parent.work.request, summary = ticket.record.parent.work.summary, summary_source = "unknown", selection = None(), check = checked, exit_code = exit, output = first_output, history = [] };
     let stages = HistoryStages { prior_request = prior_request, previous = previous, prior_work = prior_work, wide = false };
-    let pending = match prepare_legacy(stages, input) { Ok(value) => value, Err(failure) => { ledger(failure.state); return refused(failure.error); } };
+    let prepared = prepare_legacy(stages, input) with {
+        EditOriginal.read(path) => { resume read_original(path); }
+        HarnessProgress.write(line) => { println(line); resume; }
+        DiagnosticOutput.write(line) => { println(line); resume; }
+    };
+    let pending = match prepared { Ok(value) => value, Err(failure) => { ledger(failure.state); return refused(failure.error); } };
     let selected = match confirm_current(pending.selected, pending.prepared) { Ok(value) => value, Err(error) => { return refused(error); } };
     match claim(ticket) { Ok(_) => {} Err(error) => { return refused(error); } }
     let intent = match begin(selected) { Ok(value) => value, Err(error) => { return refused(error); } };
@@ -64,7 +74,11 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
     println("APPLIED " + selected.id);
     let confirmed = Confirmed { binding = selected, after = pending.prepared.proposal.after };
     let captured = match finish_edit(pending, confirmed) { Ok(value) => value, Err(failure) => { return refused(failure.error); } };
-    let summary = match summarize_legacy(stages, captured) { Ok(value) => value, Err(failure) => { return refused(failure.error); } };
+    let summarized = summarize_legacy(stages, captured) with {
+        HarnessProgress.write(line) => { println(line); resume; }
+        DiagnosticOutput.write(line) => { println(line); resume; }
+    };
+    let summary = match summarized { Ok(value) => value, Err(failure) => { return refused(failure.error); } };
     match finish(ticket, summary.answer, summary.state) { Ok(_) => {} Err(error) => { return refused("edit completed; " + error); } }
     display("FINAL ", summary.answer); println("SAVED history-followup; captured history is not a root identity or grant.");
     ledger(summary.state); return 0;

@@ -12,10 +12,9 @@ import nomo.tools.edit_binding.bind;
 import nomo.ui.edit_diff.render;
 import nomo.session.edit_operation.{Binding, selector_error};
 import nomo.session.edit_operation_store.{begin, complete};
+public import nomo.application.edit.effects.Approval;
 public import nomo.tools.edit_contract.{Selector, Confirmed};
 
-// The selected native Prompt adapter accepts this string -> bool payload.
-public effect Approval { action request(reason: string) -> bool; }
 flow preview(value: Prepared, selected: Binding) -> Result<string, string> {
     return object(["format", "id", "workspace", "region", "path", "before", "target", "replacement", "after",
         "before_bytes", "after_bytes", "before_digest", "after_digest", "request_digest"],

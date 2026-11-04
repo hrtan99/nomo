@@ -6,7 +6,9 @@ import std.memory.{get_entry, WriteCondition, MemoryVersion, MemoryEntry, Missin
 import nomo.model.model_tool_contract.question_error;
 import nomo.session.harness_checkpoint.{Identity, identity_error};
 import nomo.session.harness_checkpoint_store.{Binding, binding};
-import nomo.session.harness_successor.{Successor, restore, validate, encode, decode};
+import nomo.session.harness_successor.{Successor, restore, validate};
+import nomo.application.record_codec.{encode_record, decode_record};
+import nomo.session.harness_successor_codec.{SuccessorEncoder, SuccessorCodec};
 import nomo.harness.harness_tool_contract.{Ledger, ledger_error};
 import nomo.harness.harness_tool_chat_contract.{TurnResult, Context, context_error, combine, empty};
 
@@ -96,7 +98,7 @@ public flow publish(ticket: Ticket, saved: Successor) -> Result<bool, string> ![
     match validate(saved, ticket.successor, ticket.predecessor.checkpoint.identity) { Ok(_) => {} Err(error) => { return Err(error); } }
     if saved.predecessor != ticket.predecessor.checkpoint || saved.predecessor_version != ticket.predecessor.version.opaque ||
         saved.request != ticket.request { return Err("successor differs from admitted predecessor or request"); }
-    let body = match encode(saved) { Ok(value) => value, Err(error) => { return Err(error); } };
+    let body = match encode_record(SuccessorEncoder {}, saved) { Ok(value) => value, Err(error) => { return Err(error); } };
     match claim(ticket) { Ok(_) => {} Err(error) => { return Err(error); } }
     let changed = unchanged(ticket.predecessor); if changed != "" { return Err(changed); }
     match read(key(ticket.successor)) { Some(_) => { return Err("successor already exists; no retry"); } None() => {} }
@@ -121,7 +123,7 @@ public flow reload(predecessor: Identity, successor: Identity) -> Result<Success
         None() => { return Err("successor admission missing"); } };
     let published = match read(key(successor)) { Some(value) => value,
         None() => { return Err("successor missing; no completed continuation"); } };
-    let saved = match decode(published.value.body) { Ok(value) => value, Err(error) => { return Err(error); } };
+    let saved = match decode_record(SuccessorCodec {}, published.value.body) { Ok(value) => value, Err(error) => { return Err(error); } };
     match validate(saved, successor, predecessor) { Ok(_) => {} Err(error) => { return Err(error); } }
     let ticket = Ticket { predecessor = before, successor = successor, request = saved.request, version = admitted.version };
     if saved.predecessor != before.checkpoint || saved.predecessor_version != before.version.opaque ||
