@@ -43,7 +43,7 @@ public flow bounded_model_context(input: Context, maximum: usize) -> Result<Cont
                 SelectionRefusal.InvalidContext => "invalid bounded model context",
                 SelectionRefusal.InvalidLimit => "invalid model context byte limit",
                 SelectionRefusal.Encoding => "model context encoding refused",
-                SelectionRefusal.RequiredTooLarge => if maximum == 2048 { "required model context exceeds 2048 encoded UTF-8 bytes" } else { "required model context exceeds 1048576 encoded UTF-8 bytes" },
+                SelectionRefusal.RequiredTooLarge => if maximum == 2048 { "required model context exceeds 2048 encoded UTF-8 bytes" } else { "required model context exceeds 8388608 encoded UTF-8 bytes" },
             };
             return Err(message);
         },

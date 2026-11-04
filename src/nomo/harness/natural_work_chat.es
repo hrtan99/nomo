@@ -5,7 +5,8 @@ import nomo.harness.history_continue_model.WorkFacts;
 import nomo.harness.read_model_tools.private_chat_child_turn;
 import nomo.harness.read_tool_chat_controller.run_private_turn_controller;
 import nomo.harness.legacy_chat_stages.LegacyChatStages;
-import nomo.harness.read_tool_chat_contract.multi_wide_maximum;
+import nomo.harness.read_tool_chat.{LargeChatMain, WideChatMain};
+import nomo.harness.read_tool_chat_contract.{multi_wide_maximum, multi_large_maximum};
 import nomo.core.conversation.Event;
 import nomo.model.read_protocol.decode_work_plan;
 import std.collections.len as count;
@@ -17,13 +18,9 @@ flow prompt_Main() -> string { return "Coordinate one read-only child for the us
 agent Main(input: Input) -> string {
     return perform infer<string>(Prompt.new().system(Trusted(prompt_Main())).data(input));
 }
-@limits([Tokens(4096), ContextTokens(65536)])
-agent MainWide(input: Input) -> string {
-    return perform infer<string>(Prompt.new().system(Trusted(prompt_Main())).data(input));
-}
 public flow run(request: string, allowed: Array<string>, invocation: Invocation, history: Array<Event>, work: Option<WorkFacts>, followup: Option<WorkFacts>, additional: Array<WorkFacts>, page: usize, more_pages: bool) -> TurnResult {
     return run_private_turn_controller(request, allowed, invocation) with {
-        LegacyChatStages.main(context) => { resume if invocation.maximum == multi_wide_maximum(2) || invocation.maximum == multi_wide_maximum(32) || invocation.maximum == multi_wide_maximum(48) { MainWide.run(Input { current = context, history = history, work = work, followup = followup, additional = additional, page = page, more_pages = more_pages }) } else { Main.run(Input { current = context, history = history, work = work, followup = followup, additional = additional, page = page, more_pages = more_pages }) }; }
+        LegacyChatStages.main(context) => { resume if invocation.maximum == multi_large_maximum(48) { LargeChatMain.run(Prompt.new().system(Trusted(prompt_Main())).data(Input { current = context, history = history, work = work, followup = followup, additional = additional, page = page, more_pages = more_pages })) } else { if invocation.maximum == multi_wide_maximum(2) || invocation.maximum == multi_wide_maximum(32) || invocation.maximum == multi_wide_maximum(48) { WideChatMain.run(Prompt.new().system(Trusted(prompt_Main())).data(Input { current = context, history = history, work = work, followup = followup, additional = additional, page = page, more_pages = more_pages })) } else { Main.run(Input { current = context, history = history, work = work, followup = followup, additional = additional, page = page, more_pages = more_pages }) } }; }
         LegacyChatStages.child(task, files, selected, multi) => { resume private_chat_child_turn(task, files, selected, multi); }
     };
 }

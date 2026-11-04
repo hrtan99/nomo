@@ -5,8 +5,10 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
 NEW = Path(__file__).resolve().parent.parent
-if len(sys.argv) != 2: raise SystemExit('usage: chat_legacy_budget_probe.py OLD_PROJECT')
+if len(sys.argv) not in (2, 3) or (len(sys.argv) == 3 and sys.argv[2] != '--wide'):
+    raise SystemExit('usage: chat_legacy_budget_probe.py OLD_PROJECT [--wide]')
 OLD = Path(sys.argv[1]).resolve(strict=True)
+WIDE = len(sys.argv) == 3
 
 class Fake(BaseHTTPRequestHandler):
     def log_message(self, *_): pass
@@ -14,7 +16,7 @@ class Fake(BaseHTTPRequestHandler):
         try:
             req = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
             i = len(self.server.seen)
-            expected = 2048 if i % 4 in (0, 3) else 4096
+            expected = 4096 if WIDE else (2048 if i % 4 in (0, 3) else 4096)
             assert req['max_tokens'] == expected, (i, req.get('max_tokens'))
             value = (['delegate','Read note.txt'] if i % 4 == 0 else
                      ['read','note.txt'] if i % 4 == 1 else
@@ -42,7 +44,8 @@ def main():
                 start=text.index('[runtime.profiles.'+profile+'.model]');end=text.index('[runtime.profiles.'+profile+'.model.timeout]',start)
                 part=text[start:end].replace('https://api.minimax.cn/v1','http://host.docker.internal:%d/v1'%server.server_port).replace('allow_private = false','allow_private = true');text=text[:start]+part+text[end:]
             manifest.write_text(text);projects.append(project)
-        env={k:os.environ[k] for k in ('PATH','HOME','LANG') if k in os.environ};env.update(MINIMAX_API_KEY='SYNTHETIC_ONLY',NOMO_ETAS_VERSION='0.2.6')
+        env={k:os.environ[k] for k in ('PATH','HOME','LANG') if k in os.environ};env.update(MINIMAX_API_KEY='SYNTHETIC_ONLY',NOMO_ETAS_VERSION='0.2.6',NOMO_ETAS_GRAPH='026-v68')
+        env['PATH'] = '/Applications/Docker.app/Contents/Resources/bin:' + env.get('PATH', '')
         def run(project,action,identifier=None):
             cmd=[str(project/'scripts/nomo-read.sh'),'session-id',action,'--sessions-dir',str(sessions),'--root',str(workspace),'--allow','note.txt','--once','Read note.txt','--events-policy-dir',str(policy)]
             if identifier:cmd+=['--id',identifier]
@@ -52,7 +55,7 @@ def main():
         assert first.returncode==0 and len(ids)==1 and b'SAVED chat' in first.stdout,(first.returncode,server.failure)
         second=run(projects[1],'resume',ids[0].decode());(out/'new.log').write_bytes(second.stdout+second.stderr)
         assert second.returncode==0 and b'SAVED chat' in second.stdout and server.seen==list(range(8)),(second.returncode,server.failure,server.seen)
-        assert b'tokens=14336' in second.stdout, 'legacy cumulative token ledger did not persist'
-        print(json.dumps({'status':'passed','scope':'old-format session resumed by new candidate with 2048 parent requests and retained ledger','fake_requests':len(server.seen),'result_dir':str(out)}))
+        assert (b'tokens=32768' if WIDE else b'tokens=14336') in second.stdout, 'legacy cumulative token ledger did not persist'
+        print(json.dumps({'status':'passed','scope':'old-format session resumed by new candidate with its original parent allowance and retained ledger','fake_requests':len(server.seen),'result_dir':str(out)}))
     finally:server.shutdown();server.server_close();worker.join(timeout=5)
 if __name__=='__main__':main()

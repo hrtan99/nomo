@@ -3,7 +3,7 @@ module app.main;
 import std.io.println;
 import nomo.harness.harness_tool_chat_contract.{Invocation, Previous, Completed, TurnResult, empty};
 import nomo.harness.harness_tool_contract.{Ledger, fresh as fresh_ledger};
-import nomo.harness.read_tool_chat_contract.{multi_maximum, multi_wide_maximum};
+import nomo.harness.read_tool_chat_contract.{multi_maximum, multi_wide_maximum, multi_large_maximum};
 import nomo.session.chat_session_contract.{Session, fresh, fresh_events, invalid, begin, complete};
 
 flow completed(request: string, maximum: Ledger, tokens: i32) -> TurnResult {
@@ -15,14 +15,14 @@ flow completed(request: string, maximum: Ledger, tokens: i32) -> TurnResult {
 }
 public flow probe(args: Array<string>) -> i32 ![Console, Error<std.io.IOError>, Error<IndexError>] {
     let new = fresh_events();
-    if new.format != 14 || new.invocation.maximum != multi_wide_maximum(48) || invalid(new) != "" { abort("new event session changed"); }
+    if new.format != 15 || new.invocation.maximum != multi_large_maximum(48) || invalid(new) != "" { abort("new event session changed"); }
     let mismatched = Session { format = 11, phase = "ready", invocation = Invocation { usage = fresh_ledger(), maximum = multi_maximum(32), admitted = 0, prior = empty() }, last_request = "", pending = "" };
     if invalid(mismatched) == "" { abort("new format with old allowance accepted"); }
     let reserved = match begin(new, "question") { Ok(value) => value, Err(_) => { abort("new reservation refused"); } };
     match begin(reserved, "repeat") { Ok(_) => { abort("running reservation retried"); } Err(_) => {} }
-    match complete(reserved, completed("question", multi_wide_maximum(48), 8192)) { Ok(_) => { abort("undercharged new model accepted"); } Err(_) => {} }
-    let saved = match complete(reserved, completed("question", multi_wide_maximum(48), 12288)) { Ok(value) => value, Err(_) => { abort("new accounting refused"); } };
-    if saved.invocation.usage.tokens != 12288 || saved.phase != "ready" { abort("new usage changed"); }
+    match complete(reserved, completed("question", multi_large_maximum(48), 12288)) { Ok(_) => { abort("undercharged new model accepted"); } Err(_) => {} }
+    let saved = match complete(reserved, completed("question", multi_large_maximum(48), 266240)) { Ok(value) => value, Err(_) => { abort("new accounting refused"); } };
+    if saved.invocation.usage.tokens != 266240 || saved.phase != "ready" { abort("new usage changed"); }
     let legacy_invocation = Invocation { usage = fresh_ledger(), maximum = multi_maximum(32), admitted = 0, prior = empty() };
     let legacy = Session { format = 9, phase = "ready", invocation = legacy_invocation, last_request = "", pending = "" };
     let inflated = Session { format = 9, phase = "ready", invocation = Invocation { usage = fresh_ledger(), maximum = multi_wide_maximum(32), admitted = 0, prior = empty() }, last_request = "", pending = "" };
@@ -42,6 +42,13 @@ public flow probe(args: Array<string>) -> i32 ![Console, Error<std.io.IOError>, 
     let final = match complete(last, TurnResult { status = 0, state = done_invocation, resolved = true, completed = Some(done) }) { Ok(value) => value, Err(_) => { abort("48th completion refused"); } };
     if final.phase != "complete" || final.invocation.maximum.tokens != 1179648 { abort("new lifetime limit changed"); }
     match begin(final, "overflow") { Ok(_) => { abort("49th turn accepted"); } Err(_) => {} }
+    let large_usage = Ledger { steps = 517, calls = 282, tokens = 13090816, tools = 141, scan = 591432960 };
+    let large = Session { format = 15, phase = "ready", invocation = Invocation { usage = large_usage, maximum = multi_large_maximum(48), admitted = 47, prior = prior }, last_request = "question", pending = "" };
+    let large_last = match begin(large, "last") { Ok(value) => value, Err(_) => { abort("large final reservation refused"); } };
+    let large_done = Ledger { steps = 528, calls = 288, tokens = 13369344, tools = 144, scan = 604016640 };
+    let large_invocation = Invocation { usage = large_done, maximum = multi_large_maximum(48), admitted = 48, prior = prior };
+    let large_final = match complete(large_last, TurnResult { status = 0, state = large_invocation, resolved = true, completed = Some(done) }) { Ok(value) => value, Err(_) => { abort("large final settlement refused"); } };
+    if large_final.phase != "complete" { abort("large final phase changed"); }
     let old32 = Session { format = 13, phase = "ready", invocation = Invocation { usage = fresh_ledger(), maximum = multi_wide_maximum(32), admitted = 0, prior = empty() }, last_request = "", pending = "" };
     if invalid(old32) != "" { abort("legacy 32-turn session refused"); }
     if fresh().format != 12 { abort("new two-turn format missing"); }

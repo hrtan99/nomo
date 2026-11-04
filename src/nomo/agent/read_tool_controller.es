@@ -34,7 +34,7 @@ flow model_attempt(previous: Session, allowed: Array<string>, limits: Limits, fi
         return Err(failed(history(session, stop(session.history)), full, 4));
     }
     let original = Context { history = session.history.events, allowed = allowed, final_only = final_only };
-    let context = match bounded_model_context(original, 1048576) {
+    let context = match bounded_model_context(original, 8388608) {
         Ok(value) => value, Err(error) => { return Err(failed(session, error, 4)); }
     };
     var error = if chat { "" } else { context_error(context) };
@@ -74,7 +74,7 @@ flow run_multistep(raw: string, allowed: Array<string>, previous: Session, priva
     while calls < 4 limit Iterations(4) {
         let full = capacity(session, 4, 262688); if full != "" { return failed(history(session, stop(session.history)), full, 4); }
         let original = Context { history = session.history.events, allowed = allowed, final_only = tools == 3 };
-        let context = match bounded_model_context(original, 1048576) { Ok(value) => value, Err(error) => { return failed(session, error, 4); } };
+        let context = match bounded_model_context(original, 8388608) { Ok(value) => value, Err(error) => { return failed(session, error, 4); } };
         session = Session { history = charge(session.history), calls = session.calls + 1, tokens = session.tokens + 4096, tools = session.tools, scan = session.scan };
         session = history(session, emit_mode(session.history, "model", "text", "qwen", "", private_progress));
         calls = calls + 1;

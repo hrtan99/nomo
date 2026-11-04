@@ -86,9 +86,9 @@ public flow reserve(expected: MemoryEntry<string, Frame>, request: string, polic
     let saved = expected.value.chat;
     let current = if saved.format == 3 && saved.phase == "complete" { match extend(saved) { Ok(item) => item, Err(problem) => { return Err(problem); } } } else { saved };
     let pending = match begin(current, request) { Ok(item) => item, Err(problem) => { return Err(problem); } };
-    let marker = match encode("Reserved up to 1179648 configured native tokens for this chat turn; actual usage is unknown.", policy) { Ok(item) => item.value, Err(problem) => { return Err(problem); } };
+    let marker = match encode(if saved.format == 15 { "Reserved up to 3048576 configured native tokens for this chat turn; actual usage is unknown." } else { "Reserved up to 1179648 configured native tokens for this chat turn; actual usage is unknown." }, policy) { Ok(item) => item.value, Err(problem) => { return Err(problem); } };
     let prior = expected.value.events;
-    let events = EventFrame { format = 2, turns = prior.turns, first_count = prior.first_count, events = prior.events.push(Event { role = "system", kind = "native-budget", name = "chat", text = marker }) };
+    let events = EventFrame { format = 2, turns = prior.turns, first_count = prior.first_count, events = prior.events.push(Event { role = "system", kind = "native-budget", name = if saved.format == 15 { "chat-large" } else { "chat" }, text = marker }) };
     return write(Frame { format = 1, encoding = "json-string-v1", policy_binding = binding, chat = pending, events = events }, Some(expected), policy, binding);
 }
 

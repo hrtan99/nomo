@@ -60,7 +60,7 @@ flow failure(error: Refusal) -> SelectionRefusal {
 // Required values are indivisible. Optional values are tried whole in source
 // order; a large omission does not prevent a later smaller event from fitting.
 public flow select(context: Context, policies: Array<EventPolicy>, maximum_bytes: usize) -> Result<Selection, SelectionRefusal> {
-    if maximum_bytes > 1048576 { return Err(SelectionRefusal.InvalidLimit); }
+    if maximum_bytes > 8388608 { return Err(SelectionRefusal.InvalidLimit); }
     if count(context.history) == 0 || count(context.history) > 32 ||
         count(policies) != count(context.history) { return Err(SelectionRefusal.InvalidPolicy); }
     if bounded_context_error(context) != "" { return Err(SelectionRefusal.InvalidContext); }

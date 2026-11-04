@@ -126,6 +126,6 @@ public flow context_error(value: Context) -> string {
     let conversion: Option<Message<JsonValue>> = message.cast<JsonValue>();
     let data = match conversion { Some(item) => item.body, None() => { return "work context conversion refused"; } };
     let encoded = match stringify(data) { Ok(item) => item, Err(_) => { return "work context JSON refused"; } };
-    if byte_count(utf8_encode(encoded)) > 1048576 { return "work context exceeds 1048576 serialized UTF-8 bytes"; }
+    if byte_count(utf8_encode(encoded)) > 8388608 { return "work context exceeds 8388608 serialized UTF-8 bytes"; }
     return "";
 }

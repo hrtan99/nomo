@@ -237,7 +237,7 @@ def work_command(args, action, root, operation_id, path, task, check):
 
 def show_discovery():
     print('Discovery uses pages of 256 files, up to eight automatic pages, seven directory levels and 512 directories; each directory is limited to 1024 entries and 131072 name bytes. Unsupported paths and file types are excluded; .gitignore is not interpreted.', flush=True)
-    print('Each automatic page uses another bounded chat turn: up to 6 calls and 24576 output tokens for new sessions. Page contents may change between turns.', flush=True)
+    print('Each automatic page uses another bounded chat turn: up to 6 calls and 278528 output tokens for new event sessions (older sessions retain their allowance). Page contents may change between turns.', flush=True)
     print('Excluded: .git/.hg/.svn/.bzr, dependency and build directories, .venv/.tox/.cache/.mypy_cache/.pytest_cache, .ssh/.aws/.gnupg/.netrc, and .env files except .env.example/.env.sample.', flush=True)
     print('Dotfiles and project configuration in scope may be sent to the model.', flush=True)
     print('A link outside the selected workspace stops discovery; choose a narrower root.', flush=True)
@@ -276,7 +276,7 @@ def main(argv=None):
             print('Input cancelled.', file=sys.stderr)
             return 130
     if args.discover: show_discovery()
-    print('A read turn may reserve up to 6 calls and 24576 output tokens for new sessions: up to 4 child calls at 4096 each and 2 parent calls at up to 4096 each; at most 1179648 configured native tokens in total; up to 3 read/search operations reserve 4 MiB plus 256 probe bytes each.', flush=True)
+    print('A read turn may reserve up to 6 calls and 278528 output tokens for new event sessions (older sessions retain their allowance): up to 4 child calls at 4096 each and 2 parent calls at up to 4096 each; at most 1179648 configured native tokens in total; up to 3 read/search operations reserve 4 MiB plus 256 probe bytes each.', flush=True)
     if args.once is not None: print('An unfinished delegated answer may use one additional read turn with the same limits.', flush=True)
     if args.id is not None:
         show_resume(args, show_id=True)
@@ -429,7 +429,7 @@ def main(argv=None):
                 print('The agent is inspecting discovery page ' + str(args.page) + ' using another bounded chat turn.', flush=True)
             else:
                 extra_read = True
-                print('The agent is gathering more evidence using one additional chat turn (up to 6 calls and 24576 output tokens for new sessions).', flush=True)
+                print('The agent is gathering more evidence using one additional chat turn (up to 6 calls and 278528 output tokens for new event sessions (older sessions retain their allowance)).', flush=True)
             code, observer = chat_turn(args, question, False, natural, tty)
             if code:
                 print('Additional read stopped; inspect session status before continuing.', file=sys.stderr, flush=True)

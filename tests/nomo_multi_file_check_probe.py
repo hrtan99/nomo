@@ -13,7 +13,7 @@ class Fake(BaseHTTPRequestHandler):
  def do_POST(self):
   try:
    req=json.loads(self.rfile.read(int(self.headers['Content-Length'])));ctx=json.loads(req['messages'][1]['content']);i=len(self.server.seen)
-   if i in (6,17):assert req['max_tokens']==131072
+   if i in (0,3,6,11,14,17,22,25,26,29):assert req['max_tokens']==131072
    if i in (0,4):v=['delegate','Read first.txt before editing']
    elif i in (1,5):v=['read','first.txt']
    elif i in (2,6):v=['final','first.txt contains first old']

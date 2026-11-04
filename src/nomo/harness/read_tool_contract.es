@@ -9,7 +9,7 @@ public import nomo.harness.harness_tool_contract.{Context, Ledger, Observed, num
 import nomo.harness.harness_tool_contract.inspect_shared;
 public flow context_error(context: Context) -> string {
     let message = Message.new(context);
-    return context_json_error(message.cast<JsonValue>(), 1048576, true, "model context exceeds 1048576 serialized characters");
+    return context_json_error(message.cast<JsonValue>(), 8388608, true, "model context exceeds 8388608 serialized characters");
 }
 
 public flow inspect(child: Session, status: i32, request: string, task: string, allowed: Array<string>) -> Result<Observed, string> {

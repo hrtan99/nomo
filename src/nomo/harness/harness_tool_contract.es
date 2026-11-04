@@ -113,7 +113,7 @@ public flow inspect_shared(child: Session, status: i32, request: string, task: s
     if !(if unicode { utf8_bounded(request, 512) } else { bounded(request, 128) }) || !(if unicode { utf8_bounded(task, if work { 512 } else { 128 }) } else { bounded(task, 128) }) || (if unicode { candidate_error(allowed) } else { allowed_error(allowed) }) != "" { return Err("invalid selected child context"); }
     let events = child.history.events;
     let size = count(events);
-    if size < 4 || size > 7 || child.history.stopped || child.history.characters > (if unicode { 1048576 } else { 8192 }) { return Err("invalid child history"); }
+    if size < 4 || size > 7 || child.history.stopped || child.history.characters > (if unicode { 8388608 } else { 8192 }) { return Err("invalid child history"); }
     var characters: usize = 0;
     for event in events limit Iterations(7) {
         if len(event.name) > 8 || len(event.text) > (if unicode { 262154 } else { 512 }) || !printable(event.name) || !(if unicode { safe(event.text, 262154) } else { printable(event.text) }) {
