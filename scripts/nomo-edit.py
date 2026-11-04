@@ -33,7 +33,7 @@ def safe_path(value, maximum=128):
     if not safe_text(value, maximum):return False
     parts = value.split('/')
     return len(parts) <= 8 and all(part not in ('', '.', '..') and not part.startswith(' ') and not part.endswith(' ') and
-        all(ord(c) >= 128 or c in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._- ' for c in part) for part in parts)
+        all(ord(c) >= 128 or c in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._- @+()[]' for c in part) for part in parts)
 
 
 def format_check_capture(entry, env, literals=(), excerpt=False):

@@ -14,7 +14,7 @@ def main():
         source=path.read_text().replace('module nomo.main;', 'module nomo.main;\nimport nomo.tools.path_policy.valid_path;\nimport nomo.harness.natural_work_chat.target as natural_target;',1)
         source += '''
 public flow spaced_path_probe(args: Array<string>) -> i32 {
-    if !valid_path("project docs/说明 文件.txt") || !valid_path("dir/two  spaces.txt") { return 1; }
+    if !valid_path("project docs/说明 文件.txt") || !valid_path("dir/two  spaces.txt") || !valid_path("src/routes/[slug]/+page.svelte") || !valid_path("app/(group)/@slot/page.tsx") { return 1; }
     if valid_path("../project docs/x") || valid_path("project docs/../x") || valid_path("/project docs/x") || valid_path("project docs//x") { return 2; }
     if valid_path(" project/x") || valid_path("project /x") || valid_path("project/x ") || valid_path("project/x\\ny") { return 3; }
     let allowed = ["project docs/说明 文件.txt", "dir/two  spaces.txt"];

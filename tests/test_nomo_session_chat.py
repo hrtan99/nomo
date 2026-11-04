@@ -99,6 +99,8 @@ class SessionChatTest(unittest.TestCase):
     def test_unicode_path_routing_preserves_bounds_and_rejects_unsafe_paths(self):
         self.assertTrue(module.edit.safe_path('文档/说明.txt'))
         self.assertTrue(module.edit.safe_path('project docs/说明 文件.txt'))
+        self.assertTrue(module.edit.safe_path('src/routes/[slug]/+page.svelte'))
+        self.assertTrue(module.edit.safe_path('app/(group)/@slot/page.tsx'))
         self.assertTrue(module.edit.safe_path('中' * 42 + 'ab'))
         for value in ('中' * 43, '../说明.txt', 'a//说明.txt', 'a/ 说明.txt', 'a/说明.txt ', 'a/\u202e说明.txt', 'a/说明\\.txt'):
             self.assertFalse(module.edit.safe_path(value), value)
