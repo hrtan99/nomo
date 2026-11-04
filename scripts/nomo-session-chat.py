@@ -91,7 +91,7 @@ class NaturalObserver(StartIdObserver):
         self.buffer.extend(data)
         while b'\n' in self.buffer:
             line, _, remainder = self.buffer.partition(b'\n');self.buffer = bytearray(remainder)
-            try: fields = line.decode('utf-8', 'strict').rstrip('\r').split(' ')
+            try: fields = line.decode('utf-8', 'strict').rstrip('\r').split(' ', 3)
             except UnicodeDecodeError: continue
             if len(fields)==4 and fields[:2]==['NATURAL','WORK'] and fields[2] in ('work','followup') and (edit.safe_path(fields[3]) and (fields[3] in self.allowed or '*' in self.allowed)):
                 self.route = (fields[2], fields[3])

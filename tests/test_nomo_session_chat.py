@@ -98,12 +98,18 @@ class SessionChatTest(unittest.TestCase):
 
     def test_unicode_path_routing_preserves_bounds_and_rejects_unsafe_paths(self):
         self.assertTrue(module.edit.safe_path('文档/说明.txt'))
+        self.assertTrue(module.edit.safe_path('project docs/说明 文件.txt'))
         self.assertTrue(module.edit.safe_path('中' * 42 + 'ab'))
-        for value in ('中' * 43, '../说明.txt', 'a//说明.txt', 'a/说 明.txt', 'a/\u202e说明.txt', 'a/说明\\.txt'):
+        for value in ('中' * 43, '../说明.txt', 'a//说明.txt', 'a/ 说明.txt', 'a/说明.txt ', 'a/\u202e说明.txt', 'a/说明\\.txt'):
             self.assertFalse(module.edit.safe_path(value), value)
         observer = module.NaturalObserver(['*'])
         observer.feed('stdout', 'NATURAL WORK work 文档/说明.txt\n'.encode())
         self.assertEqual(observer.route, ('work', '文档/说明.txt'))
+        observer = module.NaturalObserver(['project docs/说明 文件.txt'])
+        observer.feed('stdout', 'NATURAL WORK work project docs/说明 文件.txt\n'.encode())
+        self.assertEqual(observer.route, ('work', 'project docs/说明 文件.txt'))
+        observer.feed('stdout', b'NATURAL WORK followup project docs/not allowed.txt\n')
+        self.assertEqual(observer.route, ('work', 'project docs/说明 文件.txt'))
         observer = module.NaturalObserver(['*'])
         observer.feed('stdout', b'NATURAL WORK work bad-\xff.txt\n')
         self.assertIsNone(observer.route)
