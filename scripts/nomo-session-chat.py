@@ -86,6 +86,7 @@ class NaturalObserver(StartIdObserver):
         self.deferred = None
         self.check = None
         self.check_invalid = False
+        self.final = None
 
     def feed(self, stream, data):
         super().feed(stream, data)
@@ -95,6 +96,7 @@ class NaturalObserver(StartIdObserver):
             line, _, remainder = self.buffer.partition(b'\n');self.buffer = bytearray(remainder)
             try: decoded = line.decode('utf-8', 'strict').rstrip('\r'); fields = decoded.split(' ', 3)
             except UnicodeDecodeError: continue
+            if decoded.startswith('FINAL '): self.final = decoded[6:]
             if decoded.startswith('NATURAL CHECK '):
                 try:
                     command = shlex.split(decoded[len('NATURAL CHECK '):])
@@ -189,10 +191,10 @@ def chat_turn(args, question, starting, natural, tty):
     return code, observer
 
 
-def run_recorded_check(args, command):
+def run_recorded_check(args, command, check_id=None):
     state = session_state(args)
     request = [sys.executable, str(ROOT/'scripts/nomo-history-work.py'), '--independent-check', '--state', str(state), '--root', args.root,
-               '--id', 'check-' + secrets.token_hex(16), '--events-policy-dir', args.events_policy_dir, '--check', *command]
+               '--id', check_id or 'check-' + secrets.token_hex(16), '--events-policy-dir', args.events_policy_dir, '--check', *command]
     return edit.run_owned(request, dict(os.environ))
 
 
@@ -423,13 +425,22 @@ def main(argv=None):
             if approval not in ('y', 'yes'):
                 print('Check declined; no command was run.', flush=True)
                 continue
-            try: code = run_recorded_check(args, observer.check)
+            check_id = 'check-' + secrets.token_hex(16)
+            try:
+                code = run_recorded_check(args, observer.check, check_id)
+                if code:
+                    print('Check stopped or its result was not recorded; inspect the workspace and session before continuing.', file=sys.stderr, flush=True)
+                    return code
+                print('Check recorded. Asking the model for one read-only summary; the command will not run again.', flush=True)
+                summary_request = 'AUTO-CONTINUATION (no new user input): Summarize recorded check ' + check_id + ', its exit code and available output; suggest next steps without running commands.'
+                code, summary = chat_turn(args, summary_request, False, False, tty)
             except (OSError, ValueError) as error:
-                print('Check could not be started or recorded: ' + str(error), file=sys.stderr, flush=True); return 1
+                print('Check or summary could not start or complete; inspect the session: ' + str(error), file=sys.stderr, flush=True); return 1
             if code:
-                print('Check stopped or its result was not recorded; inspect the workspace and session before continuing.', file=sys.stderr, flush=True)
-                return code
-            print('Recorded check output is available to the next request; it will not run again automatically.', flush=True)
+                print('Check remains recorded; model summary stopped. Inspect session status; do not rerun the check automatically.', file=sys.stderr, flush=True)
+                show_status_hint(args, args.id); return code
+            if not summary.final or summary.deferred or summary.final.startswith(('CHECK ', 'EDIT ', 'NEXT_PAGE')):
+                print('Check remains recorded; the model did not provide a complete summary. No further action was run.', flush=True)
             continue
         if natural and observer.route is not None:
             action, path = observer.route

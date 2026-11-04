@@ -127,7 +127,29 @@ class SessionChatTest(unittest.TestCase):
              patch.object(module.sys, 'stderr', io.StringIO()) as error, patch.object(module, 'chat_turn', return_value=(0, observer)), \
              patch.object(module, 'run_recorded_check', side_effect=OSError('unavailable')) as check:
             self.assertEqual(module.main(self.args), 1)
-        check.assert_called_once(); self.assertIn('could not be started or recorded', error.getvalue())
+        check.assert_called_once(); self.assertIn('Check or summary could not start or complete', error.getvalue())
+
+    def test_confirmed_check_summarizes_once_in_read_only_mode(self):
+        self.args += ['--events-policy-dir', '/private-policy']
+        proposal = module.NaturalObserver(['file.txt']); proposal.feed('stdout', b'NATURAL CHECK python3 -m unittest\n')
+        summary = module.NaturalObserver(['file.txt']); summary.feed('stdout', b'FINAL CHECK python3 -m unittest\nNATURAL CHECK python3 -m unittest\n')
+        with patch.object(module.sys, 'stdin', Terminal('run test\ny\n/exit\n')), patch.object(module.sys, 'stdout', Terminal()) as output, \
+             patch.object(module.sys, 'stderr', io.StringIO()), patch.object(module, 'chat_turn', side_effect=[(0, proposal), (0, summary)]) as chat, \
+             patch.object(module, 'run_recorded_check', return_value=0) as check:
+            self.assertEqual(module.main(self.args), 0)
+        check.assert_called_once(); self.assertEqual(chat.call_count, 2)
+        self.assertIn(check.call_args.args[2], chat.call_args.args[1]); self.assertFalse(chat.call_args.args[3])
+        self.assertIn('did not provide a complete summary', output.getvalue())
+
+    def test_summary_failure_preserves_recorded_check_without_retry(self):
+        self.args += ['--events-policy-dir', '/private-policy']
+        proposal = module.NaturalObserver(['file.txt']); proposal.feed('stdout', b'NATURAL CHECK python3 -m unittest\n')
+        summary = module.NaturalObserver(['file.txt'])
+        with patch.object(module.sys, 'stdin', Terminal('run test\ny\n')), patch.object(module.sys, 'stdout', Terminal()), \
+             patch.object(module.sys, 'stderr', io.StringIO()) as error, patch.object(module, 'chat_turn', side_effect=[(0, proposal), (1, summary)]), \
+             patch.object(module, 'run_recorded_check', return_value=0) as check:
+            self.assertEqual(module.main(self.args), 1)
+        check.assert_called_once(); self.assertIn('Check remains recorded', error.getvalue())
 
     def test_proposed_check_rejects_unsafe_and_ambiguous_markers(self):
         for payload in (b'NATURAL CHECK python3 "unterminated\n', b'NATURAL CHECK python3 a\x1bb\n',

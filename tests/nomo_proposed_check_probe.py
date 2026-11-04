@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
-"""Local fake-model check proposal: deny, approve, record failure, then resume."""
+"""Local fake-model check proposal: deny or approve once, then automatically summarize the recorded check."""
 import json, os, pty, re, select, shutil, signal, subprocess, tempfile, termios, threading, time
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 ROOT=Path(__file__).resolve().parent.parent
 TASK='请运行 check.py 并报告检查结果。'
-FOLLOW='刚才检查的结果是什么？'
-CHECK="from pathlib import Path\np=Path('ran.txt')\np.write_text(str(int(p.read_text())+1) if p.exists() else '1')\nprint('SYNTHETIC_FAIL_42')\nraise SystemExit(3)\n"
+CHECK="from pathlib import Path\np=Path('ran.txt')\np.write_text(str(int(p.read_text())+1) if p.exists() else '1')\nprint('SYNTHETIC_CHECK_42')\nraise SystemExit(EXIT_CODE)\n"
 
 class Fake(BaseHTTPRequestHandler):
     def log_message(self,*_):pass
@@ -20,13 +19,14 @@ class Fake(BaseHTTPRequestHandler):
             elif i==2:value=['final','check.py is the requested test']
             elif i==3:value='CHECK python3 check.py'
             elif i==4:
-                assert ctx['current']['request']==FOLLOW
                 checks=[e for e in ctx['history'] if e['role']=='tool' and e['kind']=='check' and e['name']=='independent-check']
-                assert len(checks)==1 and 'SYNTHETIC_FAIL_42' in checks[0]['text'] and 'Exit 3' in checks[0]['text']
+                assert len(checks)==1 and 'SYNTHETIC_CHECK_42' in checks[0]['text'] and ('Exit '+str(self.server.exit_code)) in checks[0]['text']
+                identifier=re.search(r'Recorded check (check-[0-9a-f]{32})',checks[0]['text']).group(1)
+                assert ctx['current']['request'].startswith('AUTO-CONTINUATION (no new user input):') and identifier in ctx['current']['request']
                 value=['delegate','Read check.py and summarize the recorded check']
             elif i==5:value=['read','check.py']
             elif i==6:value=['final','The test script is check.py']
-            elif i==7:value='检查失败，退出码 3，输出 SYNTHETIC_FAIL_42。'
+            elif i==7:value=('检查通过' if self.server.exit_code==0 else '检查失败')+'，退出码 '+str(self.server.exit_code)+'，输出 SYNTHETIC_CHECK_42。'
             else:raise AssertionError('unexpected model request')
             content=json.dumps(value,ensure_ascii=False,separators=(',',':')) if isinstance(value,list) else value
             body=json.dumps({'choices':[{'message':{'role':'assistant','content':content},'finish_reason':'stop'}],'usage':{'prompt_tokens':10,'completion_tokens':10,'total_tokens':20}},ensure_ascii=False).encode()
@@ -34,8 +34,8 @@ class Fake(BaseHTTPRequestHandler):
         except Exception as exc:self.server.failure=repr(exc);self.send_error(500)
 
 
-def run_case(project,server,out,approve):
-    workspace=out/'workspace';workspace.mkdir(mode=0o755);(workspace/'check.py').write_text(CHECK)
+def run_case(project,server,out,approve,exit_code):
+    workspace=out/'workspace';workspace.mkdir(mode=0o755);(workspace/'check.py').write_text(CHECK.replace('EXIT_CODE',str(exit_code)))
     env={'PATH':os.environ['PATH'],'HOME':os.environ['HOME'],'MINIMAX_API_KEY':'SYNTHETIC_ONLY','NOMO_ETAS_VERSION':'0.2.6','NOMO_ETAS_GRAPH':'026-v68','NOMO_STATE_DIR':str(out/'state')}
     command=[str(project/'scripts/nomo'),'--root',str(workspace),'--allow','check.py']
     master,slave=pty.openpty();settings=termios.tcgetattr(slave);settings[3]&=~(termios.ECHO|termios.ECHONL);termios.tcsetattr(slave,termios.TCSANOW,settings)
@@ -54,9 +54,10 @@ def run_case(project,server,out,approve):
                 os.write(master,b'y\n' if approve else b'n\n');confirmed=True
             if confirmed and not approve and not exited and b'Check declined; no command was run.' in text:
                 assert not (workspace/'ran.txt').exists();os.write(master,b'/exit\n');exited=True
-            if approve and not continued and b'Check failed (exit 3)' in text and b'Recorded check output is available' in text:
-                assert (workspace/'ran.txt').read_text()=='1';os.write(master,FOLLOW.encode()+b'\n');continued=True
-            if continued and not events and '检查失败，退出码 3'.encode() in text:os.write(master,b'/events\n');events=True
+            if approve and not continued and b'Check recorded. Asking the model for one read-only summary' in text:
+                assert (workspace/'ran.txt').read_text()=='1';continued=True
+            final=('检查通过' if exit_code==0 else '检查失败')+'，退出码 '+str(exit_code)
+            if continued and not events and final.encode() in text:os.write(master,b'/events\n');events=True
             if events and not exited and b'independent-check' in text:os.write(master,b'/exit\n');exited=True
         if proc.returncode:raise AssertionError('process failed '+str(proc.returncode)+' '+bytes(output).decode('utf-8','replace')[-4000:])
         assert asked and confirmed and exited and (not approve or (continued and events))
@@ -79,10 +80,11 @@ def main():
             start=text.index('[runtime.profiles.'+name+'.model]');end=text.index('[runtime.profiles.'+name+'.model.timeout]',start)
             part=text[start:end].replace('https://api.minimax.cn/v1','http://host.docker.internal:%d/v1'%server.server_port).replace('allow_private = false','allow_private = true');text=text[:start]+part+text[end:]
         manifest.write_text(text)
-        denied=out/'denied';denied.mkdir();run_case(project,server,denied,False)
-        server.phases=[];server.failure=None
-        approved=out/'approved';approved.mkdir();run_case(project,server,approved,True)
-        print(json.dumps({'status':'passed','denied_no_execution':True,'approved_once':True,'recorded_exit':3,'recorded_output':'SYNTHETIC_FAIL_42','later_model_saw_check':True,'evidence':str(out)}))
+        denied=out/'denied';denied.mkdir();server.exit_code=3;run_case(project,server,denied,False,3)
+        for exit_code in (0,3):
+            server.phases=[];server.failure=None;server.exit_code=exit_code
+            approved=out/('approved-'+str(exit_code));approved.mkdir();run_case(project,server,approved,True,exit_code)
+        print(json.dumps({'status':'passed','denied_no_execution':True,'approved_once':True,'recorded_exits':[0,3],'recorded_output':'SYNTHETIC_CHECK_42','automatic_model_summary':True,'evidence':str(out)}))
     finally:server.shutdown();server.server_close();thread.join(timeout=5)
 
 if __name__=='__main__':main()
