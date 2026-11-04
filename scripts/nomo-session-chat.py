@@ -77,6 +77,7 @@ class NaturalObserver(StartIdObserver):
         self.allowed = allowed
         self.buffer = bytearray()
         self.route = None
+        self.check_after_edit = False
         self.deferred = None
         self.check = None
         self.check_invalid = False
@@ -97,8 +98,9 @@ class NaturalObserver(StartIdObserver):
                     if self.check is not None or not 1 <= len(command) <= 16 or not command[0] or sum(len(arg.encode('utf-8')) for arg in command) > 512 or any(not all(c.isprintable() for c in arg) for arg in command): raise ValueError('invalid check proposal')
                     self.check = command
                 except (ValueError, UnicodeEncodeError): self.check_invalid = True
-            if len(fields)==4 and fields[:2]==['NATURAL','WORK'] and fields[2] in ('work','followup') and (edit.safe_path(fields[3]) and (fields[3] in self.allowed or '*' in self.allowed)):
+            if len(fields)==4 and fields[0]=='NATURAL' and fields[1] in ('WORK','WORK_CHECK') and fields[2] in ('work','followup') and (edit.safe_path(fields[3]) and (fields[3] in self.allowed or '*' in self.allowed)):
                 self.route = (fields[2], fields[3])
+                self.check_after_edit = fields[1] == 'WORK_CHECK'
             elif fields == ['NATURAL','PAGE']:self.deferred = 'page'
             elif fields == ['NATURAL','PAGE','LIMIT']:self.deferred = 'page-limit'
             elif fields == ['NATURAL','DELEGATE']:self.deferred = 'read'
@@ -436,6 +438,35 @@ def main(argv=None):
         if observer.deferred is not None:
             print('The agent could not continue discovery or the additional read; no further edit was made. Refine the scope or inspect the session before continuing.', flush=True)
             if args.once is not None: return 1
+        if natural and observer.route is not None and not observer.check_invalid and observer.check is None:
+            action, path = observer.route
+            operation_id = 'auto-' + secrets.token_hex(8)
+            command = work_command(args, action, args.root, operation_id, path, question, args.check)
+            print('Selected ' + path + ' for a proposed edit; review the preview and confirm before writing.', flush=True)
+            code, signals, proof, closed = run_with_proof(command)
+            if code:
+                if recovery_ready(code, signals, proof, closed) and args.events_policy_dir is not None and offer_recovery(args, operation_id, action):
+                    print('Continue with a new request; a new edit requires fresh confirmations.', flush=True)
+                    continue
+                print('Work stopped; inspect session status before continuing.', file=sys.stderr, flush=True)
+                show_status_hint(args, args.id)
+                return code
+            if args.check and args.events_policy_dir is not None:
+                code = summarize_recorded_check(args, operation_id, tty)
+                if code: return code
+            elif observer.check_after_edit and not args.check:
+                if args.events_policy_dir is None:
+                    print('Edit completed; proposed checks require event recording. Select a command with /check.', flush=True)
+                else:
+                    print('Edit completed. Finding the requested check uses another bounded read-only model turn.', flush=True)
+                    request = 'AUTO-CONTINUATION: For the preceding user request and completed edit ' + operation_id + ', propose one suitable CHECK command, or say if evidence is insufficient. Do not propose another edit.'
+                    try: code, observer = chat_turn(args, request, False, True, tty)
+                    except (OSError, ValueError) as error:
+                        print('Edit remains recorded; check proposal could not start: ' + str(error), file=sys.stderr, flush=True); return 1
+                    if code:
+                        print('Edit remains recorded; check proposal stopped. Inspect the session before continuing.', file=sys.stderr, flush=True); return code
+                    if observer.deferred or observer.route or (observer.check is None and not observer.check_invalid):
+                        print('Edit completed; no check command was proposed or run.', flush=True); continue
         if natural and (observer.check_invalid or (observer.check is not None and observer.route is not None)):
             print('REFUSED invalid or ambiguous proposed check; no command was run.', file=sys.stderr, flush=True)
             continue
@@ -461,22 +492,6 @@ def main(argv=None):
             code = summarize_recorded_check(args, check_id, tty)
             if code: return code
             continue
-        if natural and observer.route is not None:
-            action, path = observer.route
-            operation_id = 'auto-' + secrets.token_hex(8)
-            command = work_command(args, action, args.root, operation_id, path, question, args.check)
-            print('Selected ' + path + ' for a proposed edit; review the preview and confirm before writing.', flush=True)
-            code, signals, proof, closed = run_with_proof(command)
-            if code:
-                if recovery_ready(code, signals, proof, closed) and args.events_policy_dir is not None and offer_recovery(args, operation_id, action):
-                    print('Continue with a new request; a new edit requires fresh confirmations.', flush=True)
-                    continue
-                print('Work stopped; inspect session status before continuing.', file=sys.stderr, flush=True)
-                show_status_hint(args, args.id)
-                return code
-            if args.check and args.events_policy_dir is not None:
-                code = summarize_recorded_check(args, operation_id, tty)
-                if code: return code
         if args.once is not None:
             return 0
 

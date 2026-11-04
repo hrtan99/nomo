@@ -150,6 +150,38 @@ class SessionChatTest(unittest.TestCase):
             self.assertEqual(module.main(self.args), 1)
         work.assert_called_once(); self.assertIn('Check remains recorded', error.getvalue())
 
+    def test_combined_edit_and_check_requests_confirm_and_record_once(self):
+        self.args += ['--events-policy-dir', '/private-policy']
+        for answer in ('yes','no'):
+            route=module.NaturalObserver(['file.txt']);route.feed('stdout',b'NATURAL WORK_CHECK work file.txt\n')
+            proposal=module.NaturalObserver(['file.txt']);proposal.feed('stdout',b'NATURAL CHECK python3 verify.py\n')
+            summary=module.NaturalObserver(['file.txt']);summary.feed('stdout',b'FINAL check failed\n')
+            with patch.object(module.sys,'stdin',Terminal('edit and test\n'+answer+'\n/exit\n')),patch.object(module.sys,'stdout',Terminal()), \
+                 patch.object(module.sys,'stderr',io.StringIO()),patch.object(module,'chat_turn',side_effect=[(0,route),(0,proposal),(0,summary)]) as chat, \
+                 patch.object(module,'run_with_proof',return_value=(0,[],b'',True)) as work,patch.object(module,'run_recorded_check',return_value=0) as check:
+                self.assertEqual(module.main(self.args),0)
+            work.assert_called_once();self.assertEqual(check.called,answer=='yes');self.assertEqual(chat.call_count,3 if answer=='yes' else 2)
+            self.assertTrue(chat.call_args_list[1].args[3]);self.assertIn('completed edit auto-',chat.call_args_list[1].args[1])
+
+    def test_combined_request_does_not_repeat_configured_check(self):
+        self.args += ['--events-policy-dir', '/private-policy','--check','python3','verify.py']
+        route=module.NaturalObserver(['file.txt']);route.feed('stdout',b'NATURAL WORK_CHECK work file.txt\n')
+        summary=module.NaturalObserver(['file.txt']);summary.feed('stdout',b'FINAL check passed\n')
+        with patch.object(module.sys,'stdin',Terminal('edit and test\n/exit\n')),patch.object(module.sys,'stdout',Terminal()), \
+             patch.object(module.sys,'stderr',io.StringIO()),patch.object(module,'chat_turn',side_effect=[(0,route),(0,summary)]) as chat, \
+             patch.object(module,'run_with_proof',return_value=(0,[],b'',True)) as work,patch.object(module,'run_recorded_check') as check:
+            self.assertEqual(module.main(self.args),0)
+        work.assert_called_once();check.assert_not_called();self.assertEqual(chat.call_count,2);self.assertFalse(chat.call_args.args[3])
+
+    def test_combined_request_legacy_configured_check_is_not_proposed_again(self):
+        self.args += ['--check','python3','verify.py']
+        route=module.NaturalObserver(['file.txt']);route.feed('stdout',b'NATURAL WORK_CHECK work file.txt\n')
+        with patch.object(module.sys,'stdin',Terminal('edit and test\n/exit\n')),patch.object(module.sys,'stdout',Terminal()), \
+             patch.object(module.sys,'stderr',io.StringIO()),patch.object(module,'chat_turn',return_value=(0,route)) as chat, \
+             patch.object(module,'run_with_proof',return_value=(0,[],b'',True)) as work,patch.object(module,'run_recorded_check') as check:
+            self.assertEqual(module.main(self.args),0)
+        work.assert_called_once();check.assert_not_called();chat.assert_called_once()
+
     def test_confirmed_check_summarizes_once_in_read_only_mode(self):
         self.args += ['--events-policy-dir', '/private-policy']
         proposal = module.NaturalObserver(['file.txt']); proposal.feed('stdout', b'NATURAL CHECK python3 -m unittest\n')

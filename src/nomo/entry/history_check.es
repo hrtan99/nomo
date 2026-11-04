@@ -3,7 +3,8 @@ module nomo.entry.history_check;
 import std.io.{println, read_line};
 import std.json.parse;
 import std.collections.len as count;
-import nomo.session.history_check_guard.{start, finish};
+import nomo.session.history_check_guard.{start, finish as first_finish};
+import nomo.session.history_followup_check_guard.{start as followup_start, finish as followup_finish};
 
 import nomo.session.check_output.{Record as OutputRecord, save as save_output};
 
@@ -22,13 +23,15 @@ public flow save_check_output(args: Array<string>, slot: string) -> i32 ![Consol
     match save_output(value) { Ok(_) => { println("CHECK OUTPUT SAVED"); return 0; } Err(error) => { println("REFUSED " + error); return 1; } }
 }
 
-public flow run(args: Array<string>) -> i32 ![Console, Memory, Error<StorageError>, Error<IndexError>, Error<IOError>] {
+public flow run_slot(args: Array<string>, followup: bool) -> i32 ![Console, Memory, Error<StorageError>, Error<IndexError>, Error<IOError>] {
     if count(args) == 3 && args[0] == "start" {
-        match start(args[1], args[2]) { Ok(_) => { println("CHECK RESERVED"); return 0; } Err(error) => { println("REFUSED " + error); return 1; } }
+        match (if followup { followup_start(args[1], args[2]) } else { start(args[1], args[2]) }) { Ok(_) => { println("CHECK RESERVED"); return 0; } Err(error) => { println("REFUSED " + error); return 1; } }
     }
     if count(args) == 5 && args[0] == "finish" {
-        match finish(args[1], args[2], args[3], args[4]) { Ok(_) => { println("CHECK SAVED"); return 0; } Err(error) => { println("REFUSED " + error); return 1; } }
+        match (if followup { followup_finish(args[1], args[2], args[3], args[4]) } else { first_finish(args[1], args[2], args[3], args[4]) }) { Ok(_) => { println("CHECK SAVED"); return 0; } Err(error) => { println("REFUSED " + error); return 1; } }
     }
-    if count(args) == 5 && args[0] == "output" { return save_check_output(args, "first"); }
+    if count(args) == 5 && args[0] == "output" { return save_check_output(args, if followup { "followup" } else { "first" }); }
     println("REFUSED invalid internal check action"); return 1;
 }
+
+public flow run(args: Array<string>) -> i32 ![Console, Memory, Error<StorageError>, Error<IndexError>, Error<IOError>] { return run_slot(args, false); }

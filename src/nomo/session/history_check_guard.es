@@ -73,26 +73,18 @@ flow confirmed_work(id: string) -> string {
     if edit.phase != "completed" { return "completed edit record required"; }
     return "";
 }
-public flow start(id: string, digest: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+flow transition(id: string, digest: string, outcome: string, exit_code: string, finishing: bool) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
     let proof = confirmed_work(id); if proof != "" { return Err(proof); }
-    let before = match read() { Some(value) => value, None() => { return Err("planned check missing"); } };
+    let before = match read() { Some(value) => value, None() => { return Err(if finishing { "running check missing" } else { "planned check missing" }); } };
     let error = invalid(before.value); if error != "" { return Err(error); }
-    if before.key != "check" || before.value.id != id || before.value.digest != digest || before.value.phase != "planned" { return Err("planned check differs; no retry"); }
-    let row = Record { format = 1, phase = "running", id = id, digest = digest, outcome = "", exit_code = "" };
+    if before.key != "check" || before.value.id != id || before.value.digest != digest || before.value.phase != (if finishing { "running" } else { "planned" }) { return Err(if finishing { "running check differs; no retry" } else { "planned check differs; no retry" }); }
+    let row = Record { format = 1, phase = if finishing { "complete" } else { "running" }, id = id, digest = digest, outcome = outcome, exit_code = exit_code };
     let version = match write(row, Match(before.version)) { Ok(value) => value, Err(problem) => { return Err(problem); } };
     if version.opaque == before.version.opaque { return Err("check version did not change"); }
     return Ok(true);
 }
-public flow finish(id: string, digest: string, outcome: string, exit_code: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
-    let proof = confirmed_work(id); if proof != "" { return Err(proof); }
-    let before = match read() { Some(value) => value, None() => { return Err("running check missing"); } };
-    let error = invalid(before.value); if error != "" { return Err(error); }
-    if before.key != "check" || before.value.id != id || before.value.digest != digest || before.value.phase != "running" { return Err("running check differs; no retry"); }
-    let row = Record { format = 1, phase = "complete", id = id, digest = digest, outcome = outcome, exit_code = exit_code };
-    let version = match write(row, Match(before.version)) { Ok(value) => value, Err(problem) => { return Err(problem); } };
-    if version.opaque == before.version.opaque { return Err("check version did not change"); }
-    return Ok(true);
-}
+public flow start(id: string, digest: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] { return transition(id, digest, "", "", false); }
+public flow finish(id: string, digest: string, outcome: string, exit_code: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] { return transition(id, digest, outcome, exit_code, true); }
 public flow inspect() -> Result<Option<Record>, string> {
     let before = read();
     match before {
