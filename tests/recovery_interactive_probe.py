@@ -65,7 +65,7 @@ try:
  (out/'status.log').write_bytes(status.stdout+status.stderr)
  assert status.returncode==0,status.stderr.decode('utf8','replace')
  views=[json.loads(line[len(b'EVENT VIEW '):]) for line in status.stdout.splitlines() if line.startswith(b'EVENT VIEW {')]
- assert len(views)==1 and views[0]['work_phase']=='abandoned' and views[0]['work_reserved_calls']==7 and views[0]['work_reserved_tokens']==188416 and views[0]['followup_phase']=='complete',views
+ assert len(views)==1 and views[0]['work_phase']=='abandoned' and views[0]['work_reserved_calls']==7 and views[0]['work_reserved_tokens']==286720 and views[0]['followup_phase']=='complete',views
  print(json.dumps({'status':'passed','scope':'normal SIGINT after preview; explicit abandon; same session and new confirmed edit','fake_http':len(server.seen),'result_dir':str(out)}))
 except Exception as e:
  (out/'terminal.log').write_bytes(log);print(json.dumps({'status':'failed','step':step,'error':repr(e),'server_error':server.error,'phases':server.seen,'result_dir':str(out),'tail':bytes(log).decode('utf8','replace')[-4000:]}));raise

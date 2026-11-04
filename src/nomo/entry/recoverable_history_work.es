@@ -9,9 +9,9 @@ import nomo.cli.harness_work_args.{Work, parse_recorded};
 import nomo.harness.harness_work_contract.Ledger;
 import nomo.harness.read_model_tools.{expanded_work_child_turn as work_child_turn};
 import nomo.harness.legacy_string_stages.{LegacyStringStages, LegacyEditStages};
-import nomo.harness.history_work_model.{plan, child, aggregate, read_main_mode, wide_plan, wide_aggregate};
+import nomo.harness.history_work_model.{plan, child, large_child, aggregate, read_main_mode, wide_plan, wide_aggregate};
 import nomo.harness.harness_tool_chat_contract.Previous;
-import nomo.entry.harness_work_entry.{prepare_expanded_unicode, finish_edit, finish_history_summary, expanded_ledger as ledger, Pending, Failure, Completed, Summary};
+import nomo.entry.harness_work_entry.{prepare_expanded_unicode, finish_edit, finish_history_summary, expanded_ledger as ledger, expanded_stage as stage, simple_refused as refused, Pending, Failure, Completed, Summary};
 import nomo.session.event_policy.{PolicyRoot, load as load_policy};
 import nomo.session.chat_history.load as load_legacy;
 import nomo.session.recoverable_chat_store.{load as load_chat, record_work};
@@ -29,7 +29,6 @@ import nomo.entry.edit_context.display;
 import nomo.tools.workspace.ReadOnlyRoot;
 import nomo.tools.edit_file.{EditableRoot, apply_wide as apply};
 
-flow stage(name: string, value: Ledger, wide: bool) -> unit { println("STAGE " + name); ledger(value, wide); }
 flow prepare_history(input: Work, prior_request: string, previous: Previous, wide: bool) -> Result<Pending, Failure> {
     let original = (value: string) => "";
     let log = (name: string, state: Ledger) => stage(name, state, wide);
@@ -37,7 +36,7 @@ flow prepare_history(input: Work, prior_request: string, previous: Previous, wid
         LegacyStringStages.main(value) => { resume read_main_mode(value, prior_request, previous, wide); }
         LegacyStringStages.child(task, files, selected) => { resume work_child_turn(task, files, selected, wide); }
         LegacyEditStages.plan(value) => { resume if wide { wide_plan(value, prior_request, previous) } else { plan(value, prior_request, previous) }; }
-        LegacyEditStages.child(value) => { resume child(value, prior_request, previous); }
+        LegacyEditStages.child(value) => { resume if wide { large_child(value, prior_request, previous) } else { child(value, prior_request, previous) }; }
         LegacyEditStages.aggregate(value) => { resume if wide { wide_aggregate(value, prior_request, previous) } else { aggregate(value, prior_request, previous) }; }
     };
 }
@@ -45,11 +44,10 @@ flow summarize_history(value: Completed, prior_request: string, previous: Previo
     let log = (name: string, state: Ledger) => stage(name, state, wide);
     return finish_history_summary(value, log) with {
         LegacyEditStages.plan(item) => { resume if wide { wide_plan(item, prior_request, previous) } else { plan(item, prior_request, previous) }; }
-        LegacyEditStages.child(item) => { resume child(item, prior_request, previous); }
+        LegacyEditStages.child(item) => { resume if wide { large_child(item, prior_request, previous) } else { child(item, prior_request, previous) }; }
         LegacyEditStages.aggregate(item) => { resume if wide { wide_aggregate(item, prior_request, previous) } else { aggregate(item, prior_request, previous) }; }
     };
 }
-flow refused(error: string) -> i32 { println("REFUSED " + error); return 1; }
 
 public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read<PolicyRoot>, Fs.read<ReadOnlyRoot>, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {
     if count(args) < 2 || args[count(args) - 2] != "--policy-binding" { return refused("event work requires a policy binding"); }
@@ -74,7 +72,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
     if parsed.has_check { match plan_check(ticket, parsed.digest, policy, binding) { Ok(_) => {} Err(error) => { return refused(error); } } }
     println("RESERVED event work; interruption or uncertain effects cannot be retried automatically.");
     let prior_request = history.value.chat.last_request; let previous = history.value.chat.invocation.prior;
-    let wide = ticket.frame.work.format == 3 || ticket.frame.work.format == 4 || ticket.frame.work.format == 6;
+    let wide = ticket.frame.work.format == 3 || ticket.frame.work.format == 4 || ticket.frame.work.format == 6 || ticket.frame.work.format == 7;
     let pending = match prepare_history(input, prior_request, previous, wide) { Ok(value) => value, Err(failure) => { ledger(failure.state, wide); return refused(failure.error); } };
     let selected = match confirm_current(pending.selected, pending.prepared) { Ok(value) => value, Err(error) => { return refused(error); } };
     match claim(ticket, policy, binding) { Ok(_) => {} Err(error) => { return refused(error); } }

@@ -67,7 +67,7 @@ flow prepare_mode_with(input: Work, original_error: (string) -> string, stage_lo
     var state = fresh();
     let selected = Selector { id = input.edit.id, workspace = input.edit.workspace, path = input.edit.path };
     let invalid = ledger_error(state); if invalid != "" { return failed(state, invalid); }
-    println(if wide { "RESERVATION work13 steps/7 calls/188416 generation/2073152 native; edit tail6 steps/3 calls/45056 generation/786432 native; one read/search up to 65540 bytes, three edit reads up to 65537 bytes each, and one atomic maximum" } else { if expanded { "RESERVATION work13 steps/7 calls/51200 generation/1335296 native; edit tail6 steps/3 calls/38912 generation/786432 native; one read/search up to 65540 bytes, three edit reads up to 65537 bytes each, and one atomic maximum" } else { "RESERVATION work13 steps/7 calls/47104 generation/196608 historical native allowance (not a provider cap); edit tail6 steps/3 calls/38912 generation/163840 historical allowance; one read/search and one atomic maximum" } });
+    println(if wide { "RESERVATION work13 steps/7 calls/286720 generation/2811008 native; edit tail6 steps/3 calls/143360 generation/1524288 native; one read/search up to 65540 bytes, three edit reads up to 65537 bytes each, and one atomic maximum" } else { if expanded { "RESERVATION work13 steps/7 calls/51200 generation/1335296 native; edit tail6 steps/3 calls/38912 generation/786432 native; one read/search up to 65540 bytes, three edit reads up to 65537 bytes each, and one atomic maximum" } else { "RESERVATION work13 steps/7 calls/47104 generation/196608 historical native allowance (not a provider cap); edit tail6 steps/3 calls/38912 generation/163840 historical allowance; one read/search and one atomic maximum" } });
     let read_result = if unicode { unicode_read(input.edit.request, input.allowed, state.read, expanded, wide) }
         else { read_context(input.edit.request, input.allowed, state.read, "read-", true, chain_read, inspect_plan, inspect_all) };
     let read = match read_result {
@@ -123,8 +123,10 @@ public flow prepare_expanded_unicode(input: Work, original_error: (string) -> st
         EditOriginal.read(path) => { resume read_original_wide(path); }
     };
 }
+public flow expanded_stage(name: string, state: Ledger, wide: bool) -> unit { println("STAGE " + name); expanded_ledger(state, wide); }
+public flow simple_refused(error: string) -> i32 { println("REFUSED " + error); return 1; }
 public flow expanded_ledger(state: Ledger, wide: bool) -> unit {
-    println("LEDGER work steps=" + to_string_i32(state.read.steps + state.edit.steps) + "/13 calls=" + to_string_i32(state.read.calls + state.edit.calls) + "/7 generation_allowance=" + to_string_i32(state.read.tokens + state.edit.tokens) + (if wide { "/188416 native_configured=" } else { "/51200 native_configured=" }) + to_string_i32(native_budget(state)) + if wide { "/2073152; configured allowances are not measured usage" } else { "/1335296; configured allowances are not measured usage" });
+    println("LEDGER work steps=" + to_string_i32(state.read.steps + state.edit.steps) + "/13 calls=" + to_string_i32(state.read.calls + state.edit.calls) + "/7 generation_allowance=" + to_string_i32(state.read.tokens + state.edit.tokens) + (if wide { "/286720 native_configured=" } else { "/51200 native_configured=" }) + to_string_i32(native_budget(state)) + if wide { "/2811008; configured allowances are not measured usage" } else { "/1335296; configured allowances are not measured usage" });
 }
 
 // The production facade binds the original native reader once; exceptions and

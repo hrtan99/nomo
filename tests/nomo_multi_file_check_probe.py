@@ -13,7 +13,7 @@ class Fake(BaseHTTPRequestHandler):
  def do_POST(self):
   try:
    req=json.loads(self.rfile.read(int(self.headers['Content-Length'])));ctx=json.loads(req['messages'][1]['content']);i=len(self.server.seen)
-   if i in (0,3,6,11,14,17,22,25,26,29):assert req['max_tokens']==131072
+   if i in (0,3,6,9,11,14,17,20,22,25,26,29):assert req['max_tokens']==131072
    if i in (0,4):v=['delegate','Read first.txt before editing']
    elif i in (1,5):v=['read','first.txt']
    elif i in (2,6):v=['final','first.txt contains first old']
@@ -91,7 +91,7 @@ try:
  status=subprocess.run([str(project/'scripts/nomo'),'--id',identifier,'--status'],env=env,capture_output=True,timeout=120);(out/'status.log').write_bytes(status.stdout+status.stderr)
  assert status.returncode==0,status.stderr
  views=[json.loads(line[len(b'EVENT VIEW '):]) for line in status.stdout.splitlines() if line.startswith(b'EVENT VIEW {')];v=views[0]
- assert v['work_phase']=='complete' and v['followup_phase']=='complete' and v['work_settled_calls']==7 and v['followup_settled_calls']==7 and v['work_settled_tokens']==188416 and v['followup_settled_tokens']==188416,v
+ assert v['work_phase']=='complete' and v['followup_phase']=='complete' and v['work_settled_calls']==7 and v['followup_settled_calls']==7 and v['work_settled_tokens']==286720 and v['followup_settled_tokens']==286720,v
  print(json.dumps({'status':'passed','scope':'one request; two existing-file previews and confirmations; one check; recorded results and budgets','fake_http':len(server.seen),'result_dir':str(out)}))
 except Exception as error:
  (out/'terminal.log').write_bytes(log);print(json.dumps({'status':'failed','step':step,'error':repr(error),'server_error':server.error,'phases':server.seen,'result_dir':str(out),'tail':bytes(log).decode('utf8','replace')[-4000:]}));raise

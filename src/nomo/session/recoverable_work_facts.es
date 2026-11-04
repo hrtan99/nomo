@@ -28,7 +28,7 @@ flow extra_fact(item: Entry, policy: Policy) -> Result<WorkFacts, string> {
         output = Some(match check_values(item.check.stdout, item.check.stderr, item.check.stdout_truncated, item.check.stderr_truncated, policy) { Ok(value) => value, Err(error) => { return Err(error); } });
     }
     let chosen = match selection(item.result.events, policy) { Ok(value) => value, Err(error) => { return Err(error); } };
-    return Ok(WorkFacts { id = item.core.id, summary = item.result.summary, summary_source = if (item.result.source == "model-v2" || item.result.source == "model-v3") { "model" } else { if (item.result.source == "system-v2" || item.result.source == "system-v3") { "system" } else { item.result.source } }, selection = chosen,
+    return Ok(WorkFacts { id = item.core.id, summary = item.result.summary, summary_source = if (item.result.source == "model-v2" || item.result.source == "model-v3" || item.result.source == "model-v4") { "model" } else { if (item.result.source == "system-v2" || item.result.source == "system-v3" || item.result.source == "system-v4") { "system" } else { item.result.source } }, selection = chosen,
         check = if item.check.phase == "none" { "not requested" } else { if item.check.phase == "abandoned" { "abandoned; outcome unknown" } else { item.check.outcome } }, exit_code = item.check.exit_code, output = output });
 }
 // Keep older diagnostics at the original per-stream context bound; the stored
@@ -119,7 +119,7 @@ public flow snapshot(policy: Policy, binding: string) -> Result<Facts, string> {
         var index: usize = 0;
         for item in items limit Iterations(48) {
             let fact = match extra_fact(item, policy) { Ok(value) => value, Err(error) => { return Err(error); } };
-            additional = additional.push(if index + 2 < count(items) { compact(fact) } else { fact }); index = index + 1; calls = calls + if item.result.phase == "abandoned" { 7 } else { item.result.calls }; generation = generation + if item.result.phase == "abandoned" { if item.result.source == "wide-v3" { 188416 } else { if item.result.source == "wide" || item.result.source == "wide-v2" { 61440 } else { 51200 } } } else { item.result.generation };
+            additional = additional.push(if index + 2 < count(items) { compact(fact) } else { fact }); index = index + 1; calls = calls + if item.result.phase == "abandoned" { 7 } else { item.result.calls }; generation = generation + if item.result.phase == "abandoned" { if item.result.source == "wide-v4" { 286720 } else { if item.result.source == "wide-v3" { 188416 } else { if item.result.source == "wide" || item.result.source == "wide-v2" { 61440 } else { 51200 } } } } else { item.result.generation };
         }
     } None() => {} }
     if count(additional) >= 1 { first_facts = match first_facts { Some(value) => Some(compact(value)), None() => None() }; }

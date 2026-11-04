@@ -19,7 +19,7 @@ import nomo.harness.harness_edit_contract.Context as EditContext;
 import nomo.harness.harness_edit_contract.Ledger as EditLedger;
 import nomo.harness.harness_edit_contract.fresh as edit_fresh;
 import nomo.harness.harness_edit_contract.bump_mode as edit_bump;
-import nomo.harness.harness_edit_contract.{ledger_error as edit_error, wide_error};
+import nomo.harness.harness_edit_contract.{ledger_error as edit_error, wide_error, large_error};
 import nomo.harness.harness_edit_contract.context_error as edit_context_error;
 import nomo.tools.edit_encoding.json;
 
@@ -34,24 +34,29 @@ flow read_complete(value: ReadLedger) -> bool {
     return value.steps == 7 && value.calls == 4 && (value.tokens == 8192 || value.tokens == 12288 || value.tokens == 16384 || value.tokens == 20480 || value.tokens == 143360) && value.tools == 1 && (value.scan == 4096 || value.scan == 16384 || value.scan == 65540);
 }
 
+flow selected_edit_error(state: Ledger) -> string {
+    if state.read.tokens == 143360 && wide_error(state.edit) != "" { return large_error(state.edit); }
+    return if state.read.tokens == 16384 || state.read.tokens == 20480 || state.read.tokens == 143360 { wide_error(state.edit) } else { edit_error(state.edit) };
+}
+
 // Historical ledger allowance; it is not the interpreter total-token cap.
 public flow native_tokens(state: Ledger) -> i32 {
-    if read_error(state.read) != "" || (if (state.read.tokens == 16384 || state.read.tokens == 20480 || state.read.tokens == 143360) { wide_error(state.edit) } else { edit_error(state.edit) }) != "" { return 0; }
+    if read_error(state.read) != "" || selected_edit_error(state) != "" { return 0; }
     return state.read.calls * 8192 + state.edit.native_tokens;
 }
 
 // New event-work stages reserve interpreter-enforced total-token maxima.
 public flow native_budget(state: Ledger) -> i32 {
     let read = match state.read.calls { 0 => 0, 1 => 8192, 2 => 24576, 3 => 286720, _ => 548864 };
-    return read + state.edit.calls * 262144 + if state.read.tokens >= 139264 { 737856 } else { 0 };
+    return read + state.edit.calls * 262144 + (if state.read.tokens >= 139264 { 737856 } else { 0 }) + (if state.read.tokens == 143360 && state.edit.tokens >= 139264 { 737856 } else { 0 });
 }
 
 public flow ledger_error(state: Ledger) -> string {
     let read = read_error(state.read); if read != "" { return read; }
-    let edit = if (state.read.tokens == 16384 || state.read.tokens == 20480 || state.read.tokens == 143360) { wide_error(state.edit) } else { edit_error(state.edit) }; if edit != "" { return edit; }
+    let edit = selected_edit_error(state); if edit != "" { return edit; }
     if state.edit.steps != 0 && !read_complete(state.read) { return "edit tail requires settled read work"; }
     if state.read.steps + state.edit.steps > 13 || state.read.calls + state.edit.calls > 7 ||
-        state.read.tokens + state.edit.tokens > 188416 || native_tokens(state) > 196608 || native_budget(state) > 2073152 {
+        state.read.tokens + state.edit.tokens > 286720 || native_tokens(state) > 196608 || native_budget(state) > 2811008 {
         return "shared work reservation exhausted";
     }
     return "";
@@ -62,7 +67,7 @@ public flow ledger_error(state: Ledger) -> string {
 public flow bump_edit(state: Ledger, call: bool) -> Result<Ledger, string> {
     let invalid = ledger_error(state); if invalid != "" { return Err(invalid); }
     if !read_complete(state.read) { return Err("edit tail requires settled read work"); }
-    let edit = match edit_bump(state.edit, call, (state.read.tokens == 16384 || state.read.tokens == 20480 || state.read.tokens == 143360)) { Ok(value) => value, Err(error) => { return Err(error); } };
+    let edit = match edit_bump(state.edit, call, (state.read.tokens == 16384 || state.read.tokens == 20480 || state.read.tokens == 143360), state.read.tokens == 143360) { Ok(value) => value, Err(error) => { return Err(error); } };
     return Ok(Ledger { read = state.read, edit = edit });
 }
 

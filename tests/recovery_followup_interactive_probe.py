@@ -13,6 +13,7 @@ class Fake(BaseHTTPRequestHandler):
  def do_POST(self):
   try:
    req=json.loads(self.rfile.read(int(self.headers['Content-Length'])));ctx=json.loads(req['messages'][1]['content']);i=len(self.server.seen)
+   if i in (9,20,30):assert req['max_tokens']==131072
    if i in (0,4,11,15,21,25):v=['delegate','Read note.txt before editing']
    elif i in (1,5,12,16,22,26):v=['read','note.txt']
    elif i in (2,6,13,17,23,27):v=['final','note.txt contains the current color']
@@ -33,10 +34,10 @@ manifest=project/'etas.toml';text=manifest.read_text()
 for name in ('nomo-read-events-new','nomo-read-events-existing','nomo-history-events-work'):
  start=text.index('[runtime.profiles.'+name+'.model]');end=text.index('[runtime.profiles.'+name+'.model.timeout]',start);part=text[start:end].replace('https://api.minimax.cn/v1','http://host.docker.internal:%d/v1'%server.server_port).replace('allow_private = false','allow_private = true');text=text[:start]+part+text[end:]
 manifest.write_text(text)
-env={'PATH':os.environ['PATH'],'HOME':os.environ['HOME'],'MINIMAX_API_KEY':'SYNTHETIC_ONLY','NOMO_ETAS_VERSION':'0.2.6'}
+env={'PATH':'/Applications/Docker.app/Contents/Resources/bin:'+os.environ['PATH'],'HOME':os.environ['HOME'],'MINIMAX_API_KEY':'SYNTHETIC_ONLY','NOMO_ETAS_VERSION':'0.2.6','NOMO_ETAS_GRAPH':'026-v68'}
 cmd=[str(project/'scripts/nomo-read.sh'),'session-chat','--sessions-dir',str(sessions),'--new','--root',str(workspace),'--allow','note.txt','--events-policy-dir',str(policy)]
 master,slave=pty.openpty();setting=termios.tcgetattr(slave);setting[3]&=~(termios.ECHO|termios.ECHONL);termios.tcsetattr(slave,termios.TCSANOW,setting)
-proc=subprocess.Popen(cmd,stdin=slave,stdout=slave,stderr=slave,env=env,start_new_session=True);os.close(slave);log=bytearray();step=0;deadline=time.monotonic()+300
+proc=subprocess.Popen(cmd,stdin=slave,stdout=slave,stderr=slave,env=env,start_new_session=True);os.close(slave);log=bytearray();step=0;deadline=time.monotonic()+420
 try:
  while proc.poll() is None:
   if time.monotonic()>deadline:raise TimeoutError('timeout step '+str(step))
@@ -70,7 +71,7 @@ try:
  (out/'status.log').write_bytes(status.stdout+status.stderr)
  assert status.returncode==0,status.stderr.decode('utf8','replace')
  views=[json.loads(line[len(b'EVENT VIEW '):]) for line in status.stdout.splitlines() if line.startswith(b'EVENT VIEW {')]
- assert len(views)==1 and views[0]['work_phase']=='complete' and views[0]['followup_phase']=='abandoned' and views[0]['followup_reserved_calls']==7 and views[0]['followup_reserved_tokens']==51200 and views[0]['additional_work'][-1]['result']['phase']=='complete',views
+ assert len(views)==1 and views[0]['work_phase']=='complete' and views[0]['followup_phase']=='abandoned' and views[0]['followup_reserved_calls']==7 and views[0]['followup_reserved_tokens']==286720 and views[0]['additional_work'][-1]['result']['phase']=='complete' and views[0]['additional_work'][-1]['result']['generation']==286720 and views[0]['additional_work'][-1]['result']['source']=='model-v4',views
  print(json.dumps({'status':'passed','scope':'completed first edit, normal SIGINT on followup preview, explicit abandon, same-session additional edit','fake_http':len(server.seen),'result_dir':str(out)}))
 except Exception as e:
  (out/'terminal.log').write_bytes(log);print(json.dumps({'status':'failed','step':step,'error':repr(e),'server_error':server.error,'phases':server.seen,'result_dir':str(out),'tail':bytes(log).decode('utf8','replace')[-3000:]}));raise
