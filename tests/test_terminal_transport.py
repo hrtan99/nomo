@@ -48,7 +48,7 @@ if args and args[0]=='compose':
     write(record_path,record);event({'kind':'run','owned':owned})
     if os.environ.get('NOMO_TERMINAL_TEST_WAIT'):
         def interrupted(number,_frame):
-            event({'kind':'signal','signal':number,'at':time.monotonic()})
+            event({'kind':'signal','signal':number})
             if not os.environ.get('NOMO_TERMINAL_TEST_IGNORE'):raise SystemExit(128+number)
         signal.signal(signal.SIGINT,interrupted);signal.signal(signal.SIGTERM,interrupted)
         Path(os.environ['NOMO_TERMINAL_TEST_READY']).write_text('ready')
@@ -73,12 +73,13 @@ if args and args[0]=='inspect':
         # without another lookup and leaked this exact owned container.
         history=list(map(json.loads,events_path.read_text().splitlines()))
         signals=[item for item in history if item['kind']=='signal']
-        if not value['exists'] and os.environ.get('NOMO_TERMINAL_TEST_LATE_CREATE') and signals and time.monotonic()-signals[0]['at']>=1.5 and not any(item['kind']=='late-create' for item in history):
+        if not value['exists'] and os.environ.get('NOMO_TERMINAL_TEST_LATE_CREATE') and signals and not any(item['kind']=='late-create' for item in history):
             record=json.loads(record_path.read_text())
             try:os.kill(record['client_pid'],0);creator_alive=True
             except ProcessLookupError:creator_alive=False
-            value['exists']=True;write(state_path,value)
-            event({'kind':'late-create','creator_alive':creator_alive})
+            if not creator_alive:
+                value['exists']=True;write(state_path,value)
+                event({'kind':'late-create','creator_alive':creator_alive})
         print('Error: No such object: '+target,file=sys.stderr);raise SystemExit(1)
     print(value['id']+'\n'+value['name']+'\n'+value['owner']);raise SystemExit(0)
 if args and args[0] in ('stop','rm'):
