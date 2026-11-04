@@ -1,5 +1,7 @@
 module nomo.session.history_check_guard;
 
+import nomo.session.cas_rows.{Target, commit_native};
+
 import std.memory.{get_entry, prepare_put, operation_ref, commit, WriteCondition, MemoryVersion, MemoryEntry,
     WriteOutcome, MemoryWriteChange, StorageDurability, Missing, Match};
 import std.text.{len, split, starts_with};
@@ -42,22 +44,7 @@ public flow invalid(row: Record) -> string { return invalid_values(row.format, r
 
 flow write(row: Record, condition: WriteCondition) -> Result<MemoryVersion, string> ![Memory, Error<StorageError>, Error<IndexError>] {
     let error = invalid(row); if error != "" { return Err(error); }
-    let intent = prepare_put(Checks.Rows, "check", row, condition); let operation = operation_ref(intent);
-    let receipt = match commit(intent) {
-        WriteOutcome.Unknown(_) => { return Err("history-check commit unknown; no retry"); }
-        WriteOutcome.NotCommitted(_, _) => { return Err("history-check commit refused; no retry"); }
-        WriteOutcome.Committed(value) => value,
-    };
-    if receipt.operation.key != operation.key || receipt.operation.fingerprint != operation.fingerprint ||
-        receipt.target.key != "check" || receipt.target.region != "nomo-history-check-v1" || receipt.target.store != ["Rows"] {
-        return Err("history-check receipt mismatch; no retry");
-    }
-    let durable = match receipt.durability { StorageDurability.SqliteWalFull() => true, _ => false };
-    if !durable { return Err("durable SQLite history-check receipt required"); }
-    let version = match receipt.change { MemoryWriteChange.Written(value) => value, _ => { return Err("history-check version required"); } };
-    let after = match read() { Some(value) => value, None() => { return Err("history-check readback missing"); } };
-    if after.key != "check" || after.value != row || after.version.opaque != version.opaque { return Err("history-check readback mismatch; no retry"); }
-    return Ok(version);
+    return commit_native<Record>(Checks.Rows, Target { store = ["Rows"], region = "nomo-history-check-v1", key = "check", label = "history-check" }, row, condition);
 }
 public flow plan(ticket: Ticket, digest: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
     match claim(ticket) { Ok(_) => {} Err(error) => { return Err(error); } }

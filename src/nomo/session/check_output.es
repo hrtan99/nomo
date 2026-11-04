@@ -1,7 +1,8 @@
 module nomo.session.check_output;
 
-import std.memory.{get_entry, prepare_put, operation_ref, commit, MemoryEntry,
-    WriteOutcome, MemoryWriteChange, StorageDurability, Missing};
+import nomo.session.cas_rows.{Target, commit_native};
+
+import std.memory.{get_entry, Missing};
 import std.text.len;
 import nomo.session.history_check_guard.inspect as inspect_first;
 import nomo.session.history_followup_check_guard.inspect as inspect_followup;
@@ -28,15 +29,7 @@ public flow save(value: Record) -> Result<bool, string> ![Memory, Error<StorageE
     if value.format != 1 || len(value.stdout) > 16384 || len(value.stderr) > 16384 { return Err("invalid check output"); }
     let problem = check_binding(value.slot, value.id, value.digest); if problem != "" { return Err(problem); }
     if get_entry(Outputs.Rows, value.slot) != None() { return Err("check output already recorded"); }
-    let intent = prepare_put(Outputs.Rows, value.slot, value, Missing); let operation = operation_ref(intent);
-    let receipt = match commit(intent) { WriteOutcome.Committed(item) => item, _ => { return Err("check output commit failed or unknown"); } };
-    if receipt.operation.key != operation.key || receipt.operation.fingerprint != operation.fingerprint ||
-        receipt.target.key != value.slot || receipt.target.region != "nomo-check-output-v1" || receipt.target.store != ["Rows"] { return Err("check output receipt mismatch"); }
-    match receipt.durability { StorageDurability.SqliteWalFull() => {}, _ => { return Err("durable check output required"); } }
-    let version = match receipt.change { MemoryWriteChange.Written(item) => item, _ => { return Err("check output version missing"); } };
-    let saved = match get_entry(Outputs.Rows, value.slot) { Some(item) => item, None() => { return Err("check output readback missing"); } };
-    if saved.value != value || saved.version.opaque != version.opaque { return Err("check output readback differs"); }
-    return Ok(true);
+    match commit_native<Record>(Outputs.Rows, Target { store = ["Rows"], region = "nomo-check-output-v1", key = value.slot, label = "check output" }, value, Missing) { Ok(_) => Ok(true), Err(error) => Err(error) }
 }
 
 public flow load(slot: string, id: string, digest: string) -> Result<Option<Record>, string> {

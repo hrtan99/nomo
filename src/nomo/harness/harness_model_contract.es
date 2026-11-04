@@ -1,8 +1,11 @@
 module nomo.harness.harness_model_contract;
 
+import nomo.application.decoder_contract.ReadPlanDecoder;
+import nomo.core.json.{FieldError, decode_fields as json_fields};
+
 import std.text.{len, trim, split};
 import std.collections.len as count;
-import std.json.{JsonValue, parse};
+import std.json.JsonValue;
 import std.agent.message.Message;
 import nomo.core.text.{printable, context_json_error};
 import nomo.harness.model_plan_diagnostic.{read_plan_error, response_error};
@@ -49,30 +52,26 @@ flow frame_error(raw: string, formatting: bool) -> string {
     return if opened && closed && !quoted { "" } else { "frame" };
 }
 
-public flow decode_plan(raw: string) -> Result<string, string> {
-    if !bounded(raw, 384) || frame_error(raw, false) != "" { return Err("expected bounded flat single-line delegation JSON"); }
-    let parsed = match parse(raw) { Ok(value) => value, Err(_) => { return Err("invalid delegation JSON"); } };
-    let message = Message.new(parsed);
-    let conversion: Option<Message<Array<string>>> = message.cast<Array<string>>();
-    let fields = match conversion { Some(value) => value.body, None() => { return Err("delegation fields must be strings"); } };
-    if count(fields) != 2 || fields[0] != "delegate" { return Err("unsupported delegation verb or arity"); }
-    if !bounded(fields[1], 128) { return Err("invalid bounded delegated task"); }
-    return Ok(fields[1]);
+public type AsciiReadPlan = { compatible: bool };
+impl AsciiReadPlan ~ ReadPlanDecoder {
+    flow decode(self, raw: string) -> Result<string, string> {
+        if self.compatible {
+            if len(raw) == 0 || len(raw) > 384 { return Err(read_plan_error(raw, "limit")); }
+            let framed = frame_error(raw, true); if framed != "" { return Err(read_plan_error(raw, framed)); }
+        } else if !bounded(raw, 384) || frame_error(raw, false) != "" { return Err("expected bounded flat single-line delegation JSON"); }
+        let fields = match json_fields(raw) {
+            Ok(value) => value,
+            Err(FieldError.Json) => { return Err(if self.compatible { read_plan_error(raw, "json") } else { "invalid delegation JSON" }); }
+            Err(FieldError.Shape) => { return Err(if self.compatible { read_plan_error(raw, "shape") } else { "delegation fields must be strings" }); }
+        };
+        if count(fields) != 2 { return Err(if self.compatible { read_plan_error(raw, "arity") } else { "unsupported delegation verb or arity" }); }
+        if fields[0] != "delegate" { return Err(if self.compatible { read_plan_error(raw, "verb") } else { "unsupported delegation verb or arity" }); }
+        if !bounded(fields[1], 128) { return Err(if self.compatible { read_plan_error(raw, "task") } else { "invalid bounded delegated task" }); }
+        return Ok(fields[1]);
+    }
 }
-
-// Current v2 read-plan compatibility; old callers retain decode_plan above.
-public flow decode_read_plan(raw: string) -> Result<string, string> {
-    if len(raw) == 0 || len(raw) > 384 { return Err(read_plan_error(raw, "limit")); }
-    let framed = frame_error(raw, true); if framed != "" { return Err(read_plan_error(raw, framed)); }
-    let parsed = match parse(raw) { Ok(value) => value, Err(_) => { return Err(read_plan_error(raw, "json")); } };
-    let message = Message.new(parsed);
-    let conversion: Option<Message<Array<string>>> = message.cast<Array<string>>();
-    let fields = match conversion { Some(value) => value.body, None() => { return Err(read_plan_error(raw, "shape")); } };
-    if count(fields) != 2 { return Err(read_plan_error(raw, "arity")); }
-    if fields[0] != "delegate" { return Err(read_plan_error(raw, "verb")); }
-    if !bounded(fields[1], 128) { return Err(read_plan_error(raw, "task")); }
-    return Ok(fields[1]);
-}
+public flow decode_plan(raw: string) -> Result<string, string> { let decoder = AsciiReadPlan { compatible = false }; return decoder.decode(raw); }
+public flow decode_read_plan(raw: string) -> Result<string, string> { let decoder = AsciiReadPlan { compatible = true }; return decoder.decode(raw); }
 
 public flow read_aggregate_error(raw: string) -> string {
     if len(raw) == 0 || len(raw) > 512 { return response_error(raw, "read-aggregate", "limit", 512); }

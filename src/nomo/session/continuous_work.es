@@ -1,6 +1,7 @@
 module nomo.session.continuous_work;
 
-import std.memory.{get_entry, prepare_put, operation_ref, commit, MemoryEntry, MemoryVersion, WriteCondition, WriteOutcome, MemoryWriteChange, StorageDurability, Missing, Match};
+import nomo.session.cas_rows.{CasRows, Target, Submission, submit_native, commit_once};
+import std.memory.{get_entry, MemoryEntry, MemoryVersion, WriteCondition, Missing, Match};
 import std.collections.len as count;
 import nomo.core.conversation.Event;
 import nomo.session.edit_operation.Binding;
@@ -26,17 +27,23 @@ public flow load(binding: string) -> Result<Option<Stored>, string> {
     match row { Some(item) => { if item.key != "latest" || item.value.binding != binding { return Err("continuous work policy binding mismatch"); } } None() => {} }
     return match row { Some(item) => Ok(Some(Stored { key = item.key, value = item.value, version = item.version })), None() => Ok(None()) };
 }
+type ContinuousRows = { binding: string };
+impl ContinuousRows ~ CasRows<Book> {
+    flow target(self) -> Target ![] { return Target { store = ["Rows"], region = "nomo-continuous-work-v1", key = "latest", label = "continuous work" }; }
+    flow submit(self, value: Book, condition: WriteCondition) -> Submission ![Memory, Error<StorageError>] { return submit_native(Books.Rows, "latest", value, condition); }
+    flow read(self) -> Result<Option<MemoryEntry<string, Book>>, string> {
+        let row = get_entry(Books.Rows, "latest");
+        match row { Some(item) => { if item.key != "latest" || item.value.binding != self.binding { return Err("continuous work policy binding mismatch"); } } None() => {} }
+        return Ok(row);
+    }
+    flow same(self, left: Book, right: Book) -> bool ![] { return left == right; }
+}
 flow write(book: Book, previous: Option<Stored>) -> Result<Stored, string> ![Memory, Error<StorageError>, Error<IndexError>] {
     let condition: WriteCondition = match previous { Some(item) => Match(item.version), None() => Missing };
-    let intent = prepare_put(Books.Rows, "latest", book, condition); let operation = operation_ref(intent);
-    let receipt = match commit(intent) { WriteOutcome.Committed(item) => item, _ => { return Err("continuous work commit not confirmed"); } };
-    if receipt.operation.key != operation.key || receipt.operation.fingerprint != operation.fingerprint || receipt.target.key != "latest" { return Err("continuous work receipt mismatch"); }
-    match receipt.durability { StorageDurability.SqliteWalFull() => {} _ => { return Err("durable work storage required"); } }
-    let version = match receipt.change { MemoryWriteChange.Written(item) => item, _ => { return Err("work version missing"); } };
-    let after = match load(book.binding) { Ok(Some(item)) => item, _ => { return Err("work readback missing"); } };
-    if after.value != book || after.version.opaque != version.opaque { return Err("work readback mismatch"); }
-    return Ok(after);
+    let version = match commit_once<Book, ContinuousRows>(ContinuousRows { binding = book.binding }, book, condition, None()) { Ok(value) => value, Err(error) => { return Err(error); } };
+    return Ok(Stored { key = "latest", value = book, version = version });
 }
+
 flow put(previous: Stored, item: Entry) -> Result<Stored, string> ![Memory, Error<StorageError>, Error<IndexError>] {
     return write(Book { binding = previous.value.binding, history = previous.value.history, current = item }, Some(previous));
 }

@@ -1,7 +1,8 @@
 module nomo.session.metadata_store;
 
-import std.memory.{get_entry, prepare_put, operation_ref, commit, WriteCondition, MemoryVersion, MemoryEntry,
-    WriteOutcome, MemoryWriteChange, StorageDurability};
+import nomo.session.cas_rows.{Target, commit_receipt};
+
+import std.memory.{get_entry, WriteCondition, MemoryVersion, MemoryEntry};
 import nomo.session.store_record.Record;
 
 alias Schema = MemoryRegion<{ Rows: Store<string, Record> }>;
@@ -27,18 +28,5 @@ public flow publish(row: Record, expected: MemoryVersion) -> Result<MemoryVersio
 
 // A confirmed Memory mutation is not proof of Session content or effect completion.
 public flow write(row: Record, condition: WriteCondition) -> Result<MemoryVersion, string> ![Memory, Error<StorageError>] {
-    let intent = prepare_put(Metadata.Rows, row.snapshot.session_id, row, condition);
-    let operation = operation_ref(intent);
-    match commit(intent) {
-        WriteOutcome.Unknown(_) => { return Err("metadata commit unknown; no retry"); }
-        WriteOutcome.NotCommitted(_, _) => { return Err("metadata commit refused; no retry"); }
-        WriteOutcome.Committed(receipt) => {
-            if receipt.operation.key != operation.key || receipt.operation.fingerprint != operation.fingerprint ||
-                receipt.target.key != row.snapshot.session_id || receipt.target.region != "nomo-session-store-v1" ||
-                receipt.target.store != ["Rows"] { return Err("metadata receipt mismatch"); }
-            let durable = match receipt.durability { StorageDurability.SqliteWalFull() => true, _ => false };
-            if !durable { return Err("durable SQLite receipt required"); }
-            return match receipt.change { MemoryWriteChange.Written(version) => Ok(version), _ => Err("metadata write receipt required") };
-        }
-    }
+    return commit_receipt<Record>(Metadata.Rows, Target { store = ["Rows"], region = "nomo-session-store-v1", key = row.snapshot.session_id, label = "metadata" }, row, condition);
 }

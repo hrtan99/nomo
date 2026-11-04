@@ -1,7 +1,7 @@
 module nomo.session.recoverable_work_store;
 
-import std.memory.{get_entry, prepare_put, operation_ref, commit, MemoryEntry, MemoryVersion,
-    WriteCondition, WriteOutcome, MemoryWriteChange, StorageDurability, Missing, Match};
+import nomo.session.cas_rows.{CasRows, Target, Submission, submit_native, commit_once};
+import std.memory.{get_entry, commit, MemoryEntry, MemoryVersion, WriteCondition, Missing, Match};
 import nomo.core.conversation.Event;
 import nomo.session.redaction.{Policy, text as redact};
 import nomo.session.event_text_codec.decode;
@@ -58,28 +58,21 @@ public flow load(policy: Policy, binding: string) -> Result<Option<MemoryEntry<s
     return Ok(row);
 }
 
+type WorkRows = { redaction: Policy, binding: string };
+impl WorkRows ~ CasRows<Frame> {
+    flow target(self) -> Target ![] { return Target { store = ["Rows"], region = "nomo-recoverable-work-v1", key = "work", label = "recoverable work" }; }
+    flow submit(self, value: Frame, condition: WriteCondition) -> Submission ![Memory, Error<StorageError>] { return submit_native(Runs.Rows, "work", value, condition); }
+    flow read(self) -> Result<Option<MemoryEntry<string, Frame>>, string> { return load(self.redaction, self.binding); }
+    flow same(self, left: Frame, right: Frame) -> bool ![] { return left == right; }
+}
 flow write(value: Frame, expected: Option<MemoryEntry<string, Frame>>, policy: Policy, binding: string) -> Result<MemoryVersion, string> ![Memory, Error<StorageError>, Error<IndexError>] {
     let error = frame_error(value, policy, binding); if error != "" { return Err(error); }
     let before = match load(policy, binding) { Ok(item) => item, Err(problem) => { return Err(problem); } };
     if before != expected { return Err("recoverable work changed; no retry"); }
     let condition: WriteCondition = match expected { Some(item) => Match(item.version), None() => Missing };
-    let intent = prepare_put(Runs.Rows, "work", value, condition); let operation = operation_ref(intent);
-    let receipt = match commit(intent) {
-        WriteOutcome.Unknown(_) => { return Err("recoverable work commit unknown; no retry"); }
-        WriteOutcome.NotCommitted(_, _) => { return Err("recoverable work commit refused; no retry"); }
-        WriteOutcome.Committed(item) => item,
-    };
-    if receipt.operation.key != operation.key || receipt.operation.fingerprint != operation.fingerprint ||
-        receipt.target.key != "work" || receipt.target.region != "nomo-recoverable-work-v1" || receipt.target.store != ["Rows"] {
-        return Err("recoverable work receipt mismatch; no retry");
-    }
-    let durable = match receipt.durability { StorageDurability.SqliteWalFull() => true, _ => false };
-    if !durable { return Err("durable SQLite work receipt required"); }
-    let version = match receipt.change { MemoryWriteChange.Written(item) => item, _ => { return Err("recoverable work version missing"); } };
-    let after = match load(policy, binding) { Ok(Some(item)) => item, _ => { return Err("recoverable work readback missing"); } };
-    if after.value != value || after.version.opaque != version.opaque { return Err("recoverable work readback mismatch; no retry"); }
-    match expected { Some(item) => { if item.version.opaque == version.opaque { return Err("recoverable work version did not change"); } } None() => {} }
-    return Ok(version);
+    let rows = WorkRows { redaction = policy, binding = binding };
+    let previous = match expected { Some(item) => Some(item.version), None() => None() };
+    return commit_once<Frame, WorkRows>(rows, value, condition, previous);
 }
 
 public flow admit(id: string, workspace: string, path: string, request: string, chat: MemoryEntry<string, ChatFrame>, policy: Policy, binding: string) -> Result<Ticket, string> ![Memory, Error<StorageError>, Error<IndexError>] {

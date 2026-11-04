@@ -1,13 +1,14 @@
 module nomo.session.harness_successor_store;
 
-import std.memory.{get_entry, prepare_put, operation_ref, commit, WriteCondition, MemoryVersion, MemoryEntry,
-    WriteOutcome, MemoryWriteChange, StorageDurability, Missing, Match};
+import nomo.session.cas_rows.{Target, commit_native};
+
+import std.memory.{get_entry, WriteCondition, MemoryVersion, MemoryEntry, Missing, Match};
 import nomo.model.model_tool_contract.question_error;
 import nomo.session.harness_checkpoint.{Identity, identity_error};
 import nomo.session.harness_checkpoint_store.{Binding, binding};
 import nomo.session.harness_successor.{Successor, restore, validate, encode, decode};
 import nomo.harness.harness_tool_contract.{Ledger, ledger_error};
-import nomo.harness.harness_tool_chat_contract.{Invocation, TurnResult, Context, context_error, combine, empty};
+import nomo.harness.harness_tool_chat_contract.{TurnResult, Context, context_error, combine, empty};
 
 public type Record = { format: i32, phase: string, predecessor: Identity, successor: Identity,
     predecessor_version: string, predecessor_body: string, request: string, body: string,
@@ -20,27 +21,8 @@ flow admission(identity: Identity) -> string { return "admission:" + identity.id
 flow key(identity: Identity) -> string { return "successor:" + identity.id; }
 flow read(name: string) -> Option<MemoryEntry<string, Record>> { return get_entry(Successors.Rows, name); }
 
-flow write(name: string, row: Record, condition: WriteCondition) -> Result<MemoryVersion, string> ![Memory, Error<StorageError>] {
-    let intent = prepare_put(Successors.Rows, name, row, condition);
-    let operation = operation_ref(intent);
-    let receipt = match commit(intent) {
-        WriteOutcome.Unknown(_) => { return Err("successor commit unknown; no retry"); }
-        WriteOutcome.NotCommitted(_, _) => { return Err("successor commit refused; no retry"); }
-        WriteOutcome.Committed(value) => value,
-    };
-    if receipt.operation.key != operation.key || receipt.operation.fingerprint != operation.fingerprint ||
-        receipt.target.key != name || receipt.target.region != "nomo-harness-successor-v1" || receipt.target.store != ["Rows"] {
-        return Err("successor receipt mismatch");
-    }
-    let durable = match receipt.durability { StorageDurability.SqliteWalFull() => true, _ => false };
-    if !durable { return Err("durable SQLite successor receipt required"); }
-    let version = match receipt.change { MemoryWriteChange.Written(value) => value,
-        _ => { return Err("successor write receipt required"); } };
-    let observed = match read(name) { Some(value) => value, None() => { return Err("successor write readback missing"); } };
-    if observed.key != name || observed.value != row || observed.version.opaque != version.opaque {
-        return Err("successor write readback mismatch");
-    }
-    return Ok(version);
+flow write(name: string, row: Record, condition: WriteCondition) -> Result<MemoryVersion, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+    return commit_native<Record>(Successors.Rows, Target { store = ["Rows"], region = "nomo-harness-successor-v1", key = name, label = "successor" }, row, condition);
 }
 
 flow row(ticket: Ticket, phase: string, body: string, usage: Ledger, resolved: bool) -> Record {

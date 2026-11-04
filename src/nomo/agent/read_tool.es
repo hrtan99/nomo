@@ -1,7 +1,8 @@
 module nomo.agent.read_tool;
 
 import nomo.model.model_tool_contract.{Session, Limits, Context};
-import nomo.tools.workspace.{read_file, read_wide, search_files, search_wide};
+import nomo.tools.workspace.{ReadOnlyRoot, StandardFiles, WideFiles, MultiFiles};
+import nomo.tools.read_capabilities.{FileReader, LiteralSearcher};
 import nomo.tools.read_contract.ReadTools;
 import nomo.agent.read_tool_controller.{run_loop_controller, run_private_loop_controller, run_private_work_loop_controller, run_chat_loop_controller, run_expanded_work_loop_controller, run_multi_chat_loop_controller};
 import nomo.harness.legacy_string_stages.LegacyChildModel;
@@ -32,62 +33,72 @@ agent WorkToolFinal(input: Context) -> string {
 @limits([Tokens(131072), ContextTokens(1000000)])
 agent WideWorkToolFinal(input: Context) -> string { return perform infer<string>(Prompt.new().system(Trusted(work_tool_system())).data(input)); }
 
-public flow run_loop(raw: string, allowed: Array<string>, limits: Limits, previous: Session) -> LoopTurn {
-    return run_loop_with(raw, allowed, limits, previous, false, false) with {
-        LegacyChildModel.infer(context) => { resume ToolModel.run(context); }
+spec ChildModel {
+    flow infer(self, context: Context) -> string ![];
+}
+type StandardModel = {};
+type MultiModel = {};
+type WorkModel = { wide: bool };
+impl StandardModel ~ ChildModel {
+    flow infer(self, context: Context) -> string ![] { return ToolModel.run(context); }
+}
+impl MultiModel ~ ChildModel {
+    flow infer(self, context: Context) -> string ![] { return MultiToolModel.run(context); }
+}
+impl WorkModel ~ ChildModel {
+    flow infer(self, context: Context) -> string ![] {
+        return if context.final_only { if self.wide { WideWorkToolFinal.run(context) } else { WorkToolFinal.run(context) } } else { WorkToolAction.run(context) };
+    }
+}
+enum LoopMode {
+    Public(limits: Limits, work: bool, inspect: bool),
+    Private(limits: Limits, work: bool),
+    Chat(limits: Limits, private_progress: bool),
+    Expanded(wide: bool),
+    Multi(private_progress: bool),
+}
+flow selected(mode: LoopMode, raw: string, allowed: Array<string>, previous: Session) -> LoopTurn {
+    return match mode {
+        LoopMode.Public(limits, work, inspect) => run_loop_controller(raw, allowed, limits, previous, work, inspect),
+        LoopMode.Private(limits, work) => if work { run_private_work_loop_controller(raw, allowed, limits, previous) } else { run_private_loop_controller(raw, allowed, limits, previous) },
+        LoopMode.Chat(limits, hidden) => run_chat_loop_controller(raw, allowed, limits, previous, hidden),
+        LoopMode.Expanded(wide) => run_expanded_work_loop_controller(raw, allowed, previous, wide),
+        LoopMode.Multi(hidden) => run_multi_chat_loop_controller(raw, allowed, previous, hidden),
     };
+}
+flow run_tools<F ~ FileReader<ReadOnlyRoot>, S ~ LiteralSearcher<ReadOnlyRoot>>(reader: F, searcher: S, mode: LoopMode, raw: string, allowed: Array<string>, previous: Session) -> LoopTurn {
+    return selected(mode, raw, allowed, previous) with {
+        ReadTools.read(name) => { resume reader.read(name); }
+        ReadTools.search(names, literal) => { resume searcher.search(names, literal); }
+    };
+}
+flow run_native<M ~ ChildModel, F ~ FileReader<ReadOnlyRoot>, S ~ LiteralSearcher<ReadOnlyRoot>>(model: M, reader: F, searcher: S, mode: LoopMode, raw: string, allowed: Array<string>, previous: Session) -> LoopTurn {
+    return run_tools(reader, searcher, mode, raw, allowed, previous) with {
+        LegacyChildModel.infer(context) => { resume model.infer(context); }
+    };
+}
+public flow run_loop(raw: string, allowed: Array<string>, limits: Limits, previous: Session) -> LoopTurn {
+    return run_native(StandardModel {}, StandardFiles {}, StandardFiles {}, LoopMode.Public(limits, false, false), raw, allowed, previous);
 }
 public flow run_work_loop(raw: string, allowed: Array<string>, limits: Limits, previous: Session) -> LoopTurn {
-    return run_loop_with(raw, allowed, limits, previous, true, false) with {
-        LegacyChildModel.infer(context) => { resume ToolModel.run(context); }
-    };
+    return run_native(StandardModel {}, StandardFiles {}, StandardFiles {}, LoopMode.Public(limits, true, false), raw, allowed, previous);
 }
-
-// Compatibility composition: callers may still supply the Model handler.
-// The reusable controller receives both operations without native bindings.
+// Compatibility composition leaves the model operation for its caller.
 public flow run_loop_with(raw: string, allowed: Array<string>, limits: Limits, previous: Session, work: bool, inspect_all: bool) -> LoopTurn {
-    return run_loop_controller(raw, allowed, limits, previous, work, inspect_all) with {
-        ReadTools.read(name) => { resume read_file(name); }
-        ReadTools.search(names, literal) => { resume search_files(names, literal); }
-    };
+    return run_tools(StandardFiles {}, StandardFiles {}, LoopMode.Public(limits, work, inspect_all), raw, allowed, previous);
 }
-
 public flow run_private_loop(raw: string, allowed: Array<string>, limits: Limits, previous: Session) -> LoopTurn {
-    return run_private_loop_controller(raw, allowed, limits, previous) with {
-        LegacyChildModel.infer(context) => { resume ToolModel.run(context); }
-        ReadTools.read(name) => { resume read_file(name); }
-        ReadTools.search(names, literal) => { resume search_files(names, literal); }
-    };
+    return run_native(StandardModel {}, StandardFiles {}, StandardFiles {}, LoopMode.Private(limits, false), raw, allowed, previous);
 }
-
 public flow run_private_work_loop(raw: string, allowed: Array<string>, limits: Limits, previous: Session) -> LoopTurn {
-    return run_private_work_loop_controller(raw, allowed, limits, previous) with {
-        LegacyChildModel.infer(context) => { resume ToolModel.run(context); }
-        ReadTools.read(name) => { resume read_file(name); }
-        ReadTools.search(names, literal) => { resume search_files(names, literal); }
-    };
+    return run_native(StandardModel {}, StandardFiles {}, StandardFiles {}, LoopMode.Private(limits, true), raw, allowed, previous);
 }
-
 public flow run_chat_loop(raw: string, allowed: Array<string>, limits: Limits, previous: Session, private_progress: bool) -> LoopTurn {
-    return run_chat_loop_controller(raw, allowed, limits, previous, private_progress) with {
-        LegacyChildModel.infer(context) => { resume ToolModel.run(context); }
-        ReadTools.read(name) => { resume read_file(name); }
-        ReadTools.search(names, literal) => { resume search_files(names, literal); }
-    };
+    return run_native(StandardModel {}, StandardFiles {}, StandardFiles {}, LoopMode.Chat(limits, private_progress), raw, allowed, previous);
 }
-
 public flow run_expanded_work_loop(raw: string, allowed: Array<string>, previous: Session, wide: bool) -> LoopTurn {
-    return run_expanded_work_loop_controller(raw, allowed, previous, wide) with {
-        LegacyChildModel.infer(context) => { resume if context.final_only { if wide { WideWorkToolFinal.run(context) } else { WorkToolFinal.run(context) } } else { WorkToolAction.run(context) }; }
-        ReadTools.read(name) => { resume read_wide(name); }
-        ReadTools.search(names, literal) => { resume search_wide(names, literal); }
-    };
+    return run_native(WorkModel { wide = wide }, WideFiles {}, WideFiles {}, LoopMode.Expanded(wide), raw, allowed, previous);
 }
-
 public flow run_multi_chat_loop(raw: string, allowed: Array<string>, previous: Session, private_progress: bool) -> LoopTurn {
-    return run_multi_chat_loop_controller(raw, allowed, previous, private_progress) with {
-        LegacyChildModel.infer(context) => { resume MultiToolModel.run(context); }
-        ReadTools.read(name) => { resume read_wide(name); }
-        ReadTools.search(names, literal) => { resume if names[0] == "*" { search_files(names, literal) } else { search_wide(names, literal) }; }
-    };
+    return run_native(MultiModel {}, WideFiles {}, MultiFiles {}, LoopMode.Multi(private_progress), raw, allowed, previous);
 }

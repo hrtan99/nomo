@@ -1,11 +1,13 @@
 module nomo.session.harness_checkpoint;
 
+import nomo.core.json.{encode as encode_json, string_fields};
+
 import std.text.{len, split, starts_with, to_string_i32, to_string_usize};
 import std.collections.len as count;
 import std.bytes.len as byte_count;
 import std.codec.text.utf8_encode;
-import std.json.{JsonValue, parse, stringify};
-import std.agent.message.Message;
+
+
 import nomo.core.text.printable;
 import nomo.core.conversation.{Event, State};
 import nomo.model.model_tool_contract.{Session, allowed_error};
@@ -48,15 +50,8 @@ public flow validate(saved: Checkpoint, requested: Identity) -> Result<Checkpoin
         exact.tools > maximum.tools || exact.scan > maximum.scan { return Err("checkpoint usage exceeds saved limits"); }
     let records = saved.records;
     if count(records) != record_count { return Err("invalid checkpoint record count"); }
-    var characters: usize = 0;
-    for event in records limit Iterations(13) {
-        if len(event.role) > 9 || len(event.kind) > 8 || len(event.name) > 8 || len(event.text) > 512 ||
-            !printable(event.role) || !printable(event.kind) || !printable(event.name) || !printable(event.text) {
-            return Err("invalid checkpoint record data");
-        }
-        characters = characters + len(event.name) + len(event.text);
-        if characters > 4096 { return Err("checkpoint record content exceeds bound"); }
-    }
+    let record_error = records_error(records, 4096, "checkpoint");
+    if record_error != "" { return Err(record_error); }
     if !same(records[0], "user", "request", "", saved.request) || !same(records[1], "main", "plan", "", records[1].text) ||
         !same(records[2], "main", "delegate", "child-1", saved.task) { return Err("invalid checkpoint planning records"); }
     let task = match decode_plan(records[1].text) { Ok(value) => value, Err(error) => { return Err(error); } };
@@ -152,13 +147,24 @@ public flow read_ledger(fields: Array<string>, offset: usize, label: string) -> 
     return Ok(Ledger { steps = values[0], calls = values[1], tokens = values[2], tools = values[3], scan = values[4] });
 }
 
-flow fields_error(fields: Array<string>) -> string {
-    if count(fields) > 80 { return "checkpoint string fields exceed bounds"; }
+public flow records_error(records: Array<Event>, maximum: usize, label: string) -> string {
     var characters: usize = 0;
-    for field in fields limit Iterations(80) {
-        if len(field) > 1024 { return "checkpoint string fields exceed bounds"; }
-        characters = characters + len(field);
-        if characters > 8192 { return "checkpoint string fields exceed bounds"; }
+    for event in records limit Iterations(18) {
+        if len(event.role) > 9 || len(event.kind) > 8 || len(event.name) > 8 || len(event.text) > 512 ||
+            !printable(event.role) || !printable(event.kind) || !printable(event.name) || !printable(event.text) { return "invalid " + label + " record data"; }
+        characters = characters + len(event.name) + len(event.text);
+        if characters > maximum { return label + " record content exceeds bound"; }
+    }
+    return "";
+}
+public flow fields_error(fields: Array<string>, successor: bool) -> string {
+    let error = (if successor { "successor" } else { "checkpoint" }) + " string fields exceed bounds";
+    if count(fields) > (if successor { 100 } else { 80 }) { return error; }
+    var characters: usize = 0; var index: usize = 0;
+    for field in fields limit Iterations(100) {
+        if len(field) > (if successor && index == 5 { 65536 } else { 1024 }) { return error; }
+        characters = characters + len(field); index = index + 1;
+        if characters > (if successor { 73728 } else { 8192 }) { return error; }
     }
     return "";
 }
@@ -175,22 +181,16 @@ public flow encode(saved: Checkpoint) -> Result<string, string> {
     for event in saved.records limit Iterations(13) {
         fields = fields.push(event.role); fields = fields.push(event.kind); fields = fields.push(event.name); fields = fields.push(event.text);
     }
-    let invalid_fields = fields_error(fields); if invalid_fields != "" { return Err(invalid_fields); }
-    let message = Message.new(fields);
-    let conversion: Option<Message<JsonValue>> = message.cast<JsonValue>();
-    let json = match conversion { Some(value) => value.body, None() => { return Err("checkpoint encoding conversion refused"); } };
-    let encoded = match stringify(json) { Ok(value) => value, Err(_) => { return Err("checkpoint JSON encoding refused"); } };
+    let invalid_fields = fields_error(fields, false); if invalid_fields != "" { return Err(invalid_fields); }
+    let encoded = match encode_json(fields, "checkpoint encoding conversion refused", "checkpoint JSON encoding refused") { Ok(value) => value, Err(error) => { return Err(error); } };
     if !framed(encoded, false) { return Err("checkpoint encoded bounds exceeded"); }
     return Ok(encoded);
 }
 
 public flow decode(raw: string) -> Result<Checkpoint, string> {
     if !framed(raw, false) { return Err("checkpoint encoded shape or bounds invalid"); }
-    let parsed = match parse(raw) { Ok(value) => value, Err(_) => { return Err("invalid checkpoint JSON"); } };
-    let message = Message.new(parsed);
-    let conversion: Option<Message<Array<string>>> = message.cast<Array<string>>();
-    let fields = match conversion { Some(value) => value.body, None() => { return Err("checkpoint fields must be strings"); } };
-    let invalid_fields = fields_error(fields); if invalid_fields != "" { return Err(invalid_fields); }
+    let fields = match string_fields(raw, "invalid checkpoint JSON", "checkpoint fields must be strings") { Ok(value) => value, Err(error) => { return Err(error); } };
+    let invalid_fields = fields_error(fields, false); if invalid_fields != "" { return Err(invalid_fields); }
     if count(fields) != 61 && count(fields) != 77 { return Err("invalid checkpoint field count"); }
     if fields[0] != "nomo-harness-checkpoint-v1" { return Err("unsupported checkpoint format"); }
     if fields[21] != "1" || fields[22] != "completed" || fields[23] != "true" { return Err("checkpoint is not completed and settled"); }

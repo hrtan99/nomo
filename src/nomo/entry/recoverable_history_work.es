@@ -5,48 +5,52 @@ import std.collections.len as count;
 import std.io.IOError as ConsoleError;
 import std.fs.IOError as FileError;
 import std.effects.Fs;
-import nomo.cli.harness_work_args.{Work, parse_recorded};
-import nomo.harness.harness_work_contract.Ledger;
-import nomo.harness.read_model_tools.{expanded_work_child_turn as work_child_turn};
-import nomo.harness.legacy_string_stages.{LegacyStringStages, LegacyEditStages};
-import nomo.harness.history_work_model.{plan, child, large_child, aggregate, read_main_mode, wide_plan, wide_aggregate};
-import nomo.harness.harness_tool_chat_contract.Previous;
-import nomo.entry.harness_work_entry.{prepare_expanded_unicode, finish_edit, finish_history_summary, expanded_ledger as ledger, expanded_stage as stage, simple_refused as refused, Pending, Failure, Completed, Summary};
+import nomo.cli.harness_work_args.parse_recorded;
+
+
+
+import nomo.harness.history_work_model.HistoryStages;
+
+import nomo.entry.harness_work_entry.{simple_refused as refused, Summary};
 import nomo.session.event_policy.{PolicyRoot, load as load_policy};
 import nomo.session.chat_history.load as load_legacy;
-import nomo.session.recoverable_chat_store.{load as load_chat, record_work};
-import nomo.session.recoverable_work_store.{admit, claim, finish, abandon as abandon_work, load as load_work};
-import nomo.session.recoverable_check_store.{plan as plan_check, load as load_check, abandon as abandon_check};
-import nomo.session.work_fact_events.capture;
+import nomo.session.recoverable_chat_store.{load as load_chat};
+import nomo.session.recoverable_work_store.{Ticket as WorkTicket, admit, claim, finish as finish_work, abandon as abandon_work, load as load_work};
+import nomo.session.recoverable_check_store.{plan as plan_check, load as load_check};
+
 import nomo.session.history_work_guard.inspect as inspect_legacy_work;
 import nomo.session.history_check_guard.inspect as inspect_legacy_check;
 import nomo.session.history_followup_guard.inspect as inspect_followup;
 import nomo.session.history_followup_check_guard.inspect as inspect_followup_check;
 import nomo.session.history_followup_edit_store.available as followup_edit_available;
-import nomo.session.edit_operation_store.{available, begin, complete};
-import nomo.entry.edit_coordinator.{Confirmed, confirm_current};
-import nomo.entry.edit_context.display;
-import nomo.tools.workspace.ReadOnlyRoot;
-import nomo.tools.edit_file.{EditableRoot, apply_wide as apply};
+import nomo.session.edit_operation_store.{Ticket as EditTicket, available, begin, complete};
+import nomo.core.conversation.Event;
+import nomo.session.edit_operation.Binding;
+import nomo.session.redaction.Policy;
+import nomo.session.check_lifecycle.FirstCheck;
+import nomo.application.check_contract.CheckLifecycle;
+import nomo.entry.work_controller.execute;
+import nomo.application.work_contract.{WorkStages, WorkModelStages, WorkPersistence, Run};
 
-flow prepare_history(input: Work, prior_request: string, previous: Previous, wide: bool) -> Result<Pending, Failure> {
-    let original = (value: string) => "";
-    let log = (name: string, state: Ledger) => stage(name, state, wide);
-    return prepare_expanded_unicode(input, original, log, wide) with {
-        LegacyStringStages.main(value) => { resume read_main_mode(value, prior_request, previous, wide); }
-        LegacyStringStages.child(task, files, selected) => { resume work_child_turn(task, files, selected, wide); }
-        LegacyEditStages.plan(value) => { resume if wide { wide_plan(value, prior_request, previous) } else { plan(value, prior_request, previous) }; }
-        LegacyEditStages.child(value) => { resume if wide { large_child(value, prior_request, previous) } else { child(value, prior_request, previous) }; }
-        LegacyEditStages.aggregate(value) => { resume if wide { wide_aggregate(value, prior_request, previous) } else { aggregate(value, prior_request, previous) }; }
-    };
-}
-flow summarize_history(value: Completed, prior_request: string, previous: Previous, wide: bool) -> Result<Summary, Failure> {
-    let log = (name: string, state: Ledger) => stage(name, state, wide);
-    return finish_history_summary(value, log) with {
-        LegacyEditStages.plan(item) => { resume if wide { wide_plan(item, prior_request, previous) } else { plan(item, prior_request, previous) }; }
-        LegacyEditStages.child(item) => { resume if wide { large_child(item, prior_request, previous) } else { child(item, prior_request, previous) }; }
-        LegacyEditStages.aggregate(item) => { resume if wide { wide_aggregate(item, prior_request, previous) } else { aggregate(item, prior_request, previous) }; }
-    };
+
+
+
+
+
+
+import nomo.tools.workspace.ReadOnlyRoot;
+import nomo.tools.edit_file.{EditableRoot};
+
+type FirstPersistence = { ticket: WorkTicket, redaction: Policy, binding: string };
+impl FirstPersistence ~ WorkPersistence<EditTicket, bool> {
+    flow begin(self, selected: Binding) -> Result<EditTicket, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+        match claim(self.ticket, self.redaction, self.binding) { Ok(_) => {} Err(error) => { return Err(error); } }
+        return begin(selected);
+    }
+    flow complete(self, ticket: EditTicket) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] { return complete(ticket); }
+    flow finish(self, edited: bool, summary: Summary, records: Array<Event>) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+        return finish_work(self.ticket, summary.answer, summary.state, records, self.redaction, self.binding);
+    }
 }
 
 public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read<PolicyRoot>, Fs.read<ReadOnlyRoot>, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {
@@ -73,32 +77,16 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
     println("RESERVED event work; interruption or uncertain effects cannot be retried automatically.");
     let prior_request = history.value.chat.last_request; let previous = history.value.chat.invocation.prior;
     let wide = ticket.frame.work.format == 3 || ticket.frame.work.format == 4 || ticket.frame.work.format == 6 || ticket.frame.work.format == 7;
-    let pending = match prepare_history(input, prior_request, previous, wide) { Ok(value) => value, Err(failure) => { ledger(failure.state, wide); return refused(failure.error); } };
-    let selected = match confirm_current(pending.selected, pending.prepared) { Ok(value) => value, Err(error) => { return refused(error); } };
-    match claim(ticket, policy, binding) { Ok(_) => {} Err(error) => { return refused(error); } }
-    let intent = match begin(selected) { Ok(value) => value, Err(error) => { return refused(error); } };
-    println("INTENT durable " + selected.id);
-    match apply(pending.prepared) { Ok(_) => {} Err(error) => { return refused(error); } }
-    match complete(intent) { Ok(_) => {} Err(error) => { return refused("edit may have completed; " + error); } }
-    println("APPLIED " + selected.id);
-    let confirmed = Confirmed { binding = selected, after = pending.prepared.proposal.after };
-    println("POST_EDIT context");
-    let completed = match finish_edit(pending, confirmed) { Ok(value) => value, Err(failure) => { return refused(failure.error); } };
-    println("POST_EDIT aggregate");
-    let summary = match summarize_history(completed, prior_request, previous, wide) { Ok(value) => value, Err(failure) => { return refused(failure.error); } };
-    println("POST_EDIT events");
-    let records = match capture(pending, confirmed, summary) { Ok(value) => value, Err(error) => { return refused("edit completed; " + error); } };
-    println("POST_EDIT persist");
-    match finish(ticket, summary.answer, summary.state, records, policy, binding) { Ok(_) => {} Err(error) => { return refused("edit completed; " + error); } }
-    match record_work(selected.id, records, policy, binding) { Ok(_) => {} Err(error) => { return refused("work saved; timeline incomplete: " + error); } }
-    display("FINAL ", summary.answer); println("SAVED event work facts; no grant or root identity is persisted.");
-    ledger(summary.state, wide); return 0;
+    let stages = HistoryStages { prior_request = prior_request, previous = previous, wide = wide };
+    let persistence = FirstPersistence { ticket = ticket, redaction = policy, binding = binding };
+    return execute<HistoryStages, EditTicket, bool, FirstPersistence>(stages, persistence, input, Run { redaction = policy, binding = binding, wide = wide, saved = "SAVED event work facts; no grant or root identity is persisted." });
 }
 
 public flow abandon(args: Array<string>) -> i32 ![Console, Memory, Fs.read<PolicyRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {
     if count(args) != 2 { return refused("recovery requires binding and operation ID"); }
     let policy = match load_policy() { Ok(value) => value, Err(error) => { return refused(error); } };
     let work = match load_work(policy, args[0]) { Ok(Some(value)) => value, _ => { return refused("interrupted work missing"); } };
-    let decision = if work.value.work.phase == "complete" { abandon_check(args[1], policy, args[0]) } else { abandon_work(args[1], policy, args[0]) };
+    let checks = FirstCheck { redaction = policy, binding = args[0] };
+    let decision = if work.value.work.phase == "complete" { checks.abandon(args[1]) } else { abandon_work(args[1], policy, args[0]) };
     match decision { Ok(_) => { println("RECORDED user decision: abandoned; interrupted outcome remains unknown; saved budgets are retained."); return 0; } Err(error) => { return refused(error); } }
 }

@@ -87,8 +87,8 @@ def ensure_cache(project_root):
 
 
 def etas_version():
-    version = os.environ.get('NOMO_ETAS_VERSION', '0.2.6')
-    if version != '0.2.6': raise ValueError('this Nomo revision requires ETAS 0.2.6; use an earlier Nomo revision for older ETAS')
+    version = os.environ.get('NOMO_ETAS_VERSION', '0.3.0')
+    if version != '0.3.0': raise ValueError('this Nomo revision requires ETAS 0.3.0; use an earlier Nomo revision for older ETAS')
     return version
 
 
@@ -115,16 +115,21 @@ def history_environment(state, workspace, context, version, root, overlay):
 
 
 def session_graph(fd, *, create=False):
-    graph=os.environ.get('NOMO_ETAS_GRAPH','026-20261103-a')
-    if graph not in ('026-20261103-a','026-v68'):raise ValueError('unknown ETAS graph; select 026-20261103-a or 026-v68')
-    saved=os.pread(fd,9,0)
-    if create and graph=='026-v68':
-        if saved:raise ValueError('new session graph identity already exists')
-        if os.pwrite(fd,b'026-v68\n',0)!=8:raise OSError('session graph identity write incomplete')
-        os.fsync(fd);saved=b'026-v68\n'
-    if saved not in (b'',b'026-v68\n'):raise ValueError('unrecognized session graph identity')
-    required='026-v68' if saved else '026-20261103-a'
-    if graph!=required:raise ValueError('session requires ETAS graph '+required+'; set NOMO_ETAS_GRAPH accordingly')
+    graph = os.environ.get('NOMO_ETAS_GRAPH', '030-pr67')
+    if graph != '030-pr67':
+        raise ValueError('this Nomo revision requires ETAS graph 030-pr67')
+    saved = os.pread(fd, 16, 0)
+    current = b'030-pr67\n'
+    if create:
+        if saved: raise ValueError('new session graph identity already exists')
+        if os.pwrite(fd, current, 0) != len(current): raise OSError('session graph identity write incomplete')
+        os.fsync(fd)
+        saved = current
+    # These markers record the session's original graph. 0.3.0 reads the old
+    # data formats without rewriting the marker or their versioned allowances.
+    if saved not in (b'', b'026-v68\n', b'030-20261104-a\n', current):
+        raise ValueError('unrecognized session graph identity')
+
 
 def check_history_lock(fd, *, verify=True):
     lock = os.fstat(fd)
@@ -218,7 +223,7 @@ def prepare(args, stdin_tty, stdout_tty):
         env['NOMO_WORK_CONTEXT_DIR'] = str(read_root)
     if deadline is not None:
         env['NOMO_MODEL_REQUEST_DEADLINE_MS'] = str(deadline)
-    overlay = {'0.2.2': 'config/etas-022-official-compose.yaml', '0.2.3': 'config/etas-023-official-compose.yaml', '0.2.4': 'config/etas-024-official-compose.yaml', '0.2.5': 'config/etas-025-official-compose.yaml', '0.2.6': 'config/etas-026-official-compose.yaml'}[version]
+    overlay = {'0.2.2': 'config/etas-022-official-compose.yaml', '0.2.3': 'config/etas-023-official-compose.yaml', '0.2.4': 'config/etas-024-official-compose.yaml', '0.2.5': 'config/etas-025-official-compose.yaml', '0.2.6': 'config/etas-026-official-compose.yaml', '0.3.0': 'config/etas-030-official-compose.yaml'}[version]
     compose = ['docker', 'compose', '--env-file', '/dev/null', '--file', str(ROOT / 'compose.yaml'),
                '--file', str(ROOT / overlay),
                '--file', str(ROOT / 'config/etas-runtime-cache-compose.yaml'),
@@ -507,10 +512,10 @@ def prepare_project_check(root, check, version=None, long_capture=False):
     workspace = owned_workspace(root)
     if not check or not check[0]:
         raise ValueError('provide a check command')
-    version = version if version is not None else os.environ.get('NOMO_ETAS_VERSION', '0.2.6')
-    if version not in ('0.2.2', '0.2.3', '0.2.4', '0.2.5', '0.2.6'):
-        raise ValueError('NOMO_ETAS_VERSION must be 0.2.2, 0.2.3, 0.2.4, 0.2.5 or 0.2.6')
-    overlay = {'0.2.2': 'config/etas-022-official-compose.yaml', '0.2.3': 'config/etas-023-official-compose.yaml', '0.2.4': 'config/etas-024-official-compose.yaml', '0.2.5': 'config/etas-025-official-compose.yaml', '0.2.6': 'config/etas-026-official-compose.yaml'}[version]
+    version = version if version is not None else os.environ.get('NOMO_ETAS_VERSION', '0.3.0')
+    if version not in ('0.2.2', '0.2.3', '0.2.4', '0.2.5', '0.2.6', '0.3.0'):
+        raise ValueError('NOMO_ETAS_VERSION must be 0.2.2, 0.2.3, 0.2.4, 0.2.5, 0.2.6 or 0.3.0')
+    overlay = {'0.2.2': 'config/etas-022-official-compose.yaml', '0.2.3': 'config/etas-023-official-compose.yaml', '0.2.4': 'config/etas-024-official-compose.yaml', '0.2.5': 'config/etas-025-official-compose.yaml', '0.2.6': 'config/etas-026-official-compose.yaml', '0.3.0': 'config/etas-030-official-compose.yaml'}[version]
     env = without_model(os.environ)
     env['NOMO_EDIT_WORKSPACE_DIR'] = str(workspace)
     env['NOMO_ETAS_VERSION'] = version
@@ -563,7 +568,7 @@ def prepare_edit_status(state_path, operation_id, path):
     ensure_cache(ROOT)
     env = without_model(os.environ)
     env['NOMO_EDIT_STATE_DIR'] = str(state)
-    overlay = {'0.2.2': 'config/etas-022-official-compose.yaml', '0.2.3': 'config/etas-023-official-compose.yaml', '0.2.4': 'config/etas-024-official-compose.yaml', '0.2.5': 'config/etas-025-official-compose.yaml', '0.2.6': 'config/etas-026-official-compose.yaml'}[version]
+    overlay = {'0.2.2': 'config/etas-022-official-compose.yaml', '0.2.3': 'config/etas-023-official-compose.yaml', '0.2.4': 'config/etas-024-official-compose.yaml', '0.2.5': 'config/etas-025-official-compose.yaml', '0.2.6': 'config/etas-026-official-compose.yaml', '0.3.0': 'config/etas-030-official-compose.yaml'}[version]
     command = [sys.executable, str(ROOT / 'scripts/terminal-transport.py'),
                'docker', 'compose', '--env-file', '/dev/null', '--file', str(ROOT / 'compose.yaml'),
                '--file', str(ROOT / overlay), '--file', str(ROOT / 'config/etas-runtime-cache-compose.yaml'),

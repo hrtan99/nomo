@@ -1,10 +1,12 @@
 module nomo.session.session_display;
 
+import nomo.core.json.encode as encode_json;
+
 import std.text.{len, split};
 import std.bytes.len as byte_count;
 import std.codec.text.utf8_encode;
-import std.json.{JsonValue, stringify};
-import std.agent.message.Message;
+
+
 import nomo.session.session_state.{Projection, Snapshot, Request, validate};
 
 flow hex(value: u8) -> string { return split("0123456789abcdef", "")[value + 1]; }
@@ -52,17 +54,16 @@ public flow display(projection: Projection) -> Result<string, string> {
         Ok(checked) => { if checked != projection { return Err("inconsistent display projection"); } },
         Err(_) => { return Err("invalid display projection"); }
     }
-    let message = Message.new(projection);
-    let converted: Option<Message<JsonValue>> = message.cast<JsonValue>();
-    let value = match converted { Some(item) => item.body, None() => { return Err("display conversion failed"); } };
-    let json = match stringify(value) { Ok(text) => text, Err(_) => { return Err("display JSON failed"); } };
-    if len(json) > 131072 || byte_count(utf8_encode(json)) > 131072 { return Err("display encoded limit exceeded"); }
-    var output = "";
-    var size: usize = 0;
+    let json = match encode_json(projection, "display conversion failed", "display JSON failed") { Ok(value) => value, Err(error) => { return Err(error); } };
+    return ascii_json(json, 131072, "display encoded limit exceeded", "display output limit exceeded");
+}
+
+public flow ascii_json(json: string, maximum: usize, encoded_error: string, display_error: string) -> Result<string, string> {
+    if len(json) > 131072 || byte_count(utf8_encode(json)) > 131072 { return Err(encoded_error); }
+    var output = ""; var size: usize = 0;
     for character in split(json, "") limit Iterations(131074) {
-        let fragment = escaped(character);
-        size = size + len(fragment);
-        if size > 131072 { return Err("display output limit exceeded"); }
+        let fragment = escaped(character); size = size + len(fragment);
+        if size > maximum { return Err(display_error); }
         output = output + fragment;
     }
     return Ok(output);

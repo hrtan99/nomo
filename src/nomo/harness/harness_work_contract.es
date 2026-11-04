@@ -1,11 +1,13 @@
 module nomo.harness.harness_work_contract;
 
+import nomo.core.json.encode as encode_json;
+
 import std.text.starts_with;
 import std.collections.len as count;
 import std.bytes.len as byte_count;
 import std.codec.text.utf8_encode;
-import std.json.{JsonValue, stringify};
-import std.agent.message.Message;
+
+
 import nomo.model.model_tool_contract.{Session, allowed_error};
 import nomo.model.read_protocol.decode_child as decode_reply;
 import nomo.core.read_text.bounded;
@@ -27,6 +29,32 @@ public type Evidence = { request: string, task: string, operation: string, files
     outcome: string, result: string, summary: string, allowed: Array<string>, ledger: ReadLedger };
 public type Context = { edit: EditContext, evidence: Evidence };
 public type Ledger = { read: ReadLedger, edit: EditLedger };
+
+public type WorkMaximum = { steps: i32, calls: i32, generation: i32, native_tokens: i32 };
+public type WorkParameters = { expanded: bool, large: bool };
+public spec WorkBudgetPolicy {
+    flow maximum(self) -> WorkMaximum ![];
+    flow parameters(self) -> WorkParameters ![];
+    flow reserve_edit(self, state: Ledger, call: bool) -> Result<Ledger, string> ![];
+}
+public type HistoricalWorkBudget = {};
+public type ExpandedWorkBudget = {};
+public type LargeWorkBudget = {};
+impl HistoricalWorkBudget ~ WorkBudgetPolicy {
+    flow maximum(self) -> WorkMaximum ![] { return WorkMaximum { steps = 13, calls = 7, generation = 47104, native_tokens = 196608 }; }
+    flow parameters(self) -> WorkParameters ![] { return WorkParameters { expanded = false, large = false }; }
+    flow reserve_edit(self, state: Ledger, call: bool) -> Result<Ledger, string> ![] { return bump_selected(state, call, false, false); }
+}
+impl ExpandedWorkBudget ~ WorkBudgetPolicy {
+    flow maximum(self) -> WorkMaximum ![] { return WorkMaximum { steps = 13, calls = 7, generation = 51200, native_tokens = 1335296 }; }
+    flow parameters(self) -> WorkParameters ![] { return WorkParameters { expanded = true, large = false }; }
+    flow reserve_edit(self, state: Ledger, call: bool) -> Result<Ledger, string> ![] { return bump_selected(state, call, false, false); }
+}
+impl LargeWorkBudget ~ WorkBudgetPolicy {
+    flow maximum(self) -> WorkMaximum ![] { return WorkMaximum { steps = 13, calls = 7, generation = 286720, native_tokens = 2811008 }; }
+    flow parameters(self) -> WorkParameters ![] { return WorkParameters { expanded = true, large = true }; }
+    flow reserve_edit(self, state: Ledger, call: bool) -> Result<Ledger, string> ![] { return bump_selected(state, call, true, true); }
+}
 
 public flow fresh() -> Ledger { return Ledger { read = read_fresh(), edit = edit_fresh() }; }
 
@@ -64,11 +92,18 @@ public flow ledger_error(state: Ledger) -> string {
 
 // Both reservations are created once, before any Model/File work. The read
 // ledger remains in this value while the existing edit ledger advances.
-public flow bump_edit(state: Ledger, call: bool) -> Result<Ledger, string> {
+flow bump_selected(state: Ledger, call: bool, wide: bool, large: bool) -> Result<Ledger, string> {
     let invalid = ledger_error(state); if invalid != "" { return Err(invalid); }
     if !read_complete(state.read) { return Err("edit tail requires settled read work"); }
-    let edit = match edit_bump(state.edit, call, (state.read.tokens == 16384 || state.read.tokens == 20480 || state.read.tokens == 143360), state.read.tokens == 143360) { Ok(value) => value, Err(error) => { return Err(error); } };
+    let edit = match edit_bump(state.edit, call, wide, large) { Ok(value) => value, Err(error) => { return Err(error); } };
     return Ok(Ledger { read = state.read, edit = edit });
+}
+// Compatibility selection for a settled historical ledger. Current preparation
+// receives its policy before any work and never infers it from running counters.
+public flow bump_edit(state: Ledger, call: bool) -> Result<Ledger, string> {
+    if state.read.tokens == 143360 { let policy = LargeWorkBudget {}; return policy.reserve_edit(state, call); }
+    if state.read.tokens == 16384 || state.read.tokens == 20480 { return bump_selected(state, call, true, false); }
+    let policy = HistoricalWorkBudget {}; return policy.reserve_edit(state, call);
 }
 
 flow selected_error(value: Evidence, complete: bool) -> string {
@@ -127,10 +162,7 @@ public flow context_error(value: Context) -> string {
     let evidence = evidence_error(value.evidence); if evidence != "" { return evidence; }
     let edit = edit_context_error(value.edit); if edit != "" { return edit; }
     if value.edit.request != value.evidence.request { return "read and edit original request changed"; }
-    let message = Message.new(value);
-    let conversion: Option<Message<JsonValue>> = message.cast<JsonValue>();
-    let data = match conversion { Some(item) => item.body, None() => { return "work context conversion refused"; } };
-    let encoded = match stringify(data) { Ok(item) => item, Err(_) => { return "work context JSON refused"; } };
+    let encoded = match encode_json(value, "work context conversion refused", "work context JSON refused") { Ok(value) => value, Err(error) => { return error; } };
     if byte_count(utf8_encode(encoded)) > 8388608 { return "work context exceeds 8388608 serialized UTF-8 bytes"; }
     return "";
 }

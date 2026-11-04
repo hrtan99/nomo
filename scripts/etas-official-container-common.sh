@@ -5,7 +5,7 @@ readonly project_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)
 label="${1:-}"
 case "$label" in
     012|022|023|024) target=etas-latest ;;
-    025|026) target="etas-${label}" ;;
+    025|026|030) target="etas-${label}" ;;
     *) echo 'Unsupported official Etas version.' >&2; exit 64 ;;
 esac
 shift

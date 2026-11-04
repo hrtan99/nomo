@@ -1,9 +1,9 @@
 module nomo.session.bundle_codec;
 
+import nomo.core.json.{encode as encode_json, string_fields};
+
 import std.collections.len as count;
 import std.text.len;
-import std.json.{JsonValue, parse, stringify};
-import std.agent.message.Message;
 import nomo.core.text.{printable, flat_string_frame};
 
 public type Bundle = { format: i32, session_id: string, save_id: string, bodies: Array<string> };
@@ -35,34 +35,14 @@ public flow encode(bundle: Bundle) -> Result<string, string> {
     for body in bundle.bodies limit Iterations(32) { fields = fields.push(body); }
     // Public checked Message.cast performs typed HostValue/JsonValue conversion;
     // these helpers issue no Host request and never attach a Session configuration.
-    let message = Message.new(fields);
-    let converted: Option<Message<JsonValue>> = message.cast<JsonValue>();
-    match converted {
-        Some(converted) => {
-            match stringify(converted.body) {
-                Ok(json) => {
-                    if !framed(json) { return Err("bundle encoded bounds exceeded"); }
-                    return Ok(json);
-                },
-                Err(_) => { return Err("bundle JSON encoding failed"); }
-            }
-        },
-        None => { return Err("bundle checked encoding failed"); }
-    }
+    let json = match encode_json(fields, "bundle checked encoding failed", "bundle JSON encoding failed") { Ok(value) => value, Err(error) => { return Err(error); } };
+    if !framed(json) { return Err("bundle encoded bounds exceeded"); }
+    return Ok(json);
 }
 
 public flow decode(json: string) -> Result<Bundle, string> {
     if !framed(json) { return Err("bundle encoded shape or bounds invalid"); }
-    let parsed = match parse(json) {
-        Ok(value) => value,
-        Err(_) => { return Err("bundle JSON invalid"); }
-    };
-    let message = Message.new(parsed);
-    let converted: Option<Message<Array<string>>> = message.cast<Array<string>>();
-    let fields = match converted {
-        Some(converted) => converted.body,
-        None => { return Err("bundle must contain only strings"); }
-    };
+    let fields = match string_fields(json, "bundle JSON invalid", "bundle must contain only strings") { Ok(value) => value, Err(error) => { return Err(error); } };
     if count(fields) < 3 || count(fields) > 35 { return Err("bundle field count invalid"); }
     if fields[0] != "nomo-session-bundle-v1" { return Err("unsupported bundle format"); }
     var bodies: Array<string> = [];

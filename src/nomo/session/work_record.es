@@ -1,10 +1,12 @@
 module nomo.session.work_record;
 
+import nomo.core.json.{encode as encode_json, string_fields};
+
 import std.text.{len, split, to_string_i32, to_string_usize};
 import std.collections.len as count;
 import std.bytes.len as byte_count;
 import std.codec.text.utf8_encode;
-import std.json.{JsonValue, parse, stringify};
+import std.json.parse;
 import std.agent.message.Message;
 import nomo.core.text.flat_string_frame;
 import nomo.session.edit_operation.{Binding, binding_error, same_binding};
@@ -42,19 +44,13 @@ flow fields_error(fields: Array<string>) -> string {
 
 flow decode(body: string) -> Result<Array<string>, string> {
     if !framed(body) { return Err("work record encoded framing or 65536-byte bound invalid"); }
-    let parsed = match parse(body) { Ok(value) => value, Err(_) => { return Err("invalid work record JSON"); } };
-    let message = Message.new(parsed);
-    let converted: Option<Message<Array<string>>> = message.cast<Array<string>>();
-    let fields = match converted { Some(value) => value.body, None() => { return Err("work record fields must be strings"); } };
+    let fields = match string_fields(body, "invalid work record JSON", "work record fields must be strings") { Ok(value) => value, Err(error) => { return Err(error); } };
     let invalid = fields_error(fields); if invalid != "" { return Err(invalid); }
     return Ok(fields);
 }
 
 flow outer_error(row: Record) -> string {
-    let message = Message.new(row);
-    let converted: Option<Message<JsonValue>> = message.cast<JsonValue>();
-    let data = match converted { Some(value) => value.body, None() => { return "work row conversion refused"; } };
-    let encoded = match stringify(data) { Ok(value) => value, Err(_) => { return "work row serialization refused"; } };
+    let encoded = match encode_json(row, "work row conversion refused", "work row serialization refused") { Ok(value) => value, Err(error) => { return error; } };
     if byte_count(utf8_encode(encoded)) > 131072 { return "work row exceeds 131072 serialized UTF-8 bytes"; }
     return "";
 }
@@ -83,10 +79,7 @@ flow encode(value: Captured, phase: string) -> Result<Record, string> {
     if count(value.evidence.allowed) > 2 || count(value.evidence.files) > 2 { return Err("legacy work record supports at most two files"); }
     let projection = fields(value, phase);
     let invalid = fields_error(projection); if invalid != "" { return Err(invalid); }
-    let message = Message.new(projection);
-    let converted: Option<Message<JsonValue>> = message.cast<JsonValue>();
-    let data = match converted { Some(item) => item.body, None() => { return Err("work body conversion refused"); } };
-    let body = match stringify(data) { Ok(item) => item, Err(_) => { return Err("work body encoding refused"); } };
+    let body = match encode_json(projection, "work body conversion refused", "work body encoding refused") { Ok(value) => value, Err(error) => { return Err(error); } };
     if !framed(body) { return Err("work record encoded bounds exceeded"); }
     let row = Record { format = 1, phase = phase, binding = value.binding, body = body };
     let outer = outer_error(row); if outer != "" { return Err(outer); }

@@ -6,7 +6,7 @@ import std.fs.IOError as FileError;
 import std.effects.Fs;
 import nomo.tools.workspace.ReadOnlyRoot;
 import nomo.tools.edit_file.{EditableRoot, apply};
-import nomo.tools.edit_encoding.{json, object};
+import nomo.tools.edit_encoding.json;
 import nomo.tools.edit_binding.bind;
 import nomo.cli.work_chain_args.{Input as ChainInput, parse};
 import nomo.cli.harness_work_args.Work;
@@ -135,7 +135,7 @@ flow execute_work(request: TurnRequest, inspect_plan: bool, inspect_all: bool, u
     if ticket.row.turn == 1 && !user_context { continue_hint(edit.id, edit.workspace, edit.path, value.allowed); }
     return DetailedWorkOutcome.Completed;
 }
-public flow execute_application(request: TurnRequest) -> WorkOutcome ![Console, Memory, Approval, Fs.read<ReadOnlyRoot>, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] { return project_outcome(execute_work(request, false, false, false)); }
+
 public flow execute_application_detailed(request: TurnRequest) -> DetailedWorkOutcome ![Console, Memory, Approval, Fs.read<ReadOnlyRoot>, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] { return execute_work(request, false, false, false); }
 flow run(args: Array<string>, continuing: bool, inspect_plan: bool, inspect_all: bool) -> i32 {
     let input = match parse(args, continuing) { Ok(value) => value, Err(error) => { return present_detailed_outcome(stopped(fresh(), error)); } };

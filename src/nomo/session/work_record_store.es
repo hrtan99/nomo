@@ -1,10 +1,11 @@
 module nomo.session.work_record_store;
 
-import std.memory.{get_entry, prepare_put, operation_ref, commit, WriteCondition, MemoryVersion, MemoryEntry,
-    WriteOutcome, MemoryWriteChange, StorageDurability, Missing, Match};
+import nomo.session.cas_rows.{CasRows, Target, Submission, submit_native, commit_once};
+
+import std.memory.{get_entry, WriteCondition, MemoryVersion, MemoryEntry, Missing, Match};
 import nomo.session.edit_operation.{selector_error, same_binding};
 import nomo.session.edit_operation_store.inspect as inspect_edit;
-import nomo.session.work_record.{Record, Captured, validate, confirm, same_record};
+import nomo.session.work_record.{Record, validate, confirm, same_record};
 
 public type Ticket = { row: Record, version: MemoryVersion };
 alias Schema = MemoryRegion<{ Rows: Store<string, Record> }>;
@@ -17,29 +18,17 @@ public flow available(id: string, workspace: string, path: string) -> Result<boo
     return match read(id) { None() => Ok(true), Some(_) => Err("work record key already exists; no adoption or retry") };
 }
 
+type RecordRows = { name: string };
+impl RecordRows ~ CasRows<Record> {
+    flow target(self) -> Target ![] { return Target { store = ["Rows"], region = "nomo-work-record-v1", key = self.name, label = "work record" }; }
+    flow submit(self, value: Record, condition: WriteCondition) -> Submission ![Memory, Error<StorageError>] { return submit_native(Work.Rows, self.name, value, condition); }
+    flow read(self) -> Result<Option<MemoryEntry<string, Record>>, string> { return Ok(get_entry(Work.Rows, self.name)); }
+    flow same(self, left: Record, right: Record) -> bool ![] { return same_record(left, right); }
+}
 flow write(row: Record, condition: WriteCondition) -> Result<MemoryVersion, string> ![Memory, Error<StorageError>, Error<IndexError>] {
     match validate(row) { Ok(_) => {} Err(error) => { return Err(error); } }
     let selected = key(row.binding.id);
-    let intent = prepare_put(Work.Rows, selected, row, condition);
-    let operation = operation_ref(intent);
-    let receipt = match commit(intent) {
-        WriteOutcome.Unknown(_) => { return Err("work record commit unknown; no retry"); }
-        WriteOutcome.NotCommitted(_, _) => { return Err("work record commit refused; no retry"); }
-        WriteOutcome.Committed(value) => value,
-    };
-    if receipt.operation.key != operation.key || receipt.operation.fingerprint != operation.fingerprint ||
-        receipt.target.key != selected || receipt.target.region != "nomo-work-record-v1" || receipt.target.store != ["Rows"] {
-        return Err("work record receipt mismatch; no retry");
-    }
-    let durable = match receipt.durability { StorageDurability.SqliteWalFull() => true, _ => false };
-    if !durable { return Err("durable SQLite work record receipt required"); }
-    let version = match receipt.change { MemoryWriteChange.Written(value) => value,
-        _ => { return Err("work record written-version receipt required"); } };
-    let observed = match read(row.binding.id) { Some(value) => value, None() => { return Err("work record readback missing; no retry"); } };
-    if observed.key != selected || !same_record(observed.value, row) || observed.version.opaque != version.opaque {
-        return Err("work record readback mismatch; no retry");
-    }
-    return Ok(version);
+    return commit_once<Record, RecordRows>(RecordRows { name = selected }, row, condition, None());
 }
 
 public flow publish(row: Record) -> Result<Ticket, string> ![Memory, Error<StorageError>, Error<IndexError>] {

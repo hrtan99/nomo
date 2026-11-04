@@ -13,10 +13,34 @@ import std.fs.IOError as FileError;
 import std.io.{println, IOError as ConsoleError};
 import std.effects.Fs;
 import nomo.tools.read_contract.{NomoRead, NomoSearch};
+import nomo.tools.read_capabilities.{FileReader, LiteralSearcher, SearchBounds};
 public import nomo.tools.read_contract.{Outcome, outcome, display};
 
 public type ReadOnlyRoot;
 impl ReadOnlyRoot ~ Region;
+public type StandardFiles = {};
+public type WideFiles = {};
+public type MultiFiles = {};
+impl StandardFiles ~ FileReader<ReadOnlyRoot> {
+    flow maximum_bytes(self) -> usize ![] { return 16384; }
+    flow read(self, name: string) -> Outcome { return read_bounded(name, self.maximum_bytes()); }
+}
+impl WideFiles ~ FileReader<ReadOnlyRoot> {
+    flow maximum_bytes(self) -> usize ![] { return 65536; }
+    flow read(self, name: string) -> Outcome { return read_bounded(name, self.maximum_bytes()); }
+}
+impl StandardFiles ~ LiteralSearcher<ReadOnlyRoot> {
+    flow bounds(self) -> SearchBounds ![] { return SearchBounds { files = 4, file_bytes = 16384, total_bytes = 16384, partial_results = false }; }
+    flow search(self, names: Array<string>, literal: string) -> Outcome { return search_files(names, literal); }
+}
+impl WideFiles ~ LiteralSearcher<ReadOnlyRoot> {
+    flow bounds(self) -> SearchBounds ![] { return SearchBounds { files = 4, file_bytes = 65536, total_bytes = 65536, partial_results = false }; }
+    flow search(self, names: Array<string>, literal: string) -> Outcome { return search_wide(names, literal); }
+}
+impl MultiFiles ~ LiteralSearcher<ReadOnlyRoot> {
+    flow bounds(self) -> SearchBounds ![] { return SearchBounds { files = 256, file_bytes = 65536, total_bytes = 4194304, partial_results = true }; }
+    flow search(self, names: Array<string>, literal: string) -> Outcome { return if names[0] == "*" { search_files(names, literal) } else { search_wide(names, literal) }; }
+}
 flow target(name: string) -> WorkspacePath<ReadOnlyRoot> {
     let checked: Result<WorkspacePath<ReadOnlyRoot>, IOError> = path<ReadOnlyRoot>(name);
     return match checked {
@@ -102,7 +126,7 @@ public flow read_file(name: string) -> Outcome ![Fs.read<ReadOnlyRoot>, Error<Fi
 }
 
 // Legacy scripted callers retain their original 2 KiB per-file scan reservation.
-public flow read_wide(name: string) -> Outcome ![Fs.read<ReadOnlyRoot>, Error<FileError>, Error<IndexError>] ~ NomoRead<ReadOnlyRoot> { return read_bounded(name, 65536); }
+
 
 public flow read_legacy(name: string) -> Outcome ![Fs.read<ReadOnlyRoot>, Error<FileError>, Error<IndexError>] ~ NomoRead<ReadOnlyRoot> {
     return read_bounded(name, 2048);

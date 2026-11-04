@@ -1,11 +1,13 @@
 module nomo.session.work_chain;
 
+import nomo.core.json.encode as encode_json;
+
 import std.text.{len, split, starts_with, to_string_usize};
 import std.collections.len as count;
 import std.bytes.len as byte_count;
 import std.codec.text.utf8_encode;
-import std.json.{JsonValue, stringify};
-import std.agent.message.Message;
+
+
 import nomo.session.edit_operation.selector_error;
 import nomo.model.model_tool_contract.{question_error, allowed_error};
 import nomo.session.work_record.Record as WorkRecord;
@@ -86,9 +88,7 @@ public flow parse_policy(raw: string) -> Result<Caps, string> {
 public flow policy(raw: string) -> Result<Caps, string> { return parse_policy(raw); }
 
 flow serialized(row: Record) -> Result<string, string> {
-    let message = Message.new(row); let converted: Option<Message<JsonValue>> = message.cast<JsonValue>();
-    let data = match converted { Some(value) => value.body, None() => { return Err("work-chain row conversion refused"); } };
-    let encoded = match stringify(data) { Ok(value) => value, Err(_) => { return Err("work-chain row serialization refused"); } };
+    let encoded = match encode_json(row, "work-chain row conversion refused", "work-chain row serialization refused") { Ok(value) => value, Err(error) => { return Err(error); } };
     if byte_count(utf8_encode(encoded)) > 262144 { return Err("work-chain row exceeds 262144 serialized UTF-8 bytes"); }
     return Ok(encoded);
 }

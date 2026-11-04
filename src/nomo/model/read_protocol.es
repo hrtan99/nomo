@@ -2,10 +2,10 @@ module nomo.model.read_protocol;
 
 import std.text.{len, split, trim};
 import std.collections.len as count;
-import std.json.parse;
 import std.codec.text.utf8_encode;
 import std.bytes.len as byte_count;
-import std.agent.message.Message;
+import nomo.application.decoder_contract.ReadPlanDecoder;
+import nomo.core.json.string_fields;
 import nomo.core.read_text.{safe, bounded};
 import nomo.model.model_tool_contract.{Action, candidate_error, read_selection_error};
 
@@ -40,9 +40,7 @@ flow frame(raw: string, maximum: usize) -> bool {
 
 flow fields(raw: string, maximum: usize) -> Result<Array<string>, string> {
     if !frame(raw, maximum) { return Err("expected bounded flat JSON string array"); }
-    let value = match parse(raw) { Ok(item) => item, Err(_) => { return Err("invalid JSON"); } };
-    let converted: Option<Message<Array<string>>> = Message.new(value).cast<Array<string>>();
-    return match converted { Some(item) => Ok(item.body), None() => Err("expected string fields") };
+    return string_fields(raw, "invalid JSON", "expected string fields");
 }
 
 // Call only after decoding a valid frame. Keep string bytes and escapes intact.
@@ -64,24 +62,17 @@ public flow compact_frame(raw: string) -> string {
     return result;
 }
 
-public flow decode_plan(raw: string) -> Result<string, string> {
-    let values = match fields(raw, 384) { Ok(item) => item, Err(error) => { return Err(error); } };
-    if count(values) != 2 || values[0] != "delegate" || !bounded(values[1], 128) {
-        return Err("invalid bounded delegated task");
+public type Utf8ReadPlan = { work: bool };
+impl Utf8ReadPlan ~ ReadPlanDecoder {
+    flow decode(self, raw: string) -> Result<string, string> {
+        let values = match fields(raw, if self.work { 4096 } else { 384 }) { Ok(item) => item, Err(error) => { return Err(error); } };
+        if count(values) != 2 || values[0] != "delegate" || !bounded(values[1], if self.work { 512 } else { 128 }) { return Err("invalid bounded delegated task"); }
+        return Ok(values[1]);
     }
-    return Ok(values[1]);
 }
+public flow decode_plan(raw: string) -> Result<string, string> { let decoder = Utf8ReadPlan { work = false }; return decoder.decode(raw); }
+public flow decode_work_plan(raw: string) -> Result<string, string> { let decoder = Utf8ReadPlan { work = true }; return decoder.decode(raw); }
 
-// Work can carry a longer delegation while the original read/chat limit stays 128 bytes.
-public flow decode_work_plan(raw: string) -> Result<string, string> {
-    let values = match fields(raw, 4096) { Ok(item) => item, Err(error) => { return Err(error); } };
-    if count(values) != 2 || values[0] != "delegate" || !bounded(values[1], 512) {
-        return Err("invalid bounded delegated task");
-    }
-    return Ok(values[1]);
-}
-
-// Classify only the violated bound; do not expose the rejected response.
 public flow work_plan_rejection(raw: string) -> string {
     let values = match fields(raw, 4096) { Ok(item) => item, Err(_) => { return "unknown"; } };
     if count(values) != 2 || values[0] != "delegate" { return "unknown"; }

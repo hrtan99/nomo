@@ -1,7 +1,7 @@
 module nomo.session.recoverable_chat_store;
 
-import std.memory.{get_entry, prepare_put, operation_ref, commit, MemoryEntry, MemoryVersion,
-    WriteCondition, WriteOutcome, MemoryWriteChange, StorageDurability, Missing, Match};
+import nomo.session.cas_rows.{CasRows, Target, Submission, submit_native, commit_once};
+import std.memory.{get_entry, commit, MemoryEntry, MemoryVersion, WriteCondition, Missing, Match};
 import nomo.session.chat_session_contract.{Session, fresh_events, invalid as invalid_chat, begin, complete, extend};
 import nomo.harness.harness_tool_chat_contract.TurnResult;
 import nomo.session.redaction.{Policy, policy_error, text as redact};
@@ -53,28 +53,21 @@ public flow load(policy: Policy, binding: string) -> Result<Option<MemoryEntry<s
     return Ok(entry);
 }
 
+type ChatRows = { redaction: Policy, binding: string };
+impl ChatRows ~ CasRows<Frame> {
+    flow target(self) -> Target ![] { return Target { store = ["Rows"], region = "nomo-recoverable-chat-v1", key = "latest", label = "recoverable chat" }; }
+    flow submit(self, value: Frame, condition: WriteCondition) -> Submission ![Memory, Error<StorageError>] { return submit_native(Frames.Rows, "latest", value, condition); }
+    flow read(self) -> Result<Option<MemoryEntry<string, Frame>>, string> { return load(self.redaction, self.binding); }
+    flow same(self, left: Frame, right: Frame) -> bool ![] { return left == right; }
+}
 flow write(value: Frame, expected: Option<MemoryEntry<string, Frame>>, policy: Policy, binding: string) -> Result<MemoryVersion, string> ![Memory, Error<StorageError>, Error<IndexError>] {
     let error = frame_error(value, policy, binding); if error != "" { return Err(error); }
     let observed = match load(policy, binding) { Ok(item) => item, Err(problem) => { return Err(problem); } };
     if observed != expected { return Err("recoverable chat changed; no retry"); }
     let condition: WriteCondition = match expected { Some(item) => Match(item.version), None() => Missing };
-    let intent = prepare_put(Frames.Rows, "latest", value, condition); let operation = operation_ref(intent);
-    let receipt = match commit(intent) {
-        WriteOutcome.Unknown(_) => { return Err("recoverable chat commit unknown; no retry"); }
-        WriteOutcome.NotCommitted(_, _) => { return Err("recoverable chat commit refused; no retry"); }
-        WriteOutcome.Committed(item) => item,
-    };
-    if receipt.operation.key != operation.key || receipt.operation.fingerprint != operation.fingerprint ||
-        receipt.target.key != "latest" || receipt.target.region != "nomo-recoverable-chat-v1" || receipt.target.store != ["Rows"] {
-        return Err("recoverable chat receipt mismatch; no retry");
-    }
-    let durable = match receipt.durability { StorageDurability.SqliteWalFull() => true, _ => false };
-    if !durable { return Err("durable SQLite receipt required"); }
-    let version = match receipt.change { MemoryWriteChange.Written(item) => item, _ => { return Err("recoverable chat version missing"); } };
-    let after = match load(policy, binding) { Ok(Some(item)) => item, _ => { return Err("recoverable chat readback missing"); } };
-    if after.value != value || after.version.opaque != version.opaque { return Err("recoverable chat readback mismatch; no retry"); }
-    match expected { Some(item) => { if item.version.opaque == version.opaque { return Err("recoverable chat version did not change"); } } None() => {} }
-    return Ok(version);
+    let rows = ChatRows { redaction = policy, binding = binding };
+    let previous = match expected { Some(item) => Some(item.version), None() => None() };
+    return commit_once<Frame, ChatRows>(rows, value, condition, previous);
 }
 
 public flow create(policy: Policy, binding: string) -> Result<MemoryVersion, string> ![Memory, Error<StorageError>, Error<IndexError>] {

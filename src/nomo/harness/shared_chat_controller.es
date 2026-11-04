@@ -1,27 +1,29 @@
 module nomo.harness.shared_chat_controller;
 
-import std.io.println;
+import nomo.model.harness_progress.{HarnessProgress, ProgressSink};
+import nomo.model.conversation_output.{ConversationOutput, ConversationSink};
+import nomo.agent.console_progress.ConsoleProgress;
+import nomo.agent.console_events.{PublicHarnessEvents, RedactedHarnessEvents};
 import std.text.to_string_i32;
 import nomo.core.conversation.{Event, State};
 import nomo.model.model_tool_contract.{question_error, allowed_error, candidate_error};
 import nomo.harness.harness_model_contract.{bounded, decode_plan};
-import nomo.harness.harness_tool_contract.{Ledger, fresh, bump, settle, numbers};
-import nomo.harness.harness_tool_chat_contract.{Previous, Context, Invocation, LocalTurn, TurnResult, Completed, empty, prior_error,
-    context_error, seed, inspect_turn, turn_error, combine};
+import nomo.harness.harness_tool_contract.{Ledger, fresh, numbers};
+import nomo.harness.chat_budget_policy.{ChatBudgetPolicy, SelectedBudget, select};
+import nomo.harness.harness_tool_chat_contract.{Previous, Context, Invocation, LocalTurn, TurnResult, Completed, empty,
+    context_error, seed, inspect_turn, combine};
 import nomo.harness.legacy_chat_stages.LegacyChatStages;
 import nomo.model.read_protocol.question_error as unicode_question_error;
 import nomo.model.read_protocol.decode_work_plan as unicode_decode_plan;
 import nomo.core.read_text.bounded as unicode_bounded;
-import nomo.harness.read_tool_chat_contract.prior_error as unicode_prior_error;
+
 import nomo.harness.read_tool_chat_contract.context_error as unicode_context_error;
-import nomo.harness.read_tool_chat_contract.inspect_turn as unicode_inspect_turn;
-import nomo.harness.read_tool_chat_contract.turn_error as unicode_turn_error;
-import nomo.harness.read_tool_chat_contract.{is_extended, extended_turn_error, extended_combine};
-import nomo.harness.read_tool_chat_contract.{session_maximum, session_turn_error, session_combine, multi_maximum, multi_wide_maximum, multi_large_maximum, multi_turn_error, multi_combine, multi_bump, multi_settle, inspect_multi_turn};
+import nomo.harness.read_tool_chat_contract.{inspect_turn as unicode_inspect_turn, inspect_multi_turn};
+
 
 flow refused(usage: Ledger, error: string, resolved: bool) -> LocalTurn {
-    println("REFUSED " + error);
-    if !resolved { println("RESERVATION child-1 unresolved=true; returned child metadata refused"); }
+    perform HarnessProgress.write("REFUSED " + error);
+    if !resolved { perform HarnessProgress.write("RESERVATION child-1 unresolved=true; returned child metadata refused"); }
     return LocalTurn { status = 1, usage = usage, selected = empty(), resolved = resolved, completed = None() };
 }
 
@@ -42,42 +44,33 @@ flow total(before: Ledger, local: Ledger) -> Ledger {
         tools = before.tools + local.tools, scan = before.scan + local.scan };
 }
 
-flow stage(turn: i32, phase: string, before: Ledger, local: Ledger, multi: bool, wide: bool, large: bool) -> unit {
-    var steps: i32 = 0;
-    if phase == "plan" { steps = if multi { 10 } else { 6 }; }
-    if phase == "child" { steps = if multi { 9 } else { 5 }; }
-    let calls = if phase == "aggregate" { 0 } else { if multi { 5 } else { 3 } };
-    let tools = if phase == "aggregate" { 0 } else { if multi { 3 } else { 1 } };
-    println("TURN " + to_string_i32(turn) + " STAGE " + phase + " " + numbers(total(before, local)) +
-        " reserved_steps=" + to_string_i32(steps) + " reserved_calls=" + to_string_i32(calls) +
-        " reserved_tokens=" + to_string_i32(if multi && phase != "aggregate" { if large { 147456 } else { if wide { 20480 } else { 18432 } } } else { calls * 2048 }) + " reserved_tools=" + to_string_i32(tools) +
-        " reserved_scan=" + to_string_i32(tools * if multi { 4194560 } else { 16384 }));
+flow stage<P ~ ChatBudgetPolicy>(policy: P, turn: i32, phase: string, before: Ledger, local: Ledger) -> unit {
+    let pending = policy.pending(phase);
+    perform HarnessProgress.write("TURN " + to_string_i32(turn) + " STAGE " + phase + " " + numbers(total(before, local)) +
+        " reserved_steps=" + to_string_i32(pending.steps) + " reserved_calls=" + to_string_i32(pending.calls) +
+        " reserved_tokens=" + to_string_i32(pending.tokens) + " reserved_tools=" + to_string_i32(pending.tools) +
+        " reserved_scan=" + to_string_i32(pending.scan));
     if phase == "child" {
-        println(if multi { if large { "RESERVATION child-1 steps=7 calls=4 tokens=16384 tools=3 scan=12583680 tail_steps=2 tail_calls=1 tail_tokens=131072 unresolved=true" } else { if wide { "RESERVATION child-1 steps=7 calls=4 tokens=16384 tools=3 scan=12583680 tail_steps=2 tail_calls=1 tail_tokens=4096 unresolved=true" } else { "RESERVATION child-1 steps=7 calls=4 tokens=16384 tools=3 scan=12583680 tail_steps=2 tail_calls=1 tail_tokens=2048 unresolved=true" } } } else { "RESERVATION child-1 steps=3 calls=2 tokens=4096 tools=1 scan=16384 tail_steps=2 tail_calls=1 tail_tokens=2048 unresolved=true" });
+        perform HarnessProgress.write("RESERVATION child-1 " + numbers(policy.child_pending()) + " tail_steps=2 tail_calls=1 tail_tokens=" + to_string_i32(policy.parent_tokens()) + " unresolved=true");
     }
 }
 
 // The invocation supplies cumulative usage and a validated successful selection.
 // Fresh local counters are a subledger of the already checked global reservation.
-flow execute(request: string, allowed: Array<string>, prior: Previous, before: Ledger, turn: i32, unicode: bool, private_progress: bool, multi: bool, wide: bool, large: bool) -> LocalTurn {
+flow execute<P ~ ChatBudgetPolicy>(policy: P, request: string, allowed: Array<string>, prior: Previous, before: Ledger, turn: i32, unicode: bool, multi: bool) -> LocalTurn {
     var state = fresh();
-    if turn < 1 || turn > 48 || (turn == 1 && prior.task != "") || (turn > 1 && prior.task == "") {
-        return refused(state, "invalid turn selection", true);
-    }
     let invalid = if unicode { unicode_question_error(request) } else { question_error(request) }; if invalid != "" { return refused(state, invalid, true); }
     let paths = if unicode { candidate_error(allowed) } else { allowed_error(allowed) }; if paths != "" { return refused(state, paths, true); }
-    let previous = if unicode { unicode_prior_error(prior) } else { prior_error(prior) }; if previous != "" { return refused(state, previous, true); }
     let plan = Context { phase = "plan", request = request, task = "", result = "", tool = "", outcome = "", allowed = allowed, prior = prior };
     let invalid_plan = if unicode { unicode_context_error(plan) } else { context_error(plan) }; if invalid_plan != "" { return refused(state, invalid_plan, true); }
-    state = match if multi { multi_bump(state, true, wide, large) } else { bump(state, true) } { Ok(value) => value, Err(error) => { return refused(state, error, true); } };
-    stage(turn, "plan", before, state, multi, wide, large);
+    state = match policy.reserve_stage(state, true) { Ok(value) => value, Err(error) => { return refused(state, error, true); } };
+    stage(policy, turn, "plan", before, state);
     let raw = perform LegacyChatStages.main(plan);
     let decoded = if unicode { unicode_decode_plan(raw) } else { decode_plan(raw) };
     let task = match decoded { Ok(value) => value, Err(error) => { return refused(state, error, true); } };
-    state = match if multi { multi_bump(state, false, wide, large) } else { bump(state, false) } { Ok(value) => value, Err(error) => { return refused(state, error, true); } };
-    if private_progress { println("EVENT main -> child-1 request child-1: [REDACTED]"); }
-    else { println("EVENT main -> child-1 request child-1: " + task); }
-    stage(turn, "child", before, state, multi, wide, large);
+    state = match policy.reserve_stage(state, false) { Ok(value) => value, Err(error) => { return refused(state, error, true); } };
+    perform ConversationOutput.publish(Event { role = "main -> child-1", kind = "request", name = "child-1", text = task });
+    stage(policy, turn, "child", before, state);
     let child = perform LegacyChatStages.child(task, allowed, seed(request, prior), multi);
     let inspected = if multi { inspect_multi_turn(child.state, child.status, request, task, allowed, prior) } else { if unicode { unicode_inspect_turn(child.state, child.status, request, task, allowed, prior) }
         else { inspect_turn(child.state, child.status, request, task, allowed, prior) } };
@@ -85,62 +78,70 @@ flow execute(request: string, allowed: Array<string>, prior: Previous, before: L
         Ok(value) => value, Err(error) => { return refused(state, error, false); }
     };
     if child.state.calls != 0 {
-        state = match if multi { multi_settle(state, child.state, wide, large) } else { settle(state, child.state) } { Ok(value) => value, Err(error) => { return refused(state, error, false); } };
+        state = match policy.settle_child(state, child.state) { Ok(value) => value, Err(error) => { return refused(state, error, false); } };
     }
-    println("SETTLED child-1 " + numbers(total(before, state)) + " released_steps=" + to_string_i32((if multi { 9 } else { 5 }) - state.steps) +
-        " released_calls=" + to_string_i32((if multi { 5 } else { 3 }) - state.calls) + " released_tokens=" + to_string_i32((if multi { if large { 147456 } else { if wide { 20480 } else { 18432 } } } else { 6144 }) - state.tokens) +
-        " released_tools=" + to_string_i32((if multi { 3 } else { 1 }) - state.tools) + " released_scan=" + to_string_i32((if multi { 12583680 } else { 16384 }) - state.scan) + " unresolved=false");
+    let pending = policy.pending("child");
+    perform HarnessProgress.write("SETTLED child-1 " + numbers(total(before, state)) + " released_steps=" + to_string_i32(pending.steps - state.steps) +
+        " released_calls=" + to_string_i32(pending.calls - state.calls) + " released_tokens=" + to_string_i32(pending.tokens - state.tokens) +
+        " released_tools=" + to_string_i32(pending.tools - state.tools) + " released_scan=" + to_string_i32(pending.scan - state.scan) + " unresolved=false");
     if child.status != 0 { return refused(state, "child returned failure; no aggregation", true); }
     if !(if unicode { unicode_bounded(observed.result, 256) } else { bounded(observed.result, 256) }) { return refused(state, "invalid bounded child result", true); }
-    if private_progress { println("EVENT child-1 -> main result child-1: [REDACTED]"); }
-    else { println("EVENT child-1 -> main result child-1: " + observed.result); }
-    state = match if multi { multi_bump(state, false, wide, large) } else { bump(state, false) } { Ok(value) => value, Err(error) => { return refused(state, error, true); } };
-    if private_progress { println("EVENT main -> main consume child-1: [REDACTED]"); }
-    else { println("EVENT main -> main consume child-1: " + observed.result); }
+    perform ConversationOutput.publish(Event { role = "child-1 -> main", kind = "result", name = "child-1", text = observed.result });
+    state = match policy.reserve_stage(state, false) { Ok(value) => value, Err(error) => { return refused(state, error, true); } };
+    perform ConversationOutput.publish(Event { role = "main -> main", kind = "consume", name = "child-1", text = observed.result });
     if observed.tool != "" {
-        if private_progress { println("EVENT main -> main tool " + observed.tool + ": [REDACTED]"); }
-        else { println("EVENT main -> main tool " + observed.tool + ": " + observed.outcome); }
+        perform ConversationOutput.publish(Event { role = "main -> main", kind = "tool", name = observed.tool, text = observed.outcome });
     }
     let aggregate = Context { phase = "aggregate", request = request, task = task, result = observed.result,
         tool = observed.tool, outcome = observed.outcome, allowed = allowed, prior = prior };
     let invalid_aggregate = if unicode { unicode_context_error(aggregate) } else { context_error(aggregate) }; if invalid_aggregate != "" { return refused(state, invalid_aggregate, true); }
-    state = match if multi { multi_bump(state, true, wide, large) } else { bump(state, true) } { Ok(value) => value, Err(error) => { return refused(state, error, true); } };
-    stage(turn, "aggregate", before, state, multi, wide, large);
+    state = match policy.reserve_stage(state, true) { Ok(value) => value, Err(error) => { return refused(state, error, true); } };
+    stage(policy, turn, "aggregate", before, state);
     let answer = perform LegacyChatStages.main(aggregate);
     if !(if unicode { unicode_bounded(answer, 512) } else { bounded(answer, 512) }) { return refused(state, "invalid bounded final answer", true); }
-    println("FINAL " + answer);
+    perform HarnessProgress.write("FINAL " + answer);
     let selected = Previous { task = task, result = observed.result, tool = observed.tool, outcome = observed.outcome, answer = answer };
     return LocalTurn { status = 0, usage = state, selected = selected, resolved = true,
         completed = Some(completed(request, raw, selected, child.state.history)) };
 }
 
-flow run_mode(request: string, allowed: Array<string>, invocation: Invocation, unicode: bool, private_progress: bool) -> TurnResult {
-    let large = unicode && invocation.maximum == multi_large_maximum(48);
-    let wide = large || (unicode && (invocation.maximum == multi_wide_maximum(2) || invocation.maximum == multi_wide_maximum(32) || invocation.maximum == multi_wide_maximum(48)));
-    let multi = wide || (unicode && (invocation.maximum == multi_maximum(2) || invocation.maximum == multi_maximum(32)));
-    let session = unicode && invocation.maximum == session_maximum();
-    let extended = unicode && is_extended(invocation.maximum);
-    let invalid = if multi { multi_turn_error(invocation, if large || invocation.maximum == multi_wide_maximum(48) { 48 } else { if invocation.maximum == multi_maximum(32) || invocation.maximum == multi_wide_maximum(32) { 32 } else { 2 } }) } else { if session { session_turn_error(invocation) } else { if extended { extended_turn_error(invocation) } else { if unicode { unicode_turn_error(invocation) } else { turn_error(invocation) } } } };
-    if invalid != "" { println("REFUSED " + invalid); return TurnResult { status = 1, state = invocation, resolved = true, completed = None() }; }
-    let last_admission = if large || invocation.maximum == multi_wide_maximum(48) { 47 } else { if multi && (invocation.maximum == multi_maximum(32) || invocation.maximum == multi_wide_maximum(32)) { 31 } else { if session { 31 } else { if extended { 3 } else { 1 } } } };
+flow run_policy<P ~ ChatBudgetPolicy>(policy: P, request: string, allowed: Array<string>, invocation: Invocation, unicode: bool, multi: bool) -> TurnResult {
+    let invalid = policy.validate_invocation(invocation);
+    if invalid != "" { perform HarnessProgress.write("REFUSED " + invalid); return TurnResult { status = 1, state = invocation, resolved = true, completed = None() }; }
+    let last_admission = policy.turn_limit() - 1;
     if invocation.admitted < 0 || invocation.admitted > last_admission {
-        println("REFUSED turn limit reached"); return TurnResult { status = 1, state = invocation, resolved = true, completed = None() };
+        perform HarnessProgress.write("REFUSED turn limit reached"); return TurnResult { status = 1, state = invocation, resolved = true, completed = None() };
     }
     let turn = invocation.admitted + 1;
-    let local = execute(request, allowed, invocation.prior, invocation.usage, turn, unicode, private_progress, multi, wide, large);
+    let local = execute(policy, request, allowed, invocation.prior, invocation.usage, turn, unicode, multi);
     if !local.resolved { return TurnResult { status = 1, state = invocation, resolved = false, completed = None() }; }
-    let combined = if multi { multi_combine(invocation.usage, local.usage, invocation.maximum) } else { if session { session_combine(invocation.usage, local.usage) } else { if extended { extended_combine(invocation.usage, local.usage) } else { combine(invocation.usage, local.usage, invocation.maximum) } } };
+    let combined = policy.combine(invocation.usage, local.usage);
     let usage = match combined {
-        Ok(value) => value, Err(error) => { println("REFUSED " + error); return TurnResult { status = 1, state = invocation, resolved = false, completed = None() }; }
+        Ok(value) => value, Err(error) => { perform HarnessProgress.write("REFUSED " + error); return TurnResult { status = 1, state = invocation, resolved = false, completed = None() }; }
     };
     let next = Invocation { usage = usage, maximum = invocation.maximum, admitted = turn, prior = local.selected };
     return TurnResult { status = local.status, state = next, resolved = true, completed = local.completed };
 }
 
+flow run_mode(request: string, allowed: Array<string>, invocation: Invocation, unicode: bool) -> TurnResult {
+    return match select(invocation, unicode) {
+        SelectedBudget.Single(policy) => run_policy(policy, request, allowed, invocation, unicode, false),
+        SelectedBudget.Multi(policy) => run_policy(policy, request, allowed, invocation, unicode, true),
+    };
+}
+
 // User-facing final answers are unchanged; progress omits arbitrary tool/task text.
 public flow run_shared_turn(request: string, allowed: Array<string>, invocation: Invocation, unicode: bool) -> TurnResult {
-    return run_mode(request, allowed, invocation, unicode, false);
+    return run_output(PublicHarnessEvents {}, request, allowed, invocation, unicode);
 }
 public flow run_private_turn(request: string, allowed: Array<string>, invocation: Invocation, unicode: bool) -> TurnResult {
-    return run_mode(request, allowed, invocation, unicode, true);
+    return run_output(RedactedHarnessEvents {}, request, allowed, invocation, unicode);
+}
+
+flow run_output<S ~ ConversationSink>(sink: S, request: string, allowed: Array<string>, invocation: Invocation, unicode: bool) -> TurnResult {
+    let progress = ConsoleProgress {};
+    return run_mode(request, allowed, invocation, unicode) with {
+        ConversationOutput.publish(event) => { resume sink.publish(event); }
+        HarnessProgress.write(line) => { resume progress.write(line); }
+    };
 }

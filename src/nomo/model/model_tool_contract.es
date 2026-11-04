@@ -2,8 +2,9 @@ module nomo.model.model_tool_contract;
 
 import std.text.{len, trim, split};
 import std.collections.len as count;
-import std.json.{JsonValue, parse};
+import std.json.JsonValue;
 import std.agent.message.Message;
+import nomo.core.json.{FieldError, decode_fields as json_fields};
 import nomo.core.text.{printable, context_json_error};
 import nomo.core.read_text.search_literal;
 import nomo.harness.model_plan_diagnostic.response_error;
@@ -93,10 +94,11 @@ public flow decode_reply(raw: string, allowed: Array<string>, final_only: bool) 
     let invalid = allowed_error(allowed);
     if invalid != "" { return Err(invalid); }
     if !framed(raw) { return Err("expected bounded flat single-line JSON string array"); }
-    let parsed = match parse(raw) { Ok(value) => value, Err(_) => { return Err("invalid action JSON"); } };
-    let message = Message.new(parsed);
-    let conversion: Option<Message<Array<string>>> = message.cast<Array<string>>();
-    let fields = match conversion { Some(value) => value.body, None() => { return Err("action fields must be strings"); } };
+    let fields = match json_fields(raw) {
+        Ok(value) => value,
+        Err(FieldError.Json) => { return Err("invalid action JSON"); }
+        Err(FieldError.Shape) => { return Err("action fields must be strings"); }
+    };
     if count(fields) < 2 || count(fields) > 4 { return Err("invalid action field count"); }
     if fields[0] == "final" {
         if count(fields) != 2 || len(fields[1]) == 0 || len(fields[1]) > 512 ||
@@ -129,9 +131,7 @@ flow work_category(raw: string, error: string) -> string {
     if error == "tool action exceeds 384 raw characters" { return "limit"; }
     if error == "invalid search literal" { return "literal"; }
     if error == "unsupported action or arity" {
-        let parsed = match parse(raw) { Ok(value) => value, Err(_) => { return "json"; } };
-        let message = Message.new(parsed); let converted: Option<Message<Array<string>>> = message.cast<Array<string>>();
-        let fields = match converted { Some(value) => value.body, None() => { return "shape"; } };
+        let fields = match json_fields(raw) { Ok(value) => value, Err(FieldError.Json) => { return "json"; } Err(FieldError.Shape) => { return "shape"; } };
         return if fields[0] == "read" || fields[0] == "search" { "arity" } else { "verb" };
     }
     return "files";

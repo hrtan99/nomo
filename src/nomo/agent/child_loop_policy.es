@@ -1,0 +1,82 @@
+module nomo.agent.child_loop_policy;
+
+import nomo.model.model_tool_contract.{Session, Limits, Context, budget_error, charge_action, context_error, candidate_error, allowed_error, question_error};
+
+
+import nomo.core.conversation.charge;
+import nomo.core.read_text.bounded;
+
+public type Shape = { calls: usize, tools: usize, context_bytes: usize, input_characters: usize, result_characters: usize, slots: usize, characters: usize, tool_characters: usize, whole_scope: bool, partial_search: bool, named_final: bool };
+public spec ChildLoopPolicy {
+    flow shape(self) -> Shape ![];
+    flow allowed_error(self, allowed: Array<string>) -> string ![Error<IndexError>];
+    flow request_error(self, request: string) -> string ![Error<IndexError>];
+    flow validate_context(self, context: Context) -> string ![Error<IndexError>];
+    flow reserve_model(self, state: Session, final_only: bool) -> Result<Session, string> ![Error<IndexError>];
+    flow reserve_tool(self, state: Session) -> Result<Session, string> ![Error<IndexError>];
+}
+public type BoundedChild = { limits: Limits, work: bool, chat: bool };
+public type ExpandedChild = { wide: bool };
+public type MultiChild = {};
+public type LegacyChild = { limits: Limits };
+
+flow single_shape(input_characters: usize) -> Shape { return Shape { calls = 2, tools = 1, context_bytes = 8388608, input_characters = input_characters, result_characters = 262144, slots = 2, characters = 518, tool_characters = 65556, whole_scope = false, partial_search = false, named_final = true }; }
+flow request_error(request: string, work: bool) -> string {
+    if work { return if bounded(request, 512) { "" } else { "work delegation requires 1..512 safe UTF-8 bytes" }; }
+    return if bounded(request, 128) { "" } else { "question requires 1..128 safe UTF-8 bytes, not only spaces" };
+}
+flow charged(state: Session, tokens: usize, tool_scan: usize) -> Session {
+    return Session { history = charge(state.history), calls = state.calls + if tool_scan == 0 { 1 } else { 0 }, tokens = state.tokens + tokens, tools = state.tools + if tool_scan == 0 { 0 } else { 1 }, scan = state.scan + tool_scan };
+}
+impl BoundedChild ~ ChildLoopPolicy {
+    flow allowed_error(self, allowed: Array<string>) -> string { return candidate_error(allowed); }
+    flow shape(self) -> Shape ![] { return single_shape(if self.work { 512 } else { 128 }); }
+    flow request_error(self, request: string) -> string { return request_error(request, self.work); }
+    flow validate_context(self, context: Context) -> string { return if self.chat { "" } else { context_error(context) }; }
+    flow reserve_model(self, state: Session, final_only: bool) -> Result<Session, string> {
+        return reserve(state, self.limits, false);
+    }
+    flow reserve_tool(self, state: Session) -> Result<Session, string> {
+        return reserve(state, self.limits, true);
+    }
+}
+impl ExpandedChild ~ ChildLoopPolicy {
+    flow allowed_error(self, allowed: Array<string>) -> string { return candidate_error(allowed); }
+    flow shape(self) -> Shape ![] { return single_shape(512); }
+    flow request_error(self, request: string) -> string { return request_error(request, true); }
+    flow validate_context(self, context: Context) -> string { return context_error(context); }
+    flow reserve_model(self, state: Session, final_only: bool) -> Result<Session, string> {
+        if state.history.spent >= 3 || state.calls >= 2 || state.tokens != state.calls * 4096 || state.tools > 1 || state.scan > 65540 { return Err("expanded work model reservation exhausted"); }
+        return Ok(charged(state, if final_only && self.wide { 131072 } else { 4096 }, 0));
+    }
+    flow reserve_tool(self, state: Session) -> Result<Session, string> {
+        if state.tools != 0 || state.scan != 0 || state.history.spent >= 3 { return Err("expanded work tool reservation exhausted"); }
+        return Ok(charged(state, 0, 65540));
+    }
+}
+impl MultiChild ~ ChildLoopPolicy {
+    flow allowed_error(self, allowed: Array<string>) -> string { return candidate_error(allowed); }
+    flow shape(self) -> Shape ![] { return Shape { calls = 4, tools = 3, context_bytes = 8388608, input_characters = 512, result_characters = 262144, slots = 4, characters = 262688, tool_characters = 0, whole_scope = true, partial_search = true, named_final = false }; }
+    flow request_error(self, request: string) -> string { return if bounded(request, 512) { "" } else { "invalid selected child context" }; }
+    flow validate_context(self, context: Context) -> string ![] { return ""; }
+    flow reserve_model(self, state: Session, final_only: bool) -> Result<Session, string> ![] { return Ok(charged(state, 4096, 0)); }
+    flow reserve_tool(self, state: Session) -> Result<Session, string> ![] { return Ok(charged(state, 0, 4194560)); }
+}
+
+impl LegacyChild ~ ChildLoopPolicy {
+    flow shape(self) -> Shape ![] { return Shape { calls = 2, tools = 1, context_bytes = 2048, input_characters = 128, result_characters = 256, slots = 2, characters = 518, tool_characters = 284, whole_scope = false, partial_search = false, named_final = true }; }
+    flow allowed_error(self, allowed: Array<string>) -> string { return allowed_error(allowed); }
+    flow request_error(self, request: string) -> string { return question_error(request); }
+    flow validate_context(self, context: Context) -> string { return context_error(context); }
+    flow reserve_model(self, state: Session, final_only: bool) -> Result<Session, string> {
+        return reserve(state, self.limits, false);
+    }
+    flow reserve_tool(self, state: Session) -> Result<Session, string> {
+        return reserve(state, self.limits, true);
+    }
+}
+
+flow reserve(state: Session, limits: Limits, tool: bool) -> Result<Session, string> {
+    let error = budget_error(state, limits, tool); if error != "" { return Err(error); }
+    return Ok(charge_action(state, tool, limits));
+}

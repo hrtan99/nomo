@@ -1,10 +1,16 @@
 module nomo.harness.harness_edit_contract;
 
+import nomo.core.json.encode as encode_json;
+
+public import nomo.application.decoder_contract.EditText as Child;
+import nomo.application.decoder_contract.EditProposalDecoder;
+import nomo.core.json.{FieldError, decode_fields as json_fields};
+
 import std.text.{len, split, trim, contains};
 import std.collections.len as count;
 import std.bytes.len as byte_count;
 import std.codec.text.utf8_encode;
-import std.json.{JsonValue, parse, stringify};
+import std.json.{JsonValue, stringify};
 import std.agent.message.Message;
 import nomo.tools.edit_proposal.text_bytes;
 import nomo.tools.edit_encoding.digest;
@@ -18,7 +24,6 @@ public flow history_bound(converted: Option<Message<JsonValue>>, maximum: usize,
     if byte_count(utf8_encode(raw)) > maximum { abort(if kind == "read" { "history read context exceeds 8388608 bytes" } else { "history edit context exceeds 8388608 bytes" }); }
 }
 
-public type Child = { target: string, replacement: string };
 public type Context = { phase: string, request: string, task: string, id: string, workspace: string, path: string,
     before: string, after: string, request_digest: string, before_digest: string, after_digest: string,
     before_bytes: usize, after_bytes: usize, completed: bool };
@@ -115,10 +120,11 @@ flow decoded(raw: string, maximum: usize, expected: usize, diagnostic: bool) -> 
     let legacy = if expected == 2 { "delegation" } else { "edit" };
     let framed = frame_error(raw, maximum, expected, diagnostic);
     if framed != "" { return Err(if diagnostic { response_error(raw, phase, framed, maximum) } else { "expected bounded flat " + legacy + " JSON" }); }
-    let parsed = match parse(raw) { Ok(value) => value, Err(_) => { return Err(if diagnostic { response_error(raw, phase, "json", maximum) } else { "invalid " + legacy + " JSON" }); } };
-    let message = Message.new(parsed);
-    let conversion: Option<Message<Array<string>>> = message.cast<Array<string>>();
-    let fields = match conversion { Some(value) => value.body, None() => { return Err(if diagnostic { response_error(raw, phase, "shape", maximum) } else { legacy + " fields must be strings" }); } };
+    let fields = match json_fields(raw) {
+        Ok(value) => value,
+        Err(FieldError.Json) => { return Err(if diagnostic { response_error(raw, phase, "json", maximum) } else { "invalid " + legacy + " JSON" }); }
+        Err(FieldError.Shape) => { return Err(if diagnostic { response_error(raw, phase, "shape", maximum) } else { legacy + " fields must be strings" }); }
+    };
     let verb = if expected == 2 { "delegate" } else { "edit" };
     if count(fields) != expected { return Err(if diagnostic { response_error(raw, phase, "arity", maximum) } else { "unsupported " + legacy + " verb or arity" }); }
     if fields[0] != verb { return Err(if diagnostic { response_error(raw, phase, "verb", maximum) } else { "unsupported " + legacy + " verb or arity" }); }
@@ -138,10 +144,14 @@ flow edit(raw: string, diagnostic: bool, empty: bool) -> Result<Child, string> {
     return Ok(Child { target = fields[1], replacement = fields[2] });
 }
 public flow decode_plan(raw: string) -> Result<string, string> { return plan(raw, false); }
-public flow decode_edit(raw: string) -> Result<Child, string> { return edit(raw, false, false); }
-public flow decode_empty_edit(raw: string) -> Result<Child, string> { return edit(raw, false, true); }
+public type EditProposal = { diagnostic: bool, empty: bool };
+impl EditProposal ~ EditProposalDecoder {
+    flow decode(self, raw: string) -> Result<Child, string> { return edit(raw, self.diagnostic, self.empty); }
+}
+public flow decode_edit(raw: string) -> Result<Child, string> { let decoder = EditProposal { diagnostic = false, empty = false }; return decoder.decode(raw); }
+public flow decode_empty_edit(raw: string) -> Result<Child, string> { let decoder = EditProposal { diagnostic = false, empty = true }; return decoder.decode(raw); }
 public flow decode_work_plan(raw: string) -> Result<string, string> { return plan(raw, true); }
-public flow decode_work_edit(raw: string) -> Result<Child, string> { return edit(raw, true, false); }
+public flow decode_work_edit(raw: string) -> Result<Child, string> { let decoder = EditProposal { diagnostic = true, empty = false }; return decoder.decode(raw); }
 public flow work_summary_error(raw: string) -> string {
     if len(raw) == 0 || len(raw) > 512 || byte_count(utf8_encode(raw)) > 512 { return response_error(raw, "edit-aggregate", "limit", 512); }
     let invalid = text_error(raw, "final answer");
@@ -176,10 +186,7 @@ public flow context_error(context: Context) -> string {
         let after_digest = match digest(context.after) { Ok(value) => value, Err(error) => { return error; } };
         if before_digest != context.before_digest || after_digest != context.after_digest { return "edit context digest mismatch"; }
     }
-    let message = Message.new(context);
-    let conversion: Option<Message<JsonValue>> = message.cast<JsonValue>();
-    let json = match conversion { Some(value) => value.body, None() => { return "edit context conversion refused"; } };
-    let encoded = match stringify(json) { Ok(value) => value, Err(_) => { return "edit context JSON refused"; } };
+    let encoded = match encode_json(context, "edit context conversion refused", "edit context JSON refused") { Ok(value) => value, Err(error) => { return error; } };
     if byte_count(utf8_encode(encoded)) > 8388608 { return "edit context exceeds 8388608 serialized UTF-8 bytes"; }
     return "";
 }

@@ -25,29 +25,53 @@ flow preview(value: Prepared, selected: Binding) -> Result<string, string> {
         selected.before_digest, selected.after_digest, selected.request_digest]);
 }
 
-// Both callers admit an unused slot before reading the original. No caller may
-// infer completion from Console text or continue after an uncertain outcome.
-public flow confirm_current(selector: Selector, prepared: Prepared) -> Result<Binding, string> ![Console, Approval, Error<IndexError>, Error<ConsoleError>] {
+public type Preview = { binding: Binding, machine: string, diff: string };
+public spec PreviewPresenter {
+    flow present(self, preview: Preview) -> unit ![Console, Error<ConsoleError>];
+}
+public spec CurrentEditConsent {
+    flow confirm(self, preview: Preview) -> Result<Binding, string> ![Console, Approval, Error<ConsoleError>];
+}
+public type TerminalPreview = {};
+public type TerminalConsent = {};
+
+public flow build_preview(selector: Selector, prepared: Prepared) -> Result<Preview, string> {
     let invalid = selector_error(selector.id, selector.workspace, selector.path); if invalid != "" { return Err(invalid); }
-    if selector.path != prepared.request.path || selector.path != prepared.proposal.path {
-        return Err("edit selector differs from prepared request");
-    }
+    if selector.path != prepared.request.path || selector.path != prepared.proposal.path { return Err("edit selector differs from prepared request"); }
     match validate(prepared.request, prepared.proposal) { Ok(_) => {} Err(error) => { return Err(error); } }
     let selected = match bind(selector.id, selector.workspace, selector.path, prepared) { Ok(value) => value, Err(error) => { return Err(error); } };
     let shown = match preview(prepared, selected) { Ok(value) => value, Err(error) => { return Err(error); } };
     let readable = match render(prepared.proposal.before, prepared.proposal.after) { Ok(value) => value, Err(error) => { return Err(error); } };
-    println("PREVIEW " + shown);
-    println("DIFF request=" + selected.request_digest + "\n" + readable);
-    println("WARNING File permissions, including executable bits, may change during this edit.");
-    println("CONFIRM Native gate requires yes; then confirm this request with y/yes.");
-    let approved = perform Approval.request("Nomo edit " + selector.id + " request=" + selected.request_digest);
-    if !approved { return Err("native approval denied; no intent or File write"); }
-    println("CONFIRM Apply this exact preview? [y/N]");
-    let raw = read_line();
-    if len(raw) > 32 { return Err("application confirmation denied; no intent or File write"); }
-    let answer = lowercase(trim(raw));
-    if answer != "y" && answer != "yes" { return Err("application confirmation denied; no intent or File write"); }
-    return Ok(selected);
+    return Ok(Preview { binding = selected, machine = shown, diff = readable });
+}
+impl TerminalPreview ~ PreviewPresenter {
+    flow present(self, preview: Preview) -> unit ![Console, Error<ConsoleError>] {
+        println("PREVIEW " + preview.machine);
+        println("DIFF request=" + preview.binding.request_digest + "\n" + preview.diff);
+        println("WARNING File permissions, including executable bits, may change during this edit.");
+        println("CONFIRM Native gate requires yes; then confirm this request with y/yes.");
+    }
+}
+impl TerminalConsent ~ CurrentEditConsent {
+    flow confirm(self, preview: Preview) -> Result<Binding, string> ![Console, Approval, Error<ConsoleError>] {
+        let selected = preview.binding;
+        let approved = perform Approval.request("Nomo edit " + selected.id + " request=" + selected.request_digest);
+        if !approved { return Err("native approval denied; no intent or File write"); }
+        println("CONFIRM Apply this exact preview? [y/N]");
+        let raw = read_line();
+        if len(raw) > 32 { return Err("application confirmation denied; no intent or File write"); }
+        let answer = lowercase(trim(raw));
+        if answer != "y" && answer != "yes" { return Err("application confirmation denied; no intent or File write"); }
+        return Ok(selected);
+    }
+}
+public flow confirm_using<P ~ PreviewPresenter, C ~ CurrentEditConsent>(presenter: P, consent: C, selector: Selector, prepared: Prepared) -> Result<Binding, string> ![Console, Approval, Error<ConsoleError>, Error<IndexError>] {
+    let shown = match build_preview(selector, prepared) { Ok(value) => value, Err(error) => { return Err(error); } };
+    presenter.present(shown);
+    return consent.confirm(shown);
+}
+public flow confirm_current(selector: Selector, prepared: Prepared) -> Result<Binding, string> ![Console, Approval, Error<IndexError>, Error<ConsoleError>] {
+    return confirm_using(TerminalPreview {}, TerminalConsent {}, selector, prepared);
 }
 
 public flow execute(selector: Selector, prepared: Prepared) -> Result<Confirmed, string> ![Console, Memory, Approval, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {

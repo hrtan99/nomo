@@ -19,12 +19,12 @@ INSTALLED = CACHE / 'bin/etas'
 
 
 def configure(label, wrapper):
-    global LABEL, VERSION, SELECTOR, CONFIG, LOCK, SPEC, PINS, ROOT, SOURCE, TARGET, BOOTSTRAP_SHA, LEGACY_SHA, PREVIOUS_SHARED, PREVIOUS_BOOTSTRAP, PREVIOUS_CURRENT, ADOPTED
+    global LABEL, VERSION, SELECTOR, CONFIG, LOCK, SPEC, PINS, ROOT, SOURCE, TARGET, INSTALLED, BOOTSTRAP_SHA, LEGACY_SHA, PREVIOUS_SHARED, PREVIOUS_BOOTSTRAP, PREVIOUS_CURRENT, ADOPTED
     versions = {'012': ('0.1.12', 'e13f4988826cef49555dfb7cbc5dfb968a517f8b8506d3ef36789d3ec8492b56'),
                 '022': ('0.2.2', 'b585d9bf44b1482eba4d733016fe1b1566a23393f844989e3bc1b42af4277846'),
                 '023': ('0.2.3', None),
                 '024': ('0.2.4', None),
-                '025': ('0.2.5', None), '026': ('0.2.6', None), '026-v68': ('0.2.6', None)}
+                '025': ('0.2.5', None), '026': ('0.2.6', None), '026-v68': ('0.2.6', None), '030': ('0.3.0', None)}
     require(label in versions, 'unsupported official graph')
     LABEL = label
     VERSION, LEGACY_SHA = versions[label]
@@ -33,9 +33,10 @@ def configure(label, wrapper):
     LOCK = REPO / ('config/etas-' + label + '-official.Cargo.lock')
     SPEC = json.loads(CONFIG.read_text())
     PINS = SPEC['repositories']
-    ROOT = CACHE / ('etas-eval' if label == '026-v68' else 'etas-' + label if label in ('025', '026') else 'etas-p0-' + label)
-    SOURCE = ROOT / ('src' if label in ('025', '026', '026-v68') else 'src/cli')
-    TARGET = ROOT / 'target' if label in ('025', '026', '026-v68') else CACHE / 'etas-latest/target'
+    ROOT = CACHE / SPEC.get('cache_root', 'etas-eval' if label == '026-v68' else 'etas-' + label if label in ('025', '026', '030') else 'etas-p0-' + label)
+    SOURCE = ROOT / ('src' if label in ('025', '026', '026-v68', '030') else 'src/cli')
+    TARGET = CACHE / SPEC['build_target'] if 'build_target' in SPEC else ROOT / 'target' if label in ('025', '026', '026-v68', '030') else CACHE / 'etas-latest/target'
+    INSTALLED = CACHE / SPEC.get('installed_binary', 'bin/etas')
     bridge_path = REPO / 'config/etas-official-legacy-bridge.json'
     bridge = json.loads(bridge_path.read_text())
     entry = bridge[label]
@@ -45,18 +46,18 @@ def configure(label, wrapper):
     previous = {'012': 'f51e2b184927c47f109fbf1e3778d804abe06be1ff5c9c87ec2e2468e5782b1d',
                 '022': '1abd68df1a97c80190f025b6f2330e130e924b3b299494c8e80ea6ca562adcbc',
                 '023': None,
-                '024': None, '025': None, '026': None, '026-v68': None}
+                '024': None, '025': None, '026': None, '026-v68': None, '030': None}
     PREVIOUS_SHARED = previous[label]
     require(entry.get('previous_shared_sha256') == PREVIOUS_SHARED, 'previous shared provenance drift')
     prior = {'012': '29663ca202861ccc54cf7df5fe1c2f278ae8192d8f2d7abd41dfd44aebc2e5c4',
              '022': '5252858a71ac814ce1c15d5c0e5d8a291c0af69ed07d02c7d88343b5e8905f22',
-             '023': '0fd4152065d3ab56f4a3508ecb0686bf2eab253f0f5be5b2482dfc4f933184fc', '024': None, '025': None, '026': None, '026-v68': None}
+             '023': '0fd4152065d3ab56f4a3508ecb0686bf2eab253f0f5be5b2482dfc4f933184fc', '024': None, '025': None, '026': None, '026-v68': None, '030': None}
     PREVIOUS_BOOTSTRAP = prior[label]
     require(entry.get('previous_bootstrap_sha256') == PREVIOUS_BOOTSTRAP, 'previous bootstrap provenance drift')
     previous_current = {'012': 'd9136e020ec5cbe83457cabef11c993d1c9eb93d2406dfc68fce0f727f207d61',
                         '022': 'cb5feaeefdbad42b3b1253755e0167e9023664f6b1b38ef2b814aa118638b9bf',
                         '023': '90cb9bba2e7d7a52a688cac3faa4c5b74b144f2f8e87ba36c1f083810288c170',
-                        '024': '89c11a09f408387c5d1e1a801bb9770517c6a30b9b95d366f2d43aa5f3c75274', '025': None, '026': None, '026-v68': None}
+                        '024': '89c11a09f408387c5d1e1a801bb9770517c6a30b9b95d366f2d43aa5f3c75274', '025': None, '026': None, '026-v68': None, '030': None}
     PREVIOUS_CURRENT = previous_current[label]
     require(entry.get('previous_current_sha256') == PREVIOUS_CURRENT, 'previous current bootstrap provenance drift')
     # New installations bind the wrapper, shared implementation and reviewed bridge policy.
@@ -67,7 +68,7 @@ def configure(label, wrapper):
     identity_hash.update(b'\0')
     identity_hash.update(bridge_path.read_bytes())
     BOOTSTRAP_SHA = identity_hash.hexdigest()
-    ADOPTED = 'source-lock-registry-validated-owner-built-' + label if label in ('025', '026', '026-v68') else 'adopted-independently-verified-' + label + '-build'
+    ADOPTED = 'source-lock-registry-validated-owner-built-' + label if label in ('025', '026', '026-v68', '030') else 'adopted-independently-verified-' + label + '-build'
 
 
 def require(ok, message):
@@ -115,12 +116,22 @@ def guard_environment():
     require(digest(LOCK) == SPEC['cargo_lock_sha256'], 'repository CLI lock drift')
 
 
+def frontend_override():
+    return '\n[patch."https://github.com/etas-project/etas-frontend.git"]\n' + ''.join(name + ' = { path = "' + str(ROOT / 'frontend/crates' / name) + '" }\n' for name in PINS['frontend']['packages'])
+
+
 def git_guard(path, key, check_origin=False):
     pin = PINS[key]
     require(path.is_dir() and path.resolve() == path, 'invalid source root: ' + key)
     require(read(['git', 'rev-parse', 'HEAD'], cwd=path).strip() == pin['revision'], 'revision drift: ' + key)
     require(read(['git', 'rev-parse', 'HEAD^{tree}'], cwd=path).strip() == pin['tree'], 'tree drift: ' + key)
-    require(not read(['git', 'status', '--porcelain', '--untracked-files=no'], cwd=path).strip(), 'tracked source drift: ' + key)
+    changes = read(['git', 'status', '--porcelain', '--untracked-files=no'], cwd=path).strip()
+    if key == 'cli' and SPEC.get('frontend_override'):
+        require(changes == 'M Cargo.toml', 'CLI override changed other sources')
+        original = read(['git', 'show', 'HEAD:Cargo.toml'], cwd=path)
+        require((path / 'Cargo.toml').read_text() == original + frontend_override(), 'frontend dependency override drift')
+    else:
+        require(not changes, 'tracked source drift: ' + key)
     extras = read(['git', 'ls-files', '--others', '--exclude-standard'], cwd=path).splitlines()
     require(set(extras) <= ({'Cargo.lock'} if key == 'cli' else {'.cargo-ok'}), 'unexpected source files: ' + key)
     ignored = read(['git', 'ls-files', '--others', '--ignored', '--exclude-standard'], cwd=path).splitlines()
@@ -143,6 +154,10 @@ def graph_guard(data):
         manifest = Path(package['manifest_path'])
         if key == 'cli':
             require(origin is None and manifest == SOURCE / 'crates' / name / 'Cargo.toml', 'CLI package source drift: ' + name)
+        elif key == 'frontend' and SPEC.get('frontend_override'):
+            root = ROOT / 'frontend'
+            require(origin is None and manifest == root / 'crates' / name / 'Cargo.toml', 'frontend override source drift: ' + name)
+            roots[key] = root
         else:
             pin = PINS[key]
             expected_source = 'git+https://github.com/etas-project/' + pin['repository'] + '.git?rev=' + pin['revision'] + '#' + pin['revision']
@@ -217,6 +232,11 @@ def prepare(sources=None, seed=None):
         for directory, dirs, files in os.walk(sources, followlinks=False):
             require(not any((Path(directory) / name).is_symlink() for name in dirs + files), 'symlink in source seed')
         shutil.copytree(sources, SOURCE, symlinks=True)
+    if SPEC.get('frontend_override'):
+        run(['git', 'clone', '--no-checkout', 'https://github.com/etas-project/etas-frontend.git', ROOT / 'frontend'])
+        run(['git', '-c', 'core.hooksPath=/dev/null', 'checkout', '--detach', PINS['frontend']['revision']], cwd=ROOT / 'frontend')
+        with (SOURCE / 'Cargo.toml').open('a') as stream:
+            stream.write(frontend_override())
     git_guard(SOURCE, 'cli', check_origin=True)
     require(not (SOURCE / 'Cargo.lock').exists(), 'unexpected source Cargo.lock')
     shutil.copyfile(LOCK, SOURCE / 'Cargo.lock')
@@ -231,7 +251,7 @@ def prepare(sources=None, seed=None):
     save('identity.json', {'pins': PINS, 'configuration_sha256': digest(CONFIG), 'bootstrap_sha256': BOOTSTRAP_SHA,
         'lock_sha256': digest(LOCK), 'metadata_sha256': digest(ROOT / 'cli-metadata.json'), 'origins_sha256': digest(ROOT / 'cli-origins.json'),
         'rustc': read(['rustc', '-vV']), 'cargo': read(['cargo', '-V'])})
-    print('PASS prepared official Git graph; no local patches')
+    print('PASS prepared pinned ETAS Git graph')
 
 
 def register_existing(binary):
@@ -273,6 +293,8 @@ def guard(read_only=False):
     # still run the full source, lock, toolchain and registry checks below.
     provenance = identity['bootstrap_sha256']
     accepted = [BOOTSTRAP_SHA]
+    previous_baseline = {'012': 'b6dbd491e61aaf8588bbfe210b20039db71d00ab790849831ee5eb429bb1155d', '022': 'cc555681fcd284547c0405c6b6bc9b57d25c398c7ed1a857327e105ff02c11ea', '023': '47c7a8fe3b5a2fcff7458714d27400a25fd89aa436baa4f317cb0eda670e0c67', '024': '0204af17073268062fe2d90c8cbb25cf73f6cd9eee85c916c9f4ca5ece4f6d52', '025': '393fd743eccc787fe61c9396f94056ae3596a469a21701cc53ab35c47d95b545', '026': '01ce30cc977ec6d7de2e05aea3727f8dbb31e5462d85dd747919022eeffe4b57', '026-v68': '01ce30cc977ec6d7de2e05aea3727f8dbb31e5462d85dd747919022eeffe4b57'}
+    if LABEL in previous_baseline: accepted.append(previous_baseline[LABEL])
     previous_refactor = {'012': '39b0277800140388d34d678bc3f07dbf10d240888fb31956d09cb999dc7a503c', '022': '9bc1745be5eb056eca102314930db86901f1c81c0dae957b84d6d96d2a93b176', '023': '96ff100859d8eb9000d190888515eb05056da32555c81e0a5b5a0d81cb3db63d', '024': '3ffddeb87a4deb59304825e7bc6103b7f6bcfb889df5c764eb4801c9be21dd46', '025': 'a9c166409d8bacc39a1e4af3e83451241da6efe33d35082077a36298cb3da458'}
     if LABEL in previous_refactor: accepted.append(previous_refactor[LABEL])
     previous_v2 = {'012': '01552d56e137654ce92a5a5a8f9a87bc453acd64b7a330e329b9c4fbbd26ffc0', '022': '91ea6d4934155e5e6265c3df75f6848354b76fbf4a8f434b7625165a83635cc3', '023': '49de480236faa63d3ca9848e612e216c393c18b6840bd9885d562e4e21fb453d', '024': 'c5ed54add4b7f5d3329845e16a12ae2fdecad7687f286860fc56cb4d6ea893db', '025': '48d947d96597cfdb5225ac4c1b851e4dd870eedf55ad0d51c29b4f56029cc3e4', '026': '2f5b586e027532be033d071ac8179160b78cce7e83586fbc56c40ce7efb5342a'}

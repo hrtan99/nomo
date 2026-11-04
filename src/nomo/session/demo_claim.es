@@ -1,7 +1,8 @@
 module nomo.session.demo_claim;
 
-import std.memory.{get_entry, prepare_put, operation_ref, commit, WriteCondition, MemoryVersion, MemoryEntry,
-    WriteOutcome, MemoryWriteChange, StorageDurability};
+import nomo.session.cas_rows.{Target, commit_native};
+
+import std.memory.{get_entry, WriteCondition, MemoryVersion, MemoryEntry};
 
 public type Claim = { format: i32, phase: string, session_id: string, save_id: string, binding: string,
     maximum: i32, budget: i32 };
@@ -12,22 +13,5 @@ public flow read_claim() -> Option<MemoryEntry<string, Claim>> { return get_entr
 
 // Exact durable receipt and committed-version readback; no retry or reconciliation.
 public flow write_claim(value: Claim, condition: WriteCondition) -> Result<MemoryVersion, string> ![Memory, Error<StorageError>] {
-    let intent = prepare_put(Demo.Claims, "single-demo", value, condition);
-    let operation = operation_ref(intent);
-    let receipt = match commit(intent) {
-        WriteOutcome.Unknown(_) => { return Err("demo initialization unknown; no retry"); }
-        WriteOutcome.NotCommitted(_, _) => { return Err("demo initialization refused; no retry"); }
-        WriteOutcome.Committed(value) => value,
-    };
-    if receipt.operation.key != operation.key || receipt.operation.fingerprint != operation.fingerprint ||
-        receipt.target.key != "single-demo" || receipt.target.region != "nomo-session-demo-v1" ||
-        receipt.target.store != ["Claims"] { return Err("demo receipt mismatch"); }
-    let durable = match receipt.durability { StorageDurability.SqliteWalFull() => true, _ => false };
-    if !durable { return Err("durable SQLite demo receipt required"); }
-    let committed = match receipt.change { MemoryWriteChange.Written(version) => version, _ => { return Err("demo write receipt required"); } };
-    let observed = match read_claim() { Some(entry) => entry, None() => { return Err("demo claim missing after commit"); } };
-    if observed.key != "single-demo" || observed.value != value || observed.version.opaque != committed.opaque {
-        return Err("demo claim readback mismatch");
-    }
-    return Ok(committed);
+    return commit_native<Claim>(Demo.Claims, Target { store = ["Claims"], region = "nomo-session-demo-v1", key = "single-demo", label = "demo" }, value, condition);
 }

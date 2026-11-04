@@ -1,7 +1,8 @@
 module nomo.session.chat_history;
 
-import std.memory.{get_entry, prepare_put, operation_ref, commit, WriteCondition, MemoryVersion, MemoryEntry,
-    WriteOutcome, MemoryWriteChange, StorageDurability, Missing, Match};
+import nomo.session.cas_rows.{Target, commit_receipt};
+
+import std.memory.{get_entry, WriteCondition, MemoryVersion, MemoryEntry, Missing, Match};
 import std.collections.len as count;
 import nomo.core.conversation.Event;
 import nomo.session.chat_session_contract.{Session, invalid, fresh, begin, complete};
@@ -115,11 +116,7 @@ flow save_inner(value: Session, expected: Option<Entry>, records: Array<Event>) 
         if schema == 2 && value.invocation.admitted == previous_turns + 1 {
             match append_metadata(value.invocation.admitted, records) { Ok(_) => {} Err(problem) => { return Err(problem); } }
         }
-        let intent = prepare_put(Legacy.Rows, "latest", value, condition); let operation = operation_ref(intent);
-        let receipt = match commit(intent) { WriteOutcome.Unknown(_) => { return Err("chat history commit unknown; no retry"); } WriteOutcome.NotCommitted(_, _) => { return Err("chat history commit refused; no retry"); } WriteOutcome.Committed(item) => item };
-        if receipt.operation.key != operation.key || receipt.operation.fingerprint != operation.fingerprint || receipt.target.key != "latest" || receipt.target.region != "nomo-chat-history-v1" || receipt.target.store != ["Rows"] { return Err("legacy history receipt mismatch"); }
-        let durable = match receipt.durability { StorageDurability.SqliteWalFull() => true, _ => false }; if !durable { return Err("durable SQLite chat receipt required"); }
-        let version = match receipt.change { MemoryWriteChange.Written(item) => item, _ => { return Err("history version required"); } };
+        let version = match commit_receipt(Legacy.Rows, Target { store = ["Rows"], region = "nomo-chat-history-v1", key = "latest", label = "chat history" }, value, condition) { Ok(item) => item, Err(error) => { return Err(error); } };
         let after = match load() { Ok(Some(item)) => item, _ => { return Err("history readback missing"); } };
         if after.value != value || after.version.opaque != version.opaque || after.schema != schema || after.pending { return Err("legacy readback mismatch"); }
         match before { Some(old) => { if old.version.opaque == version.opaque { return Err("history version did not change"); } } None() => {} }
@@ -134,11 +131,7 @@ flow save_inner(value: Session, expected: Option<Entry>, records: Array<Event>) 
     } else if count(records) != 0 { return Err("unexpected completed event batch"); }
     let frame = Frame { format = 3, chat = value, first_count = first_count, events = events };
     let problem = frame_error(frame); if problem != "" { return Err(problem); }
-    let intent = prepare_put(Frames.Rows, "latest", frame, condition); let operation = operation_ref(intent);
-    let receipt = match commit(intent) { WriteOutcome.Unknown(_) => { return Err("chat frame commit unknown; no retry"); } WriteOutcome.NotCommitted(_, _) => { return Err("chat frame commit refused; no retry"); } WriteOutcome.Committed(item) => item };
-    if receipt.operation.key != operation.key || receipt.operation.fingerprint != operation.fingerprint || receipt.target.key != "latest" || receipt.target.region != "nomo-chat-history-v3" || receipt.target.store != ["Rows"] { return Err("chat frame receipt mismatch"); }
-    let durable = match receipt.durability { StorageDurability.SqliteWalFull() => true, _ => false }; if !durable { return Err("durable SQLite chat frame required"); }
-    let version = match receipt.change { MemoryWriteChange.Written(item) => item, _ => { return Err("chat frame version required"); } };
+    let version = match commit_receipt(Frames.Rows, Target { store = ["Rows"], region = "nomo-chat-history-v3", key = "latest", label = "chat frame" }, frame, condition) { Ok(item) => item, Err(error) => { return Err(error); } };
     let after = match load() { Ok(Some(item)) => item, _ => { return Err("chat frame readback missing"); } };
     if after.value != value || after.events != events || after.first_count != first_count || after.version.opaque != version.opaque || after.schema != 3 { return Err("chat frame readback mismatch"); }
     match before { Some(old) => { if old.version.opaque == version.opaque { return Err("chat frame version did not change"); } } None() => {} }

@@ -6,15 +6,13 @@ import std.io.IOError as ConsoleError;
 import std.fs.IOError as FileError;
 import std.effects.Fs;
 import nomo.cli.harness_work_args.{Work, parse_recorded};
-import nomo.harness.harness_work_contract.Ledger;
-import nomo.harness.read_model_tools.work_child_turn;
-import nomo.harness.legacy_string_stages.{LegacyStringStages, LegacyEditStages};
-import nomo.harness.history_followup_model.{read_main, plan, child, aggregate, PriorWork};
+import nomo.harness.history_followup_model.{HistoryStages, PriorWork};
+import nomo.harness.history_stages.{prepare_legacy, summarize_legacy};
 import nomo.harness.history_continue_model.CheckOutput;
 import nomo.session.history_check_guard.inspect as inspect_first_check;
 import nomo.session.check_output.load as load_check_output;
 import nomo.harness.harness_tool_chat_contract.Previous;
-import nomo.entry.harness_work_entry.{prepare_unicode, finish_edit, finish_history_summary, ledger, Pending, Failure, Completed, Summary};
+import nomo.entry.harness_work_entry.{finish_edit, ledger};
 import nomo.session.chat_history.load as load_chat;
 import nomo.session.history_followup_guard.{admit, claim, finish};
 import nomo.session.history_followup_check_guard.plan as plan_check;
@@ -24,26 +22,6 @@ import nomo.entry.edit_context.display;
 import nomo.tools.workspace.ReadOnlyRoot;
 import nomo.tools.edit_file.{EditableRoot, apply};
 
-flow stage(name: string, value: Ledger) -> unit { println("STAGE " + name); ledger(value); }
-flow prepare_history(input: Work, prior_request: string, previous: Previous, prior_work: PriorWork) -> Result<Pending, Failure> {
-    let original = (value: string) => "";
-    let log = (name: string, state: Ledger) => stage(name, state);
-    return prepare_unicode(input, original, log) with {
-        LegacyStringStages.main(value) => { resume read_main(value, prior_request, previous, prior_work); }
-        LegacyStringStages.child(task, files, selected) => { resume work_child_turn(task, files, selected); }
-        LegacyEditStages.plan(value) => { resume plan(value, prior_request, previous, prior_work); }
-        LegacyEditStages.child(value) => { resume child(value, prior_request, previous, prior_work); }
-        LegacyEditStages.aggregate(value) => { resume aggregate(value, prior_request, previous, prior_work); }
-    };
-}
-flow summarize_history(value: Completed, prior_request: string, previous: Previous, prior_work: PriorWork) -> Result<Summary, Failure> {
-    let log = (name: string, state: Ledger) => stage(name, state);
-    return finish_history_summary(value, log) with {
-        LegacyEditStages.plan(item) => { resume plan(item, prior_request, previous, prior_work); }
-        LegacyEditStages.child(item) => { resume child(item, prior_request, previous, prior_work); }
-        LegacyEditStages.aggregate(item) => { resume aggregate(item, prior_request, previous, prior_work); }
-    };
-}
 flow refused(error: string) -> i32 { println("REFUSED " + error); return 1; }
 
 // Current roots and current approval are supplied by this invocation. Saved
@@ -75,7 +53,8 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
     let checked = match ticket.record.parent.check { Some(value) => value.outcome, None() => "not requested" };
     let exit = match ticket.record.parent.check { Some(value) => value.exit_code, None() => "" };
     let prior_work = PriorWork { request = ticket.record.parent.work.request, summary = ticket.record.parent.work.summary, summary_source = "unknown", selection = None(), check = checked, exit_code = exit, output = first_output, history = [] };
-    let pending = match prepare_history(input, prior_request, previous, prior_work) { Ok(value) => value, Err(failure) => { ledger(failure.state); return refused(failure.error); } };
+    let stages = HistoryStages { prior_request = prior_request, previous = previous, prior_work = prior_work, wide = false };
+    let pending = match prepare_legacy(stages, input) { Ok(value) => value, Err(failure) => { ledger(failure.state); return refused(failure.error); } };
     let selected = match confirm_current(pending.selected, pending.prepared) { Ok(value) => value, Err(error) => { return refused(error); } };
     match claim(ticket) { Ok(_) => {} Err(error) => { return refused(error); } }
     let intent = match begin(selected) { Ok(value) => value, Err(error) => { return refused(error); } };
@@ -85,7 +64,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
     println("APPLIED " + selected.id);
     let confirmed = Confirmed { binding = selected, after = pending.prepared.proposal.after };
     let captured = match finish_edit(pending, confirmed) { Ok(value) => value, Err(failure) => { return refused(failure.error); } };
-    let summary = match summarize_history(captured, prior_request, previous, prior_work) { Ok(value) => value, Err(failure) => { return refused(failure.error); } };
+    let summary = match summarize_legacy(stages, captured) { Ok(value) => value, Err(failure) => { return refused(failure.error); } };
     match finish(ticket, summary.answer, summary.state) { Ok(_) => {} Err(error) => { return refused("edit completed; " + error); } }
     display("FINAL ", summary.answer); println("SAVED history-followup; captured history is not a root identity or grant.");
     ledger(summary.state); return 0;

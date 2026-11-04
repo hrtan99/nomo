@@ -1,7 +1,8 @@
 module nomo.session.event_history;
 
-import std.memory.{get_entry, prepare_put, operation_ref, commit, WriteCondition, MemoryVersion, MemoryEntry,
-    WriteOutcome, MemoryWriteChange, StorageDurability, Missing, Match};
+import nomo.session.cas_rows.{Target, commit_receipt};
+
+import std.memory.{get_entry, WriteCondition, MemoryVersion, MemoryEntry, Missing, Match};
 import std.collections.len as count;
 import nomo.core.conversation.Event;
 import nomo.core.read_text.safe;
@@ -50,19 +51,7 @@ public flow append(turn: i32, input: Array<Event>, policy: Policy) -> Result<Mem
     let next = History { format = 1, turns = turn, first_count = first_count, events = prior };
     let error = invalid(next); if error != "" { return Err(error); }
     let condition: WriteCondition = match before { Some(entry) => Match(entry.version), None() => Missing };
-    let intent = prepare_put(EventStore.Rows, "events", next, condition); let operation = operation_ref(intent);
-    let receipt = match commit(intent) {
-        WriteOutcome.Unknown(_) => { return Err("event history commit unknown; no retry"); }
-        WriteOutcome.NotCommitted(_, _) => { return Err("event history commit refused; no retry"); }
-        WriteOutcome.Committed(value) => value,
-    };
-    if receipt.operation.key != operation.key || receipt.operation.fingerprint != operation.fingerprint ||
-        receipt.target.key != "events" || receipt.target.region != "nomo-event-history-v1" || receipt.target.store != ["Rows"] {
-        return Err("event history receipt mismatch; no retry");
-    }
-    let durable = match receipt.durability { StorageDurability.SqliteWalFull() => true, _ => false };
-    if !durable { return Err("durable SQLite event receipt required"); }
-    let version = match receipt.change { MemoryWriteChange.Written(value) => value, _ => { return Err("event history version required"); } };
+    let version = match commit_receipt(EventStore.Rows, Target { store = ["Rows"], region = "nomo-event-history-v1", key = "events", label = "event history" }, next, condition) { Ok(item) => item, Err(error) => { return Err(error); } };
     let after = match load() { Ok(Some(value)) => value, _ => { return Err("event history readback missing or invalid"); } };
     if after.value != next || after.version.opaque != version.opaque { return Err("event history readback mismatch; no retry"); }
     match before { Some(value) => { if value.version.opaque == version.opaque { return Err("event history version did not change"); } } None() => {} }

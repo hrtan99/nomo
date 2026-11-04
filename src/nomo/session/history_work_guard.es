@@ -1,7 +1,8 @@
 module nomo.session.history_work_guard;
 
-import std.memory.{get_entry, prepare_put, operation_ref, commit, WriteCondition, MemoryVersion, MemoryEntry,
-    WriteOutcome, MemoryWriteChange, StorageDurability, Missing, Match};
+import nomo.session.cas_rows.{Target, commit_native};
+
+import std.memory.{get_entry, WriteCondition, MemoryVersion, MemoryEntry, Missing, Match};
 import nomo.session.chat_history.{Entry, load as load_chat};
 import nomo.session.edit_operation.selector_error;
 import nomo.model.read_protocol.question_error;
@@ -46,22 +47,7 @@ flow history_error(history: Entry) -> string {
 }
 flow write(row: Record, condition: WriteCondition) -> Result<MemoryVersion, string> ![Memory, Error<StorageError>, Error<IndexError>] {
     let error = invalid(row); if error != "" { return Err(error); }
-    let intent = prepare_put(Runs.Rows, "work", row, condition); let operation = operation_ref(intent);
-    let receipt = match commit(intent) {
-        WriteOutcome.Unknown(_) => { return Err("history-work commit unknown; no retry"); }
-        WriteOutcome.NotCommitted(_, _) => { return Err("history-work commit refused; no retry"); }
-        WriteOutcome.Committed(value) => value,
-    };
-    if receipt.operation.key != operation.key || receipt.operation.fingerprint != operation.fingerprint ||
-        receipt.target.key != "work" || receipt.target.region != "nomo-history-work-v1" || receipt.target.store != ["Rows"] {
-        return Err("history-work receipt mismatch; no retry");
-    }
-    let durable = match receipt.durability { StorageDurability.SqliteWalFull() => true, _ => false };
-    if !durable { return Err("durable SQLite history-work receipt required"); }
-    let version = match receipt.change { MemoryWriteChange.Written(value) => value, _ => { return Err("history-work version required"); } };
-    let after = match read() { Some(value) => value, None() => { return Err("history-work readback missing"); } };
-    if after.key != "work" || after.value != row || after.version.opaque != version.opaque { return Err("history-work readback mismatch; no retry"); }
-    return Ok(version);
+    return commit_native<Record>(Runs.Rows, Target { store = ["Rows"], region = "nomo-history-work-v1", key = "work", label = "history-work" }, row, condition);
 }
 public flow admit(id: string, workspace: string, path: string, request: string, history: Entry) -> Result<Ticket, string> ![Memory, Error<StorageError>, Error<IndexError>] {
     if read() != None() { return Err("history-work already admitted; no retry"); }

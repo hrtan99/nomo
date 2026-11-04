@@ -1,5 +1,7 @@
 module nomo.entry.harness_work_entry;
 
+public import nomo.application.work_contract.{Failure, Pending, Completed, Summary};
+
 import std.io.println;
 import std.io.IOError as ConsoleError;
 import std.fs.IOError as FileError;
@@ -7,7 +9,7 @@ import std.effects.Fs;
 import std.text.to_string_i32;
 import nomo.harness.model_plan_diagnostic.{response_error, response_text};
 import nomo.cli.harness_work_args.{Work, parse};
-import nomo.harness.harness_work_contract.{Context, Evidence, Ledger, fresh, ledger_error, bump_edit, native_tokens, native_budget, collect, finish_evidence, context_error};
+import nomo.harness.harness_work_contract.{Context, Ledger, WorkBudgetPolicy, HistoricalWorkBudget, ExpandedWorkBudget, LargeWorkBudget, fresh, ledger_error, bump_edit, native_tokens, native_budget, collect, finish_evidence, context_error};
 import nomo.harness.harness_model_tools.{run_context as read_context, work_child_turn, chain_child_turn, Report as ReadReport, Failure as ReadFailure};
 import nomo.harness.read_model_tools.{run_context as unicode_read_context, run_expanded_context};
 import nomo.harness.harness_tool_contract.Ledger as ReadLedger;
@@ -18,7 +20,7 @@ import nomo.harness.work_chain_context.ParentFacts;
 import nomo.harness.work_chain_model.{plan as chain_plan, child as chain_child, aggregate as chain_aggregate};
 import nomo.harness.harness_edit_contract.{decode_plan, decode_edit, decode_empty_edit, text_error, history_summary_error, history_fallback_summary, decode_work_plan, decode_work_edit, work_summary_error};
 import nomo.tools.workspace.ReadOnlyRoot;
-import nomo.tools.edit_file.{EditableRoot, Prepared, read_original, read_original_wide, prepare_original, prepare_original_legacy};
+import nomo.tools.edit_file.{EditableRoot, read_original, read_original_wide, prepare_original, prepare_original_legacy};
 import nomo.session.edit_operation_store.available;
 import nomo.entry.edit_coordinator.{Approval, Selector, Confirmed, execute};
 import nomo.harness.edit_context.{context, completed_context};
@@ -47,10 +49,6 @@ flow help() -> unit {
     println("Exclusive owned disposable workspace/store; native yes then Nomo y/yes. Data-only edit_status, no automatic retries or mutating resume.");
 }
 
-public type Failure = { state: Ledger, error: string };
-public type Pending = { selected: Selector, prepared: Prepared, evidence: Evidence, request: string, task: string, state: Ledger };
-public type Completed = { context: Context, state: Ledger };
-public type Summary = { answer: string, state: Ledger, model_generated: bool };
 flow failed(state: Ledger, error: string) -> Result<Pending, Failure> { return Err(Failure { state = state, error = error }); }
 
 flow unicode_read(request: string, allowed: Array<string>, state: ReadLedger, expanded: bool, wide: bool) -> Result<ReadReport, ReadFailure> {
@@ -63,11 +61,14 @@ flow unicode_read(request: string, allowed: Array<string>, state: ReadLedger, ex
 }
 
 // Callers admit the unused edit slot before this shared Model/File preparation.
-flow prepare_mode_with(input: Work, original_error: (string) -> string, stage_log: (string, Ledger) -> unit, chain_read: bool, inspect_plan: bool, inspect_all: bool, unicode: bool, expanded: bool, wide: bool) -> Result<Pending, Failure> {
+flow prepare_policy<P ~ WorkBudgetPolicy>(policy: P, input: Work, original_error: (string) -> string, stage_log: (string, Ledger) -> unit, chain_read: bool, inspect_plan: bool, inspect_all: bool, unicode: bool) -> Result<Pending, Failure> {
+    let parameters = policy.parameters();
+    let expanded = parameters.expanded; let wide = parameters.large;
     var state = fresh();
+    let maximum = policy.maximum();
     let selected = Selector { id = input.edit.id, workspace = input.edit.workspace, path = input.edit.path };
     let invalid = ledger_error(state); if invalid != "" { return failed(state, invalid); }
-    println(if wide { "RESERVATION work13 steps/7 calls/286720 generation/2811008 native; edit tail6 steps/3 calls/143360 generation/1524288 native; one read/search up to 65540 bytes, three edit reads up to 65537 bytes each, and one atomic maximum" } else { if expanded { "RESERVATION work13 steps/7 calls/51200 generation/1335296 native; edit tail6 steps/3 calls/38912 generation/786432 native; one read/search up to 65540 bytes, three edit reads up to 65537 bytes each, and one atomic maximum" } else { "RESERVATION work13 steps/7 calls/47104 generation/196608 historical native allowance (not a provider cap); edit tail6 steps/3 calls/38912 generation/163840 historical allowance; one read/search and one atomic maximum" } });
+    println(if wide { "RESERVATION work" + to_string_i32(maximum.steps) + " steps/" + to_string_i32(maximum.calls) + " calls/" + to_string_i32(maximum.generation) + " generation/" + to_string_i32(maximum.native_tokens) + " native; edit tail6 steps/3 calls/143360 generation/1524288 native; one read/search up to 65540 bytes, three edit reads up to 65537 bytes each, and one atomic maximum" } else { if expanded { "RESERVATION work13 steps/7 calls/51200 generation/1335296 native; edit tail6 steps/3 calls/38912 generation/786432 native; one read/search up to 65540 bytes, three edit reads up to 65537 bytes each, and one atomic maximum" } else { "RESERVATION work13 steps/7 calls/47104 generation/196608 historical native allowance (not a provider cap); edit tail6 steps/3 calls/38912 generation/163840 historical allowance; one read/search and one atomic maximum" } });
     let read_result = if unicode { unicode_read(input.edit.request, input.allowed, state.read, expanded, wide) }
         else { read_context(input.edit.request, input.allowed, state.read, "read-", true, chain_read, inspect_plan, inspect_all) };
     let read = match read_result {
@@ -87,25 +88,31 @@ flow prepare_mode_with(input: Work, original_error: (string) -> string, stage_lo
     let original = original_error(before); if original != "" { return failed(state, original); }
     let plan = Context { edit = context("plan", selected, input.edit.request, "", before), evidence = evidence };
     let error = context_error(plan); if error != "" { return failed(state, error); }
-    state = match bump_edit(state, true) { Ok(value) => value, Err(error) => { return failed(state, error); } };
+    state = match policy.reserve_edit(state, true) { Ok(value) => value, Err(error) => { return failed(state, error); } };
     stage_log("edit-plan", state);
     let plan_raw = perform LegacyEditStages.plan(plan);
     if inspect_all { println(response_text(plan_raw, "edit-plan", "lab-qwen-", 4096)); }
     let decoded_plan = if chain_read { decode_work_plan(plan_raw) } else { decode_plan(plan_raw) };
     let task = match decoded_plan { Ok(value) => value, Err(error) => { return failed(state, error); } };
-    state = match bump_edit(state, false) { Ok(value) => value, Err(error) => { return failed(state, error); } };
+    state = match policy.reserve_edit(state, false) { Ok(value) => value, Err(error) => { return failed(state, error); } };
     display("EVENT main -> edit-child request ", task);
     let delegated = Context { edit = context("child", selected, input.edit.request, task, before), evidence = evidence };
     let child_error = context_error(delegated); if child_error != "" { return failed(state, child_error); }
-    state = match bump_edit(state, true) { Ok(value) => value, Err(error) => { return failed(state, error); } };
+    state = match policy.reserve_edit(state, true) { Ok(value) => value, Err(error) => { return failed(state, error); } };
     stage_log("edit-child", state);
     let edit_raw = perform LegacyEditStages.child(delegated);
     if inspect_all { println(response_text(edit_raw, "edit-child", "lab-qwen-", 32768)); }
     let decoded_edit = if expanded && before == "" { decode_empty_edit(edit_raw) } else { if chain_read { decode_work_edit(edit_raw) } else { decode_edit(edit_raw) } };
     let request = match decoded_edit { Ok(value) => value, Err(error) => { return failed(state, error); } };
     let prepared = match (if expanded { prepare_original(selected.path, before, request.target, request.replacement) } else { prepare_original_legacy(selected.path, before, request.target, request.replacement) }) { Ok(value) => value, Err(error) => { return failed(state, if chain_read { response_error(edit_raw, "edit-child", "proposal", 32768) } else { error }); } };
-    state = match bump_edit(state, false) { Ok(value) => value, Err(error) => { return failed(state, error); } };
+    state = match policy.reserve_edit(state, false) { Ok(value) => value, Err(error) => { return failed(state, error); } };
     return Ok(Pending { selected = selected, prepared = prepared, evidence = evidence, request = input.edit.request, task = task, state = state });
+}
+
+flow prepare_mode_with(input: Work, original_error: (string) -> string, stage_log: (string, Ledger) -> unit, chain_read: bool, inspect_plan: bool, inspect_all: bool, unicode: bool, expanded: bool, wide: bool) -> Result<Pending, Failure> {
+    if wide { return prepare_policy(LargeWorkBudget {}, input, original_error, stage_log, chain_read, inspect_plan, inspect_all, unicode); }
+    if expanded { return prepare_policy(ExpandedWorkBudget {}, input, original_error, stage_log, chain_read, inspect_plan, inspect_all, unicode); }
+    return prepare_policy(HistoricalWorkBudget {}, input, original_error, stage_log, chain_read, inspect_plan, inspect_all, unicode);
 }
 
 public flow prepare_with(input: Work, original_error: (string) -> string, stage_log: (string, Ledger) -> unit, chain_read: bool, inspect_plan: bool, inspect_all: bool) -> Result<Pending, Failure> {

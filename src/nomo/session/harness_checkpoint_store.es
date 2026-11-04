@@ -1,7 +1,7 @@
 module nomo.session.harness_checkpoint_store;
 
-import std.memory.{get_entry, prepare_put, operation_ref, commit, WriteCondition, MemoryVersion, MemoryEntry,
-    WriteOutcome, MemoryWriteChange, StorageDurability, Missing, Match};
+import nomo.session.cas_rows.{Target, commit_native};
+import std.memory.{get_entry, WriteCondition, MemoryVersion, MemoryEntry, Missing, Match};
 import nomo.session.harness_checkpoint.{Identity, Checkpoint, identity_error, validate, encode, decode};
 
 public type Record = { format: i32, phase: string, identity: Identity, body: string };
@@ -14,27 +14,8 @@ flow read(name: string) -> Option<MemoryEntry<string, Record>> { return get_entr
 
 // Exactly one attempt, durable receipt and committed-version readback. Unknown
 // is not absence and does not authorize a retry or a second model execution.
-flow write(name: string, row: Record, condition: WriteCondition) -> Result<MemoryVersion, string> ![Memory, Error<StorageError>] {
-    let intent = prepare_put(Checkpoints.Rows, name, row, condition);
-    let operation = operation_ref(intent);
-    let receipt = match commit(intent) {
-        WriteOutcome.Unknown(_) => { return Err("checkpoint commit unknown; no retry"); }
-        WriteOutcome.NotCommitted(_, _) => { return Err("checkpoint commit refused; no retry"); }
-        WriteOutcome.Committed(value) => value,
-    };
-    if receipt.operation.key != operation.key || receipt.operation.fingerprint != operation.fingerprint ||
-        receipt.target.key != name || receipt.target.region != "nomo-harness-checkpoint-v1" || receipt.target.store != ["Rows"] {
-        return Err("checkpoint receipt mismatch");
-    }
-    let durable = match receipt.durability { StorageDurability.SqliteWalFull() => true, _ => false };
-    if !durable { return Err("durable SQLite checkpoint receipt required"); }
-    let version = match receipt.change { MemoryWriteChange.Written(value) => value,
-        _ => { return Err("checkpoint write receipt required"); } };
-    let observed = match read(name) { Some(value) => value, None() => { return Err("checkpoint write readback missing"); } };
-    if observed.key != name || observed.value != row || observed.version.opaque != version.opaque {
-        return Err("checkpoint write readback mismatch");
-    }
-    return Ok(version);
+flow write(name: string, row: Record, condition: WriteCondition) -> Result<MemoryVersion, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+    return commit_native<Record>(Checkpoints.Rows, Target { store = ["Rows"], region = "nomo-harness-checkpoint-v1", key = name, label = "checkpoint" }, row, condition);
 }
 
 flow owner(identity: Identity, phase: string) -> Result<MemoryEntry<string, Record>, string> {

@@ -1,7 +1,8 @@
 module nomo.session.recovery_decision;
 
-import std.memory.{get_entry, prepare_put, operation_ref, commit, MemoryVersion, MemoryEntry,
-    WriteOutcome, MemoryWriteChange, StorageDurability, Missing};
+import nomo.session.cas_rows.{Target, commit_native};
+
+import std.memory.{get_entry, MemoryVersion, MemoryEntry, Missing};
 import nomo.session.history_work_guard.inspect as inspect_work;
 import nomo.session.history_check_guard.inspect as inspect_check;
 import nomo.session.history_followup_guard.inspect as inspect_followup;
@@ -53,18 +54,5 @@ public flow abandon(target: string, id: string) -> Result<MemoryVersion, string>
     let error = validate_target(target, id); if error != "" { return Err(error); }
     if read(target) != None() { return Err("recovery decision already recorded; no retry"); }
     let item = Decision { format = 1, id = id, target = target, choice = "abandon" };
-    let intent = prepare_put(Decisions.Rows, target, item, Missing); let operation = operation_ref(intent);
-    let receipt = match commit(intent) {
-        WriteOutcome.Unknown(_) => { return Err("decision commit unknown; inspect without retry"); }
-        WriteOutcome.NotCommitted(_, _) => { return Err("decision commit refused; inspect without retry"); }
-        WriteOutcome.Committed(value) => value,
-    };
-    if receipt.operation.key != operation.key || receipt.operation.fingerprint != operation.fingerprint || receipt.target.key != target ||
-        receipt.target.region != "nomo-recovery-decision-v1" || receipt.target.store != ["Rows"] { return Err("decision receipt mismatch"); }
-    let durable = match receipt.durability { StorageDurability.SqliteWalFull() => true, _ => false };
-    if !durable { return Err("durable SQLite decision required"); }
-    let version = match receipt.change { MemoryWriteChange.Written(value) => value, _ => { return Err("decision version required"); } };
-    let after = match read(target) { Some(value) => value, None() => { return Err("decision readback missing"); } };
-    if after.key != target || after.value != item || after.version.opaque != version.opaque { return Err("decision readback mismatch"); }
-    return Ok(version);
+    return commit_native<Decision>(Decisions.Rows, Target { store = ["Rows"], region = "nomo-recovery-decision-v1", key = target, label = "decision" }, item, Missing);
 }

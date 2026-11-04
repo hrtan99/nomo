@@ -1,7 +1,8 @@
 module nomo.session.work_chain_journal;
 
-import std.memory.{get_entry, prepare_put, operation_ref, commit, WriteCondition, MemoryVersion, MemoryEntry,
-    WriteOutcome, MemoryWriteChange, StorageDurability, Missing, Match};
+import nomo.session.cas_rows.{Target, commit_native};
+
+import std.memory.{get_entry, WriteCondition, MemoryVersion, MemoryEntry, Missing, Match};
 import nomo.session.edit_operation.{Binding, selector_error};
 import nomo.session.work_chain_journal_contract.{CapturedJournal, invalid as journal_error};
 
@@ -19,21 +20,8 @@ public flow captured(row: Record) -> CapturedJournal {
 
 flow write(row: Record, condition: WriteCondition) -> Result<MemoryVersion, string> ![Memory, Error<StorageError>, Error<IndexError>] {
     let error = invalid(row); if error != "" { return Err(error); }
-    let selected = key(row.turn); let intent = prepare_put(Journal.Rows, selected, row, condition);
-    let operation = operation_ref(intent);
-    let receipt = match commit(intent) {
-        WriteOutcome.Unknown(_) => { return Err("v2 edit journal commit unknown; no retry"); }
-        WriteOutcome.NotCommitted(_, _) => { return Err("v2 edit journal commit refused; no retry"); }
-        WriteOutcome.Committed(value) => value,
-    };
-    if receipt.operation.key != operation.key || receipt.operation.fingerprint != operation.fingerprint || receipt.target.key != selected ||
-        receipt.target.region != "nomo-work-chain-edit-v2" || receipt.target.store != ["Rows"] { return Err("v2 edit journal receipt mismatch; no retry"); }
-    let durable = match receipt.durability { StorageDurability.SqliteWalFull() => true, _ => false };
-    if !durable { return Err("durable SQLite v2 edit receipt required"); }
-    let version = match receipt.change { MemoryWriteChange.Written(value) => value, _ => { return Err("v2 edit written-version receipt required"); } };
-    let after = match read(row.turn) { Some(value) => value, None() => { return Err("v2 edit journal readback missing; no retry"); } };
-    if after.key != selected || after.value != row || after.version.opaque != version.opaque { return Err("v2 edit journal readback mismatch; no retry"); }
-    return Ok(version);
+    let selected = key(row.turn);
+    return commit_native<Record>(Journal.Rows, Target { store = ["Rows"], region = "nomo-work-chain-edit-v2", key = selected, label = "v2 edit journal" }, row, condition);
 }
 
 // Fixed turn slots remain consumed across changed operation IDs.

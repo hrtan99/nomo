@@ -1,9 +1,11 @@
 module nomo.session.harness_successor;
 
-import std.text.{len, trim, split, to_string_i32, to_string_usize};
+import nomo.core.json.{encode as encode_json, string_fields};
+
+import std.text.{len, trim, to_string_i32, to_string_usize};
 import std.collections.len as count;
-import std.json.{JsonValue, parse, stringify};
-import std.agent.message.Message;
+
+
 import nomo.core.text.printable;
 import nomo.core.conversation.{Event, State};
 import nomo.model.model_tool_contract.Session;
@@ -12,7 +14,7 @@ import nomo.model.model_tool_contract.context_error as child_context_error;
 import nomo.harness.harness_model_contract.{bounded, decode_plan};
 import nomo.harness.harness_tool_contract.{Ledger, same};
 import nomo.harness.harness_tool_chat_contract.{Previous, Context, Invocation, TurnResult, prior_error, turn_error, context_error, inspect_turn};
-import nomo.session.harness_checkpoint.{Identity, Checkpoint, identity_error, read_ledger, framed};
+import nomo.session.harness_checkpoint.{Identity, Checkpoint, identity_error, read_ledger, framed, records_error, fields_error};
 import nomo.session.harness_checkpoint.validate as validate_first;
 import nomo.session.harness_checkpoint.encode as encode_first;
 import nomo.session.harness_checkpoint.decode as decode_first;
@@ -57,15 +59,8 @@ public flow validate(saved: Successor, requested: Identity, predecessor_identity
     if saved.usage != exact || saved.maximum != restored.maximum { return Err("successor cumulative usage or limits mismatch"); }
     let records = saved.records;
     if count(records) != record_count { return Err("invalid successor record count"); }
-    var characters: usize = 0;
-    for event in records limit Iterations(18) {
-        if len(event.role) > 9 || len(event.kind) > 8 || len(event.name) > 8 || len(event.text) > 512 ||
-            !printable(event.role) || !printable(event.kind) || !printable(event.name) || !printable(event.text) {
-            return Err("invalid successor record data");
-        }
-        characters = characters + len(event.name) + len(event.text);
-        if characters > 8192 { return Err("successor record content exceeds bound"); }
-    }
+    let record_error = records_error(records, 8192, "successor");
+    if record_error != "" { return Err(record_error); }
     if !same(records[0], "user", "request", "", saved.request) || !same(records[1], "main", "plan", "", records[1].text) ||
         !same(records[2], "main", "delegate", "child-1", saved.task) { return Err("invalid successor planning records"); }
     let task = match decode_plan(records[1].text) { Ok(value) => value, Err(error) => { return Err(error); } };
@@ -122,17 +117,6 @@ public flow from_turn(identity: Identity, predecessor: Checkpoint, predecessor_v
 
 // The nested first checkpoint is data in one string, never a widened v1 cast.
 
-flow fields_error(fields: Array<string>) -> string {
-    if count(fields) > 100 { return "successor string fields exceed bounds"; }
-    var characters: usize = 0; var index: usize = 0;
-    for field in fields limit Iterations(100) {
-        let maximum: usize = if index == 5 { 65536 } else { 1024 };
-        if len(field) > maximum { return "successor string fields exceed bounds"; }
-        characters = characters + len(field); index = index + 1;
-        if characters > 73728 { return "successor string fields exceed bounds"; }
-    }
-    return "";
-}
 
 public flow encode(saved: Successor) -> Result<string, string> {
     match validate(saved, saved.identity, saved.predecessor.identity) { Err(error) => { return Err(error); } Ok(_) => {} }
@@ -147,22 +131,16 @@ public flow encode(saved: Successor) -> Result<string, string> {
     for event in saved.records limit Iterations(18) {
         fields = fields.push(event.role); fields = fields.push(event.kind); fields = fields.push(event.name); fields = fields.push(event.text);
     }
-    let invalid = fields_error(fields); if invalid != "" { return Err(invalid); }
-    let message = Message.new(fields);
-    let conversion: Option<Message<JsonValue>> = message.cast<JsonValue>();
-    let json = match conversion { Some(value) => value.body, None() => { return Err("successor encoding conversion refused"); } };
-    let encoded = match stringify(json) { Ok(value) => value, Err(_) => { return Err("successor JSON encoding refused"); } };
+    let invalid = fields_error(fields, true); if invalid != "" { return Err(invalid); }
+    let encoded = match encode_json(fields, "successor encoding conversion refused", "successor JSON encoding refused") { Ok(value) => value, Err(error) => { return Err(error); } };
     if !framed(encoded, true) { return Err("successor encoded bounds exceeded"); }
     return Ok(encoded);
 }
 
 public flow decode(raw: string) -> Result<Successor, string> {
     if !framed(raw, true) { return Err("successor encoded shape or bounds invalid"); }
-    let parsed = match parse(raw) { Ok(value) => value, Err(_) => { return Err("invalid successor JSON"); } };
-    let message = Message.new(parsed);
-    let conversion: Option<Message<Array<string>>> = message.cast<Array<string>>();
-    let fields = match conversion { Some(value) => value.body, None() => { return Err("successor fields must be strings"); } };
-    let invalid = fields_error(fields); if invalid != "" { return Err(invalid); }
+    let fields = match string_fields(raw, "invalid successor JSON", "successor fields must be strings") { Ok(value) => value, Err(error) => { return Err(error); } };
+    let invalid = fields_error(fields, true); if invalid != "" { return Err(invalid); }
     if count(fields) != 83 && count(fields) != 99 { return Err("invalid successor field count"); }
     if fields[0] != "nomo-harness-successor-v1" { return Err("unsupported successor format"); }
     if fields[23] != "2" || fields[24] != "completed" || fields[25] != "true" { return Err("successor is not completed and settled"); }

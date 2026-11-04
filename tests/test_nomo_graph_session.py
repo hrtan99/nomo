@@ -30,24 +30,25 @@ class GraphSessionTest(unittest.TestCase):
         return self.run_session(['new', '--root', str(self.root), '--state', str(self.state), '--allow', 'a.txt', '--once', 'read'])
     def status(self):
         return self.run_session(['status', '--state', str(self.state)])
-    def test_new_session_is_bound_and_cross_graph_status_refused(self):
-        with patch.dict(os.environ, {'NOMO_ETAS_GRAPH':'026-v68'}), patch.object(read, 'run_owned', return_value=0) as run:
+    def test_new_session_uses_030_and_refuses_an_older_runtime(self):
+        with patch.object(read, 'run_owned', return_value=0) as run:
             self.assertEqual(self.create(), 0); run.assert_called_once()
         lock = self.state / '.nomo-session.lock'
-        self.assertEqual(lock.read_bytes(), b'026-v68\n')
-        (self.state / 'history.sqlite3').write_bytes(b'synthetic')
-        with patch.object(read, 'run_owned', return_value=0) as run:
-            self.assertNotEqual(self.status(), 0); run.assert_not_called()
-            with patch.dict(os.environ, {'NOMO_ETAS_GRAPH':'026-v68'}):
-                self.assertEqual(self.status(), 0); run.assert_called_once()
-    def test_old_session_remains_old_and_rejects_new_graph(self):
-        (self.state / '.nomo-session.lock').touch(mode=0o600)
+        self.assertEqual(lock.read_bytes(), b'030-pr67\n')
         (self.state / 'history.sqlite3').write_bytes(b'synthetic')
         with patch.object(read, 'run_owned', return_value=0) as run:
             self.assertEqual(self.status(), 0); run.assert_called_once(); run.reset_mock()
             with patch.dict(os.environ, {'NOMO_ETAS_GRAPH':'026-v68'}):
                 self.assertNotEqual(self.status(), 0); run.assert_not_called()
-        self.assertEqual((self.state / '.nomo-session.lock').read_bytes(), b'')
+    def test_historical_session_markers_are_preserved_under_030(self):
+        lock = self.state / '.nomo-session.lock'; lock.touch(mode=0o600)
+        (self.state / 'history.sqlite3').write_bytes(b'synthetic')
+        for marker in (b'', b'026-v68\n'):
+            with self.subTest(marker=marker):
+                lock.write_bytes(marker)
+                with patch.object(read, 'run_owned', return_value=0) as run:
+                    self.assertEqual(self.status(), 0); run.assert_called_once()
+                self.assertEqual(lock.read_bytes(), marker)
     def test_unknown_marker_or_selector_refuses_without_runtime(self):
         lock = self.state / '.nomo-session.lock'; lock.write_bytes(b'unknown\n'); lock.chmod(0o600)
         (self.state / 'history.sqlite3').write_bytes(b'synthetic')
@@ -58,7 +59,7 @@ class GraphSessionTest(unittest.TestCase):
                 self.assertNotEqual(self.status(), 0); run.assert_not_called()
     def test_existing_data_not_marked_as_new_graph(self):
         (self.state / 'history.sqlite3').write_bytes(b'synthetic')
-        with patch.dict(os.environ, {'NOMO_ETAS_GRAPH':'026-v68'}), patch.object(read, 'run_owned') as run:
+        with patch.dict(os.environ, {'NOMO_ETAS_GRAPH':'030-pr67'}), patch.object(read, 'run_owned') as run:
             self.assertNotEqual(self.create(), 0); run.assert_not_called()
         self.assertEqual((self.state / '.nomo-session.lock').read_bytes(), b'')
 
