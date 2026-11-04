@@ -198,6 +198,20 @@ def run_recorded_check(args, command, check_id=None):
     return edit.run_owned(request, dict(os.environ))
 
 
+def summarize_recorded_check(args, check_id, tty):
+    print('Check recorded. Asking the model for one read-only summary; the command will not run again.', flush=True)
+    request = 'AUTO-CONTINUATION (no new user input): Summarize recorded check ' + check_id + ', its outcome, exit code and available output; do not claim it passed if it failed or is unavailable. Suggest next steps without running commands.'
+    try: code, summary = chat_turn(args, request, False, False, tty)
+    except (OSError, ValueError) as error:
+        print('Check remains recorded; model summary could not start or complete: ' + str(error), file=sys.stderr, flush=True); return 1
+    if code:
+        print('Check remains recorded; model summary stopped. Inspect session status; do not rerun the check automatically.', file=sys.stderr, flush=True)
+        show_status_hint(args, args.id); return code
+    if not summary.final or summary.deferred or summary.final.startswith(('CHECK ', 'EDIT ', 'NEXT_PAGE')):
+        print('Check remains recorded; the model did not provide a complete summary. No further action was run.', flush=True)
+    return 0
+
+
 def work_command(args, action, root, operation_id, path, task, check):
     command = [sys.executable, str(ROOT / 'scripts/nomo-session-id.py'), action,
                '--sessions-dir', args.sessions_dir, '--id', args.id, '--read-root', args.root,
@@ -426,21 +440,14 @@ def main(argv=None):
                 print('Check declined; no command was run.', flush=True)
                 continue
             check_id = 'check-' + secrets.token_hex(16)
-            try:
-                code = run_recorded_check(args, observer.check, check_id)
-                if code:
-                    print('Check stopped or its result was not recorded; inspect the workspace and session before continuing.', file=sys.stderr, flush=True)
-                    return code
-                print('Check recorded. Asking the model for one read-only summary; the command will not run again.', flush=True)
-                summary_request = 'AUTO-CONTINUATION (no new user input): Summarize recorded check ' + check_id + ', its exit code and available output; suggest next steps without running commands.'
-                code, summary = chat_turn(args, summary_request, False, False, tty)
+            try: code = run_recorded_check(args, observer.check, check_id)
             except (OSError, ValueError) as error:
                 print('Check or summary could not start or complete; inspect the session: ' + str(error), file=sys.stderr, flush=True); return 1
             if code:
-                print('Check remains recorded; model summary stopped. Inspect session status; do not rerun the check automatically.', file=sys.stderr, flush=True)
-                show_status_hint(args, args.id); return code
-            if not summary.final or summary.deferred or summary.final.startswith(('CHECK ', 'EDIT ', 'NEXT_PAGE')):
-                print('Check remains recorded; the model did not provide a complete summary. No further action was run.', flush=True)
+                print('Check stopped or its result was not recorded; inspect the workspace and session before continuing.', file=sys.stderr, flush=True)
+                return code
+            code = summarize_recorded_check(args, check_id, tty)
+            if code: return code
             continue
         if natural and observer.route is not None:
             action, path = observer.route
@@ -466,6 +473,9 @@ def main(argv=None):
                 print('Work stopped; inspect session status before continuing.', file=sys.stderr, flush=True)
                 show_status_hint(args, args.id)
                 return code
+            if args.check and args.events_policy_dir is not None:
+                code = summarize_recorded_check(args, operation_id, tty)
+                if code: return code
         if args.once is not None:
             return 0
 

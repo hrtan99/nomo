@@ -129,6 +129,27 @@ class SessionChatTest(unittest.TestCase):
             self.assertEqual(module.main(self.args), 1)
         check.assert_called_once(); self.assertIn('Check or summary could not start or complete', error.getvalue())
 
+    def test_natural_edit_summarizes_only_recorded_configured_check(self):
+        self.args += ['--events-policy-dir', '/private-policy', '--check', 'python3', 'verify.py']
+        proposal = module.NaturalObserver(['file.txt']); proposal.route = ('work', 'file.txt')
+        summary = module.NaturalObserver(['file.txt']); summary.feed('stdout', b'FINAL check failed; inspect the output\n')
+        with patch.object(module.sys, 'stdin', Terminal('edit file\n/exit\n')), patch.object(module.sys, 'stdout', Terminal()), \
+             patch.object(module.sys, 'stderr', io.StringIO()), patch.object(module, 'chat_turn', side_effect=[(0, proposal), (0, summary)]) as chat, \
+             patch.object(module.edit, 'run_owned', return_value=0) as work:
+            self.assertEqual(module.main(self.args), 0)
+        work.assert_called_once(); self.assertEqual(chat.call_count, 2)
+        operation = next(x.split('=', 1)[1] for x in work.call_args.args[0] if x.startswith('--operation-id='))
+        self.assertIn(operation, chat.call_args.args[1]); self.assertFalse(chat.call_args.args[3])
+
+    def test_natural_edit_summary_failure_does_not_retry_work(self):
+        self.args += ['--events-policy-dir', '/private-policy', '--check', 'python3', 'verify.py']
+        proposal = module.NaturalObserver(['file.txt']); proposal.route = ('work', 'file.txt')
+        with patch.object(module.sys, 'stdin', Terminal('edit file\n')), patch.object(module.sys, 'stdout', Terminal()), \
+             patch.object(module.sys, 'stderr', io.StringIO()) as error, patch.object(module, 'chat_turn', side_effect=[(0, proposal), (1, module.NaturalObserver([]))]), \
+             patch.object(module.edit, 'run_owned', return_value=0) as work:
+            self.assertEqual(module.main(self.args), 1)
+        work.assert_called_once(); self.assertIn('Check remains recorded', error.getvalue())
+
     def test_confirmed_check_summarizes_once_in_read_only_mode(self):
         self.args += ['--events-policy-dir', '/private-policy']
         proposal = module.NaturalObserver(['file.txt']); proposal.feed('stdout', b'NATURAL CHECK python3 -m unittest\n')

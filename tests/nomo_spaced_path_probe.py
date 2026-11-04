@@ -21,8 +21,8 @@ class Fake(BaseHTTPRequestHandler):
             if i == 0:
                 assert ctx['current']['request'] == TASK and set(ctx['current']['allowed']) == set(FILES)
                 value = ['delegate', 'Read note.txt to identify the requested edit']
-            elif i in (1, 5, 12): value = ['read', TARGET]
-            elif i in (2, 6, 13): value = ['final', 'note.txt contains the relevant color']
+            elif i in (1, 5, 12, 16): value = ['read', TARGET]
+            elif i in (2, 6, 13, 17): value = ['final', 'note.txt contains the relevant color']
             elif i == 3: value = 'EDIT ' + TARGET
             elif i == 4:
                 assert ctx['current']['request'] == TASK and ctx['previous']['answer'] == 'EDIT ' + TARGET
@@ -33,13 +33,15 @@ class Fake(BaseHTTPRequestHandler):
                 value = ['delegate', 'Replace old with green']
             elif i == 9: value = ['edit', 'old', 'new']
             elif i == 10: value = '已将 old 改为 new'
-            elif i == 11:
+            elif i in (11, 15):
+                if i == 11: assert ctx['current']['request'].startswith('AUTO-CONTINUATION (no new user input):')
                 assert any(TASK in str(item) for item in ctx['history'])
                 marker = next(n for n,e in enumerate(ctx['history']) if e['kind']=='work-boundary')
                 checked = next(n for n,e in enumerate(ctx['history']) if e['kind']=='check' and e['name']=='work-check')
                 assert marker < checked, ctx['history']
                 value = ['delegate', 'Read note.txt to report its current color']
-            elif i == 14: value = '当前文件包含 new'
+            elif i == 14: value = '自动检查通过，退出码 0'
+            elif i == 18: value = '当前文件包含 new'
             else: raise AssertionError('unexpected request')
             content = json.dumps(value, ensure_ascii=False, separators=(',', ':')) if isinstance(value, list) else value
             body = json.dumps({'choices':[{'message':{'role':'assistant','content':content},'finish_reason':'stop'}], 'usage':{'prompt_tokens':100,'completion_tokens':20,'total_tokens':120}},ensure_ascii=False).encode()
@@ -65,7 +67,7 @@ def interactive(command, env, question, editing):
                 os.write(master,b'yes\n');native=True
             if editing and not application and b'CONFIRM Apply this exact preview? [y/N]' in text:
                 assert native;os.write(master,b'yes\n');application=True
-            done = b'Check passed.' in text if editing else '当前文件包含 new'.encode() in text
+            done = '自动检查通过，退出码 0'.encode() in text if editing else '当前文件包含 new'.encode() in text
             if done and not editing and not events_requested: os.write(master,b'/events\n');events_requested=True
             if (editing and done or events_requested and b'TIMELINE ' in text) and not exited: os.write(master,b'/exit\n');exited=True
         while select.select([master],[],[],0)[0]:
@@ -108,12 +110,12 @@ def main():
         assert stat.S_IMODE(workspace.stat().st_mode)==0o755
         command=[str(project/'scripts/nomo'),'--id',match.group(1).decode(),'--root',str(workspace),'--allow',','.join(FILES)]
         second=interactive(command,env,'现在文件的颜色是什么？',False)
-        assert not server.failure and server.phases==list(range(15));assert '当前文件包含 new'.encode() in second
+        assert not server.failure and server.phases==list(range(19));assert '当前文件包含 new'.encode() in second
         assert b'work-boundary' in second and b'work-check' in second and b'UNORDERED WORK' not in second
         assert second.index(b'work-boundary') < second.index(b'work-check')
         status = subprocess.run([str(project/'scripts/nomo'), '--id', match.group(1).decode(), '--status'], env=env, capture_output=True, timeout=60)
         assert status.returncode == 0, status.stderr.decode('utf-8', 'replace')
-        assert b'NATIVE configured cumulative reservation=3694592; actual provider usage unknown; legacy native budget not present' in status.stdout, status.stdout.decode('utf-8', 'replace')
+        assert b'NATIVE configured cumulative reservation=4874240; actual provider usage unknown; legacy native budget not present' in status.stdout, status.stdout.decode('utf-8', 'replace')
         print(json.dumps({'status':'passed','scope':'discovery and natural-language spaced-path edit, check, same-ID explicit continuation','fake_requests':len(server.phases),'confirmations':2,'selected_file':TARGET,'unchanged_other_files':3}))
     finally:server.shutdown();server.server_close();thread.join(timeout=5);print('evidence',out,flush=True)
 
