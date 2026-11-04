@@ -16,7 +16,7 @@ import nomo.harness.edit_original.EditOriginal;
 import nomo.harness.harness_work_model.{read_main, edit_plan, edit_child, aggregate};
 import nomo.harness.work_chain_context.ParentFacts;
 import nomo.harness.work_chain_model.{plan as chain_plan, child as chain_child, aggregate as chain_aggregate};
-import nomo.harness.harness_edit_contract.{decode_plan, decode_edit, text_error, history_summary_error, history_fallback_summary, decode_work_plan, decode_work_edit, work_summary_error};
+import nomo.harness.harness_edit_contract.{decode_plan, decode_edit, decode_empty_edit, text_error, history_summary_error, history_fallback_summary, decode_work_plan, decode_work_edit, work_summary_error};
 import nomo.tools.workspace.ReadOnlyRoot;
 import nomo.tools.edit_file.{EditableRoot, Prepared, read_original, read_original_wide, prepare_original, prepare_original_legacy};
 import nomo.session.edit_operation_store.available;
@@ -101,7 +101,7 @@ flow prepare_mode_with(input: Work, original_error: (string) -> string, stage_lo
     stage_log("edit-child", state);
     let edit_raw = perform LegacyEditStages.child(delegated);
     if inspect_all { println(response_text(edit_raw, "edit-child", "lab-qwen-", 32768)); }
-    let decoded_edit = if chain_read { decode_work_edit(edit_raw) } else { decode_edit(edit_raw) };
+    let decoded_edit = if expanded && before == "" { decode_empty_edit(edit_raw) } else { if chain_read { decode_work_edit(edit_raw) } else { decode_edit(edit_raw) } };
     let request = match decoded_edit { Ok(value) => value, Err(error) => { return failed(state, error); } };
     let prepared = match (if expanded { prepare_original(selected.path, before, request.target, request.replacement) } else { prepare_original_legacy(selected.path, before, request.target, request.replacement) }) { Ok(value) => value, Err(error) => { return failed(state, if chain_read { response_error(edit_raw, "edit-child", "proposal", 32768) } else { error }); } };
     state = match bump_edit(state, false) { Ok(value) => value, Err(error) => { return failed(state, error); } };

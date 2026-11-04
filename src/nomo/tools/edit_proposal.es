@@ -30,7 +30,7 @@ public flow propose(request: Request) -> Result<Proposal, string> {
     let original_bytes = match text_bytes(request.original, "original") { Ok(value) => value, Err(error) => { return Err(error); } };
     let target_bytes = match text_bytes(request.target, "target") { Ok(value) => value, Err(error) => { return Err(error); } };
     let replacement_bytes = match text_bytes(request.replacement, "replacement") { Ok(value) => value, Err(error) => { return Err(error); } };
-    if target_bytes == 0 { return Err("target must not be empty"); }
+    if target_bytes == 0 { if original_bytes == 0 && replacement_bytes > 0 { return Ok(Proposal { path = request.path, before = request.original, after = request.replacement }); } return Err("target must not be empty"); }
 
     // The first split selects the leftmost match. Search again after its first
     // Unicode scalar to detect every later match, including overlapping ones.

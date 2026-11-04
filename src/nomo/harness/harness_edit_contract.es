@@ -129,17 +129,18 @@ flow plan(raw: string, diagnostic: bool) -> Result<string, string> {
     if invalid != "" { return Err(if diagnostic { response_error(raw, "edit-plan", "task", 4096) } else { invalid }); }
     return Ok(fields[1]);
 }
-flow edit(raw: string, diagnostic: bool) -> Result<Child, string> {
+flow edit(raw: string, diagnostic: bool, empty: bool) -> Result<Child, string> {
     let fields = match decoded(raw, 32768, 3, diagnostic) { Ok(value) => value, Err(error) => { return Err(error); } };
     let size = match text_bytes(fields[1], "target") { Ok(value) => value, Err(error) => { return Err(if diagnostic { response_error(raw, "edit-child", "target", 32768) } else { error }); } };
     match text_bytes(fields[2], "replacement") { Ok(_) => {} Err(error) => { return Err(if diagnostic { response_error(raw, "edit-child", "replacement", 32768) } else { error }); } }
-    if size == 0 { return Err(if diagnostic { response_error(raw, "edit-child", "target", 32768) } else { "target must not be empty" }); }
+    if size == 0 && !empty { return Err(if diagnostic { response_error(raw, "edit-child", "target", 32768) } else { "target must not be empty" }); }
     return Ok(Child { target = fields[1], replacement = fields[2] });
 }
 public flow decode_plan(raw: string) -> Result<string, string> { return plan(raw, false); }
-public flow decode_edit(raw: string) -> Result<Child, string> { return edit(raw, false); }
+public flow decode_edit(raw: string) -> Result<Child, string> { return edit(raw, false, false); }
+public flow decode_empty_edit(raw: string) -> Result<Child, string> { return edit(raw, false, true); }
 public flow decode_work_plan(raw: string) -> Result<string, string> { return plan(raw, true); }
-public flow decode_work_edit(raw: string) -> Result<Child, string> { return edit(raw, true); }
+public flow decode_work_edit(raw: string) -> Result<Child, string> { return edit(raw, true, false); }
 public flow work_summary_error(raw: string) -> string {
     if len(raw) == 0 || len(raw) > 512 || byte_count(utf8_encode(raw)) > 512 { return response_error(raw, "edit-aggregate", "limit", 512); }
     let invalid = text_error(raw, "final answer");
@@ -158,7 +159,7 @@ public flow context_error(context: Context) -> string {
     }
     let selected = selector_error(context.id, context.workspace, context.path); if selected != "" { return selected; }
     let before = match text_bytes(context.before, "original") { Ok(value) => value, Err(error) => { return error; } };
-    if before == 0 || before != context.before_bytes { return "edit original byte count mismatch"; }
+    if before != context.before_bytes { return "edit original byte count mismatch"; }
     if context.phase != "aggregate" {
         if context.completed || context.after != "" || context.after_bytes != 0 || context.request_digest != "" ||
             context.before_digest != "" || context.after_digest != "" { return "uncompleted edit context carries outcome"; }
