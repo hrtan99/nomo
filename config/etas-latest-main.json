@@ -1,10 +1,15 @@
 {
   "selector": "latest041",
+  "source_overrides": [
+    "core",
+    "frontend",
+    "interpreter"
+  ],
   "repositories": {
     "cli": {
       "repository": "etas",
-      "revision": "578606f14216e92ffbb05cf7d9652b000c54c6bf",
-      "tree": "fd689ac6ae193574b2739aa4eedad61d188dd0cf",
+      "revision": "6b70636866d9f1c1ea4d796ac12d10eda29412f3",
+      "tree": "2639b1a00d579f650f8f14b5d7c113c60632724a",
       "packages": [
         "etas_cli",
         "etas_driver",
@@ -14,8 +19,8 @@
     },
     "core": {
       "repository": "etas-core",
-      "revision": "fef278ab63934af59c009f2b819acf84ef880e80",
-      "tree": "d3deedb5798d28dcce2f2c70d12da7c22f1690d7",
+      "revision": "280c0644a6e549209b58a263dca60ae3f3fe60c3",
+      "tree": "8872b7c5ba20718e80a1f971524b334603b98914",
       "packages": [
         "etas_builtin",
         "etas_cache",
@@ -30,8 +35,8 @@
     },
     "frontend": {
       "repository": "etas-frontend",
-      "revision": "2da5fd16487177d960ce7204b2ae8dff317065ca",
-      "tree": "358964703cf558b4eba3c9a6b40f2ff777dadf58",
+      "revision": "9be3d8e508035557ca431810b27dcb9ca7e3ca41",
+      "tree": "86a78a9808e72c2d33adac3b5427f096620c271d",
       "packages": [
         "etas_effects",
         "etas_frontend",
@@ -44,14 +49,14 @@
     },
     "interpreter": {
       "repository": "etas-interpreter",
-      "revision": "c2a6ed9289ec946d2012cb7b894a154ca48c1e20",
-      "tree": "696282028b2c16b5f15ebb6cc867d8e21b7903f9",
+      "revision": "d4018f325388979b851949ab538a511ec05b7ddf",
+      "tree": "43e82f2e6f3162ba44cd87634f0e4e7c4e4d9331",
       "packages": [
         "etas_interpreter"
       ]
     }
   },
-  "source": "Official unmodified ETAS CLI 0.4.1 dependency graph observed 2026-11-05",
-  "cargo_lock_sha256": "429ffcee0853b6f5f6826810f1e9a706e14fa92546e18a08a1ba8b2118c809dc",
-  "verified_seed_binary_sha256": "13518e3a112eabd87e071da850b62d178361c0fea9643a85837f459125179b3a"
+  "source": "Official ETAS CLI 0.4.1 at upstream HEAD plus source overrides to the 2026-11-06 upstream HEADs of etas-core, etas-frontend and etas-interpreter; this is a Nomo-pinned four-repository combination, not the CLI repository's unmodified dependency graph",
+  "cargo_lock_sha256": "61d81ddf9ff22181f0cce07a7baa7c6f9950bc16fcee903b40175e2a3f835a42",
+  "verified_seed_binary_sha256": "e2368eed8bdecd825446744366f6708f55414fc906b03aed5477255fc050723f"
 }

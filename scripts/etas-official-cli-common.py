@@ -117,11 +117,26 @@ def guard_environment():
         for name in ('config', 'config.toml'):
             require(not (directory / name).exists(), 'unexpected Cargo config: ' + str(directory / name))
     require(SPEC['selector'] == SELECTOR and set(PINS) == {'cli', 'core', 'frontend', 'interpreter'}, 'invalid graph configuration')
+    require(len(source_override_keys()) == len(set(source_override_keys())) and
+            set(source_override_keys()) <= {'core', 'frontend', 'interpreter'}, 'invalid dependency source overrides')
     require(digest(LOCK) == SPEC['cargo_lock_sha256'], 'repository CLI lock drift')
 
 
-def frontend_override():
-    return '\n[patch."https://github.com/etas-project/etas-frontend.git"]\n' + ''.join(name + ' = { path = "' + str(ROOT / 'frontend/crates' / name) + '" }\n' for name in PINS['frontend']['packages'])
+def source_override_keys():
+    configured = tuple(SPEC.get('source_overrides', ()))
+    # The 0.3.0 graph predates the generic source_overrides field. Preserve
+    # its reviewed frontend PR override while newer graphs may name any of the
+    # three upstream source repositories explicitly.
+    if SPEC.get('frontend_override'):
+        require(not configured or configured == ('frontend',), 'conflicting frontend dependency overrides')
+        return ('frontend',)
+    return configured
+
+
+def source_overrides():
+    return ''.join('\n[patch."https://github.com/etas-project/' + PINS[key]['repository'] + '.git"]\n' +
+                   ''.join(name + ' = { path = "' + str(ROOT / key / 'crates' / name) + '" }\n'
+                           for name in PINS[key]['packages']) for key in source_override_keys())
 
 
 def git_guard(path, key, check_origin=False):
@@ -130,10 +145,10 @@ def git_guard(path, key, check_origin=False):
     require(read(['git', 'rev-parse', 'HEAD'], cwd=path).strip() == pin['revision'], 'revision drift: ' + key)
     require(read(['git', 'rev-parse', 'HEAD^{tree}'], cwd=path).strip() == pin['tree'], 'tree drift: ' + key)
     changes = read(['git', 'status', '--porcelain', '--untracked-files=no'], cwd=path).strip()
-    if key == 'cli' and SPEC.get('frontend_override'):
+    if key == 'cli' and source_override_keys():
         require(changes == 'M Cargo.toml', 'CLI override changed other sources')
         original = read(['git', 'show', 'HEAD:Cargo.toml'], cwd=path)
-        require((path / 'Cargo.toml').read_text() == original + frontend_override(), 'frontend dependency override drift')
+        require((path / 'Cargo.toml').read_text() == original + source_overrides(), 'dependency source override drift')
     else:
         require(not changes, 'tracked source drift: ' + key)
     extras = read(['git', 'ls-files', '--others', '--exclude-standard'], cwd=path).splitlines()
@@ -141,7 +156,8 @@ def git_guard(path, key, check_origin=False):
     ignored = read(['git', 'ls-files', '--others', '--ignored', '--exclude-standard'], cwd=path).splitlines()
     require(set(ignored) <= ({'Cargo.lock'} if key == 'cli' else set()), 'unexpected ignored source files: ' + key)
     if check_origin:
-        require(read(['git', 'remote', 'get-url', 'origin'], cwd=path).strip() == 'https://github.com/etas-project/etas.git', 'CLI origin drift')
+        expected = 'https://github.com/etas-project/' + PINS[key]['repository'] + '.git'
+        require(read(['git', 'remote', 'get-url', 'origin'], cwd=path).strip() == expected, 'Git origin drift: ' + key)
 
 
 def graph_guard(data):
@@ -158,9 +174,9 @@ def graph_guard(data):
         manifest = Path(package['manifest_path'])
         if key == 'cli':
             require(origin is None and manifest == SOURCE / 'crates' / name / 'Cargo.toml', 'CLI package source drift: ' + name)
-        elif key == 'frontend' and SPEC.get('frontend_override'):
-            root = ROOT / 'frontend'
-            require(origin is None and manifest == root / 'crates' / name / 'Cargo.toml', 'frontend override source drift: ' + name)
+        elif key in source_override_keys():
+            root = ROOT / key
+            require(origin is None and manifest == root / 'crates' / name / 'Cargo.toml', 'source override drift: ' + name)
             roots[key] = root
         else:
             pin = PINS[key]
@@ -236,11 +252,14 @@ def prepare(sources=None, seed=None):
         for directory, dirs, files in os.walk(sources, followlinks=False):
             require(not any((Path(directory) / name).is_symlink() for name in dirs + files), 'symlink in source seed')
         shutil.copytree(sources, SOURCE, symlinks=True)
-    if SPEC.get('frontend_override'):
-        run(['git', 'clone', '--no-checkout', 'https://github.com/etas-project/etas-frontend.git', ROOT / 'frontend'])
-        run(['git', '-c', 'core.hooksPath=/dev/null', 'checkout', '--detach', PINS['frontend']['revision']], cwd=ROOT / 'frontend')
+    for key in source_override_keys():
+        root = ROOT / key
+        run(['git', 'clone', '--no-checkout', 'https://github.com/etas-project/' + PINS[key]['repository'] + '.git', root])
+        run(['git', '-c', 'core.hooksPath=/dev/null', 'checkout', '--detach', PINS[key]['revision']], cwd=root)
+        git_guard(root, key, check_origin=True)
+    if source_override_keys():
         with (SOURCE / 'Cargo.toml').open('a') as stream:
-            stream.write(frontend_override())
+            stream.write(source_overrides())
     git_guard(SOURCE, 'cli', check_origin=True)
     require(not (SOURCE / 'Cargo.lock').exists(), 'unexpected source Cargo.lock')
     shutil.copyfile(LOCK, SOURCE / 'Cargo.lock')
@@ -301,7 +320,9 @@ def guard(read_only=False):
     if LABEL in previous_baseline: accepted.append(previous_baseline[LABEL])
     previous_refactor = {'012': '39b0277800140388d34d678bc3f07dbf10d240888fb31956d09cb999dc7a503c', '022': '9bc1745be5eb056eca102314930db86901f1c81c0dae957b84d6d96d2a93b176', '023': '96ff100859d8eb9000d190888515eb05056da32555c81e0a5b5a0d81cb3db63d', '024': '3ffddeb87a4deb59304825e7bc6103b7f6bcfb889df5c764eb4801c9be21dd46', '025': 'a9c166409d8bacc39a1e4af3e83451241da6efe33d35082077a36298cb3da458'}
     if LABEL in previous_refactor: accepted.append(previous_refactor[LABEL])
-    previous_v2 = {'012': '01552d56e137654ce92a5a5a8f9a87bc453acd64b7a330e329b9c4fbbd26ffc0', '022': '91ea6d4934155e5e6265c3df75f6848354b76fbf4a8f434b7625165a83635cc3', '023': '49de480236faa63d3ca9848e612e216c393c18b6840bd9885d562e4e21fb453d', '024': 'c5ed54add4b7f5d3329845e16a12ae2fdecad7687f286860fc56cb4d6ea893db', '025': '48d947d96597cfdb5225ac4c1b851e4dd870eedf55ad0d51c29b4f56029cc3e4', '026': '2f5b586e027532be033d071ac8179160b78cce7e83586fbc56c40ce7efb5342a'}
+    previous_v2 = {'012': '01552d56e137654ce92a5a5a8f9a87bc453acd64b7a330e329b9c4fbbd26ffc0', '022': '91ea6d4934155e5e6265c3df75f6848354b76fbf4a8f434b7625165a83635cc3', '023': '49de480236faa63d3ca9848e612e216c393c18b6840bd9885d562e4e21fb453d', '024': 'c5ed54add4b7f5d3329845e16a12ae2fdecad7687f286860fc56cb4d6ea893db', '025': '48d947d96597cfdb5225ac4c1b851e4dd870eedf55ad0d51c29b4f56029cc3e4', '026': '2f5b586e027532be033d071ac8179160b78cce7e83586fbc56c40ce7efb5342a',
+        '030': '2ebc9bef95b024ef35f8ac4075e8268d2d547f980a8951f91381b22f22a206e7',
+        '041': '4da692d577464b972d83189ccca5d7caa74807a38dcbb5f054c8462ec1dff55e'}
     if LABEL in previous_v2: accepted.append(previous_v2[LABEL])
     if LEGACY_SHA is not None: accepted.append(LEGACY_SHA)
     if PREVIOUS_SHARED is not None: accepted.append(PREVIOUS_SHARED)
