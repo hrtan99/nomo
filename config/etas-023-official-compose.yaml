@@ -1,5 +1,5 @@
 services:
-  dev:
+  dev: &etas-service
     environment:
       NOMO_NORMAL_GRAPH: latest023
       CARGO_BUILD_JOBS: "1"
@@ -9,16 +9,7 @@ services:
         source: .
         target: /workspace
         read_only: true
-  dependency:
-    environment:
-      NOMO_NORMAL_GRAPH: latest023
-      CARGO_BUILD_JOBS: "1"
-      PYTHONDONTWRITEBYTECODE: "1"
-    volumes:
-      - type: bind
-        source: .
-        target: /workspace
-        read_only: true
+  dependency: *etas-service
 
 volumes:
   cargo-cache:
