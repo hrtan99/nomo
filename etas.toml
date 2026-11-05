@@ -604,6 +604,7 @@ model = "MiniMax-M3.1-Flash"
 base_url = "https://api.minimax.cn/v1"
 api_key_env = "MINIMAX_API_KEY"
 allow_private = false
+typed_output_encoding = "output-tool"
 
 [runtime.profiles.harness-minimax-work.model.timeout]
 request_deadline_ms = 120000
@@ -638,6 +639,7 @@ model = "MiniMax-M3.1-Flash"
 base_url = "https://api.minimax.cn/v1"
 api_key_env = "MINIMAX_API_KEY"
 allow_private = false
+typed_output_encoding = "output-tool"
 [runtime.profiles.nomo-read-session-new.model.timeout]
 request_deadline_ms = 120000
 connect_timeout_ms = 2000
@@ -665,6 +667,7 @@ model = "MiniMax-M3.1-Flash"
 base_url = "https://api.minimax.cn/v1"
 api_key_env = "MINIMAX_API_KEY"
 allow_private = false
+typed_output_encoding = "output-tool"
 [runtime.profiles.nomo-read-session-existing.model.timeout]
 request_deadline_ms = 120000
 connect_timeout_ms = 2000
@@ -715,6 +718,7 @@ model = "MiniMax-M3.1-Flash"
 base_url = "https://api.minimax.cn/v1"
 api_key_env = "MINIMAX_API_KEY"
 allow_private = false
+typed_output_encoding = "output-tool"
 
 [runtime.profiles.nomo-history-work.model.timeout]
 request_deadline_ms = 120000
@@ -774,6 +778,7 @@ model = "MiniMax-M3.1-Flash"
 base_url = "https://api.minimax.cn/v1"
 api_key_env = "MINIMAX_API_KEY"
 allow_private = false
+typed_output_encoding = "output-tool"
 [runtime.profiles.nomo-read-events-new.model.timeout]
 request_deadline_ms = 120000
 connect_timeout_ms = 2000
@@ -806,6 +811,7 @@ model = "MiniMax-M3.1-Flash"
 base_url = "https://api.minimax.cn/v1"
 api_key_env = "MINIMAX_API_KEY"
 allow_private = false
+typed_output_encoding = "output-tool"
 [runtime.profiles.nomo-read-events-existing.model.timeout]
 request_deadline_ms = 120000
 connect_timeout_ms = 2000
@@ -866,6 +872,7 @@ model = "MiniMax-M3.1-Flash"
 base_url = "https://api.minimax.cn/v1"
 api_key_env = "MINIMAX_API_KEY"
 allow_private = false
+typed_output_encoding = "output-tool"
 
 [runtime.profiles.nomo-history-events-work.model.timeout]
 request_deadline_ms = 120000

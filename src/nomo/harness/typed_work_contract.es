@@ -16,6 +16,14 @@ import nomo.tools.edit_proposal.Proposal;
 public type Delegation = { task: string };
 public type ReadAction = { operation: string, files: Array<string>, literal: string };
 public type Answer = { text: string };
+// ETAS 0.4.1 checks this typed design but cannot yet lower it to a host schema.
+// Keep the formal contract while runtime action selection remains on the strict
+// string decoder; see etas-project/etas#65.
+public enum ChildSelection {
+    Read(string),
+    Search(string, Array<string>),
+    Final(string),
+}
 
 public flow read_input_error(context: ReadContext, phase: string) -> string {
     if (phase != "plan" && phase != "aggregate") || context.phase != phase { return "typed read context phase mismatch"; }

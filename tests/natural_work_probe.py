@@ -15,7 +15,7 @@ class Fake(BaseHTTPRequestHandler):
     def do_POST(self):
         try:
             req = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
-            ctx = json.loads(req['messages'][1]['content']); i = len(self.server.phases)
+            ctx = json.loads(next(message['content'] for message in reversed(req['messages']) if message['role'] == 'user')); i = len(self.server.phases)
             if i == 0:
                 assert ctx['current']['request'] == TASK and ctx['current']['allowed'] == FILES
                 value = ['delegate', 'Read note.txt to identify the requested edit']
@@ -38,8 +38,14 @@ class Fake(BaseHTTPRequestHandler):
                 value = ['delegate', 'Read note.txt to report its current color']
             elif i == 14: value = '当前内容是 before green'
             else: raise AssertionError('unexpected request')
-            content = json.dumps(value, ensure_ascii=False, separators=(',', ':')) if isinstance(value, list) else value
-            body = json.dumps({'choices':[{'message':{'role':'assistant','content':content},'finish_reason':'stop'}], 'usage':{'prompt_tokens':100,'completion_tokens':20,'total_tokens':120}},ensure_ascii=False).encode()
+            if req.get('tools'):
+                output = {'text': value[1]}
+                message = {'role':'assistant','content':None,'tool_calls':[{'id':'synthetic-output','type':'function','function':{'name':'etas_emit_output','arguments':json.dumps(output,ensure_ascii=False,separators=(',',':'))}}]}
+                finish_reason = 'tool_calls'
+            else:
+                content = json.dumps(value, ensure_ascii=False, separators=(',', ':')) if isinstance(value, list) else value
+                message = {'role':'assistant','content':content}; finish_reason = 'stop'
+            body = json.dumps({'choices':[{'message':message,'finish_reason':finish_reason}], 'usage':{'prompt_tokens':100,'completion_tokens':20,'total_tokens':120}},ensure_ascii=False).encode()
             self.server.phases.append(i);self.send_response(200);self.send_header('Content-Length',str(len(body)));self.end_headers();self.wfile.write(body)
         except Exception as error:
             self.server.failure = repr(error);self.send_error(500)
