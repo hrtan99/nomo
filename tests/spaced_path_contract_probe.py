@@ -25,8 +25,8 @@ public flow spaced_path_probe(args: Array<string>) -> i32 {
 }
 '''
         path.write_text(source)
-        env=dict(os.environ,NOMO_ETAS_GRAPH='026-v68')
-        command=['docker','compose','--env-file','/dev/null','-f','compose.yaml','-f','config/etas-026-official-compose.yaml','-f','config/etas-runtime-cache-compose.yaml','run','--rm','--no-deps','-T','dev','python3','-B','/workspace/scripts/nomo-verified-etas.py','run','/workspace','--flow','spaced_path_probe','--profile','foundation','--allow-effects']
+        env=dict(os.environ,NOMO_NORMAL_GRAPH='latest041')
+        command=['docker','compose','--env-file','/dev/null','-f','compose.yaml','-f','config/etas-041-official-compose.yaml','-f','config/etas-runtime-cache-compose.yaml','run','--rm','--no-deps','-T','dev','python3','-B','/workspace/scripts/nomo-verified-etas.py','run','/workspace','--flow','spaced_path_probe','--profile','foundation','--allow-effects']
         result=subprocess.run(command,cwd=project,env=env,text=True,capture_output=True,timeout=120)
         assert result.returncode==0 and '"value":"0"' in result.stdout.replace(' ',''),(result.stdout,result.stderr)
         print('PASS native path bounds and exact spaced-path routing')

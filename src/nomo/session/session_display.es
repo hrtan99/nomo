@@ -2,7 +2,7 @@ module nomo.session.session_display;
 
 import nomo.core.json.encode as encode_json;
 
-import std.text.{char_count as len, char_get, from_char};
+import std.text.{char_count as len, char_get, concat, from_char, is_ascii};
 import std.bytes.len as byte_count;
 import std.codec.text.utf8_encode;
 
@@ -61,12 +61,22 @@ public flow display(projection: Projection) -> Result<string, string> {
 }
 
 public flow ascii_json(json: string, maximum: usize, encoded_error: string, display_error: string) -> Result<string, string> {
-    if len(json) > 131072 || byte_count(utf8_encode(json)) > 131072 { return Err(encoded_error); }
-    var output = ""; var size: usize = 0;
-    for codepoint in std.text.chars(json) limit Iterations(131074) { let character = std.text.from_char(codepoint);
+    return ascii_json_with(json, 131072, maximum, encoded_error, display_error);
+}
+
+// The standard JSON codec owns JSON framing and string escaping. This final
+// terminal-safety pass only converts remaining non-ASCII scalars to JSON
+// Unicode escapes; chunked std.text.concat avoids quadratic large-string growth.
+public flow ascii_json_with(json: string, encoded_maximum: usize, maximum: usize, encoded_error: string, display_error: string) -> Result<string, string> {
+    if len(json) > encoded_maximum || byte_count(utf8_encode(json)) > encoded_maximum { return Err(encoded_error); }
+    if is_ascii(json) { if len(json) > maximum { return Err(display_error); } return Ok(json); }
+    var pieces: Array<string> = []; var chunk = ""; var size: usize = 0;
+    for codepoint in std.text.chars(json) limit Iterations(8388610) { let character = std.text.from_char(codepoint);
         let fragment = escaped(character); size = size + len(fragment);
         if size > maximum { return Err(display_error); }
-        output = output + fragment;
+        chunk = chunk + fragment;
+        if len(chunk) >= 4096 { pieces = pieces.push(chunk); chunk = ""; }
     }
-    return Ok(output);
+    if chunk != "" { pieces = pieces.push(chunk); }
+    return Ok(concat(pieces));
 }

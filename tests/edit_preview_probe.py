@@ -37,7 +37,7 @@ def ascii_json(value):
                 output += '\\u' + format(56320 + (code & 1023), '04x')
         return output + '"'
     if isinstance(value, dict):
-        return '{' + ','.join(quote(key) + ':' + quote(item) for key, item in value.items()) + '}'
+        return json.dumps(value, ensure_ascii=True, sort_keys=True, separators=(',', ':'))
     return '[' + ','.join(quote(item) for item in value) + ']'
 
 
@@ -85,9 +85,12 @@ def cases():
     add('full 2048 line input bounded', '\n' * 2048, 'n\n' * 1024,
         normal + '- \n' * 12 + '... 2036 removed lines omitted ...\n' + '+ n\n' * 12 + '... 1012 added lines omitted ...\n')
     add('UTF8 byte bound accepted', 'é' * 1024, 'safe', no_lf + '- ' + '\\u00e9' * 26 + clipped + '\n+ safe\n')
-    add('before byte bound refused', 'x' * 2049, 'safe', error='preview before exceeds 2048 UTF-8 bytes')
-    add('after byte bound refused', 'old', 'x' * 2049, error='preview after exceeds 2048 UTF-8 bytes')
-    add('UTF8 byte overflow refused', 'é' * 1024 + 'x', 'safe', error='preview before exceeds 2048 UTF-8 bytes')
+    add('legacy before byte bound lifted', 'x' * 2049, 'safe',
+        no_lf + '- ' + 'x' * 160 + clipped + '\n+ safe\n')
+    add('legacy after byte bound lifted', 'old', 'x' * 2049,
+        no_lf + '- old\n+ ' + 'x' * 160 + clipped + '\n')
+    add('legacy UTF8 byte bound lifted', 'é' * 1024 + 'x', 'safe',
+        no_lf + '- ' + '\\u00e9' * 26 + clipped + '\n+ safe\n')
     add('NUL refused', 'o\x00ld', 'new', error='preview before contains NUL')
     add('unchanged refused', 'same\n', 'same\n', error='edit preview requires a change')
     assert len(checks) == 29 and len({item['label'] for item in checks}) == 29
@@ -114,16 +117,17 @@ def sources():
 
 
 def denied_output():
-    before, after = 'head\nold\nend\n', 'head\nnew\nend\n'
-    selected = dict(id='preview-denied', workspace='preview-fixture', region='nomo.tools.edit_file.EditableRoot', path='docs/note.txt')
-    canonical = ascii_json(['nomo-edit-request-v1', *selected.values(), before, 'old', 'new', after])
+    before, after = 'head\n前😀 old\nend\n', 'head\n前😀 新😀\nend\n'
+    selected = dict(id='preview-denied', workspace='preview-fixture', region='nomo.tools.edit_file.EditableRoot', path='docs/说明.txt')
+    canonical = ascii_json(['nomo-edit-request-v1', *selected.values(), before, 'old', '新😀', after])
     digest = lambda value: hashlib.sha256(value.encode()).hexdigest()
     request_digest = digest(canonical)
-    preview = dict(format='nomo-edit-preview-v1', **selected, before=before, target='old', replacement='new', after=after,
+    preview = dict(format='nomo-edit-preview-v1', **selected, before=before, target='old', replacement='新😀', after=after,
                    before_bytes=str(len(before.encode())), after_bytes=str(len(after.encode())),
                    before_digest=digest(before), after_digest=digest(after), request_digest=request_digest)
     return ('PREVIEW ' + ascii_json(preview) + '\nDIFF request=' + request_digest + '\n'
-            '--- before\n+++ after\n  head\n- old\n+ new\n  end\n\n'
+            '--- before\n+++ after\n  head\n- \\u524d\\ud83d\\ude00 old\n+ \\u524d\\ud83d\\ude00 \\u65b0\\ud83d\\ude00\n  end\n\n'
+            'WARNING File permissions, including executable bits, may change during this edit.\n'
             'CONFIRM Native gate requires yes; then confirm this request with y/yes.\n'
             'SOURCE_APPROVAL_DENIED Nomo edit preview-denied request=' + request_digest + '\nPASS ' + DENIAL_LABEL + '\n')
 
@@ -146,6 +150,19 @@ def main():
     generated = FIXTURE.read_text().replace('__CHECKS__', '[' + ',\n'.join(map(record, checks)) + ']')
     (project / 'src/app/preview_probe.es').write_text(generated)
     manifest = MANIFEST.replace('harness-checkpoint-contract-probe', 'edit-preview001').replace('app.contract_probe', 'app.preview_probe')
+    manifest = manifest.replace('rules = ["console=allow"]',
+        'rules = ["console=allow", "memory=allow", "approval=allow", "filesystem=allow"]')
+    manifest = manifest.replace('mode = "deny"', 'mode = "prompt"')
+    manifest += '''
+[runtime.profiles.fixture.memory]
+backend = "sqlite"
+path = "/tmp/edit-preview001.sqlite3"
+[runtime.profiles.fixture.filesystem.regions."nomo.tools.edit_file.EditableRoot"]
+root = "/tmp"
+read = true
+write = true
+delete = false
+'''
     (project / 'etas.toml').write_text(manifest)
     result = dict(task='EDIT-PREVIEW-001', status='prepared', sources=copied,
                   fixture_sha256=hashlib.sha256(FIXTURE.read_bytes()).hexdigest(), checks=[item['label'] for item in checks], commands=[],

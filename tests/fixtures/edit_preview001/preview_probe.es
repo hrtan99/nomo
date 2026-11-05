@@ -49,11 +49,11 @@ public flow observe(args: Array<string>) -> i32 {
 
 // Source denial, not a native approval exercise. Calling the real execute
 // controller proves this denial returns before its journal/File branches.
-public flow denied(args: Array<string>) -> i32 ![Console, Memory, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {
-    let prepared = match prepare_original("docs/note.txt", "head\nold\nend\n", "old", "new") {
+public flow denied(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {
+    let prepared = match prepare_original("docs/说明.txt", "head\n前😀 old\nend\n", "old", "新😀") {
         Ok(value) => value, Err(error) => { abort(error); }
     };
-    let selector = Selector { id = "preview-denied", workspace = "preview-fixture", path = "docs/note.txt" };
+    let selector = Selector { id = "preview-denied", workspace = "preview-fixture", path = "docs/说明.txt" };
     let answer = execute(selector, prepared) with {
         Approval.request(reason) => {
             println("SOURCE_APPROVAL_DENIED " + reason);

@@ -4,15 +4,16 @@ import std.io.{println, read_line};
 import std.io.IOError as ConsoleError;
 import std.fs.IOError as FileError;
 import std.effects.Fs;
-import std.text.{trim, lowercase, char_count as len, from_usize, is_ascii};
+import std.text.{trim, lowercase, char_count as len, from_usize};
 import nomo.tools.edit_file.{EditableRoot, Prepared, apply};
 import nomo.tools.edit_proposal.validate;
-import nomo.tools.edit_encoding.object;
 import nomo.tools.edit_binding.bind;
 import nomo.ui.edit_diff.render;
 import nomo.session.edit_operation.{Binding, selector_error};
 import nomo.session.edit_operation_store.{begin, complete};
 import nomo.core.json.encode as encode_json;
+import nomo.core.large_context.edit_json_bytes;
+import nomo.session.session_display.ascii_json_with;
 public import nomo.application.edit.effects.Approval;
 public import nomo.tools.edit_contract.{Selector, Confirmed};
 
@@ -21,26 +22,19 @@ type PreviewMachine = { format: string, id: string, workspace: string, region: s
     before_digest: string, after_digest: string, request_digest: string };
 
 flow preview(value: Prepared, selected: Binding) -> Result<string, string> {
-    // The runtime JSON codec handles large ASCII previews in one bounded
-    // operation. Keep the historical ASCII-only encoder as the safe fallback
-    // for Unicode, including invisible and bidirectional scalars that must not
-    // be emitted raw to a terminal.
+    // The runtime codec owns the complete JSON representation. A final bounded
+    // pass keeps Unicode, including invisible and bidirectional scalars, from
+    // being emitted raw to the terminal.
     let machine = PreviewMachine { format = "nomo-edit-preview-v1", id = selected.id, workspace = selected.workspace,
         region = selected.region, path = selected.path, before = value.proposal.before, target = value.request.target,
         replacement = value.request.replacement, after = value.proposal.after, before_bytes = from_usize(selected.before_bytes),
         after_bytes = from_usize(selected.after_bytes), before_digest = selected.before_digest,
         after_digest = selected.after_digest, request_digest = selected.request_digest };
-    if is_ascii(selected.id) && is_ascii(selected.workspace) && is_ascii(selected.region) && is_ascii(selected.path) &&
-        is_ascii(value.proposal.before) && is_ascii(value.request.target) && is_ascii(value.request.replacement) &&
-        is_ascii(value.proposal.after) {
-        return encode_json(machine, "edit preview JSON conversion refused", "edit preview JSON encoding refused");
-    }
-    return object(["format", "id", "workspace", "region", "path", "before", "target", "replacement", "after",
-        "before_bytes", "after_bytes", "before_digest", "after_digest", "request_digest"],
-        ["nomo-edit-preview-v1", selected.id, selected.workspace, selected.region, selected.path,
-        value.proposal.before, value.request.target, value.request.replacement, value.proposal.after,
-        from_usize(selected.before_bytes), from_usize(selected.after_bytes),
-        selected.before_digest, selected.after_digest, selected.request_digest]);
+    let json = match encode_json(machine, "edit preview JSON conversion refused", "edit preview JSON encoding refused") {
+        Ok(text) => text, Err(error) => { return Err(error); }
+    };
+    return ascii_json_with(json, edit_json_bytes(), edit_json_bytes(),
+        "edit preview JSON input exceeds bound", "edit preview JSON output exceeds bound");
 }
 
 public type Preview = { binding: Binding, machine: string, diff: string };

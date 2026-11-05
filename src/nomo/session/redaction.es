@@ -1,6 +1,6 @@
 module nomo.session.redaction;
 
-import std.text.{contains, join, split};
+import std.text.{contains, count as match_count, replace};
 import std.collections.len as count;
 import std.bytes.len as byte_count;
 import std.codec.text.utf8_encode;
@@ -39,8 +39,8 @@ public flow text(value: string, policy: Policy) -> Result<Text, string> {
     if byte_count(utf8_encode(value)) > event_bytes() { return Err("redaction input exceeds bound"); }
     var output = value; var replacements: usize = 0;
     for literal in policy.literals limit Iterations(8) {
-        let parts = split(output, literal); let pieces = count(parts);
-        if pieces > 1 { replacements = replacements + pieces - 1; output = join(parts, "[REDACTED]"); }
+        let matches = match_count(output, literal);
+        if matches > 0 { replacements = replacements + matches; output = replace(output, literal, "[REDACTED]"); }
         if byte_count(utf8_encode(output)) > event_bytes() { return Err("redaction output exceeds bound"); }
     }
     for literal in policy.literals limit Iterations(8) {

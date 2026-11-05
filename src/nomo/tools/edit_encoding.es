@@ -1,6 +1,6 @@
 module nomo.tools.edit_encoding;
 
-import std.text.{char_count as len, join, from_char};
+import std.text.{char_count as len, char_get, concat, from_char};
 import std.collections.len as count;
 import std.bytes.len as byte_count;
 import std.codec.text.utf8_encode;
@@ -10,8 +10,7 @@ import nomo.core.large_context.{file_bytes, edit_json_bytes};
 
 // All callers produce a nibble by division/modulo or valid UTF-8 bit groups.
 flow nibble(value: u8) -> string {
-    return match value { 0 => "0", 1 => "1", 2 => "2", 3 => "3", 4 => "4", 5 => "5", 6 => "6", 7 => "7",
-        8 => "8", 9 => "9", 10 => "a", 11 => "b", 12 => "c", 13 => "d", 14 => "e", 15 => "f", _ => "?" };
+    return match char_get("0123456789abcdef", value) { Some(character) => from_char(character), None() => "?" };
 }
 
 flow byte_hex(value: u8) -> string { return nibble(value / 16) + nibble(value % 16); }
@@ -62,7 +61,7 @@ flow quoted(value: string) -> Result<string, string> {
             if len(chunk) >= 4096 { pieces = pieces.push(chunk); chunk = ""; }
         }
     }
-    return Ok("\"" + join(pieces, "") + chunk + "\"");
+    return Ok("\"" + concat(pieces) + chunk + "\"");
 }
 
 public flow json(values: Array<string>) -> Result<string, string> {
