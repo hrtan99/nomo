@@ -13,6 +13,7 @@ BEFORE = ''.join('line %03d: unchanged marker content\n' % n for n in range(7000
 AFTER = BEFORE.replace('before old\n', 'before green\n')
 CHILD_DETAIL = '详细证据' * 300
 assert len(CHILD_DETAIL.encode()) == 3600
+LATEST_TOOL_REFERENCE = 'Exact latest tool outcome supplied separately as current.prior.outcome for read stages or previous.outcome for work stages; duplicate text omitted.'
 
 class Fake(BaseHTTPRequestHandler):
     def log_message(self, *_): pass
@@ -30,17 +31,24 @@ class Fake(BaseHTTPRequestHandler):
             elif i == 3: value = 'EDIT note.txt'
             elif i == 4:
                 assert ctx['current']['request'] == TASK and ctx['previous']['answer'] == 'EDIT note.txt'
+                assert 'line 000: unchanged marker content' in ctx['previous']['outcome'] and 'line 6999: unchanged marker content' in ctx['previous']['outcome']
+                recovered = json.dumps(ctx['conversation'], ensure_ascii=False)
+                assert LATEST_TOOL_REFERENCE in recovered and 'line 000: unchanged marker content' not in recovered and 'line 6999: unchanged marker content' not in recovered
                 value = ['delegate', 'Read note.txt before editing']
             elif i == 7: value = 'note.txt contains before old'
             elif i == 8:
                 assert ctx['current']['edit']['path'] == 'note.txt' and ctx['current']['edit']['before'] == BEFORE
                 recovered = json.dumps(ctx['conversation'], ensure_ascii=False)
-                assert 'line 000: unchanged marker content' in recovered and 'line 6999: unchanged marker content' in recovered
+                assert 'line 000: unchanged marker content' in ctx['previous']['outcome'] and 'line 6999: unchanged marker content' in ctx['previous']['outcome']
+                assert LATEST_TOOL_REFERENCE in recovered and 'line 000: unchanged marker content' not in recovered and 'line 6999: unchanged marker content' not in recovered
                 value = ['delegate', 'Replace old with green']
             elif i == 9: value = ['edit', 'old', 'green']
             elif i == 10: value = '已将 old 改为 green'
             elif i == 11:
                 assert ctx['work']['name'] == 'Some'
+                recovered = json.dumps(ctx['history'], ensure_ascii=False)
+                assert 'line 000: unchanged marker content' in ctx['current']['prior']['outcome'] and 'line 6999: unchanged marker content' in ctx['current']['prior']['outcome']
+                assert LATEST_TOOL_REFERENCE in recovered and 'line 000: unchanged marker content' not in recovered and 'line 6999: unchanged marker content' not in recovered
                 value = ['delegate', 'Read note.txt to report its current color']
             elif i == 14: value = '当前内容是 before green'
             else: raise AssertionError('unexpected request')

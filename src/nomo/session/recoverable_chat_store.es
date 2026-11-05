@@ -96,14 +96,18 @@ public flow load_evidence(turn: i32, policy: Policy, binding: string) -> Result<
 }
 
 // Restore the durable conversation projection, including large tool evidence
-// archived outside the compact main frame. Callers receive decoded data only.
+// archived outside the compact main frame. The caller also supplies the latest
+// canonical selection separately, so replace only its exact projected copies
+// with explicit references. Earlier turns and non-selected work/check events
+// stay in their original order, including their positions around the references.
 public flow conversation(frame: EventFrame, latest: Previous, policy: Policy, binding: string) -> Result<Array<Event>, string> {
-    var selected: Array<Event> = []; var chat_turn: i32 = 0;
+    var selected: Array<Event> = []; var chat_turn: i32 = 0; var chat_open = false;
     for event in frame.events limit Iterations(4096) {
         if event.role == "system" && event.kind == "native-budget" &&
             (event.name == "chat" || event.name == "chat-large" || event.name == "chat-resilient" || event.name == "chat-high-input") {
-            chat_turn = chat_turn + 1;
+            chat_turn = chat_turn + 1; chat_open = true;
         }
+        if event.role == "system" && event.kind == "work-boundary" { chat_open = false; }
         if (event.role == "user" && event.kind == "request") || (event.role == "model" && event.kind == "request") ||
             (event.role == "tool" && event.kind == "check") || (event.role == "system" && (event.kind == "work-boundary" || event.kind == "notice")) ||
             (event.role == "assistant" && event.kind == "answer") ||
@@ -119,6 +123,10 @@ public flow conversation(frame: EventFrame, latest: Previous, policy: Policy, bi
                     if chat_turn != frame.turns || latest.tool == "" || latest.outcome == "" { return Err("latest recoverable chat evidence missing"); }
                     value = latest.outcome;
                 }
+            }
+            if chat_open && chat_turn == frame.turns && event.role == "main" && event.kind == "tool" && latest.tool != "" && event.name == latest.tool &&
+                latest.outcome != "" && value == latest.outcome && byte_len(value) > timeline_inline_bytes() {
+                value = "Exact latest tool outcome supplied separately as current.prior.outcome for read stages or previous.outcome for work stages; duplicate text omitted.";
             }
             selected = selected.push(Event { role = event.role, kind = event.kind, name = event.name, text = value });
         }

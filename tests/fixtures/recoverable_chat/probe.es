@@ -5,7 +5,7 @@ import nomo.core.conversation.Event;
 import nomo.harness.harness_tool_contract.Ledger;
 import nomo.harness.harness_tool_chat_contract.{Invocation, Previous, Completed, TurnResult};
 import nomo.session.redaction.Policy;
-import nomo.session.recoverable_chat_store.{create, load, reserve, finish, conversation};
+import nomo.session.recoverable_chat_store.{create, load, reserve, finish, conversation, record_work};
 import nomo.session.event_text_codec.decode;
 import std.collections.len as count;
 
@@ -32,9 +32,10 @@ flow large_result(turn: i32, request: string, label: string, maximum: Ledger) ->
     let prior = Previous { task = "Read large evidence", result = answer, tool = "read", outcome = outcome, answer = answer };
     let used = Ledger { steps = turn * 7, calls = turn * 4, tokens = turn * 270336, tools = turn, scan = turn * 4194560 };
     let state = Invocation { usage = used, maximum = maximum, admitted = turn, prior = prior };
-    let records = [Event { role = "user", kind = "request", name = "", text = request },
+    var records = [Event { role = "user", kind = "request", name = "", text = request },
         Event { role = "main", kind = "tool", name = "read", text = outcome },
         Event { role = "assistant", kind = "answer", name = "", text = answer }];
+    if label == "LATEST-PRIOR" { records = records.push(Event { role = "system", kind = "notice", name = "after-latest", text = "unique event after latest answer" }); }
     let done = Completed { request = request, task = prior.task, result = prior.result, tool = prior.tool,
         outcome = prior.outcome, answer = prior.answer, records = records };
     return TurnResult { status = 0, state = state, resolved = true, completed = Some(done) };
@@ -105,15 +106,27 @@ public flow recoverable_chat_probe(args: Array<string>) -> i32 ![Console, Memory
     if args[0] == "finish-fourth-large" {
         let prior = match load(policy, binding) { Ok(Some(item)) => item, _ => { abort("fourth running frame missing"); } };
         match finish(prior, large_result(4, "fourth question", "LATEST-PRIOR", prior.value.chat.invocation.maximum), policy, binding) { Ok(_) => {} Err(_) => { abort("fourth finish refused"); } }
-        println("PASS fourth large completion"); return 0;
+        let repeated = "captured LATEST-PRIOR";
+        let work = [Event { role = "main", kind = "consume", name = "child-1", text = repeated },
+            Event { role = "main", kind = "answer", name = "", text = repeated }];
+        match record_work("after-latest", work, policy, binding) { Ok(_) => {} Err(_) => { abort("work facts after latest chat refused"); } }
+        println("PASS fourth large completion and later same-text work facts"); return 0;
     }
     if args[0] == "inspect-conversation" {
         let final = match load(policy, binding) { Ok(Some(item)) => item, _ => { abort("four-turn frame missing"); } };
         let history = match conversation(final.value.events, final.value.chat.invocation.prior, policy, binding) { Ok(value) => value, Err(_) => { abort("conversation restore refused"); } };
-        if final.value.events.turns != 4 || count(history) != 8 || history[2].text != "third question" || history[5].text != "fourth question" ||
+        if final.value.events.turns != 4 || count(history) != 12 || history[2].text != "third question" || history[5].text != "fourth question" ||
             history[3].role != "main" || history[3].kind != "tool" || history[3].text != large("EARLY-HISTORY") ||
-            history[6].role != "main" || history[6].kind != "tool" || history[6].text != large("LATEST-PRIOR") { abort("archived/latest conversation content or order changed"); }
-        println("PASS archived and latest large evidence restored in order"); return 0;
+            history[6].role != "main" || history[6].kind != "tool" || history[6].name != "read" ||
+            history[6].text != "Exact latest tool outcome supplied separately as current.prior.outcome for read stages or previous.outcome for work stages; duplicate text omitted." ||
+            history[7].role != "assistant" || history[7].kind != "answer" || history[7].text != "captured LATEST-PRIOR" ||
+            history[8].role != "system" || history[8].kind != "notice" || history[8].name != "after-latest" || history[8].text != "unique event after latest answer" ||
+            history[9].role != "system" || history[9].kind != "work-boundary" || history[9].name != "after-latest" ||
+            history[10].role != "main" || history[10].kind != "consume" || history[10].text != "captured LATEST-PRIOR" ||
+            history[11].role != "main" || history[11].kind != "answer" || history[11].text != "captured LATEST-PRIOR" ||
+            final.value.chat.invocation.prior.tool != "read" || final.value.chat.invocation.prior.outcome != large("LATEST-PRIOR") ||
+            final.value.chat.invocation.prior.answer != "captured LATEST-PRIOR" { abort("archived/latest conversation content or order changed"); }
+        println("PASS archived evidence restored and latest canonical references preserve event order"); return 0;
     }
     abort("unknown test phase");
 }
