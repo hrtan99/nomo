@@ -150,8 +150,8 @@ def main(argv=None):
                 print('Event recording is opt-in; policy filters only supplied exact literals. Unknown secrets may remain. Keep the same private policy and binding key; recorded history alone does not establish workspace identity.',flush=True)
             if args.natural_work:native_args+=['--natural-work']
             compose+=['--file',str(ROOT/'config/nomo-read-session-compose.yaml')]
-            runner='/workspace/scripts/nomo-event-policy-bootstrap.py' if policy is not None else '/workspace/scripts/nomo-verified-etas.py'
-            native=['python3','-B',runner,'run','/workspace','--flow',flow,'--profile',profile,'--allow-effects',*native_args]
+            runner=['python3','-B','/workspace/scripts/nomo-event-policy.py','stdin-bootstrap'] if policy is not None else ['python3','-B','/workspace/scripts/nomo-verified-etas.py']
+            native=[*runner,'run','/workspace','--flow',flow,'--profile',profile,'--allow-effects',*native_args]
             command=[sys.executable,str(ROOT/'scripts/terminal-transport.py'),*compose,'run','--rm','--no-deps','--pull','never','--tty=false','--workdir','/session-state','dev',*native]
             if status:
                 if args.events:

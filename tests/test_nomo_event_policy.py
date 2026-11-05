@@ -32,7 +32,7 @@ class PolicyBindingTests(unittest.TestCase):
 
     def test_init_creates_private_key_once_without_printing_it(self):
         with tempfile.TemporaryDirectory() as tmp:
-            cmd = [sys.executable, '-B', str(ROOT / 'scripts/nomo-event-policy-init.py'), '--directory', tmp]
+            cmd = [sys.executable, '-B', str(ROOT / 'scripts/nomo-event-policy.py'), 'init', '--directory', tmp]
             first = subprocess.run(cmd, capture_output=True, timeout=5)
             self.assertEqual(first.returncode, 0)
             key = (Path(tmp) / 'binding.key').read_bytes()

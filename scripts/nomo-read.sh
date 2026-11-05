@@ -86,7 +86,7 @@ HELP
 }
 if [[ $# -eq 0 || ( $# -eq 1 && ( "$1" == help || "$1" == --help ) ) ]]; then usage; exit 0; fi
 action="$1"; shift
-if [[ "$action" == event-policy-init ]]; then exec python3 "$root/scripts/nomo-event-policy-init.py" "$@"; fi
+if [[ "$action" == event-policy-init ]]; then exec python3 "$root/scripts/nomo-event-policy.py" init "$@"; fi
 if [[ "$action" == session-chat ]]; then exec python3 "$root/scripts/nomo-session-chat.py" "$@"; fi
 if [[ "$action" == session-decision ]]; then exec python3 "$root/scripts/nomo-recovery-decision.py" "$@"; fi
 if [[ "$action" == session-id ]]; then exec python3 "$root/scripts/nomo-session-id.py" "$@"; fi

@@ -47,7 +47,7 @@ def main(argv=None):
                 runner=['python3','-B','/workspace/scripts/nomo-verified-etas.py'];flow='history_followup' if args.legacy_followup else 'history_work';profile='nomo-history-work'
                 if policy is not None:
                     compose+=['--file',str(ROOT/'config/nomo-event-policy-work-compose.yaml')]
-                    runner=['python3','-B','/workspace/scripts/nomo-event-policy-mount-bootstrap.py',binding]
+                    runner=['python3','-B','/workspace/scripts/nomo-event-policy.py','mount-bootstrap',binding]
                     flow='recoverable_history_followup' if args.event_followup else 'recoverable_history_work';profile='nomo-history-events-work'
                 native=[*runner,'run','/workspace','--flow',flow,'--profile',profile,'--allow-effects',
                     '--args','--id',args.id,'--workspace','private-workspace','--path',args.path,'--once',args.once,'--allow',args.allow]
@@ -78,7 +78,7 @@ def main(argv=None):
                         '--profile','nomo-read-session-status','--allow-effects','--args',action,args.id,check_ref,*extra]
                 else:
                     check_flow='recoverable_history_followup_check' if args.event_followup else 'recoverable_history_check'
-                    native_check=['python3','-B','/workspace/scripts/nomo-event-policy-mount-bootstrap.py',binding,'run','/workspace','--flow',check_flow,
+                    native_check=['python3','-B','/workspace/scripts/nomo-event-policy.py','mount-bootstrap',binding,'run','/workspace','--flow',check_flow,
                         '--profile','nomo-read-events-status','--allow-effects','--args','--policy-binding',binding,action,args.id,check_ref,*extra]
                 command_check=[sys.executable,str(ROOT/'scripts/terminal-transport.py'),*offline,'run','--rm','--no-deps','--pull','never',
                     '--tty=false','--workdir','/session-state','dev',*native_check]

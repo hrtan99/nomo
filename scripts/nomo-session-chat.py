@@ -158,7 +158,7 @@ def abandon_stopped_work(args, operation_id, action):
         compose = ['docker', 'compose', '--env-file', '/dev/null']
         for name in ('compose.yaml', 'config/etas-' + env['NOMO_ETAS_VERSION'].replace('.', '') + '-official-compose.yaml', 'config/etas-runtime-cache-compose.yaml', 'config/nomo-read-session-compose.yaml', 'config/nomo-event-policy-work-compose.yaml'):
             compose += ['--file', str(ROOT / name)]
-        native = ['python3', '-B', '/workspace/scripts/nomo-event-policy-mount-bootstrap.py', binding, 'run', '/workspace', '--flow', 'recoverable_work_abandon' if action == 'work' else 'recoverable_followup_abandon', '--profile', 'nomo-read-events-status', '--allow-effects', '--args', binding, operation_id]
+        native = ['python3', '-B', '/workspace/scripts/nomo-event-policy.py', 'mount-bootstrap', binding, 'run', '/workspace', '--flow', 'recoverable_work_abandon' if action == 'work' else 'recoverable_followup_abandon', '--profile', 'nomo-read-events-status', '--allow-effects', '--args', binding, operation_id]
         command = [sys.executable, str(ROOT / 'scripts/terminal-transport.py'), *compose, 'run', '--rm', '--no-deps', '--pull', 'never', '--tty=false', '--workdir', '/session-state', 'dev', *native]
         return edit.run_owned(command, env)
     finally: os.close(fd)

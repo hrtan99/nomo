@@ -66,7 +66,7 @@ class ReadSessionLauncherTest(unittest.TestCase):
             self.assertEqual(self.invoke(self.newargs()+['--events-policy-dir',str(policy)]),0)
         cmd,env=run.call_args.args[:2]
         self.assertIn('recoverable_read_session',cmd);self.assertIn('nomo-read-events-new',cmd)
-        self.assertIn('/workspace/scripts/nomo-event-policy-bootstrap.py',cmd)
+        self.assertIn('/workspace/scripts/nomo-event-policy.py',cmd);self.assertIn('stdin-bootstrap',cmd)
         self.assertEqual(run.call_args.kwargs['input_data'],file.read_bytes())
         self.assertNotIn('NOMO_EVENT_POLICY_DIR',env)
         self.assertFalse(any('SYNTHETIC_SECRET' in value for value in cmd))

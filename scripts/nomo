@@ -43,7 +43,7 @@ def state_paths(resume, workspace):
             os.fsync(fd)
         finally:
             os.close(fd)
-        subprocess.run([sys.executable, str(ROOT/'scripts/nomo-event-policy-init.py'), '--directory', str(policy)], check=True)
+        subprocess.run([sys.executable, str(ROOT/'scripts/nomo-event-policy.py'), 'init', '--directory', str(policy)], check=True)
     policy = private_dir(policy, False)
     return sessions, policy
 
