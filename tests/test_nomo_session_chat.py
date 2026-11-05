@@ -34,11 +34,12 @@ class SessionChatTest(unittest.TestCase):
         return code, output.getvalue(), error.getvalue(), call
 
     def test_empty_event_session_initialization_carries_workspace_identity(self):
-        args=module.argparse.Namespace(sessions_dir='/private/sessions',id=None,root='/workspace',allow='file.txt',events_policy_dir='/policy',discover=False)
+        args=module.argparse.Namespace(sessions_dir='/private/sessions',id=None,root='/workspace',allow='file.txt',events_policy_dir='/policy',discover=False,high_input=True)
         with patch.object(module.edit,'run_owned',return_value=0) as launch:
             code,_=module.chat_turn(args,None,True,False,False)
         self.assertEqual(code,0);command=launch.call_args.args[0]
         self.assertEqual(command[command.index('--workspace-root')+1],'/workspace')
+        self.assertIn('--high-input',command)
 
     def test_high_input_flag_is_forwarded_only_when_starting(self):
         args=module.argparse.Namespace(sessions_dir='/private/sessions',id=None,root='/workspace',allow='file.txt',events_policy_dir='/policy',discover=False,high_input=True)

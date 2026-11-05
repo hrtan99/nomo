@@ -135,13 +135,14 @@ public type View = { format: i32, encoding: string, phase: string, turns: i32, f
     additional_work: Array<ExtraEntry> };
 
 public flow status(args: Array<string>) -> i32 ![Console, Memory, Fs.read<PolicyRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {
-    let initialize = count(args) == 3 && args[2] == "--initialize";
+    let high_input = count(args) == 4 && args[2] == "--initialize" && args[3] == "--high-input";
+    let initialize = (count(args) == 3 && args[2] == "--initialize") || high_input;
     if (count(args) != 2 && !initialize) || args[0] != "--policy-binding" { println("REFUSED recoverable status requires policy binding"); return 1; }
     let policy = match load_policy() { Ok(item) => item, Err(error) => { println("REFUSED " + error); return 1; } };
     match load_legacy() { Ok(None()) => {} _ => { println("REFUSED legacy or invalid session data"); return 1; } }
     if initialize {
         match load(policy, args[1]) { Ok(None()) => {} Ok(Some(_)) => { println("REFUSED session already exists"); return 1; } Err(error) => { println("REFUSED " + error); return 1; } }
-        return match create(policy, args[1], false) { Ok(_) => { println("SESSION INITIALIZED"); 0 } Err(error) => { println("REFUSED " + error); 1 } };
+        return match create(policy, args[1], high_input) { Ok(_) => { println("SESSION INITIALIZED"); 0 } Err(error) => { println("REFUSED " + error); 1 } };
     }
     let snapshot = match recoverable_status_reader(policy, args[1]).snapshot() { Ok(value) => value, Err(error) => { println("REFUSED " + error); return 1; } };
     let saved = snapshot.chat; let work = snapshot.work; let check = snapshot.check;

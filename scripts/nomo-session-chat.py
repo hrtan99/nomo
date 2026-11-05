@@ -198,6 +198,8 @@ def chat_turn(args, question, starting, natural, tty):
     if question is not None: command += ['--root', args.root, '--allow=' + args.allow, '--once=' + question]
     if args.events_policy_dir is not None: command += ['--events-policy-dir', args.events_policy_dir]
     if natural: command += ['--natural-work']
+    # Initialization persists the selected format before a possible check, so
+    # the first later read must not silently lose an explicit high-input mode.
     if starting and getattr(args, 'high_input', False): command += ['--high-input']
     observer = NaturalObserver(['*'] if args.discover else args.allow.split(','))
     code = edit.run_owned(command, dict(os.environ), diagnostic=observer, **({} if tty else {'input_data': b''}))
@@ -430,7 +432,10 @@ def main(argv=None):
                 print('The agent is inspecting discovery page ' + str(args.page) + ' using another bounded chat turn.', flush=True)
             else:
                 extra_read = True
-                print('The agent is gathering more evidence using one additional chat turn (up to 6 calls and 405504 output tokens for new event sessions (older sessions retain their allowance)).', flush=True)
+                print('The agent is gathering more evidence using one additional chat turn (' +
+                      ('up to 6 calls and 81920 output tokens in this new high-input session' if args.high_input else
+                       'the same persisted limits as this session' if not starting else
+                       'up to 6 calls and 405504 output tokens in this new event session') + ').', flush=True)
             code, observer = chat_turn(args, question, False, natural, tty)
             if code:
                 print('Additional read stopped; inspect session status before continuing.', file=sys.stderr, flush=True)

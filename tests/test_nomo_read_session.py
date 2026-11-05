@@ -123,9 +123,9 @@ class ReadSessionLauncherTest(unittest.TestCase):
         file=policy/'policy.json';file.write_text('{"format":1,"literals":["SYNTHETIC_SECRET"]}');file.chmod(0o600)
         key=policy/'binding.key';key.write_bytes(b'K'*32);key.chmod(0o600)
         with patch.object(launcher,'run_owned',return_value=0) as run:
-            self.assertEqual(self.invoke(['init','--state',str(self.state),'--events-policy-dir',str(policy)]),0)
+            self.assertEqual(self.invoke(['init','--state',str(self.state),'--events-policy-dir',str(policy),'--high-input']),0)
         cmd,env=run.call_args.args[:2]
-        self.assertIn('recoverable_read_status',cmd);self.assertIn('--initialize',cmd)
+        self.assertIn('recoverable_read_status',cmd);self.assertIn('--initialize',cmd);self.assertEqual(cmd[-1],'--high-input')
         self.assertFalse(any('nomo-minimax-read-compose.yaml' in value for value in cmd))
         for name in ('MINIMAX_API_KEY','ETAS_HOST_MODEL_API_KEY','NOMO_QWEN_SERVER_API_KEY'):self.assertNotIn(name,env)
         self.assertEqual(run.call_args.kwargs['input_data'],file.read_bytes())

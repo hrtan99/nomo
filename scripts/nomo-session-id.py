@@ -182,7 +182,7 @@ def main(argv=None):
     args=parser.parse_args(argv)
     try:
         if args.natural_work and args.action not in ('start','resume'):raise ValueError('natural work routing requires a read turn')
-        if args.high_input and (args.action!='start' or args.events_policy_dir is None):raise ValueError('high-input mode requires a new event-recording session')
+        if args.high_input and (args.action not in ('start','init') or args.events_policy_dir is None):raise ValueError('high-input mode requires a new event-recording session')
         if args.interactive_check and args.action not in ('work','followup'):raise ValueError('interactive check requires a work action')
         if args.action in ('start','init') and args.id is not None:raise ValueError('a new session ID is generated automatically')
         if args.action not in ('start','init') and args.id is None:raise ValueError('select an existing session ID')

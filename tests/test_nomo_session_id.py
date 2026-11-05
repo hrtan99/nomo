@@ -54,11 +54,11 @@ class SessionIDTest(unittest.TestCase):
    code,_,err=self.call(['resume','--sessions-dir',str(self.base),'--id',self.identifier,'--root',str(self.workspace),'--allow','f','--once','q'])
   self.assertNotEqual(code,0);self.assertIn('different workspace',err);launch.assert_not_called()
  def test_init_creates_random_session_without_question_or_workspace(self):
-  args=['init','--sessions-dir',str(self.base),'--events-policy-dir','/policy']
+  args=['init','--sessions-dir',str(self.base),'--events-policy-dir','/policy','--high-input']
   with patch.object(module.secrets,'token_hex',return_value=self.identifier),patch.object(module._edit,'run_owned',return_value=0) as launch:
    code,out,_=self.call(args);self.assertEqual(code,0);self.assertIn('SESSION ID '+self.identifier,out)
    command=launch.call_args.args[0];self.assertIn('init',command);self.assertIn(str(self.base/self.identifier),command)
-   self.assertNotIn('--once',command);self.assertNotIn('--root',command);self.assertTrue((self.base/self.identifier).is_dir())
+   self.assertNotIn('--once',command);self.assertNotIn('--root',command);self.assertIn('--high-input',command);self.assertTrue((self.base/self.identifier).is_dir())
  def test_status_and_failure_retains_state(self):
   (self.base/self.identifier).mkdir(mode=0o700)
   with patch.object(module._edit,'run_owned',return_value=125):

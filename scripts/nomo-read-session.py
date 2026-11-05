@@ -91,7 +91,7 @@ def main(argv=None):
     args=parser.parse_args(argv)
     try:
         if args.natural_work and args.action in ('status','init'):raise ValueError('natural work routing requires a read turn')
-        if args.high_input and (args.action!='new' or args.events_policy_dir is None):raise ValueError('high-input mode requires a new event-recording session')
+        if args.high_input and (args.action not in ('new','init') or args.events_policy_dir is None):raise ValueError('high-input mode requires a new event-recording session')
         status=args.action in ('status','init');creating=args.action in ('new','init');state=_edit_launcher.private_state(args.state);context=None
         if status:
             if args.root is not None or args.allow is not None or args.once is not None:raise ValueError('status accepts only --state')
