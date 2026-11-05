@@ -316,11 +316,13 @@ class SessionChatTest(unittest.TestCase):
     def test_stopped_proposed_check_does_not_summarize_or_repeat(self):
         self.args += ['--events-policy-dir', '/private-policy']
         proposal=module.NaturalObserver(['file.txt']);proposal.feed('stdout',b'NATURAL CHECK python3 verify.py\n')
-        with patch.object(module.sys,'stdin',Terminal('run check\ny\n/exit\n')), patch.object(module.sys,'stdout',Terminal()), \
+        output = Terminal()
+        with patch.object(module.sys,'stdin',Terminal('run check\ny\n/exit\n')), patch.object(module.sys,'stdout',output), \
              patch.object(module.sys,'stderr',io.StringIO()),patch.object(module,'chat_turn',return_value=(0,proposal)) as chat, \
-             patch.object(module,'run_recorded_check',return_value=None) as check, patch.object(module,'summarize_recorded_check') as summary:
+             patch.object(module,'run_recorded_check',return_value=None) as check:
             self.assertEqual(module.main(self.args),0)
-        chat.assert_called_once();check.assert_called_once();summary.assert_not_called()
+        chat.assert_called_once();check.assert_called_once()
+        self.assertNotIn('Check recorded.', output.getvalue())
 
     def test_multiple_turns_and_exit(self):
         code, out, _, calls = self.run_chat('/help\nfirst\nsecond\n/exit\n', codes=(0, 0))

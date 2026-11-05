@@ -213,11 +213,6 @@ def run_recorded_check(args, command, check_id=None):
     return code
 
 
-def summarize_recorded_check(args, check_id, tty):
-    print('Check recorded. The deterministic outcome above is authoritative and available to resumed turns; no model summary was started and the command will not run again.', flush=True)
-    return 0
-
-
 def work_command(args, action, root, operation_id, path, task, check):
     command = [sys.executable, str(ROOT / 'scripts/nomo-session-id.py'), action,
                '--sessions-dir', args.sessions_dir, '--id', args.id, '--read-root', args.root,
@@ -461,8 +456,7 @@ def main(argv=None):
                 return code
             edits_left -= 1; requested_check = requested_check or observer.work_marker in ('WORK_CHECK', 'WORK_MORE_CHECK')
             if args.check and args.events_policy_dir is not None:
-                code = summarize_recorded_check(args, operation_id, tty)
-                if code: return code
+                print('Check recorded. The deterministic outcome above is authoritative and available to resumed turns; no model summary was started and the command will not run again.', flush=True)
             if observer.work_marker in ('WORK_MORE', 'WORK_MORE_CHECK'):
                 if not edits_left or args.events_policy_dir is None:
                     print('Further requested edits remain; automatic continuation stopped. Review the session and ask for the next file.', flush=True); break
@@ -512,8 +506,7 @@ def main(argv=None):
             if code:
                 print('Check stopped or its result was not recorded; inspect the workspace and session before continuing.', file=sys.stderr, flush=True)
                 return code
-            code = summarize_recorded_check(args, check_id, tty)
-            if code: return code
+            print('Check recorded. The deterministic outcome above is authoritative and available to resumed turns; no model summary was started and the command will not run again.', flush=True)
             continue
         if args.once is not None:
             return 0

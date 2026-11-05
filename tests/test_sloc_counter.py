@@ -1,4 +1,4 @@
-"""Counter v2 regression: product roots are explicit and cannot silently disappear."""
+"""Counter v3 regression: product roots and runtime files cannot disappear."""
 import contextlib
 import importlib.util
 import io
@@ -20,6 +20,8 @@ class SlocCounterTest(unittest.TestCase):
         self.root = Path(self.directory.name)
         for name in COUNTER.PRODUCT_ROOTS + COUNTER.OTHER_ROOTS:
             (self.root / name).mkdir(parents=True)
+        for name in COUNTER.RUNTIME_FILES:
+            self.write(name, "")
 
     def write(self, relative, text="code;\n"):
         path = self.root / relative
@@ -32,7 +34,8 @@ class SlocCounterTest(unittest.TestCase):
         self.write("tests/fixture.py", "fixture()\n")
         counts = COUNTER.inventory(self.root)
         self.assertEqual(counts["src"], (3, 5, 2))
-        self.assertEqual(counts["product"], (3, 5, 2))
+        self.assertEqual(counts["runtime"], (0, 0, len(COUNTER.RUNTIME_FILES)))
+        self.assertEqual(counts["product"], (3, 5, 2 + len(COUNTER.RUNTIME_FILES)))
         self.assertEqual(counts["tests"], (1, 1, 1))
 
     def test_missing_product_root_refused(self):
@@ -46,10 +49,17 @@ class SlocCounterTest(unittest.TestCase):
     def test_missing_other_category_refused(self):
         for name in COUNTER.OTHER_ROOTS:
             with self.subTest(name=name):
-                (self.root / name).rmdir()
+                selected = self.root / name
+                moved = self.root / (name + "-missing")
+                selected.rename(moved)
                 with self.assertRaisesRegex(ValueError, name):
                     COUNTER.inventory(self.root)
-                (self.root / name).mkdir()
+                moved.rename(selected)
+
+    def test_missing_runtime_file_refused(self):
+        (self.root / COUNTER.RUNTIME_FILES[0]).unlink()
+        with self.assertRaisesRegex(ValueError, COUNTER.RUNTIME_FILES[0]):
+            COUNTER.inventory(self.root)
 
     def test_file_cannot_stand_in_for_declared_root(self):
         (self.root / "src").rmdir()
@@ -58,7 +68,10 @@ class SlocCounterTest(unittest.TestCase):
             COUNTER.inventory(self.root)
 
     def test_empty_existing_roots_are_reported_as_zero(self):
-        self.assertTrue(all(values == (0, 0, 0) for values in COUNTER.inventory(self.root).values()))
+        counts = COUNTER.inventory(self.root)
+        self.assertEqual(counts["runtime"], (0, 0, len(COUNTER.RUNTIME_FILES)))
+        self.assertEqual(counts["product"], counts["runtime"])
+        self.assertEqual(counts["engineering-scripts"], (0, 0, 0))
 
     def test_physical_line_convention_unchanged(self):
         self.write("src/lines.py", '\n \n  # comment\n\t// comment\ncode # inline\n"""doc"""\n/* block */\n')
@@ -72,7 +85,7 @@ class SlocCounterTest(unittest.TestCase):
         self.write("src/ignored.md")
         self.write("packages/session-store/tests/outside.es")
         self.write("packages/unrelated/src/outside.es")
-        self.assertEqual(COUNTER.inventory(self.root)["product"], (4, 4, 4))
+        self.assertEqual(COUNTER.inventory(self.root)["product"], (4, 4, 4 + len(COUNTER.RUNTIME_FILES)))
 
     def test_cli_reports_version_roots_and_aggregate(self):
         self.write("src/main.es")
@@ -80,10 +93,10 @@ class SlocCounterTest(unittest.TestCase):
         output = io.StringIO()
         with patch.object(COUNTER, "ROOT", self.root), contextlib.redirect_stdout(output):
             self.assertEqual(COUNTER.main(), 0)
-        self.assertIn("nomo-physical-v2; authoritative", output.getvalue())
-        self.assertIn("product roots: src;", output.getvalue())
+        self.assertIn("nomo-physical-v3; authoritative", output.getvalue())
+        self.assertIn("product roots: src; reviewed runtime inventory:", output.getvalue())
         self.assertIn("src: 2 SLOC, 2 raw lines, 2 files", output.getvalue())
-        self.assertIn("product: 2 SLOC, 2 raw lines, 2 files", output.getvalue())
+        self.assertIn("product: 2 SLOC, 2 raw lines, 14 files", output.getvalue())
 
     def test_cli_missing_root_has_no_authoritative_totals(self):
         (self.root / "src").rmdir()
