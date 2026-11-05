@@ -2,10 +2,8 @@ module nomo.session.harness_checkpoint;
 
 import nomo.core.json.{encode as encode_json, string_fields};
 
-import std.text.{char_count as len, parse_i32, from_char, from_i32, from_usize};
+import std.text.{char_count as len, len as byte_len, is_ascii, parse_i32, from_char, from_i32, from_usize};
 import std.collections.len as count;
-import std.bytes.len as byte_count;
-import std.codec.text.utf8_encode;
 
 
 import nomo.core.text.printable;
@@ -98,12 +96,12 @@ public flow from_turn(identity: Identity, turn: TurnResult) -> Result<Checkpoint
 // Reject nested shapes and bound encoded bytes before JSON parsing/casting.
 public flow framed(raw: string, successor: bool) -> bool {
     let limit: usize = if successor { 196608 } else { 65536 };
-    if len(raw) == 0 || len(raw) > limit || byte_count(utf8_encode(raw)) > limit { return false; }
+    if len(raw) == 0 || len(raw) > limit || byte_len(raw) > limit { return false; }
     var opened = false; var closed = false; var quoted = false; var escaped = false;
     var leaves: usize = 0; var characters: usize = 0; var field_size: usize = 0; var unicode: usize = 0;
     let slash = from_char('\\');
     for codepoint in std.text.chars(raw) limit Iterations(196610) { let character = std.text.from_char(codepoint);
-        if character != "" && byte_count(utf8_encode(character)) != 1 { return false; }
+        if character != "" && !is_ascii(character) { return false; }
         if quoted {
             if unicode > 0 { unicode = unicode - 1; }
             else if escaped { escaped = false; if character == "u" { unicode = 4; } }

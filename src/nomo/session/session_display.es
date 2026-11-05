@@ -2,7 +2,7 @@ module nomo.session.session_display;
 
 import nomo.core.json.encode as encode_json;
 
-import std.text.{char_count as len, char_get, concat, from_char, is_ascii};
+import std.text.{char_count as len, len as byte_len, char_get, concat, from_char, is_ascii};
 import std.bytes.len as byte_count;
 import std.codec.text.utf8_encode;
 
@@ -78,7 +78,7 @@ flow printable_ascii(value: string) -> bool {
 // terminal-safety pass only converts remaining non-ASCII scalars to JSON
 // Unicode escapes; chunked std.text.concat avoids quadratic large-string growth.
 public flow ascii_json_with(json: string, encoded_maximum: usize, maximum: usize, encoded_error: string, display_error: string) -> Result<string, string> {
-    if len(json) > encoded_maximum || byte_count(utf8_encode(json)) > encoded_maximum { return Err(encoded_error); }
+    if len(json) > encoded_maximum || byte_len(json) > encoded_maximum { return Err(encoded_error); }
     if printable_ascii(json) { if len(json) > maximum { return Err(display_error); } return Ok(json); }
     var pieces: Array<string> = []; var chunk = ""; var size: usize = 0;
     // The largest caller accepts 16 Mi scalar inputs; keep its established

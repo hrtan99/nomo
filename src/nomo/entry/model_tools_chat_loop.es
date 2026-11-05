@@ -1,10 +1,8 @@
 module nomo.entry.model_tools_chat_loop;
 
 import std.io.{println, read_line};
-import std.text.{char_count as len, split, from_i32, starts_with, ends_with};
+import std.text.{char_count as len, len as byte_len, split, from_i32, starts_with, ends_with};
 import std.collections.len as count;
-import std.codec.text.utf8_encode;
-import std.bytes.len as byte_count;
 import nomo.core.read_text.within;
 import nomo.cli.cli_request.parse_line as parse_ascii;
 import nomo.cli.read_cli.parse_line as parse_unicode;
@@ -41,7 +39,7 @@ flow refused(error: string, unicode: bool) -> i32 {
     ledger("", fresh(), displayed_maximum(unicode, state.maximum)); return 1;
 }
 flow line_error(raw: string, unicode: bool) -> string {
-    let size = if unicode { byte_count(utf8_encode(raw)) } else { len(raw) };
+    let size = if unicode { byte_len(raw) } else { len(raw) };
     let framing: usize = if ends_with(raw, "\r\n") { 2 } else { if ends_with(raw, "\n") { 1 } else { 0 } };
     if size > 130 || size - framing > 128 { return if unicode { "raw input exceeds 128 UTF-8 bytes plus LF/CRLF" } else { "raw input exceeds 128 characters plus LF/CRLF" }; }
     return "";
