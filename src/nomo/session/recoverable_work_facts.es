@@ -73,7 +73,7 @@ flow read_snapshot(policy: Policy, binding: string) -> Result<Facts, string> {
         var index: usize = 0;
         for item in items limit Iterations(48) {
             let fact = match extra_fact(item, policy) { Ok(value) => value, Err(error) => { return Err(error); } };
-            additional = additional.push(if index + 2 < count(items) { compact(fact) } else { fact }); index = index + 1; calls = calls + if item.result.phase == "abandoned" { 7 } else { item.result.calls }; generation = generation + if item.result.phase == "abandoned" { if item.result.source == "wide-v5" || item.result.source == "wide-v4" { 286720 } else { if item.result.source == "wide-v3" { 188416 } else { if item.result.source == "wide" || item.result.source == "wide-v2" { 61440 } else { 51200 } } } } else { item.result.generation };
+            additional = additional.push(if index + 2 < count(items) { compact(fact) } else { fact }); index = index + 1; calls = calls + if item.result.phase == "abandoned" { 7 } else { item.result.calls }; generation = generation + if item.result.phase == "abandoned" { if item.result.source == "wide-v5" || item.result.source == "wide-v4" { 286720 } else { if item.result.source == "wide-v3" || item.result.source == "high-input-v1" { 188416 } else { if item.result.source == "wide" || item.result.source == "wide-v2" { 61440 } else { 51200 } } } } else { item.result.generation };
         }
     } None() => {} }
     if count(additional) >= 1 { first_facts = match first_facts { Some(value) => Some(compact(value)), None() => None() }; }

@@ -34,6 +34,8 @@ class Fake(BaseHTTPRequestHandler):
             elif i == 7: value = 'note.txt contains before old'
             elif i == 8:
                 assert ctx['current']['edit']['path'] == 'note.txt' and ctx['current']['edit']['before'] == BEFORE
+                recovered = json.dumps(ctx['conversation'], ensure_ascii=False)
+                assert 'line 000: unchanged marker content' in recovered and 'line 6999: unchanged marker content' in recovered
                 value = ['delegate', 'Replace old with green']
             elif i == 9: value = ['edit', 'old', 'green']
             elif i == 10: value = '已将 old 改为 green'
@@ -42,6 +44,7 @@ class Fake(BaseHTTPRequestHandler):
                 value = ['delegate', 'Read note.txt to report its current color']
             elif i == 14: value = '当前内容是 before green'
             else: raise AssertionError('unexpected request')
+            if i == 9: assert req['max_tokens'] == 32768
             if req.get('tools'):
                 output = {'text': value[1]}
                 message = {'role':'assistant','content':None,'tool_calls':[{'id':'synthetic-output','type':'function','function':{'name':'etas_emit_output','arguments':json.dumps(output,ensure_ascii=False,separators=(',',':'))}}]}
@@ -65,10 +68,12 @@ class Fake(BaseHTTPRequestHandler):
 def interactive(command, env, question, editing):
     master, slave = pty.openpty(); settings = termios.tcgetattr(slave); settings[3] &= ~(termios.ECHO | termios.ECHONL); termios.tcsetattr(slave, termios.TCSANOW, settings)
     proc = subprocess.Popen(command, stdin=slave, stdout=slave, stderr=slave, env=env, start_new_session=True);os.close(slave)
-    output = bytearray();asked = native = application = exited = False;deadline = time.monotonic() + 240
+    output = bytearray();asked = native = application = exited = stopped = False;deadline = time.monotonic() + 240
     try:
         while proc.poll() is None:
-            if time.monotonic() > deadline: raise TimeoutError('interactive flow timeout')
+            if time.monotonic() > deadline:
+                tail = bytes(output).decode('utf-8','replace')[-3000:]
+                raise TimeoutError('interactive flow timeout; output=' + tail)
             if select.select([master], [], [], .1)[0]:
                 try: output.extend(os.read(master, 65536))
                 except OSError: pass
@@ -80,6 +85,8 @@ def interactive(command, env, question, editing):
                 os.write(master,b'yes\n');native=True
             if editing and not application and b'CONFIRM Apply this exact preview? [y/N]' in text:
                 assert native;os.write(master,b'yes\n');application=True
+            if editing and not stopped and b'Abandon this stopped operation and continue this session? [y/N]' in text:
+                os.write(master,b'n\n/exit\n');stopped=True;exited=True
             done = b'Check passed.' in text if editing else '当前内容是 before green'.encode() in text
             if done and not exited: os.write(master,b'/exit\n');exited=True
         while select.select([master],[],[],0)[0]:
@@ -88,7 +95,8 @@ def interactive(command, env, question, editing):
             if not data: break
             output.extend(data)
         if proc.returncode: raise AssertionError('interactive exited '+str(proc.returncode)+'; '+bytes(output).decode('utf-8','replace')[-3000:])
-        assert asked and exited and (not editing or (native and application))
+        if not (asked and exited and (not editing or (native and application))):
+            raise AssertionError('interactive flow incomplete; '+bytes(output).decode('utf-8','replace')[-3000:])
         return bytes(output)
     finally:
         if proc.poll() is None: os.killpg(proc.pid,signal.SIGTERM);proc.wait(timeout=25)
@@ -120,8 +128,12 @@ def main():
         command=[str(project/'scripts/nomo'),'--root',str(workspace),'--id',match.group(1).decode(),'--allow',','.join(FILES)]
         second=interactive(command,env,'现在文件的颜色是什么？',False)
         assert not server.failure and server.phases==list(range(15));assert '当前内容是 before green'.encode() in second
-        status=subprocess.run([str(project/'scripts/nomo'),'--status','--id',match.group(1).decode(),'--events'],env=env,capture_output=True,timeout=120)
-        assert status.returncode==0 and b'line 000: unchanged marker content' in status.stdout and b'line 6999: unchanged marker content' in status.stdout and CHILD_DETAIL.encode() in status.stdout
+        status=subprocess.run([str(project/'scripts/nomo'),'--status','--id',match.group(1).decode()],env=env,capture_output=True,timeout=120)
+        assert status.returncode==0, status.stderr[-3000:]
+        assert b'NATIVE configured cumulative reservation=13572864; actual provider usage unknown; legacy native budget not present' in status.stdout, status.stdout[-3000:]
+        events=subprocess.run([str(project/'scripts/nomo'),'--status','--id',match.group(1).decode(),'--events'],env=env,capture_output=True,timeout=120)
+        assert events.returncode==0, events.stderr[-3000:]
+        assert b'line 000: unchanged marker content' in events.stdout and b'line 6999: unchanged marker content' in events.stdout and CHILD_DETAIL.encode() in events.stdout
         print(json.dumps({'status':'passed','scope':'persisted high-input natural-language edit, check, same-ID new-process continuation','file_bytes':len(BEFORE.encode()),'fake_requests':len(server.phases),'confirmations':2,'selected_file':'note.txt','unchanged_other_files':3}))
     finally:server.shutdown();server.server_close();thread.join(timeout=5);shutil.rmtree(out)
 

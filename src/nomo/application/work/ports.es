@@ -17,8 +17,8 @@ import nomo.tools.edit_file.EditableRoot;
 import nomo.tools.workspace.ReadOnlyRoot;
 
 public type Failure = { state: Ledger, error: string };
-public type Pending = { selected: Selector, prepared: Prepared, evidence: Evidence, request: string, task: string, state: Ledger };
-public type Completed = { context: Context, state: Ledger };
+public type Pending = { selected: Selector, prepared: Prepared, evidence: Evidence, request: string, task: string, state: Ledger, high_input: bool };
+public type Completed = { context: Context, state: Ledger, high_input: bool };
 public type Summary = { answer: string, state: Ledger, model_generated: bool };
 
 public spec WorkStages {
@@ -44,4 +44,4 @@ public spec WorkTimeline {
     flow save(self, id: string, records: Array<Event>, policy: Policy, binding: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>];
 }
 
-public type Run = { redaction: Policy, binding: string, wide: bool, saved: string };
+public type Run = { redaction: Policy, binding: string, wide: bool, high_input: bool, saved: string };

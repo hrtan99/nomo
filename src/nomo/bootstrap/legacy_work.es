@@ -45,11 +45,11 @@ impl LegacyWorkOutput ~ WorkOutputSink {
     }
     flow diagnostic(self, line: string) -> unit ![Error<ConsoleError>] { println(line); }
     flow recorded(self, selected: Selector) -> unit ![Error<ConsoleError>, Error<IndexError>] { recorded(selected); }
-    flow ledger(self, state: Ledger, wide: bool) -> unit ![Error<ConsoleError>] {
+    flow ledger(self, state: Ledger, wide: bool, high_input: bool) -> unit ![Error<ConsoleError>] {
         println(historical_ledger_text(state) + "; configured allowances are not measured usage; no persisted Model history or mutating resume");
     }
     flow refused(self, error: string) -> i32 ![Error<ConsoleError>] { println("REFUSED " + error); return 1; }
-    flow completed(self, answer: string, saved: string, state: Ledger, wide: bool) -> i32 ![Error<ConsoleError>, Error<IndexError>] {
+    flow completed(self, answer: string, saved: string, state: Ledger, wide: bool, high_input: bool) -> i32 ![Error<ConsoleError>, Error<IndexError>] {
         display("FINAL ", answer);
         println(saved);
         println(historical_ledger_text(state) + "; configured allowances are not measured usage; no persisted Model history or mutating resume");

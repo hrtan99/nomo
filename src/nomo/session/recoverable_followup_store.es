@@ -8,7 +8,7 @@ import nomo.session.recoverable_events.{Frame as EventFrame, empty as empty_even
 import nomo.session.recoverable_chat_store.{Frame as ChatFrame, load as load_chat};
 import nomo.session.history_work_guard.{Record};
 import nomo.harness.harness_work_contract.Ledger;
-import nomo.session.recoverable_work_store.{load as load_parent_work, work_data_error, running_record, completed_record, abandoned_record, admission_chat_error, claim_chat_error};
+import nomo.session.recoverable_work_store.{load as load_parent_work, work_data_error, running_record_mode, completed_record, abandoned_record, admission_chat_error, claim_chat_error};
 import nomo.session.recoverable_check_store.{ load as load_parent_check};
 import nomo.session.edit_operation_store.inspect as inspect_parent_edit;
 
@@ -73,7 +73,7 @@ public flow admit(id: string, workspace: string, path: string, request: string, 
     let chat_error = admission_chat_error(current, chat); if chat_error != "" { return Err(chat_error); }
     match load(policy, binding) { Ok(None()) => {} Ok(Some(_)) => { return Err("recoverable followup already admitted; no retry"); } Err(error) => { return Err(error); } }
     let wide = chat.value.chat.format >= 13;
-    let row = running_record(id, workspace, path, request, chat.version.opaque, wide);
+    let row = running_record_mode(id, workspace, path, request, chat.version.opaque, wide, chat.value.chat.format == 18);
     let parent_work = match load_parent_work(policy, binding) { Ok(Some(item)) => item, _ => { return Err("completed first work required"); } };
     if (parent_work.value.work.phase != "complete" && parent_work.value.work.phase != "abandoned") || parent_work.value.work.id == id { return Err("completed distinct first work required"); }
     if parent_work.value.work.phase == "complete" {

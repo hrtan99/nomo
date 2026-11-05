@@ -3,7 +3,7 @@ module nomo.application.harness.work.controller;
 import std.text.{from_i32, from_usize};
 import nomo.application.work.request.WorkRequest;
 import nomo.application.work.ports.{Failure, Pending, Completed, Summary};
-import nomo.harness.harness_work_contract.{Context, Ledger, WorkBudgetPolicy, HistoricalWorkBudget, ExpandedWorkBudget, LargeWorkBudget, fresh, ledger_error, bump_edit, native_tokens, native_budget, collect, finish_evidence, context_error};
+import nomo.harness.harness_work_contract.{Context, Ledger, WorkBudgetPolicy, HistoricalWorkBudget, ExpandedWorkBudget, LargeWorkBudget, HighInputWorkBudget, fresh, ledger_error, bump_edit_mode, native_tokens, native_budget, collect, finish_evidence, context_error};
 import nomo.harness.harness_model_tools.{run_context as read_context, Report as ReadReport, Failure as ReadFailure};
 import nomo.harness.read_model_tools.{run_context as unicode_read_context, run_expanded_context};
 import nomo.harness.harness_tool_contract.Ledger as ReadLedger;
@@ -38,19 +38,19 @@ public flow historical_ledger_text(state: Ledger) -> string {
         from_i32(state.read.calls + state.edit.calls) + "/7 generation_allowance=" + from_i32(state.read.tokens + state.edit.tokens) +
         "/47104 historical_native_allowance=" + from_i32(native_tokens(state)) + "/196608";
 }
-public flow expanded_ledger_text(state: Ledger, wide: bool) -> string {
+public flow expanded_ledger_text(state: Ledger, wide: bool, high_input: bool) -> string {
     return "LEDGER work steps=" + from_i32(state.read.steps + state.edit.steps) + "/13 calls=" +
         from_i32(state.read.calls + state.edit.calls) + "/7 generation_allowance=" + from_i32(state.read.tokens + state.edit.tokens) +
-        (if wide { "/286720 native_configured=" } else { "/51200 native_configured=" }) + from_i32(native_budget(state)) +
-        if wide { "/2811008; configured allowances are not measured usage" } else { "/1335296; configured allowances are not measured usage" };
+        (if high_input { "/188416 native_configured=6000000/6000000" } else { if wide { "/286720 native_configured=" + from_i32(native_budget(state)) + "/2811008" } else { "/51200 native_configured=" + from_i32(native_budget(state)) + "/1335296" } }) +
+        "; configured allowances are not measured usage";
 }
 public flow historical_stage(name: string, state: Ledger) -> unit {
     progress("STAGE " + name);
     progress(historical_ledger_text(state) + "; configured allowances are not measured usage; no persisted Model history or mutating resume");
 }
-public flow expanded_stage(name: string, state: Ledger, wide: bool) -> unit {
+public flow expanded_stage(name: string, state: Ledger, wide: bool, high_input: bool) -> unit {
     progress("STAGE " + name);
-    progress(expanded_ledger_text(state, wide));
+    progress(expanded_ledger_text(state, wide, high_input));
 }
 public flow chain_stage(name: string, state: Ledger, user_context: bool) -> unit {
     progress("STAGE " + name);
@@ -72,13 +72,13 @@ flow unicode_read(request: string, allowed: Array<string>, state: ReadLedger, ex
 
 flow prepare_policy<P ~ WorkBudgetPolicy>(policy: P, input: WorkRequest, original_error: (string) -> string ![], chain_read: bool, inspect_plan: bool, inspect_all: bool, unicode: bool) -> Result<Pending, Failure> {
     let parameters = policy.parameters();
-    let expanded = parameters.expanded; let wide = parameters.large;
+    let expanded = parameters.expanded; let wide = parameters.wide; let high_input = parameters.high_input;
     var state = fresh();
     let maximum = policy.maximum();
     let selected = input.selected;
     let invalid = ledger_error(state); if invalid != "" { return failed(state, invalid); }
     let capacity = "one read/search up to " + from_i32(scan_i32()) + " bytes, three edit reads up to " + from_usize(file_bytes()) + " bytes each, and one atomic maximum";
-    progress(if wide { "RESERVATION work" + from_i32(maximum.steps) + " steps/" + from_i32(maximum.calls) + " calls/" + from_i32(maximum.generation) + " generation/" + from_i32(maximum.native_tokens) + " native; edit tail6 steps/3 calls/143360 generation/1524288 native; " + capacity } else { if expanded { "RESERVATION work13 steps/7 calls/51200 generation/1335296 native; edit tail6 steps/3 calls/38912 generation/786432 native; " + capacity } else { "RESERVATION work13 steps/7 calls/47104 generation/196608 historical native allowance (not a provider cap); edit tail6 steps/3 calls/38912 generation/163840 historical allowance; one read/search and one atomic maximum" } });
+    progress(if wide { "RESERVATION work" + from_i32(maximum.steps) + " steps/" + from_i32(maximum.calls) + " calls/" + from_i32(maximum.generation) + " generation/" + from_i32(maximum.native_tokens) + " configured native; edit tail6 steps/3 calls/" + if high_input { "45056 generation; " } else { "143360 generation; " } + capacity } else { if expanded { "RESERVATION work13 steps/7 calls/51200 generation/1335296 native; edit tail6 steps/3 calls/38912 generation/786432 native; " + capacity } else { "RESERVATION work13 steps/7 calls/47104 generation/196608 historical native allowance (not a provider cap); edit tail6 steps/3 calls/38912 generation/163840 historical allowance; one read/search and one atomic maximum" } });
     let read_result = if unicode { unicode_read(input.request, input.allowed, state.read, expanded, wide) }
         else { read_context(input.request, input.allowed, state.read, "read-", true, chain_read, inspect_plan, inspect_all) };
     let read = match read_result {
@@ -116,38 +116,39 @@ flow prepare_policy<P ~ WorkBudgetPolicy>(policy: P, input: WorkRequest, origina
     let request = match decoded_edit { Ok(value) => value, Err(error) => { return failed(state, error); } };
     let prepared = match (if expanded { prepare_original(selected.path, before, request.target, request.replacement) } else { prepare_original_legacy(selected.path, before, request.target, request.replacement) }) { Ok(value) => value, Err(error) => { return failed(state, if chain_read { response_error(edit_raw, "edit-child", "proposal", 32768) } else { error }); } };
     state = match policy.reserve_edit(state, false) { Ok(value) => value, Err(error) => { return failed(state, error); } };
-    return Ok(Pending { selected = selected, prepared = prepared, evidence = evidence, request = input.request, task = task, state = state });
+    return Ok(Pending { selected = selected, prepared = prepared, evidence = evidence, request = input.request, task = task, state = state, high_input = parameters.high_input });
 }
 
-flow prepare_mode(input: WorkRequest, original_error: (string) -> string ![], chain_read: bool, inspect_plan: bool, inspect_all: bool, unicode: bool, expanded: bool, wide: bool) -> Result<Pending, Failure> {
+flow prepare_mode(input: WorkRequest, original_error: (string) -> string ![], chain_read: bool, inspect_plan: bool, inspect_all: bool, unicode: bool, expanded: bool, wide: bool, high_input: bool) -> Result<Pending, Failure> {
+    if high_input { return prepare_policy<HighInputWorkBudget>(HighInputWorkBudget {}, input, original_error, chain_read, inspect_plan, inspect_all, unicode); }
     if wide { return prepare_policy<LargeWorkBudget>(LargeWorkBudget {}, input, original_error, chain_read, inspect_plan, inspect_all, unicode); }
     if expanded { return prepare_policy<ExpandedWorkBudget>(ExpandedWorkBudget {}, input, original_error, chain_read, inspect_plan, inspect_all, unicode); }
     return prepare_policy<HistoricalWorkBudget>(HistoricalWorkBudget {}, input, original_error, chain_read, inspect_plan, inspect_all, unicode);
 }
 
 public flow prepare_with(input: WorkRequest, original_error: (string) -> string ![], chain_read: bool, inspect_plan: bool, inspect_all: bool) -> Result<Pending, Failure> {
-    return prepare_mode(input, original_error, chain_read, inspect_plan, inspect_all, false, false, false);
+    return prepare_mode(input, original_error, chain_read, inspect_plan, inspect_all, false, false, false, false);
 }
 public flow prepare_unicode(input: WorkRequest, original_error: (string) -> string ![]) -> Result<Pending, Failure> {
-    return prepare_mode(input, original_error, false, false, false, true, false, false);
+    return prepare_mode(input, original_error, false, false, false, true, false, false, false);
 }
-public flow prepare_expanded_unicode(input: WorkRequest, original_error: (string) -> string ![], wide: bool) -> Result<Pending, Failure> {
-    return prepare_mode(input, original_error, false, false, false, true, true, wide);
+public flow prepare_expanded_unicode(input: WorkRequest, original_error: (string) -> string ![], wide: bool, high_input: bool) -> Result<Pending, Failure> {
+    return prepare_mode(input, original_error, false, false, false, true, true, wide, high_input);
 }
 public flow prepare_chain(input: WorkRequest, original_error: (string) -> string ![], inspect_plan: bool, inspect_all: bool) -> Result<Pending, Failure> {
-    return prepare_mode(input, original_error, true, inspect_plan, inspect_all, false, false, false);
+    return prepare_mode(input, original_error, true, inspect_plan, inspect_all, false, false, false, false);
 }
 
 public flow complete(pending: Pending, outcome: Confirmed) -> Result<Completed, Failure> {
-    let state = match bump_edit(pending.state, false) { Ok(value) => value,
+    let state = match bump_edit_mode(pending.state, false, pending.high_input) { Ok(value) => value,
         Err(error) => { return Err(Failure { state = pending.state, error = "edit completed; " + error }); } };
     let final = Context { edit = completed_context(pending.request, pending.task, pending.prepared.proposal.before, outcome), evidence = pending.evidence };
     let error = context_error(final); if error != "" { return Err(Failure { state = state, error = "edit completed; " + error }); }
-    return Ok(Completed { context = final, state = state });
+    return Ok(Completed { context = final, state = state, high_input = pending.high_input });
 }
 
 flow finish_mode(completed: Completed, work: bool, inspect_all: bool, history: bool) -> Result<Summary, Failure> {
-    let state = match bump_edit(completed.state, true) { Ok(value) => value,
+    let state = match bump_edit_mode(completed.state, true, completed.high_input) { Ok(value) => value,
         Err(error) => { return Err(Failure { state = completed.state, error = "edit completed; " + error }); } };
     perform HarnessWorkStage.write("edit-aggregate", state);
     let answer = perform LegacyEditStages.aggregate(completed.context);

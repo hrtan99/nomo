@@ -35,7 +35,7 @@ public flow extra_fact(item: Entry, policy: Policy) -> Result<WorkFacts, string>
     }
     let chosen = match selection(item.result.events, policy) { Ok(value) => value, Err(error) => { return Err(error); } };
     let observed = match evidence(item.result.events, policy) { Ok(value) => value, Err(error) => { return Err(error); } };
-    return Ok(WorkFacts { id = item.core.id, summary = item.result.summary, summary_source = if (item.result.source == "model-v2" || item.result.source == "model-v3" || item.result.source == "model-v4" || item.result.source == "model-v5") { "model" } else { if (item.result.source == "system-v2" || item.result.source == "system-v3" || item.result.source == "system-v4" || item.result.source == "system-v5") { "system" } else { item.result.source } }, selection = chosen, evidence = observed,
+    return Ok(WorkFacts { id = item.core.id, summary = item.result.summary, summary_source = if (item.result.source == "model-v2" || item.result.source == "model-v3" || item.result.source == "model-v4" || item.result.source == "model-v5" || item.result.source == "model-high-input") { "model" } else { if (item.result.source == "system-v2" || item.result.source == "system-v3" || item.result.source == "system-v4" || item.result.source == "system-v5" || item.result.source == "system-high-input") { "system" } else { item.result.source } }, selection = chosen, evidence = observed,
         check = if item.check.phase == "none" { "not requested" } else { if item.check.phase == "abandoned" { "abandoned; outcome unknown" } else { item.check.outcome } }, exit_code = item.check.exit_code, output = output });
 }
 // Keep older diagnostics at the original per-stream context bound; the stored

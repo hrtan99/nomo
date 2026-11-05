@@ -49,7 +49,7 @@ flow expected_pending() -> Pending {
     let prepared = Prepared { request = Request { path = "dir/file.txt", original = "old\n", target = "old", replacement = "blue" },
         proposal = Proposal { path = "dir/file.txt", before = "old\n", after = "blue\n" } };
     return Pending { selected = selected, prepared = prepared, evidence = evidence(), request = "Q", task = "edit T",
-        state = Ledger { read = read_ledger(), edit = edit_ledger(4, 2, 36864, 98304, 2) } };
+        state = Ledger { read = read_ledger(), edit = edit_ledger(4, 2, 36864, 98304, 2) }, high_input = false };
 }
 flow run_case(label: string, mode: string, chain: bool) -> Result<Pending, Failure> {
     let original = (value: string) => if mode == "mismatch" && value != "confirmed-parent" { "current original differs from confirmed parent result" } else { "" };

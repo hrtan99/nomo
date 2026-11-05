@@ -76,8 +76,8 @@ public flow private_chat_child_turn(task: string, allowed: Array<string>, select
     return if multi { run_multi_chat_loop(task, allowed, seed(selected), true, resilient, high_input, reasoning) } else { run_chat_loop(task, allowed, default_limits(), seed(selected), true) };
 }
 
-public flow expanded_work_child_turn(task: string, allowed: Array<string>, selected: State, wide: bool) -> LoopTurn ~ WideChatChildStage<ReadOnlyRoot> {
-    return run_expanded_work_loop(task, allowed, seed(selected), wide);
+public flow expanded_work_child_turn(task: string, allowed: Array<string>, selected: State, wide: bool, high_input: bool) -> LoopTurn ~ WideChatChildStage<ReadOnlyRoot> {
+    return run_expanded_work_loop(task, allowed, seed(selected), wide, high_input);
 }
 
 flow failed(state: Ledger, error: string, resolved: bool) -> Result<Report, Failure> {

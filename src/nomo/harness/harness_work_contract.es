@@ -32,7 +32,7 @@ public type Context = { edit: EditContext, evidence: Evidence };
 public type Ledger = { read: ReadLedger, edit: EditLedger };
 
 public type WorkMaximum = { steps: i32, calls: i32, generation: i32, native_tokens: i32 };
-public type WorkParameters = { expanded: bool, large: bool };
+public type WorkParameters = { expanded: bool, wide: bool, large: bool, high_input: bool };
 public spec WorkBudgetPolicy {
     flow maximum(self) -> WorkMaximum ![];
     flow parameters(self) -> WorkParameters ![];
@@ -41,20 +41,26 @@ public spec WorkBudgetPolicy {
 public type HistoricalWorkBudget = {};
 public type ExpandedWorkBudget = {};
 public type LargeWorkBudget = {};
+public type HighInputWorkBudget = {};
 impl HistoricalWorkBudget ~ WorkBudgetPolicy {
     flow maximum(self) -> WorkMaximum ![] { return WorkMaximum { steps = 13, calls = 7, generation = 47104, native_tokens = 196608 }; }
-    flow parameters(self) -> WorkParameters ![] { return WorkParameters { expanded = false, large = false }; }
+    flow parameters(self) -> WorkParameters ![] { return WorkParameters { expanded = false, wide = false, large = false, high_input = false }; }
     flow reserve_edit(self, state: Ledger, call: bool) -> Result<Ledger, string> ![] { return bump_selected(state, call, false, false); }
 }
 impl ExpandedWorkBudget ~ WorkBudgetPolicy {
     flow maximum(self) -> WorkMaximum ![] { return WorkMaximum { steps = 13, calls = 7, generation = 51200, native_tokens = 1335296 }; }
-    flow parameters(self) -> WorkParameters ![] { return WorkParameters { expanded = true, large = false }; }
+    flow parameters(self) -> WorkParameters ![] { return WorkParameters { expanded = true, wide = false, large = false, high_input = false }; }
     flow reserve_edit(self, state: Ledger, call: bool) -> Result<Ledger, string> ![] { return bump_selected(state, call, false, false); }
 }
 impl LargeWorkBudget ~ WorkBudgetPolicy {
     flow maximum(self) -> WorkMaximum ![] { return WorkMaximum { steps = 13, calls = 7, generation = 286720, native_tokens = 2811008 }; }
-    flow parameters(self) -> WorkParameters ![] { return WorkParameters { expanded = true, large = true }; }
+    flow parameters(self) -> WorkParameters ![] { return WorkParameters { expanded = true, wide = true, large = true, high_input = false }; }
     flow reserve_edit(self, state: Ledger, call: bool) -> Result<Ledger, string> ![] { return bump_selected(state, call, true, true); }
+}
+impl HighInputWorkBudget ~ WorkBudgetPolicy {
+    flow maximum(self) -> WorkMaximum ![] { return WorkMaximum { steps = 13, calls = 7, generation = 188416, native_tokens = 6000000 }; }
+    flow parameters(self) -> WorkParameters ![] { return WorkParameters { expanded = true, wide = true, large = false, high_input = true }; }
+    flow reserve_edit(self, state: Ledger, call: bool) -> Result<Ledger, string> ![] { return bump_selected(state, call, true, false); }
 }
 
 public flow fresh() -> Ledger { return Ledger { read = read_fresh(), edit = edit_fresh() }; }
@@ -105,6 +111,10 @@ public flow bump_edit(state: Ledger, call: bool) -> Result<Ledger, string> {
     if state.read.tokens == 143360 { let policy = LargeWorkBudget {}; return policy.reserve_edit(state, call); }
     if state.read.tokens == 16384 || state.read.tokens == 20480 { return bump_selected(state, call, true, false); }
     let policy = HistoricalWorkBudget {}; return policy.reserve_edit(state, call);
+}
+public flow bump_edit_mode(state: Ledger, call: bool, high_input: bool) -> Result<Ledger, string> {
+    if high_input { let policy = HighInputWorkBudget {}; return policy.reserve_edit(state, call); }
+    return bump_edit(state, call);
 }
 
 flow selected_error(value: Evidence, complete: bool) -> string {

@@ -65,7 +65,7 @@ public flow prepare_unicode<effect E>(input: Work, original_error: (string) -> s
 }
 
 public flow prepare_expanded_unicode<effect E>(input: Work, original_error: (string) -> string ![], stage_log: (string, Ledger) -> unit ![E], wide: bool) -> Result<Pending, Failure> ![Console, LegacyStringStages, LegacyEditStages, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Error<FileError>, Error<ConsoleError>, Error<IndexError>, E] {
-    return application_prepare_expanded_unicode(application_request(input), original_error, wide) with {
+    return application_prepare_expanded_unicode(application_request(input), original_error, wide, false) with {
         HarnessWorkStage.write(name, state) => { stage_log(name, state); resume; }
         EditOriginal.read(path) => { resume read_original_wide(path); }
         HarnessProgress.write(line) => { println(line); resume; }
@@ -75,7 +75,8 @@ public flow prepare_expanded_unicode<effect E>(input: Work, original_error: (str
 
 public flow expanded_stage(name: string, state: Ledger, wide: bool) -> unit { println("STAGE " + name); expanded_ledger(state, wide); }
 public flow simple_refused(error: string) -> i32 { println("REFUSED " + error); return 1; }
-public flow expanded_ledger(state: Ledger, wide: bool) -> unit { println(expanded_ledger_text(state, wide)); }
+public flow expanded_ledger(state: Ledger, wide: bool) -> unit { println(expanded_ledger_text(state, wide, false)); }
+public flow expanded_ledger_mode(state: Ledger, wide: bool, high_input: bool) -> unit { println(expanded_ledger_text(state, wide, high_input)); }
 
 public flow prepare<effect E>(input: Work, original_error: (string) -> string ![], stage_log: (string, Ledger) -> unit ![E], chain_read: bool, inspect_plan: bool, inspect_all: bool) -> Result<Pending, Failure> ![Console, LegacyStringStages, LegacyEditStages, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Error<FileError>, Error<ConsoleError>, Error<IndexError>, E] {
     return prepare_with<![E]>(input, original_error, stage_log, chain_read, inspect_plan, inspect_all) with {

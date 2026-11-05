@@ -24,7 +24,7 @@ public flow execute<S ~ WorkStages, Intent, Edited, P ~ WorkPersistence<Intent, 
         HarnessProgress.write(line) => { output.progress(line); resume; }
         DiagnosticOutput.write(line) => { output.diagnostic(line); resume; }
     };
-    let pending = match prepared { Ok(value) => value, Err(failure) => { output.ledger(failure.state, run.wide); return output.refused(failure.error); } };
+    let pending = match prepared { Ok(value) => value, Err(failure) => { output.ledger(failure.state, run.wide, run.high_input); return output.refused(failure.error); } };
     let selected = match editor.confirm(pending.selected, pending.prepared) { Ok(value) => value, Err(error) => { return output.refused(error); } };
     let begun: Result<Intent, string> = persistence.begin(selected);
     let intent = match begun { Ok(value) => value, Err(error) => { return output.refused(error); } };
@@ -53,5 +53,5 @@ public flow execute<S ~ WorkStages, Intent, Edited, P ~ WorkPersistence<Intent, 
     if timeline.enabled() {
         match timeline.save(selected.id, records, run.redaction, run.binding) { Ok(_) => {} Err(error) => { return output.refused("work saved; timeline incomplete: " + error); } }
     }
-    return output.completed(summary.answer, run.saved, summary.state, run.wide);
+    return output.completed(summary.answer, run.saved, summary.state, run.wide, run.high_input);
 }

@@ -8,10 +8,10 @@ import nomo.harness.read_model_tools.work_child_turn;
 import nomo.harness.legacy_string_stages.{LegacyStringStages, LegacyEditStages};
 import nomo.model.harness_progress.HarnessProgress;
 
-public flow prepare<S ~ WorkModelStages>(stages: S, input: WorkRequest, wide: bool) -> Result<Pending, Failure> {
+public flow prepare<S ~ WorkModelStages>(stages: S, input: WorkRequest, wide: bool, high_input: bool) -> Result<Pending, Failure> {
     let original: (string) -> string ![] = (value: string) => "";
-    return prepare_expanded_unicode(input, original, wide) with {
-        HarnessWorkStage.write(name, state) => { expanded_stage(name, state, wide); resume; }
+    return prepare_expanded_unicode(input, original, wide, high_input) with {
+        HarnessWorkStage.write(name, state) => { expanded_stage(name, state, wide, high_input); resume; }
         LegacyStringStages.main(value) => { resume stages.read(value); }
         LegacyStringStages.child(task, files, selected) => { resume stages.read_child(task, files, selected); }
         LegacyEditStages.plan(value) => { resume stages.plan(value); }
@@ -20,9 +20,9 @@ public flow prepare<S ~ WorkModelStages>(stages: S, input: WorkRequest, wide: bo
     };
 }
 
-public flow summarize<S ~ WorkModelStages>(stages: S, completed: Completed, wide: bool) -> Result<Summary, Failure> {
+public flow summarize<S ~ WorkModelStages>(stages: S, completed: Completed, wide: bool, high_input: bool) -> Result<Summary, Failure> {
     return finish_history_summary(completed) with {
-        HarnessWorkStage.write(name, state) => { expanded_stage(name, state, wide); resume; }
+        HarnessWorkStage.write(name, state) => { expanded_stage(name, state, wide, high_input); resume; }
         LegacyEditStages.aggregate(value) => { resume stages.summarize(value); }
     };
 }

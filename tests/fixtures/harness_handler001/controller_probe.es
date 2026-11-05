@@ -88,7 +88,7 @@ flow completed() -> Completed {
         before = "old\n", after = "blue\n", request_digest = request_digest, before_digest = before_digest, after_digest = after_digest, before_bytes = 4, after_bytes = 5, completed = true };
     let evidence = Evidence { request = "Q", task = "T", operation = "read", files = ["a.txt"], literal = "", outcome = "complete: blue<LF>", result = "Seen blue", summary = "Answer", allowed = ["a.txt"], ledger = read };
     return Completed { context = WorkContext { edit = edit, evidence = evidence }, state = WorkLedger { read = read,
-        edit = EditLedger { steps = 5, calls = 2, tokens = 36864, native_tokens = 98304, boundaries = 3 } } };
+        edit = EditLedger { steps = 5, calls = 2, tokens = 36864, native_tokens = 98304, boundaries = 3 } }, high_input = false };
 }
 flow summary_mismatch(state: WorkLedger, error: string) -> Result<Summary, WorkFailure> {
     return Err(WorkFailure { state = state, error = error });
@@ -150,7 +150,7 @@ flow remaining_groups() -> unit {
     let refused_summary = summary_controller(confirmed, "", false);
     verify("summary failure keeps completed truth and charge", match refused_summary { Ok(_) => false, Err(failure) => confirmed.context.edit.completed && confirmed.context.edit.after == "blue\n" && failure.state.edit.calls == 3 && failure.state.edit.tokens == 38912 && failure.error != "UNEXPECTED edit aggregate" });
     let consumed = Completed { context = confirmed.context, state = WorkLedger { read = confirmed.state.read,
-        edit = EditLedger { steps = 6, calls = 3, tokens = 38912, native_tokens = 163840, boundaries = 3 } } };
+        edit = EditLedger { steps = 6, calls = 3, tokens = 38912, native_tokens = 163840, boundaries = 3 } }, high_input = false };
     verify("summary exhausted reservation precedes effect trap", match summary_controller(consumed, "Summary", true) { Ok(_) => false, Err(failure) => failure.state == consumed.state && failure.error != "UNEXPECTED edit aggregate" });
 }
 

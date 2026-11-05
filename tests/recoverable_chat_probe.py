@@ -39,7 +39,7 @@ profile = "fixture"
 
 
 def main():
-    expected = json.loads((ROOT / 'config/etas-025-official.json').read_text())['verified_seed_binary_sha256']
+    expected = json.loads((ROOT / 'config/etas-latest-main.json').read_text())['verified_seed_binary_sha256']
     digest = hashlib.sha256(CLI.read_bytes()).hexdigest()
     if digest != expected:
         raise ValueError('official CLI identity mismatch')
@@ -54,7 +54,9 @@ def main():
         checks = []
         commands = [[str(CLI), 'check', '--all', str(project)]]
         commands += [[str(CLI), 'run', str(project), '--flow', 'recoverable_chat_probe', '--allow-effects', '--args', phase]
-                     for phase in ('reserve-first', 'first-finish', 'reserve-second', 'finish-second', 'inspect')]
+                     for phase in ('reserve-first', 'first-finish', 'reserve-second', 'finish-second', 'inspect',
+                                   'reserve-third-large', 'finish-third-large', 'reserve-fourth-large',
+                                   'finish-fourth-large', 'inspect-conversation')]
         for command in commands:
             result = subprocess.run(command, capture_output=True, text=True, cwd=work, timeout=120)
             checks.append({'exit': result.returncode, 'stdout': result.stdout[-1500:], 'stderr': result.stderr[-3000:]})

@@ -51,9 +51,9 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
     match claim(ticket) { Ok(_) => {} Err(error) => { return refused(error); } }
     if parsed.has_check { match plan_check(ticket, parsed.digest) { Ok(_) => {} Err(error) => { return refused(error); } } }
     println("RESERVED history-work; failure or interruption cannot be retried automatically.");
-    let stages = HistoryStages { prior_request = history.value.last_request, previous = history.value.invocation.prior, wide = false, historical = true };
+    let stages = HistoryStages { prior_request = history.value.last_request, previous = history.value.invocation.prior, conversation = [], wide = false, high_input = false, historical = true };
     let persistence = FirstPersistence { ticket = ticket, journal = journal };
-    let run = Run { redaction = Policy { format = 1, literals = [] }, binding = "", wide = false,
+    let run = Run { redaction = Policy { format = 1, literals = [] }, binding = "", wide = false, high_input = false,
         saved = "SAVED history-work; captured history is not a root identity or grant." };
     return execute<HistoryStages, EditTicket, bool, FirstPersistence, LegacyWorkEditor, LegacyWorkTimeline, LegacyWorkOutput>(
         stages, persistence, legacy_editor(), legacy_timeline(), legacy_output(), input, run);

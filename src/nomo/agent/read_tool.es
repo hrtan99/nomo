@@ -53,6 +53,12 @@ agent WorkToolFinal(input: Context) -> Answer {
 
 @limits([Tokens(131072), ContextTokens(2811008)])
 agent WideWorkToolFinal(input: Context) -> Answer { return perform infer<Answer>(Prompt.new().system(Trusted(work_final_system())).data(input)); }
+@limits([Tokens(4096), ContextTokens(6000000)])
+agent HighInputWorkToolAction(input: Context) -> string { return perform infer<string>(Prompt.new().system(Trusted(work_action_system())).data(input)); }
+// The read child receives only its delegated task and current tool evidence,
+// not the recovered parent conversation carried by history work stages.
+@limits([Tokens(131072), ContextTokens(6000000)])
+agent HighInputWorkToolFinal(input: Context) -> Answer { return perform infer<Answer>(Prompt.new().system(Trusted(work_final_system())).data(input)); }
 
 flow encoded(fields: Array<string>) -> string {
     return match encode(fields, "typed child output conversion failed", "typed child output encoding failed") {
@@ -69,7 +75,7 @@ spec ChildModel {
 }
 type StandardModel = {};
 type MultiModel = { resilient: bool, high_input: bool, reasoning: bool };
-type WorkModel = { wide: bool };
+type WorkModel = { wide: bool, high_input: bool };
 impl StandardModel ~ ChildModel {
     flow infer(self, context: Context) -> string ![] { return ToolModel.run(context); }
 }
@@ -86,9 +92,9 @@ impl MultiModel ~ ChildModel {
 impl WorkModel ~ ChildModel {
     flow infer(self, context: Context) -> string ![Error<IndexError>] {
         if context.final_only {
-            return final_frame(if self.wide { WideWorkToolFinal.run(context) } else { WorkToolFinal.run(context) });
+            return final_frame(if self.high_input { HighInputWorkToolFinal.run(context) } else { if self.wide { WideWorkToolFinal.run(context) } else { WorkToolFinal.run(context) } });
         }
-        return if self.wide { WideWorkToolAction.run(context) } else { WorkToolAction.run(context) };
+        return if self.high_input { HighInputWorkToolAction.run(context) } else { if self.wide { WideWorkToolAction.run(context) } else { WorkToolAction.run(context) } };
     }
 }
 enum LoopMode {
@@ -137,8 +143,8 @@ public flow run_private_work_loop(raw: string, allowed: Array<string>, limits: L
 public flow run_chat_loop(raw: string, allowed: Array<string>, limits: Limits, previous: Session, redacted: bool) -> LoopTurn {
     return run_native(StandardModel {}, StandardFiles {}, StandardFiles {}, LoopMode.Chat(limits, redacted), raw, allowed, previous);
 }
-public flow run_expanded_work_loop(raw: string, allowed: Array<string>, previous: Session, wide: bool) -> LoopTurn {
-    return run_native(WorkModel { wide = wide }, WideFiles {}, WideFiles {}, LoopMode.Expanded(wide), raw, allowed, previous);
+public flow run_expanded_work_loop(raw: string, allowed: Array<string>, previous: Session, wide: bool, high_input: bool) -> LoopTurn {
+    return run_native(WorkModel { wide = wide, high_input = high_input }, WideFiles {}, WideFiles {}, LoopMode.Expanded(wide), raw, allowed, previous);
 }
 public flow run_multi_chat_loop(raw: string, allowed: Array<string>, previous: Session, redacted: bool, resilient: bool, high_input: bool, reasoning: bool) -> LoopTurn {
     return run_native(MultiModel { resilient = resilient, high_input = high_input, reasoning = reasoning }, WideFiles {}, MultiFiles {}, LoopMode.Multi(redacted, resilient, reasoning), raw, allowed, previous);

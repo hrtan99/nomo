@@ -10,7 +10,7 @@ public spec WorkOutputSink {
     flow progress(self, line: string) -> unit ![Error<ConsoleError>];
     flow diagnostic(self, line: string) -> unit ![Error<ConsoleError>];
     flow recorded(self, selected: Selector) -> unit ![Error<ConsoleError>, Error<IndexError>];
-    flow ledger(self, state: Ledger, wide: bool) -> unit ![Error<ConsoleError>];
+    flow ledger(self, state: Ledger, wide: bool, high_input: bool) -> unit ![Error<ConsoleError>];
     flow refused(self, error: string) -> i32 ![Error<ConsoleError>];
-    flow completed(self, answer: string, saved: string, state: Ledger, wide: bool) -> i32 ![Error<ConsoleError>, Error<IndexError>];
+    flow completed(self, answer: string, saved: string, state: Ledger, wide: bool, high_input: bool) -> i32 ![Error<ConsoleError>, Error<IndexError>];
 }

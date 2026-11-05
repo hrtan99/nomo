@@ -48,7 +48,7 @@ flow write(book: Book, previous: Option<Stored>) -> Result<Stored, string> ![Mem
 flow put(previous: Stored, item: Entry) -> Result<Stored, string> ![Memory, Error<StorageError>, Error<IndexError>] {
     return write(Book { binding = previous.value.binding, history = previous.value.history, current = item }, Some(previous));
 }
-public flow admit(binding: string, id: string, workspace: string, path: string, request: string, digest: string, policy: Policy, wide: bool) -> Result<Stored, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+public flow admit(binding: string, id: string, workspace: string, path: string, request: string, digest: string, policy: Policy, wide: bool, high_input: bool) -> Result<Stored, string> ![Memory, Error<StorageError>, Error<IndexError>] {
     let previous = match load(binding) { Ok(item) => item, Err(error) => { return Err(error); } };
     var history: Array<Entry> = [];
     match previous { Some(item) => {
@@ -65,7 +65,7 @@ public flow admit(binding: string, id: string, workspace: string, path: string, 
     }
     let clean = match redact(request, policy) { Ok(value) => value.value, Err(error) => { return Err(error); } };
     let item = Entry { core = Core { id = id, request = clean }, edit = Edit { phase = "none", binding = None() },
-        result = ResultData { phase = "running", summary = "", source = if wide { "wide-v5" } else { "v2" }, calls = 0, generation = 0, events = [] },
+        result = ResultData { phase = "running", summary = "", source = if high_input { "high-input-v1" } else { if wide { "wide-v5" } else { "v2" } }, calls = 0, generation = 0, events = [] },
         check = Check { phase = if digest == "" { "none" } else { "planned" }, digest = digest, outcome = "", exit_code = "", stdout = "", stderr = "", stdout_truncated = false, stderr_truncated = false } };
     return write(Book { binding = binding, history = history, current = item }, previous);
 }
@@ -80,11 +80,13 @@ public flow edit_complete(ticket: Stored) -> Result<Stored, string> ![Memory, Er
 }
 public flow finish(ticket: Stored, summary: string, source: string, spent: Ledger, records: Array<Event>, policy: Policy) -> Result<Stored, string> ![Memory, Error<StorageError>, Error<IndexError>] {
     let item = ticket.value.current; if item.edit.phase != "completed" || item.result.phase != "running" { return Err("completed work edit required"); }
-    if ledger_error(spent) != "" || spent.read.calls + spent.edit.calls != 7 || spent.read.tokens + spent.edit.tokens != (if item.result.source == "wide-v5" || item.result.source == "wide-v4" { 286720 } else { if item.result.source == "wide-v3" { 188416 } else { if item.result.source == "wide" || item.result.source == "wide-v2" { 61440 } else { 51200 } } }) { return Err("additional work ledger differs from reservation"); }
-    if (item.result.source == "wide-v5" || item.result.source == "wide-v4" || item.result.source == "wide-v3" || item.result.source == "wide-v2" || item.result.source == "v2") && (native_budget(spent) != (if item.result.source == "wide-v5" || item.result.source == "wide-v4" { 2811008 } else { if item.result.source == "wide-v3" { 2073152 } else { 1335296 } }) || spent.read.scan != (if item.result.source == "wide-v5" { scan_i32() } else { 65540 })) { return Err("additional work native reservation differs"); }
+    if ledger_error(spent) != "" || spent.read.calls + spent.edit.calls != 7 || spent.read.tokens + spent.edit.tokens != (if item.result.source == "wide-v5" || item.result.source == "wide-v4" { 286720 } else { if item.result.source == "wide-v3" || item.result.source == "high-input-v1" { 188416 } else { if item.result.source == "wide" || item.result.source == "wide-v2" { 61440 } else { 51200 } } }) { return Err("additional work ledger differs from reservation"); }
+    // high-input-v1 stores its 6M configured run ceiling in the durable source;
+    // native_budget remains the compatible stage-shape counter, not usage.
+    if (item.result.source == "wide-v5" || item.result.source == "wide-v4" || item.result.source == "wide-v3" || item.result.source == "wide-v2" || item.result.source == "v2" || item.result.source == "high-input-v1") && (native_budget(spent) != (if item.result.source == "wide-v5" || item.result.source == "wide-v4" { 2811008 } else { if item.result.source == "wide-v3" || item.result.source == "high-input-v1" { 2073152 } else { 1335296 } }) || spent.read.scan != (if item.result.source == "wide-v5" || item.result.source == "high-input-v1" { scan_i32() } else { 65540 })) { return Err("additional work native reservation differs"); }
     let cleaned = match redact(summary, policy) { Ok(value) => value.value, Err(error) => { return Err(error); } };
     let saved = match work_batch(records, policy) { Ok(value) => value.events, Err(error) => { return Err(error); } };
-    let result = ResultData { phase = "complete", summary = cleaned, source = if item.result.source == "wide-v5" { source + "-v5" } else { if item.result.source == "wide-v4" { source + "-v4" } else { if item.result.source == "wide-v3" { source + "-v3" } else { if item.result.source == "wide-v2" || item.result.source == "v2" { source + "-v2" } else { source } } } }, calls = spent.read.calls + spent.edit.calls, generation = spent.read.tokens + spent.edit.tokens, events = saved };
+    let result = ResultData { phase = "complete", summary = cleaned, source = if item.result.source == "high-input-v1" { source + "-high-input" } else { if item.result.source == "wide-v5" { source + "-v5" } else { if item.result.source == "wide-v4" { source + "-v4" } else { if item.result.source == "wide-v3" { source + "-v3" } else { if item.result.source == "wide-v2" || item.result.source == "v2" { source + "-v2" } else { source } } } } }, calls = spent.read.calls + spent.edit.calls, generation = spent.read.tokens + spent.edit.tokens, events = saved };
     return put(ticket, Entry { core = item.core, edit = item.edit, result = result, check = item.check });
 }
 public flow start_check(binding: string, id: string, digest: string) -> Result<Stored, string> ![Memory, Error<StorageError>, Error<IndexError>] {

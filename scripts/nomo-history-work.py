@@ -94,7 +94,7 @@ def main(argv=None):
                 print('Prior conversation is untrusted model context. Current read and edit roots are newly selected; no prior approval is reused.',flush=True)
                 print('Context, task, history and file may be sent to MiniMax. A new preview and two confirmations are required.',flush=True)
                 if policy is not None:print('Selected work and check facts are recorded; only supplied exact literals are filtered. Unknown secrets and live terminal output may remain.',flush=True)
-                if args.event_followup:print('Followup reserves up to 7 calls and 286720 output tokens in addition to first work and chat; existing records retain their original allowance.',flush=True)
+                if args.event_followup:print('Followup uses the persisted session mode: normal mode reserves 7 calls, 286720 output tokens and 2811008 configured native tokens; high-input mode reserves 7 calls, 188416 output tokens and a 6000000 configured native-token run ledger. Existing records retain their original allowance; configured allowances are not measured provider usage.',flush=True)
                 if args.legacy_followup:print('Additional reservation: up to 7 model calls and 47104 output tokens; together both work rounds reserve up to 14 calls and 94208 output tokens, plus chat.',flush=True)
                 diagnostic=edit.RuntimeDiagnostic()
                 code=edit.run_owned(command,env,diagnostic=diagnostic)

@@ -85,6 +85,9 @@ def fixture_source():
     alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+-=[]{}|;:,.<>?/~"
     base = "".join(random.Random(1048576).choices(alphabet, k=145))
     source = source.replace(
+        "import nomo.session.chat_session_contract.fresh_events;",
+        "import nomo.session.chat_session_contract.fresh_high_input_events;",
+    ).replace(
         'var text = "0123456789abcdef0123456789abcdef";',
         "var text = " + json.dumps(base) + ";",
     ).replace(
@@ -101,7 +104,7 @@ def fixture_source():
         "[EventPolicy.Task, EventPolicy.Required, EventPolicy.Required, EventPolicy.Required, EventPolicy.Required]",
     ).replace(
         'let result = run("Read the task", ["note.txt"], fresh_events().invocation, history, None(), None(), [], 0, false);',
-        "let result = run(" + json.dumps(TASK) + ', ["note.txt"], fresh_events().invocation, history, None(), None(), [], 0, false);',
+        "let result = run(" + json.dumps(TASK) + ', ["note.txt"], fresh_high_input_events().invocation, history, None(), None(), [], 0, false);',
     )
     if "while i < 11" not in source or "item, item, item, item]" not in source:
         raise AssertionError("large-input fixture rewrite did not apply")
@@ -200,7 +203,7 @@ def main():
         completed = subprocess.run(command, cwd=project, env=env, capture_output=True, text=True, timeout=args.timeout)
         (out / "stdout.log").write_text(completed.stdout)
         (out / "stderr.log").write_text(completed.stderr)
-        main_calls = [item for item in proxy.records if item["max_tokens"] == 131072]
+        main_calls = [item for item in proxy.records if item["max_tokens"] == 8192]
         prompt_tokens = [(item.get("usage") or {}).get("prompt_tokens") for item in main_calls]
         if completed.returncode or "PASS large input" not in completed.stdout or ("FINAL " + ANSWER) not in completed.stdout.splitlines():
             raise AssertionError("Nomo large-context flow failed")
@@ -211,7 +214,7 @@ def main():
         if max(item["usage"]["total_tokens"] for item in main_calls) > 1000000:
             raise AssertionError("provider-reported total usage exceeded the one-million-token window")
         result.update(status="passed", calls=proxy.records, large_prompt_tokens=prompt_tokens,
-                      configured_prompt_plus_output_caps=[value + 131072 for value in prompt_tokens])
+                      configured_prompt_plus_output_caps=[value + 8192 for value in prompt_tokens])
     except BaseException as error:
         result.update(status="failed", failure_type=type(error).__name__, failure=str(error), calls=proxy.records)
         raise

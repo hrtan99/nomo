@@ -15,7 +15,11 @@ project = out / 'project'
 shutil.copytree(root, project, ignore=shutil.ignore_patterns('.git', '.etas', 'tmp', '__pycache__'))
 (project / '.etas').mkdir()
 (project / 'src/app').mkdir()
-shutil.copyfile(root / 'tests/fixtures/chat_budget/large_input.es', project / 'src/app/large_input.es')
+fixture = (root / 'tests/fixtures/chat_budget/large_input.es').read_text()
+fixture = fixture.replace('import nomo.session.chat_session_contract.fresh_events;',
+                          'import nomo.session.chat_session_contract.fresh_high_input_events;')
+fixture = fixture.replace('fresh_events().invocation', 'fresh_high_input_events().invocation')
+(project / 'src/app/large_input.es').write_text(fixture)
 entry = project / 'src/nomo/main.es'
 entry.write_text(entry.read_text().replace('module nomo.main;', 'module nomo.main;\nimport app.large_input.probe as large_input_probe;') +
                  '\npublic flow probe(args: Array<string>) -> i32 { return large_input_probe(args); }\n')
@@ -38,9 +42,9 @@ class Fake(BaseHTTPRequestHandler):
                 assert len(payload.encode()) > 1048576
                 assert len(context['history']) == 6
                 assert all(len(event['text']) == 262144 for event in context['history'][1:])
-                assert request['max_tokens'] == 131072
+                assert request['max_tokens'] == 8192
             else:
-                assert index == 1 and request['max_tokens'] == 4096
+                assert index == 1 and request['max_tokens'] == 16384
             response = (['delegate', 'Read the task'] if index == 0 else
                         ['final', 'Synthetic evidence'] if index == 1 else 'Synthetic answer')
             content = json.dumps(response, separators=(',', ':')) if isinstance(response, list) else response

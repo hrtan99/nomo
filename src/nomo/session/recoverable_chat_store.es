@@ -3,7 +3,7 @@ module nomo.session.recoverable_chat_store;
 import nomo.session.cas_rows.{CasRows, Target, Submission, submit_native, commit_once, commit_native};
 import std.memory.{get_entry, commit, MemoryEntry, MemoryVersion, WriteCondition, Missing, Match};
 import nomo.session.chat_session_contract.{Session, fresh_events, fresh_high_input_events, invalid as invalid_chat, begin, complete, extend};
-import nomo.harness.harness_tool_chat_contract.TurnResult;
+import nomo.harness.harness_tool_chat_contract.{TurnResult, Previous};
 import nomo.session.redaction.{Policy, policy_error, text as redact};
 import nomo.session.recoverable_events.{Frame as EventFrame, empty as empty_events, invalid as invalid_events, append, work_batch};
 import nomo.session.event_text_codec.{encode, decode, encode_prefix};
@@ -95,6 +95,37 @@ public flow load_evidence(turn: i32, policy: Policy, binding: string) -> Result<
             match decode(item.value.text, policy) { Ok(value) => Ok(Some(value)), Err(error) => Err(error) }
         }
     };
+}
+
+// Restore the durable conversation projection, including large tool evidence
+// archived outside the compact main frame. Callers receive decoded data only.
+public flow conversation(frame: EventFrame, latest: Previous, policy: Policy, binding: string) -> Result<Array<Event>, string> {
+    var selected: Array<Event> = []; var chat_turn: i32 = 0;
+    for event in frame.events limit Iterations(4096) {
+        if event.role == "system" && event.kind == "native-budget" &&
+            (event.name == "chat" || event.name == "chat-large" || event.name == "chat-resilient" || event.name == "chat-high-input") {
+            chat_turn = chat_turn + 1;
+        }
+        if (event.role == "user" && event.kind == "request") || (event.role == "model" && event.kind == "request") ||
+            (event.role == "tool" && event.kind == "check") || (event.role == "system" && (event.kind == "work-boundary" || event.kind == "notice")) ||
+            (event.role == "assistant" && event.kind == "answer") ||
+            (event.role == "main" && (event.kind == "consume" || event.kind == "tool" || event.kind == "answer")) {
+            var value = match decode(event.text, policy) { Ok(item) => item, Err(error) => { return Err(error); } };
+            if event.role == "main" && event.kind == "tool" && value == chat_omitted() {
+                if chat_turn < frame.turns {
+                    value = match load_evidence(chat_turn, policy, binding) {
+                        Ok(Some(item)) => item, Ok(None()) => { return Err("archived recoverable chat evidence missing"); }
+                        Err(error) => { return Err(error); }
+                    };
+                } else {
+                    if chat_turn != frame.turns || latest.tool == "" || latest.outcome == "" { return Err("latest recoverable chat evidence missing"); }
+                    value = latest.outcome;
+                }
+            }
+            selected = selected.push(Event { role = event.role, kind = event.kind, name = event.name, text = value });
+        }
+    }
+    return Ok(selected);
 }
 flow archive_evidence(turn: i32, outcome: string, policy: Policy, binding: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
     if byte_count(utf8_encode(outcome)) <= timeline_inline_bytes() { return Ok(false); }

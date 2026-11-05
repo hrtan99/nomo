@@ -14,7 +14,7 @@ import nomo.harness.history_work_model.HistoryStages;
 import nomo.entry.harness_work_entry.{simple_refused as refused, Summary};
 import nomo.session.event_policy.{PolicyRoot, load as load_policy};
 import nomo.session.chat_history.load as load_legacy;
-import nomo.session.recoverable_chat_store.{load as load_chat};
+import nomo.session.recoverable_chat_store.{load as load_chat, conversation as restore_conversation};
 import nomo.session.recoverable_work_store.{Ticket as WorkTicket, admit, claim, finish as finish_work, abandon as abandon_work, load as load_work};
 import nomo.session.recoverable_check_store.{plan as plan_check, load as load_check};
 
@@ -71,6 +71,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
     match followup_edit_available() { Ok(_) => {} _ => { return refused("legacy followup edit exists or is invalid"); } }
     match available() { Ok(_) => {} Err(error) => { return refused(error); } }
     let history = match load_chat(policy, binding) { Ok(Some(value)) => value, _ => { return refused("saved event chat missing or invalid"); } };
+    let conversation = match restore_conversation(history.value.events, history.value.chat.invocation.prior, policy, binding) { Ok(value) => value, Err(error) => { return refused(error); } };
     match load_check(policy, binding) { Ok(None()) => {} _ => { return refused("check already exists or is invalid"); } }
     let ticket = match admit(input.selected.id, input.selected.workspace, input.selected.path, input.request, history, policy, binding) {
         Ok(value) => value, Err(error) => { return refused(error); }
@@ -80,9 +81,10 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
     println("RESERVED event work; interruption or uncertain effects cannot be retried automatically.");
     let prior_request = history.value.chat.last_request; let previous = history.value.chat.invocation.prior;
     let wide = ticket.frame.work.format == 3 || ticket.frame.work.format == 4 || ticket.frame.work.format == 6 || ticket.frame.work.format == 7 || ticket.frame.work.format == 8;
-    let stages = HistoryStages { prior_request = prior_request, previous = previous, wide = wide, historical = false };
+    let high_input = ticket.frame.work.format == 9;
+    let stages = HistoryStages { prior_request = prior_request, previous = previous, conversation = conversation, wide = wide || high_input, high_input = high_input, historical = false };
     let persistence = FirstPersistence { ticket = ticket, redaction = policy, binding = binding };
-    return execute<HistoryStages, EditTicket, bool, FirstPersistence, NativeWorkEditor, EventWorkTimeline, TerminalWorkOutput>(stages, persistence, native_editor(), event_timeline(), TerminalWorkOutput {}, input, Run { redaction = policy, binding = binding, wide = wide, saved = "SAVED event work facts; no grant or root identity is persisted." });
+    return execute<HistoryStages, EditTicket, bool, FirstPersistence, NativeWorkEditor, EventWorkTimeline, TerminalWorkOutput>(stages, persistence, native_editor(), event_timeline(), TerminalWorkOutput {}, input, Run { redaction = policy, binding = binding, wide = wide || high_input, high_input = high_input, saved = "SAVED event work facts; no grant or root identity is persisted." });
 }
 
 public flow abandon(args: Array<string>) -> i32 ![Console, Memory, Fs.read<PolicyRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {

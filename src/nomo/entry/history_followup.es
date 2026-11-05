@@ -74,9 +74,9 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
     let prior_work = PriorWork { request = ticket.record.parent.work.request, summary = ticket.record.parent.work.summary,
         summary_source = "unknown", selection = None(), check = checked, exit_code = exit, output = first_output, history = [] };
     let stages = HistoryStages { prior_request = history.value.last_request, previous = history.value.invocation.prior,
-        prior_work = prior_work, wide = false, historical = true };
+        conversation = [], prior_work = prior_work, wide = false, high_input = false, historical = true };
     let persistence = FollowupPersistence { ticket = ticket, journal = journal };
-    let run = Run { redaction = Policy { format = 1, literals = [] }, binding = "", wide = false,
+    let run = Run { redaction = Policy { format = 1, literals = [] }, binding = "", wide = false, high_input = false,
         saved = "SAVED history-followup; captured history is not a root identity or grant." };
     return execute<HistoryStages, EditTicket, bool, FollowupPersistence, LegacyWorkEditor, LegacyWorkTimeline, LegacyWorkOutput>(
         stages, persistence, legacy_editor(), legacy_timeline(), legacy_output(), input, run);
