@@ -86,7 +86,7 @@ flow more(input: WorkRequest, prior_request: string, previous: Previous, first_i
     let prior = PriorWork { request = request, summary = latest.summary, summary_source = latest.summary_source, selection = latest.selection, check = latest.check, exit_code = latest.exit_code, output = latest.output, history = history };
     let ticket = match admit_extra(binding, input.selected.id, input.selected.workspace, input.selected.path, input.request, check_digest, policy, wide) { Ok(value) => value, Err(error) => { return refused(error); } };
     println(if wide { "RESERVED additional work: 7 calls, 286720 output tokens, 2811008 configured native tokens; interruption leaves this work unresolved." } else { "RESERVED additional work: 7 calls, 51200 output tokens, 1335296 configured native tokens; interruption leaves this work unresolved." });
-    let stages = HistoryStages { prior_request = prior_request, previous = previous, prior_work = prior, wide = wide };
+    let stages = HistoryStages { prior_request = prior_request, previous = previous, prior_work = prior, wide = wide, historical = false };
     let persistence = ContinuousPersistence { ticket = ticket, redaction = policy };
     return execute<HistoryStages, Stored, Stored, ContinuousPersistence, NativeWorkEditor, EventWorkTimeline, TerminalWorkOutput>(stages, persistence, native_editor(), event_timeline(), TerminalWorkOutput {}, input, Run { redaction = policy, binding = binding, wide = wide, saved = "SAVED additional work facts" });
 }
@@ -139,7 +139,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
     let prior_request = history.value.chat.last_request; let previous = history.value.chat.invocation.prior;
     let prior_work = PriorWork { request = first_work.value.work.request, summary = if first_work.value.work.phase == "abandoned" { "User abandoned interrupted work; its effect is unknown. Inspect the file before a new edit." } else { first_work.value.work.summary }, summary_source = if first_work.value.work.phase == "abandoned" { "system" } else { origin }, selection = chosen, check = checked, exit_code = exit, output = first_output, history = [] };
     let wide = ticket.frame.work.format == 3 || ticket.frame.work.format == 4 || ticket.frame.work.format == 6 || ticket.frame.work.format == 7 || ticket.frame.work.format == 8;
-    let stages = HistoryStages { prior_request = prior_request, previous = previous, prior_work = prior_work, wide = wide };
+    let stages = HistoryStages { prior_request = prior_request, previous = previous, prior_work = prior_work, wide = wide, historical = false };
     let persistence = FollowupPersistence { ticket = ticket, redaction = policy, binding = binding };
     return execute<HistoryStages, EditTicket, bool, FollowupPersistence, NativeWorkEditor, EventWorkTimeline, TerminalWorkOutput>(stages, persistence, native_editor(), event_timeline(), TerminalWorkOutput {}, input, Run { redaction = policy, binding = binding, wide = wide, saved = "SAVED event followup facts; no grant or root identity is persisted." });
 }

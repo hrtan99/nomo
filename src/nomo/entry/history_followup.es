@@ -5,13 +5,11 @@ import std.io.IOError as ConsoleError;
 import std.fs.IOError as FileError;
 import std.effects.Fs;
 import nomo.application.work.controller.execute;
-import nomo.application.work.request.WorkRequest;
-import nomo.application.work.ports.{WorkStages, WorkPersistence, Pending, Failure, Completed, Summary, Run};
+import nomo.application.work.ports.{WorkPersistence, Summary, Run};
 import nomo.bootstrap.legacy_work.{LegacyWorkEditor, LegacyWorkTimeline, LegacyWorkOutput, legacy_editor, legacy_timeline, legacy_output};
 import nomo.cli.harness_work_args.{parse_recorded, application};
 import nomo.core.conversation.Event;
 import nomo.harness.history_followup_model.{HistoryStages, PriorWork};
-import nomo.harness.history_stages.{prepare_legacy, summarize_legacy};
 import nomo.harness.history_continue_model.CheckOutput;
 import nomo.session.chat_history.load as load_chat;
 import nomo.session.check_output.load as load_check_output;
@@ -25,12 +23,6 @@ import nomo.tools.workspace.ReadOnlyRoot;
 import nomo.tools.edit_file.EditableRoot;
 
 flow refused(error: string) -> i32 { println("REFUSED " + error); return 1; }
-
-type LegacyStages = { model: HistoryStages };
-impl LegacyStages ~ WorkStages {
-    flow prepare(self, input: WorkRequest) -> Result<Pending, Failure> { return prepare_legacy(self.model, input); }
-    flow summarize(self, value: Completed) -> Result<Summary, Failure> { return summarize_legacy(self.model, value); }
-}
 
 type FollowupPersistence = { ticket: WorkTicket, journal: FollowupEditJournal };
 impl FollowupPersistence ~ WorkPersistence<EditTicket, bool> {
@@ -81,12 +73,11 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
     let exit = match ticket.record.parent.check { Some(value) => value.exit_code, None() => "" };
     let prior_work = PriorWork { request = ticket.record.parent.work.request, summary = ticket.record.parent.work.summary,
         summary_source = "unknown", selection = None(), check = checked, exit_code = exit, output = first_output, history = [] };
-    let model = HistoryStages { prior_request = history.value.last_request, previous = history.value.invocation.prior,
-        prior_work = prior_work, wide = false };
-    let stages = LegacyStages { model = model };
+    let stages = HistoryStages { prior_request = history.value.last_request, previous = history.value.invocation.prior,
+        prior_work = prior_work, wide = false, historical = true };
     let persistence = FollowupPersistence { ticket = ticket, journal = journal };
     let run = Run { redaction = Policy { format = 1, literals = [] }, binding = "", wide = false,
         saved = "SAVED history-followup; captured history is not a root identity or grant." };
-    return execute<LegacyStages, EditTicket, bool, FollowupPersistence, LegacyWorkEditor, LegacyWorkTimeline, LegacyWorkOutput>(
+    return execute<HistoryStages, EditTicket, bool, FollowupPersistence, LegacyWorkEditor, LegacyWorkTimeline, LegacyWorkOutput>(
         stages, persistence, legacy_editor(), legacy_timeline(), legacy_output(), input, run);
 }

@@ -80,7 +80,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
     println("RESERVED event work; interruption or uncertain effects cannot be retried automatically.");
     let prior_request = history.value.chat.last_request; let previous = history.value.chat.invocation.prior;
     let wide = ticket.frame.work.format == 3 || ticket.frame.work.format == 4 || ticket.frame.work.format == 6 || ticket.frame.work.format == 7 || ticket.frame.work.format == 8;
-    let stages = HistoryStages { prior_request = prior_request, previous = previous, wide = wide };
+    let stages = HistoryStages { prior_request = prior_request, previous = previous, wide = wide, historical = false };
     let persistence = FirstPersistence { ticket = ticket, redaction = policy, binding = binding };
     return execute<HistoryStages, EditTicket, bool, FirstPersistence, NativeWorkEditor, EventWorkTimeline, TerminalWorkOutput>(stages, persistence, native_editor(), event_timeline(), TerminalWorkOutput {}, input, Run { redaction = policy, binding = binding, wide = wide, saved = "SAVED event work facts; no grant or root identity is persisted." });
 }

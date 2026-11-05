@@ -3,7 +3,7 @@ module nomo.harness.history_followup_model;
 import nomo.application.work.ports.{WorkStages, Pending, Failure, Completed, Summary};
 import nomo.application.work.request.WorkRequest;
 import nomo.application.harness.work.ports.WorkModelStages;
-import nomo.application.harness.work.stages.{prepare as prepare_history, summarize as summarize_history};
+import nomo.application.harness.work.stages.{prepare as prepare_history, summarize as summarize_history, prepare_legacy, summarize_legacy};
 import nomo.harness.read_model_tools.expanded_work_child_turn as work_child_turn;
 import nomo.core.conversation.State;
 import nomo.model.model_tool_contract.LoopTurn;
@@ -32,10 +32,10 @@ flow editaggregate_system() -> string { return "Use current.edit and current.evi
 flow edit_input(value: WorkContext, request: string, previous: Previous, prior_work: PriorWork) -> EditInput {
     return bounded_history(EditInput { current = value, previous_request = request, previous = previous, prior_work = prior_work }, "edit");
 }
-public type HistoryStages = { prior_request: string, previous: Previous, prior_work: PriorWork, wide: bool };
+public type HistoryStages = { prior_request: string, previous: Previous, prior_work: PriorWork, wide: bool, historical: bool };
 impl HistoryStages ~ WorkStages {
-    flow prepare(self, input: WorkRequest) -> Result<Pending, Failure> { return prepare_history(self, input, self.wide); }
-    flow summarize(self, value: Completed) -> Result<Summary, Failure> { return summarize_history(self, value, self.wide); }
+    flow prepare(self, input: WorkRequest) -> Result<Pending, Failure> { return if self.historical { prepare_legacy(self, input) } else { prepare_history(self, input, self.wide) }; }
+    flow summarize(self, value: Completed) -> Result<Summary, Failure> { return if self.historical { summarize_legacy(self, value) } else { summarize_history(self, value, self.wide) }; }
 }
 impl HistoryStages ~ WorkModelStages {
     flow read(self, value: ReadContext) -> string ![] {
