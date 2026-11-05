@@ -44,8 +44,9 @@ class Fake(BaseHTTPRequestHandler):
             response = (['delegate', 'Read the task'] if index == 0 else
                         ['final', 'Synthetic evidence'] if index == 1 else 'Synthetic answer')
             content = json.dumps(response, separators=(',', ':')) if isinstance(response, list) else response
+            usage = {'prompt_tokens': 999000, 'completion_tokens': 1000, 'total_tokens': 1000000} if index == 0 else {'prompt_tokens': 100, 'completion_tokens': 20, 'total_tokens': 120}
             data = json.dumps({'choices': [{'message': {'role': 'assistant', 'content': content}, 'finish_reason': 'stop'}],
-                               'usage': {'prompt_tokens': 100, 'completion_tokens': 20, 'total_tokens': 120}}).encode()
+                               'usage': usage}).encode()
             self.server.seen.append({'index': index, 'payload_bytes': len(payload.encode()), 'max_tokens': request['max_tokens']})
             self.send_response(200)
             self.send_header('Content-Length', str(len(data)))
@@ -88,18 +89,18 @@ try:
 ''' % json.dumps(str(workspace)))
     docker = '/Applications/Docker.app/Contents/Resources/bin/docker'
     command = [docker, 'compose', '--env-file', '/dev/null', '-f', str(project / 'compose.yaml'),
-               '-f', str(project / 'config/etas-026-official-compose.yaml'),
+               '-f', str(project / 'config/etas-041-official-compose.yaml'),
                '-f', str(project / 'config/etas-runtime-cache-compose.yaml'), '-f', str(override),
                'run', '--rm', '--no-deps', '-T', 'dev', 'python3', '-B', '/workspace/scripts/nomo-verified-etas.py',
                'run', '/workspace', '--flow', 'probe', '--profile', 'nomo-read-events-new', '--allow-effects']
-    env = dict(os.environ, NOMO_ETAS_GRAPH='026-v68')
+    env = dict(os.environ, NOMO_ETAS_GRAPH='latest041')
     result = subprocess.run(command, cwd=project, env=env, capture_output=True, text=True, timeout=300)
     (out / 'result.log').write_text(result.stdout + result.stderr)
     if result.returncode or server.error or len(server.seen) != 3 or 'PASS large input' not in result.stdout:
         raise RuntimeError({'exit': result.returncode, 'error': server.error, 'calls': server.seen,
                             'tail': (result.stdout + result.stderr)[-4000:]})
     print(json.dumps({'status': 'passed', 'calls': server.seen, 'result_dir': str(out),
-                      'scope': 'synthetic encoded bytes; no provider tokenizer or real model usage'}))
+                      'scope': 'synthetic provider-reported 1M-token usage and encoded bytes; no real tokenizer or model usage'}))
 finally:
     server.shutdown()
     server.server_close()

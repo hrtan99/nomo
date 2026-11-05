@@ -10,7 +10,9 @@ import nomo.core.conversation.State;
 
 
 // The caller supplies the same trusted system prompt and typed data used by each legacy main.
-@limits([Tokens(131072), ContextTokens(1000000)])
+// ContextTokens is a run-owned cumulative ledger in ETAS 0.4.1. Every model
+// stage in this resilient chat shares the declared 3,786,432-token ceiling.
+@limits([Tokens(131072), ContextTokens(3786432)])
 public agent LargeChatMain(input: Prompt) -> string {
     return perform infer<string>(input);
 }

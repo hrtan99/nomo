@@ -47,7 +47,8 @@ class Fake(BaseHTTPRequestHandler):
             else:
                 content = json.dumps(value, ensure_ascii=False, separators=(',', ':')) if isinstance(value, list) else value
                 message = {'role':'assistant','content':content}; finish_reason = 'stop'
-            body = json.dumps({'choices':[{'message':message,'finish_reason':finish_reason}], 'usage':{'prompt_tokens':100,'completion_tokens':20,'total_tokens':120}},ensure_ascii=False).encode()
+            usage = {'prompt_tokens':999000,'completion_tokens':1000,'total_tokens':1000000} if i == 4 else {'prompt_tokens':100,'completion_tokens':20,'total_tokens':120}
+            body = json.dumps({'choices':[{'message':message,'finish_reason':finish_reason}], 'usage':usage},ensure_ascii=False).encode()
             self.server.phases.append(i);self.send_response(200);self.send_header('Content-Length',str(len(body)));self.end_headers();self.wfile.write(body)
         except Exception as error:
             self.server.failure = repr(error);self.send_error(500)
@@ -86,7 +87,7 @@ def interactive(command, env, question, editing):
 
 def main():
     out=Path(tempfile.mkdtemp(prefix='nomo-natural-work-'));project=out/'project'
-    shutil.copytree(ROOT,project,ignore=shutil.ignore_patterns('.git','.etas','tmp','__pycache__','.pytest_cache'));(project/'.etas').mkdir(mode=0o700)
+    shutil.copytree(ROOT,project,ignore=shutil.ignore_patterns('.git','.etas','tmp','docs','__pycache__','.pytest_cache'));(project/'.etas').mkdir(mode=0o700)
     workspace=out/'workspace';mask=os.umask(0o022)
     try: workspace.mkdir(mode=0o755)
     finally: os.umask(mask)
