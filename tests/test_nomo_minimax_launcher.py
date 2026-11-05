@@ -32,7 +32,7 @@ class MiniMaxLauncherTests(unittest.TestCase):
             self.assertEqual(module.main(self.argv,work=True),0)
         self.assertEqual(len(calls),2);cmd,child=calls[0];check,check_env=calls[1]
         self.assertIn(str(self.project/'config/nomo-minimax-model-compose.yaml'),cmd)
-        self.assertIn(str(self.project/'config/etas-030-official-compose.yaml'),cmd)
+        self.assertIn(str(self.project/'config/etas-041-official-compose.yaml'),cmd)
         self.assertEqual(cmd[cmd.index('--profile')+1],'harness-minimax-work')
         self.assertEqual(child['MINIMAX_API_KEY'],'FAKE_MINIMAX_TOKEN');self.assertNotIn('NOMO_QWEN_SERVER_API_KEY',child)
         self.assertNotIn('FAKE_MINIMAX_TOKEN',repr(cmd));self.assertNotIn('FAKE_MINIMAX_TOKEN',out.getvalue()+err.getvalue())
@@ -59,7 +59,7 @@ class MiniMaxLauncherTests(unittest.TestCase):
                                  'MINIMAX_API_KEY':'FAKE_MINIMAX_TOKEN','NOMO_QWEN_SERVER_API_KEY':'FAKE_QWEN_TOKEN'}
         result=subprocess.run(['bash',str(ROOT/'scripts/nomo-read.sh'),'ask','--root',str(self.context),'--allow','context.txt','--once','hello'],env=env,capture_output=True,timeout=15)
         self.assertEqual(result.returncode,0,result.stderr);call=json.loads(log.read_text());args=call['args']
-        self.assertIn(str(ROOT/'config/nomo-minimax-read-compose.yaml'),args);self.assertIn(str(ROOT/'config/etas-030-official-compose.yaml'),args)
+        self.assertIn(str(ROOT/'config/nomo-minimax-read-compose.yaml'),args);self.assertIn(str(ROOT/'config/etas-041-official-compose.yaml'),args)
         self.assertEqual(args[args.index('--profile')+1],'gateway-minimax-readonly')
         self.assertTrue(call['minimax']);self.assertFalse(call['qwen']);self.assertNotIn('FAKE_MINIMAX_TOKEN',repr(args))
 if __name__=='__main__':unittest.main()

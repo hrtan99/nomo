@@ -2,7 +2,7 @@ module nomo.entry.read_model_tools_chat;
 
 import nomo.core.read_text.within;
 import std.io.{println, read_line};
-import std.text.{split, to_string_i32, starts_with};
+import std.text.{split, from_i32, starts_with, ends_with};
 import std.collections.len as count;
 import std.codec.text.utf8_encode;
 import std.bytes.len as byte_count;
@@ -22,27 +22,22 @@ flow help() -> unit {
 }
 
 flow ledger(prefix: string, state: Ledger, maximum: Ledger) -> unit {
-    println(prefix + "LEDGER steps=" + to_string_i32(state.steps) + "/" + to_string_i32(maximum.steps) + " calls=" + to_string_i32(state.calls) + "/" + to_string_i32(maximum.calls) + " tokens=" +
-        to_string_i32(state.tokens) + "/" + to_string_i32(maximum.tokens) + " tools=" + to_string_i32(state.tools) + "/" + to_string_i32(maximum.tools) + " scan=" + to_string_i32(state.scan) +
-        "/" + to_string_i32(maximum.scan) + " reserved_steps=0 reserved_calls=0 reserved_tokens=0 reserved_tools=0 reserved_scan=0");
+    println(prefix + "LEDGER steps=" + from_i32(state.steps) + "/" + from_i32(maximum.steps) + " calls=" + from_i32(state.calls) + "/" + from_i32(maximum.calls) + " tokens=" +
+        from_i32(state.tokens) + "/" + from_i32(maximum.tokens) + " tools=" + from_i32(state.tools) + "/" + from_i32(maximum.tools) + " scan=" + from_i32(state.scan) +
+        "/" + from_i32(maximum.scan) + " reserved_steps=0 reserved_calls=0 reserved_tokens=0 reserved_tools=0 reserved_scan=0");
 }
 
 flow stop(reason: string, turns: i32, lines: i32, state: Ledger, maximum: Ledger) -> unit {
-    println("STOP " + reason + " turns=" + to_string_i32(turns) + " lines=" + to_string_i32(lines));
+    println("STOP " + reason + " turns=" + from_i32(turns) + " lines=" + from_i32(lines));
     ledger("", state, maximum);
 }
 
 flow refused(error: string) -> i32 { println("REFUSED " + error); let state = fresh_invocation(); ledger("", fresh(), state.maximum); return 1; }
 
 flow line_error(raw: string) -> string {
-    if byte_count(utf8_encode(raw)) > 130 { return "raw input exceeds 128 UTF-8 bytes plus LF/CRLF"; }
-    var last = ""; var previous = "";
-    for character in split(raw, "") limit Iterations(132) {
-        if character != "" { previous = last; last = character; }
-    }
-    var framing: usize = 0;
-    if last == "\n" { framing = 1; if previous == "\r" { framing = 2; } }
-    if byte_count(utf8_encode(raw)) - framing > 128 { return "raw input exceeds 128 UTF-8 bytes plus LF/CRLF"; }
+    let size = byte_count(utf8_encode(raw));
+    let framing: usize = if ends_with(raw, "\r\n") { 2 } else { if ends_with(raw, "\n") { 1 } else { 0 } };
+    if size > 130 || size - framing > 128 { return "raw input exceeds 128 UTF-8 bytes plus LF/CRLF"; }
     return "";
 }
 
@@ -78,11 +73,11 @@ public flow run(args: Array<string>) -> i32 {
                         if state.admitted >= turn_limit { println("REFUSED turn limit reached"); stop("turn limit", state.admitted, lines, state.usage, state.maximum); return 1; }
                         let capacity = if extended { extended_admission_error(state.usage) } else { admission_error(state.usage, state.maximum) };
                         if capacity != "" { println("REFUSED " + capacity); stop("budget", state.admitted, lines, state.usage, state.maximum); return 1; }
-                        println("TURN " + to_string_i32(state.admitted + 1) + " USER " + command.text);
+                        println("TURN " + from_i32(state.admitted + 1) + " USER " + command.text);
                         let result = run_turn(command.text, allowed, state);
                         if !result.resolved { return 1; }
                         state = result.state;
-                        ledger("TURN " + to_string_i32(state.admitted) + " ", state.usage, state.maximum);
+                        ledger("TURN " + from_i32(state.admitted) + " ", state.usage, state.maximum);
                         if result.status != 0 { stop("turn failed", state.admitted, lines, state.usage, state.maximum); return 1; }
                     }
                 }

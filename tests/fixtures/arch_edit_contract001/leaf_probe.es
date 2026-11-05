@@ -6,7 +6,7 @@ import nomo.tools.edit_contract.{Prepared, prepare_original};
 import nomo.tools.edit_proposal.{Request, Proposal};
 
 type Check = { label: string, passed: bool };
-flow slash() -> string { return split("\\/", "")[1]; }
+flow slash() -> string { return std.text.from_char('\\'); }
 flow prepared(name: string, before: string, target: string, replacement: string, after: string) -> bool {
     let expected = Prepared { request = Request { path = name, original = before, target = target, replacement = replacement },
         proposal = Proposal { path = name, before = before, after = after } };

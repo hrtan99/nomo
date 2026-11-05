@@ -1,6 +1,6 @@
 module nomo.context.preflight;
 
-import std.text.len;
+import std.text.char_count as len;
 import std.bytes.len as byte_count;
 import std.codec.text.utf8_encode;
 import std.json.{JsonValue, stringify};

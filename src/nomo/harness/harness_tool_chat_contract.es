@@ -1,6 +1,6 @@
 module nomo.harness.harness_tool_chat_contract;
 
-import std.text.{len, starts_with};
+import std.text.{char_count as len, starts_with};
 import std.collections.len as count;
 import std.json.JsonValue;
 import std.agent.message.Message;

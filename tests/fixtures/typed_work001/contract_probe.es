@@ -18,7 +18,7 @@ import nomo.tools.edit_contribution.Contribution;
 import nomo.harness.typed_work_reservation.{Policy, Envelope, Reservation, required, admit, advance, stop, reservation_error};
 
 type Check = { label: string, passed: bool };
-flow slash() -> string { return split("\\/", "")[1]; }
+flow slash() -> string { return std.text.from_char('\\'); }
 flow checks() -> Array<Check> { return __CHECKS__; }
 flow plan_context(phase: string) -> ReadContext {
     return ReadContext { phase = phase, request = "Change chosen using observed context", task = if phase == "plan" { "" } else { "Read context.txt" },

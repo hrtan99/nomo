@@ -1,7 +1,7 @@
 module nomo.cli.harness_checkpoint_args;
 
 import std.collections.len as count;
-import std.text.{len, split};
+import std.text.{char_count as len, split};
 import nomo.model.model_tool_contract.question_error;
 import nomo.session.harness_checkpoint.{Identity, identity_error};
 

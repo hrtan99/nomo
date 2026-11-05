@@ -1,7 +1,7 @@
 module nomo.core.conversation;
 
 import std.collections.len;
-import std.text.len as text_len;
+import std.text.char_count as text_len;
 
 public type Event = { role: string, kind: string, name: string, text: string };
 public type State = { events: Array<Event>, characters: usize, spent: i32, stopped: bool };

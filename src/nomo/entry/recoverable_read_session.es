@@ -1,8 +1,12 @@
 module nomo.entry.recoverable_read_session;
 
 import nomo.core.read_text.within;
+import nomo.application.chat.controller.{open as open_chat, reserve_loaded as reserve_chat, finish as finish_chat};
+import nomo.application.status_contract.SessionStatusReader;
+import nomo.bootstrap.chat.{RecoverableTicket, RecoverableChatRepository, recoverable_repository};
+import nomo.bootstrap.recoverable_status.recoverable_status_reader;
 import std.io.println;
-import std.text.{len, split, ends_with, to_string_i32};
+import std.text.{char_count as len, ends_with, from_i32};
 import std.bytes.len as byte_count;
 import std.codec.text.utf8_encode;
 import std.agent.message.Message;
@@ -14,17 +18,13 @@ import nomo.harness.read_tool_chat.{run_private_turn, run_with_history};
 import nomo.harness.natural_work_chat.{run as run_natural, route as natural_route, delegated as delegate_route};
 import nomo.harness.history_continue_model.{BudgetFacts, run_turn as run_after_work, run_after_followup};
 import nomo.session.recoverable_work_facts.snapshot as work_facts;
-import nomo.session.continuous_work.{Entry as ExtraEntry, load as load_continuous};
+import nomo.session.continuous_work.Entry as ExtraEntry;
 import nomo.session.event_policy.load as load_policy;
 import nomo.session.event_text_codec.decode;
 import nomo.session.redaction.Policy;
 import nomo.session.recoverable_events.Frame as EventFrame;
 import nomo.session.chat_history.load as load_legacy;
-import nomo.session.recoverable_chat_store.{create, load, reserve, finish};
-import nomo.session.recoverable_work_store.load as load_recoverable_work;
-import nomo.session.recoverable_check_store.load as load_recoverable_check;
-import nomo.session.recoverable_followup_store.load as load_recoverable_followup;
-import nomo.session.recoverable_followup_check_store.load as load_recoverable_followup_check;
+import nomo.session.recoverable_chat_store.{create, load};
 import nomo.session.history_work_guard.inspect as inspect_work;
 import nomo.session.history_followup_guard.inspect as inspect_followup;
 import nomo.session.history_check_guard.inspect as inspect_check;
@@ -39,6 +39,7 @@ import std.fs.IOError as FileError;
 import std.effects.Fs;
 import nomo.tools.workspace.{ReadOnlyRoot, selection};
 import nomo.session.event_policy.PolicyRoot;
+import nomo.session.chat_format_policy.policy as format_policy;
 
 // Explicit opt-in path. It does not silently migrate v1-v3, establish a
 // workspace identity, or claim comprehensive secret redaction.
@@ -74,35 +75,30 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyR
     match inspect_check() { Ok(None()) => {} _ => { println("REFUSED check record exists or is invalid"); return 1; } }
     match inspect_followup_check() { Ok(None()) => {} _ => { println("REFUSED followup check exists or is invalid"); return 1; } }
     let binding = args[6];
-    let existing = match load(policy, binding) { Ok(item) => item, Err(error) => { println("REFUSED " + error); return 1; } };
-    if args[0] == "new" {
-        match existing { None() => {} Some(_) => { println("REFUSED session already exists"); return 1; } }
-        match create(policy, binding) { Ok(_) => {} Err(error) => { println("REFUSED " + error); return 1; } }
-    } else { match existing { Some(_) => {} None() => { println("REFUSED recoverable session missing"); return 1; } } }
-    let current = match load(policy, binding) { Ok(Some(item)) => item, _ => { println("REFUSED recoverable session missing or invalid"); return 1; } };
+    let repository = recoverable_repository(policy, binding);
+    let current = match open_chat<RecoverableTicket, RecoverableChatRepository>(repository, args[0] == "new") { Ok(value) => value, Err(error) => { println("REFUSED " + error); return 1; } };
     let facts = match work_facts(policy, binding) { Ok(item) => item, Err(error) => { println("REFUSED " + error); return 1; } };
     let history = match conversation(current.value.events, policy) { Ok(item) => item, Err(error) => { println("REFUSED " + error); return 1; } };
-    let version = match reserve(current, args[4], policy, binding) { Ok(item) => item, Err(error) => { println("REFUSED " + error); return 1; } };
-    let running = match load(policy, binding) { Ok(Some(item)) => item, _ => { println("REFUSED reservation missing"); return 1; } };
-    if running.version.opaque != version.opaque || running.value.chat.phase != "running" { println("REFUSED reservation changed"); return 1; }
+    let reservation = match reserve_chat<RecoverableTicket, RecoverableChatRepository>(repository, current, args[4]) { Ok(value) => value, Err(error) => { println("REFUSED " + error); return 1; } };
+    let running = reservation.reserved;
     println("RESERVED chat turn; interruption leaves it unresolved and will not retry.");
     println("A final answer is provisional until SAVED confirms durable history.");
     let result = if natural { run_natural(args[4], allowed, running.value.chat.invocation, history, facts.first, facts.followup, facts.additional, scope.page, scope.more) } else { match facts.first {
         Some(first) => { match facts.followup {
             Some(second) => {
-                let usage = running.value.chat.invocation.usage;
-                let budget = BudgetFacts { work_calls = facts.calls, work_generation = facts.generation, chat_used_calls = usage.calls, chat_used_generation = usage.tokens, chat_reserved_calls = if running.value.chat.format == 5 || running.value.chat.format == 7 || running.value.chat.format == 9 || (running.value.chat.format == 11 || running.value.chat.format >= 13) { 6 } else { 4 }, chat_reserved_generation = if running.value.chat.format == 15 { 278528 } else { if (running.value.chat.format == 11 || running.value.chat.format >= 13) { 24576 } else { if running.value.chat.format == 9 { 20480 } else { if running.value.chat.format == 5 || running.value.chat.format == 7 { 12288 } else { 8192 } } } } };
+                let usage = running.value.chat.invocation.usage; let pending = format_policy(running.value.chat.format).pending_reservation(running.value.chat.phase);
+                let budget = BudgetFacts { work_calls = facts.calls, work_generation = facts.generation, chat_used_calls = usage.calls, chat_used_generation = usage.tokens,
+                    chat_reserved_calls = pending.calls, chat_reserved_generation = pending.generation };
                 run_after_followup(args[4], allowed, running.value.chat.invocation, first, second, facts.additional, history, budget)
             }
             None() => run_after_work(args[4], allowed, running.value.chat.invocation, first, history),
         } }
-        None() => if running.value.chat.invocation.admitted >= 2 || current.value.events.format == 2 { run_with_history(args[4], allowed, running.value.chat.invocation, history) }
+        None() => if format_policy(running.value.chat.format).history_rule(running.value.chat.invocation.admitted, current.value.events.format) { run_with_history(args[4], allowed, running.value.chat.invocation, history) }
             else { run_private_turn(args[4], allowed, running.value.chat.invocation) },
     } };
-    if result.status != 0 || !result.resolved { println("REFUSED chat turn unresolved; inspect without retry"); return 1; }
-    match finish(running, result, policy, binding) { Ok(_) => {} Err(error) => { println("REFUSED " + error); return 1; } }
+    match finish_chat<RecoverableTicket, RecoverableChatRepository>(repository, running, result) { Ok(_) => {} Err(error) => { println("REFUSED " + error); return 1; } }
     println("SAVED chat and event records together; saved text is untrusted and does not grant authority.");
-    match result.completed { Some(item) => { let route = if natural { natural_route(item.answer, allowed, facts.first != None(), result.state.admitted < if running.value.chat.format >= 14 { 48 } else { 32 }, scope.page, scope.more) } else { delegate_route(item.answer, result.state.admitted < if running.value.chat.format >= 14 { 48 } else { 32 }) }; if route != "" { println(route); } } None() => {} }
+    match result.completed { Some(item) => { let can_continue = format_policy(running.value.chat.format).continuation_rule(result.state.admitted); let route = if natural { natural_route(item.answer, allowed, facts.first != None(), can_continue, scope.page, scope.more) } else { delegate_route(item.answer, can_continue) }; if route != "" { println(route); } } None() => {} }
     return 0;
 }
 
@@ -136,12 +132,9 @@ public flow status(args: Array<string>) -> i32 ![Console, Memory, Fs.read<Policy
         match load(policy, args[1]) { Ok(None()) => {} Ok(Some(_)) => { println("REFUSED session already exists"); return 1; } Err(error) => { println("REFUSED " + error); return 1; } }
         return match create(policy, args[1]) { Ok(_) => { println("SESSION INITIALIZED"); 0 } Err(error) => { println("REFUSED " + error); 1 } };
     }
-    let saved = match load(policy, args[1]) { Ok(Some(item)) => item, Ok(None()) => { println("REFUSED recoverable session missing"); return 1; } Err(error) => { println("REFUSED " + error); return 1; } };
-    let work = match load_recoverable_work(policy, args[1]) { Ok(item) => item, Err(error) => { println("REFUSED " + error); return 1; } };
-    let check = match load_recoverable_check(policy, args[1]) { Ok(item) => item, Err(error) => { println("REFUSED " + error); return 1; } };
-    let followup = match load_recoverable_followup(policy, args[1]) { Ok(item) => item, Err(error) => { println("REFUSED " + error); return 1; } };
-    let followup_check = match load_recoverable_followup_check(policy, args[1]) { Ok(item) => item, Err(error) => { println("REFUSED " + error); return 1; } };
-    let extra = match load_continuous(args[1]) { Ok(item) => item, Err(error) => { println("REFUSED " + error); return 1; } };
+    let snapshot = match recoverable_status_reader(policy, args[1]).snapshot() { Ok(value) => value, Err(error) => { println("REFUSED " + error); return 1; } };
+    let saved = snapshot.chat; let work = snapshot.work; let check = snapshot.check;
+    let followup = snapshot.followup; let followup_check = snapshot.followup_check; let extra = snapshot.additional;
     var additional: Array<ExtraEntry> = [];
     match extra { Some(item) => { additional = item.value.history.push(item.value.current); } None() => {} }
     var chat_reservations: i32 = 0; var native_configured: i32 = 0; var legacy_native_unknown = false;
@@ -151,10 +144,10 @@ public flow status(args: Array<string>) -> i32 ![Console, Memory, Fs.read<Policy
     match work { Some(item) => { if item.value.work.format >= 4 { native_configured = native_configured + if item.value.work.format == 7 { 2811008 } else { if item.value.work.format == 6 { 2073152 } else { 1335296 } }; } else { legacy_native_unknown = true; } } None() => {} }
     match followup { Some(item) => { if item.value.work.format >= 4 { native_configured = native_configured + if item.value.work.format == 7 { 2811008 } else { if item.value.work.format == 6 { 2073152 } else { 1335296 } }; } else { legacy_native_unknown = true; } } None() => {} }
     for item in additional limit Iterations(48) { if ends_with(item.result.source, "-v4") { native_configured = native_configured + 2811008; } else { if ends_with(item.result.source, "-v3") { native_configured = native_configured + 2073152; } else { if item.result.source == "v2" || ends_with(item.result.source, "-v2") { native_configured = native_configured + 1335296; } else { legacy_native_unknown = true; } } } }
-    println("NATIVE configured cumulative reservation=" + to_string_i32(native_configured) + "; actual provider usage unknown; legacy native budget " + if legacy_native_unknown { "unknown" } else { "not present" });
+    println("NATIVE configured cumulative reservation=" + from_i32(native_configured) + "; actual provider usage unknown; legacy native budget " + if legacy_native_unknown { "unknown" } else { "not present" });
     for item in additional limit Iterations(48) {
         println("ADDITIONAL WORK " + item.core.id + " phase=" + item.result.phase + " edit=" + item.edit.phase + " check=" + item.check.phase +
-            " settled_calls=" + to_string_i32(item.result.calls) + " settled_generation=" + to_string_i32(item.result.generation) +
+            " settled_calls=" + from_i32(item.result.calls) + " settled_generation=" + from_i32(item.result.generation) +
             if item.result.phase == "running" || item.result.phase == "abandoned" { if item.result.source == "wide-v4" { " reserved_calls=7 reserved_generation=286720" } else { if item.result.source == "wide-v3" { " reserved_calls=7 reserved_generation=188416" } else { if item.result.source == "wide" || item.result.source == "wide-v2" { " reserved_calls=7 reserved_generation=61440" } else { " reserved_calls=7 reserved_generation=51200" } } } } else { " reserved_calls=0 reserved_generation=0" });
         if item.check.phase == "abandoned" { println("ABANDONED CHECK: outcome unknown; inspect the workspace before further action."); }
     }
@@ -220,10 +213,11 @@ public flow status(args: Array<string>) -> i32 ![Console, Memory, Fs.read<Policy
     if pending || work_phase == "running" || followup_phase == "running" || check_phase == "planned" || check_phase == "running" || followup_check_phase == "planned" || followup_check_phase == "running" {
         println("Before starting a separate session, ensure the earlier invocation has stopped and inspect the workspace. Use session-chat --new or session-id start with selected roots; a new session does not resolve this one and requires fresh approval.");
     }
+    let pending_budget = format_policy(saved.value.chat.format).pending_reservation(saved.value.chat.phase);
     let view = View { format = 1, encoding = saved.value.encoding, phase = saved.value.chat.phase,
         turns = saved.value.events.turns, first_count = saved.value.events.first_count,
         used_calls = used.calls, used_tokens = used.tokens, used_tools = used.tools, used_scan = used.scan,
-        reserved_calls = if pending { if saved.value.chat.format == 5 || saved.value.chat.format == 7 || saved.value.chat.format == 9 || (saved.value.chat.format == 11 || saved.value.chat.format >= 13) { 6 } else { 4 } } else { 0 }, reserved_tokens = if pending { if saved.value.chat.format == 15 { 278528 } else { if (saved.value.chat.format == 11 || saved.value.chat.format >= 13) { 24576 } else { if saved.value.chat.format == 9 { 20480 } else { if saved.value.chat.format == 5 || saved.value.chat.format == 7 { 12288 } else { 8192 } } } } } else { 0 },
+        reserved_calls = pending_budget.calls, reserved_tokens = pending_budget.generation,
         events = saved.value.events.events, work_phase = work_phase, work_edit_phase = work_edit_phase, work_reserved_calls = work_reserved_calls,
         work_reserved_tokens = work_reserved_tokens, work_settled_calls = work_settled_calls,
         work_settled_tokens = work_settled_tokens, work_events = work_events,
@@ -239,7 +233,7 @@ public flow status(args: Array<string>) -> i32 ![Console, Memory, Fs.read<Policy
     let raw = match stringify(value) { Ok(item) => item, Err(_) => { println("REFUSED event view encoding"); return 1; } };
     if len(raw) > 16777216 || byte_count(utf8_encode(raw)) > 16777216 { println("REFUSED event view exceeds bound"); return 1; }
     var output = ""; var size: usize = 0;
-    for character in split(raw, "") limit Iterations(16777218) {
+    for codepoint in std.text.chars(raw) limit Iterations(16777218) { let character = std.text.from_char(codepoint);
         let part = escaped(character); size = size + len(part);
         if size > 67108864 { println("REFUSED event view exceeds display bound"); return 1; }
         output = output + part;

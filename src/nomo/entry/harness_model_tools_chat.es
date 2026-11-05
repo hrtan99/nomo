@@ -1,7 +1,7 @@
 module nomo.entry.harness_model_tools_chat;
 
 import std.io.{println, read_line};
-import std.text.{len, split, to_string_i32, starts_with};
+import std.text.{char_count as len, split, from_i32, starts_with, ends_with};
 import std.collections.len as count;
 import nomo.cli.cli_request.parse_line;
 import nomo.model.model_tool_contract.{allowed_error, question_error};
@@ -18,27 +18,22 @@ flow help() -> unit {
 }
 
 flow ledger(prefix: string, state: Ledger) -> unit {
-    println(prefix + "LEDGER steps=" + to_string_i32(state.steps) + "/14 calls=" + to_string_i32(state.calls) + "/8 tokens=" +
-        to_string_i32(state.tokens) + "/16384 tools=" + to_string_i32(state.tools) + "/2 scan=" + to_string_i32(state.scan) +
+    println(prefix + "LEDGER steps=" + from_i32(state.steps) + "/14 calls=" + from_i32(state.calls) + "/8 tokens=" +
+        from_i32(state.tokens) + "/16384 tools=" + from_i32(state.tools) + "/2 scan=" + from_i32(state.scan) +
         "/8192 reserved_steps=0 reserved_calls=0 reserved_tokens=0 reserved_tools=0 reserved_scan=0");
 }
 
 flow stop(reason: string, turns: i32, lines: i32, state: Ledger) -> unit {
-    println("STOP " + reason + " turns=" + to_string_i32(turns) + " lines=" + to_string_i32(lines));
+    println("STOP " + reason + " turns=" + from_i32(turns) + " lines=" + from_i32(lines));
     ledger("", state);
 }
 
 flow refused(error: string) -> i32 { println("REFUSED " + error); ledger("", fresh()); return 1; }
 
 flow line_error(raw: string) -> string {
-    if len(raw) > 130 { return "raw input exceeds 128 characters plus LF/CRLF"; }
-    var last = ""; var previous = "";
-    for character in split(raw, "") limit Iterations(132) {
-        if character != "" { previous = last; last = character; }
-    }
-    var framing: usize = 0;
-    if last == "\n" { framing = 1; if previous == "\r" { framing = 2; } }
-    if len(raw) - framing > 128 { return "raw input exceeds 128 characters plus LF/CRLF"; }
+    let size = len(raw);
+    let framing: usize = if ends_with(raw, "\r\n") { 2 } else { if ends_with(raw, "\n") { 1 } else { 0 } };
+    if size > 130 || size - framing > 128 { return "raw input exceeds 128 characters plus LF/CRLF"; }
     return "";
 }
 
@@ -71,11 +66,11 @@ public flow run(args: Array<string>) -> i32 {
                         if state.admitted >= 2 { println("REFUSED turn limit reached"); stop("turn limit", state.admitted, lines, state.usage); return 1; }
                         let capacity = admission_error(state.usage, state.maximum);
                         if capacity != "" { println("REFUSED " + capacity); stop("budget", state.admitted, lines, state.usage); return 1; }
-                        println("TURN " + to_string_i32(state.admitted + 1) + " USER " + command.text);
+                        println("TURN " + from_i32(state.admitted + 1) + " USER " + command.text);
                         let result = run_turn(command.text, allowed, state);
                         if !result.resolved { return 1; }
                         state = result.state;
-                        ledger("TURN " + to_string_i32(state.admitted) + " ", state.usage);
+                        ledger("TURN " + from_i32(state.admitted) + " ", state.usage);
                         if result.status != 0 { stop("turn failed", state.admitted, lines, state.usage); return 1; }
                     }
                 }

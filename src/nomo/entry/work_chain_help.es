@@ -1,7 +1,7 @@
 module nomo.entry.work_chain_help;
 
 import std.io.println;
-import std.text.{len, split};
+import std.text.{char_count as len, replace};
 import std.collections.len as count;
 import nomo.core.text.printable;
 import nomo.session.edit_operation.selector_error;
@@ -10,12 +10,7 @@ import nomo.model.model_tool_contract.allowed_error;
 // Literal shell arguments are data; no command is evaluated by these helpers.
 public flow argument(value: string) -> Result<string, string> {
     if len(value) > 128 || !printable(value) { return Err("hint argument requires at most128 printable ASCII characters"); }
-    var output = "'";
-    for character in split(value, "") limit Iterations(130) {
-        if character == "'" { output = output + "'\"'\"'"; }
-        else { output = output + character; }
-    }
-    return Ok(output + "'");
+    return Ok("'" + replace(value, "'", "'\"'\"'") + "'");
 }
 flow bindings(id: string, workspace: string, path: string) -> Result<string, string> {
     let invalid = selector_error(id, workspace, path); if invalid != "" { return Err(invalid); }

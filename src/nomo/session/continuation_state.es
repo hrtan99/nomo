@@ -1,6 +1,6 @@
 module nomo.session.continuation_state;
 
-import std.text.{len, trim};
+import std.text.{char_count as len, trim};
 import nomo.core.text.input_error;
 import nomo.core.conversation.{State, capacity_error};
 import nomo.session.session_state.{Snapshot, Request, Projection, validate};

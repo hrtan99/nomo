@@ -13,7 +13,7 @@ import nomo.tools.edit_encoding.json;
 
 type Case = { label: string, raw: string, maximum: i32, budget: i32, initial: State, reply: string,
     model_expected: bool, context: Context, expected: Turn };
-flow slash() -> string { return split("\\/", "")[1]; }
+flow slash() -> string { return std.text.from_char('\\'); }
 flow collect(event: Event) -> unit {
     let encoded = match json([event.role, event.kind, event.name, event.text]) { Ok(value) => value, Err(_) => { abort("collector encoding refused"); } };
     println("EVENT " + encoded);

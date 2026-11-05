@@ -235,7 +235,7 @@ def cases():
 
 IMPORTS = '''module nomo.session_fixture;
 import std.io.println;
-import std.text.{len, contains};
+import std.text.{char_count as len, contains};
 import nomo.core.conversation.{Event, State};
 import nomo.session.session_state.{Caps, Ledger, Operation, Reference, Snapshot, Request, Projection, validate};
 '''

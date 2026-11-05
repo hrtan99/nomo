@@ -9,7 +9,7 @@ import nomo.tools.edit_encoding.{json, object, digest};
 import nomo.session.edit_operation.{Binding, Record, binding_error, record_error, same_binding, same_record};
 
 type Check = { label: string, passed: bool };
-flow slash() -> string { return split("\\/", "")[1]; }
+flow slash() -> string { return std.text.from_char('\\'); }
 flow checks() -> Array<Check> { return __CHECKS__; }
 
 flow arguments(input: Array<string>, applying: bool, expected: Options, error: string) -> bool {

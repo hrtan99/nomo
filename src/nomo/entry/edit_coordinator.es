@@ -4,7 +4,7 @@ import std.io.{println, read_line};
 import std.io.IOError as ConsoleError;
 import std.fs.IOError as FileError;
 import std.effects.Fs;
-import std.text.{trim, lowercase, len, to_string_usize};
+import std.text.{trim, lowercase, char_count as len, from_usize};
 import nomo.tools.edit_file.{EditableRoot, Prepared, apply};
 import nomo.tools.edit_proposal.validate;
 import nomo.tools.edit_encoding.object;
@@ -20,7 +20,7 @@ flow preview(value: Prepared, selected: Binding) -> Result<string, string> {
         "before_bytes", "after_bytes", "before_digest", "after_digest", "request_digest"],
         ["nomo-edit-preview-v1", selected.id, selected.workspace, selected.region, selected.path,
         value.proposal.before, value.request.target, value.request.replacement, value.proposal.after,
-        to_string_usize(selected.before_bytes), to_string_usize(selected.after_bytes),
+        from_usize(selected.before_bytes), from_usize(selected.after_bytes),
         selected.before_digest, selected.after_digest, selected.request_digest]);
 }
 

@@ -1,6 +1,6 @@
 module app.bounded_edit_probe;
 import std.io.println;
-import std.text.len;
+import std.text.char_count as len;
 import std.fs.IOError as FileError;
 import std.effects.Fs;
 import std.runtime.error.IndexError;

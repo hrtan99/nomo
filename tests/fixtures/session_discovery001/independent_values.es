@@ -4,7 +4,7 @@ import nomo.tools.edit_contract.Selector as EditSelector;
 import nomo.session.work_chain_usecase.{WorkRequest, ContinueRequest, TurnRequest};
 
 import std.io.println;
-import std.text.{len, split};
+import std.text.{char_count as len, split};
 import nomo.session.work_chain.{Record, Caps, initial, successor, validate, linked, publish_partial, confirm,
     maximum, turn_caps, zero, summary_reservation, values, reserve, policy, caps_error, fingerprint};
 import nomo.session.work_record.Record as WorkRecord;
@@ -50,7 +50,7 @@ flow patched(row: Record, mode: string) -> Record {
         remaining = if mode == "remaining" { maximum() } else { row.remaining },
         reserved = if mode == "reserved" { turn_caps() } else { row.reserved }, work = if mode == "work" { None() } else { row.work } };
 }
-flow slash() -> string { return split("\\/", "")[1]; }
+flow slash() -> string { return std.text.from_char('\\'); }
 flow copied_journal(row: Record, phase: string) -> Result<Journal, string> {
     let captured = match row.work {
         Some(value) => value,

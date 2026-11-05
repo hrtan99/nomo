@@ -1,6 +1,6 @@
 module nomo.agent.provider_controller;
 
-import std.text.{len, trim};
+import std.text.{char_count as len, trim};
 import std.collections.len as event_count;
 import nomo.core.conversation.{State, capacity_error, charge, stop};
 import nomo.agent.conversation_events.{Turn, emit, failure, reject};

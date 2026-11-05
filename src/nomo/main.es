@@ -1,7 +1,7 @@
 module nomo.main;
 
 import std.io.{println, read_line};
-import std.text.{trim, len};
+import std.text.{trim, char_count as len};
 import nomo.cli.config.load;
 import nomo.agent.loop.{turn, reject};
 import nomo.core.conversation.fresh;

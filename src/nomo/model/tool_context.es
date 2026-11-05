@@ -1,6 +1,6 @@
 module nomo.model.tool_context;
 
-import std.text.len;
+import std.text.char_count as len;
 import std.collections.len as count;
 import nomo.core.conversation.Event;
 import nomo.tools.path_policy.valid_path;

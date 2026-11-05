@@ -1,6 +1,6 @@
 module nomo.agent.model_context;
 
-import std.text.to_string_usize;
+import std.text.from_usize;
 import std.io.println;
 import nomo.core.conversation.{State, capacity_error};
 import nomo.agent.loop.failure;
@@ -44,7 +44,7 @@ public flow bounded_model_context(input: Context, maximum: usize) -> Result<Cont
         },
     };
     if selected.omitted_count > 0 {
-        println("CONTEXT omitted " + to_string_usize(selected.omitted_count) + " optional history events; required facts retained.");
+        println("CONTEXT omitted " + from_usize(selected.omitted_count) + " optional history events; required facts retained.");
     }
     return Ok(selected.context);
 }

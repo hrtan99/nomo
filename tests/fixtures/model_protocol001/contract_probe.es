@@ -1,13 +1,13 @@
 module app.contract_probe;
 
 import std.io.println;
-import std.text.{contains, len, split};
+import std.text.{contains, char_count as len, split};
 import nomo.core.text.printable;
 import nomo.harness.harness_model_contract.{decode_plan, decode_read_plan};
 import nomo.harness.model_plan_diagnostic.returned_text;
 
 type Check = { label: string, passed: bool };
-flow slash() -> string { return split("\\/", "")[1]; }
+flow slash() -> string { return std.text.from_char('\\'); }
 flow checks() -> Array<Check> { return __CHECKS__; }
 flow accepted(raw: string, expected: string) -> bool {
     return match decode_read_plan(raw) { Ok(actual) => actual == expected, Err(_) => false };

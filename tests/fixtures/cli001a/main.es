@@ -1,7 +1,7 @@
 module app.main;
 
 import std.io.{println, read_all};
-import std.text.{len, to_string_usize};
+import std.text.{char_count as len, from_usize};
 import std.collections.len as count;
 import std.json.parse;
 import std.agent.message.Message;
@@ -83,13 +83,13 @@ public flow main(args: Array<string>) -> i32 {
     if count(fixtures) == 0 || count(fixtures) > 512 { abort("invalid fixture count"); }
     var ordinal: usize = 0;
     for item in fixtures limit Iterations(512) {
-        println("CASE " + to_string_usize(ordinal) + " " + item.label);
+        println("CASE " + from_usize(ordinal) + " " + item.label);
         if item.mode == "args" { args_case(item); }
         else if item.mode == "line" { line_case(item); }
         else { abort("unknown synthetic fixture mode"); }
-        println("PASS " + to_string_usize(ordinal) + " " + item.label);
+        println("PASS " + from_usize(ordinal) + " " + item.label);
         ordinal = ordinal + 1;
     }
-    println("PASS CLI001A " + to_string_usize(count(fixtures)));
+    println("PASS CLI001A " + from_usize(count(fixtures)));
     return 0;
 }

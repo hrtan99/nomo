@@ -2,7 +2,7 @@ module nomo.entry.model_tool_entry;
 
 import std.collections.len;
 import std.text.split;
-import std.text.len as text_len;
+import std.text.char_count as text_len;
 import std.io.println;
 import nomo.cli.config.load_for;
 import nomo.model.model_tool_contract.{Limits, fresh_loop};

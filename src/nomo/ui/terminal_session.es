@@ -1,6 +1,6 @@
 module nomo.ui.terminal_session;
 
-import std.text.{len, to_string_i32};
+import std.text.{char_count as len, from_i32};
 import nomo.tools.edit_encoding.{object, json};
 
 // Pure control state only: no admission, durable fact, approval or work authority.
@@ -40,7 +40,7 @@ public flow state_line(state: State, root_id: string, child_id: string, workspac
     let remaining = match state { State.First => if once { 1 } else { 2 }, State.Second => 1, State.Stopped(_) => 0 };
     let current = if selected_turn == 1 { root_id } else { child_id };
     let value = match object(["phase", "root_id", "current_id", "turn", "configured_turns_in_process", "workspace", "path", "configured_cap", "once", "scope"],
-        [phase, root_id, current, to_string_i32(selected_turn), to_string_i32(remaining), workspace, path,
+        [phase, root_id, current, from_i32(selected_turn), from_i32(remaining), workspace, path,
         if cap == "" { "work-chain defaults" } else { cap }, if once { "true" } else { "false" },
         "configuration only; not a durable balance, File observation or permission"]) {
         Ok(value) => value, Err(error) => { return Err(error); }

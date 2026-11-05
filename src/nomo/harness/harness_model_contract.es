@@ -3,7 +3,7 @@ module nomo.harness.harness_model_contract;
 import nomo.application.decoder_contract.ReadPlanDecoder;
 import nomo.core.json.{FieldError, decode_fields as json_fields};
 
-import std.text.{len, trim, split};
+import std.text.{char_count as len, trim, from_char};
 import std.collections.len as count;
 import std.json.JsonValue;
 import std.agent.message.Message;
@@ -25,8 +25,8 @@ public flow bounded(text: string, maximum: usize) -> bool {
 flow frame_error(raw: string, formatting: bool) -> string {
     var opened = false; var closed = false; var quoted = false; var escaped = false;
     var leaves: usize = 0;
-    let slash = split("\\/", "")[1];
-    for character in split(raw, "") limit Iterations(386) {
+    let slash = from_char('\\');
+    for codepoint in std.text.chars(raw) limit Iterations(386) { let character = std.text.from_char(codepoint);
         let whitespace = character == " " || character == "\t" || character == "\r" || character == "\n";
         if !printable(character) && !(formatting && !quoted && whitespace) { return "control"; }
         if quoted {

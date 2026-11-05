@@ -1,6 +1,7 @@
 module nomo.harness.harness_model_edit;
 
 import nomo.harness.harness_edit_contract.Context;
+import nomo.harness.legacy_stage_contracts.StandaloneEditStage;
 
 @limits([Tokens(4096), ContextTokens(32768)])
 agent MainPlan(input: Context) -> string {
@@ -23,6 +24,6 @@ agent MainAggregate(input: Context) -> string {
         .data(input));
 }
 
-public flow plan(context: Context) -> string { return MainPlan.run(context); }
-public flow propose(context: Context) -> string { return EditChild.run(context); }
-public flow aggregate(context: Context) -> string { return MainAggregate.run(context); }
+public flow plan(context: Context) -> string ~ StandaloneEditStage { return MainPlan.run(context); }
+public flow propose(context: Context) -> string ~ StandaloneEditStage { return EditChild.run(context); }
+public flow aggregate(context: Context) -> string ~ StandaloneEditStage { return MainAggregate.run(context); }

@@ -1,7 +1,7 @@
 module nomo.entry.user_context_entry;
 
 import std.collections.len as count;
-import std.text.{len, split, starts_with, trim};
+import std.text.{char_count as len, starts_with, trim};
 import std.codec.text.utf8_encode;
 import std.bytes.len as byte_count;
 import std.io.{println, read_line};
@@ -19,7 +19,7 @@ public type Selection = { root: string, mode: string, accepted: bool, input: Inp
 
 flow root_error(root: string) -> string {
     if len(root) == 0 || len(root) > 512 || !starts_with(root, "/") { return "read root must be an absolute path of at most 512 characters"; }
-    for character in split(root, "") limit Iterations(514) {
+    for codepoint in std.text.chars(root) limit Iterations(514) { let character = std.text.from_char(codepoint);
         if character != "" {
             let bytes = utf8_encode(character);
             if byte_count(bytes) == 1 && (bytes[0] < 32 || bytes[0] == 127) { return "read root must not contain control characters"; }

@@ -17,7 +17,7 @@ public spec ChildLoopPolicy {
 }
 public type BoundedChild = { limits: Limits, work: bool, chat: bool };
 public type ExpandedChild = { wide: bool };
-public type MultiChild = {};
+public type MultiChild = { resilient: bool };
 public type LegacyChild = { limits: Limits };
 
 flow single_shape(input_characters: usize) -> Shape { return Shape { calls = 2, tools = 1, context_bytes = 8388608, input_characters = input_characters, result_characters = 262144, slots = 2, characters = 518, tool_characters = 65556, whole_scope = false, partial_search = false, named_final = true }; }
@@ -59,7 +59,9 @@ impl MultiChild ~ ChildLoopPolicy {
     flow shape(self) -> Shape ![] { return Shape { calls = 4, tools = 3, context_bytes = 8388608, input_characters = 512, result_characters = 262144, slots = 4, characters = 262688, tool_characters = 0, whole_scope = true, partial_search = true, named_final = false }; }
     flow request_error(self, request: string) -> string { return if bounded(request, 512) { "" } else { "invalid selected child context" }; }
     flow validate_context(self, context: Context) -> string ![] { return ""; }
-    flow reserve_model(self, state: Session, final_only: bool) -> Result<Session, string> ![] { return Ok(charged(state, 4096, 0)); }
+    flow reserve_model(self, state: Session, final_only: bool) -> Result<Session, string> ![] {
+        return Ok(charged(state, if final_only && self.resilient { 131072 } else { 4096 }, 0));
+    }
     flow reserve_tool(self, state: Session) -> Result<Session, string> ![] { return Ok(charged(state, 0, 4194560)); }
 }
 

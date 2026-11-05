@@ -4,7 +4,7 @@ import std.io.println;
 import std.io.IOError as ConsoleError;
 import std.fs.IOError as FileError;
 import std.effects.Fs;
-import std.text.to_string_i32;
+import std.text.from_i32;
 import nomo.cli.harness_edit_args.parse;
 import nomo.harness.harness_edit_contract.{Ledger, fresh, bump, context_error, decode_edit, decode_plan, text_error};
 import nomo.harness.harness_model_edit.{plan, propose, aggregate};
@@ -15,16 +15,16 @@ import nomo.harness.edit_context.{context, completed_context};
 import nomo.entry.edit_context.{recorded, display};
 
 flow ledger(state: Ledger) -> unit {
-    println("LEDGER steps=" + to_string_i32(state.steps) + "/6 calls=" + to_string_i32(state.calls) +
-        "/3 token_allowance=" + to_string_i32(state.tokens) + "/38912 boundaries=" + to_string_i32(state.boundaries) +
-        "/3 native_token_allowance=" + to_string_i32(state.native_tokens) + "/163840; allowances are not provider usage; journal does not persist model history or budgets");
+    println("LEDGER steps=" + from_i32(state.steps) + "/6 calls=" + from_i32(state.calls) +
+        "/3 token_allowance=" + from_i32(state.tokens) + "/38912 boundaries=" + from_i32(state.boundaries) +
+        "/3 native_token_allowance=" + from_i32(state.native_tokens) + "/163840; allowances are not provider usage; journal does not persist model history or budgets");
 }
 flow refused(state: Ledger, error: string) -> i32 { println("REFUSED " + error); ledger(state); return 1; }
 flow stage(phase: string, state: Ledger) -> unit {
-    println("STAGE " + phase + " child-1 steps=" + to_string_i32(state.steps) + " calls=" + to_string_i32(state.calls) +
-        " token_allowance=" + to_string_i32(state.tokens) + " remaining_calls=" + to_string_i32(3 - state.calls) +
-        " remaining_token_allowance=" + to_string_i32(38912 - state.tokens) +
-        " native_token_allowance=" + to_string_i32(state.native_tokens) + " remaining_native_token_allowance=" + to_string_i32(163840 - state.native_tokens));
+    println("STAGE " + phase + " child-1 steps=" + from_i32(state.steps) + " calls=" + from_i32(state.calls) +
+        " token_allowance=" + from_i32(state.tokens) + " remaining_calls=" + from_i32(3 - state.calls) +
+        " remaining_token_allowance=" + from_i32(38912 - state.tokens) +
+        " native_token_allowance=" + from_i32(state.native_tokens) + " remaining_native_token_allowance=" + from_i32(163840 - state.native_tokens));
 }
 flow help() -> unit {
     println("Nomo one-shot model edit: --id ID --workspace BIND --path FILE --once TASK (flags in any order).");

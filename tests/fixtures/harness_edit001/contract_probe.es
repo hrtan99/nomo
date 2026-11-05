@@ -11,7 +11,7 @@ import nomo.cli.harness_edit_args.parse as parse_args;
 import nomo.harness.harness_edit_contract.{Context, Ledger, fresh, bump, ledger_error, context_error, decode_edit, decode_plan};
 
 type Check = { label: string, passed: bool };
-flow slash() -> string { return split("\\/", "")[1]; }
+flow slash() -> string { return std.text.from_char('\\'); }
 flow checks() -> Array<Check> { return __CHECKS__; }
 flow child(raw: string, target: string, replacement: string, denied: bool) -> bool {
     return match decode_edit(raw) { Ok(value) => !denied && value.target == target && value.replacement == replacement, Err(_) => denied };

@@ -1,7 +1,7 @@
 module nomo.harness.harness_model;
 
 import std.io.println;
-import std.text.to_string_i32;
+import std.text.from_i32;
 import nomo.harness.harness_model_contract.{Context, Ledger, fresh, bounded, decode_plan, context_error, charge_call, charge_boundary};
 
 type ChildTask = { id: string, depth: i32, task: string, request: string };
@@ -21,18 +21,18 @@ agent ChildModel(input: Context) -> string {
 }
 
 flow numbers(state: Ledger) -> string {
-    return "steps=" + to_string_i32(state.steps) + " calls=" + to_string_i32(state.calls) + " tokens=" + to_string_i32(state.tokens);
+    return "steps=" + from_i32(state.steps) + " calls=" + from_i32(state.calls) + " tokens=" + from_i32(state.tokens);
 }
 
 flow precharged(phase: string, state: Ledger) -> unit {
     println("STAGE " + phase + " child-1 " + numbers(state) +
-        " reserved_steps=" + to_string_i32(5 - state.steps) + " reserved_calls=" + to_string_i32(3 - state.calls) +
-        " reserved_tokens=" + to_string_i32(6144 - state.tokens));
+        " reserved_steps=" + from_i32(5 - state.steps) + " reserved_calls=" + from_i32(3 - state.calls) +
+        " reserved_tokens=" + from_i32(6144 - state.tokens));
 }
 
 flow settled(state: Ledger) -> unit {
-    println("LEDGER steps=" + to_string_i32(state.steps) + "/5 calls=" + to_string_i32(state.calls) +
-        "/3 tokens=" + to_string_i32(state.tokens) + "/6144 reserved_steps=0 reserved_calls=0 reserved_tokens=0");
+    println("LEDGER steps=" + from_i32(state.steps) + "/5 calls=" + from_i32(state.calls) +
+        "/3 tokens=" + from_i32(state.tokens) + "/6144 reserved_steps=0 reserved_calls=0 reserved_tokens=0");
 }
 
 public flow refused(state: Ledger, error: string) -> i32 {

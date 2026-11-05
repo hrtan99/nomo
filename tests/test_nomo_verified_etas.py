@@ -88,6 +88,16 @@ class VerifiedEtas(unittest.TestCase):
         self.lock.write_text('different lock\n')
         self.assertFalse(self.verify('latest025'))
 
+    def test_041_requires_its_matching_version_and_selector(self):
+        self.cli.write_text('#!/bin/sh\nprintf "etas 0.4.1\\n"\n')
+        self.write_config()
+        value = json.loads(self.config.read_text()); value['selector'] = 'latest041'
+        self.config.write_text(json.dumps(value))
+        self.assertTrue(self.verify('latest041'))
+        self.assertFalse(self.verify('latest030'))
+        self.lock.write_text('different lock\n')
+        self.assertFalse(self.verify('latest041'))
+
     def test_same_version_graphs_require_distinct_binary_and_lock(self):
         self.cli.write_text('#!/bin/sh\nprintf "etas 0.2.6\\n"\n# old\n')
         self.write_config()

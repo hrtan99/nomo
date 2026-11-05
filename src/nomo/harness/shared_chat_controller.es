@@ -4,7 +4,7 @@ import nomo.model.harness_progress.{HarnessProgress, ProgressSink};
 import nomo.model.conversation_output.{ConversationOutput, ConversationSink};
 import nomo.agent.console_progress.ConsoleProgress;
 import nomo.agent.console_events.{PublicHarnessEvents, RedactedHarnessEvents};
-import std.text.to_string_i32;
+import std.text.from_i32;
 import nomo.core.conversation.{Event, State};
 import nomo.model.model_tool_contract.{question_error, allowed_error, candidate_error};
 import nomo.harness.harness_model_contract.{bounded, decode_plan};
@@ -46,12 +46,12 @@ flow total(before: Ledger, local: Ledger) -> Ledger {
 
 flow stage<P ~ ChatBudgetPolicy>(policy: P, turn: i32, phase: string, before: Ledger, local: Ledger) -> unit {
     let pending = policy.pending(phase);
-    perform HarnessProgress.write("TURN " + to_string_i32(turn) + " STAGE " + phase + " " + numbers(total(before, local)) +
-        " reserved_steps=" + to_string_i32(pending.steps) + " reserved_calls=" + to_string_i32(pending.calls) +
-        " reserved_tokens=" + to_string_i32(pending.tokens) + " reserved_tools=" + to_string_i32(pending.tools) +
-        " reserved_scan=" + to_string_i32(pending.scan));
+    perform HarnessProgress.write("TURN " + from_i32(turn) + " STAGE " + phase + " " + numbers(total(before, local)) +
+        " reserved_steps=" + from_i32(pending.steps) + " reserved_calls=" + from_i32(pending.calls) +
+        " reserved_tokens=" + from_i32(pending.tokens) + " reserved_tools=" + from_i32(pending.tools) +
+        " reserved_scan=" + from_i32(pending.scan));
     if phase == "child" {
-        perform HarnessProgress.write("RESERVATION child-1 " + numbers(policy.child_pending()) + " tail_steps=2 tail_calls=1 tail_tokens=" + to_string_i32(policy.parent_tokens()) + " unresolved=true");
+        perform HarnessProgress.write("RESERVATION child-1 " + numbers(policy.child_pending()) + " tail_steps=2 tail_calls=1 tail_tokens=" + from_i32(policy.parent_tokens()) + " unresolved=true");
     }
 }
 
@@ -71,7 +71,7 @@ flow execute<P ~ ChatBudgetPolicy>(policy: P, request: string, allowed: Array<st
     state = match policy.reserve_stage(state, false) { Ok(value) => value, Err(error) => { return refused(state, error, true); } };
     perform ConversationOutput.publish(Event { role = "main -> child-1", kind = "request", name = "child-1", text = task });
     stage(policy, turn, "child", before, state);
-    let child = perform LegacyChatStages.child(task, allowed, seed(request, prior), multi);
+    let child = perform LegacyChatStages.child(task, allowed, seed(request, prior), multi, policy.resilient_child());
     let inspected = if multi { inspect_multi_turn(child.state, child.status, request, task, allowed, prior) } else { if unicode { unicode_inspect_turn(child.state, child.status, request, task, allowed, prior) }
         else { inspect_turn(child.state, child.status, request, task, allowed, prior) } };
     let observed = match inspected {
@@ -81,9 +81,9 @@ flow execute<P ~ ChatBudgetPolicy>(policy: P, request: string, allowed: Array<st
         state = match policy.settle_child(state, child.state) { Ok(value) => value, Err(error) => { return refused(state, error, false); } };
     }
     let pending = policy.pending("child");
-    perform HarnessProgress.write("SETTLED child-1 " + numbers(total(before, state)) + " released_steps=" + to_string_i32(pending.steps - state.steps) +
-        " released_calls=" + to_string_i32(pending.calls - state.calls) + " released_tokens=" + to_string_i32(pending.tokens - state.tokens) +
-        " released_tools=" + to_string_i32(pending.tools - state.tools) + " released_scan=" + to_string_i32(pending.scan - state.scan) + " unresolved=false");
+    perform HarnessProgress.write("SETTLED child-1 " + numbers(total(before, state)) + " released_steps=" + from_i32(pending.steps - state.steps) +
+        " released_calls=" + from_i32(pending.calls - state.calls) + " released_tokens=" + from_i32(pending.tokens - state.tokens) +
+        " released_tools=" + from_i32(pending.tools - state.tools) + " released_scan=" + from_i32(pending.scan - state.scan) + " unresolved=false");
     if child.status != 0 { return refused(state, "child returned failure; no aggregation", true); }
     if !(if unicode { unicode_bounded(observed.result, 256) } else { bounded(observed.result, 256) }) { return refused(state, "invalid bounded child result", true); }
     perform ConversationOutput.publish(Event { role = "child-1 -> main", kind = "result", name = "child-1", text = observed.result });

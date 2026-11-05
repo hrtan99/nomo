@@ -4,6 +4,7 @@ import std.io.IOError as ConsoleError;
 import std.fs.IOError as FileError;
 import std.effects.Fs;
 import nomo.application.edit.effects.Approval;
+import nomo.core.conversation.Event;
 import nomo.application.harness.work.controller.complete;
 import nomo.application.work.request.WorkRequest;
 import nomo.application.work.ports.{WorkStages, WorkPersistence, WorkEditor, WorkTimeline, Run};
@@ -42,10 +43,15 @@ public flow execute<S ~ WorkStages, Intent, Edited, P ~ WorkPersistence<Intent, 
         DiagnosticOutput.write(line) => { output.diagnostic(line); resume; }
     };
     let summary = match summarized { Ok(value) => value, Err(failure) => { return output.refused(failure.error); } };
-    output.progress("POST_EDIT events");
-    let records = match timeline.capture(pending, confirmed, summary) { Ok(value) => value, Err(error) => { return output.refused("edit completed; " + error); } };
+    var records: Array<Event> = [];
+    if timeline.enabled() {
+        output.progress("POST_EDIT events");
+        records = match timeline.capture(pending, confirmed, summary) { Ok(value) => value, Err(error) => { return output.refused("edit completed; " + error); } };
+    }
     output.progress("POST_EDIT persist");
     match persistence.finish(edited, summary, records) { Ok(_) => {} Err(error) => { return output.refused("edit completed; " + error); } }
-    match timeline.save(selected.id, records, run.redaction, run.binding) { Ok(_) => {} Err(error) => { return output.refused("work saved; timeline incomplete: " + error); } }
+    if timeline.enabled() {
+        match timeline.save(selected.id, records, run.redaction, run.binding) { Ok(_) => {} Err(error) => { return output.refused("work saved; timeline incomplete: " + error); } }
+    }
     return output.completed(summary.answer, run.saved, summary.state, run.wide);
 }

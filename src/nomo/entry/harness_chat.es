@@ -1,7 +1,7 @@
 module nomo.entry.harness_chat;
 
 import std.io.{println, read_line};
-import std.text.to_string_i32;
+import std.text.from_i32;
 import nomo.cli.cli_request.{parse_args, parse_line};
 import nomo.harness.harness.run as coordinate;
 import nomo.harness.harness_contract.{Job, Outcome};
@@ -15,18 +15,18 @@ flow help() -> unit {
 
 flow emit(outcome: Outcome, turn: i32) -> unit {
     // child-1 is local to each coordinator call, so qualify every record by turn.
-    let prefix = "TURN " + to_string_i32(turn) + " ";
+    let prefix = "TURN " + from_i32(turn) + " ";
     for message in outcome.messages limit Iterations(3) {
         println(prefix + "EVENT " + message.sender + " -> " + message.recipient + " " +
             message.kind + " " + message.child_id + ": " + message.text);
     }
     println(prefix + "FINAL " + outcome.status + ": " + outcome.text);
-    println(prefix + "LEDGER maximum=" + to_string_i32(outcome.ledger.maximum) +
-        " spent=" + to_string_i32(outcome.ledger.spent) + " reserved=" + to_string_i32(outcome.ledger.reserved));
+    println(prefix + "LEDGER maximum=" + from_i32(outcome.ledger.maximum) +
+        " spent=" + from_i32(outcome.ledger.spent) + " reserved=" + from_i32(outcome.ledger.reserved));
 }
 
 flow stop(reason: string, turns: i32, spent: i32) -> unit {
-    println("STOP " + reason + " turns=" + to_string_i32(turns) + " spent=" + to_string_i32(spent));
+    println("STOP " + reason + " turns=" + from_i32(turns) + " spent=" + from_i32(spent));
 }
 
 // HARNESS-002A: only line orchestration; parser, child policy and settlement stay

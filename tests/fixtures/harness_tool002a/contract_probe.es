@@ -1,7 +1,7 @@
 module app.contract_probe;
 
 import std.io.println;
-import std.text.len;
+import std.text.char_count as len;
 import nomo.core.conversation.{Event, State, add};
 import nomo.model.model_tool_contract.{Session};
 import nomo.model.model_tool_contract.Context as ChildContext;

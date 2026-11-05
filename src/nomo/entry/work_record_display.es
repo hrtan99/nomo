@@ -1,7 +1,7 @@
 module nomo.entry.work_record_display;
 
 import std.collections.len as count;
-import std.text.{len, to_string_i32, to_string_usize};
+import std.text.{char_count as len, from_i32, from_usize};
 import nomo.session.work_record.{Record, validate};
 import nomo.tools.edit_encoding.object;
 
@@ -19,11 +19,11 @@ public flow render(row: Record) -> Result<Array<string>, string> {
         ["steps", "calls", "generation", "native_tokens", "read_tools", "scan", "edit_reads", "edit_read_bytes", "atomic_attempts", "edit_bytes"],
         ["steps", "calls", "generation", "native_tokens"]];
     let values = [["nomo-work-record-v1", row.phase, binding.id, binding.workspace, binding.region, binding.path,
-        binding.request_digest, binding.before_digest, binding.after_digest, to_string_usize(binding.before_bytes), to_string_usize(binding.after_bytes)],
+        binding.request_digest, binding.before_digest, binding.after_digest, from_usize(binding.before_bytes), from_usize(binding.after_bytes)],
         [read.request, read.task, read.operation, read.allowed[0], allowed2, read.files[0], selected2, read.literal, read.outcome, read.result, read.summary],
         [value.task, value.target, value.replacement, value.before, value.after, value.summary],
-        [to_string_i32(state.read.steps), to_string_i32(state.read.calls), to_string_i32(state.read.tokens), to_string_i32(state.read.tools), to_string_i32(state.read.scan)],
-        [to_string_i32(state.edit.steps), to_string_i32(state.edit.calls), to_string_i32(state.edit.tokens), to_string_i32(state.edit.native_tokens), to_string_i32(state.edit.boundaries)],
+        [from_i32(state.read.steps), from_i32(state.read.calls), from_i32(state.read.tokens), from_i32(state.read.tools), from_i32(state.read.scan)],
+        [from_i32(state.edit.steps), from_i32(state.edit.calls), from_i32(state.edit.tokens), from_i32(state.edit.native_tokens), from_i32(state.edit.boundaries)],
         ["13", "7", "47104", "196608", "1", "4096", "3", "6144", "1", "2048"], remaining];
     var output: Array<string> = []; var index: usize = 0; var size: usize = 0;
     while index < 7 limit Iterations(7) {

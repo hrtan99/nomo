@@ -1,7 +1,7 @@
 module app.prepare_interface_probe;
 
 import std.io.println;
-import std.text.len;
+import std.text.char_count as len;
 import nomo.core.conversation.{Event, State, add, fresh as empty_history};
 import nomo.model.model_tool_contract.{Session, LoopTurn};
 import nomo.cli.harness_edit_args.Input;

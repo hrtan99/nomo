@@ -44,9 +44,9 @@ class ReadSessionLauncherTest(unittest.TestCase):
         self.assertFalse(any('nomo-minimax-read-compose.yaml' in value for value in cmd));self.assertIn('nomo-read-session-status',cmd)
     def test_030_overlay_and_older_versions_rejected(self):
         self.existing()
-        with patch.dict(os.environ, {'NOMO_ETAS_VERSION':'0.3.0'}), patch.object(launcher,'run_owned',return_value=0) as run:
+        with patch.dict(os.environ, {'NOMO_ETAS_VERSION':'0.4.1'}), patch.object(launcher,'run_owned',return_value=0) as run:
             self.assertEqual(self.invoke(['status','--state',str(self.state)]),0)
-            self.assertIn(str(self.project/'config/etas-030-official-compose.yaml'),run.call_args.args[0])
+            self.assertIn(str(self.project/'config/etas-041-official-compose.yaml'),run.call_args.args[0])
         for version in ('0.2.4','0.2.5'):
             with self.subTest(version=version), patch.dict(os.environ, {'NOMO_ETAS_VERSION':version}), patch.object(launcher,'run_owned') as run:
                 self.assertNotEqual(self.invoke(['status','--state',str(self.state)]),0);run.assert_not_called()

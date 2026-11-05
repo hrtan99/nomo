@@ -35,7 +35,7 @@ sys.exit(int(os.environ.get('NOMO_TEST_EXIT','0')))
 ''')
         docker.chmod(0o755)
         self.env = {'PATH':str(self.bin)+':/usr/bin:/bin','HOME':str(base), 'NOMO_TEST_LOG':str(self.log),
-                    'NOMO_ETAS_VERSION':'0.3.0','NOMO_QWEN_SERVER_API_KEY':'synthetic',
+                    'NOMO_ETAS_VERSION':'0.4.1','NOMO_QWEN_SERVER_API_KEY':'synthetic',
                     'NOMO_MODEL_REQUEST_DEADLINE_MS':'240000',
                     'NOMO_READ_MODEL_BASE_URL':'http://synthetic','ETAS_HOST_POLICY':'unsafe'}
 
@@ -57,9 +57,9 @@ sys.exit(int(os.environ.get('NOMO_TEST_EXIT','0')))
 
     def test_030_status_uses_the_selected_overlay(self):
         result = self.invoke('--state', self.state, '--id', 'owned-edit', '--path', 'note.txt',
-                             env=dict(self.env, NOMO_ETAS_VERSION='0.3.0'))
+                             env=dict(self.env, NOMO_ETAS_VERSION='0.4.1'))
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn(str(ROOT/'config/etas-030-official-compose.yaml'), json.loads(self.log.read_text())['args'])
+        self.assertIn(str(ROOT/'config/etas-041-official-compose.yaml'), json.loads(self.log.read_text())['args'])
 
     def test_missing_db_unsafe_state_and_sidecars_refuse_before_docker(self):
         db = self.state/'edit.sqlite3'

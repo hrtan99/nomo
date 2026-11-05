@@ -1,6 +1,6 @@
 module nomo.ui.edit_diff;
 
-import std.text.{len, split, to_string_usize};
+import std.text.{char_count as len, split, strip_prefix, strip_suffix, from_usize};
 import std.collections.len as count;
 import std.bytes.len as byte_count;
 import std.codec.text.utf8_encode;
@@ -33,7 +33,7 @@ flow same(left: Line, right: Line) -> bool {
 // emoji's two JSON surrogate escapes are kept together. Never slice an escape.
 flow line_text(raw: string) -> Result<string, string> {
     var selected = ""; var width: usize = 0; var clipped = false;
-    for character in split(raw, "") limit Iterations(65538) {
+    for codepoint in std.text.chars(raw) limit Iterations(65538) { let character = std.text.from_char(codepoint);
         if character != "" {
             let encoded = match json([character]) { Ok(value) => value, Err(error) => { return Err(error); } };
             let size = len(encoded) - 4;
@@ -42,12 +42,9 @@ flow line_text(raw: string) -> Result<string, string> {
         }
     }
     let encoded = match json([selected]) { Ok(value) => value, Err(error) => { return Err(error); } };
-    let characters = split(encoded, "");
     // Remove only the known ["..."] framing, after encoding complete scalars.
-    var output = ""; var index: usize = 3;
-    while index < count(characters) - 3 limit Iterations(160) {
-        output = output + characters[index]; index = index + 1;
-    }
+    let framed = match strip_prefix(encoded, "[\"") { Some(value) => value, None() => { return Err("edit preview JSON framing invalid"); } };
+    var output = match strip_suffix(framed, "\"]") { Some(value) => value, None() => { return Err("edit preview JSON framing invalid"); } };
     if clipped { output = output + " ... [line truncated]"; }
     return Ok(output);
 }
@@ -63,7 +60,7 @@ flow shown(mark: string, value: Line) -> Result<string, string> {
 }
 
 flow omitted(size: usize, kind: string) -> string {
-    return "... " + to_string_usize(size) + " " + kind + " lines omitted ...\n";
+    return "... " + from_usize(size) + " " + kind + " lines omitted ...\n";
 }
 
 flow context(values: Array<Line>, start: usize, end: usize) -> Result<string, string> {

@@ -4,7 +4,7 @@ import nomo.session.cas_rows.{Target, commit_native};
 
 import std.memory.{get_entry, prepare_put, operation_ref, commit, WriteCondition, MemoryVersion, MemoryEntry,
     WriteOutcome, MemoryWriteChange, StorageDurability, Missing, Match};
-import std.text.{len, split, starts_with};
+import std.text.{char_count as len, parse_i32, from_i32};
 import nomo.core.text.hex_digest;
 import nomo.session.history_work_guard.{Ticket, claim, inspect as inspect_work};
 import nomo.session.edit_operation_store.inspect as inspect_edit;
@@ -18,16 +18,10 @@ flow read() -> Option<MemoryEntry<string, Record>> { return get_entry(Checks.Row
 
 flow valid_failure_code(value: string) -> bool {
     if len(value) < 1 || len(value) > 3 { return false; }
-    if len(value) > 1 && starts_with(value, "0") { return false; }
-    var n: i32 = 0;
-    for c in split(value, "") limit Iterations(5) {
-        if c != "" {
-            let digit: i32 = match c { "0" => 0, "1" => 1, "2" => 2, "3" => 3, "4" => 4, "5" => 5,
-                "6" => 6, "7" => 7, "8" => 8, "9" => 9, _ => { return false; } };
-            n = n * 10 + digit;
-        }
-    }
-    return n >= 1 && n <= 123;
+    return match parse_i32(value) {
+        Ok(number) => number >= 1 && number <= 123 && from_i32(number) == value,
+        Err(_) => false
+    };
 }
 public flow invalid_values(format: i32, phase: string, id: string, digest: string, outcome: string, exit_code: string, allow_abandoned: bool) -> string {
     if format != 1 || (phase != "planned" && phase != "running" && phase != "complete" && !(allow_abandoned && phase == "abandoned")) || id == "" || !hex_digest(digest) {

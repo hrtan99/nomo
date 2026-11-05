@@ -1,7 +1,7 @@
 module app.harness_handler_probe;
 
 import std.io.println;
-import std.text.len;
+import std.text.char_count as len;
 import nomo.core.conversation.{Event, State, add, fresh as empty_history};
 import nomo.model.model_tool_contract.{Session, LoopTurn, Context as ChildContext, question_error, default_limits};
 import nomo.agent.model_tool.run_loop_with;

@@ -1,6 +1,6 @@
 module nomo.core.text;
 
-import std.text.{split, contains, len, trim, starts_with};
+import std.text.{contains, char_count as len, trim, starts_with, from_char};
 import std.json.{JsonValue, stringify};
 import std.agent.message.Message;
 import std.codec.text.utf8_encode;
@@ -8,7 +8,7 @@ import std.bytes.len as byte_count;
 
 public flow printable(text: string) -> bool {
     let allowed = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 !\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~";
-    for character in split(text, "") limit Iterations(1026) {
+    for codepoint in std.text.chars(text) limit Iterations(1026) { let character = std.text.from_char(codepoint);
         if character != "" && !contains(allowed, character) { return false; }
     }
     return true;
@@ -35,8 +35,8 @@ public flow context_json_error(value: Option<Message<JsonValue>>, maximum: usize
 public flow flat_string_frame(raw: string, maximum: usize, exact: bool) -> bool {
     if len(raw) > 65536 || byte_count(utf8_encode(raw)) > 65536 { return false; }
     var opened = false; var closed = false; var quoted = false; var escaped = false;
-    var leaves: usize = 0; let slash = split("\\/", "")[1];
-    for character in split(raw, "") limit Iterations(65538) {
+    var leaves: usize = 0; let slash = from_char('\\');
+    for codepoint in std.text.chars(raw) limit Iterations(65538) { let character = std.text.from_char(codepoint);
         if quoted {
             if escaped { escaped = false; }
             else if character == slash { escaped = true; }
@@ -57,7 +57,7 @@ public flow flat_string_frame(raw: string, maximum: usize, exact: bool) -> bool 
 
 public flow hex_digest(value: string) -> bool {
     if len(value) != 64 { return false; }
-    for character in split(value, "") limit Iterations(66) {
+    for codepoint in std.text.chars(value) limit Iterations(66) { let character = std.text.from_char(codepoint);
         if character != "" && !contains("0123456789abcdef", character) { return false; }
     }
     return true;

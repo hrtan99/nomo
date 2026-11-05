@@ -49,7 +49,7 @@ def state_paths(resume, workspace):
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__, epilog='Set NOMO_STATE_DIR to select a private state directory. --id resumes only that ID; it does not verify workspace identity. This revision uses ETAS 0.3.0; historical sessions retain their recorded budget versions.')
+    parser = argparse.ArgumentParser(description=__doc__, epilog='Set NOMO_STATE_DIR to select a private state directory. --id resumes only that ID; it does not verify workspace identity. This revision uses ETAS 0.4.1; historical sessions retain their recorded budget versions.')
     parser.add_argument('--root', default=os.getcwd(), help='workspace directory (default: current directory)')
     parser.add_argument('--id', help='resume this exact session ID')
     parser.add_argument('--status', action='store_true', help='inspect the selected session offline')

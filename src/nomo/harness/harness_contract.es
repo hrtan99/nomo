@@ -1,7 +1,7 @@
 module nomo.harness.harness_contract;
 
 import std.collections.len as count;
-import std.text.{len, trim, split};
+import std.text.{char_count as len, trim};
 import nomo.core.text.{printable, input_error};
 
 // HARNESS-001A: copied selected data, never Host handles or delegated authority.
@@ -44,7 +44,7 @@ public flow fixed_refusal(text: string) -> bool {
 // Check individual characters here so the larger bounded answers stay checked.
 public flow safe_text(text: string, maximum: usize) -> bool {
     if maximum > 1280 || len(text) == 0 || len(text) > maximum { return false; }
-    for character in split(text, "") limit Iterations(1282) {
+    for codepoint in std.text.chars(text) limit Iterations(1282) { let character = std.text.from_char(codepoint);
         if !printable(character) { return false; }
     }
     return true;

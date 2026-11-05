@@ -1,7 +1,7 @@
 module app.contract_probe;
 
 import std.io.println;
-import std.text.len;
+import std.text.char_count as len;
 import nomo.session.work_chain.{Record, Caps, initial, initial_user_context, successor, validate, linked, publish_partial, confirm,
     maximum, turn_caps, zero, summary_reservation, values, reserve, policy, caps_error, fingerprint};
 import nomo.session.work_record.Record as WorkRecord;

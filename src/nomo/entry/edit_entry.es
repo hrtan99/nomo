@@ -4,7 +4,7 @@ import std.io.println;
 import std.io.IOError as ConsoleError;
 import std.fs.IOError as FileError;
 import std.effects.Fs;
-import std.text.to_string_usize;
+import std.text.from_usize;
 import std.collections.len as count;
 import nomo.cli.edit_args.parse;
 import nomo.tools.edit_file.{EditableRoot, prepare};
@@ -42,7 +42,7 @@ flow status_record(value: Record) -> Result<string, string> {
     let selected = value.binding;
     return object(["format", "phase", "id", "workspace", "region", "path", "request_digest", "before_digest", "after_digest", "before_bytes", "after_bytes"],
         ["nomo-edit-operation-v1", value.phase, selected.id, selected.workspace, selected.region, selected.path,
-        selected.request_digest, selected.before_digest, selected.after_digest, to_string_usize(selected.before_bytes), to_string_usize(selected.after_bytes)]);
+        selected.request_digest, selected.before_digest, selected.after_digest, from_usize(selected.before_bytes), from_usize(selected.after_bytes)]);
 }
 
 // Separate entry: no Approval, File action, Console input or Memory mutation.

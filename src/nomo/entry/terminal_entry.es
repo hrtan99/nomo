@@ -1,7 +1,7 @@
 module nomo.entry.terminal_entry;
 
 import std.io.{println, read_line};
-import std.text.to_string_i32;
+import std.text.{from_i32, join};
 import std.io.IOError as ConsoleError;
 import std.fs.IOError as FileError;
 import std.effects.Fs;
@@ -27,11 +27,11 @@ flow selected_config(config: Config) -> Result<Config, string> {
 }
 flow policy(config: Config) -> string {
     if config.cap_raw != "" { return config.cap_raw; }
-    var result = "";
+    var parts: Array<string> = [];
     for value in values(turn_caps()) limit Iterations(10) {
-        if result != "" { result = result + ","; } result = result + to_string_i32(value);
+        parts = parts.push(from_i32(value));
     }
-    return result;
+    return join(parts, ",");
 }
 flow display(config: Config, state: State) -> Result<bool, string> {
     let rendered = match state_line(state, config.root_id, config.child_id, config.workspace, config.path, policy(config), config.once_supplied) {

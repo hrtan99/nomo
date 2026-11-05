@@ -1,7 +1,7 @@
 module app.harness_progress_probe;
 
 import std.io.println;
-import std.text.len;
+import std.text.char_count as len;
 import nomo.core.conversation.{Event, State, add, fresh as empty_history};
 import nomo.model.model_tool_contract.{Session, LoopTurn};
 import nomo.harness.harness_tool_contract.{Context, Ledger, Observed, fresh};

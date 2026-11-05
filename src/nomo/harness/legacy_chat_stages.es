@@ -13,5 +13,5 @@ public spec ChatChildStage<R ~ Region>: callable (string, Array<string>, State) 
 public spec WideChatChildStage<R ~ Region>: callable (string, Array<string>, State, bool) => LoopTurn ![Fs.read<R>, Error<ConsoleError>, Error<FileError>, Error<IndexError>];
 public effect LegacyChatStages {
     action main(context: Context) -> string;
-    action child(task: string, allowed: Array<string>, selected: State, multi: bool) -> LoopTurn;
+    action child(task: string, allowed: Array<string>, selected: State, multi: bool, resilient: bool) -> LoopTurn;
 }

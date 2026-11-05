@@ -1,7 +1,7 @@
 module app.main;
 
 import std.io.{println, read_all};
-import std.text.{len, split, to_string_usize};
+import std.text.{char_count as len, split, from_usize};
 import std.collections.len as count;
 import std.json.parse;
 import std.agent.message.Message;
@@ -36,7 +36,7 @@ flow fixed_admission_error(error: string) -> bool {
 }
 
 flow printable_text(text: string) -> bool {
-    for character in split(text, "") limit Iterations(1282) {
+    for codepoint in std.text.chars(text) limit Iterations(1282) { let character = std.text.from_char(codepoint);
         if character != "" && !printable(character) { return false; }
     }
     return true;
@@ -135,15 +135,15 @@ public flow main(args: Array<string>) -> i32 {
     if count(fixtures) == 0 || count(fixtures) > 512 { abort("invalid fixture count"); }
     var ordinal: usize = 0;
     for item in fixtures limit Iterations(512) {
-        println("CASE " + to_string_usize(ordinal) + " " + item.label);
+        println("CASE " + from_usize(ordinal) + " " + item.label);
         if item.mode == "run" { assert_run(item); }
         else if item.mode == "admit" { assert_admission(item); }
         else if item.mode == "child" { assert_child(item); }
         else if item.mode == "settle" || item.mode == "forged" { assert_settle(item); }
         else { abort("unknown synthetic fixture mode"); }
-        println("PASS " + to_string_usize(ordinal) + " " + item.label);
+        println("PASS " + from_usize(ordinal) + " " + item.label);
         ordinal = ordinal + 1;
     }
-    println("PASS HARNESS001A " + to_string_usize(count(fixtures)));
+    println("PASS HARNESS001A " + from_usize(count(fixtures)));
     return 0;
 }

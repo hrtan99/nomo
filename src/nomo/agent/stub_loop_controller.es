@@ -1,6 +1,6 @@
 module nomo.agent.stub_loop_controller;
 
-import std.text.{len, trim};
+import std.text.{char_count as len, trim};
 import nomo.core.text.input_error;
 import nomo.model.stub.{next, dispatch};
 import nomo.core.conversation.{State, capacity_error, charge, stop};

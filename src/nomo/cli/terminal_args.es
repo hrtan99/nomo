@@ -1,7 +1,7 @@
 module nomo.cli.terminal_args;
 
 import std.collections.len as count;
-import std.text.{len, split, trim, starts_with};
+import std.text.{char_count as len, split, trim, starts_with, strip_suffix};
 import nomo.core.text.printable;
 import nomo.session.edit_operation.selector_error;
 import nomo.model.model_tool_contract.{question_error, allowed_error};
@@ -95,19 +95,9 @@ public flow parse_once(args: Array<string>) -> Result<Config, string> {
 public flow line(raw: string) -> Result<LineCommand, string> {
     if raw == "" { return Ok(LineCommand.Eof); }
     if len(raw) > 130 { return Err("raw terminal line exceeds 128 characters plus LF/CRLF"); }
-    var body = ""; var position: usize = 0; var carriage_return = false;
-    for character in split(raw, "") limit Iterations(132) {
-        if character != "" {
-            position = position + 1;
-            if carriage_return && character != "\n" { return Err("expected printable ASCII terminal line"); }
-            if character == "\r" && position + 1 == len(raw) { carriage_return = true; }
-            else if character == "\n" && position == len(raw) { }
-            else {
-                if !printable(character) { return Err("expected printable ASCII terminal line"); }
-                body = body + character;
-            }
-        }
-    }
+    let body = match strip_suffix(raw, "\r\n") { Some(value) => value,
+        None() => match strip_suffix(raw, "\n") { Some(value) => value, None() => raw } };
+    if !printable(body) { return Err("expected printable ASCII terminal line"); }
     if len(body) > 128 { return Err("terminal line exceeds 128 characters before trimming"); }
     let text = trim(body);
     match text {

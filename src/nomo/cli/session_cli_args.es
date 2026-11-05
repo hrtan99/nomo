@@ -1,6 +1,7 @@
 module nomo.cli.session_cli_args;
 
 import std.collections.len as count;
+import std.text.{char_count as len, parse_i32, from_i32};
 import nomo.session.store_record.valid_id;
 import nomo.core.text.{printable, input_error};
 
@@ -8,10 +9,9 @@ public type Options = { verb: string, session_id: string, save_id: string, bindi
     input: string, maximum: i32, budget: i32 };
 
 flow parse_limit(value: string) -> i32 {
-    return match value {
-        "1" => 1, "2" => 2, "3" => 3, "4" => 4, "5" => 5, "6" => 6, "7" => 7, "8" => 8,
-        "9" => 9, "10" => 10, "11" => 11, "12" => 12, "13" => 13, "14" => 14, "15" => 15, "16" => 16,
-        _ => 0,
+    return match parse_i32(value) {
+        Ok(number) => if number >= 1 && number <= 16 && from_i32(number) == value { number } else { 0 },
+        Err(_) => 0,
     };
 }
 
@@ -57,7 +57,7 @@ public flow parse(args: Array<string>) -> Result<Options, string> {
     if !valid_id(session_id) || !valid_id(save_id) || !valid_id(binding) { return Err("explicit valid session, save and binding required"); }
     if verb == "save" {
         if !supplied_input { return Err("save requires input"); }
-        if std.text.len(input) > 1024 || !printable(input) { return Err("input must be bounded printable ASCII"); }
+        if len(input) > 1024 || !printable(input) { return Err("input must be bounded printable ASCII"); }
         let invalid = input_error(input);
         if invalid != "" { return Err(invalid); }
     } else if supplied_input { return Err("show forbids input"); }

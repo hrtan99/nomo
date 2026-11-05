@@ -1,7 +1,7 @@
 module nomo.entry.harness_entry;
 
 import std.io.println;
-import std.text.to_string_i32;
+import std.text.from_i32;
 import nomo.cli.cli_request.parse_args;
 import nomo.harness.harness.run as coordinate;
 import nomo.harness.harness_contract.Job;
@@ -39,8 +39,8 @@ public flow run(args: Array<string>) -> i32 {
         println("EVENT " + message.sender + " -> " + message.recipient + " " + message.kind + " " + message.child_id + ": " + message.text);
     }
     println("FINAL " + outcome.status + ": " + outcome.text);
-    println("LEDGER maximum=" + to_string_i32(outcome.ledger.maximum) +
-        " spent=" + to_string_i32(outcome.ledger.spent) + " reserved=" + to_string_i32(outcome.ledger.reserved));
+    println("LEDGER maximum=" + from_i32(outcome.ledger.maximum) +
+        " spent=" + from_i32(outcome.ledger.spent) + " reserved=" + from_i32(outcome.ledger.reserved));
     if outcome.status != "completed" { return 1; }
     return 0;
 }

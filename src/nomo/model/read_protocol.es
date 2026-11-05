@@ -1,6 +1,6 @@
 module nomo.model.read_protocol;
 
-import std.text.{len, split, trim};
+import std.text.{char_count as len, trim, replace, from_char};
 import std.collections.len as count;
 import std.codec.text.utf8_encode;
 import std.bytes.len as byte_count;
@@ -18,8 +18,8 @@ public flow question_error(raw: string) -> string {
 flow frame(raw: string, maximum: usize) -> bool {
     if raw == "" || maximum == 0 || maximum > 4096 || len(raw) > maximum || byte_count(utf8_encode(raw)) > maximum { return false; }
     var opened = false; var closed = false; var quoted = false; var escaped = false;
-    var leaves: usize = 0; let slash = split("\\/", "")[1];
-    for character in split(raw, "") limit Iterations(4098) {
+    var leaves: usize = 0; let slash = from_char('\\');
+    for codepoint in std.text.chars(raw) limit Iterations(4098) { let character = std.text.from_char(codepoint);
         if quoted {
             if character != "" && !safe(character, 4) { return false; }
             if escaped { escaped = false; }
@@ -46,8 +46,8 @@ flow fields(raw: string, maximum: usize) -> Result<Array<string>, string> {
 // Call only after decoding a valid frame. Keep string bytes and escapes intact.
 public flow compact_frame(raw: string) -> string {
     var result = ""; var quoted = false; var escaped = false;
-    let slash = split("\\/", "")[1];
-    for character in split(raw, "") limit Iterations(1154) {
+    let slash = from_char('\\');
+    for codepoint in std.text.chars(raw) limit Iterations(1154) { let character = std.text.from_char(codepoint);
         if quoted {
             result = result + character;
             if escaped { escaped = false; }
@@ -91,8 +91,7 @@ public flow answer(raw: string) -> Result<string, string> {
 // Report only the violated constraint; never display the model's rejected text.
 flow child_final(text: string) -> Result<string, string> {
     if len(text) > 256 || byte_count(utf8_encode(text)) > 256 { return Err("child final exceeds 256 UTF-8 bytes"); }
-    var line = "";
-    for character in split(text, "") limit Iterations(258) { line = line + if character == "\n" || character == "\r" || character == "\t" { " " } else { character }; }
+    let line = replace(replace(replace(text, "\n", " "), "\r", " "), "\t", " ");
     if !bounded(line, 256) { return Err("child final contains unsupported control or formatting characters or is empty"); }
     return Ok(line);
 }

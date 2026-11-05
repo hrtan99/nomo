@@ -1,7 +1,7 @@
 module nomo.harness.harness_model_tools;
 
 import std.io.println;
-import std.text.to_string_i32;
+import std.text.from_i32;
 import nomo.core.conversation.State;
 import nomo.model.model_tool_contract.{Session, Limits};
 import nomo.agent.model_tool.{LoopTurn, run_loop, run_work_loop, run_chain_work_loop};
@@ -26,8 +26,8 @@ agent MainModel(input: Context) -> string ~ ReadMainStage {
 }
 
 flow finished(state: Ledger) -> unit {
-    println("LEDGER steps=" + to_string_i32(state.steps) + "/7 calls=" + to_string_i32(state.calls) + "/4 tokens=" +
-        to_string_i32(state.tokens) + "/8192 tools=" + to_string_i32(state.tools) + "/1 scan=" + to_string_i32(state.scan) +
+    println("LEDGER steps=" + from_i32(state.steps) + "/7 calls=" + from_i32(state.calls) + "/4 tokens=" +
+        from_i32(state.tokens) + "/8192 tools=" + from_i32(state.tools) + "/1 scan=" + from_i32(state.scan) +
         "/4096 reserved_steps=0 reserved_calls=0 reserved_tokens=0 reserved_tools=0 reserved_scan=0");
 }
 

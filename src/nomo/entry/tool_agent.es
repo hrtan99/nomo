@@ -1,6 +1,6 @@
 module nomo.entry.tool_agent;
 
-import std.text.{split, len};
+import std.text.{split, char_count as len};
 import std.collections.len as count;
 import std.io.println;
 import nomo.cli.config.load_for;

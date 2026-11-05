@@ -7,7 +7,7 @@ import std.codec.text.utf8_encode;
 import std.bytes.len as byte_count;
 import nomo.harness.harness_edit_contract.Context as EditContext;
 import nomo.harness.harness_work_contract.{Context as WorkContext, context_error as work_context_error};
-import std.text.{split, contains, len};
+import std.text.{split, contains, char_count as len};
 import nomo.core.text.printable;
 import nomo.harness.harness_model_contract.{decode_read_plan, read_aggregate_error};
 import nomo.harness.harness_model_contract.decode_plan as legacy_read_plan;
@@ -27,7 +27,7 @@ import nomo.harness.harness_tool_contract.Ledger as ReadLedger;
 import nomo.entry.work_chain_display.render;
 
 type Check = { label: string, passed: bool };
-flow slash() -> string { return split("\\/", "")[1]; }
+flow slash() -> string { return std.text.from_char('\\'); }
 flow checks() -> Array<Check> { return __CHECKS__; }
 flow issue(phase: string, raw: string) -> string {
     if phase == "read-plan" { return match decode_read_plan(raw) { Ok(_) => "", Err(error) => error }; }

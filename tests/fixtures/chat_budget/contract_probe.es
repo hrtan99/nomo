@@ -3,7 +3,7 @@ module app.main;
 import std.io.println;
 import nomo.harness.harness_tool_chat_contract.{Invocation, Previous, Completed, TurnResult, empty};
 import nomo.harness.harness_tool_contract.{Ledger, fresh as fresh_ledger};
-import nomo.harness.read_tool_chat_contract.{multi_maximum, multi_wide_maximum, multi_large_maximum};
+import nomo.harness.read_tool_chat_contract.{multi_maximum, multi_wide_maximum, multi_large_maximum, multi_resilient_maximum};
 import nomo.session.chat_session_contract.{Session, fresh, fresh_events, invalid, begin, complete};
 
 flow completed(request: string, maximum: Ledger, tokens: i32) -> TurnResult {
@@ -15,14 +15,16 @@ flow completed(request: string, maximum: Ledger, tokens: i32) -> TurnResult {
 }
 public flow probe(args: Array<string>) -> i32 ![Console, Error<std.io.IOError>, Error<IndexError>] {
     let new = fresh_events();
-    if new.format != 15 || new.invocation.maximum != multi_large_maximum(48) || invalid(new) != "" { abort("new event session changed"); }
+    if new.format != 16 || new.invocation.maximum != multi_resilient_maximum(48) || invalid(new) != "" { abort("new event session changed"); }
     let mismatched = Session { format = 11, phase = "ready", invocation = Invocation { usage = fresh_ledger(), maximum = multi_maximum(32), admitted = 0, prior = empty() }, last_request = "", pending = "" };
     if invalid(mismatched) == "" { abort("new format with old allowance accepted"); }
     let reserved = match begin(new, "question") { Ok(value) => value, Err(_) => { abort("new reservation refused"); } };
     match begin(reserved, "repeat") { Ok(_) => { abort("running reservation retried"); } Err(_) => {} }
-    match complete(reserved, completed("question", multi_large_maximum(48), 12288)) { Ok(_) => { abort("undercharged new model accepted"); } Err(_) => {} }
-    let saved = match complete(reserved, completed("question", multi_large_maximum(48), 266240)) { Ok(value) => value, Err(_) => { abort("new accounting refused"); } };
-    if saved.invocation.usage.tokens != 266240 || saved.phase != "ready" { abort("new usage changed"); }
+    match complete(reserved, completed("question", multi_resilient_maximum(48), 12288)) { Ok(_) => { abort("undercharged new model accepted"); } Err(_) => {} }
+    let early = match complete(reserved, completed("question", multi_resilient_maximum(48), 266240)) { Ok(value) => value, Err(_) => { abort("early final accounting refused"); } };
+    if early.invocation.usage.tokens != 266240 || invalid(early) != "" { abort("early final usage changed"); }
+    let saved = match complete(reserved, completed("question", multi_resilient_maximum(48), 393216)) { Ok(value) => value, Err(_) => { abort("new accounting refused"); } };
+    if saved.invocation.usage.tokens != 393216 || saved.phase != "ready" { abort("new usage changed"); }
     let legacy_invocation = Invocation { usage = fresh_ledger(), maximum = multi_maximum(32), admitted = 0, prior = empty() };
     let legacy = Session { format = 9, phase = "ready", invocation = legacy_invocation, last_request = "", pending = "" };
     let inflated = Session { format = 9, phase = "ready", invocation = Invocation { usage = fresh_ledger(), maximum = multi_wide_maximum(32), admitted = 0, prior = empty() }, last_request = "", pending = "" };

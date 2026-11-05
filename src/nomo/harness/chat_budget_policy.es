@@ -3,7 +3,7 @@ module nomo.harness.chat_budget_policy;
 import nomo.harness.harness_tool_contract.{Ledger, bump, settle};
 import nomo.model.model_tool_contract.Session;
 import nomo.harness.harness_tool_chat_contract.{Invocation, default_maximum, turn_error, combine};
-import nomo.harness.read_tool_chat_contract.{turn_error as unicode_turn_error, extended_maximum, extended_turn_error, extended_combine, session_maximum, session_turn_error, session_combine, multi_maximum, multi_wide_maximum, multi_large_maximum, multi_turn_error, multi_bump, multi_settle, multi_combine};
+import nomo.harness.read_tool_chat_contract.{turn_error as unicode_turn_error, extended_maximum, extended_turn_error, extended_combine, session_maximum, session_turn_error, session_combine, multi_maximum, multi_wide_maximum, multi_large_maximum, multi_resilient_maximum, multi_turn_error, multi_bump, multi_settle, multi_combine};
 
 // Policies account configured reservations. They never dispatch a model or retry.
 public spec ChatBudgetPolicy {
@@ -16,11 +16,12 @@ public spec ChatBudgetPolicy {
     flow pending(self, phase: string) -> Ledger ![];
     flow child_pending(self) -> Ledger ![];
     flow parent_tokens(self) -> i32 ![];
+    flow resilient_child(self) -> bool ![];
 }
 
 public enum SingleMode { Legacy, Unicode, Extended, Persistent }
 public type SingleBudget = { mode: SingleMode };
-public type MultiBudget = { turns: i32, parent: i32, ceiling: Ledger };
+public type MultiBudget = { turns: i32, parent: i32, resilient: bool, ceiling: Ledger };
 public enum SelectedBudget { Single(SingleBudget), Multi(MultiBudget) }
 
 impl SingleBudget ~ ChatBudgetPolicy {
@@ -38,9 +39,10 @@ impl SingleBudget ~ ChatBudgetPolicy {
     flow combine(self, previous: Ledger, local: Ledger) -> Result<Ledger, string> ![] {
         return match self.mode { SingleMode.Extended => extended_combine(previous, local), SingleMode.Persistent => session_combine(previous, local), _ => combine(previous, local, self.maximum()) };
     }
-    flow pending(self, phase: string) -> Ledger ![] { return pending(phase, false, 2048); }
+    flow pending(self, phase: string) -> Ledger ![] { return pending(phase, false, 2048, 2048); }
     flow child_pending(self) -> Ledger ![] { return Ledger { steps = 3, calls = 2, tokens = 4096, tools = 1, scan = 16384 }; }
     flow parent_tokens(self) -> i32 ![] { return 2048; }
+    flow resilient_child(self) -> bool ![] { return false; }
 }
 
 impl MultiBudget ~ ChatBudgetPolicy {
@@ -48,27 +50,29 @@ impl MultiBudget ~ ChatBudgetPolicy {
     flow turn_limit(self) -> i32 ![] { return self.turns; }
     flow validate_invocation(self, value: Invocation) -> string ![Error<IndexError>] { return multi_turn_error(value, self.turns); }
     flow reserve_stage(self, value: Ledger, call: bool) -> Result<Ledger, string> ![] { return multi_bump(value, call, self.parent >= 4096, self.parent == 131072); }
-    flow settle_child(self, value: Ledger, child: Session) -> Result<Ledger, string> ![] { return multi_settle(value, child, self.parent >= 4096, self.parent == 131072); }
+    flow settle_child(self, value: Ledger, child: Session) -> Result<Ledger, string> ![] { return multi_settle(value, child, self.parent >= 4096, self.parent == 131072, self.resilient); }
     flow combine(self, previous: Ledger, local: Ledger) -> Result<Ledger, string> ![] { return multi_combine(previous, local, self.ceiling); }
-    flow pending(self, phase: string) -> Ledger ![] { return pending(phase, true, self.parent); }
-    flow child_pending(self) -> Ledger ![] { return Ledger { steps = 7, calls = 4, tokens = 16384, tools = 3, scan = 12583680 }; }
+    flow pending(self, phase: string) -> Ledger ![] { return pending(phase, true, self.parent, if self.resilient { 131072 } else { 4096 }); }
+    flow child_pending(self) -> Ledger ![] { return Ledger { steps = 7, calls = 4, tokens = (if self.resilient { 131072 } else { 4096 }) + 12288, tools = 3, scan = 12583680 }; }
     flow parent_tokens(self) -> i32 ![] { return self.parent; }
+    flow resilient_child(self) -> bool ![] { return self.resilient; }
 }
 
-flow pending(phase: string, multi: bool, parent: i32) -> Ledger {
+flow pending(phase: string, multi: bool, parent: i32, child_final: i32) -> Ledger {
     let calls = if phase == "aggregate" { 0 } else { if multi { 5 } else { 3 } };
     let tools = if phase == "aggregate" { 0 } else { if multi { 3 } else { 1 } };
     let steps = if phase == "plan" { if multi { 10 } else { 6 } } else { if phase == "child" { if multi { 9 } else { 5 } } else { 0 } };
-    return Ledger { steps = steps, calls = calls, tokens = if calls == 0 { 0 } else { if multi { parent + 16384 } else { 6144 } }, tools = tools, scan = tools * if multi { 4194560 } else { 16384 } };
+    return Ledger { steps = steps, calls = calls, tokens = if calls == 0 { 0 } else { if multi { parent + child_final + 12288 } else { 6144 } }, tools = tools, scan = tools * if multi { 4194560 } else { 16384 } };
 }
 
 // This is the sole compatibility mapping from saved maxima to runtime policy.
 public flow select(value: Invocation, unicode: bool) -> SelectedBudget {
     if unicode {
-        if value.maximum == multi_large_maximum(48) { return SelectedBudget.Multi(MultiBudget { turns = 48, parent = 131072, ceiling = value.maximum }); }
+        if value.maximum == multi_resilient_maximum(48) { return SelectedBudget.Multi(MultiBudget { turns = 48, parent = 131072, resilient = true, ceiling = value.maximum }); }
+        if value.maximum == multi_large_maximum(48) { return SelectedBudget.Multi(MultiBudget { turns = 48, parent = 131072, resilient = false, ceiling = value.maximum }); }
         for turns in [2, 32, 48] limit Iterations(3) {
-            if value.maximum == multi_wide_maximum(turns) { return SelectedBudget.Multi(MultiBudget { turns = turns, parent = 4096, ceiling = value.maximum }); }
-            if turns != 48 && value.maximum == multi_maximum(turns) { return SelectedBudget.Multi(MultiBudget { turns = turns, parent = 2048, ceiling = value.maximum }); }
+            if value.maximum == multi_wide_maximum(turns) { return SelectedBudget.Multi(MultiBudget { turns = turns, parent = 4096, resilient = false, ceiling = value.maximum }); }
+            if turns != 48 && value.maximum == multi_maximum(turns) { return SelectedBudget.Multi(MultiBudget { turns = turns, parent = 2048, resilient = false, ceiling = value.maximum }); }
         }
         if value.maximum == session_maximum() { return SelectedBudget.Single(SingleBudget { mode = SingleMode.Persistent }); }
         if value.maximum == extended_maximum() { return SelectedBudget.Single(SingleBudget { mode = SingleMode.Extended }); }

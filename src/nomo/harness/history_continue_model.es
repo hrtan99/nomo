@@ -19,7 +19,7 @@ flow prompt_ContinueMain() -> string { return "Coordinate one read-only child fo
 type WorkStages = { mode: MainMode, work: WorkFacts, history: Array<Event> };
 impl WorkStages ~ ReadStages {
     flow main(self, context: Context) -> string ![] { return infer_main(self.mode, Prompt.new().system(Trusted(prompt_ContinueMain())).data(Input { current = context, work = self.work, history = self.history })); }
-    flow child(self, task: string, files: Array<string>, selected: State, multi: bool) -> LoopTurn { return private_chat_child_turn(task, files, selected, multi); }
+    flow child(self, task: string, files: Array<string>, selected: State, multi: bool, resilient: bool) -> LoopTurn { return private_chat_child_turn(task, files, selected, multi, resilient); }
 }
 public flow run_turn(request: string, allowed: Array<string>, invocation: Invocation, work: WorkFacts, history: Array<Event>) -> TurnResult {
     return run_private(WorkStages { mode = main_mode(invocation), work = work, history = history }, request, allowed, invocation);
@@ -31,7 +31,7 @@ flow prompt_ContinueAfterFollowup() -> string { return "Coordinate one read-only
 type FollowupStages = { mode: MainMode, work: WorkFacts, followup: WorkFacts, additional: Array<WorkFacts>, history: Array<Event>, budget: BudgetFacts };
 impl FollowupStages ~ ReadStages {
     flow main(self, context: Context) -> string ![] { return infer_main(self.mode, Prompt.new().system(Trusted(prompt_ContinueAfterFollowup())).data(FollowupInput { current = context, work = self.work, followup = self.followup, additional = self.additional, history = self.history, budget = self.budget })); }
-    flow child(self, task: string, files: Array<string>, selected: State, multi: bool) -> LoopTurn { return private_chat_child_turn(task, files, selected, multi); }
+    flow child(self, task: string, files: Array<string>, selected: State, multi: bool, resilient: bool) -> LoopTurn { return private_chat_child_turn(task, files, selected, multi, resilient); }
 }
 public flow run_after_followup(request: string, allowed: Array<string>, invocation: Invocation, work: WorkFacts, followup: WorkFacts, additional: Array<WorkFacts>, history: Array<Event>, budget: BudgetFacts) -> TurnResult {
     let stages = FollowupStages { mode = main_mode(invocation), work = work, followup = followup, additional = additional, history = history, budget = budget };

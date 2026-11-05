@@ -10,7 +10,7 @@ import nomo.agent.console_events.publish;
 import nomo.model.conversation_output.ConversationOutput;
 import nomo.tools.edit_encoding.json;
 
-flow slash() -> string { return split("\\/", "")[1]; }
+flow slash() -> string { return std.text.from_char('\\'); }
 flow collect(event: Event) -> unit {
     let value = match json([event.role, event.kind, event.name, event.text]) {
         Ok(text) => text, Err(_) => abort("bounded collector encoding refused"),

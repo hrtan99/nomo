@@ -3,7 +3,7 @@ module nomo.session.check_output;
 import nomo.session.cas_rows.{Target, commit_native};
 
 import std.memory.{get_entry, Missing};
-import std.text.len;
+import std.text.char_count as len;
 import nomo.session.history_check_guard.inspect as inspect_first;
 import nomo.session.history_followup_check_guard.inspect as inspect_followup;
 

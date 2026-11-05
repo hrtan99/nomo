@@ -2,7 +2,7 @@ module nomo.session.work_record;
 
 import nomo.core.json.{encode as encode_json, string_fields};
 
-import std.text.{len, split, to_string_i32, to_string_usize};
+import std.text.{char_count as len, from_char, from_i32, from_usize};
 import std.collections.len as count;
 import std.bytes.len as byte_count;
 import std.codec.text.utf8_encode;
@@ -62,14 +62,14 @@ flow fields(value: Captured, phase: string) -> Array<string> {
     let confirmed = phase == "summary-confirmed";
     return ["nomo-work-record-v1", phase, binding.id, binding.workspace, binding.region, binding.path,
         binding.request_digest, binding.before_digest, binding.after_digest,
-        to_string_usize(binding.before_bytes), to_string_usize(binding.after_bytes), value.evidence.request,
+        from_usize(binding.before_bytes), from_usize(binding.after_bytes), value.evidence.request,
         value.evidence.task, value.evidence.operation, value.evidence.allowed[0], allowed_second,
         value.evidence.files[0], selected_second, value.evidence.literal, value.evidence.outcome,
         value.evidence.result, value.evidence.summary, value.task, value.target, value.replacement,
-        value.before, value.after, value.summary, to_string_i32(read.steps), to_string_i32(read.calls),
-        to_string_i32(read.tokens), to_string_i32(read.tools), to_string_i32(read.scan),
-        to_string_i32(edit.steps), to_string_i32(edit.calls), to_string_i32(edit.tokens),
-        to_string_i32(edit.native_tokens), to_string_i32(edit.boundaries),
+        value.before, value.after, value.summary, from_i32(read.steps), from_i32(read.calls),
+        from_i32(read.tokens), from_i32(read.tools), from_i32(read.scan),
+        from_i32(edit.steps), from_i32(edit.calls), from_i32(edit.tokens),
+        from_i32(edit.native_tokens), from_i32(edit.boundaries),
         "13", "7", "47104", "196608", "1", "4096", "3", "6144", "1", "2048",
         if confirmed { "0" } else { "1" }, if confirmed { "0" } else { "1" },
         if confirmed { "0" } else { "2048" }, if confirmed { "0" } else { "65536" }];
@@ -100,7 +100,7 @@ public flow validate(row: Record) -> Result<Captured, string> {
     let binding = match bind(data[2], data[3], data[5], prepared) { Ok(value) => value, Err(error) => { return Err(error); } };
     if !same_binding(binding, row.binding) || data[4] != binding.region || data[6] != binding.request_digest ||
         data[7] != binding.before_digest || data[8] != binding.after_digest ||
-        data[9] != to_string_usize(binding.before_bytes) || data[10] != to_string_usize(binding.after_bytes) {
+        data[9] != from_usize(binding.before_bytes) || data[10] != from_usize(binding.after_bytes) {
         return Err("work body or outer edit binding mismatch");
     }
     var allowed = [data[14]]; if data[15] != "" { allowed = allowed.push(data[15]); }
@@ -159,7 +159,7 @@ public flow confirm(row: Record, summary: string) -> Result<Record, string> {
 public flow admit(row: Record) -> Result<bool, string> {
     let captured = match validate(row) { Ok(value) => value, Err(error) => { return Err(error); } };
     if row.phase != "summary-unconfirmed" { return Err("work admission requires an unconfirmed candidate"); }
-    let sentinel = "\"" + split("\\/", "")[1] + "u0001\"";
+    let sentinel = "\"" + from_char('\\') + "u0001\"";
     let parsed = match parse(sentinel) { Ok(value) => value, Err(_) => { return Err("work admission sentinel decode refused"); } };
     let message = Message.new(parsed); let converted: Option<Message<string>> = message.cast<string>();
     let control = match converted { Some(value) => value.body, None() => { return Err("work admission sentinel conversion refused"); } };

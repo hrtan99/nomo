@@ -8,7 +8,7 @@ import std.codec.text.{utf8_encode, utf8_decode, Strict};
 import std.agent.message.Message;
 import nomo.tools.path_policy.valid_path;
 import nomo.harness.edit_original.{OriginalReadFunction, OriginalReader, EditApplier};
-import std.text.to_string_usize;
+import std.text.from_usize;
 import nomo.tools.edit_proposal.{validate, text_bytes};
 public import nomo.tools.edit_contract.{Prepared, prepare_original};
 
@@ -33,15 +33,15 @@ flow read_existing(name: string, maximum: EditLimit) -> Result<bytes, string> {
     let conversion: Option<Message<FileInfo>> = message.cast<FileInfo>();
     let info = match conversion { Some(value) => value.body, None() => { return Err("edit stat projection refused"); } };
     if !info.is_file || info.is_dir { return Err("edit requires an existing regular file"); }
-    if info.len > maximum.metadata { return Err("edit file exceeds " + to_string_usize(maximum.bytes) + " bytes"); }
+    if info.len > maximum.metadata { return Err("edit file exceeds " + from_usize(maximum.bytes) + " bytes"); }
     return handle {
         let bytes = read_bytes_limited(target, maximum.bytes);
-        if byte_count(bytes) > (maximum.bytes) { return Err("edit file exceeds " + to_string_usize(maximum.bytes) + " bytes after read"); }
+        if byte_count(bytes) > (maximum.bytes) { return Err("edit file exceeds " + from_usize(maximum.bytes) + " bytes after read"); }
         Ok(bytes)
     } with {
         Error<ReadLimitError>.raise(ReadLimitError.LimitExceeded(observed_limit)) => {
             if observed_limit != maximum.bytes { abort("unexpected edit read limit"); }
-            finish Err("edit file exceeds " + to_string_usize(maximum.bytes) + " bytes after read");
+            finish Err("edit file exceeds " + from_usize(maximum.bytes) + " bytes after read");
         }
     };
 }

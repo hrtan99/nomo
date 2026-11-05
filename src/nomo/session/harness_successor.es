@@ -2,7 +2,7 @@ module nomo.session.harness_successor;
 
 import nomo.core.json.{encode as encode_json, string_fields};
 
-import std.text.{len, trim, to_string_i32, to_string_usize};
+import std.text.{char_count as len, trim, from_i32, from_usize};
 import std.collections.len as count;
 
 
@@ -124,10 +124,10 @@ public flow encode(saved: Successor) -> Result<string, string> {
     var second = ""; if count(saved.identity.allowed) == 2 { second = saved.identity.allowed[1]; }
     var fields = ["nomo-harness-successor-v1", saved.identity.id, saved.identity.workspace, saved.identity.allowed[0], second,
         predecessor, saved.predecessor_version, saved.request, saved.task, saved.result, saved.tool, saved.outcome, saved.answer,
-        to_string_i32(saved.usage.steps), to_string_i32(saved.usage.calls), to_string_i32(saved.usage.tokens),
-        to_string_i32(saved.usage.tools), to_string_i32(saved.usage.scan), to_string_i32(saved.maximum.steps),
-        to_string_i32(saved.maximum.calls), to_string_i32(saved.maximum.tokens), to_string_i32(saved.maximum.tools),
-        to_string_i32(saved.maximum.scan), "2", "completed", "true", to_string_usize(count(saved.records))];
+        from_i32(saved.usage.steps), from_i32(saved.usage.calls), from_i32(saved.usage.tokens),
+        from_i32(saved.usage.tools), from_i32(saved.usage.scan), from_i32(saved.maximum.steps),
+        from_i32(saved.maximum.calls), from_i32(saved.maximum.tokens), from_i32(saved.maximum.tools),
+        from_i32(saved.maximum.scan), "2", "completed", "true", from_usize(count(saved.records))];
     for event in saved.records limit Iterations(18) {
         fields = fields.push(event.role); fields = fields.push(event.kind); fields = fields.push(event.name); fields = fields.push(event.text);
     }
@@ -145,7 +145,7 @@ public flow decode(raw: string) -> Result<Successor, string> {
     if fields[0] != "nomo-harness-successor-v1" { return Err("unsupported successor format"); }
     if fields[23] != "2" || fields[24] != "completed" || fields[25] != "true" { return Err("successor is not completed and settled"); }
     var record_count: usize = 14; if count(fields) == 99 { record_count = 18; }
-    if fields[26] != to_string_usize(record_count) { return Err("successor record count disagrees with framing"); }
+    if fields[26] != from_usize(record_count) { return Err("successor record count disagrees with framing"); }
     var allowed = [fields[3]]; if fields[4] != "" { allowed = allowed.push(fields[4]); }
     let identity = Identity { id = fields[1], workspace = fields[2], allowed = allowed };
     let predecessor = match decode_first(fields[5]) { Ok(value) => value, Err(error) => { return Err(error); } };

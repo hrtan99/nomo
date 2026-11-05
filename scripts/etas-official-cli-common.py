@@ -19,54 +19,58 @@ INSTALLED = CACHE / 'bin/etas'
 
 
 def configure(label, wrapper):
-    global LABEL, VERSION, SELECTOR, CONFIG, LOCK, SPEC, PINS, ROOT, SOURCE, TARGET, INSTALLED, BOOTSTRAP_SHA, LEGACY_SHA, PREVIOUS_SHARED, PREVIOUS_BOOTSTRAP, PREVIOUS_CURRENT, ADOPTED
+    global LABEL, VERSION, SELECTOR, CONFIG, LOCK, SPEC, PINS, ROOT, SOURCE, TARGET, INSTALLED, BOOTSTRAP_SHA, LEGACY_SHA, PREVIOUS_CONFIG, PREVIOUS_SHARED, PREVIOUS_BOOTSTRAP, PREVIOUS_CURRENT, ADOPTED
     versions = {'012': ('0.1.12', 'e13f4988826cef49555dfb7cbc5dfb968a517f8b8506d3ef36789d3ec8492b56'),
                 '022': ('0.2.2', 'b585d9bf44b1482eba4d733016fe1b1566a23393f844989e3bc1b42af4277846'),
                 '023': ('0.2.3', None),
                 '024': ('0.2.4', None),
-                '025': ('0.2.5', None), '026': ('0.2.6', None), '026-v68': ('0.2.6', None), '030': ('0.3.0', None)}
+                '025': ('0.2.5', None), '026': ('0.2.6', None), '026-v68': ('0.2.6', None), '030': ('0.3.0', None),
+                '041': ('0.4.1', None)}
     require(label in versions, 'unsupported official graph')
     LABEL = label
     VERSION, LEGACY_SHA = versions[label]
     SELECTOR = 'latest' + label.replace('-', '')
-    CONFIG = REPO / ('config/etas-' + label + '-official.json')
-    LOCK = REPO / ('config/etas-' + label + '-official.Cargo.lock')
+    CONFIG = REPO / ('config/etas-latest-main.json' if label == '041' else 'config/etas-' + label + '-official.json')
+    LOCK = REPO / ('config/etas-latest.Cargo.lock' if label == '041' else 'config/etas-' + label + '-official.Cargo.lock')
     SPEC = json.loads(CONFIG.read_text())
     PINS = SPEC['repositories']
-    ROOT = CACHE / SPEC.get('cache_root', 'etas-eval' if label == '026-v68' else 'etas-' + label if label in ('025', '026', '030') else 'etas-p0-' + label)
+    ROOT = CACHE / SPEC.get('cache_root', 'etas-latest' if label == '041' else 'etas-eval' if label == '026-v68' else 'etas-' + label if label in ('025', '026', '030') else 'etas-p0-' + label)
     SOURCE = ROOT / ('src' if label in ('025', '026', '026-v68', '030') else 'src/cli')
     TARGET = CACHE / SPEC['build_target'] if 'build_target' in SPEC else ROOT / 'target' if label in ('025', '026', '026-v68', '030') else CACHE / 'etas-latest/target'
     INSTALLED = CACHE / SPEC.get('installed_binary', 'bin/etas')
+    PREVIOUS_CONFIG = '765ca4aeae41496467cd35b398f8c40ac4fb3c5c30c6d970fdba66426b7f878b' if label == '041' else None
     bridge_path = REPO / 'config/etas-official-legacy-bridge.json'
     bridge = json.loads(bridge_path.read_text())
-    entry = bridge[label]
-    require(bridge['format'] == 1 and entry['legacy_sha256'] == LEGACY_SHA, 'legacy bridge policy drift')
-    require(entry['wrapper_sha256'] == digest(wrapper), 'bootstrap wrapper drift')
-    require(entry['common_sha256'] == digest(__file__), 'shared bootstrap drift')
+    entry = None if label == '041' else bridge[label]
+    if entry is not None:
+        require(bridge['format'] == 1 and entry['legacy_sha256'] == LEGACY_SHA, 'legacy bridge policy drift')
+        require(entry['wrapper_sha256'] == digest(wrapper), 'bootstrap wrapper drift')
+        require(entry['common_sha256'] == digest(__file__), 'shared bootstrap drift')
     previous = {'012': 'f51e2b184927c47f109fbf1e3778d804abe06be1ff5c9c87ec2e2468e5782b1d',
                 '022': '1abd68df1a97c80190f025b6f2330e130e924b3b299494c8e80ea6ca562adcbc',
                 '023': None,
                 '024': None, '025': None, '026': None, '026-v68': None, '030': None}
-    PREVIOUS_SHARED = previous[label]
-    require(entry.get('previous_shared_sha256') == PREVIOUS_SHARED, 'previous shared provenance drift')
+    PREVIOUS_SHARED = previous.get(label)
+    if entry is not None: require(entry.get('previous_shared_sha256') == PREVIOUS_SHARED, 'previous shared provenance drift')
     prior = {'012': '29663ca202861ccc54cf7df5fe1c2f278ae8192d8f2d7abd41dfd44aebc2e5c4',
              '022': '5252858a71ac814ce1c15d5c0e5d8a291c0af69ed07d02c7d88343b5e8905f22',
-             '023': '0fd4152065d3ab56f4a3508ecb0686bf2eab253f0f5be5b2482dfc4f933184fc', '024': None, '025': None, '026': None, '026-v68': None, '030': None}
-    PREVIOUS_BOOTSTRAP = prior[label]
-    require(entry.get('previous_bootstrap_sha256') == PREVIOUS_BOOTSTRAP, 'previous bootstrap provenance drift')
+             '023': '0fd4152065d3ab56f4a3508ecb0686bf2eab253f0f5be5b2482dfc4f933184fc', '024': None, '025': None, '026': None, '026-v68': None, '030': None,
+             '041': 'a1ed042bd53279891f0e1b381fe01735fbc0ba17d949b55d1852523c0c26448b'}
+    PREVIOUS_BOOTSTRAP = prior.get(label)
+    if entry is not None: require(entry.get('previous_bootstrap_sha256') == PREVIOUS_BOOTSTRAP, 'previous bootstrap provenance drift')
     previous_current = {'012': 'd9136e020ec5cbe83457cabef11c993d1c9eb93d2406dfc68fce0f727f207d61',
                         '022': 'cb5feaeefdbad42b3b1253755e0167e9023664f6b1b38ef2b814aa118638b9bf',
                         '023': '90cb9bba2e7d7a52a688cac3faa4c5b74b144f2f8e87ba36c1f083810288c170',
                         '024': '89c11a09f408387c5d1e1a801bb9770517c6a30b9b95d366f2d43aa5f3c75274', '025': None, '026': None, '026-v68': None, '030': None}
-    PREVIOUS_CURRENT = previous_current[label]
-    require(entry.get('previous_current_sha256') == PREVIOUS_CURRENT, 'previous current bootstrap provenance drift')
+    PREVIOUS_CURRENT = previous_current.get(label)
+    if entry is not None: require(entry.get('previous_current_sha256') == PREVIOUS_CURRENT, 'previous current bootstrap provenance drift')
     # New installations bind the wrapper, shared implementation and reviewed bridge policy.
     identity_hash = hashlib.sha256(b'nomo.official-bootstrap.v2\0')
     identity_hash.update(Path(wrapper).read_bytes())
     identity_hash.update(b'\0')
     identity_hash.update(Path(__file__).read_bytes())
     identity_hash.update(b'\0')
-    identity_hash.update(bridge_path.read_bytes())
+    if entry is not None: identity_hash.update(bridge_path.read_bytes())
     BOOTSTRAP_SHA = identity_hash.hexdigest()
     ADOPTED = 'source-lock-registry-validated-owner-built-' + label if label in ('025', '026', '026-v68', '030') else 'adopted-independently-verified-' + label + '-build'
 
@@ -287,7 +291,7 @@ def register_existing(binary):
 def guard(read_only=False):
     guard_environment()
     identity = json.loads((ROOT / 'identity.json').read_text())
-    require(identity['pins'] == PINS and identity['configuration_sha256'] == digest(CONFIG), 'graph configuration drift')
+    require(identity['pins'] == PINS and identity['configuration_sha256'] in tuple(x for x in (digest(CONFIG), PREVIOUS_CONFIG) if x), 'graph configuration drift')
     # Existing cache records name the exact pre-sharing verifier; new records
     # bind both the selected wrapper and this implementation. Both branches
     # still run the full source, lock, toolchain and registry checks below.

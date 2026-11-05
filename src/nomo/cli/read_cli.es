@@ -1,7 +1,7 @@
 module nomo.cli.read_cli;
 
 import std.collections.len as count;
-import std.text.{split, trim, starts_with};
+import std.text.{trim, starts_with, strip_suffix};
 import std.codec.text.utf8_encode;
 import std.bytes.len as bytes_len;
 import nomo.core.read_text.safe;
@@ -27,19 +27,9 @@ public flow parse_args(args: Array<string>) -> Result<Request, string> {
 
 public flow parse_line(raw: string) -> Result<LineCommand, string> {
     if bytes_len(utf8_encode(raw)) > 130 { return Err("input exceeds 128 UTF-8 bytes plus LF/CRLF"); }
-    var body = ""; var carriage_return = false; var newline = false;
-    for character in split(raw, "") limit Iterations(132) {
-        if character != "" {
-            if newline { return Err("invalid line framing"); }
-            if character == "\r" { if carriage_return { return Err("invalid line framing"); } carriage_return = true; }
-            else if character == "\n" { newline = true; }
-            else {
-                if carriage_return { return Err("invalid line framing"); }
-                if !safe(character, 4) { return Err("unsafe terminal character"); } body = body + character;
-            }
-        }
-    }
-    if carriage_return && !newline { return Err("invalid line framing"); }
+    let body = match strip_suffix(raw, "\r\n") { Some(value) => value,
+        None() => match strip_suffix(raw, "\n") { Some(value) => value, None() => raw } };
+    if !safe(body, 128) { return Err("unsafe terminal character"); }
     let command = trim(body);
     if command == "/help" { return Ok(LineCommand { kind = "help", text = "" }); }
     if command == "/exit" { return Ok(LineCommand { kind = "exit", text = "" }); }

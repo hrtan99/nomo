@@ -7,7 +7,7 @@ import nomo.session.chat_history.{Entry, load as load_chat};
 import nomo.session.edit_operation.selector_error;
 import nomo.model.read_protocol.question_error;
 import nomo.harness.harness_edit_contract.history_summary_error;
-import std.text.len;
+import std.text.char_count as len;
 import nomo.harness.harness_work_contract.{Ledger, ledger_error, native_tokens, native_budget};
 
 // This record prevents a second dispatched work request for this session.

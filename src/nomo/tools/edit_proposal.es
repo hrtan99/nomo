@@ -1,6 +1,6 @@
 module nomo.tools.edit_proposal;
 
-import std.text.{len, split, join, contains};
+import std.text.{char_count as len, split, contains, char_get, from_char, strip_prefix};
 import std.collections.len as count;
 import std.bytes.len as byte_count;
 import std.codec.text.utf8_encode;
@@ -37,9 +37,8 @@ public flow propose(request: Request) -> Result<Proposal, string> {
     let parts = split(request.original, request.target);
     if count(parts) < 2 { return Err("literal target not found"); }
     if count(parts) > 2 { return Err("literal target is ambiguous"); }
-    let characters = split(request.target, "");
-    if count(characters) < 3 { return Err("literal match framing invalid"); }
-    let tail = join(characters[2, count(characters)).to_array(), "");
+    let first = match char_get(request.target, 0) { Some(value) => from_char(value), None() => { return Err("literal match framing invalid"); } };
+    let tail = match strip_prefix(request.target, first) { Some(value) => value, None() => { return Err("literal match framing invalid"); } };
     if contains(tail + parts[1], request.target) { return Err("literal target is ambiguous"); }
     if request.target == request.replacement { return Err("replacement leaves original unchanged"); }
     // The exact match proves target_bytes <= original_bytes. Reject expansion

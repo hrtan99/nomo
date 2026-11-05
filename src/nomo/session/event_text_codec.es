@@ -5,8 +5,7 @@ import nomo.core.json.encode as encode_json;
 import std.agent.message.Message;
 import std.json.parse;
 import nomo.core.read_text.safe;
-import std.text.split;
-import std.text.len;
+import std.text.char_count as len;
 import std.codec.text.utf8_encode;
 import std.bytes.len as byte_count;
 import nomo.session.redaction.{Policy, text as redact};
@@ -42,7 +41,7 @@ public flow encode_prefix(text: string, truncated: bool, policy: Policy) -> Resu
     let clean = match redact(text, policy) { Ok(item) => item.value, Err(error) => { return Err(error); } };
     let size = byte_count(utf8_encode(clean)); let clipped = truncated || size > 4096;
     var selected = ""; var seen: usize = 0; var marked = false;
-    for character in split(clean, "") limit Iterations(262146) {
+    for codepoint in std.text.chars(clean) limit Iterations(262146) { let character = std.text.from_char(codepoint);
         if character != "" {
             let width = byte_count(utf8_encode(character));
             if size <= 4096 || seen + width <= 2000 || seen >= size - 2000 { selected = selected + character; }

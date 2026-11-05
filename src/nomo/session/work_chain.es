@@ -2,7 +2,7 @@ module nomo.session.work_chain;
 
 import nomo.core.json.encode as encode_json;
 
-import std.text.{len, split, starts_with, to_string_usize};
+import std.text.{char_count as len, split, parse_i32, from_i32, from_usize};
 import std.collections.len as count;
 import std.bytes.len as byte_count;
 import std.codec.text.utf8_encode;
@@ -70,15 +70,9 @@ public flow parse_policy(raw: string) -> Result<Caps, string> {
     let fields = split(raw, ","); if count(fields) != 10 { return Err("expected ten canonical work-chain policy counters"); }
     var numbers: Array<i32> = [];
     for field in fields limit Iterations(10) {
-        if len(field) == 0 || len(field) > 6 || (len(field) > 1 && starts_with(field, "0")) { return Err("invalid canonical work-chain counter"); }
-        var number: i32 = 0;
-        for character in split(field, "") limit Iterations(8) {
-            if character != "" {
-                let digit: i32 = match character { "0" => 0, "1" => 1, "2" => 2, "3" => 3, "4" => 4,
-                    "5" => 5, "6" => 6, "7" => 7, "8" => 8, "9" => 9, _ => { return Err("invalid canonical work-chain counter"); } };
-                number = number * 10 + digit;
-            }
-        }
+        if len(field) == 0 || len(field) > 6 { return Err("invalid canonical work-chain counter"); }
+        let number = match parse_i32(field) { Ok(value) => value, Err(_) => { return Err("invalid canonical work-chain counter"); } };
+        if number < 0 || from_i32(number) != field { return Err("invalid canonical work-chain counter"); }
         numbers = numbers.push(number);
     }
     let result = caps(numbers); let invalid = policy_error(result); if invalid != "" { return Err(invalid); }
@@ -145,7 +139,7 @@ public flow validate(row: Record) -> string {
             let binding = value.binding;
             for field in [value.phase, binding.id, binding.workspace, binding.region, binding.path,
                 binding.request_digest, binding.before_digest, binding.after_digest,
-                to_string_usize(binding.before_bytes), to_string_usize(binding.after_bytes)] limit Iterations(10) {
+                from_usize(binding.before_bytes), from_usize(binding.after_bytes)] limit Iterations(10) {
                 decoded = decoded + byte_count(utf8_encode(field));
             }
             decoded = decoded + 12288;

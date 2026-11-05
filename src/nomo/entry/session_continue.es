@@ -1,17 +1,17 @@
 module nomo.entry.session_continue;
 
 import std.io.println;
-import std.text.to_string_i32;
+import std.text.from_i32;
 import std.collections.len as count;
 import std.agent.session.Conversation;
 import nomo.cli.continuation_args.ContinueOptions;
 import nomo.session.continuation_state.{plan, continuing};
 import nomo.session.session_state.{Request, validate};
+import nomo.session.session_store.publish_snapshot;
 import nomo.session.stub_snapshot.{caps, successor};
 import nomo.session.metadata_store.{read, publish};
-import nomo.session.store_record.{session_key, restore, pending, published, bundle};
-import nomo.session.history_store.{load, empty, append};
-import nomo.session.bundle_codec.encode;
+import nomo.session.store_record.{session_key, restore};
+import nomo.session.history_store.{load, empty};
 import nomo.agent.loop.turn;
 import nomo.session.session_display.display;
 import std.memory.Match;
@@ -61,22 +61,15 @@ public flow run_continue(options: ContinueOptions) -> i32 ![Console, Memory, Err
     let successor = match successor(completed.state, admitted.prior, admitted.reserved, completed.status) {
         Ok(value) => value, Err(error) => { println("REFUSED " + error); return 3; }
     };
-    let next = published(pending(successor, options.next_save));
-    let next_body = bundle(successor, options.next_save);
-    match encode(next_body) { Err(error) => { println("REFUSED " + error); return 3; } Ok(_) => {} }
-    match append(next.session_key, next_body) { Err(error) => { println("REFUSED " + error); return 3; } Ok(_) => {} }
-    let observed = match load(next.session_key) { Ok(value) => value, Err(error) => { println("REFUSED " + error); return 3; } };
-    let restored = match restore(next, observed) { Ok(value) => value, Err(error) => { println("REFUSED " + error); return 3; } };
-    if observed != next_body || restored != successor { println("REFUSED successor bundle differs from intent"); return 3; }
-    let current = match read(input.session_id) { Some(value) => value, None() => { println("REFUSED admission missing"); return 3; } };
-    if current.value != admission || current.version.opaque != version.opaque { println("REFUSED admission changed"); return 3; }
-    match publish(next, version) { Err(error) => { println("REFUSED " + error); return 3; } Ok(_) => {} }
+    match publish_snapshot(successor, options.next_save, admission, version, true) {
+        Ok(_) => {} Err(error) => { println("REFUSED " + error); return 3; }
+    }
     let projection = match validate(successor, requested) {
         Ok(value) => value, Err(error) => { println("STORED_DISPLAY_FAILED; do not retry: " + error); return 3; }
     };
     let output = match display(projection) {
         Ok(value) => value, Err(error) => { println("STORED_DISPLAY_FAILED; do not retry: " + error); return 3; }
     };
-    println("SAVED turn_status=" + to_string_i32(completed.status) + " " + output);
+    println("SAVED turn_status=" + from_i32(completed.status) + " " + output);
     return 0;
 }

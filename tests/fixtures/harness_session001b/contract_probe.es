@@ -1,7 +1,7 @@
 module app.contract_probe;
 
 import std.io.println;
-import std.text.{len, split};
+import std.text.{char_count as len, split};
 import nomo.core.text.printable;
 import nomo.core.conversation.Event;
 import nomo.harness.harness_tool_contract.Ledger;
@@ -14,7 +14,7 @@ type Check = { label: string, mode: string, saved: Successor, requested: Identit
     raw: string, accepted: bool, status: i32, resolved: bool, present: bool, mutation: string,
     args: Array<string>, help: bool };
 
-flow slash() -> string { return split("\\/", "")[1]; }
+flow slash() -> string { return std.text.from_char('\\'); }
 flow event(role: string, kind: string, name: string, text: string) -> Event {
     return Event { role = role, kind = kind, name = name, text = text };
 }

@@ -1,6 +1,6 @@
 module nomo.core.read_text;
 
-import std.text.{len, trim, contains};
+import std.text.{char_count as len, trim, contains};
 import std.json.parse;
 import std.agent.message.Message;
 import std.codec.text.utf8_encode;

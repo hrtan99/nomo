@@ -6,7 +6,7 @@ import std.collections.len as count;
 import nomo.entry.work_chain_help.{argument, help, show_hint, continue_hint};
 
 type Check = { label: string, input: string, accepted: bool, expected: string };
-flow slash() -> string { return split("\\/", "")[1]; }
+flow slash() -> string { return std.text.from_char('\\'); }
 flow checks() -> Array<Check> { return __CHECKS__; }
 flow evaluate(item: Check) -> bool {
     return match argument(item.input) { Ok(value) => item.accepted && value == item.expected, Err(_) => !item.accepted };

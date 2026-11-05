@@ -4,7 +4,7 @@ import std.fs.Region;
 import std.fs.IOError as FileError;
 import std.effects.Fs;
 import std.runtime.error.IndexError;
-import std.text.{len, split};
+import std.text.char_count as len;
 import nomo.core.text.printable;
 
 public type Outcome = { status: string, text: string, scanned: usize };
@@ -25,7 +25,7 @@ public effect ReadTools {
 public flow display(result: Outcome) -> Outcome {
     if len(result.text) > 1024 { return outcome("refused", "result exceeds 1024 characters", result.scanned); }
     var escaped = "";
-    for character in split(result.text, "") limit Iterations(1026) {
+    for codepoint in std.text.chars(result.text) limit Iterations(1026) { let character = std.text.from_char(codepoint);
         if character == "\n" { escaped = escaped + "<LF>"; }
         else {
             if character == "\r" { escaped = escaped + "<CR>"; }

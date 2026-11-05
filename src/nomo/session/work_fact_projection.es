@@ -1,6 +1,6 @@
 module nomo.session.work_fact_projection;
 
-import std.text.split;
+import std.text.{char_count, get_char_slice};
 import nomo.session.work_fact_events.{summary_source, selection};
 import nomo.session.history_work_guard.Record;
 import nomo.session.recoverable_events.Frame as EventFrame;
@@ -25,9 +25,11 @@ public flow extra_fact(item: Entry, policy: Policy) -> Result<WorkFacts, string>
 // Keep older diagnostics at the original per-stream context bound; the stored
 // excerpts remain intact and the two latest checks retain their wider context.
 flow short_text(value: string) -> string {
-    var result = ""; var size: usize = 0;
-    for item in split(value, "") limit Iterations(262146) { if item != "" { if size < 128 { result = result + item; } size = size + 1; } }
-    return result;
+    if char_count(value) <= 128 { return value; }
+    return match get_char_slice(value, Range.closed(0, 127)) {
+        Some(text) => text,
+        None() => ""
+    };
 }
 public flow compact(value: WorkFacts) -> WorkFacts {
     let output = match value.output { None() => None(), Some(item) => {

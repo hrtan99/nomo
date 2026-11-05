@@ -1,6 +1,6 @@
 module nomo.agent.read_tool_controller;
 
-import std.text.{len, contains};
+import std.text.{char_count as len, contains};
 import nomo.core.read_text.{safe};
 import nomo.harness.model_plan_diagnostic.{response_text};
 import nomo.core.conversation.{ stop};
@@ -57,7 +57,11 @@ flow run_policy<P ~ ChildLoopPolicy, D ~ ToolActionDecoder>(policy: P, decoder: 
         perform HarnessProgress.write(if final_only && shape.named_final { "CHILD STAGE model-final" } else { "CHILD STAGE model-action" });
         let response = perform LegacyChildModel.infer(context);
         if inspect_all { perform DiagnosticOutput.write(response_text(response, phase, "lab-qwen-", if final_only { 1152 } else { 384 })); }
-        let action = match decoder.decode(response, allowed, final_only) { Ok(value) => value, Err(error) => { return failed(session, error, 3); } };
+        let action = match decoder.decode(response, allowed, final_only) { Ok(value) => value, Err(error) => {
+            let diagnostic = decoder.diagnostic(response, error, final_only);
+            if diagnostic != "" { perform DiagnosticOutput.write("CHILD MODEL REFUSAL " + diagnostic); }
+            return failed(session, error, 3);
+        } };
         if action.operation == "final" { return LoopTurn { state = history(session, emit(session.history, "assistant", "final", "", action.text)), status = 0 }; }
         if action.operation == "search" && action.files[0] == "*" && !shape.whole_scope { return failed(session, "whole-scope search requires a multi-step reservation", 3); }
         if shape.tool_characters != 0 {
@@ -103,11 +107,11 @@ public flow run_private_chat_loop_controller(raw: string, allowed: Array<string>
 public flow run_expanded_work_loop_controller(raw: string, allowed: Array<string>, previous: Session, wide: bool) -> LoopTurn {
     return run_output(ExpandedChild { wide = wide }, UnicodeActions {}, RedactedChildEvents {}, ConsoleProgress {}, ConsoleDiagnostics {}, raw, allowed, previous, false);
 }
-public flow run_public_multi_chat_loop_controller(raw: string, allowed: Array<string>, previous: Session) -> LoopTurn {
-    return run_output(MultiChild {}, UnicodeActions {}, PublicChildEvents {}, SilentProgress {}, ConsoleDiagnostics {}, raw, allowed, previous, false);
+public flow run_public_multi_chat_loop_controller(raw: string, allowed: Array<string>, previous: Session, resilient: bool) -> LoopTurn {
+    return run_output(MultiChild { resilient = resilient }, UnicodeActions {}, PublicChildEvents {}, SilentProgress {}, ConsoleDiagnostics {}, raw, allowed, previous, false);
 }
-public flow run_private_multi_chat_loop_controller(raw: string, allowed: Array<string>, previous: Session) -> LoopTurn {
-    return run_output(MultiChild {}, UnicodeActions {}, RedactedChildEvents {}, ConsoleProgress {}, ConsoleDiagnostics {}, raw, allowed, previous, false);
+public flow run_private_multi_chat_loop_controller(raw: string, allowed: Array<string>, previous: Session, resilient: bool) -> LoopTurn {
+    return run_output(MultiChild { resilient = resilient }, UnicodeActions {}, RedactedChildEvents {}, ConsoleProgress {}, ConsoleDiagnostics {}, raw, allowed, previous, false);
 }
 
 public flow run_output<P ~ ChildLoopPolicy, D ~ ToolActionDecoder, S ~ ConversationSink, O ~ ProgressSink, G ~ DiagnosticSink>(policy: P, decoder: D, sink: S, progress: O, diagnostics: G, raw: string, allowed: Array<string>, previous: Session, inspect_all: bool) -> LoopTurn {

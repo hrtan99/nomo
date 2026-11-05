@@ -1,6 +1,6 @@
 module nomo.session.edit_operation;
 
-import std.text.{len, trim};
+import std.text.{char_count as len, trim};
 import nomo.core.text.{printable, hex_digest};
 import nomo.tools.path_policy.valid_path;
 

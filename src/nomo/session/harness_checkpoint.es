@@ -2,7 +2,7 @@ module nomo.session.harness_checkpoint;
 
 import nomo.core.json.{encode as encode_json, string_fields};
 
-import std.text.{len, split, starts_with, to_string_i32, to_string_usize};
+import std.text.{char_count as len, parse_i32, from_char, from_i32, from_usize};
 import std.collections.len as count;
 import std.bytes.len as byte_count;
 import std.codec.text.utf8_encode;
@@ -101,8 +101,8 @@ public flow framed(raw: string, successor: bool) -> bool {
     if len(raw) == 0 || len(raw) > limit || byte_count(utf8_encode(raw)) > limit { return false; }
     var opened = false; var closed = false; var quoted = false; var escaped = false;
     var leaves: usize = 0; var characters: usize = 0; var field_size: usize = 0; var unicode: usize = 0;
-    let slash = split("\\/", "")[1];
-    for character in split(raw, "") limit Iterations(196610) {
+    let slash = from_char('\\');
+    for codepoint in std.text.chars(raw) limit Iterations(196610) { let character = std.text.from_char(codepoint);
         if character != "" && byte_count(utf8_encode(character)) != 1 { return false; }
         if quoted {
             if unicode > 0 { unicode = unicode - 1; }
@@ -124,15 +124,9 @@ public flow framed(raw: string, successor: bool) -> bool {
 }
 
 flow number(raw: string, maximum: i32, label: string) -> Result<i32, string> {
-    if len(raw) == 0 || len(raw) > 5 || (len(raw) > 1 && starts_with(raw, "0")) { return Err("invalid canonical " + label + " number"); }
-    var value: i32 = 0;
-    for character in split(raw, "") limit Iterations(7) {
-        if character != "" {
-            let digit: i32 = match character { "0" => 0, "1" => 1, "2" => 2, "3" => 3, "4" => 4, "5" => 5,
-                "6" => 6, "7" => 7, "8" => 8, "9" => 9, _ => { return Err("invalid canonical " + label + " number"); } };
-            value = value * 10 + digit;
-        }
-    }
+    if len(raw) == 0 || len(raw) > 5 { return Err("invalid canonical " + label + " number"); }
+    let value = match parse_i32(raw) { Ok(item) => item, Err(_) => { return Err("invalid canonical " + label + " number"); } };
+    if value < 0 || from_i32(value) != raw { return Err("invalid canonical " + label + " number"); }
     if value > maximum { return Err(label + " number exceeds bound"); }
     return Ok(value);
 }
@@ -174,10 +168,10 @@ public flow encode(saved: Checkpoint) -> Result<string, string> {
     var second = ""; if count(saved.identity.allowed) == 2 { second = saved.identity.allowed[1]; }
     var fields = ["nomo-harness-checkpoint-v1", saved.identity.id, saved.identity.workspace, saved.identity.allowed[0], second,
         saved.request, saved.task, saved.result, saved.tool, saved.outcome, saved.answer,
-        to_string_i32(saved.usage.steps), to_string_i32(saved.usage.calls), to_string_i32(saved.usage.tokens),
-        to_string_i32(saved.usage.tools), to_string_i32(saved.usage.scan), to_string_i32(saved.maximum.steps),
-        to_string_i32(saved.maximum.calls), to_string_i32(saved.maximum.tokens), to_string_i32(saved.maximum.tools),
-        to_string_i32(saved.maximum.scan), "1", "completed", "true", to_string_usize(count(saved.records))];
+        from_i32(saved.usage.steps), from_i32(saved.usage.calls), from_i32(saved.usage.tokens),
+        from_i32(saved.usage.tools), from_i32(saved.usage.scan), from_i32(saved.maximum.steps),
+        from_i32(saved.maximum.calls), from_i32(saved.maximum.tokens), from_i32(saved.maximum.tools),
+        from_i32(saved.maximum.scan), "1", "completed", "true", from_usize(count(saved.records))];
     for event in saved.records limit Iterations(13) {
         fields = fields.push(event.role); fields = fields.push(event.kind); fields = fields.push(event.name); fields = fields.push(event.text);
     }
@@ -195,7 +189,7 @@ public flow decode(raw: string) -> Result<Checkpoint, string> {
     if fields[0] != "nomo-harness-checkpoint-v1" { return Err("unsupported checkpoint format"); }
     if fields[21] != "1" || fields[22] != "completed" || fields[23] != "true" { return Err("checkpoint is not completed and settled"); }
     var record_count: usize = 9; if count(fields) == 77 { record_count = 13; }
-    if fields[24] != to_string_usize(record_count) { return Err("checkpoint record count disagrees with framing"); }
+    if fields[24] != from_usize(record_count) { return Err("checkpoint record count disagrees with framing"); }
     var allowed = [fields[3]]; if fields[4] != "" { allowed = allowed.push(fields[4]); }
     let identity = Identity { id = fields[1], workspace = fields[2], allowed = allowed };
     let usage = match read_ledger(fields, 11, "checkpoint") { Ok(value) => value, Err(error) => { return Err(error); } };

@@ -154,7 +154,7 @@ def abandon_stopped_work(args, operation_id, action):
     try:
         edit.check_history_lock(fd)
         env = {k:v for k,v in os.environ.items() if not k.startswith('ETAS_HOST_') and k not in ('MINIMAX_API_KEY', 'NOMO_QWEN_SERVER_API_KEY')}
-        env.update(NOMO_SESSION_STATE=str(state), NOMO_EVENT_POLICY_DIR=str(policy_dir), NOMO_ETAS_VERSION=os.environ.get('NOMO_ETAS_VERSION', '0.3.0'))
+        env.update(NOMO_SESSION_STATE=str(state), NOMO_EVENT_POLICY_DIR=str(policy_dir), NOMO_ETAS_VERSION=os.environ.get('NOMO_ETAS_VERSION', '0.4.1'))
         compose = ['docker', 'compose', '--env-file', '/dev/null']
         for name in ('compose.yaml', 'config/etas-' + env['NOMO_ETAS_VERSION'].replace('.', '') + '-official-compose.yaml', 'config/etas-runtime-cache-compose.yaml', 'config/nomo-read-session-compose.yaml', 'config/nomo-event-policy-work-compose.yaml'):
             compose += ['--file', str(ROOT / name)]
@@ -212,16 +212,7 @@ def run_recorded_check(args, command, check_id=None):
 
 
 def summarize_recorded_check(args, check_id, tty):
-    print('Check recorded. Asking the model for one read-only summary; the command will not run again.', flush=True)
-    request = 'AUTO-CONTINUATION (no new user input): Summarize recorded check ' + check_id + ', its outcome, exit code and available output; do not claim it passed if it failed or is unavailable. Suggest next steps without running commands.'
-    try: code, summary = chat_turn(args, request, False, False, tty)
-    except (OSError, ValueError) as error:
-        print('Check remains recorded; model summary could not start or complete: ' + str(error), file=sys.stderr, flush=True); return 1
-    if code:
-        print('Check remains recorded; model summary stopped. Inspect session status; do not rerun the check automatically.', file=sys.stderr, flush=True)
-        show_status_hint(args, args.id); return code
-    if not summary.final or summary.deferred or summary.final.startswith(('CHECK ', 'EDIT ', 'NEXT_PAGE')):
-        print('Check remains recorded; the model did not provide a complete summary. No further action was run.', flush=True)
+    print('Check recorded. The deterministic outcome above is authoritative and available to resumed turns; no model summary was started and the command will not run again.', flush=True)
     return 0
 
 
@@ -237,7 +228,7 @@ def work_command(args, action, root, operation_id, path, task, check):
 
 def show_discovery():
     print('Discovery uses pages of 256 files, up to eight automatic pages, seven directory levels and 512 directories; each directory is limited to 1024 entries and 131072 name bytes. Unsupported paths and file types are excluded; .gitignore is not interpreted.', flush=True)
-    print('Each automatic page uses another bounded chat turn: up to 6 calls and 278528 output tokens for new event sessions (older sessions retain their allowance). Page contents may change between turns.', flush=True)
+    print('Each automatic page uses another bounded chat turn: up to 6 calls and 405504 output tokens for new event sessions (older sessions retain their allowance). Page contents may change between turns.', flush=True)
     print('Excluded: .git/.hg/.svn/.bzr, dependency and build directories, .venv/.tox/.cache/.mypy_cache/.pytest_cache, .ssh/.aws/.gnupg/.netrc, and .env files except .env.example/.env.sample.', flush=True)
     print('Dotfiles and project configuration in scope may be sent to the model.', flush=True)
     print('A link outside the selected workspace stops discovery; choose a narrower root.', flush=True)
@@ -276,7 +267,7 @@ def main(argv=None):
             print('Input cancelled.', file=sys.stderr)
             return 130
     if args.discover: show_discovery()
-    print('A read turn in a new event session may reserve up to 6 calls and 278528 output tokens: up to 4 child calls at 4096 each and 2 parent calls at 131072 each; at most 3048576 configured native tokens in total; up to 3 read/search operations reserve 4 MiB plus 256 probe bytes each. Older sessions retain their original allowance.', flush=True)
+    print('A read turn in a new event session may reserve up to 6 calls and 405504 output tokens: up to 3 child action calls at 4096 each, one child final and 2 parent calls at 131072 each; at most 3786432 configured native tokens in total; up to 3 read/search operations reserve 4 MiB plus 256 probe bytes each. Older sessions retain their original allowance.', flush=True)
     if args.once is not None: print('An unfinished delegated answer may use one additional read turn with the same limits.', flush=True)
     if args.id is not None:
         show_resume(args, show_id=True)
@@ -429,7 +420,7 @@ def main(argv=None):
                 print('The agent is inspecting discovery page ' + str(args.page) + ' using another bounded chat turn.', flush=True)
             else:
                 extra_read = True
-                print('The agent is gathering more evidence using one additional chat turn (up to 6 calls and 278528 output tokens for new event sessions (older sessions retain their allowance)).', flush=True)
+                print('The agent is gathering more evidence using one additional chat turn (up to 6 calls and 405504 output tokens for new event sessions (older sessions retain their allowance)).', flush=True)
             code, observer = chat_turn(args, question, False, natural, tty)
             if code:
                 print('Additional read stopped; inspect session status before continuing.', file=sys.stderr, flush=True)

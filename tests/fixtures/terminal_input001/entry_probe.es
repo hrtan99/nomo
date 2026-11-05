@@ -1,7 +1,7 @@
 module app.terminal_input_probe;
 
 import std.io.println;
-import std.text.to_string_i32;
+import std.text.from_i32;
 import std.collections.len as count;
 import std.io.IOError as ConsoleError;
 import std.fs.IOError as FileError;
@@ -24,7 +24,7 @@ import nomo.entry.work_chain_entry.present_outcome;
 // The broad row acknowledges the entry's existing static contract; the test
 // profile permits only Console and denies every business authority at runtime.
 flow returned(status: i32) -> i32 {
-    println("TERMINAL_INPUT_RETURN " + to_string_i32(status));
+    println("TERMINAL_INPUT_RETURN " + from_i32(status));
     return 0;
 }
 

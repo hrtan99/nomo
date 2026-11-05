@@ -27,7 +27,7 @@ CASES = [
 
 SOURCE = '''module app.main;
 import std.io.{println, read_all};
-import std.text.{len, to_string_i32};
+import std.text.{char_count as len, from_i32};
 import std.collections.len as count;
 import std.json.parse;
 import std.agent.message.Message;
@@ -64,7 +64,7 @@ flow observed(label: string, raw: string, maximum: i32, budget: i32, expected_li
     let before = projection;
     let output = match display(projection) { Ok(value) => value, Err(_) => { abort("display refused valid projection"); } };
     if projection != before { abort("display mutated projection"); }
-    println("MAPPED " + label + " " + to_string_i32(original.status) + " " + output);
+    println("MAPPED " + label + " " + from_i32(original.status) + " " + output);
 }
 flow refuses(state: State, maximum: i32, budget: i32) -> bool {
     return match snapshot(state, "id", "binding", maximum, budget) { Err(_) => true, Ok(_) => false };

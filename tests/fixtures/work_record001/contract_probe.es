@@ -1,7 +1,7 @@
 module app.contract_probe;
 
 import std.io.println;
-import std.text.{split, len};
+import std.text.{split, char_count as len};
 import std.collections.len as count;
 import std.bytes.len as byte_count;
 import std.codec.text.utf8_encode;
@@ -15,7 +15,7 @@ import nomo.tools.edit_file.prepare_original;
 import nomo.tools.edit_binding.bind;
 
 type Check = { label: string, passed: bool };
-flow slash() -> string { return split("\\/", "")[1]; }
+flow slash() -> string { return std.text.from_char('\\'); }
 flow encoded(fields: Array<string>) -> string {
     let message = Message.new(fields); let conversion: Option<Message<JsonValue>> = message.cast<JsonValue>();
     let data = match conversion { Some(value) => value.body, None() => { return ""; } };

@@ -7,7 +7,7 @@ import nomo.session.harness_checkpoint.Identity;
 import nomo.cli.session_lifecycle_args.{Request, parse, help_lines, topic_lines};
 
 type Check = { label: string, action: string, args: Array<string>, accepted: bool, expected: Request, error: string };
-flow slash() -> string { return split("\\/", "")[1]; }
+flow slash() -> string { return std.text.from_char('\\'); }
 flow expected_help() -> Array<string> { return __HELP__; }
 flow checks() -> Array<Check> { return __CHECKS__; }
 flow evaluate(item: Check) -> bool {

@@ -1,6 +1,6 @@
 module nomo.harness.model_plan_diagnostic;
 
-import std.text.{len, contains, split, to_string_usize, lowercase};
+import std.text.{char_count as len, contains, from_usize, lowercase};
 import std.bytes.len as byte_count;
 import std.codec.text.utf8_encode;
 import nomo.tools.edit_encoding.json;
@@ -14,12 +14,12 @@ flow category_name(value: string) -> string {
     return "unknown";
 }
 flow limit(maximum: usize) -> usize { return if maximum > 0 && maximum <= 32768 { maximum } else { 384 }; }
-// The public std has no borrowing UTF-8 byte length or bounded string slice.
-// Bound characters before encoding/splitting; never guess an omitted byte count.
+// Preserve the historical scalar-count diagnostic while measuring UTF-8 bytes
+// only after the response is within the configured scalar bound.
 public flow response_error(raw: string, phase: string, category: string, maximum: usize) -> string {
     var bytes = "unmeasured";
-    if len(raw) <= limit(maximum) { bytes = to_string_usize(byte_count(utf8_encode(raw))); }
-    return "phase=" + phase_name(phase) + " category=" + category_name(category) + " chars=" + to_string_usize(len(raw)) + " utf8=" + bytes;
+    if len(raw) <= limit(maximum) { bytes = from_usize(byte_count(utf8_encode(raw))); }
+    return "phase=" + phase_name(phase) + " category=" + category_name(category) + " chars=" + from_usize(len(raw)) + " utf8=" + bytes;
 }
 public flow read_plan_error(raw: string, category: string) -> string { return response_error(raw, "read-plan", category, 384); }
 flow header(phase: string, clipped: bool, redacted: bool) -> string {
@@ -43,7 +43,7 @@ public flow response_text(raw: string, phase: string, excluded: string, maximum:
     if contains(folded, "authorization") || contains(folded, "bearer") || contains(folded, "api-key") || contains(folded, "api_key") { return shown(phase, "<redacted>", false, true); }
     var prefix = ""; var size: usize = 4; var clipped = false;
     let maximum_encoded = 384 - len(header(phase, false, false));
-    for character in split(raw, "") limit Iterations(32770) {
+    for codepoint in std.text.chars(raw) limit Iterations(32770) { let character = std.text.from_char(codepoint);
         if character != "" {
             let encoded = match json([character]) { Ok(value) => value, Err(_) => { return shown(phase, "<unavailable>", true, true); } };
             let width = len(encoded) - 4;

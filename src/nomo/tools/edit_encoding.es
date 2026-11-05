@@ -1,6 +1,6 @@
 module nomo.tools.edit_encoding;
 
-import std.text.{len, split, join};
+import std.text.{char_count as len, join, from_char};
 import std.collections.len as count;
 import std.bytes.len as byte_count;
 import std.codec.text.utf8_encode;
@@ -14,9 +14,8 @@ flow nibble(value: u8) -> string {
 }
 
 flow byte_hex(value: u8) -> string { return nibble(value / 16) + nibble(value % 16); }
-flow slash() -> string { return split("\\/", "")[1]; }
 flow unit_hex(a: u8, b: u8, c: u8, d: u8) -> string {
-    return slash() + "u" + nibble(a) + nibble(b) + nibble(c) + nibble(d);
+    return from_char('\\') + "u" + nibble(a) + nibble(b) + nibble(c) + nibble(d);
 }
 
 // Serialize each scalar to printable ASCII JSON, including surrogate pairs.
@@ -25,10 +24,10 @@ flow scalar(value: string) -> Result<string, string> {
     let data = utf8_encode(value); let size = byte_count(data);
     if size == 1 {
         let number = data[0];
-        if number == 34 { return Ok(slash() + "\""); }
-        if number == 92 { return Ok(slash() + slash()); }
+        if number == 34 { return Ok(from_char('\\') + "\""); }
+        if number == 92 { return Ok(from_char('\\') + from_char('\\')); }
         if number >= 32 && number <= 126 { return Ok(value); }
-        return Ok(slash() + "u00" + byte_hex(number));
+        return Ok(from_char('\\') + "u00" + byte_hex(number));
     }
     if size == 2 {
         let a: u8 = data[0] - 192; let b: u8 = data[1] - 128;
@@ -54,7 +53,7 @@ flow scalar(value: string) -> Result<string, string> {
 flow quoted(value: string) -> Result<string, string> {
     if len(value) > 65536 { return Err("edit JSON field exceeds bound"); }
     var pieces: Array<string> = []; var chunk = ""; var size: usize = 1;
-    for character in split(value, "") limit Iterations(65538) {
+    for codepoint in std.text.chars(value) limit Iterations(65538) { let character = std.text.from_char(codepoint);
         if character != "" {
             let escaped = match scalar(character) { Ok(item) => item, Err(error) => { return Err(error); } };
             size = size + len(escaped); if size > 2097150 { return Err("edit JSON output exceeds bound"); }

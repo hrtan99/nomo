@@ -5,7 +5,7 @@ import std.io.IOError as ConsoleError;
 import std.fs.IOError as FileError;
 import std.effects.Fs;
 import nomo.tools.workspace.ReadOnlyRoot;
-import std.text.{len, split};
+import std.text.{char_count as len, split};
 import nomo.core.conversation.{Event, State};
 import nomo.model.model_tool_contract.{Session, LoopTurn};
 import nomo.model.model_tool_contract.Context as ChildContext;
@@ -29,7 +29,7 @@ type OriginalCheck = { label: string, mode: string, ledger: Ledger, usage: Ledge
 type Vector = { label: string, request: string, allowed: Array<string>, before: Invocation, plan: Context,
     aggregate: Context, task: string, selected: State, child: LoopTurn, raw_plan: string, answer: string,
     expected: TurnResult };
-flow slash() -> string { return split("\\/", "")[1]; }
+flow slash() -> string { return std.text.from_char('\\'); }
 flow event(role: string, kind: string, name: string, text: string) -> Event {
     return Event { role = role, kind = kind, name = name, text = text };
 }

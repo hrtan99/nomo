@@ -1,7 +1,7 @@
 module nomo.model_tool_test;
 
 import std.io.println;
-import std.text.{split, len};
+import std.text.{split, char_count as len};
 import std.collections.len as count;
 import std.json.{JsonValue, stringify};
 import std.agent.message.Message;

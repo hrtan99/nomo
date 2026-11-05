@@ -11,7 +11,7 @@ import nomo.context.preflight.{Measurement, Refusal, measure_context, measure_te
 import nomo.context.selection.{EventPolicy, SelectionRefusal, select};
 
 type Check = { label: string, passed: bool };
-flow slash() -> string { return split("\\/", "")[1]; }
+flow slash() -> string { return std.text.from_char('\\'); }
 flow checks() -> Array<Check> { return __CHECKS__; }
 flow unknown_tokens(value: Measurement) -> bool {
     return match value.tokens { None() => true, Some(_) => false };

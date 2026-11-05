@@ -1,7 +1,7 @@
 module nomo.harness.read_model_tools;
 
 import std.io.println;
-import std.text.to_string_i32;
+import std.text.from_i32;
 import nomo.core.conversation.{Event, State, add};
 import nomo.model.model_tool_contract.{Session, fresh_loop, default_limits, allowed_error, question_error as legacy_question_error};
 import nomo.agent.read_tool.{LoopTurn, run_loop, run_work_loop, run_chat_loop, run_expanded_work_loop, run_multi_chat_loop};
@@ -35,18 +35,18 @@ public flow stage(phase: string, state: Ledger, prefix: string, expanded: bool, 
     let steps: i32 = match phase { "plan" => 6, "child" => 5, _ => 0 };
     let calls = if phase == "aggregate" { 0 } else { 3 };
     let tools = if phase == "aggregate" { 0 } else { 1 };
-    var lines = ["STAGE " + prefix + phase + " child-1 " + numbers(state) + " reserved_steps=" + to_string_i32(steps) +
-        " reserved_calls=" + to_string_i32(calls) + " reserved_tokens=" + to_string_i32(if wide && phase != "aggregate" { 139264 } else { if expanded && phase != "aggregate" { 10240 } else { calls * 2048 } }) +
-        " reserved_tools=" + to_string_i32(tools) + " reserved_scan=" + to_string_i32(tools * scan)];
+    var lines = ["STAGE " + prefix + phase + " child-1 " + numbers(state) + " reserved_steps=" + from_i32(steps) +
+        " reserved_calls=" + from_i32(calls) + " reserved_tokens=" + from_i32(if wide && phase != "aggregate" { 139264 } else { if expanded && phase != "aggregate" { 10240 } else { calls * 2048 } }) +
+        " reserved_tools=" + from_i32(tools) + " reserved_scan=" + from_i32(tools * scan)];
     if phase == "child" {
-        lines = lines.push(if wide { "RESERVATION child-1 steps=3 calls=2 tokens=135168 tools=1 scan=65540 tail_steps=2 tail_calls=1 tail_tokens=4096 unresolved=true" } else { if expanded { "RESERVATION child-1 steps=3 calls=2 tokens=8192 tools=1 scan=65540 tail_steps=2 tail_calls=1 tail_tokens=2048 unresolved=true" } else { "RESERVATION child-1 steps=3 calls=2 tokens=4096 tools=1 scan=" + to_string_i32(scan) + " tail_steps=2 tail_calls=1 tail_tokens=2048 unresolved=true" } });
+        lines = lines.push(if wide { "RESERVATION child-1 steps=3 calls=2 tokens=135168 tools=1 scan=65540 tail_steps=2 tail_calls=1 tail_tokens=4096 unresolved=true" } else { if expanded { "RESERVATION child-1 steps=3 calls=2 tokens=8192 tools=1 scan=65540 tail_steps=2 tail_calls=1 tail_tokens=2048 unresolved=true" } else { "RESERVATION child-1 steps=3 calls=2 tokens=4096 tools=1 scan=" + from_i32(scan) + " tail_steps=2 tail_calls=1 tail_tokens=2048 unresolved=true" } });
     }
     return lines;
 }
 
 flow finished(state: Ledger) -> unit {
-    println("LEDGER steps=" + to_string_i32(state.steps) + "/7 calls=" + to_string_i32(state.calls) + "/4 tokens=" +
-        to_string_i32(state.tokens) + "/8192 tools=" + to_string_i32(state.tools) + "/1 scan=" + to_string_i32(state.scan) +
+    println("LEDGER steps=" + from_i32(state.steps) + "/7 calls=" + from_i32(state.calls) + "/4 tokens=" +
+        from_i32(state.tokens) + "/8192 tools=" + from_i32(state.tools) + "/1 scan=" + from_i32(state.scan) +
         "/16384 reserved_steps=0 reserved_calls=0 reserved_tokens=0 reserved_tools=0 reserved_scan=0");
 }
 
@@ -68,11 +68,11 @@ public flow work_child_turn(task: string, allowed: Array<string>, selected: Stat
     return run_work_loop(task, allowed, default_limits(), seed(selected));
 }
 
-public flow chat_child_turn(task: string, allowed: Array<string>, selected: State, multi: bool) -> LoopTurn {
-    return if multi { run_multi_chat_loop(task, allowed, seed(selected), false) } else { run_chat_loop(task, allowed, default_limits(), seed(selected), false) };
+public flow chat_child_turn(task: string, allowed: Array<string>, selected: State, multi: bool, resilient: bool) -> LoopTurn {
+    return if multi { run_multi_chat_loop(task, allowed, seed(selected), false, resilient) } else { run_chat_loop(task, allowed, default_limits(), seed(selected), false) };
 }
-public flow private_chat_child_turn(task: string, allowed: Array<string>, selected: State, multi: bool) -> LoopTurn {
-    return if multi { run_multi_chat_loop(task, allowed, seed(selected), true) } else { run_chat_loop(task, allowed, default_limits(), seed(selected), true) };
+public flow private_chat_child_turn(task: string, allowed: Array<string>, selected: State, multi: bool, resilient: bool) -> LoopTurn {
+    return if multi { run_multi_chat_loop(task, allowed, seed(selected), true, resilient) } else { run_chat_loop(task, allowed, default_limits(), seed(selected), true) };
 }
 
 public flow expanded_work_child_turn(task: string, allowed: Array<string>, selected: State, wide: bool) -> LoopTurn ~ WideChatChildStage<ReadOnlyRoot> {
@@ -86,49 +86,61 @@ flow failed(state: Ledger, error: string, resolved: bool) -> Result<Report, Fail
 // A caller owns the supplied read reservation and receives typed selected data.
 // Native aborts do not become resolved source returns or a fresh reservation.
 
-public spec ReadContextPolicy {
+public spec ReadContextValidation {
     flow request_error(self, value: string) -> string ![Error<IndexError>];
     flow validate_context(self, value: Context) -> string ![Error<IndexError>];
-    flow reserve(self, value: Ledger, call: bool) -> Result<Ledger, string> ![];
     flow decode(self, value: string) -> Result<string, string> ![Error<IndexError>];
     flow rejection(self, raw: string, error: string) -> string ![Error<IndexError>];
     flow observe_child(self, child: LoopTurn, request: string, task: string, allowed: Array<string>) -> Result<Observed, string> ![Error<IndexError>];
-    flow settle_child(self, value: Ledger, child: Session) -> Result<Ledger, string> ![];
     flow result_error(self, value: string) -> string ![Error<IndexError>];
     flow answer_error(self, value: string) -> string ![Error<IndexError>];
-    flow progress(self, phase: string, state: Ledger, prefix: string) -> Array<string> ![];
+}
+public spec ReadContextBudget {
+    flow reserve(self, value: Ledger, call: bool) -> Result<Ledger, string> ![];
+    flow settle_child(self, value: Ledger, child: Session) -> Result<Ledger, string> ![];
     flow allowance(self) -> Ledger ![];
 }
+public spec ReadContextProgress {
+    flow progress(self, phase: string, state: Ledger, prefix: string) -> Array<string> ![];
+}
 type UnicodeContext = { require_tool: bool, expanded: bool, wide: bool };
-impl UnicodeContext ~ ReadContextPolicy {
+impl UnicodeContext ~ ReadContextValidation {
     flow request_error(self, value: string) -> string { return question_error(value); }
     flow validate_context(self, value: Context) -> string { return context_error(value); }
-    flow reserve(self, value: Ledger, call: bool) -> Result<Ledger, string> ![] { return if self.wide { wide_bump(value, call) } else { if self.expanded { work_bump(value, call) } else { bump(value, call) } }; }
     flow decode(self, value: string) -> Result<string, string> ![Error<IndexError>] { return if self.require_tool { decode_work_plan(value) } else { decode_plan(value) }; }
     flow rejection(self, raw: string, error: string) -> string { return if self.require_tool && error == "invalid bounded delegated task" { "READ_PLAN_REJECTION " + work_plan_rejection(raw) } else { "" }; }
     flow observe_child(self, child: LoopTurn, request: string, task: string, allowed: Array<string>) -> Result<Observed, string> { return if self.require_tool { inspect_work(child.state, child.status, request, task, allowed) } else { inspect(child.state, child.status, request, task, allowed) }; }
-    flow settle_child(self, value: Ledger, child: Session) -> Result<Ledger, string> ![] { return if self.expanded { work_settle(value, child) } else { settle(value, child) }; }
     flow result_error(self, value: string) -> string { return if bounded(value, 256) { "" } else { "invalid bounded child result" }; }
     flow answer_error(self, value: string) -> string { return if bounded(value, 512) { "" } else { "invalid bounded final answer" }; }
-    flow progress(self, phase: string, state: Ledger, prefix: string) -> Array<string> ![] { return stage(phase, state, prefix, self.expanded, self.wide, if self.expanded { 65540 } else { 16384 }); }
+}
+impl UnicodeContext ~ ReadContextBudget {
+    flow reserve(self, value: Ledger, call: bool) -> Result<Ledger, string> ![] { return if self.wide { wide_bump(value, call) } else { if self.expanded { work_bump(value, call) } else { bump(value, call) } }; }
+    flow settle_child(self, value: Ledger, child: Session) -> Result<Ledger, string> ![] { return if self.expanded { work_settle(value, child) } else { settle(value, child) }; }
     flow allowance(self) -> Ledger ![] { return Ledger { steps = 5, calls = 3, tokens = if self.wide { 139264 } else { if self.expanded { 10240 } else { 6144 } }, tools = 1, scan = if self.expanded { 65540 } else { 16384 } }; }
+}
+impl UnicodeContext ~ ReadContextProgress {
+    flow progress(self, phase: string, state: Ledger, prefix: string) -> Array<string> ![] { return stage(phase, state, prefix, self.expanded, self.wide, if self.expanded { 65540 } else { 16384 }); }
 }
 
 public type AsciiContext = { compatible: bool };
-impl AsciiContext ~ ReadContextPolicy {
+impl AsciiContext ~ ReadContextValidation {
     flow request_error(self, value: string) -> string { return legacy_question_error(value); }
     flow validate_context(self, value: Context) -> string { return legacy_context_error(value); }
-    flow reserve(self, value: Ledger, call: bool) -> Result<Ledger, string> ![] { return bump(value, call); }
     flow decode(self, value: string) -> Result<string, string> ![Error<IndexError>] { return if self.compatible { legacy_decode_read_plan(value) } else { legacy_decode_plan(value) }; }
     flow rejection(self, raw: string, error: string) -> string ![] { return ""; }
     flow observe_child(self, child: LoopTurn, request: string, task: string, allowed: Array<string>) -> Result<Observed, string> { return legacy_inspect(child.state, child.status, request, task, allowed); }
-    flow settle_child(self, value: Ledger, child: Session) -> Result<Ledger, string> ![] { return settle(value, child); }
     flow result_error(self, value: string) -> string { return if legacy_bounded(value, 256) { "" } else { "invalid bounded child result" }; }
     flow answer_error(self, value: string) -> string { return if self.compatible { legacy_aggregate_error(value) } else { if legacy_bounded(value, 512) { "" } else { "invalid bounded final answer" } }; }
-    flow progress(self, phase: string, state: Ledger, prefix: string) -> Array<string> ![] { return stage(phase, state, prefix, false, false, 4096); }
+}
+impl AsciiContext ~ ReadContextBudget {
+    flow reserve(self, value: Ledger, call: bool) -> Result<Ledger, string> ![] { return bump(value, call); }
+    flow settle_child(self, value: Ledger, child: Session) -> Result<Ledger, string> ![] { return settle(value, child); }
     flow allowance(self) -> Ledger ![] { return Ledger { steps = 5, calls = 3, tokens = 6144, tools = 1, scan = 4096 }; }
 }
-public flow run_context_policy<P ~ ReadContextPolicy>(policy: P, request: string, allowed: Array<string>, initial: Ledger,
+impl AsciiContext ~ ReadContextProgress {
+    flow progress(self, phase: string, state: Ledger, prefix: string) -> Array<string> ![] { return stage(phase, state, prefix, false, false, 4096); }
+}
+public flow run_context_policy<P ~ ReadContextValidation + ReadContextBudget + ReadContextProgress>(policy: P, request: string, allowed: Array<string>, initial: Ledger,
     prefix: string, require_tool: bool, inspect_plan: bool, inspect_all: bool) -> Result<Report, Failure> {
     var state = initial;
     let invalid = policy.request_error(request); if invalid != "" { return failed(state, invalid, true); }
@@ -155,9 +167,9 @@ public flow run_context_policy<P ~ ReadContextPolicy>(policy: P, request: string
     let observed = match policy.observe_child(child, request, task, allowed) { Ok(value) => value, Err(error) => { return failed(state, error, false); } };
     state = match policy.settle_child(state, child.state) { Ok(value) => value, Err(error) => { return failed(state, error, false); } };
     let allowance = policy.allowance();
-    perform HarnessProgress.write("SETTLED child-1 " + numbers(state) + " released_steps=" + to_string_i32(5 - state.steps) +
-        " released_calls=" + to_string_i32(3 - state.calls) + " released_tokens=" + to_string_i32(allowance.tokens - state.tokens) +
-        " released_tools=" + to_string_i32(1 - state.tools) + " released_scan=" + to_string_i32(allowance.scan - state.scan) + " unresolved=false");
+    perform HarnessProgress.write("SETTLED child-1 " + numbers(state) + " released_steps=" + from_i32(5 - state.steps) +
+        " released_calls=" + from_i32(3 - state.calls) + " released_tokens=" + from_i32(allowance.tokens - state.tokens) +
+        " released_tools=" + from_i32(1 - state.tools) + " released_scan=" + from_i32(allowance.scan - state.scan) + " unresolved=false");
     if child.status != 0 { return failed(state, "child returned failure; no aggregation", true); }
     if require_tool && child.state.tools != 1 { return failed(state, "work requires a successful read or search child", true); }
     let result_error = policy.result_error(observed.result); if result_error != "" { return failed(state, result_error, true); }

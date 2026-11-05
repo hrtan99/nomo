@@ -29,6 +29,7 @@ impl NativeWorkEditor ~ WorkEditor {
 
 public type EventWorkTimeline = {};
 impl EventWorkTimeline ~ WorkTimeline {
+    flow enabled(self) -> bool ![] { return true; }
     flow capture(self, pending: Pending, confirmed: Confirmed, summary: Summary) -> Result<Array<Event>, string> ![Error<IndexError>] {
         return capture(pending, confirmed, summary);
     }

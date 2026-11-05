@@ -1,7 +1,7 @@
 module app.contract_probe;
 
 import std.io.println;
-import std.text.len;
+import std.text.char_count as len;
 import nomo.core.conversation.{Event, State};
 import nomo.model.model_tool_contract.Session;
 import nomo.harness.harness_tool_contract.{Ledger, Context, Observed, fresh, bump, settle, inspect, context_error};

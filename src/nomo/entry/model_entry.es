@@ -1,7 +1,7 @@
 module nomo.entry.model_entry;
 
 import std.io.{println, read_line};
-import std.text.{trim, len};
+import std.text.{trim, char_count as len};
 import nomo.cli.config.load_for;
 import nomo.core.conversation.fresh;
 import nomo.agent.provider.model_turn;

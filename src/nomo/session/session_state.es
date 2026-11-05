@@ -1,7 +1,7 @@
 module nomo.session.session_state;
 
 import std.collections.len as count;
-import std.text.len;
+import std.text.char_count as len;
 import nomo.core.text.printable;
 import nomo.core.conversation.{Event, State};
 

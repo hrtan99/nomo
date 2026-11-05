@@ -15,7 +15,7 @@ import nomo.harness.harness_edit_contract.Context as EditContext;
 import nomo.harness.harness_work_contract.{Evidence, Context, Ledger, fresh, ledger_error, bump_edit, native_tokens, evidence_error, finish_evidence, context_error};
 
 type Check = { label: string, passed: bool };
-flow slash() -> string { return split("\\/", "")[1]; }
+flow slash() -> string { return std.text.from_char('\\'); }
 flow checks() -> Array<Check> { return __CHECKS__; }
 flow evidence(value: Evidence, accepted: bool) -> bool { return (evidence_error(value) == "") == accepted; }
 flow finish(value: Evidence, summary: string, expected: Evidence, denied: bool) -> bool {

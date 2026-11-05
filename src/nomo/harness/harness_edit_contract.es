@@ -6,7 +6,7 @@ public import nomo.application.decoder_contract.EditText as Child;
 import nomo.application.decoder_contract.EditProposalDecoder;
 import nomo.core.json.{FieldError, decode_fields as json_fields};
 
-import std.text.{len, split, trim, contains};
+import std.text.{char_count as len, trim, contains, from_char};
 import std.collections.len as count;
 import std.bytes.len as byte_count;
 import std.codec.text.utf8_encode;
@@ -92,8 +92,8 @@ public flow history_summary_error(text: string, field: string) -> string {
 flow frame_error(raw: string, maximum: usize, fields: usize, diagnostic: bool) -> string {
     if len(raw) == 0 || len(raw) > maximum || byte_count(utf8_encode(raw)) > maximum { return "limit"; }
     var opened = false; var closed = false; var quoted = false; var escaped = false;
-    var leaves: usize = 0; let slash = split("\\/", "")[1];
-    for character in split(raw, "") limit Iterations(32770) {
+    var leaves: usize = 0; let slash = from_char('\\');
+    for codepoint in std.text.chars(raw) limit Iterations(32770) { let character = std.text.from_char(codepoint);
         if quoted {
             if escaped { escaped = false; }
             else if character == slash { escaped = true; }

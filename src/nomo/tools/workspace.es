@@ -3,7 +3,7 @@ module nomo.tools.workspace;
 import std.fs.{Region, WorkspacePath, IOError, ReadLimitError, ListLimitError, path, root, relative_name, list_limited, stat, read_bytes_limited, list};
 import std.bytes.len as byte_len;
 import std.codec.text.{utf8_decode, Strict};
-import std.text.{len, split, contains, starts_with, to_string_usize};
+import std.text.{char_count as len, split, contains, starts_with, from_usize};
 import std.agent.message.Message;
 import std.collections.len as count;
 import nomo.core.read_text.search_literal;
@@ -87,7 +87,7 @@ public flow discover(page: usize) -> Result<Discovery, string> ![Console, Fs.lis
         if deep { println("DISCOVERY INCOMPLETE: directories beyond seven levels were not visited."); }
         if unsupported { println("DISCOVERY INCOMPLETE: unsupported names or file types were omitted."); }
         if count(files) == 0 { return Err("discovery page is empty"); }
-        println("DISCOVERY PAGE " + to_string_usize(page) + (if more { ": more candidates remain." } else { ": no later candidates found within discovery bounds." }));
+        println("DISCOVERY PAGE " + from_usize(page) + (if more { ": more candidates remain." } else { ": no later candidates found within discovery bounds." }));
         return Ok(Discovery { files = files, page = page, more = more });
     } with { Error<ListLimitError>.raise(_) => { finish Err("directory exceeds 1024 entries or 131072 name bytes; select a narrower root"); } };
 }
@@ -138,7 +138,7 @@ public flow list_directory(name: string) -> Outcome {
     if !valid_path(name) { return outcome("refused", "invalid relative path", 0); }
     let entries = list(target(name));
     if count(entries) > 16 { return outcome("refused", "directory exceeds 16 entries (post-list check)", 0); }
-    return outcome("unsupported", "named listing unavailable: opaque WorkspacePath; entries=" + to_string_usize(count(entries)), 0);
+    return outcome("unsupported", "named listing unavailable: opaque WorkspacePath; entries=" + from_usize(count(entries)), 0);
 }
 
 // Search explicit files, never recurse or discover ambient paths. At most four
@@ -172,7 +172,7 @@ flow search_with(names: Array<string>, literal: string, maximum: usize) -> Outco
         for text in lines limit Iterations(16385) {
             line = line + 1;
             if contains(text, literal) {
-                let entry = name + ":" + to_string_usize(line) + "\n";
+                let entry = name + ":" + from_usize(line) + "\n";
                 if matches >= 8 || len(output) + len(entry) > 1024 { return outcome(if maximum == 4194304 { "incomplete" } else { "truncated" }, if maximum == 4194304 { "match limit reached; partial results\n" + output } else { output }, scanned); }
                 output = output + entry;
                 matches = matches + 1;
@@ -181,7 +181,7 @@ flow search_with(names: Array<string>, literal: string, maximum: usize) -> Outco
         }
         if maximum == 4194304 && consumed >= maximum && name != names[count(names) - 1] { consumed = maximum + 1; break; }
     }
-    if skipped > 0 || consumed > maximum { return outcome("incomplete", (if consumed > maximum { "scan allowance exhausted; " } else { "" }) + "skipped " + to_string_usize(skipped) + " unsupported or oversized files; partial results; skipped names (may be partial):\n" + skipped_names + "matches:\n" + output, scanned); }
+    if skipped > 0 || consumed > maximum { return outcome("incomplete", (if consumed > maximum { "scan allowance exhausted; " } else { "" }) + "skipped " + from_usize(skipped) + " unsupported or oversized files; partial results; skipped names (may be partial):\n" + skipped_names + "matches:\n" + output, scanned); }
     return outcome("complete", output, scanned);
 }
 

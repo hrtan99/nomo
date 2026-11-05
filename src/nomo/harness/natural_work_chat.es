@@ -19,7 +19,7 @@ impl NaturalStages ~ ReadStages {
     flow main(self, context: Context) -> string ![] {
         return infer_main(self.mode, Prompt.new().system(Trusted(prompt_Main())).data(Input { current = context, history = self.history, work = self.work, followup = self.followup, additional = self.additional, page = self.page, more_pages = self.more_pages }));
     }
-    flow child(self, task: string, files: Array<string>, selected: State, multi: bool) -> LoopTurn { return private_chat_child_turn(task, files, selected, multi); }
+    flow child(self, task: string, files: Array<string>, selected: State, multi: bool, resilient: bool) -> LoopTurn { return private_chat_child_turn(task, files, selected, multi, resilient); }
 }
 public flow run(request: string, allowed: Array<string>, invocation: Invocation, history: Array<Event>, work: Option<WorkFacts>, followup: Option<WorkFacts>, additional: Array<WorkFacts>, page: usize, more_pages: bool) -> TurnResult {
     let stages = NaturalStages { mode = main_mode(invocation), history = history, work = work, followup = followup, additional = additional, page = page, more_pages = more_pages };

@@ -1,7 +1,7 @@
 module nomo.cli.cli_request;
 
 import std.collections.len as count;
-import std.text.{len, split, trim};
+import std.text.{char_count as len, trim, strip_suffix};
 import nomo.core.text.{printable, input_error};
 import nomo.session.store_record.valid_id;
 
@@ -68,21 +68,9 @@ public flow parse_args(args: Array<string>) -> Result<Request, string> {
 // Controls other than that framing cannot disappear silently through trim.
 public flow parse_line(raw: string) -> Result<LineCommand, string> {
     if len(raw) > 1024 { return Err("input exceeds 1024 characters"); }
-    var body = "";
-    var position: usize = 0;
-    var carriage_return = false;
-    for character in split(raw, "") limit Iterations(1026) {
-        if character != "" {
-            position = position + 1;
-            if carriage_return && character != "\n" { return Err("expected printable ASCII single-line input"); }
-            if character == "\r" && position + 1 == len(raw) { carriage_return = true; }
-            else if character == "\n" && position == len(raw) { }
-            else {
-                if !printable(character) { return Err("expected printable ASCII single-line input"); }
-                body = body + character;
-            }
-        }
-    }
+    let body = match strip_suffix(raw, "\r\n") { Some(value) => value,
+        None() => match strip_suffix(raw, "\n") { Some(value) => value, None() => raw } };
+    if !printable(body) { return Err("expected printable ASCII single-line input"); }
     let command = trim(body);
     if command == "/help" { return Ok(LineCommand { kind = "help", text = "" }); }
     if command == "/exit" { return Ok(LineCommand { kind = "exit", text = "" }); }

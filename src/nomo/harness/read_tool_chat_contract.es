@@ -1,6 +1,6 @@
 module nomo.harness.read_tool_chat_contract;
 
-import std.text.{len, starts_with};
+import std.text.{char_count as len, starts_with};
 import std.collections.len as count;
 import std.json.JsonValue;
 import std.agent.message.Message;
@@ -112,7 +112,9 @@ public flow session_combine(previous: Ledger, local: Ledger) -> Result<Ledger, s
 public flow inspect_multi_turn(child: Session, status: i32, request: string, task: string, allowed: Array<string>, prior: Previous) -> Result<Observed, string> {
     if prior_error(prior) != "" || candidate_error(allowed) != "" || !bounded(request, 512) || !bounded(task, 512) { return Err("invalid child context"); }
     let tool_failure = status == 3 && child.tools > 0 && child.calls == child.tools;
-    if (status != 0 && status != 3) || child.history.stopped || child.tools > 3 || (!tool_failure && child.calls != child.tools + 1) || child.tokens != child.calls * 4096 || child.scan != child.tools * 4194560 { return Err("invalid multi-step child ledger"); }
+    let child_final = child.tokens - child.tools * 4096;
+    if (status != 0 && status != 3) || child.history.stopped || child.tools > 3 || (!tool_failure && child.calls != child.tools + 1) ||
+        (child.calls == child.tools && child.tokens != child.tools * 4096) || (child.calls != child.tools && child_final != 4096 && child_final != 131072) || child.scan != child.tools * 4194560 { return Err("invalid multi-step child ledger"); }
     let steps: i32 = if child.tools == 3 { 7 } else { if child.tools == 2 { 5 } else { if child.tools == 1 { 3 } else { 1 } } };
     if child.history.spent != steps - if tool_failure { 1 } else { 0 } { return Err("invalid multi-step child steps"); }
     let expected = seed(request, prior); let start = count(expected.events); let events = child.history.events;
@@ -157,6 +159,11 @@ public flow multi_wide_maximum(turns: i32) -> Ledger {
 public flow multi_large_maximum(turns: i32) -> Ledger {
     return Ledger { steps = turns * 11, calls = turns * 6, tokens = turns * 278528, tools = turns * 3, scan = turns * 12583680 };
 }
+// Format 16 keeps three 4096-token child actions but gives its final child
+// response the same 131072-token reasoning-safe cap as each parent stage.
+public flow multi_resilient_maximum(turns: i32) -> Ledger {
+    return Ledger { steps = turns * 11, calls = turns * 6, tokens = turns * 405504, tools = turns * 3, scan = turns * 12583680 };
+}
 public flow multi_error(value: Ledger) -> string {
     if value.steps < 0 || value.steps > 11 || value.calls < 0 || value.calls > 6 || value.tools < 0 || value.tools > 3 ||
         (value.tokens < value.calls * 2048 || value.tokens > value.calls * 131072 || value.tokens % 2048 != 0) || value.scan != value.tools * 4194560 || value.steps < value.calls + value.tools || value.steps > value.calls + value.tools + 2 { return "invalid multi-step ledger"; }
@@ -167,25 +174,30 @@ public flow multi_bump(value: Ledger, call: bool, wide: bool, large: bool) -> Re
     let next = Ledger { steps = value.steps + 1, calls = value.calls + if call { 1 } else { 0 }, tokens = value.tokens + if call { if large { 131072 } else { if wide { 4096 } else { 2048 } } } else { 0 }, tools = value.tools, scan = value.scan };
     let error = multi_error(next); if error != "" { return Err(error); } return Ok(next);
 }
-public flow multi_settle(value: Ledger, child: Session, wide: bool, large: bool) -> Result<Ledger, string> {
+public flow multi_settle(value: Ledger, child: Session, wide: bool, large: bool, resilient: bool) -> Result<Ledger, string> {
     let expected = Ledger { steps = 2, calls = 1, tokens = if large { 131072 } else { if wide { 4096 } else { 2048 } }, tools = 0, scan = 0 };
     if value != expected { return Err("child reservation not owned"); }
-    if child.tools > 3 || (child.calls != child.tools && child.calls != child.tools + 1) || child.calls == 0 || child.tokens != child.calls * 4096 || child.scan != child.tools * 4194560 { return Err("invalid multi-step child ledger"); }
+    let early = child.tools * 4096 + if child.calls == child.tools { 0 } else { 4096 };
+    let forced = child.tools * 4096 + if child.calls == child.tools { 0 } else { 131072 };
+    if child.tools > 3 || (child.calls != child.tools && child.calls != child.tools + 1) || child.calls == 0 ||
+        (child.tokens != early && (!resilient || child.tokens != forced)) || child.scan != child.tools * 4194560 { return Err("invalid multi-step child ledger"); }
     let tools: i32 = if child.tools == 3 { 3 } else { if child.tools == 2 { 2 } else { if child.tools == 1 { 1 } else { 0 } } };
     let calls = tools + if child.calls == child.tools { 0 } else { 1 };
     if child.history.spent != calls + tools { return Err("invalid multi-step child steps"); }
-    return Ok(Ledger { steps = 2 + calls + tools, calls = 1 + calls, tokens = (if large { 131072 } else { if wide { 4096 } else { 2048 } }) + calls * 4096, tools = tools, scan = tools * 4194560 });
+    let generation = tools * 4096 + if child.calls == child.tools { 0 } else { if child.tokens == forced { 131072 } else { 4096 } };
+    return Ok(Ledger { steps = 2 + calls + tools, calls = 1 + calls, tokens = (if large { 131072 } else { if wide { 4096 } else { 2048 } }) + generation, tools = tools, scan = tools * 4194560 });
 }
 public flow multi_turn_error(value: Invocation, maximum: i32) -> string {
     let legacy = Ledger { steps = maximum * 11, calls = maximum * 6, tokens = maximum * 12288, tools = maximum * 3, scan = maximum * 49152 };
     let previous = Ledger { steps = maximum * 11, calls = maximum * 6, tokens = maximum * 12288, tools = maximum * 3, scan = maximum * 12583680 };
-    if (value.maximum != multi_large_maximum(maximum) && value.maximum != multi_wide_maximum(maximum) && value.maximum != multi_maximum(maximum) && value.maximum != legacy && value.maximum != previous) || value.admitted < 0 || value.admitted > maximum { return "multi-step session turn limit reached"; }
+    if (value.maximum != multi_resilient_maximum(maximum) && value.maximum != multi_large_maximum(maximum) && value.maximum != multi_wide_maximum(maximum) && value.maximum != multi_maximum(maximum) && value.maximum != legacy && value.maximum != previous) || value.admitted < 0 || value.admitted > maximum { return "multi-step session turn limit reached"; }
     let used = value.usage; let turns = value.admitted; let scan_step = if value.maximum == legacy { 4096 } else { 256 };
     if used.tools < 0 || used.tools > turns * 3 || used.steps != turns * 5 + used.tools * 2 || used.calls != turns * 3 + used.tools ||
-        used.tokens < used.calls * 2048 || used.tokens > turns * (if value.maximum == multi_large_maximum(maximum) { 266240 } else { if value.maximum == multi_wide_maximum(maximum) { 12288 } else { 8192 } }) + used.tools * 4096 || used.tokens % 2048 != 0 ||
+        used.tokens < used.calls * 2048 || used.tokens > turns * (if value.maximum == multi_resilient_maximum(maximum) { 393216 } else { if value.maximum == multi_large_maximum(maximum) { 266240 } else { if value.maximum == multi_wide_maximum(maximum) { 12288 } else { 8192 } } }) + used.tools * 4096 || used.tokens % 2048 != 0 ||
+        (value.maximum == multi_resilient_maximum(maximum) && (used.tokens < turns * 266240 + used.tools * 4096 || used.tokens > turns * 393216 + used.tools * 4096 || (used.tokens - turns * 266240 - used.tools * 4096) % 126976 != 0)) ||
         (value.maximum == multi_large_maximum(maximum) && used.tokens != turns * 266240 + used.tools * 4096) ||
         (value.maximum == multi_wide_maximum(maximum) && used.tokens != turns * 12288 + used.tools * 4096) ||
-        (value.maximum != multi_maximum(maximum) && value.maximum != multi_wide_maximum(maximum) && value.maximum != multi_large_maximum(maximum) && used.tokens != used.calls * 2048) || used.scan < used.tools * 4096 || used.scan > used.tools * if value.maximum == legacy { 16384 } else { 4194560 } || used.scan % scan_step != 0 { return "invalid multi-step session ledger"; }
+        (value.maximum != multi_maximum(maximum) && value.maximum != multi_wide_maximum(maximum) && value.maximum != multi_large_maximum(maximum) && value.maximum != multi_resilient_maximum(maximum) && used.tokens != used.calls * 2048) || used.scan < used.tools * 4096 || used.scan > used.tools * if value.maximum == legacy { 16384 } else { 4194560 } || used.scan % scan_step != 0 { return "invalid multi-step session ledger"; }
     if prior_error(value.prior) != "" || (turns == 0 && value.prior.task != "") || (turns > 0 && value.prior.task == "") { return "invalid multi-step prior"; }
     let last_tool = if value.prior.tool == "" { 0 } else { 1 };
     let prior_limit = (turns - 1) * 3 + if last_tool == 1 { 2 } else { 0 };

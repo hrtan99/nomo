@@ -1,7 +1,7 @@
 module app.contract_probe;
 
 import std.io.println;
-import std.text.{len, split};
+import std.text.{char_count as len, split};
 import nomo.core.text.printable;
 import nomo.cli.terminal_args.{Config, LineCommand, parse, parse_once, line, work_request, show_selector};
 import nomo.tools.edit_contract.Selector;
@@ -10,7 +10,7 @@ import nomo.session.work_chain_usecase.{WorkRequest, ContinueRequest, TurnReques
 import nomo.ui.terminal_session.{State, fresh, turn, work_error, after_turn, state_line, request_line};
 
 type Check = { label: string, passed: bool };
-flow slash() -> string { return split("\\/", "")[1]; }
+flow slash() -> string { return std.text.from_char('\\'); }
 flow checks() -> Array<Check> { return __CHECKS__; }
 flow parsed(args: Array<string>, expected: Config) -> bool {
     return match parse(args) { Ok(value) => value == expected, Err(_) => false };

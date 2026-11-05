@@ -2,8 +2,9 @@ module nomo.session.chat_session_contract;
 
 import nomo.harness.harness_tool_chat_contract.{Invocation, TurnResult, Previous, fresh_invocation};
 import nomo.harness.harness_tool_contract.Ledger;
-import nomo.harness.read_tool_chat_contract.{prior_error, turn_error, session_maximum, session_invocation, session_turn_error, multi_maximum, multi_wide_maximum, multi_large_maximum, multi_turn_error};
+import nomo.harness.read_tool_chat_contract.{prior_error, turn_error, session_maximum, session_invocation, session_turn_error, multi_maximum, multi_wide_maximum, multi_large_maximum, multi_resilient_maximum, multi_turn_error};
 import nomo.model.read_protocol.question_error;
+import nomo.session.chat_format_policy.policy;
 
 // Persistent conversation data never carries filesystem authority or consent.
 // An in-flight reservation remains unresolved after a restart; it cannot retry.
@@ -13,7 +14,7 @@ public flow fresh() -> Session {
     return Session { format = 12, phase = "ready", invocation = Invocation { usage = fresh_invocation().usage, maximum = multi_wide_maximum(2), admitted = 0, prior = fresh_invocation().prior }, last_request = "", pending = "" };
 }
 public flow fresh_events() -> Session {
-    return Session { format = 15, phase = "ready", invocation = Invocation { usage = session_invocation().usage, maximum = multi_large_maximum(48), admitted = 0, prior = session_invocation().prior }, last_request = "", pending = "" };
+    return Session { format = 16, phase = "ready", invocation = Invocation { usage = session_invocation().usage, maximum = multi_resilient_maximum(48), admitted = 0, prior = session_invocation().prior }, last_request = "", pending = "" };
 }
 
 // Expand future per-turn scan reservations while preserving already recorded usage.
@@ -25,14 +26,16 @@ flow expanded(value: Invocation) -> Invocation {
 }
 
 public flow invalid(value: Session) -> string {
-    if (value.format < 1 || value.format > 15) || (value.phase != "ready" && value.phase != "running" && value.phase != "complete") { return "invalid chat session format or phase"; }
+    if (value.format < 1 || value.format > 16) || (value.phase != "ready" && value.phase != "running" && value.phase != "complete") { return "invalid chat session format or phase"; }
     let multi = value.format >= 5;
-    let maximum = if value.format >= 14 { 48 } else { if value.format == 4 || value.format == 5 || value.format == 7 || value.format == 9 || value.format == 11 || value.format == 13 { 32 } else { 2 } };
+    let maximum = policy(value.format).turn_limit();
     let state = expanded(value.invocation); let used = state.usage;
     if state.admitted < 0 || state.admitted > maximum { return "invalid chat session limits"; }
     if value.format == 15 && state.maximum != multi_large_maximum(maximum) { return "invalid large chat session limits"; }
+    if value.format == 16 && state.maximum != multi_resilient_maximum(maximum) { return "invalid resilient chat session limits"; }
     if value.format >= 11 && value.format < 15 && state.maximum != multi_wide_maximum(maximum) { return "invalid wide chat session limits"; }
     if value.format != 15 && state.maximum == multi_large_maximum(maximum) { return "large allowance requires new chat format"; }
+    if value.format != 16 && state.maximum == multi_resilient_maximum(maximum) { return "resilient allowance requires new chat format"; }
     if value.format < 11 && state.maximum == multi_wide_maximum(maximum) { return "wide allowance requires new chat format"; }
     if multi {
         let error = multi_turn_error(state, maximum); if error != "" { return error; }
@@ -100,8 +103,8 @@ public flow complete(value: Session, result: TurnResult) -> Result<Session, stri
     if tools < 0 || tools > maximum_tools || (selected.tool == "" && tools != 0) || (selected.tool != "" && tools == 0) ||
         next.maximum != previous.maximum || next.admitted != previous.admitted + 1 ||
         next.usage.steps != previous.usage.steps + 5 + tools * 2 || next.usage.calls != previous.usage.calls + 3 + tools ||
-        next.usage.tokens != previous.usage.tokens + if value.format == 15 { 266240 + tools * 4096 } else { if value.format >= 11 { 12288 + tools * 4096 } else { if value.format >= 9 { 8192 + tools * 4096 } else { (3 + tools) * 2048 } } } || next.usage.scan != previous.usage.scan + tools * if value.format >= 7 { 4194560 } else { 16384 } { return Err("completed chat ledger changed"); }
-    let session = Session { format = value.format, phase = if next.admitted == (if value.format >= 14 { 48 } else { if value.format == 4 || value.format == 5 || value.format == 7 || value.format == 9 || value.format == 11 || value.format == 13 { 32 } else { 2 } }) { "complete" } else { "ready" },
+        (if value.format == 16 { let delta = next.usage.tokens - previous.usage.tokens - tools * 4096; delta != 266240 && delta != 393216 } else { next.usage.tokens != previous.usage.tokens + if value.format == 15 { 266240 + tools * 4096 } else { if value.format >= 11 { 12288 + tools * 4096 } else { if value.format >= 9 { 8192 + tools * 4096 } else { (3 + tools) * 2048 } } } }) || next.usage.scan != previous.usage.scan + tools * if value.format >= 7 { 4194560 } else { 16384 } { return Err("completed chat ledger changed"); }
+    let session = Session { format = value.format, phase = if next.admitted == policy(value.format).turn_limit() { "complete" } else { "ready" },
         invocation = next, last_request = value.pending, pending = "" };
     let problem = invalid(session); if problem != "" { return Err(problem); }
     return Ok(session);

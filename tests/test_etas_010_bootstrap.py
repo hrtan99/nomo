@@ -11,7 +11,7 @@ import unittest
 from unittest.mock import patch
 
 spec=importlib.util.spec_from_file_location('bootstrap010',Path(__file__).resolve().parents[1]/'scripts/etas-latest-cli-bootstrap.py')
-b=importlib.util.module_from_spec(spec);spec.loader.exec_module(b)
+wrapper=importlib.util.module_from_spec(spec);spec.loader.exec_module(wrapper);b=wrapper._common
 
 class IntegrityChecks(unittest.TestCase):
     def setUp(self):
@@ -52,8 +52,8 @@ class IntegrityChecks(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError,'ignored source files'):b.git_guard(repo,'cli')
     def test_adopt_verification_rejects_forged_binary_metadata(self):
         root=self.root/'identity';root.mkdir();installed=root/'etas';installed.write_bytes(b'forged')
-        (root/'binary.json').write_text(json.dumps({'path':str(installed),'sha256':b.digest(installed),'version':'etas 0.1.4\n','method':'adopted-independently-verified-010-build','lock_sha256':b.digest(self.lock)}))
-        with patch.object(b,'ROOT',root),patch.object(b,'INSTALLED',installed),patch.object(b,'guard'),patch.object(b,'read',return_value='etas 0.1.4\n'):
-            with self.assertRaisesRegex(RuntimeError,'not the independently verified 010 build'):b.verify()
+        (root/'binary.json').write_text(json.dumps({'path':str(installed),'sha256':b.digest(installed),'version':'etas 0.4.1\n','method':'adopted-independently-verified-041-build','lock_sha256':b.digest(self.lock)}))
+        with patch.object(b,'ROOT',root),patch.object(b,'INSTALLED',installed),patch.object(b,'guard'),patch.object(b,'read',return_value='etas 0.4.1\n'):
+            with self.assertRaisesRegex(RuntimeError,'not the independently verified 041 build'):b.verify()
 
 if __name__=='__main__':unittest.main()

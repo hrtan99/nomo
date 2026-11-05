@@ -54,7 +54,7 @@ flow integration() -> bool {
 }
 
 flow decoded(code: string) -> string {
-    let raw = "\"" + split("\\/", "")[1] + code + "\"";
+    let raw = "\"" + std.text.from_char('\\') + code + "\"";
     let data = match parse(raw) { Ok(value) => value, Err(_) => { abort("bad synthetic JSON"); } };
     let converted: Option<Message<string>> = Message.new(data).cast<string>();
     return match converted { Some(value) => value.body, None() => { abort("bad synthetic string"); } };
@@ -103,12 +103,12 @@ public flow read_unicode_text_probe(args: Array<string>) -> i32 {
     if compact_frame("[\n \"search\", \"a b\", \"sample.txt\"\n]") != "[\"search\",\"a b\",\"sample.txt\"]" {
         abort("compacted action lost string content");
     }
-    let escaped_quote = split("\\/", "")[1] + "\"";
+    let escaped_quote = std.text.from_char('\\') + "\"";
     if compact_frame("[ \"search\", \"a" + escaped_quote + " b\", \"sample.txt\" ]") !=
         "[\"search\",\"a" + escaped_quote + " b\",\"sample.txt\"]" {
         abort("compacted action lost escaped quote");
     }
-    match decode_child("[\"read\",\"sample" + split("\\/", "")[1] + "n.txt\"]", ["sample.txt"], false) {
+    match decode_child("[\"read\",\"sample" + std.text.from_char('\\') + "n.txt\"]", ["sample.txt"], false) {
         Ok(_) => { abort("escaped newline in path accepted"); } Err(_) => {}
     }
     match decode_child("[\"final\",\"内容是蓝色\"]", ["sample.txt"], true) {
@@ -133,7 +133,7 @@ public flow read_unicode_text_probe(args: Array<string>) -> i32 {
         Err(error) => { if error != "child final exceeds 256 UTF-8 bytes" { abort("wrong final size diagnostic"); } }
         Ok(_) => { abort("overlong final accepted"); }
     }
-    match decode_child("[\"final\",\"one" + split("\\/", "")[1] + "nline\"]", ["sample.txt"], true) {
+    match decode_child("[\"final\",\"one" + std.text.from_char('\\') + "nline\"]", ["sample.txt"], true) {
         Err(error) => { if error != "child final contains unsupported control or formatting characters" { abort("wrong final control diagnostic"); } }
         Ok(_) => { abort("escaped newline final accepted"); }
     }
@@ -144,7 +144,7 @@ public flow read_unicode_text_probe(args: Array<string>) -> i32 {
     match decode_child("[\"final\",\"one\nline\"]", ["sample.txt"], true) {
         Ok(_) => { abort("literal newline inside string accepted"); } Err(_) => {}
     }
-    match decode_child("[\"final\",\"one" + split("\\/", "")[1] + "nline\"]", ["sample.txt"], true) {
+    match decode_child("[\"final\",\"one" + std.text.from_char('\\') + "nline\"]", ["sample.txt"], true) {
         Ok(_) => { abort("escaped newline in answer accepted"); } Err(_) => {}
     }
     match decode_child("[\"read\",\"other.txt\"]", ["sample.txt"], false) {
@@ -154,7 +154,7 @@ public flow read_unicode_text_probe(args: Array<string>) -> i32 {
         Ok(_) => { abort("read accepted after tool completion"); } Err(_) => {}
     }
     match decode_plan("[\"delegate\",[\"nested\"]]") { Ok(_) => { abort("nested plan accepted"); } Err(_) => {} }
-    match decode_plan("[\"delegate\",\"" + split("\\/", "")[1] + "u001b\"]") {
+    match decode_plan("[\"delegate\",\"" + std.text.from_char('\\') + "u001b\"]") {
         Ok(_) => { abort("escaped control accepted"); } Err(_) => {}
     }
     match answer("最终答案") { Ok(_) => {} Err(_) => { abort("Unicode answer refused"); } }

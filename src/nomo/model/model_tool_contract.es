@@ -1,6 +1,6 @@
 module nomo.model.model_tool_contract;
 
-import std.text.{len, trim, split};
+import std.text.{char_count as len, trim, from_char};
 import std.collections.len as count;
 import std.json.JsonValue;
 import std.agent.message.Message;
@@ -64,8 +64,8 @@ flow frame_error(raw: string) -> string {
     var quoted = false;
     var escaped = false;
     var leaves: usize = 0;
-    let slash = split("\\/", "")[1];
-    for character in split(raw, "") limit Iterations(1154) {
+    let slash = from_char('\\');
+    for codepoint in std.text.chars(raw) limit Iterations(1154) { let character = std.text.from_char(codepoint);
         if character != "" && !printable(character) { return "control"; }
         if quoted {
             if escaped { escaped = false; }

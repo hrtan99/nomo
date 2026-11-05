@@ -46,7 +46,7 @@ with open(os.environ['NOMO_TEST_LOG'],'w') as f:
         self.assertEqual(call['root'], str(self.read_root))
         self.assertTrue(call['key_present'])
         self.assertNotIn('SYNTHETIC_PRIVATE_TOKEN', json.dumps(call['args']))
-        self.assertIn(str(ROOT / 'config/etas-030-official-compose.yaml'), call['args'])
+        self.assertIn(str(ROOT / 'config/etas-041-official-compose.yaml'), call['args'])
         self.assertIn('/workspace/scripts/nomo-verified-etas.py', call['args'])
         self.assertEqual(call['args'][-12:], ['etas', 'run', '/workspace', '--flow', 'read_model_tools',
                          '--profile', 'gateway-qwen-readonly', '--allow-effects', '--args',
@@ -71,10 +71,10 @@ with open(os.environ['NOMO_TEST_LOG'],'w') as f:
         self.assertFalse(self.log.exists())
 
     def test_explicit_030_and_unknown_version(self):
-        env = dict(self.env, NOMO_ETAS_VERSION='0.3.0')
+        env = dict(self.env, NOMO_ETAS_VERSION='0.4.1')
         result = self.invoke('chat', '--root', self.read_root, '--allow', 'a.txt', env=env)
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn(str(ROOT / 'config/etas-030-official-compose.yaml'), json.loads(self.log.read_text())['args'])
+        self.assertIn(str(ROOT / 'config/etas-041-official-compose.yaml'), json.loads(self.log.read_text())['args'])
         self.log.unlink()
         env['NOMO_ETAS_VERSION'] = 'unsupported'
         result = self.invoke('chat', '--root', self.read_root, '--allow', 'a.txt', env=env)

@@ -39,6 +39,7 @@ public spec WorkEditor {
 }
 
 public spec WorkTimeline {
+    flow enabled(self) -> bool ![];
     flow capture(self, pending: Pending, confirmed: Confirmed, summary: Summary) -> Result<Array<Event>, string> ![Error<IndexError>];
     flow save(self, id: string, records: Array<Event>, policy: Policy, binding: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>];
 }

@@ -1,7 +1,7 @@
 module app.contract_probe;
 
 import std.io.println;
-import std.text.{len, split};
+import std.text.{char_count as len, split};
 import std.bytes.len as byte_count;
 import std.codec.text.{utf8_encode, utf8_decode, Strict};
 import std.json.parse;
@@ -10,7 +10,7 @@ import nomo.tools.path_policy.valid_path;
 import nomo.tools.edit_proposal.{Request, Proposal, propose, validate};
 
 type Check = { label: string, mode: string, request: Request, expected: Proposal, error: string };
-flow slash() -> string { return split("\\/", "")[1]; }
+flow slash() -> string { return std.text.from_char('\\'); }
 flow checks() -> Array<Check> { return __CHECKS__; }
 // Decode an independent JSON U+0000 escape, rather than trusting both supplied
 // request and expected source literals to share the same NUL representation.

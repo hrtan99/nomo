@@ -11,7 +11,7 @@ import nomo.harness.harness_edit_contract.Context as EditContext;
 import nomo.harness.harness_tool_contract.Ledger as ReadLedger;
 
 type Check = { label: string, passed: bool };
-flow slash() -> string { return split("\\/", "")[1]; }
+flow slash() -> string { return std.text.from_char('\\'); }
 flow checks() -> Array<Check> { return __CHECKS__; }
 
 flow projected(path: string, original: string, target: string, replacement: string, expected: string, error: string) -> bool {

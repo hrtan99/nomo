@@ -3,7 +3,7 @@ module nomo.entry.harness_model_tools_entry;
 import std.io.println;
 import nomo.core.read_text.within;
 import std.collections.len as count;
-import std.text.{len, split};
+import std.text.{char_count as len, split};
 import nomo.cli.cli_request.parse_args;
 import nomo.harness.harness_tool_contract.fresh;
 import nomo.harness.harness_model_tools.run as coordinate;

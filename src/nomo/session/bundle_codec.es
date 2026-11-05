@@ -3,7 +3,7 @@ module nomo.session.bundle_codec;
 import nomo.core.json.{encode as encode_json, string_fields};
 
 import std.collections.len as count;
-import std.text.len;
+import std.text.char_count as len;
 import nomo.core.text.{printable, flat_string_frame};
 
 public type Bundle = { format: i32, session_id: string, save_id: string, bodies: Array<string> };

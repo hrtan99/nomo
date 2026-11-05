@@ -12,7 +12,7 @@ import nomo.tools.read_contract.{Outcome, outcome, display, ReadTools, NomoRead,
 
 type FixtureRoot;
 impl FixtureRoot ~ Region;
-flow slash() -> string { return split("\\/", "")[1]; }
+flow slash() -> string { return std.text.from_char('\\'); }
 // Two stateless implementations interpret only the explicitly admitted fixture.
 public flow fixture_read_a(name: string) -> Outcome ![Error<IndexError>] ~ NomoRead<FixtureRoot> {
     if name == "fail.txt" { abort("D2_EXPECTED_BACKEND_ABORT"); }

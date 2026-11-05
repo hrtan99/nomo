@@ -2,21 +2,23 @@ module nomo.session.session_display;
 
 import nomo.core.json.encode as encode_json;
 
-import std.text.{len, split};
+import std.text.{char_count as len, char_get, from_char};
 import std.bytes.len as byte_count;
 import std.codec.text.utf8_encode;
 
 
 import nomo.session.session_state.{Projection, Snapshot, Request, validate};
 
-flow hex(value: u8) -> string { return split("0123456789abcdef", "")[value + 1]; }
+flow hex(value: u8) -> string {
+    return match char_get("0123456789abcdef", value) { Some(character) => from_char(character), None() => "?" };
+}
 
 // utf8_encode yields valid scalar encodings. Nibble arithmetic stays in u8;
 // four-byte scalars become the exact JSON UTF-16 surrogate pair, not UTF-8 bytes.
 public flow escaped(character: string) -> string {
     let bytes = utf8_encode(character);
     let size = byte_count(bytes);
-    let slash = split("\\/", "")[1];
+    let slash = from_char('\\');
     if size == 0 { return ""; }
     let first = bytes[0];
     if size == 1 {
@@ -61,7 +63,7 @@ public flow display(projection: Projection) -> Result<string, string> {
 public flow ascii_json(json: string, maximum: usize, encoded_error: string, display_error: string) -> Result<string, string> {
     if len(json) > 131072 || byte_count(utf8_encode(json)) > 131072 { return Err(encoded_error); }
     var output = ""; var size: usize = 0;
-    for character in split(json, "") limit Iterations(131074) {
+    for codepoint in std.text.chars(json) limit Iterations(131074) { let character = std.text.from_char(codepoint);
         let fragment = escaped(character); size = size + len(fragment);
         if size > maximum { return Err(display_error); }
         output = output + fragment;

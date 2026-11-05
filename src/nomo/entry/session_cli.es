@@ -1,7 +1,7 @@
 module nomo.entry.session_cli;
 
 import std.io.println;
-import std.text.to_string_i32;
+import std.text.from_i32;
 import nomo.cli.session_cli_args.parse;
 import nomo.core.conversation.fresh;
 import nomo.agent.loop.turn;
@@ -45,7 +45,7 @@ public flow run_session(args: Array<string>) -> i32 ![Console, Memory, Error<Sto
         }
     };
     // This confirms storage/data validation, not successful work or effect authority.
-    if options.verb == "save" { println("SAVED turn_status=" + to_string_i32(turn_status) + " " + output); }
+    if options.verb == "save" { println("SAVED turn_status=" + from_i32(turn_status) + " " + output); }
     else { println("SHOW " + output); }
     return 0;
 }

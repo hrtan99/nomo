@@ -1,10 +1,10 @@
 {
-  "selector": "latest",
+  "selector": "latest041",
   "repositories": {
     "cli": {
       "repository": "etas",
-      "revision": "5de5cb3c24d1227450bb47705798360c52630578",
-      "tree": "5fe396b18ff83763fe8a06b25f057a36f1863801",
+      "revision": "578606f14216e92ffbb05cf7d9652b000c54c6bf",
+      "tree": "fd689ac6ae193574b2739aa4eedad61d188dd0cf",
       "packages": [
         "etas_cli",
         "etas_driver",
@@ -14,8 +14,8 @@
     },
     "core": {
       "repository": "etas-core",
-      "revision": "ee0fa652cb7a8f703a4c389c351de5762ebdd50a",
-      "tree": "02839031f380925a98615bd436a20ec89845cc74",
+      "revision": "fef278ab63934af59c009f2b819acf84ef880e80",
+      "tree": "d3deedb5798d28dcce2f2c70d12da7c22f1690d7",
       "packages": [
         "etas_builtin",
         "etas_cache",
@@ -30,8 +30,8 @@
     },
     "frontend": {
       "repository": "etas-frontend",
-      "revision": "f6bc92f65928d7ae5c49d0935feb8e267fbafb51",
-      "tree": "83a2cfc8d40c78c9abffb628cc4f07479c560fc0",
+      "revision": "2da5fd16487177d960ce7204b2ae8dff317065ca",
+      "tree": "358964703cf558b4eba3c9a6b40f2ff777dadf58",
       "packages": [
         "etas_effects",
         "etas_frontend",
@@ -44,15 +44,14 @@
     },
     "interpreter": {
       "repository": "etas-interpreter",
-      "revision": "394b1ef4c24fe70bab6c9c91711fe6ad9f428dc2",
-      "tree": "51c03e02e39baace6dab9bad0f229668b3ad5483",
+      "revision": "c2a6ed9289ec946d2012cb7b894a154ca48c1e20",
+      "tree": "696282028b2c16b5f15ebb6cc867d8e21b7903f9",
       "packages": [
         "etas_interpreter"
       ]
     }
   },
-  "source": "Official CLI manifest dependency graph, observed 2026-10-30; candidate 0.1.9",
-  "official_observation_sha256": "f1205216183e297ee9c6931e8dc1cbf13418fe784a92e8cc2a7131dd43474f4a",
-  "cargo_lock_sha256": "a3f4b2bd1142e9d8a2cc3a8167cc3971708f6d06bae0065a1f8281828a38cbab",
-  "verified_seed_binary_sha256": "76b855252d03d95933677c971d4c2dc200c23e15f56a891c1036654dbd8c370e"
+  "source": "Official unmodified ETAS CLI 0.4.1 dependency graph observed 2026-11-05",
+  "cargo_lock_sha256": "429ffcee0853b6f5f6826810f1e9a706e14fa92546e18a08a1ba8b2118c809dc",
+  "verified_seed_binary_sha256": "13518e3a112eabd87e071da850b62d178361c0fea9643a85837f459125179b3a"
 }

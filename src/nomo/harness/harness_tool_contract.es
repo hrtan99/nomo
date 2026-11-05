@@ -1,7 +1,7 @@
 module nomo.harness.harness_tool_contract;
 
-import std.text.{len, starts_with};
-import std.text.to_string_i32;
+import std.text.{char_count as len, starts_with};
+import std.text.from_i32;
 import std.collections.len as count;
 import std.json.JsonValue;
 import std.agent.message.Message;
@@ -16,8 +16,8 @@ public type Context = { phase: string, request: string, task: string, result: st
 public type Ledger = { steps: i32, calls: i32, tokens: i32, tools: i32, scan: i32 };
 public type Observed = { result: string, tool: string, outcome: string };
 public flow numbers(state: Ledger) -> string {
-    return "steps=" + to_string_i32(state.steps) + " calls=" + to_string_i32(state.calls) + " tokens=" + to_string_i32(state.tokens) +
-        " tools=" + to_string_i32(state.tools) + " scan=" + to_string_i32(state.scan);
+    return "steps=" + from_i32(state.steps) + " calls=" + from_i32(state.calls) + " tokens=" + from_i32(state.tokens) +
+        " tools=" + from_i32(state.tools) + " scan=" + from_i32(state.scan);
 }
 
 public flow fresh() -> Ledger { return Ledger { steps = 0, calls = 0, tokens = 0, tools = 0, scan = 0 }; }

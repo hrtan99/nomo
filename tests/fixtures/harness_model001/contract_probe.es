@@ -1,7 +1,7 @@
 module nomo.harness_model_probe;
 
 import std.io.{read_all, println};
-import std.text.to_string_usize;
+import std.text.from_usize;
 import std.json.{JsonValue, parse};
 import std.agent.message.Message;
 import nomo.harness.harness_model_contract.{Context, Ledger, fresh, bounded, decode_plan, context_error, charge_call, charge_boundary};
@@ -27,7 +27,7 @@ flow observe(args: Array<string>) -> i32 {
     if fresh() != zero { abort("fixture fresh ledger"); }
     var index: usize = 0;
     for item in checks limit Iterations(64) {
-        println("CASE " + to_string_usize(index) + " " + item.label);
+        println("CASE " + from_usize(index) + " " + item.label);
         var passed = false;
         if item.mode == "bounded" { passed = bounded(item.text, item.maximum) == item.accepted; }
         else if item.mode == "context" { passed = context_error(item.context) == item.expected_text; }
@@ -40,9 +40,9 @@ flow observe(args: Array<string>) -> i32 {
             };
         }
         if !passed { abort("pure model Harness contract assertion"); }
-        println("PASS " + to_string_usize(index) + " " + item.label);
+        println("PASS " + from_usize(index) + " " + item.label);
         index = index + 1;
     }
-    println("PASS HARNESS_MODEL_PURE " + to_string_usize(index));
+    println("PASS HARNESS_MODEL_PURE " + from_usize(index));
     return 0;
 }

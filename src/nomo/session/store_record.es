@@ -1,7 +1,7 @@
 module nomo.session.store_record;
 
 import std.collections.len as count;
-import std.text.len;
+import std.text.char_count as len;
 import nomo.core.text.printable;
 import nomo.core.conversation.{Event, State};
 import nomo.session.session_state.Snapshot;
@@ -17,7 +17,7 @@ public flow valid_id(value: string) -> bool {
 
 public flow session_key(id: string, save_id: string) -> string {
     // Length prefixes make pairs unambiguous even when IDs contain delimiters.
-    return "nomo-store-v1:" + std.text.to_string_usize(len(id)) + ":" + id + save_id;
+    return "nomo-store-v1:" + std.text.from_usize(len(id)) + ":" + id + save_id;
 }
 
 public flow with_events(saved: Snapshot, events: Array<Event>) -> Snapshot {

@@ -55,7 +55,7 @@ class EditLauncherTests(unittest.TestCase):
     def test_older_versions_are_rejected_for_edit(self):
         self.args.check = ['true']
         for version in ('0.2.3', '0.2.4', '0.2.5', 'unsupported'):
-            with self.subTest(version=version), patch.dict(os.environ, {'NOMO_ETAS_VERSION': version}), self.assertRaisesRegex(ValueError, 'requires ETAS 0.3.0'):
+            with self.subTest(version=version), patch.dict(os.environ, {'NOMO_ETAS_VERSION': version}), self.assertRaisesRegex(ValueError, 'requires ETAS 0.4.1'):
                 module.prepare(self.args, True, True)
 
     def test_model_edit_uses_explicit_endpoint_and_keeps_check_offline(self):

@@ -12,7 +12,7 @@ import nomo.tools.edit_file.{EditableRoot, prepare_original};
 import nomo.entry.edit_coordinator.{Selector, Approval, execute};
 
 type Check = { label: string, before: string, after: string, expected: string, error: string };
-flow slash() -> string { return split("\\/", "")[1]; }
+flow slash() -> string { return std.text.from_char('\\'); }
 flow checks() -> Array<Check> { return __CHECKS__; }
 
 flow terminal_safe(value: string) -> bool {

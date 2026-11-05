@@ -14,7 +14,7 @@ class HistoryFollowupLauncherTest(unittest.TestCase):
         self.workspace=self.root/'workspace';self.workspace.mkdir(mode=0o700);(self.workspace/'note.txt').write_text('old')
         self.state=self.root/'state';self.state.mkdir(mode=0o700);(self.state/'.nomo-session.lock').touch(mode=0o600);(self.state/'history.sqlite3').write_bytes(b'synthetic')
         self.project=self.root/'project';self.project.mkdir(mode=0o700);self.project_patch=patch.object(launcher,'ROOT',self.project);self.project_patch.start();self.addCleanup(self.project_patch.stop)
-        self.env=patch.dict(os.environ,{'MINIMAX_API_KEY':'SYNTHETIC_KEY','NOMO_ETAS_VERSION':'0.3.0'});self.env.start();self.addCleanup(self.env.stop);self.addCleanup(self.tmp.cleanup)
+        self.env=patch.dict(os.environ,{'MINIMAX_API_KEY':'SYNTHETIC_KEY','NOMO_ETAS_VERSION':'0.4.1'});self.env.start();self.addCleanup(self.env.stop);self.addCleanup(self.tmp.cleanup)
     def args(self):return ['--read-root',str(self.context),'--root',str(self.workspace),'--state',str(self.state),'--id','id1','--path','note.txt','--allow','context.txt','--once','change it','--check','/bin/true']
     def invoke(self):
         with patch.object(launcher.sys,'stdin',TTY()),contextlib.redirect_stdout(TTY()),contextlib.redirect_stderr(io.StringIO()):return launcher.main(['--legacy-followup',*self.args()])
@@ -45,8 +45,8 @@ class HistoryFollowupLauncherTest(unittest.TestCase):
             with patch.object(launcher.edit,'run_owned',side_effect=[0,0,0,0,0]) as run:
                 self.assertEqual(self.invoke(),0)
         for call in run.call_args_list:
-            self.assertTrue(any('etas-030-official-compose.yaml' in str(part) for part in call.args[0]))
-            self.assertEqual(call.args[1]['NOMO_ETAS_VERSION'],'0.3.0')
+            self.assertTrue(any('etas-041-official-compose.yaml' in str(part) for part in call.args[0]))
+            self.assertEqual(call.args[1]['NOMO_ETAS_VERSION'],'0.4.1')
     def test_older_and_invalid_versions_are_rejected(self):
         for version in ('0.2.3','0.2.4','0.2.5','unsupported'):
             with self.subTest(version=version), patch.dict(os.environ,{'NOMO_ETAS_VERSION':version}), patch.object(launcher.edit,'run_owned') as run:

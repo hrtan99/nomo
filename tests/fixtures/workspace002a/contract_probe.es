@@ -11,7 +11,7 @@ import nomo.cli.edit_args.parse as show_args;
 import nomo.cli.harness_work_args.parse as work_args;
 
 type Check = { label: string, path: string, canonical: bool, allowed: bool };
-flow slash() -> string { return split("\\/", "")[1]; }
+flow slash() -> string { return std.text.from_char('\\'); }
 flow checks() -> Array<Check> { return __CHECKS__; }
 flow evaluate(item: Check) -> bool {
     if valid_path(item.path) != item.canonical || (selector_error("op", "owned", item.path) == "") != item.canonical ||

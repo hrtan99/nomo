@@ -1,7 +1,7 @@
 module app.discovery_interface_probe;
 
 import std.io.println;
-import std.text.{len, split, to_string_i32};
+import std.text.{char_count as len, split, from_i32};
 import nomo.session.work_chain_discovery.{DiscoveryAuthority, discover as discover_controller, latest_parent as latest_controller};
 import nomo.session.work_chain.{Record, Caps, initial, successor, validate, linked, publish_partial, confirm,
     maximum, turn_caps, zero, summary_reservation, values, reserve, policy, caps_error, fingerprint};
@@ -131,7 +131,7 @@ flow token_bound(token: string, accepted: bool) -> bool {
     return match successor(parent, token, "child-op", "update target from context", ["context.txt"], turn_caps()) { Ok(_) => accepted, Err(_) => !accepted };
 }
 
-flow slash() -> string { return split("\\/", "")[1]; }
+flow slash() -> string { return std.text.from_char('\\'); }
 flow copied_journal(row: Record, phase: string) -> Result<Journal, string> {
     let captured = match row.work {
         Some(value) => value,
@@ -231,7 +231,7 @@ flow discover_case(label: string, kind: string, requested: string, authority: st
         SessionObservation.capture(pass) => {
             captures = captures + 1;
             let phase = match pass { ObservationPass.First => "first", ObservationPass.Recheck => "recheck" };
-            println("PORT " + label + " capture " + to_string_i32(captures) + " " + phase);
+            println("PORT " + label + " capture " + from_i32(captures) + " " + phase);
             let selected = if captures == drift_at { changed(view, difference) } else { view };
             let answer: Result<Snapshot, string> = if captures == fail_at { Err("capture refused") } else { Ok(selected) };
             resume answer;
@@ -266,7 +266,7 @@ flow parent_case(label: string, kind: string, authority: string, fail_at: i32, d
         SessionObservation.capture(pass) => {
             captures = captures + 1;
             let phase = match pass { ObservationPass.First => "first", ObservationPass.Recheck => "recheck" };
-            println("PORT " + label + " capture " + to_string_i32(captures) + " " + phase);
+            println("PORT " + label + " capture " + from_i32(captures) + " " + phase);
             let selected = if captures == drift_at { changed(view, difference) } else { view };
             let answer: Result<Snapshot, string> = if captures == fail_at { Err("capture refused") } else { Ok(selected) };
             resume answer;

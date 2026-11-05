@@ -1,6 +1,6 @@
 module nomo.tools.read_display;
 
-import std.text.{len, split, join};
+import std.text.{char_count as len, split, join};
 import std.codec.text.utf8_encode;
 import std.bytes.len as byte_count;
 import nomo.core.read_text.safe;

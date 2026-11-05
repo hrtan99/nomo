@@ -1,7 +1,7 @@
 module nomo.session.stub_snapshot;
 
 import std.collections.len as count;
-import std.text.to_string_usize;
+import std.text.from_usize;
 import nomo.core.conversation.{State, fresh, stop};
 import nomo.session.session_state.{Caps, Ledger, Operation, Reference, Snapshot, Request, Projection, validate};
 
@@ -22,8 +22,8 @@ flow mapped(state: State, seed: Snapshot, prefix: usize) -> Result<Snapshot, str
         if index < prefix {
             if event != seed.history.events[index] { return Err("stub predecessor prefix changed"); }
         } else if event.role == "model" && event.kind == "request" {
-            let operation = if seed.generation == 0 { "stub-request-" + to_string_usize(index) }
-                else { "stub-successor-request-" + to_string_usize(index) };
+            let operation = if seed.generation == 0 { "stub-request-" + from_usize(index) }
+                else { "stub-successor-request-" + from_usize(index) };
             var status = "pending";
             if index + 1 < count(state.events) {
                 let next = state.events[index + 1];

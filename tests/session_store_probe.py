@@ -78,7 +78,7 @@ def fixture_source(mode, supplied=None):
     return '''module app.main;
 import std.io.println;
 import std.collections.len as count;
-import std.text.len;
+import std.text.char_count as len;
 import std.json.{JsonValue, stringify, parse};
 import nomo.core.conversation.{Event, State};
 import nomo.session.session_state.{Caps, Ledger, Operation, Reference, Snapshot, Request, Projection};
