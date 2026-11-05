@@ -4,7 +4,7 @@ import std.fs.Region;
 import std.fs.IOError as FileError;
 import std.effects.Fs;
 import std.runtime.error.IndexError;
-import std.text.char_count as len;
+import std.text.{char_count as len, replace};
 import nomo.core.text.printable;
 
 public type Outcome = { status: string, text: string, scanned: usize };
@@ -24,23 +24,14 @@ public effect ReadTools {
 // so a literal marker cannot impersonate LF/CR/TAB. Other controls are refused.
 public flow display(result: Outcome) -> Outcome {
     if len(result.text) > 1024 { return outcome("refused", "result exceeds 1024 characters", result.scanned); }
-    var escaped = "";
-    for codepoint in std.text.chars(result.text) limit Iterations(1026) { let character = std.text.from_char(codepoint);
-        if character == "\n" { escaped = escaped + "<LF>"; }
-        else {
-            if character == "\r" { escaped = escaped + "<CR>"; }
-            else {
-                if character == "\t" { escaped = escaped + "<TAB>"; }
-                else {
-                    if character == "<" { escaped = escaped + "<LT>"; }
-                    else {
-                        if !printable(character) { return outcome("unsupported", "result contains unsupported terminal characters", result.scanned); }
-                        escaped = escaped + character;
-                    }
-                }
-            }
-        }
-    }
+    var checked = replace(result.text, "\n", "");
+    checked = replace(checked, "\r", "");
+    checked = replace(checked, "\t", "");
+    if !printable(checked) { return outcome("unsupported", "result contains unsupported terminal characters", result.scanned); }
+    var escaped = replace(result.text, "<", "<LT>");
+    escaped = replace(escaped, "\n", "<LF>");
+    escaped = replace(escaped, "\r", "<CR>");
+    escaped = replace(escaped, "\t", "<TAB>");
     if len(escaped) > 1024 { return outcome("refused", "escaped result exceeds 1024 characters", result.scanned); }
     return outcome(result.status, escaped, result.scanned);
 }
