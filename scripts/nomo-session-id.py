@@ -227,9 +227,9 @@ def main(argv=None):
         if args.action in ('start','resume','work','followup'):
             print(('Workspace binding recorded and verified using its canonical path and directory identity.' if binding is not None else 'Historical session has no workspace binding; its explicit ID does not prove workspace identity.')+' Current scope and reuse approval are newly selected.',flush=True)
         if args.action=='decision':
-            command=[sys.executable,str(ROOT/'scripts/nomo-recovery-decision.py'),'--state',str(state),'--id='+args.operation_id,'--target',args.target]
+            command=[sys.executable,str(ROOT/'scripts/nomo-history-work.py'),'--recovery-decision','--state',str(state),'--id='+args.operation_id,'--target',args.target]
         elif args.action in ('work','followup'):
-            command=[sys.executable,str(ROOT/('scripts/nomo-history-followup.py' if args.action=='followup' else 'scripts/nomo-history-work.py')),'--state',str(state),'--read-root',args.read_root,'--root',args.root,'--id='+args.operation_id,'--path='+args.path,'--allow='+args.allow,'--once='+args.once]
+            command=[sys.executable,str(ROOT/'scripts/nomo-history-work.py'),*(['--followup'] if args.action=='followup' else []),'--state',str(state),'--read-root',args.read_root,'--root',args.root,'--id='+args.operation_id,'--path='+args.path,'--allow='+args.allow,'--once='+args.once]
             if args.events_policy_dir is not None:command+=['--events-policy-dir',args.events_policy_dir]
             if args.interactive_check:command+=['--interactive-check']
             if args.check is not None:command+=['--check',*args.check]

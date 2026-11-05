@@ -3,7 +3,7 @@ import contextlib,importlib.util,io,os,tempfile,unittest
 from pathlib import Path
 from unittest.mock import patch
 ROOT=Path(__file__).resolve().parent.parent
-spec=importlib.util.spec_from_file_location('recovery_launcher',ROOT/'scripts/nomo-recovery-decision.py');launcher=importlib.util.module_from_spec(spec);spec.loader.exec_module(launcher)
+spec=importlib.util.spec_from_file_location('recovery_launcher',ROOT/'scripts/nomo-history-work.py');launcher=importlib.util.module_from_spec(spec);spec.loader.exec_module(launcher)
 class TTY(io.StringIO):
  def isatty(self):return True
 class RecoveryDecisionTest(unittest.TestCase):
@@ -13,7 +13,7 @@ class RecoveryDecisionTest(unittest.TestCase):
   self.env=patch.dict(os.environ,{'MINIMAX_API_KEY':'SYNTHETIC_KEY','NOMO_QWEN_SERVER_API_KEY':'SYNTHETIC_OTHER'});self.env.start();self.addCleanup(self.env.stop)
  def invoke(self,answer,target="work"):
   out=TTY();err=io.StringIO()
-  with patch.object(launcher.sys,'stdin',TTY()),contextlib.redirect_stdout(out),contextlib.redirect_stderr(err),patch('builtins.input',return_value=answer):code=launcher.main(['--state',str(self.state),'--id','op1','--target',target])
+  with patch.object(launcher.sys,'stdin',TTY()),contextlib.redirect_stdout(out),contextlib.redirect_stderr(err),patch('builtins.input',return_value=answer):code=launcher.recovery_decision(['--state',str(self.state),'--id','op1','--target',target])
   return code,out.getvalue(),err.getvalue()
  def test_yes_records_after_status_with_no_key(self):
   with patch.object(launcher.edit,'run_owned',side_effect=[0,0]) as run:
@@ -33,7 +33,7 @@ class RecoveryDecisionTest(unittest.TestCase):
    code,_,_=self.invoke('yes');self.assertNotEqual(code,0);self.assertEqual(run.call_count,1)
  def test_non_tty_refuses_before_launch(self):
   with patch.object(launcher.sys,'stdin',io.StringIO()),contextlib.redirect_stdout(io.StringIO()),contextlib.redirect_stderr(io.StringIO()),patch.object(launcher.edit,'run_owned') as run:
-   self.assertNotEqual(launcher.main(['--state',str(self.state),'--id','op1','--target','work']),0);run.assert_not_called()
+   self.assertNotEqual(launcher.recovery_decision(['--state',str(self.state),'--id','op1','--target','work']),0);run.assert_not_called()
  def test_symlink_database_refuses(self):
   (self.state/'history.sqlite3').unlink();(self.state/'history.sqlite3').symlink_to(self.root/'other')
   with patch.object(launcher.edit,'run_owned') as run:self.assertNotEqual(self.invoke('yes')[0],0);run.assert_not_called()

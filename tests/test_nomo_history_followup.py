@@ -4,8 +4,7 @@ import contextlib,fcntl,importlib.util,io,os,subprocess,tempfile,unittest
 from pathlib import Path
 from unittest.mock import patch
 ROOT=Path(__file__).resolve().parent.parent
-spec=importlib.util.spec_from_file_location('history_work_launcher',ROOT/'scripts/nomo-history-followup.py');launcher=importlib.util.module_from_spec(spec);spec.loader.exec_module(launcher)
-wrapper=launcher;launcher=wrapper.work
+spec=importlib.util.spec_from_file_location('history_work_launcher',ROOT/'scripts/nomo-history-work.py');launcher=importlib.util.module_from_spec(spec);spec.loader.exec_module(launcher)
 class TTY(io.StringIO):
     def isatty(self):return True
 class HistoryFollowupLauncherTest(unittest.TestCase):

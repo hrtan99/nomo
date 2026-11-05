@@ -7,8 +7,45 @@ spec=importlib.util.spec_from_file_location('nomo_edit_launcher',ROOT/'scripts/n
 storage_spec=importlib.util.spec_from_file_location('nomo_session_storage',ROOT/'scripts/nomo-session-storage.py');storage=importlib.util.module_from_spec(storage_spec);storage_spec.loader.exec_module(storage)
 policy_spec=importlib.util.spec_from_file_location('nomo_event_policy',ROOT/'scripts/nomo-event-policy.py');policy_module=importlib.util.module_from_spec(policy_spec);policy_spec.loader.exec_module(policy_module)
 
+def route_followup(raw):
+    if raw[:1]!=['--followup']:return raw
+    argv=raw[1:];options=argv[:argv.index('--check')] if '--check' in argv else argv
+    event=any(item=='--events-policy-dir' or item.startswith('--events-policy-dir=') for item in options)
+    return ['--event-followup' if event else '--legacy-followup',*argv]
+
+def recovery_decision(argv):
+    parser=argparse.ArgumentParser(description='Record an explicit decision to abandon an unresolved operation.')
+    parser.add_argument('--state',required=True);parser.add_argument('--id',required=True);parser.add_argument('--target',choices=('work','check','followup','followup-check'),required=True);args=parser.parse_args(argv)
+    try:
+        if not sys.stdin.isatty() or not sys.stdout.isatty():raise ValueError('an interactive terminal is required for a recovery decision')
+        if not args.id.strip() or len(args.id)>128 or not all(32<=ord(c)<=126 for c in args.id):raise ValueError('operation ID must be 1..128 printable ASCII characters')
+        state=edit.private_state(args.state);version=edit.etas_version();fd=os.open(state/'.nomo-session.lock',os.O_RDWR|os.O_NOFOLLOW|os.O_CLOEXEC)
+        try:
+            edit.check_history_lock(fd);storage.prepare(state);edit.ensure_cache(ROOT)
+            env={k:v for k,v in os.environ.items() if not k.startswith('ETAS_HOST_') and k not in ('MINIMAX_API_KEY','NOMO_QWEN_SERVER_API_KEY','NOMO_MODEL_REQUEST_DEADLINE_MS')}
+            env.update(NOMO_SESSION_STATE=str(state),NOMO_ETAS_VERSION=version);overlay='config/etas-'+version.replace('.','')+'-official-compose.yaml'
+            compose=['docker','compose','--env-file','/dev/null','--file',str(ROOT/'compose.yaml'),'--file',str(ROOT/overlay),'--file',str(ROOT/'config/etas-runtime-cache-compose.yaml'),'--file',str(ROOT/'config/nomo-read-session-compose.yaml')]
+            def run(flow,*native_args):
+                native=['python3','-B','/workspace/scripts/nomo-verified-etas.py','run','/workspace','--flow',flow,'--profile','nomo-read-session-status','--allow-effects']
+                if native_args:native+=['--args',*native_args]
+                command=[sys.executable,str(ROOT/'scripts/terminal-transport.py'),*compose,'run','--rm','--no-deps','--pull','never','--tty=false','--workdir','/session-state','dev',*native]
+                return edit.run_owned(command,env)
+            if run('read_session_status')!=0:return 1
+            print('Abandon '+args.target+' for operation '+args.id+'? This records your decision only. Prior effects may have occurred; no rollback or retry is authorized.',flush=True)
+            try:answer=input('Record abandon? [y/N] ').strip().lower()
+            except EOFError:answer=''
+            if answer not in ('y','yes'):print('No decision recorded.',flush=True);return 1
+            return run('recovery_decision',args.target,args.id)
+        finally:os.close(fd)
+    except KeyboardInterrupt:
+        print('\nNo decision confirmed; inspect recorded status before further action.',file=sys.stderr);return 130
+    except (OSError,ValueError) as error:
+        print('REFUSED '+str(error),file=sys.stderr);return 1
+
 def main(argv=None):
     raw=list(sys.argv[1:] if argv is None else argv)
+    if raw[:1]==['--recovery-decision']:return recovery_decision(raw[1:])
+    raw=route_followup(raw)
     independent=raw[:1]==['--independent-check']
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--read-root',required=not independent);parser.add_argument('--root',required=True);parser.add_argument('--state',required=True)

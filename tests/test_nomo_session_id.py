@@ -90,7 +90,7 @@ class SessionIDTest(unittest.TestCase):
   (self.base/self.identifier).mkdir(mode=0o700)
   args=['followup','--sessions-dir',str(self.base),'--id',self.identifier,'--read-root','/read','--root','/edit','--operation-id','op2','--path','note.txt','--allow','context.txt','--once','change again','--check','/bin/true']
   with patch.object(module._edit,'run_owned',return_value=0) as launch:
-   code,out,_=self.call(args);self.assertEqual(code,0);cmd=launch.call_args.args[0];self.assertTrue(any(str(x).endswith('nomo-history-followup.py') for x in cmd));self.assertIn(str(self.base/self.identifier),cmd);self.assertIn('--id=op2',cmd);self.assertEqual(cmd[-2:],['--check','/bin/true']);self.assertIn('newly selected',out)
+   code,out,_=self.call(args);self.assertEqual(code,0);cmd=launch.call_args.args[0];self.assertTrue(any(str(x).endswith('nomo-history-work.py') for x in cmd));self.assertIn('--followup',cmd);self.assertIn(str(self.base/self.identifier),cmd);self.assertIn('--id=op2',cmd);self.assertEqual(cmd[-2:],['--check','/bin/true']);self.assertIn('newly selected',out)
  def test_work_missing_options_and_empty_check_refused(self):
   (self.base/self.identifier).mkdir(mode=0o700)
   with patch.object(module._edit,'run_owned') as launch:
@@ -101,7 +101,7 @@ class SessionIDTest(unittest.TestCase):
   (self.base/self.identifier).mkdir(mode=0o700)
   args=['decision','--sessions-dir',str(self.base),'--id',self.identifier,'--operation-id','op1','--target','work']
   with patch.object(module._edit,'run_owned',return_value=0) as launch:
-   code,_,_=self.call(args);self.assertEqual(code,0);cmd=launch.call_args.args[0];self.assertTrue(any(str(x).endswith('nomo-recovery-decision.py') for x in cmd));self.assertIn(str(self.base/self.identifier),cmd);self.assertEqual(cmd[-3:],['--id=op1','--target','work'])
+   code,_,_=self.call(args);self.assertEqual(code,0);cmd=launch.call_args.args[0];self.assertTrue(any(str(x).endswith('nomo-history-work.py') for x in cmd));self.assertIn('--recovery-decision',cmd);self.assertIn(str(self.base/self.identifier),cmd);self.assertEqual(cmd[-3:],['--id=op1','--target','work'])
  def test_followup_decisions_route_by_operation(self):
   (self.base/self.identifier).mkdir(mode=0o700)
   for target in ('followup','followup-check'):

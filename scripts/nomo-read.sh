@@ -88,13 +88,13 @@ if [[ $# -eq 0 || ( $# -eq 1 && ( "$1" == help || "$1" == --help ) ) ]]; then us
 action="$1"; shift
 if [[ "$action" == event-policy-init ]]; then exec python3 "$root/scripts/nomo-event-policy.py" init "$@"; fi
 if [[ "$action" == session-chat ]]; then exec python3 "$root/scripts/nomo-session-chat.py" "$@"; fi
-if [[ "$action" == session-decision ]]; then exec python3 "$root/scripts/nomo-recovery-decision.py" "$@"; fi
+if [[ "$action" == session-decision ]]; then exec python3 "$root/scripts/nomo-history-work.py" --recovery-decision "$@"; fi
 if [[ "$action" == session-id ]]; then exec python3 "$root/scripts/nomo-session-id.py" "$@"; fi
 if [[ "$action" == session-new || "$action" == session-continue || "$action" == session-status ]]; then
     if [[ "$action" == session-new ]]; then mode=new; elif [[ "$action" == session-continue ]]; then mode=continue; else mode=status; fi
     exec python3 "$root/scripts/nomo-read-session.py" "$mode" "$@"
 fi
-if [[ "$action" == session-followup ]]; then exec python3 "$root/scripts/nomo-history-followup.py" "$@"; fi
+if [[ "$action" == session-followup ]]; then exec python3 "$root/scripts/nomo-history-work.py" --followup "$@"; fi
 if [[ "$action" == session-work ]]; then exec python3 "$root/scripts/nomo-history-work.py" "$@"; fi
 if [[ "$action" == resume ]]; then
     echo 'Session resume is not available yet.' >&2
