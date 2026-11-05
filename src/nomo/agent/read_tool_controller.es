@@ -108,11 +108,11 @@ public flow run_private_chat_loop_controller(raw: string, allowed: Array<string>
 public flow run_expanded_work_loop_controller(raw: string, allowed: Array<string>, previous: Session, wide: bool) -> LoopTurn {
     return run_output(ExpandedChild { wide = wide }, UnicodeActions {}, RedactedChildEvents {}, ConsoleProgress {}, ConsoleDiagnostics {}, raw, allowed, previous, false);
 }
-public flow run_public_multi_chat_loop_controller(raw: string, allowed: Array<string>, previous: Session, resilient: bool) -> LoopTurn {
-    return run_output(MultiChild { resilient = resilient }, UnicodeActions {}, PublicChildEvents {}, SilentProgress {}, ConsoleDiagnostics {}, raw, allowed, previous, false);
+public flow run_public_multi_chat_loop_controller(raw: string, allowed: Array<string>, previous: Session, resilient: bool, reasoning: bool) -> LoopTurn {
+    return run_output(MultiChild { resilient = resilient, reasoning = reasoning }, UnicodeActions {}, PublicChildEvents {}, SilentProgress {}, ConsoleDiagnostics {}, raw, allowed, previous, false);
 }
-public flow run_private_multi_chat_loop_controller(raw: string, allowed: Array<string>, previous: Session, resilient: bool) -> LoopTurn {
-    return run_output(MultiChild { resilient = resilient }, UnicodeActions {}, RedactedChildEvents {}, ConsoleProgress {}, ConsoleDiagnostics {}, raw, allowed, previous, false);
+public flow run_private_multi_chat_loop_controller(raw: string, allowed: Array<string>, previous: Session, resilient: bool, reasoning: bool) -> LoopTurn {
+    return run_output(MultiChild { resilient = resilient, reasoning = reasoning }, UnicodeActions {}, RedactedChildEvents {}, ConsoleProgress {}, ConsoleDiagnostics {}, raw, allowed, previous, false);
 }
 
 public flow run_output<P ~ ChildLoopPolicy, D ~ ToolActionDecoder, S ~ ConversationSink, O ~ ProgressSink, G ~ DiagnosticSink>(policy: P, decoder: D, sink: S, progress: O, diagnostics: G, raw: string, allowed: Array<string>, previous: Session, inspect_all: bool) -> LoopTurn {

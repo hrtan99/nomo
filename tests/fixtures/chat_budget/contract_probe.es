@@ -3,7 +3,7 @@ module app.main;
 import std.io.println;
 import nomo.harness.harness_tool_chat_contract.{Invocation, Previous, Completed, TurnResult, empty};
 import nomo.harness.harness_tool_contract.{Ledger, fresh as fresh_ledger};
-import nomo.harness.read_tool_chat_contract.{multi_maximum, multi_wide_maximum, multi_input_maximum, multi_large_maximum, multi_resilient_maximum};
+import nomo.harness.read_tool_chat_contract.{multi_maximum, multi_wide_maximum, multi_input_maximum, multi_input_reasoning_maximum, multi_large_maximum, multi_resilient_maximum};
 import nomo.harness.read_tool_chat.{MainMode, main_mode};
 import nomo.harness.chat_budget_policy.{SelectedBudget, select};
 import nomo.session.chat_session_contract.{Session, fresh, fresh_events, fresh_high_input_events, invalid, begin, complete};
@@ -21,6 +21,12 @@ flow high_input_child(value: Invocation) -> bool {
         SelectedBudget.Single(_) => false,
     };
 }
+flow reasoning_child(value: Invocation) -> bool {
+    return match select(value, true) {
+        SelectedBudget.Multi(policy) => policy.reasoning_child(),
+        SelectedBudget.Single(_) => false,
+    };
+}
 public flow probe(args: Array<string>) -> i32 ![Console, Error<std.io.IOError>, Error<IndexError>] {
     let new = fresh_events();
     if new.format != 16 || new.invocation.maximum != multi_resilient_maximum(48) || invalid(new) != "" { abort("new event session changed"); }
@@ -34,12 +40,17 @@ public flow probe(args: Array<string>) -> i32 ![Console, Error<std.io.IOError>, 
     let saved = match complete(reserved, completed("question", multi_resilient_maximum(48), 393216)) { Ok(value) => value, Err(_) => { abort("new accounting refused"); } };
     if saved.invocation.usage.tokens != 393216 || saved.phase != "ready" { abort("new usage changed"); }
     let input = fresh_high_input_events();
-    if input.format != 17 || input.invocation.maximum != multi_input_maximum(48) || invalid(input) != "" || main_mode(input.invocation) != MainMode.HighInput || !high_input_child(input.invocation) { abort("high-input event session changed"); }
+    if input.format != 18 || input.invocation.maximum != multi_input_reasoning_maximum(48) || invalid(input) != "" || main_mode(input.invocation) != MainMode.HighInput || !high_input_child(input.invocation) || !reasoning_child(input.invocation) { abort("high-input event session changed"); }
     if high_input_child(new.invocation) { abort("resilient session selected high-input child"); }
     let input_reserved = match begin(input, "question") { Ok(value) => value, Err(_) => { abort("high-input reservation refused"); } };
-    match complete(input_reserved, completed("question", multi_input_maximum(48), 12288)) { Ok(_) => { abort("wide accounting accepted for high-input session"); } Err(_) => {} }
-    let input_saved = match complete(input_reserved, completed("question", multi_input_maximum(48), 20480)) { Ok(value) => value, Err(_) => { abort("high-input accounting refused"); } };
-    if input_saved.invocation.usage.tokens != 20480 || input_saved.phase != "ready" { abort("high-input usage changed"); }
+    match complete(input_reserved, completed("question", multi_input_reasoning_maximum(48), 20480)) { Ok(_) => { abort("legacy accounting accepted for reasoning high-input session"); } Err(_) => {} }
+    let input_saved = match complete(input_reserved, completed("question", multi_input_reasoning_maximum(48), 32768)) { Ok(value) => value, Err(_) => { abort("high-input accounting refused"); } };
+    if input_saved.invocation.usage.tokens != 32768 || input_saved.phase != "ready" { abort("high-input usage changed"); }
+    let legacy_input = Session { format = 17, phase = "ready", invocation = Invocation { usage = fresh_ledger(), maximum = multi_input_maximum(48), admitted = 0, prior = empty() }, last_request = "", pending = "" };
+    if invalid(legacy_input) != "" || !high_input_child(legacy_input.invocation) || reasoning_child(legacy_input.invocation) { abort("legacy high-input session changed"); }
+    let legacy_input_reserved = match begin(legacy_input, "question") { Ok(value) => value, Err(_) => { abort("legacy high-input reservation refused"); } };
+    let legacy_input_saved = match complete(legacy_input_reserved, completed("question", multi_input_maximum(48), 20480)) { Ok(value) => value, Err(_) => { abort("legacy high-input accounting refused"); } };
+    if legacy_input_saved.invocation.usage.tokens != 20480 { abort("legacy high-input usage changed"); }
     let legacy_invocation = Invocation { usage = fresh_ledger(), maximum = multi_maximum(32), admitted = 0, prior = empty() };
     let legacy = Session { format = 9, phase = "ready", invocation = legacy_invocation, last_request = "", pending = "" };
     let inflated = Session { format = 9, phase = "ready", invocation = Invocation { usage = fresh_ledger(), maximum = multi_wide_maximum(32), admitted = 0, prior = empty() }, last_request = "", pending = "" };

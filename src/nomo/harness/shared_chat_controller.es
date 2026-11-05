@@ -73,8 +73,8 @@ flow execute<P ~ ChatBudgetPolicy>(policy: P, request: string, allowed: Array<st
     perform ConversationOutput.publish(Event { role = "main -> child-1", kind = "request", name = "child-1", text = task });
     stage(policy, turn, "child", before, state);
     let child = perform LegacyChatStages.child(task, allowed, seed(request, prior), multi,
-        policy.resilient_child(), policy.high_input_child());
-    let inspected = if multi { inspect_multi_turn(child.state, child.status, request, task, allowed, prior) } else { if unicode { unicode_inspect_turn(child.state, child.status, request, task, allowed, prior) }
+        policy.resilient_child(), policy.high_input_child(), policy.reasoning_child());
+    let inspected = if multi { inspect_multi_turn(child.state, child.status, request, task, allowed, prior, policy.resilient_child(), policy.reasoning_child()) } else { if unicode { unicode_inspect_turn(child.state, child.status, request, task, allowed, prior) }
         else { inspect_turn(child.state, child.status, request, task, allowed, prior) } };
     let observed = match inspected {
         Ok(value) => value, Err(error) => { return refused(state, error, false); }

@@ -231,7 +231,7 @@ def work_command(args, action, root, operation_id, path, task, check):
 def show_discovery(mode):
     print('Discovery uses pages of 256 files, up to eight automatic pages, seven directory levels and 512 directories; each directory is limited to 1024 entries and 131072 name bytes. Unsupported paths and file types are excluded; .gitignore is not interpreted.', flush=True)
     if mode == 'high-input':
-        print('Each automatic page uses another bounded high-input chat turn: up to 6 calls and 32768 output tokens. Page contents may change between turns.', flush=True)
+        print('Each automatic page uses another bounded high-input chat turn: up to 6 calls and 81920 output tokens. Page contents may change between turns.', flush=True)
     elif mode == 'default':
         print('Each automatic page uses another bounded chat turn: up to 6 calls and 405504 output tokens for this new event session. Page contents may change between turns.', flush=True)
     else:
@@ -278,7 +278,7 @@ def main(argv=None):
     budget_mode = 'high-input' if args.high_input else 'default' if args.new else 'persisted'
     if args.discover: show_discovery(budget_mode)
     if budget_mode == 'high-input':
-        print('High-input mode is persisted for this new session. A read turn reserves up to 6 calls and 32768 output tokens: up to 3 child action calls and one child final at 4096 each, plus 2 parent calls at 8192 each; at most 3786432 configured native tokens in total. Provider input and output share its context window; actual input and usage are unknown.', flush=True)
+        print('High-input mode is persisted for this new session. A read turn reserves up to 6 calls and 81920 output tokens: up to 3 child action calls and one child final at 16384 each, plus 2 parent calls at 8192 each; at most 3786432 configured native tokens in total. Provider input and output share its context window; actual input and usage are unknown.', flush=True)
     elif budget_mode == 'default':
         print('A read turn in a new event session may reserve up to 6 calls and 405504 output tokens: up to 3 child action calls at 4096 each, one child final and 2 parent calls at 131072 each; at most 3786432 configured native tokens in total; up to 3 read/search operations reserve 4 MiB plus 256 probe bytes each. Older sessions retain their original allowance.', flush=True)
     else:
