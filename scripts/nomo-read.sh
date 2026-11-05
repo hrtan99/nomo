@@ -38,8 +38,8 @@ Historical sessions without a binding remain available only through their explic
 Each file read is limited to 16384 bytes; standalone work remains limited to two. The default model
 is MiniMax M Plan (China), MiniMax-M3.1-Flash at https://api.minimax.cn/v1.
 Provide its subscription key through MINIMAX_API_KEY in the environment.
-MiniMax thinking counts against output limits. The runtime does not expose
-the provider's finish reason under 0.2.4; review the complete edit preview carefully.
+MiniMax thinking counts against output limits. The current harness does not surface
+the provider's finish reason; review the complete edit preview carefully.
 For the earlier Qwen route, explicitly set NOMO_MODEL_PROVIDER=qwen along with
 NOMO_READ_MODEL_BASE_URL and NOMO_QWEN_SERVER_API_KEY; NOMO_READ_MODEL_NAME
 can select a different Qwen model. These provider credentials are separate.

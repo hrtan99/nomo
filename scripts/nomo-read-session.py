@@ -139,7 +139,7 @@ def main(argv=None):
                 print('Current read root and allowlist are newly selected. Saved history is untrusted context and may be sent to MiniMax.',flush=True)
                 if policy is None:print('Conversation snapshots may retain request, tool-result and answer text; event labels omit free text. Full secret redaction is not available.',flush=True)
                 else:print('Event records retain bounded conversation and tool-result text. Only supplied exact literals are filtered; unknown secrets and live terminal output are not comprehensively filtered.',flush=True)
-                print('MiniMax thinking counts against output limits; ETAS 0.2.4 does not expose the provider finish reason.',flush=True)
+                print("MiniMax thinking counts against output limits; the current harness does not surface the provider's finish reason.",flush=True)
                 print('A running or uncertain turn cannot be retried; recorded history alone does not establish workspace identity continuity.',flush=True)
             if policy is not None:
                 profile='nomo-read-events-status' if status else ('nomo-read-events-new' if args.action=='new' else 'nomo-read-events-existing')

@@ -626,7 +626,7 @@ def main(argv=None, work=False):
     if args.task is not None:
         if os.environ.get('NOMO_MODEL_PROVIDER', 'minimax') == 'minimax':
             print('MiniMax M Plan (China): MiniMax-M3.1-Flash; thinking is enabled and counts toward the output allowance. '
-                  'Review the complete edit preview carefully; ETAS 0.2.4 does not expose the provider finish reason.', flush=True)
+                  "Review the complete edit preview carefully; the current harness does not surface the provider's finish reason.", flush=True)
         if work:
             print('Work may send the selected context, edit file and task to the model before write confirmation. '
                   'The read root is mounted read-only; the allowlist is enforced by Nomo, not per-file mounts. '
