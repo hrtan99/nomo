@@ -12,20 +12,20 @@ import nomo.harness.read_tool_chat_controller.{run_turn_controller, run_private_
 
 public spec ReadStages {
     flow main(self, context: Context) -> string ![];
-    flow child(self, task: string, files: Array<string>, selected: State, multi: bool, resilient: bool) -> LoopTurn ![Fs.read<ReadOnlyRoot>, Error<ConsoleError>, Error<FileError>, Error<IndexError>];
+    flow child(self, task: string, files: Array<string>, selected: State, multi: bool, resilient: bool, high_input: bool) -> LoopTurn ![Fs.read<ReadOnlyRoot>, Error<ConsoleError>, Error<FileError>, Error<IndexError>];
 }
 
 // The controller performs operations; the composition boundary installs one handler.
 public flow run_public<S ~ ReadStages>(stages: S, request: string, allowed: Array<string>, invocation: Invocation) -> TurnResult {
     return run_turn_controller(request, allowed, invocation) with {
         LegacyChatStages.main(context) => { resume stages.main(context); }
-        LegacyChatStages.child(task, files, selected, multi, resilient) => { resume stages.child(task, files, selected, multi, resilient); }
+        LegacyChatStages.child(task, files, selected, multi, resilient, high_input) => { resume stages.child(task, files, selected, multi, resilient, high_input); }
     };
 }
 
 public flow run_private<S ~ ReadStages>(stages: S, request: string, allowed: Array<string>, invocation: Invocation) -> TurnResult {
     return run_private_turn_controller(request, allowed, invocation) with {
         LegacyChatStages.main(context) => { resume stages.main(context); }
-        LegacyChatStages.child(task, files, selected, multi, resilient) => { resume stages.child(task, files, selected, multi, resilient); }
+        LegacyChatStages.child(task, files, selected, multi, resilient, high_input) => { resume stages.child(task, files, selected, multi, resilient, high_input); }
     };
 }

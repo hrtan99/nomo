@@ -17,6 +17,7 @@ public spec ChatBudgetPolicy {
     flow child_pending(self) -> Ledger ![];
     flow parent_tokens(self) -> i32 ![];
     flow resilient_child(self) -> bool ![];
+    flow high_input_child(self) -> bool ![];
 }
 
 public enum SingleMode { Legacy, Unicode, Extended, Persistent }
@@ -43,6 +44,7 @@ impl SingleBudget ~ ChatBudgetPolicy {
     flow child_pending(self) -> Ledger ![] { return Ledger { steps = 3, calls = 2, tokens = 4096, tools = 1, scan = 16384 }; }
     flow parent_tokens(self) -> i32 ![] { return 2048; }
     flow resilient_child(self) -> bool ![] { return false; }
+    flow high_input_child(self) -> bool ![] { return false; }
 }
 
 impl MultiBudget ~ ChatBudgetPolicy {
@@ -56,6 +58,7 @@ impl MultiBudget ~ ChatBudgetPolicy {
     flow child_pending(self) -> Ledger ![] { return Ledger { steps = 7, calls = 4, tokens = (if self.resilient { 131072 } else { 4096 }) + 12288, tools = 3, scan = 12583680 }; }
     flow parent_tokens(self) -> i32 ![] { return self.parent; }
     flow resilient_child(self) -> bool ![] { return self.resilient; }
+    flow high_input_child(self) -> bool ![] { return self.parent == 8192; }
 }
 
 flow pending(phase: string, multi: bool, parent: i32, child_final: i32) -> Ledger {

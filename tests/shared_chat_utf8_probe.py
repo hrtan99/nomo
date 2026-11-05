@@ -43,7 +43,7 @@ def main():
     let next = exercise(values[1], observed.state);
     let refused = legacy_run("请说明", ["a.txt"], fresh_invocation()) with {
         LegacyChatStages.main(_) => { abort("legacy unexpectedly called main"); }
-        LegacyChatStages.child(_, _, _, _) => { abort("legacy unexpectedly called child"); }
+        LegacyChatStages.child(_, _, _, _, _, _) => { abort("legacy unexpectedly called child"); }
     };
     if refused.status != 1 { abort("legacy accepted Unicode request"); }
     println("PASS legacy_unicode_refused_before_dispatch");

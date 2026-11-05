@@ -7,7 +7,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 FILES = ['context.txt', 'second.txt', 'third.txt', 'note.txt']
 TASK = '请把 note.txt 中的 old 改为 green'
-BEFORE = ''.join('line %03d: unchanged marker content\n' % n for n in range(180)) + 'before old\n'
+# Keep this close to the production failure shape: the completed first-turn
+# read is persisted, then a new process resumes the same high-input session.
+BEFORE = ''.join('line %03d: unchanged marker content\n' % n for n in range(7000)) + 'before old\n'
 AFTER = BEFORE.replace('before old\n', 'before green\n')
 CHILD_DETAIL = '详细证据' * 300
 assert len(CHILD_DETAIL.encode()) == 3600
@@ -23,7 +25,7 @@ class Fake(BaseHTTPRequestHandler):
                 value = ['delegate', 'Read note.txt to identify the requested edit']
             elif i in (1, 5, 12): value = ['read', 'note.txt']
             elif i in (2, 6, 13):
-                data = json.dumps(ctx, ensure_ascii=False);assert 'line 000: unchanged marker content' in data and 'line 179: unchanged marker content' in data
+                data = json.dumps(ctx, ensure_ascii=False);assert 'line 000: unchanged marker content' in data and 'line 6999: unchanged marker content' in data
                 value = ['final', CHILD_DETAIL]
             elif i == 3: value = 'EDIT note.txt'
             elif i == 4:
@@ -47,7 +49,14 @@ class Fake(BaseHTTPRequestHandler):
             else:
                 content = json.dumps(value, ensure_ascii=False, separators=(',', ':')) if isinstance(value, list) else value
                 message = {'role':'assistant','content':content}; finish_reason = 'stop'
-            usage = {'prompt_tokens':999000,'completion_tokens':1000,'total_tokens':1000000} if i == 4 else {'prompt_tokens':100,'completion_tokens':20,'total_tokens':120}
+            if i == 4:
+                usage = {'prompt_tokens':999000,'completion_tokens':1000,'total_tokens':1000000}
+            elif i == 11:
+                usage = {'prompt_tokens':176775,'completion_tokens':165,'total_tokens':176940}
+            elif i == 12:
+                usage = {'prompt_tokens':176829,'completion_tokens':100,'total_tokens':176929}
+            else:
+                usage = {'prompt_tokens':100,'completion_tokens':20,'total_tokens':120}
             body = json.dumps({'choices':[{'message':message,'finish_reason':finish_reason}], 'usage':usage},ensure_ascii=False).encode()
             self.server.phases.append(i);self.send_response(200);self.send_header('Content-Length',str(len(body)));self.end_headers();self.wfile.write(body)
         except Exception as error:
@@ -112,7 +121,7 @@ def main():
         second=interactive(command,env,'现在文件的颜色是什么？',False)
         assert not server.failure and server.phases==list(range(15));assert '当前内容是 before green'.encode() in second
         status=subprocess.run([str(project/'scripts/nomo'),'--status','--id',match.group(1).decode(),'--events'],env=env,capture_output=True,timeout=120)
-        assert status.returncode==0 and b'line 000: unchanged marker content' in status.stdout and b'line 179: unchanged marker content' in status.stdout and CHILD_DETAIL.encode() in status.stdout
+        assert status.returncode==0 and b'line 000: unchanged marker content' in status.stdout and b'line 6999: unchanged marker content' in status.stdout and CHILD_DETAIL.encode() in status.stdout
         print(json.dumps({'status':'passed','scope':'persisted high-input natural-language edit, check, same-ID new-process continuation','file_bytes':len(BEFORE.encode()),'fake_requests':len(server.phases),'confirmations':2,'selected_file':'note.txt','unchanged_other_files':3}))
     finally:server.shutdown();server.server_close();thread.join(timeout=5);shutil.rmtree(out)
 

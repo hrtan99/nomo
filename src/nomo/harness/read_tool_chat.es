@@ -46,17 +46,17 @@ public flow infer_main(mode: MainMode, prompt: Prompt) -> string {
 type PublicStages = { mode: MainMode };
 impl PublicStages ~ ReadStages {
     flow main(self, context: Context) -> string ![] { return infer_main(self.mode, Prompt.new().system(Trusted(prompt_ChatMain())).data(context)); }
-    flow child(self, task: string, files: Array<string>, selected: State, multi: bool, resilient: bool) -> LoopTurn { return chat_child_turn(task, files, selected, multi, resilient); }
+    flow child(self, task: string, files: Array<string>, selected: State, multi: bool, resilient: bool, high_input: bool) -> LoopTurn { return chat_child_turn(task, files, selected, multi, resilient, high_input); }
 }
 type PrivateStages = { mode: MainMode };
 impl PrivateStages ~ ReadStages {
     flow main(self, context: Context) -> string ![] { return infer_main(self.mode, Prompt.new().system(Trusted(prompt_ChatMain())).data(context)); }
-    flow child(self, task: string, files: Array<string>, selected: State, multi: bool, resilient: bool) -> LoopTurn { return private_chat_child_turn(task, files, selected, multi, resilient); }
+    flow child(self, task: string, files: Array<string>, selected: State, multi: bool, resilient: bool, high_input: bool) -> LoopTurn { return private_chat_child_turn(task, files, selected, multi, resilient, high_input); }
 }
 type HistoryStages = { mode: MainMode, history: Array<Event> };
 impl HistoryStages ~ ReadStages {
     flow main(self, context: Context) -> string ![] { return infer_main(self.mode, Prompt.new().system(Trusted(prompt_HistoryChatMain())).data(ConversationInput { current = context, history = self.history })); }
-    flow child(self, task: string, files: Array<string>, selected: State, multi: bool, resilient: bool) -> LoopTurn { return private_chat_child_turn(task, files, selected, multi, resilient); }
+    flow child(self, task: string, files: Array<string>, selected: State, multi: bool, resilient: bool, high_input: bool) -> LoopTurn { return private_chat_child_turn(task, files, selected, multi, resilient, high_input); }
 }
 
 public flow run_turn(request: string, allowed: Array<string>, invocation: Invocation) -> TurnResult {

@@ -69,11 +69,11 @@ public flow work_child_turn(task: string, allowed: Array<string>, selected: Stat
     return run_work_loop(task, allowed, default_limits(), seed(selected));
 }
 
-public flow chat_child_turn(task: string, allowed: Array<string>, selected: State, multi: bool, resilient: bool) -> LoopTurn {
-    return if multi { run_multi_chat_loop(task, allowed, seed(selected), false, resilient) } else { run_chat_loop(task, allowed, default_limits(), seed(selected), false) };
+public flow chat_child_turn(task: string, allowed: Array<string>, selected: State, multi: bool, resilient: bool, high_input: bool) -> LoopTurn {
+    return if multi { run_multi_chat_loop(task, allowed, seed(selected), false, resilient, high_input) } else { run_chat_loop(task, allowed, default_limits(), seed(selected), false) };
 }
-public flow private_chat_child_turn(task: string, allowed: Array<string>, selected: State, multi: bool, resilient: bool) -> LoopTurn {
-    return if multi { run_multi_chat_loop(task, allowed, seed(selected), true, resilient) } else { run_chat_loop(task, allowed, default_limits(), seed(selected), true) };
+public flow private_chat_child_turn(task: string, allowed: Array<string>, selected: State, multi: bool, resilient: bool, high_input: bool) -> LoopTurn {
+    return if multi { run_multi_chat_loop(task, allowed, seed(selected), true, resilient, high_input) } else { run_chat_loop(task, allowed, default_limits(), seed(selected), true) };
 }
 
 public flow expanded_work_child_turn(task: string, allowed: Array<string>, selected: State, wide: bool) -> LoopTurn ~ WideChatChildStage<ReadOnlyRoot> {

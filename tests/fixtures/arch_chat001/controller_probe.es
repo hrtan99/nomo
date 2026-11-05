@@ -67,7 +67,7 @@ flow exercise(item: Vector, invocation: Invocation) -> TurnResult {
             let response = if value.phase == "plan" { item.raw_plan } else { item.answer };
             resume response;
         }
-        LegacyChatStages.child(task, files, selected, _) => {
+        LegacyChatStages.child(task, files, selected, _, _, _) => {
             if task != item.task || files != item.allowed || selected != item.selected { abort("complete child task/allowed/State differs"); }
             println("PORT " + item.label + " child");
             resume item.child;
@@ -110,7 +110,7 @@ public flow backend_abort(args: Array<string>) -> i32 {
             println("PORT source_abort main.plan");
             abort("D7_EXPECTED_SOURCE_STAGE_ABORT");
         }
-        LegacyChatStages.child(_, _, _, _) => { abort("UNEXPECTED child after source abort"); }
+        LegacyChatStages.child(_, _, _, _, _, _) => { abort("UNEXPECTED child after source abort"); }
     };
     println("UNREACHABLE source abort returned TurnResult");
     return 0;
