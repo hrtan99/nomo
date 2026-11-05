@@ -2,7 +2,7 @@ module nomo.session.recoverable_work_facts;
 
 public import nomo.application.history_contract.Facts;
 import nomo.application.history_contract.WorkFactsReader;
-import nomo.session.work_fact_projection.{extra_fact, completed_fact, compact};
+import nomo.session.work_fact_projection.{extra_fact, completed_fact, compact, abandoned_fact, settled_usage};
 
 import std.collections.len as count;
 
@@ -33,13 +33,13 @@ flow read_snapshot(policy: Policy, binding: string) -> Result<Facts, string> {
             let work = item.value.work;
             if work.phase == "abandoned" {
                 calls = work.reserved.calls; generation = work.reserved.generation;
-                first_facts = Some(WorkFacts { id = work.id, summary = "User abandoned interrupted work; its effect is unknown. Inspect the file before a new edit.", summary_source = "system", selection = None(), evidence = None(), check = "unknown", exit_code = "", output = None() });
+                first_facts = Some(abandoned_fact(work.id));
             } else {
             if work.phase != "complete" { return Err("first work unresolved"); }
             let edit = match inspect_edit(work.id, work.workspace, work.path) { Ok(Some(value)) => value, _ => { return Err("completed first edit required"); } };
             if edit.phase != "completed" { return Err("first edit unresolved"); }
             let spent = match work.settled { Some(value) => value, None() => { return Err("first work budget missing"); } };
-            calls = spent.read.calls + spent.edit.calls; generation = spent.read.tokens + spent.edit.tokens;
+            let usage = settled_usage(spent); calls = usage.calls; generation = usage.generation;
             first_facts = Some(match completed_fact(work, item.value.events, first_check, policy, "first") { Ok(value) => value, Err(error) => { return Err(error); } });
             }
         }
@@ -54,13 +54,13 @@ flow read_snapshot(policy: Policy, binding: string) -> Result<Facts, string> {
             let work = item.value.work;
             if work.phase == "abandoned" {
                 calls = calls + work.reserved.calls; generation = generation + work.reserved.generation;
-                second_facts = Some(WorkFacts { id = work.id, summary = "User abandoned interrupted work; its effect is unknown. Inspect the file before a new edit.", summary_source = "system", selection = None(), evidence = None(), check = "unknown", exit_code = "", output = None() });
+                second_facts = Some(abandoned_fact(work.id));
             } else {
             if work.phase != "complete" { return Err("followup unresolved"); }
             let edit = match inspect_followup_edit(work.id, work.workspace, work.path) { Ok(Some(value)) => value, _ => { return Err("completed followup edit required"); } };
             if edit.phase != "completed" { return Err("followup edit unresolved"); }
             let spent = match work.settled { Some(value) => value, None() => { return Err("followup budget missing"); } };
-            calls = calls + spent.read.calls + spent.edit.calls; generation = generation + spent.read.tokens + spent.edit.tokens;
+            let usage = settled_usage(spent); calls = calls + usage.calls; generation = generation + usage.generation;
             second_facts = Some(match completed_fact(work, item.value.events, second_check, policy, "followup") { Ok(value) => value, Err(error) => { return Err(error); } });
             }
         }

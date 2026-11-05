@@ -9,10 +9,25 @@ import nomo.session.continuous_work.Entry;
 import nomo.session.redaction.Policy;
 import nomo.session.event_text_codec.decode;
 import nomo.application.history_contract.{WorkFacts, CheckOutput};
+import nomo.harness.harness_work_contract.Ledger;
+
+public type WorkUsage = { calls: i32, generation: i32 };
+
+public flow settled_usage(value: Ledger) -> WorkUsage {
+    return WorkUsage { calls = value.read.calls + value.edit.calls, generation = value.read.tokens + value.edit.tokens };
+}
+
+public flow stored_fact(id: string, summary: string, source: string, check: string, exit_code: string, output: Option<CheckOutput>) -> WorkFacts {
+    return WorkFacts { id = id, summary = summary, summary_source = source, selection = None(), evidence = None(), check = check, exit_code = exit_code, output = output };
+}
+
+public flow abandoned_fact(id: string) -> WorkFacts {
+    return stored_fact(id, "User abandoned interrupted work; its effect is unknown. Inspect the file before a new edit.", "system", "unknown", "", None());
+}
 
 // Pure projections of captured historical records; no storage, file or model calls.
 public flow extra_fact(item: Entry, policy: Policy) -> Result<WorkFacts, string> {
-    if item.result.phase == "abandoned" && (item.check.phase == "none" || item.check.phase == "planned") { return Ok(WorkFacts { id = item.core.id, summary = "User abandoned interrupted work; its effect is unknown. Inspect the file before a new edit.", summary_source = "system", selection = None(), evidence = None(), check = "unknown", exit_code = "", output = None() }); }
+    if item.result.phase == "abandoned" && (item.check.phase == "none" || item.check.phase == "planned") { return Ok(abandoned_fact(item.core.id)); }
     if item.result.phase != "complete" || (item.check.phase != "none" && item.check.phase != "complete" && item.check.phase != "abandoned") { return Err("continuous work unresolved"); }
     var output: Option<CheckOutput> = None();
     if item.check.phase == "complete" {

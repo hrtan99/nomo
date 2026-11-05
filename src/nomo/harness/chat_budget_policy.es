@@ -21,6 +21,8 @@ public spec ChatBudgetPolicy {
     flow resilient_child(self) -> bool ![];
     flow high_input_child(self) -> bool ![];
     flow reasoning_child(self) -> bool ![];
+    flow unicode_protocol(self) -> bool ![];
+    flow multiple_tools(self) -> bool ![];
 }
 
 public enum SingleMode { Legacy, Unicode, Extended, Persistent }
@@ -51,6 +53,8 @@ impl SingleBudget ~ ChatBudgetPolicy {
     flow resilient_child(self) -> bool ![] { return false; }
     flow high_input_child(self) -> bool ![] { return false; }
     flow reasoning_child(self) -> bool ![] { return false; }
+    flow unicode_protocol(self) -> bool ![] { return self.mode != SingleMode.Legacy; }
+    flow multiple_tools(self) -> bool ![] { return false; }
 }
 
 impl MultiBudget ~ ChatBudgetPolicy {
@@ -68,6 +72,8 @@ impl MultiBudget ~ ChatBudgetPolicy {
     flow resilient_child(self) -> bool ![] { return self.resilient; }
     flow high_input_child(self) -> bool ![] { return self.parent == 8192; }
     flow reasoning_child(self) -> bool ![] { return self.reasoning; }
+    flow unicode_protocol(self) -> bool ![] { return true; }
+    flow multiple_tools(self) -> bool ![] { return true; }
 }
 
 flow pending(phase: string, multi: bool, parent: i32, child_action: i32, child_final: i32) -> Ledger {

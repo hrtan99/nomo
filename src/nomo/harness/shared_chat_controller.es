@@ -58,7 +58,8 @@ flow stage<P ~ ChatBudgetPolicy>(policy: P, turn: i32, phase: string, before: Le
 
 // The invocation supplies cumulative usage and a validated successful selection.
 // Fresh local counters are a subledger of the already checked global reservation.
-flow execute<P ~ ChatBudgetPolicy>(policy: P, request: string, allowed: Array<string>, prior: Previous, before: Ledger, turn: i32, unicode: bool, multi: bool) -> LocalTurn {
+flow execute<P ~ ChatBudgetPolicy>(policy: P, request: string, allowed: Array<string>, prior: Previous, before: Ledger, turn: i32) -> LocalTurn {
+    let unicode = policy.unicode_protocol(); let multi = policy.multiple_tools();
     var state = fresh();
     let invalid = if unicode { unicode_question_error(request) } else { question_error(request) }; if invalid != "" { return refused(state, invalid, true); }
     let paths = if unicode { candidate_error(allowed) } else { allowed_error(allowed) }; if paths != "" { return refused(state, paths, true); }
@@ -107,7 +108,7 @@ flow execute<P ~ ChatBudgetPolicy>(policy: P, request: string, allowed: Array<st
         completed = Some(completed(request, raw, selected, child.state.history)) };
 }
 
-flow run_policy<P ~ ChatBudgetPolicy>(policy: P, request: string, allowed: Array<string>, invocation: Invocation, unicode: bool, multi: bool) -> TurnResult {
+flow run_policy<P ~ ChatBudgetPolicy>(policy: P, request: string, allowed: Array<string>, invocation: Invocation) -> TurnResult {
     let invalid = policy.validate_invocation(invocation);
     if invalid != "" { perform HarnessProgress.write("REFUSED " + invalid); return TurnResult { status = 1, state = invocation, resolved = true, completed = None() }; }
     let last_admission = policy.turn_limit() - 1;
@@ -115,7 +116,7 @@ flow run_policy<P ~ ChatBudgetPolicy>(policy: P, request: string, allowed: Array
         perform HarnessProgress.write("REFUSED turn limit reached"); return TurnResult { status = 1, state = invocation, resolved = true, completed = None() };
     }
     let turn = invocation.admitted + 1;
-    let local = execute(policy, request, allowed, invocation.prior, invocation.usage, turn, unicode, multi);
+    let local = execute(policy, request, allowed, invocation.prior, invocation.usage, turn);
     if !local.resolved { return TurnResult { status = 1, state = invocation, resolved = false, completed = None() }; }
     let combined = policy.combine(invocation.usage, local.usage);
     let usage = match combined {
@@ -127,8 +128,8 @@ flow run_policy<P ~ ChatBudgetPolicy>(policy: P, request: string, allowed: Array
 
 flow run_mode(request: string, allowed: Array<string>, invocation: Invocation, unicode: bool) -> TurnResult {
     return match select(invocation, unicode) {
-        SelectedBudget.Single(policy) => run_policy(policy, request, allowed, invocation, unicode, false),
-        SelectedBudget.Multi(policy) => run_policy(policy, request, allowed, invocation, unicode, true),
+        SelectedBudget.Single(policy) => run_policy(policy, request, allowed, invocation),
+        SelectedBudget.Multi(policy) => run_policy(policy, request, allowed, invocation),
     };
 }
 

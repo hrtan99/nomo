@@ -8,6 +8,7 @@ import nomo.session.history_check_guard.inspect as inspect_check;
 import nomo.session.history_followup_guard.inspect as inspect_followup;
 import nomo.session.history_followup_edit_store.{inspect as inspect_followup_edit, available as followup_edit_available};
 import nomo.session.history_followup_check_guard.inspect as inspect_followup_check;
+import nomo.session.work_fact_projection.{stored_fact, settled_usage};
 
 public type LegacyWorkFacts = {};
 impl LegacyWorkFacts ~ WorkFactsReader {
@@ -32,9 +33,9 @@ flow read_snapshot() -> Result<Facts, string> {
                 }
                 None() => {}
             }
-            work_facts = Some(WorkFacts { id = work.id, summary = work.summary, summary_source = "unknown", selection = None(), evidence = None(), check = outcome, exit_code = exit, output = output });
+            work_facts = Some(stored_fact(work.id, work.summary, "unknown", outcome, exit, output));
             let spent = match work.settled { Some(value) => value, None() => { return Err("first work ledger missing"); } };
-            work_calls = spent.read.calls + spent.edit.calls; work_generation = spent.read.tokens + spent.edit.tokens;
+            let usage = settled_usage(spent); work_calls = usage.calls; work_generation = usage.generation;
         }
     }
     let following = match inspect_followup() { Ok(value) => value, Err(error) => { return Err(error); } };
@@ -60,9 +61,9 @@ flow read_snapshot() -> Result<Facts, string> {
             }
             let first = match item.parent.work.settled { Some(value) => value, None() => { return Err("first work ledger missing"); } };
             let second = match item.settled { Some(value) => value, None() => { return Err("followup ledger missing"); } };
-            work_calls = first.read.calls + first.edit.calls + second.read.calls + second.edit.calls;
-            work_generation = first.read.tokens + first.edit.tokens + second.read.tokens + second.edit.tokens;
-            followup_facts = Some(WorkFacts { id = item.id, summary = item.summary, summary_source = "unknown", selection = None(), evidence = None(), check = outcome, exit_code = exit, output = output });
+            let first_usage = settled_usage(first); let second_usage = settled_usage(second);
+            work_calls = first_usage.calls + second_usage.calls; work_generation = first_usage.generation + second_usage.generation;
+            followup_facts = Some(stored_fact(item.id, item.summary, "unknown", outcome, exit, output));
         }
     }
     return Ok(Facts { first = work_facts, followup = followup_facts, additional = [], calls = work_calls, generation = work_generation });
