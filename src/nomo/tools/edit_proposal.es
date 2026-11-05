@@ -1,8 +1,6 @@
 module nomo.tools.edit_proposal;
 
-import std.text.{char_count as len, split, contains, char_get, from_char, strip_prefix};
-import std.collections.len as count;
-import std.bytes.len as byte_count;
+import std.text.{TextError, len, find, find_from, char_get, from_char, replace_range};
 import std.codec.text.utf8_encode;
 import nomo.tools.path_policy.valid_path;
 import nomo.core.large_context.file_bytes;
@@ -13,9 +11,8 @@ public type Proposal = { path: string, before: string, after: string };
 // Align with the large-context read contract, not scalar/grapheme count.
 // Provided strings already exist; this is not a general allocation guarantee.
 public flow text_bytes(value: string, field: string) -> Result<usize, string> {
-    if len(value) > file_bytes() { return Err(field + " exceeds 262144 UTF-8 bytes"); }
-    let bytes = utf8_encode(value); let size = byte_count(bytes);
-    if size > file_bytes() { return Err(field + " exceeds 262144 UTF-8 bytes"); }
+    let size = len(value); if size > file_bytes() { return Err(field + " exceeds 262144 UTF-8 bytes"); }
+    let bytes = utf8_encode(value);
     let zero: u8 = 0; var index: usize = 0;
     while index < size limit Iterations(262144) {
         if bytes[index] == zero { return Err(field + " contains NUL"); }
@@ -33,19 +30,18 @@ public flow propose(request: Request) -> Result<Proposal, string> {
     let replacement_bytes = match text_bytes(request.replacement, "replacement") { Ok(value) => value, Err(error) => { return Err(error); } };
     if target_bytes == 0 { if original_bytes == 0 && replacement_bytes > 0 { return Ok(Proposal { path = request.path, before = request.original, after = request.replacement }); } return Err("target must not be empty"); }
 
-    // The first split selects the leftmost match. Search again after its first
-    // Unicode scalar to detect every later match, including overlapping ones.
-    let parts = split(request.original, request.target);
-    if count(parts) < 2 { return Err("literal target not found"); }
-    if count(parts) > 2 { return Err("literal target is ambiguous"); }
+    // Search again after the first matched scalar to detect every later match,
+    // including overlapping ones, before applying the exact byte range.
+    let first_index = match find(request.original, request.target) { Some(value) => value, None() => { return Err("literal target not found"); } };
     let first = match char_get(request.target, 0) { Some(value) => from_char(value), None() => { return Err("literal match framing invalid"); } };
-    let tail = match strip_prefix(request.target, first) { Some(value) => value, None() => { return Err("literal match framing invalid"); } };
-    if contains(tail + parts[1], request.target) { return Err("literal target is ambiguous"); }
+    let later: Result<Option<usize>, TextError> = find_from(request.original, request.target, first_index + len(first))?;
+    match later { Ok(Some(_)) => { return Err("literal target is ambiguous"); }, Ok(None()) => {} Err(_) => { return Err("literal match framing invalid"); } }
     if request.target == request.replacement { return Err("replacement leaves original unchanged"); }
     // The exact match proves target_bytes <= original_bytes. Reject expansion
-    // before constructing any output, then preserve untouched text in one pass.
+    // before constructing any output, then replace the proven byte interval.
     if original_bytes - target_bytes + replacement_bytes > file_bytes() { return Err("result exceeds 262144 UTF-8 bytes"); }
-    let after = parts[0] + request.replacement + parts[1];
+    let changed: Result<string, TextError> = replace_range(request.original, [first_index, first_index + target_bytes), request.replacement)?;
+    let after = match changed { Ok(value) => value, Err(_) => { return Err("literal match framing invalid"); } };
     return Ok(Proposal { path = request.path, before = request.original, after = after });
 }
 
