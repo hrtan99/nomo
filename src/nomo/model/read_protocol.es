@@ -1,6 +1,6 @@
 module nomo.model.read_protocol;
 
-import std.text.{char_count as len, trim, replace, from_char};
+import std.text.{char_count as len, concat, trim, replace, from_char};
 import std.collections.len as count;
 import std.codec.text.utf8_encode;
 import std.bytes.len as byte_count;
@@ -46,21 +46,21 @@ flow fields(raw: string, maximum: usize) -> Result<Array<string>, string> {
 
 // Call only after decoding a valid frame. Keep string bytes and escapes intact.
 public flow compact_frame(raw: string) -> string {
-    var result = ""; var quoted = false; var escaped = false;
+    var result: Array<string> = []; var quoted = false; var escaped = false;
     let slash = from_char('\\');
     for codepoint in std.text.chars(raw) limit Iterations(16386) { let character = std.text.from_char(codepoint);
         if quoted {
-            result = result + character;
+            result = result.push(character);
             if escaped { escaped = false; }
             else if character == slash { escaped = true; }
             else if character == "\"" { quoted = false; }
         } else if character == "\"" {
-            quoted = true; result = result + character;
+            quoted = true; result = result.push(character);
         } else if character != "" && character != " " && character != "\n" && character != "\r" && character != "\t" {
-            result = result + character;
+            result = result.push(character);
         }
     }
-    return result;
+    return concat(result);
 }
 
 public type Utf8ReadPlan = { work: bool };

@@ -1,6 +1,6 @@
 module nomo.tools.edit_encoding;
 
-import std.text.{char_count as len, char_get, concat, from_char};
+import std.text.{char_count as len, char_get, concat, from_char, join};
 import std.collections.len as count;
 import std.bytes.len as byte_count;
 import std.codec.text.utf8_encode;
@@ -66,32 +66,31 @@ flow quoted(value: string) -> Result<string, string> {
 
 public flow json(values: Array<string>) -> Result<string, string> {
     if count(values) > 16 { return Err("edit JSON field count exceeds bound"); }
-    var output = "["; var first = true;
+    var fields: Array<string> = []; var size: usize = 2;
     for value in values limit Iterations(16) {
         let encoded = match quoted(value) { Ok(item) => item, Err(error) => { return Err(error); } };
-        if !first { output = output + ","; } first = false;
-        output = output + encoded;
-        if len(output) > edit_json_bytes() - 1 { return Err("edit JSON output exceeds bound"); }
+        size = size + len(encoded) + if count(fields) == 0 { 0 } else { 1 };
+        if size > edit_json_bytes() { return Err("edit JSON output exceeds bound"); }
+        fields = fields.push(encoded);
     }
-    output = output + "]";
-    if len(output) > edit_json_bytes() { return Err("edit JSON output exceeds bound"); }
-    return Ok(output);
+    return Ok("[" + join(fields, ",") + "]");
 }
 
 public flow object(keys: Array<string>, values: Array<string>) -> Result<string, string> {
     if count(keys) != count(values) || count(keys) > 16 { return Err("edit JSON key/value count invalid"); }
-    var output = "{"; var index: usize = 0; var seen: Array<string> = [];
+    var fields: Array<string> = []; var size: usize = 2; var index: usize = 0; var seen: Array<string> = [];
     while index < count(keys) limit Iterations(16) {
         for prior in seen limit Iterations(16) { if prior == keys[index] { return Err("duplicate edit JSON key"); } }
         seen = seen.push(keys[index]);
         let key = match quoted(keys[index]) { Ok(item) => item, Err(error) => { return Err(error); } };
         let value = match quoted(values[index]) { Ok(item) => item, Err(error) => { return Err(error); } };
-        if index != 0 { output = output + ","; }
-        output = output + key + ":" + value;
-        if len(output) > edit_json_bytes() - 1 { return Err("edit JSON output exceeds bound"); }
+        let field = key + ":" + value;
+        size = size + len(field) + if count(fields) == 0 { 0 } else { 1 };
+        if size > edit_json_bytes() { return Err("edit JSON output exceeds bound"); }
+        fields = fields.push(field);
         index = index + 1;
     }
-    return Ok(output + "}");
+    return Ok("{" + join(fields, ",") + "}");
 }
 
 public flow digest(text: string) -> Result<string, string> {
@@ -99,7 +98,7 @@ public flow digest(text: string) -> Result<string, string> {
     let converted: Option<Message<bytes>> = message.cast<bytes>();
     let data = match converted { Some(value) => value.body, None() => { return Err("SHA-256 representation refused"); } };
     if byte_count(data) != 32 { return Err("invalid SHA-256 length"); }
-    var output = ""; var index: usize = 0;
-    while index < 32 limit Iterations(32) { output = output + byte_hex(data[index]); index = index + 1; }
-    return Ok(output);
+    var parts: Array<string> = []; var index: usize = 0;
+    while index < 32 limit Iterations(32) { parts = parts.push(byte_hex(data[index])); index = index + 1; }
+    return Ok(concat(parts));
 }

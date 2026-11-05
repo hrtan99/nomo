@@ -6,9 +6,7 @@ import nomo.application.status_contract.SessionStatusReader;
 import nomo.bootstrap.chat.{RecoverableTicket, RecoverableChatRepository, recoverable_repository};
 import nomo.bootstrap.recoverable_status.recoverable_status_reader;
 import std.io.println;
-import std.text.{char_count as len, ends_with, from_i32};
-import std.bytes.len as byte_count;
-import std.codec.text.utf8_encode;
+import std.text.{ends_with, from_i32};
 import std.agent.message.Message;
 import std.json.{JsonValue, stringify};
 import std.collections.len as count;
@@ -32,7 +30,7 @@ import nomo.session.history_followup_check_guard.inspect as inspect_followup_che
 import nomo.session.edit_operation_store.inspect as inspect_first_edit;
 import nomo.session.history_followup_edit_store.inspect as inspect_second_edit;
 import nomo.session.edit_operation.Record as EditRecord;
-import nomo.session.session_display.escaped;
+import nomo.session.session_display.ascii_json_with;
 import nomo.core.conversation.Event;
 import std.io.IOError as ConsoleError;
 import std.fs.IOError as FileError;
@@ -244,13 +242,9 @@ public flow status(args: Array<string>) -> i32 ![Console, Memory, Fs.read<Policy
     let converted: Option<Message<JsonValue>> = Message.new(view).cast<JsonValue>();
     let value = match converted { Some(item) => item.body, None() => { println("REFUSED event view conversion"); return 1; } };
     let raw = match stringify(value) { Ok(item) => item, Err(_) => { println("REFUSED event view encoding"); return 1; } };
-    if len(raw) > 16777216 || byte_count(utf8_encode(raw)) > 16777216 { println("REFUSED event view exceeds bound"); return 1; }
-    var output = ""; var size: usize = 0;
-    for codepoint in std.text.chars(raw) limit Iterations(16777218) { let character = std.text.from_char(codepoint);
-        let part = escaped(character); size = size + len(part);
-        if size > 67108864 { println("REFUSED event view exceeds display bound"); return 1; }
-        output = output + part;
-    }
+    let output = match ascii_json_with(raw, 16777216, 67108864, "event view exceeds bound", "event view exceeds display bound") {
+        Ok(item) => item, Err(error) => { println("REFUSED " + error); return 1; }
+    };
     println("EVENT VIEW untrusted; known literal filtering is incomplete. Text values are JSON strings encoded within the outer JSON.");
     println("EVENT VIEW " + output);
     return 0;

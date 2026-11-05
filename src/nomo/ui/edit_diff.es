@@ -1,6 +1,6 @@
 module nomo.ui.edit_diff;
 
-import std.text.{char_count as len, split, strip_prefix, strip_suffix, from_usize};
+import std.text.{char_count as len, concat, split, strip_prefix, strip_suffix, from_usize};
 import std.collections.len as count;
 import std.bytes.len as byte_count;
 import std.codec.text.utf8_encode;
@@ -64,22 +64,22 @@ flow omitted(size: usize, kind: string) -> string {
 }
 
 flow context(values: Array<Line>, start: usize, end: usize) -> Result<string, string> {
-    var output = ""; var index = start;
+    var output: Array<string> = []; var index = start;
     while index < end limit Iterations(2) {
         let text = match shown("  ", values[index]) { Ok(value) => value, Err(error) => { return Err(error); } };
-        output = output + text; index = index + 1;
+        output = output.push(text); index = index + 1;
     }
-    return Ok(output);
+    return Ok(concat(output));
 }
 
 flow changed(values: Array<Line>, start: usize, end: usize, mark: string, kind: string) -> Result<string, string> {
-    var output = ""; var index = start; var selected: usize = 0;
+    var output: Array<string> = []; var index = start; var selected: usize = 0;
     while index < end && selected < 12 limit Iterations(12) {
         let text = match shown(mark, values[index]) { Ok(value) => value, Err(error) => { return Err(error); } };
-        output = output + text; index = index + 1; selected = selected + 1;
+        output = output.push(text); index = index + 1; selected = selected + 1;
     }
-    if index < end { output = output + omitted(end - index, kind); }
-    return Ok(output);
+    if index < end { output = output.push(omitted(end - index, kind)); }
+    return Ok(concat(output));
 }
 
 // Presentation only, not an applicable patch or edit authority. Compare exact
@@ -102,18 +102,19 @@ public flow render(before: string, after: string) -> Result<string, string> {
         if !same(original[old_size - suffix - 1], replacement[new_size - suffix - 1]) { break; }
         suffix = suffix + 1;
     }
-    var output = heading("--- before", original) + heading("+++ after", replacement);
+    var output = [heading("--- before", original), heading("+++ after", replacement)];
     let first = if prefix > 2 { prefix - 2 } else { 0 };
-    if first > 0 { output = output + omitted(first, "unchanged"); }
+    if first > 0 { output = output.push(omitted(first, "unchanged")); }
     let leading = match context(original, first, prefix) { Ok(value) => value, Err(error) => { return Err(error); } };
-    output = output + leading;
+    output = output.push(leading);
     let removed = match changed(original, prefix, old_size - suffix, "- ", "removed") { Ok(value) => value, Err(error) => { return Err(error); } };
     let added = match changed(replacement, prefix, new_size - suffix, "+ ", "added") { Ok(value) => value, Err(error) => { return Err(error); } };
-    output = output + removed + added;
+    output = output.push(removed).push(added);
     let visible = if suffix > 2 { 2 } else { suffix };
     let trailing = match context(replacement, new_size - suffix, new_size - suffix + visible) { Ok(value) => value, Err(error) => { return Err(error); } };
-    output = output + trailing;
-    if suffix > visible { output = output + omitted(suffix - visible, "unchanged"); }
-    if len(output) > 8192 || byte_count(utf8_encode(output)) > 8192 { return Err("edit preview output exceeds 8192 bytes"); }
-    return Ok(output);
+    output = output.push(trailing);
+    if suffix > visible { output = output.push(omitted(suffix - visible, "unchanged")); }
+    let rendered = concat(output);
+    if len(rendered) > 8192 || byte_count(utf8_encode(rendered)) > 8192 { return Err("edit preview output exceeds 8192 bytes"); }
+    return Ok(rendered);
 }
