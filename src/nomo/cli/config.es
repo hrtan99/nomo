@@ -1,6 +1,7 @@
 module nomo.cli.config;
 
 import std.collections.len;
+import std.text.{parse_i32, from_i32};
 
 public type Config = { steps: i32, budget: i32, once: bool, request: string, help: bool, error: string };
 
@@ -45,12 +46,9 @@ public flow load_for(args: Array<string>, provider: string) -> Config {
         if flag == "--steps" || flag == "--budget" {
             if flag == "--steps" && seen_steps { return invalid("duplicate --steps"); }
             if flag == "--budget" && seen_budget { return invalid("duplicate --budget"); }
-            let parsed = match value {
-                "1" => 1, "2" => 2, "3" => 3, "4" => 4,
-                "5" => 5, "6" => 6, "7" => 7, "8" => 8,
-                "9" => 9, "10" => 10, "11" => 11, "12" => 12,
-                "13" => 13, "14" => 14, "15" => 15, "16" => 16,
-                _ => 0,
+            let parsed = match parse_i32(value) {
+                Ok(number) => if number >= 1 && number <= 16 && from_i32(number) == value { number } else { 0 },
+                Err(_) => 0,
             };
             if parsed < 1 || parsed > 16 {
                 if flag == "--steps" { return invalid("steps must be canonical decimal in 1..16"); }
