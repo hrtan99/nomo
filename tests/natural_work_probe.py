@@ -93,9 +93,7 @@ def main():
     finally: os.umask(mask)
     assert stat.S_IMODE(workspace.stat().st_mode)==0o755
     for name in FILES:(workspace/name).write_text(BEFORE if name=='note.txt' else 'unrelated context\n')
-    sessions=out/'sessions';sessions.mkdir(mode=0o700);policy=out/'policy';policy.mkdir(mode=0o700)
-    (policy/'policy.json').write_text(json.dumps({'format':1,'literals':['SYNTHETIC_NEVER_PRESENT']}));(policy/'policy.json').chmod(0o600)
-    (policy/'binding.key').write_bytes(b'K'*32);(policy/'binding.key').chmod(0o600)
+    state=out/'state'
     server=HTTPServer(('127.0.0.1',0),Fake);server.phases=[];server.failure=None
     thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start()
     try:
@@ -104,17 +102,18 @@ def main():
             start=text.index('[runtime.profiles.'+name+'.model]');end=text.index('[runtime.profiles.'+name+'.model.timeout]',start)
             part=text[start:end].replace('https://api.minimax.cn/v1','http://host.docker.internal:%d/v1'%server.server_port).replace('allow_private = false','allow_private = true');text=text[:start]+part+text[end:]
         manifest.write_text(text)
-        env={'PATH':os.environ['PATH'],'HOME':os.environ['HOME'],'MINIMAX_API_KEY':'SYNTHETIC_ONLY','NOMO_ETAS_VERSION':'0.4.1'}
-        command=[str(project/'scripts/nomo-read.sh'),'session-chat','--sessions-dir',str(sessions),'--new','--root',str(workspace),'--allow',','.join(FILES),'--events-policy-dir',str(policy),'--check','/bin/sh','-c','grep -qx "before green" note.txt']
+        env={'PATH':os.environ['PATH'],'HOME':os.environ['HOME'],'MINIMAX_API_KEY':'SYNTHETIC_ONLY','NOMO_ETAS_VERSION':'0.4.1','NOMO_STATE_DIR':str(state)}
+        command=[str(project/'scripts/nomo'),'--root',str(workspace),'--allow',','.join(FILES),'--high-input','--check','/bin/sh','-c','grep -qx "before green" note.txt']
         first=interactive(command,env,TASK,True);match=re.search(rb'SESSION ID ([0-9a-f]{32})',first);assert match
+        assert b'High-input mode is persisted for this new session' in first
         assert (workspace/'note.txt').read_text()==AFTER and all((workspace/f).read_text()=='unrelated context\n' for f in FILES[:-1])
         assert stat.S_IMODE(workspace.stat().st_mode)==0o755
-        command=[str(project/'scripts/nomo-read.sh'),'session-chat','--sessions-dir',str(sessions),'--id',match.group(1).decode(),'--root',str(workspace),'--allow',','.join(FILES),'--events-policy-dir',str(policy)]
+        command=[str(project/'scripts/nomo'),'--root',str(workspace),'--id',match.group(1).decode(),'--allow',','.join(FILES)]
         second=interactive(command,env,'现在文件的颜色是什么？',False)
         assert not server.failure and server.phases==list(range(15));assert '当前内容是 before green'.encode() in second
-        status=subprocess.run([str(project/'scripts/nomo-read.sh'),'session-id','status','--sessions-dir',str(sessions),'--id',match.group(1).decode(),'--events','--events-policy-dir',str(policy)],env=env,capture_output=True,timeout=120)
+        status=subprocess.run([str(project/'scripts/nomo'),'--status','--id',match.group(1).decode(),'--events'],env=env,capture_output=True,timeout=120)
         assert status.returncode==0 and b'line 000: unchanged marker content' in status.stdout and b'line 179: unchanged marker content' in status.stdout and CHILD_DETAIL.encode() in status.stdout
-        print(json.dumps({'status':'passed','scope':'large-file natural-language edit, check, same-ID new-process continuation','file_bytes':len(BEFORE.encode()),'fake_requests':len(server.phases),'confirmations':2,'selected_file':'note.txt','unchanged_other_files':3}))
+        print(json.dumps({'status':'passed','scope':'persisted high-input natural-language edit, check, same-ID new-process continuation','file_bytes':len(BEFORE.encode()),'fake_requests':len(server.phases),'confirmations':2,'selected_file':'note.txt','unchanged_other_files':3}))
     finally:server.shutdown();server.server_close();thread.join(timeout=5);shutil.rmtree(out)
 
 if __name__=='__main__':main()

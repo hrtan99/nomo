@@ -15,8 +15,8 @@ Usage:
   nomo-read.sh session-id resume --sessions-dir PRIVATE_DIRECTORY --id SESSION_ID|latest --root DIR --allow FILE[,FILE...] --once QUESTION
   nomo-read.sh session-id status --sessions-dir PRIVATE_DIRECTORY --id SESSION_ID [--outputs | --events --events-policy-dir PRIVATE_DIRECTORY]
   nomo-read.sh session-id decision --sessions-dir PRIVATE_DIRECTORY --id SESSION_ID --operation-id ID --target work|check|followup|followup-check
-  nomo-read.sh session-chat --sessions-dir PRIVATE_DIRECTORY (--new | --id SESSION_ID) --root DIR (--allow FILE[,FILE...] | --discover) [--events-policy-dir PRIVATE_DIRECTORY] [--once QUESTION] [--check COMMAND ARG ...]
-  Event-recording sessions accept --events-policy-dir PRIVATE_DIRECTORY on start, resume, status, work and session-chat.
+  nomo-read.sh session-chat --sessions-dir PRIVATE_DIRECTORY (--new | --id SESSION_ID) --root DIR (--allow FILE[,FILE...] | --discover) [--events-policy-dir PRIVATE_DIRECTORY] [--high-input] [--once QUESTION] [--check COMMAND ARG ...]
+  Event-recording sessions accept --events-policy-dir PRIVATE_DIRECTORY on start, resume, status, work and session-chat. --high-input applies only to a new event-recording session and is persisted for later resumes.
   Event sessions support up to 32 saved read turns, with prior usage retained.
   Each new session read turn reserves up to 6 model calls, 405504 output tokens for new event sessions (older sessions retain their allowance), 3 read/search operations and 4 MiB plus 256 probe bytes of scan reservation per operation.
   This mode supports two work operations plus up to 32 additional followups, each freshly confirmed with an optional offline check.

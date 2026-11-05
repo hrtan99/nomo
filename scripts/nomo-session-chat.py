@@ -198,6 +198,7 @@ def chat_turn(args, question, starting, natural, tty):
     if question is not None: command += ['--root', args.root, '--allow=' + args.allow, '--once=' + question]
     if args.events_policy_dir is not None: command += ['--events-policy-dir', args.events_policy_dir]
     if natural: command += ['--natural-work']
+    if starting and getattr(args, 'high_input', False): command += ['--high-input']
     observer = NaturalObserver(['*'] if args.discover else args.allow.split(','))
     code = edit.run_owned(command, dict(os.environ), diagnostic=observer, **({} if tty else {'input_data': b''}))
     return code, observer
@@ -227,9 +228,14 @@ def work_command(args, action, root, operation_id, path, task, check):
     return command
 
 
-def show_discovery():
+def show_discovery(mode):
     print('Discovery uses pages of 256 files, up to eight automatic pages, seven directory levels and 512 directories; each directory is limited to 1024 entries and 131072 name bytes. Unsupported paths and file types are excluded; .gitignore is not interpreted.', flush=True)
-    print('Each automatic page uses another bounded chat turn: up to 6 calls and 405504 output tokens for new event sessions (older sessions retain their allowance). Page contents may change between turns.', flush=True)
+    if mode == 'high-input':
+        print('Each automatic page uses another bounded high-input chat turn: up to 6 calls and 32768 output tokens. Page contents may change between turns.', flush=True)
+    elif mode == 'default':
+        print('Each automatic page uses another bounded chat turn: up to 6 calls and 405504 output tokens for this new event session. Page contents may change between turns.', flush=True)
+    else:
+        print('Each automatic page uses another bounded chat turn under this session\'s persisted budget; /status reports its recorded reservation. Page contents may change between turns.', flush=True)
     print('Excluded: .git/.hg/.svn/.bzr, dependency and build directories, .venv/.tox/.cache/.mypy_cache/.pytest_cache, .ssh/.aws/.gnupg/.netrc, and .env files except .env.example/.env.sample.', flush=True)
     print('Dotfiles and project configuration in scope may be sent to the model.', flush=True)
     print('A link outside the selected workspace stops discovery; choose a narrower root.', flush=True)
@@ -247,9 +253,11 @@ def main(argv=None):
     files.add_argument('--discover', action='store_true')
     parser.add_argument('--page', type=int, default=0, choices=range(8), help='discovery page, 0..7')
     parser.add_argument('--events-policy-dir')
+    parser.add_argument('--high-input', action='store_true', help='new event session only: reserve 8192 output tokens per parent call so more of the shared provider context window remains available to input')
     parser.add_argument('--once', help='run exactly one read-only turn')
     parser.add_argument('--check', nargs=argparse.REMAINDER, help='optional command after each natural-language edit')
     args = parser.parse_args(argv)
+    if args.high_input and (not args.new or args.events_policy_dir is None): parser.error('--high-input requires --new and --events-policy-dir')
     if args.check == []:parser.error('--check requires a command')
     if args.page and not args.discover: parser.error('--page requires --discover')
     if args.discover: args.allow = '*' + str(args.page)
@@ -267,8 +275,14 @@ def main(argv=None):
         except KeyboardInterrupt:
             print('Input cancelled.', file=sys.stderr)
             return 130
-    if args.discover: show_discovery()
-    print('A read turn in a new event session may reserve up to 6 calls and 405504 output tokens: up to 3 child action calls at 4096 each, one child final and 2 parent calls at 131072 each; at most 3786432 configured native tokens in total; up to 3 read/search operations reserve 4 MiB plus 256 probe bytes each. Older sessions retain their original allowance.', flush=True)
+    budget_mode = 'high-input' if args.high_input else 'default' if args.new else 'persisted'
+    if args.discover: show_discovery(budget_mode)
+    if budget_mode == 'high-input':
+        print('High-input mode is persisted for this new session. A read turn reserves up to 6 calls and 32768 output tokens: up to 3 child action calls and one child final at 4096 each, plus 2 parent calls at 8192 each; at most 3786432 configured native tokens in total. Provider input and output share its context window; actual input and usage are unknown.', flush=True)
+    elif budget_mode == 'default':
+        print('A read turn in a new event session may reserve up to 6 calls and 405504 output tokens: up to 3 child action calls at 4096 each, one child final and 2 parent calls at 131072 each; at most 3786432 configured native tokens in total; up to 3 read/search operations reserve 4 MiB plus 256 probe bytes each. Older sessions retain their original allowance.', flush=True)
+    else:
+        print('This resumed session keeps its persisted model budget. Use /status for the recorded reservation; input and output share the provider context window and actual usage is unknown.', flush=True)
     if args.once is not None: print('An unfinished delegated answer may use one additional read turn with the same limits.', flush=True)
     if args.id is not None:
         show_resume(args, show_id=True)
@@ -312,7 +326,7 @@ def main(argv=None):
                     print('REFUSED /discover requires a page from 0 to 7.', file=sys.stderr, flush=True)
                 else:
                     args.discover = True; args.page = int(choice); args.allow = '*' + choice
-                    print('Selected discovery page ' + choice + '.', flush=True); show_discovery()
+                    print('Selected discovery page ' + choice + '.', flush=True); show_discovery(budget_mode)
                 continue
             if question.startswith('/page '):
                 choice = question[6:]

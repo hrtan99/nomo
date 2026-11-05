@@ -3,7 +3,7 @@ module nomo.harness.chat_budget_policy;
 import nomo.harness.harness_tool_contract.{Ledger, bump, settle};
 import nomo.model.model_tool_contract.Session;
 import nomo.harness.harness_tool_chat_contract.{Invocation, default_maximum, turn_error, combine};
-import nomo.harness.read_tool_chat_contract.{turn_error as unicode_turn_error, extended_maximum, extended_turn_error, extended_combine, session_maximum, session_turn_error, session_combine, multi_maximum, multi_wide_maximum, multi_large_maximum, multi_resilient_maximum, multi_turn_error, multi_bump, multi_settle, multi_combine};
+import nomo.harness.read_tool_chat_contract.{turn_error as unicode_turn_error, extended_maximum, extended_turn_error, extended_combine, session_maximum, session_turn_error, session_combine, multi_maximum, multi_wide_maximum, multi_input_maximum, multi_large_maximum, multi_resilient_maximum, multi_turn_error, multi_bump, multi_settle, multi_combine};
 
 // Policies account configured reservations. They never dispatch a model or retry.
 public spec ChatBudgetPolicy {
@@ -49,8 +49,8 @@ impl MultiBudget ~ ChatBudgetPolicy {
     flow maximum(self) -> Ledger ![] { return self.ceiling; }
     flow turn_limit(self) -> i32 ![] { return self.turns; }
     flow validate_invocation(self, value: Invocation) -> string ![Error<IndexError>] { return multi_turn_error(value, self.turns); }
-    flow reserve_stage(self, value: Ledger, call: bool) -> Result<Ledger, string> ![] { return multi_bump(value, call, self.parent >= 4096, self.parent == 131072); }
-    flow settle_child(self, value: Ledger, child: Session) -> Result<Ledger, string> ![] { return multi_settle(value, child, self.parent >= 4096, self.parent == 131072, self.resilient); }
+    flow reserve_stage(self, value: Ledger, call: bool) -> Result<Ledger, string> ![] { return multi_bump(value, call, self.parent); }
+    flow settle_child(self, value: Ledger, child: Session) -> Result<Ledger, string> ![] { return multi_settle(value, child, self.parent, self.resilient); }
     flow combine(self, previous: Ledger, local: Ledger) -> Result<Ledger, string> ![] { return multi_combine(previous, local, self.ceiling); }
     flow pending(self, phase: string) -> Ledger ![] { return pending(phase, true, self.parent, if self.resilient { 131072 } else { 4096 }); }
     flow child_pending(self) -> Ledger ![] { return Ledger { steps = 7, calls = 4, tokens = (if self.resilient { 131072 } else { 4096 }) + 12288, tools = 3, scan = 12583680 }; }
@@ -68,6 +68,7 @@ flow pending(phase: string, multi: bool, parent: i32, child_final: i32) -> Ledge
 // This is the sole compatibility mapping from saved maxima to runtime policy.
 public flow select(value: Invocation, unicode: bool) -> SelectedBudget {
     if unicode {
+        if value.maximum == multi_input_maximum(48) { return SelectedBudget.Multi(MultiBudget { turns = 48, parent = 8192, resilient = false, ceiling = value.maximum }); }
         if value.maximum == multi_resilient_maximum(48) { return SelectedBudget.Multi(MultiBudget { turns = 48, parent = 131072, resilient = true, ceiling = value.maximum }); }
         if value.maximum == multi_large_maximum(48) { return SelectedBudget.Multi(MultiBudget { turns = 48, parent = 131072, resilient = false, ceiling = value.maximum }); }
         for turns in [2, 32, 48] limit Iterations(3) {

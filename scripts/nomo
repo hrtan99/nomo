@@ -57,12 +57,14 @@ def main():
     parser.add_argument('--status', action='store_true', help='inspect the selected session offline')
     parser.add_argument('--events', action='store_true', help='include recorded events with --status')
     parser.add_argument('--once', help='run one read-only question')
+    parser.add_argument('--high-input', action='store_true', help='new sessions only: lower output reservations so more of the shared provider context window remains available to input')
     scope = parser.add_mutually_exclusive_group()
     scope.add_argument('--page', type=int, choices=range(8), help='initial discovery page, 0..7 (default: 0)')
     scope.add_argument('--allow', help='read only these one to four comma-separated relative files')
     parser.add_argument('--check', nargs=argparse.REMAINDER, help='offline command after a confirmed edit')
     args = parser.parse_args()
     if args.events and not args.status: parser.error('--events requires --status')
+    if args.high_input and (args.id is not None or args.latest or args.status): parser.error('--high-input creates a new session and cannot be combined with --id, --latest or --status')
     if args.status and ((args.id is None and not args.latest) or args.once is not None or args.page is not None or args.allow is not None or args.check is not None):
         parser.error('--status requires --id or --latest and accepts no question, scope or check')
     if args.check == []:
@@ -95,6 +97,8 @@ def main():
                        '--events-policy-dir', str(policy)]
             if args.once is not None:
                 command += ['--once', args.once]
+            if args.high_input:
+                command += ['--high-input']
             if args.check is not None:
                 command += ['--check', *args.check]
         os.execv(command[0], command)

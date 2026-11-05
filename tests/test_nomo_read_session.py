@@ -71,6 +71,16 @@ class ReadSessionLauncherTest(unittest.TestCase):
         self.assertNotIn('NOMO_EVENT_POLICY_DIR',env)
         self.assertFalse(any('SYNTHETIC_SECRET' in value for value in cmd))
 
+    def test_high_input_mode_reaches_only_new_event_native_flow(self):
+        policy=self.root/'policy';policy.mkdir(mode=0o700);file=policy/'policy.json';file.write_text('{"format":1,"literals":["SYNTHETIC_SECRET"]}');file.chmod(0o600);key=policy/'binding.key';key.write_bytes(b'K'*32);key.chmod(0o600)
+        with patch.object(launcher,'run_owned',return_value=0) as run:
+            self.assertEqual(self.invoke(self.newargs()+['--events-policy-dir',str(policy),'--high-input']),0)
+        self.assertEqual(run.call_args.args[0][-1],'--high-input')
+        self.existing()
+        with patch.object(launcher,'run_owned') as run:
+            self.assertNotEqual(self.invoke(['continue','--root',str(self.context),'--state',str(self.state),'--allow','context.txt','--once','read it','--events-policy-dir',str(policy),'--high-input']),0)
+            run.assert_not_called()
+
     def test_event_recording_discloses_retained_text_and_limited_filtering(self):
         policy=self.root/'policy';policy.mkdir(mode=0o700);file=policy/'policy.json';file.write_text('{"format":1,"literals":["SYNTHETIC_SECRET"]}');file.chmod(0o600);key=policy/'binding.key';key.write_bytes(b'K'*32);key.chmod(0o600)
         out=io.StringIO()

@@ -40,6 +40,23 @@ class SessionChatTest(unittest.TestCase):
         self.assertEqual(code,0);command=launch.call_args.args[0]
         self.assertEqual(command[command.index('--workspace-root')+1],'/workspace')
 
+    def test_high_input_flag_is_forwarded_only_when_starting(self):
+        args=module.argparse.Namespace(sessions_dir='/private/sessions',id=None,root='/workspace',allow='file.txt',events_policy_dir='/policy',discover=False,high_input=True)
+        with patch.object(module.edit,'run_owned',return_value=0) as launch:
+            code,_=module.chat_turn(args,'question',True,True,False)
+        self.assertEqual(code,0);command=launch.call_args.args[0]
+        self.assertIn('--high-input',command);self.assertIn('--natural-work',command)
+        args.id='1'*32
+        with patch.object(module.edit,'run_owned',return_value=0) as launch:
+            code,_=module.chat_turn(args,'question',False,True,False)
+        self.assertEqual(code,0);self.assertNotIn('--high-input',launch.call_args.args[0])
+
+    def test_resumed_session_does_not_guess_default_budget(self):
+        code,out,error,calls=self.run_chat('/exit\n')
+        self.assertEqual(code,0);self.assertEqual(error,'');calls.assert_not_called()
+        self.assertIn('keeps its persisted model budget',out)
+        self.assertNotIn('405504 output tokens',out)
+
     def test_interactive_automatic_check_can_be_set_viewed_and_cleared(self):
         self.args += ['--events-policy-dir', '/private-policy']
         source = Terminal('/check python3 -c "assert 2 == 2"\n/check\nedit one\n/check --clear\nedit two\n/exit\n')

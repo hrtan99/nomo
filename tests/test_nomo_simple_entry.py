@@ -15,6 +15,17 @@ loader.exec_module(module)
 
 
 class SimpleEntryTests(unittest.TestCase):
+    def test_high_input_is_new_session_only_and_reaches_main_launcher(self):
+        with tempfile.TemporaryDirectory(prefix='nomo-high-input-') as tmp:
+            base=Path(tmp).resolve();workspace=base/'workspace';workspace.mkdir();state=base/'state'
+            with patch.dict(os.environ,{'NOMO_STATE_DIR':str(state)}),patch.object(module.sys,'argv',['nomo','--root',str(workspace),'--high-input','--once','read']),patch.object(module.os,'execv') as execute:
+                module.main();command=execute.call_args.args[1]
+            self.assertIn('--new',command);self.assertIn('--high-input',command)
+            for selection in (['--id','a'*32],['--latest'],['--status','--id','a'*32]):
+                with self.subTest(selection=selection),patch.object(module.sys,'argv',['nomo','--root',str(workspace),'--high-input',*selection]),patch.object(module.os,'execv') as execute:
+                    with self.assertRaises(SystemExit):module.main()
+                    execute.assert_not_called()
+
     def test_initialize_then_resume_preserves_policy_and_uses_current_root(self):
         with tempfile.TemporaryDirectory(prefix='nomo-entry-') as tmp:
             base = Path(tmp).resolve(); workspace = base/'workspace'; workspace.mkdir()

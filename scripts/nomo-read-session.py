@@ -87,10 +87,11 @@ def event_lines(raw):
 def main(argv=None):
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('action',choices=('new','continue','status','init'));parser.add_argument('--state',required=True)
-    parser.add_argument('--root');parser.add_argument('--allow');parser.add_argument('--once');parser.add_argument('--outputs',action='store_true');parser.add_argument('--events',action='store_true');parser.add_argument('--events-policy-dir');parser.add_argument('--natural-work',action='store_true')
+    parser.add_argument('--root');parser.add_argument('--allow');parser.add_argument('--once');parser.add_argument('--outputs',action='store_true');parser.add_argument('--events',action='store_true');parser.add_argument('--events-policy-dir');parser.add_argument('--natural-work',action='store_true');parser.add_argument('--high-input',action='store_true')
     args=parser.parse_args(argv)
     try:
         if args.natural_work and args.action in ('status','init'):raise ValueError('natural work routing requires a read turn')
+        if args.high_input and (args.action!='new' or args.events_policy_dir is None):raise ValueError('high-input mode requires a new event-recording session')
         status=args.action in ('status','init');creating=args.action in ('new','init');state=_edit_launcher.private_state(args.state);context=None
         if status:
             if args.root is not None or args.allow is not None or args.once is not None:raise ValueError('status accepts only --state')
@@ -149,6 +150,7 @@ def main(argv=None):
                 else:native_args+=['--policy-binding',policy_binding]
                 print('Event recording is opt-in; policy filters only supplied exact literals. Unknown secrets may remain. Keep the same private policy and binding key; recorded history alone does not establish workspace identity.',flush=True)
             if args.natural_work:native_args+=['--natural-work']
+            if args.high_input:native_args+=['--high-input']
             compose+=['--file',str(ROOT/'config/nomo-read-session-compose.yaml')]
             runner=['python3','-B','/workspace/scripts/nomo-event-policy.py','stdin-bootstrap'] if policy is not None else ['python3','-B','/workspace/scripts/nomo-verified-etas.py']
             native=[*runner,'run','/workspace','--flow',flow,'--profile',profile,'--allow-effects',*native_args]

@@ -24,7 +24,7 @@ public flow recoverable_chat_probe(args: Array<string>) -> i32 ![Console, Memory
     let policy = Policy { format = 1, literals = ["VERY_SECRET_123"] };
     let binding = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
     if args[0] == "reserve-first" {
-        match create(policy, binding) { Ok(_) => {} Err(_) => { abort("create refused"); } }
+        match create(policy, binding, false) { Ok(_) => {} Err(_) => { abort("create refused"); } }
         let prior = match load(policy, binding) { Ok(Some(item)) => item, _ => { abort("fresh frame missing"); } };
         match reserve(prior, "first question", policy, binding) { Ok(_) => {} Err(_) => { abort("first reservation refused"); } }
         println("PASS first reservation"); return 0;

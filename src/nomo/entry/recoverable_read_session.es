@@ -46,7 +46,7 @@ import nomo.session.chat_format_policy.policy as format_policy;
 flow conversation(frame: EventFrame, policy: Policy, binding: string) -> Result<Array<Event>, string> {
     var selected: Array<Event> = []; var chat_turn: i32 = 0;
     for event in frame.events limit Iterations(4096) {
-        if event.role == "system" && event.kind == "native-budget" && (event.name == "chat" || event.name == "chat-large" || event.name == "chat-resilient") {
+        if event.role == "system" && event.kind == "native-budget" && (event.name == "chat" || event.name == "chat-large" || event.name == "chat-resilient" || event.name == "chat-high-input") {
             chat_turn = chat_turn + 1;
         }
         if (event.role == "user" && event.kind == "request") ||
@@ -69,8 +69,11 @@ flow conversation(frame: EventFrame, policy: Policy, binding: string) -> Result<
     return Ok(selected);
 }
 public flow run(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyRoot>, Fs.list<ReadOnlyRoot>, Fs.stat<ReadOnlyRoot>, Fs.read<PolicyRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {
-    let natural = count(args) == 8 && args[7] == "--natural-work";
-    if (count(args) != 7 && !natural) || (args[0] != "new" && args[0] != "continue") || args[1] != "--allow" || args[3] != "--once" || args[5] != "--policy-binding" {
+    let size = count(args);
+    let natural = (size >= 8 && args[7] == "--natural-work") || (size == 9 && args[8] == "--natural-work");
+    let high_input = (size >= 8 && args[7] == "--high-input") || (size == 9 && args[8] == "--high-input");
+    let flags_ok = size == 7 || (size == 8 && (natural || high_input)) || (size == 9 && natural && high_input && args[7] != args[8]);
+    if !flags_ok || (args[0] != "new" && args[0] != "continue") || (high_input && args[0] != "new") || args[1] != "--allow" || args[3] != "--once" || args[5] != "--policy-binding" {
         println("REFUSED expected new|continue --allow FILE[,FILE...] --once QUESTION"); return 1;
     }
     if !within(args[2], 195) { println("REFUSED allowlist too long"); return 1; }
@@ -85,7 +88,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyR
     match inspect_check() { Ok(None()) => {} _ => { println("REFUSED check record exists or is invalid"); return 1; } }
     match inspect_followup_check() { Ok(None()) => {} _ => { println("REFUSED followup check exists or is invalid"); return 1; } }
     let binding = args[6];
-    let repository = recoverable_repository(policy, binding);
+    let repository = recoverable_repository(policy, binding, high_input);
     let current = match open_chat<RecoverableTicket, RecoverableChatRepository>(repository, args[0] == "new") { Ok(value) => value, Err(error) => { println("REFUSED " + error); return 1; } };
     let facts = match work_facts(policy, binding) { Ok(item) => item, Err(error) => { println("REFUSED " + error); return 1; } };
     let history = match conversation(current.value.events, policy, binding) { Ok(item) => item, Err(error) => { println("REFUSED " + error); return 1; } };
@@ -140,7 +143,7 @@ public flow status(args: Array<string>) -> i32 ![Console, Memory, Fs.read<Policy
     match load_legacy() { Ok(None()) => {} _ => { println("REFUSED legacy or invalid session data"); return 1; } }
     if initialize {
         match load(policy, args[1]) { Ok(None()) => {} Ok(Some(_)) => { println("REFUSED session already exists"); return 1; } Err(error) => { println("REFUSED " + error); return 1; } }
-        return match create(policy, args[1]) { Ok(_) => { println("SESSION INITIALIZED"); 0 } Err(error) => { println("REFUSED " + error); 1 } };
+        return match create(policy, args[1], false) { Ok(_) => { println("SESSION INITIALIZED"); 0 } Err(error) => { println("REFUSED " + error); 1 } };
     }
     let snapshot = match recoverable_status_reader(policy, args[1]).snapshot() { Ok(value) => value, Err(error) => { println("REFUSED " + error); return 1; } };
     let saved = snapshot.chat; let work = snapshot.work; let check = snapshot.check;
@@ -148,7 +151,7 @@ public flow status(args: Array<string>) -> i32 ![Console, Memory, Fs.read<Policy
     var additional: Array<ExtraEntry> = [];
     match extra { Some(item) => { additional = item.value.history.push(item.value.current); } None() => {} }
     var chat_reservations: i32 = 0; var native_configured: i32 = 0; var legacy_native_unknown = false;
-    for event in saved.value.events.events limit Iterations(4096) { if event.role == "system" && event.kind == "native-budget" && (event.name == "chat" || event.name == "chat-large" || event.name == "chat-resilient") { chat_reservations = chat_reservations + 1; native_configured = native_configured + if event.name == "chat-resilient" { 3786432 } else { if event.name == "chat-large" { 3048576 } else { 1179648 } }; } }
+    for event in saved.value.events.events limit Iterations(4096) { if event.role == "system" && event.kind == "native-budget" && (event.name == "chat" || event.name == "chat-large" || event.name == "chat-resilient" || event.name == "chat-high-input") { chat_reservations = chat_reservations + 1; native_configured = native_configured + if event.name == "chat-resilient" || event.name == "chat-high-input" { 3786432 } else { if event.name == "chat-large" { 3048576 } else { 1179648 } }; } }
     let completed_new = if saved.value.chat.phase == "running" && chat_reservations > 0 { chat_reservations - 1 } else { chat_reservations };
     if saved.value.chat.invocation.admitted > completed_new { legacy_native_unknown = true; }
     match work { Some(item) => { if item.value.work.format >= 4 { native_configured = native_configured + if item.value.work.format == 7 || item.value.work.format == 8 { 2811008 } else { if item.value.work.format == 6 { 2073152 } else { 1335296 } }; } else { legacy_native_unknown = true; } } None() => {} }

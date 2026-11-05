@@ -39,11 +39,11 @@ impl LegacyChatRepository ~ ChatRepository<LegacyEntry> {
 }
 
 public alias RecoverableTicket = MemoryEntry<string, Frame>;
-public type RecoverableChatRepository = { redaction: Policy, binding: string };
+public type RecoverableChatRepository = { redaction: Policy, binding: string, high_input: bool };
 impl RecoverableChatRepository ~ ChatRepository<RecoverableTicket> {
     flow load(self) -> Result<Option<RecoverableTicket>, string> { return load_recoverable(self.redaction, self.binding); }
     flow create(self) -> Result<RecoverableTicket, string> {
-        let version = match create_recoverable(self.redaction, self.binding) { Ok(value) => value, Err(error) => { return Err(error); } };
+        let version = match create_recoverable(self.redaction, self.binding, self.high_input) { Ok(value) => value, Err(error) => { return Err(error); } };
         let saved = match load_recoverable(self.redaction, self.binding) { Ok(Some(value)) => value, _ => { return Err("recoverable session missing or invalid"); } };
         if saved.version.opaque != version.opaque { return Err("session creation changed"); }
         return Ok(saved);
@@ -66,6 +66,6 @@ impl RecoverableChatRepository ~ ChatRepository<RecoverableTicket> {
 }
 
 public flow legacy_repository() -> LegacyChatRepository { return LegacyChatRepository {}; }
-public flow recoverable_repository(redaction: Policy, binding: string) -> RecoverableChatRepository {
-    return RecoverableChatRepository { redaction = redaction, binding = binding };
+public flow recoverable_repository(redaction: Policy, binding: string, high_input: bool) -> RecoverableChatRepository {
+    return RecoverableChatRepository { redaction = redaction, binding = binding, high_input = high_input };
 }
