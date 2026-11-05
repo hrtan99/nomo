@@ -43,7 +43,41 @@ flow large_chat_duplicate(item: Event, outcome: string) -> bool {
         byte_count(utf8_encode(item.text)) > timeline_inline_bytes();
 }
 public flow chat_omitted() -> string { return "Large selected tool outcome retained by canonical chat state and archived by turn before a later turn; duplicate timeline text omitted."; }
+flow context_omitted() -> string { return "Large prior tool outcome retained by canonical turn evidence; duplicate child context text omitted."; }
 flow work_omitted() -> string { return "Large selected tool outcome retained in canonical work evidence; duplicate timeline text omitted."; }
+
+// A completed child record repeats the previous turn's selected outcome as a
+// user/context/outcome event. It is not part of conversation(); the canonical
+// main/tool event is restored from the per-turn evidence row instead. Compact
+// every outgoing frame so sessions written by earlier versions are repaired on
+// their next reserve/finish without changing the durable schema or CAS head.
+flow compact_context_duplicates(value: Frame, policy: Policy, binding: string) -> Result<Frame, string> {
+    let marker = match encode(context_omitted(), policy) { Ok(item) => item.value, Err(error) => { return Err(error); } };
+    var events: Array<Event> = []; var chat_turn: i32 = 0;
+    for item in value.events.events limit Iterations(4096) {
+        if item.role == "system" && item.kind == "native-budget" &&
+            (item.name == "chat" || item.name == "chat-large" || item.name == "chat-resilient" || item.name == "chat-high-input") {
+            chat_turn = chat_turn + 1;
+        }
+        let duplicate = item.role == "user" && item.kind == "context" && item.name == "outcome" &&
+            byte_count(utf8_encode(item.text)) > timeline_inline_bytes();
+        var compact = false;
+        if duplicate && chat_turn >= 2 {
+            let decoded = match decode(item.text, policy) { Ok(text) => text, Err(error) => { return Err(error); } };
+            match load_evidence(chat_turn - 1, policy, binding) {
+                Ok(Some(evidence)) => { compact = evidence == decoded; }
+                Ok(None()) => {}
+                Err(error) => { return Err(error); }
+            }
+        }
+        events = events.push(Event { role = item.role, kind = item.kind, name = item.name,
+            text = if compact { marker } else { item.text } });
+    }
+    let before = value.events;
+    return Ok(Frame { format = value.format, encoding = value.encoding, policy_binding = value.policy_binding,
+        chat = value.chat, events = EventFrame { format = before.format, turns = before.turns,
+            first_count = before.first_count, events = events } });
+}
 
 flow evidence_error(value: Evidence, policy: Policy, binding: string) -> string {
     let bound = binding_error(binding); if bound != "" { return bound; }
@@ -118,13 +152,14 @@ impl ChatRows ~ CasRows<Frame> {
     flow same(self, left: Frame, right: Frame) -> bool ![] { return left == right; }
 }
 flow write(value: Frame, expected: Option<MemoryEntry<string, Frame>>, policy: Policy, binding: string) -> Result<MemoryVersion, string> ![Memory, Error<StorageError>, Error<IndexError>] {
-    let error = frame_error(value, policy, binding); if error != "" { return Err(error); }
+    let stored = match compact_context_duplicates(value, policy, binding) { Ok(item) => item, Err(error) => { return Err(error); } };
+    let error = frame_error(stored, policy, binding); if error != "" { return Err(error); }
     let observed = match load(policy, binding) { Ok(item) => item, Err(problem) => { return Err(problem); } };
     if observed != expected { return Err("recoverable chat changed; no retry"); }
     let condition: WriteCondition = match expected { Some(item) => Match(item.version), None() => Missing };
     let rows = ChatRows { redaction = policy, binding = binding };
     let previous = match expected { Some(item) => Some(item.version), None() => None() };
-    return commit_once<Frame, ChatRows>(rows, value, condition, previous);
+    return commit_once<Frame, ChatRows>(rows, stored, condition, previous);
 }
 
 public flow create(policy: Policy, binding: string, high_input: bool) -> Result<MemoryVersion, string> ![Memory, Error<StorageError>, Error<IndexError>] {
