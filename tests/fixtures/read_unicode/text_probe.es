@@ -24,7 +24,7 @@ flow integration() -> bool {
             if context.request != "请总结文件" { abort("parent request changed"); }
             if context.phase == "plan" { resume "[\"delegate\",\"读取文件\"]"; }
             if context.task != "读取文件" || context.result != "内容是蓝色" ||
-                context.tool != "read" || context.outcome != "complete: 蓝色<LF>" { abort("parent evidence changed"); }
+                context.tool != "read" || context.outcome != "complete: 蓝色%n" { abort("parent evidence changed"); }
             resume "文件内容是蓝色";
         }
         LegacyStringStages.child(task, allowed, selected) => {
@@ -33,7 +33,7 @@ flow integration() -> bool {
             let child = run_loop_controller(task, allowed, default_limits(), initial, false, false) with {
                 LegacyChildModel.infer(context) => {
                     if context.final_only {
-                        if context.history[4].text != "complete: 蓝色<LF>" { abort("child evidence changed"); }
+                        if context.history[4].text != "complete: 蓝色%n" { abort("child evidence changed"); }
                         resume "[\"final\",\"内容是蓝色\"]";
                     }
                     resume "[\"read\",\"sample.txt\"]";
@@ -124,18 +124,32 @@ public flow read_unicode_text_probe(args: Array<string>) -> i32 {
         Ok(_) => { abort("extra final field accepted"); }
     }
     match decode_child("[\"final\",\"   \"]", ["sample.txt"], true) {
-        Err(error) => { if error != "child final text is empty" { abort("wrong empty final diagnostic"); } }
+        Err(error) => { if error != "child final contains unsupported control or formatting characters or is empty" { abort("wrong empty final diagnostic"); } }
         Ok(_) => { abort("empty final accepted"); }
     }
-    var long = ""; var i: i32 = 0;
-    while i < 257 limit Iterations(257) { long = long + "a"; i = i + 1; }
-    match decode_child("[\"final\",\"" + long + "\"]", ["sample.txt"], true) {
-        Err(error) => { if error != "child final exceeds 256 UTF-8 bytes" { abort("wrong final size diagnostic"); } }
-        Ok(_) => { abort("overlong final accepted"); }
+    var exact_answer = ""; var i: i32 = 0;
+    while i < 4096 limit Iterations(4096) { exact_answer = exact_answer + "a"; i = i + 1; }
+    match decode_child("[\"final\",\"" + exact_answer + "\"]", ["sample.txt"], true) {
+        Ok(value) => { if value.text != exact_answer { abort("4096-byte final changed"); } }
+        Err(_) => { abort("4096-byte final refused"); }
+    }
+    match decode_child("[\"final\",\"" + exact_answer + "a\"]", ["sample.txt"], true) {
+        Err(error) => { if error != "child final exceeds 4096 UTF-8 bytes" { abort("wrong final size diagnostic"); } }
+        Ok(_) => { abort("4097-byte final accepted"); }
+    }
+    var chinese = ""; var j: i32 = 0;
+    while j < 1365 limit Iterations(1365) { chinese = chinese + "蓝"; j = j + 1; }
+    match decode_child("[\"final\",\"" + chinese + "\"]", ["sample.txt"], true) {
+        Ok(value) => { if value.text != chinese { abort("4095-byte Chinese final changed"); } }
+        Err(_) => { abort("4095-byte Chinese final refused"); }
+    }
+    match decode_child("[\"final\",\"" + chinese + "蓝\"]", ["sample.txt"], true) {
+        Err(error) => { if error != "child final exceeds 4096 UTF-8 bytes" { abort("wrong Chinese final size diagnostic"); } }
+        Ok(_) => { abort("4098-byte Chinese final accepted"); }
     }
     match decode_child("[\"final\",\"one" + std.text.from_char('\\') + "nline\"]", ["sample.txt"], true) {
-        Err(error) => { if error != "child final contains unsupported control or formatting characters" { abort("wrong final control diagnostic"); } }
-        Ok(_) => { abort("escaped newline final accepted"); }
+        Ok(value) => { if value.text != "one line" { abort("escaped newline final normalization changed"); } }
+        Err(_) => { abort("escaped newline final refused"); }
     }
     match decode_plan("[\n \"delegate\",\t \"请读取文件\"\r\n]") {
         Ok(value) => { if value != "请读取文件" { abort("formatted delegation changed"); } }
@@ -145,7 +159,7 @@ public flow read_unicode_text_probe(args: Array<string>) -> i32 {
         Ok(_) => { abort("literal newline inside string accepted"); } Err(_) => {}
     }
     match decode_child("[\"final\",\"one" + std.text.from_char('\\') + "nline\"]", ["sample.txt"], true) {
-        Ok(_) => { abort("escaped newline in answer accepted"); } Err(_) => {}
+        Ok(value) => { if value.text != "one line" { abort("escaped newline answer normalization changed"); } } Err(_) => { abort("escaped newline answer refused"); }
     }
     match decode_child("[\"read\",\"other.txt\"]", ["sample.txt"], false) {
         Ok(_) => { abort("unallowed path accepted"); } Err(_) => {}
@@ -159,7 +173,7 @@ public flow read_unicode_text_probe(args: Array<string>) -> i32 {
     }
     match answer("最终答案") { Ok(_) => {} Err(_) => { abort("Unicode answer refused"); } }
     let displayed = display(outcome("complete", "中文<LF>" + decoded("u000a") + "结束", 20));
-    if displayed.status != "complete" || displayed.text != "中文<LT>LF><LF>结束" { abort("Unicode display changed"); }
+    if displayed.status != "complete" || displayed.text != "中文<LF>%n结束" { abort("Unicode display changed"); }
     if display(outcome("complete", "中文" + esc, 7)).status != "unsupported" { abort("unsafe file content accepted"); }
     if !integration() { abort("Unicode parent-child integration failed"); }
     println("PASS bounded UTF-8 text and terminal controls");

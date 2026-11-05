@@ -14,7 +14,7 @@ import nomo.model.read_protocol.question_error as utf8_question_error;
 import nomo.harness.harness_model_contract.bounded;
 import nomo.harness.harness_tool_contract.{Ledger, Observed, inspect, ledger_error, inspect_shared};
 import nomo.harness.harness_tool_contract.fresh as fresh_ledger;
-import nomo.core.large_context.outcome_bytes;
+import nomo.core.large_context.{outcome_bytes, child_answer_bytes};
 
 // Only validated successful selected data crosses a turn boundary.
 public type Previous = { task: string, result: string, tool: string, outcome: string, answer: string };
@@ -40,7 +40,7 @@ public flow prior_error_mode(prior: Previous, unicode: bool) -> string {
         if prior.result != "" || prior.tool != "" || prior.outcome != "" || prior.answer != "" { return "invalid empty prior selection"; }
         return "";
     }
-    let invalid = if unicode { !utf8_bounded(prior.task, 512) || !utf8_bounded(prior.result, 256) || !utf8_bounded(prior.answer, 512) }
+    let invalid = if unicode { !utf8_bounded(prior.task, 512) || !utf8_bounded(prior.result, child_answer_bytes()) || !utf8_bounded(prior.answer, 512) }
         else { question_error(prior.task) != "" || !bounded(prior.result, 256) || !bounded(prior.answer, 512) };
     if invalid { return "invalid selected prior result"; }
     if prior.tool == "" {

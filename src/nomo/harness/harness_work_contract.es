@@ -24,7 +24,7 @@ import nomo.harness.harness_edit_contract.bump_mode as edit_bump;
 import nomo.harness.harness_edit_contract.{ledger_error as edit_error, wide_error, large_error};
 import nomo.harness.harness_edit_contract.context_error as edit_context_error;
 import nomo.tools.edit_encoding.json;
-import nomo.core.large_context.{scan_i32, outcome_bytes};
+import nomo.core.large_context.{scan_i32, outcome_bytes, child_answer_bytes};
 
 public type Evidence = { request: string, task: string, operation: string, files: Array<string>, literal: string,
     outcome: string, result: string, summary: string, allowed: Array<string>, ledger: ReadLedger };
@@ -108,7 +108,7 @@ public flow bump_edit(state: Ledger, call: bool) -> Result<Ledger, string> {
 }
 
 flow selected_error(value: Evidence, complete: bool) -> string {
-    if !bounded(value.request, 512) || !bounded(value.task, 512) || !bounded(value.result, 256) ||
+    if !bounded(value.request, 512) || !bounded(value.task, 512) || !bounded(value.result, child_answer_bytes()) ||
         !bounded(value.outcome, outcome_bytes()) || !starts_with(value.outcome, "complete: ") { return "invalid read evidence text"; }
     let allowed = allowed_error(value.allowed); if allowed != "" { return allowed; }
     let files = allowed_error(value.files); if files != "" { return files; }

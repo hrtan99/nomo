@@ -9,6 +9,8 @@ FILES = ['context.txt', 'second.txt', 'third.txt', 'note.txt']
 TASK = '请把 note.txt 中的 old 改为 green'
 BEFORE = ''.join('line %03d: unchanged marker content\n' % n for n in range(180)) + 'before old\n'
 AFTER = BEFORE.replace('before old\n', 'before green\n')
+CHILD_DETAIL = '详细证据' * 300
+assert len(CHILD_DETAIL.encode()) == 3600
 
 class Fake(BaseHTTPRequestHandler):
     def log_message(self, *_): pass
@@ -22,7 +24,7 @@ class Fake(BaseHTTPRequestHandler):
             elif i in (1, 5, 12): value = ['read', 'note.txt']
             elif i in (2, 6, 13):
                 data = json.dumps(ctx, ensure_ascii=False);assert 'line 000: unchanged marker content' in data and 'line 179: unchanged marker content' in data
-                value = ['final', 'note.txt contains the relevant color']
+                value = ['final', CHILD_DETAIL]
             elif i == 3: value = 'EDIT note.txt'
             elif i == 4:
                 assert ctx['current']['request'] == TASK and ctx['previous']['answer'] == 'EDIT note.txt'
@@ -110,7 +112,7 @@ def main():
         second=interactive(command,env,'现在文件的颜色是什么？',False)
         assert not server.failure and server.phases==list(range(15));assert '当前内容是 before green'.encode() in second
         status=subprocess.run([str(project/'scripts/nomo-read.sh'),'session-id','status','--sessions-dir',str(sessions),'--id',match.group(1).decode(),'--events','--events-policy-dir',str(policy)],env=env,capture_output=True,timeout=120)
-        assert status.returncode==0 and b'line 000: unchanged marker content' in status.stdout and b'line 179: unchanged marker content' in status.stdout
+        assert status.returncode==0 and b'line 000: unchanged marker content' in status.stdout and b'line 179: unchanged marker content' in status.stdout and CHILD_DETAIL.encode() in status.stdout
         print(json.dumps({'status':'passed','scope':'large-file natural-language edit, check, same-ID new-process continuation','file_bytes':len(BEFORE.encode()),'fake_requests':len(server.phases),'confirmations':2,'selected_file':'note.txt','unchanged_other_files':3}))
     finally:server.shutdown();server.server_close();thread.join(timeout=5);shutil.rmtree(out)
 

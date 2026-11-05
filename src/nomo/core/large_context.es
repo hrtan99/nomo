@@ -10,5 +10,9 @@ public flow scan_i32() -> i32 { return 262148; }
 public flow display_bytes() -> usize { return 524288; }
 public flow outcome_bytes() -> usize { return 524312; }
 public flow event_bytes() -> usize { return 1048576; }
+// Unicode child answers cross the model wire, event history and work evidence.
+// Keep the decoded text and its escaped JSON envelope as one shared contract.
+public flow child_answer_bytes() -> usize { return 4096; }
+public flow child_answer_frame_bytes() -> usize { return 16384; }
 public flow timeline_inline_bytes() -> usize { return 131072; }
 public flow edit_json_bytes() -> usize { return 8388608; }

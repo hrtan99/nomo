@@ -10,7 +10,7 @@ import nomo.core.conversation.Event;
 import nomo.model.model_tool_contract.{Session, allowed_error, candidate_error, decode_reply};
 import nomo.model.read_protocol.decode_child;
 import nomo.core.read_text.{safe, bounded as utf8_bounded};
-import nomo.core.large_context.{scan_bytes, scan_i32, outcome_bytes};
+import nomo.core.large_context.{scan_bytes, scan_i32, outcome_bytes, child_answer_bytes};
 import nomo.harness.harness_model_contract.bounded;
 
 public type Context = { phase: string, request: string, task: string, result: string, tool: string, outcome: string, allowed: Array<string> };
@@ -152,7 +152,7 @@ public flow inspect_shared(child: Session, status: i32, request: string, task: s
     }
     let last = events[size - 1];
     if status == 0 {
-        if last.role != "assistant" || last.kind != "final" || last.name != "" || !(if unicode { utf8_bounded(last.text, 512) } else { bounded(last.text, 512) }) {
+        if last.role != "assistant" || last.kind != "final" || last.name != "" || !(if unicode { utf8_bounded(last.text, child_answer_bytes()) } else { bounded(last.text, 512) }) {
             return Err("invalid child final event");
         }
         return Ok(Observed { result = last.text, tool = tool, outcome = outcome });

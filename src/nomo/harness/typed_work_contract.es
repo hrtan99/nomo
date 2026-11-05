@@ -12,6 +12,8 @@ import nomo.harness.work_chain_context.Input;
 import nomo.harness.typed_edit_contract.project_context;
 import nomo.tools.edit_contribution.Contribution;
 import nomo.tools.edit_proposal.Proposal;
+import nomo.core.read_text.bounded as unicode_bounded;
+import nomo.core.large_context.child_answer_bytes;
 
 public type Delegation = { task: string };
 public type ReadAction = { operation: string, files: Array<string>, literal: string };
@@ -56,7 +58,7 @@ public flow project_read_action(context: ToolContext, value: ReadAction) -> Resu
 }
 public flow project_read_final(context: ToolContext, value: Answer) -> Result<Action, string> {
     let invalid = child_input_error(context, true); if invalid != "" { return Err(invalid); }
-    if !bounded(value.text, 256) { return Err("invalid bounded child final answer"); }
+    if !unicode_bounded(value.text, child_answer_bytes()) { return Err("invalid bounded child final answer"); }
     return Ok(Action { operation = "final", files = [], literal = "", text = value.text });
 }
 public flow project_read_aggregate(context: ReadContext, value: Answer) -> Result<string, string> {

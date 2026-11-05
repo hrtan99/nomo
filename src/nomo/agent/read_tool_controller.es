@@ -17,6 +17,7 @@ import nomo.model.model_tool_contract.{Session, Limits, Context};
 import nomo.tools.read_contract.{outcome, Outcome, ReadTools};
 import nomo.tools.read_display.display;
 import nomo.model.action_decoder.{ToolActionDecoder, LegacyActions, UnicodeActions};
+import nomo.core.large_context.child_answer_frame_bytes;
 import nomo.harness.legacy_string_stages.LegacyChildModel;
 public import nomo.model.model_tool_contract.LoopTurn;
 flow failed(session: Session, message: string, status: i32) -> LoopTurn {
@@ -56,7 +57,7 @@ flow run_policy<P ~ ChildLoopPolicy, D ~ ToolActionDecoder>(policy: P, decoder: 
         let phase = if final_only { "read-child-final" } else { "read-child-action" };
         perform HarnessProgress.write(if final_only && shape.named_final { "CHILD STAGE model-final" } else { "CHILD STAGE model-action" });
         let response = perform LegacyChildModel.infer(context);
-        if inspect_all { perform DiagnosticOutput.write(response_text(response, phase, "lab-qwen-", if final_only { 1152 } else { 384 })); }
+        if inspect_all { perform DiagnosticOutput.write(response_text(response, phase, "lab-qwen-", if final_only { child_answer_frame_bytes() } else { 384 })); }
         let action = match decoder.decode(response, allowed, final_only) { Ok(value) => value, Err(error) => {
             let diagnostic = decoder.diagnostic(response, error, final_only);
             if diagnostic != "" { perform DiagnosticOutput.write("CHILD MODEL REFUSAL " + diagnostic); }

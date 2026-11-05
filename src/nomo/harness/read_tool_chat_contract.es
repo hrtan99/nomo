@@ -15,7 +15,7 @@ import nomo.harness.read_tool_contract.fresh as fresh_ledger;
 // Only validated successful selected data crosses a turn boundary.
 public import nomo.harness.harness_tool_chat_contract.{Previous, Context, Invocation, Completed, LocalTurn, TurnResult, default_maximum, fresh_invocation, empty, seed, invocation_error, admission_error, combine};
 import nomo.harness.harness_tool_chat_contract.{inspect_turn_shared, same, turn_error_shared, prior_error_mode};
-import nomo.core.large_context.outcome_bytes;
+import nomo.core.large_context.{outcome_bytes, child_answer_bytes};
 
 public flow prior_error(prior: Previous) -> string { return prior_error_mode(prior, true); }
 
@@ -144,7 +144,7 @@ public flow inspect_multi_turn(child: Session, status: i32, request: string, tas
     if !same(events[cursor], Event { role = "model", kind = "text", name = "qwen", text = "" }) { return Err("invalid final model event"); }
     let final = events[cursor + 1];
     if status == 3 { if final.role != "error" || final.kind != "error" || final.name != "" || !bounded(final.text, 512) { return Err("invalid multi-step refusal"); } return Ok(Observed { result = "", tool = "", outcome = "" }); }
-    if final.role != "assistant" || final.kind != "final" || final.name != "" || !bounded(final.text, 256) { return Err("invalid multi-step final"); }
+    if final.role != "assistant" || final.kind != "final" || final.name != "" || !bounded(final.text, child_answer_bytes()) { return Err("invalid multi-step final"); }
     return Ok(Observed { result = final.text, tool = tool, outcome = outcome });
 }
 

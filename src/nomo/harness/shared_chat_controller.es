@@ -16,6 +16,7 @@ import nomo.harness.legacy_chat_stages.LegacyChatStages;
 import nomo.model.read_protocol.question_error as unicode_question_error;
 import nomo.model.read_protocol.decode_work_plan as unicode_decode_plan;
 import nomo.core.read_text.bounded as unicode_bounded;
+import nomo.core.large_context.child_answer_bytes;
 
 import nomo.harness.read_tool_chat_contract.context_error as unicode_context_error;
 import nomo.harness.read_tool_chat_contract.{inspect_turn as unicode_inspect_turn, inspect_multi_turn};
@@ -85,7 +86,7 @@ flow execute<P ~ ChatBudgetPolicy>(policy: P, request: string, allowed: Array<st
         " released_calls=" + from_i32(pending.calls - state.calls) + " released_tokens=" + from_i32(pending.tokens - state.tokens) +
         " released_tools=" + from_i32(pending.tools - state.tools) + " released_scan=" + from_i32(pending.scan - state.scan) + " unresolved=false");
     if child.status != 0 { return refused(state, "child returned failure; no aggregation", true); }
-    if !(if unicode { unicode_bounded(observed.result, 256) } else { bounded(observed.result, 256) }) { return refused(state, "invalid bounded child result", true); }
+    if !(if unicode { unicode_bounded(observed.result, child_answer_bytes()) } else { bounded(observed.result, 256) }) { return refused(state, "invalid bounded child result", true); }
     perform ConversationOutput.publish(Event { role = "child-1 -> main", kind = "result", name = "child-1", text = observed.result });
     state = match policy.reserve_stage(state, false) { Ok(value) => value, Err(error) => { return refused(state, error, true); } };
     perform ConversationOutput.publish(Event { role = "main -> main", kind = "consume", name = "child-1", text = observed.result });

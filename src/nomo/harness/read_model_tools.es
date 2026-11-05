@@ -17,7 +17,7 @@ import nomo.model.harness_progress.HarnessProgress;
 import nomo.agent.console_progress.write as write_progress;
 import nomo.harness.legacy_chat_stages.{ChatChildStage, WideChatChildStage};
 import nomo.tools.workspace.ReadOnlyRoot;
-import nomo.core.large_context.scan_i32;
+import nomo.core.large_context.{scan_i32, child_answer_bytes};
 public import nomo.harness.read_tool_contract.numbers;
 
 public type Report = { request: string, task: string, allowed: Array<string>, child: Session,
@@ -111,7 +111,7 @@ impl UnicodeContext ~ ReadContextValidation {
     flow decode(self, value: string) -> Result<string, string> ![Error<IndexError>] { return if self.require_tool { decode_work_plan(value) } else { decode_plan(value) }; }
     flow rejection(self, raw: string, error: string) -> string { return if self.require_tool && error == "invalid bounded delegated task" { "READ_PLAN_REJECTION " + work_plan_rejection(raw) } else { "" }; }
     flow observe_child(self, child: LoopTurn, request: string, task: string, allowed: Array<string>) -> Result<Observed, string> { return if self.require_tool { inspect_work(child.state, child.status, request, task, allowed) } else { inspect(child.state, child.status, request, task, allowed) }; }
-    flow result_error(self, value: string) -> string { return if bounded(value, 256) { "" } else { "invalid bounded child result" }; }
+    flow result_error(self, value: string) -> string { return if bounded(value, child_answer_bytes()) { "" } else { "invalid bounded child result" }; }
     flow answer_error(self, value: string) -> string { return if bounded(value, 512) { "" } else { "invalid bounded final answer" }; }
 }
 impl UnicodeContext ~ ReadContextBudget {

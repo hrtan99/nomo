@@ -7,6 +7,7 @@ import std.bytes.len as byte_count;
 import nomo.application.decoder_contract.ReadPlanDecoder;
 import nomo.core.json.string_fields;
 import nomo.core.read_text.{safe, bounded};
+import nomo.core.large_context.{child_answer_bytes, child_answer_frame_bytes};
 import nomo.model.model_tool_contract.{Action, candidate_error, read_selection_error};
 
 public flow question_error(raw: string) -> string {
@@ -16,10 +17,10 @@ public flow question_error(raw: string) -> string {
 // This protocol is scoped to the new non-durable read-only entry. Limits are
 // UTF-8 bytes, including serialized JSON, rather than just scalar counts.
 flow frame(raw: string, maximum: usize) -> bool {
-    if raw == "" || maximum == 0 || maximum > 4096 || len(raw) > maximum || byte_count(utf8_encode(raw)) > maximum { return false; }
+    if raw == "" || maximum == 0 || maximum > child_answer_frame_bytes() || len(raw) > maximum || byte_count(utf8_encode(raw)) > maximum { return false; }
     var opened = false; var closed = false; var quoted = false; var escaped = false;
     var leaves: usize = 0; let slash = from_char('\\');
-    for codepoint in std.text.chars(raw) limit Iterations(4098) { let character = std.text.from_char(codepoint);
+    for codepoint in std.text.chars(raw) limit Iterations(16386) { let character = std.text.from_char(codepoint);
         if quoted {
             if character != "" && !safe(character, 4) { return false; }
             if escaped { escaped = false; }
@@ -47,7 +48,7 @@ flow fields(raw: string, maximum: usize) -> Result<Array<string>, string> {
 public flow compact_frame(raw: string) -> string {
     var result = ""; var quoted = false; var escaped = false;
     let slash = from_char('\\');
-    for codepoint in std.text.chars(raw) limit Iterations(1154) { let character = std.text.from_char(codepoint);
+    for codepoint in std.text.chars(raw) limit Iterations(16386) { let character = std.text.from_char(codepoint);
         if quoted {
             result = result + character;
             if escaped { escaped = false; }
@@ -90,15 +91,15 @@ public flow answer(raw: string) -> Result<string, string> {
 
 // Report only the violated constraint; never display the model's rejected text.
 flow child_final(text: string) -> Result<string, string> {
-    if len(text) > 256 || byte_count(utf8_encode(text)) > 256 { return Err("child final exceeds 256 UTF-8 bytes"); }
+    if len(text) > child_answer_bytes() || byte_count(utf8_encode(text)) > child_answer_bytes() { return Err("child final exceeds 4096 UTF-8 bytes"); }
     let line = replace(replace(replace(text, "\n", " "), "\r", " "), "\t", " ");
-    if !bounded(line, 256) { return Err("child final contains unsupported control or formatting characters or is empty"); }
+    if !bounded(line, child_answer_bytes()) { return Err("child final contains unsupported control or formatting characters or is empty"); }
     return Ok(line);
 }
 
 public flow decode_child(raw: string, allowed: Array<string>, final_only: bool) -> Result<Action, string> {
     let invalid = candidate_error(allowed); if invalid != "" { return Err(invalid); }
-    let values = match fields(raw, 1152) { Ok(item) => item, Err(error) => { return Err(error); } };
+    let values = match fields(raw, child_answer_frame_bytes()) { Ok(item) => item, Err(error) => { return Err(error); } };
     if count(values) < 2 || count(values) > 6 { return Err("invalid action field count"); }
     if values[0] == "final" {
         if count(values) != 2 { return Err("child final must contain exactly two fields"); }
