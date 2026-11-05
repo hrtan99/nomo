@@ -8,7 +8,7 @@ import nomo.session.recoverable_events.{Frame as EventFrame, empty as empty_even
 import nomo.session.recoverable_chat_store.{Frame as ChatFrame, load as load_chat};
 import nomo.session.history_work_guard.{Record};
 import nomo.harness.harness_work_contract.Ledger;
-import nomo.session.recoverable_work_store.{ load as load_parent_work, work_data_error, full, zero};
+import nomo.session.recoverable_work_store.{load as load_parent_work, work_data_error, running_record, completed_record, abandoned_record, admission_chat_error, claim_chat_error};
 import nomo.session.recoverable_check_store.{ load as load_parent_check};
 import nomo.session.edit_operation_store.inspect as inspect_parent_edit;
 
@@ -70,13 +70,10 @@ flow write(value: Frame, expected: Option<MemoryEntry<string, Frame>>, policy: P
 
 public flow admit(id: string, workspace: string, path: string, request: string, chat: MemoryEntry<string, ChatFrame>, policy: Policy, binding: string) -> Result<Ticket, string> ![Memory, Error<StorageError>, Error<IndexError>] {
     let current = match load_chat(policy, binding) { Ok(Some(item)) => item, _ => { return Err("recoverable chat missing or invalid"); } };
-    if current != chat || chat.value.chat.invocation.admitted < 1 || chat.value.chat.phase == "running" || chat.value.chat.pending != "" {
-        return Err("completed unchanged recoverable chat required");
-    }
+    let chat_error = admission_chat_error(current, chat); if chat_error != "" { return Err(chat_error); }
     match load(policy, binding) { Ok(None()) => {} Ok(Some(_)) => { return Err("recoverable followup already admitted; no retry"); } Err(error) => { return Err(error); } }
     let wide = chat.value.chat.format >= 13;
-    let row = Record { format = if wide { 8 } else { 5 }, phase = "running", id = id, workspace = workspace, path = path,
-        request = request, history_version = chat.version.opaque, reserved = full(wide), settled = None(), summary = "" };
+    let row = running_record(id, workspace, path, request, chat.version.opaque, wide);
     let parent_work = match load_parent_work(policy, binding) { Ok(Some(item)) => item, _ => { return Err("completed first work required"); } };
     if (parent_work.value.work.phase != "complete" && parent_work.value.work.phase != "abandoned") || parent_work.value.work.id == id { return Err("completed distinct first work required"); }
     if parent_work.value.work.phase == "complete" {
@@ -92,9 +89,7 @@ public flow admit(id: string, workspace: string, path: string, request: string, 
 
 public flow claim(ticket: Ticket, policy: Policy, binding: string) -> Result<bool, string> {
     let current_chat = match load_chat(policy, binding) { Ok(Some(item)) => item, _ => { return Err("recoverable chat missing or invalid"); } };
-    if current_chat != ticket.chat || ticket.frame.work.history_version != current_chat.version.opaque || ticket.frame.work.phase != "running" {
-        return Err("recoverable followup chat binding changed; no retry");
-    }
+    let chat_error = claim_chat_error(current_chat, ticket.chat, ticket.frame.work, "recoverable followup"); if chat_error != "" { return Err(chat_error); }
     let current = match load(policy, binding) { Ok(Some(item)) => item, _ => { return Err("recoverable followup missing or invalid"); } };
     if current.value != ticket.frame || current.version.opaque != ticket.version.opaque { return Err("recoverable followup reservation changed; no retry"); }
     return Ok(true);
@@ -103,9 +98,7 @@ public flow claim(ticket: Ticket, policy: Policy, binding: string) -> Result<boo
 public flow finish(ticket: Ticket, summary: string, spent: Ledger, records: Array<Event>, policy: Policy, binding: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
     match claim(ticket, policy, binding) { Ok(_) => {} Err(error) => { return Err(error); } }
     let events = match work_batch(records, policy) { Ok(item) => item, Err(error) => { return Err(error); } };
-    let old = ticket.frame.work;
-    let row = Record { format = old.format, phase = "complete", id = old.id, workspace = old.workspace, path = old.path,
-        request = old.request, history_version = old.history_version, reserved = zero(), settled = Some(spent), summary = summary };
+    let row = completed_record(ticket.frame.work, summary, spent);
     let frame = Frame { format = 1, policy_binding = binding, parent_work_version = ticket.frame.parent_work_version, parent_check_version = ticket.frame.parent_check_version, work = row, events = events };
     let current = match load(policy, binding) { Ok(Some(item)) => item, _ => { return Err("recoverable followup missing or invalid"); } };
     if current.value != ticket.frame || current.version.opaque != ticket.version.opaque { return Err("recoverable followup reservation changed; no retry"); }
@@ -114,8 +107,7 @@ public flow finish(ticket: Ticket, summary: string, spent: Ledger, records: Arra
 
 public flow abandon(id: string, policy: Policy, binding: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
     let current = match load(policy, binding) { Ok(Some(value)) => value, _ => { return Err("interrupted followup missing"); } }; let old = current.value.work;
-    if old.id != id || old.phase != "running" { return Err("interrupted followup identity or phase differs"); }
-    let row = Record { format = old.format, phase = "abandoned", id = old.id, workspace = old.workspace, path = old.path, request = old.request, history_version = old.history_version, reserved = old.reserved, settled = old.settled, summary = old.summary };
+    let row = match abandoned_record(old, id, "followup") { Ok(value) => value, Err(error) => { return Err(error); } };
     let frame = Frame { format = current.value.format, policy_binding = binding, parent_work_version = current.value.parent_work_version, parent_check_version = current.value.parent_check_version, work = row, events = current.value.events };
     return match write(frame, Some(current), policy, binding) { Ok(_) => Ok(true), Err(error) => Err(error) };
 }

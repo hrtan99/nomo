@@ -22,6 +22,28 @@ let Runs = std.memory.region<Schema>(stable_id = "nomo-recoverable-work-v1", sto
 public flow full(wide: bool) -> Budget { return Budget { steps = 13, calls = 7, generation = if wide { 286720 } else { 51200 }, native_tokens = if wide { 2811008 } else { 1335296 } }; }
 public flow zero() -> Budget { return Budget { steps = 0, calls = 0, generation = 0, native_tokens = 0 }; }
 
+public flow running_record(id: string, workspace: string, path: string, request: string, history_version: string, wide: bool) -> Record {
+    return Record { format = if wide { 8 } else { 5 }, phase = "running", id = id, workspace = workspace, path = path,
+        request = request, history_version = history_version, reserved = full(wide), settled = None(), summary = "" };
+}
+public flow completed_record(old: Record, summary: string, spent: Ledger) -> Record {
+    return Record { format = old.format, phase = "complete", id = old.id, workspace = old.workspace, path = old.path,
+        request = old.request, history_version = old.history_version, reserved = zero(), settled = Some(spent), summary = summary };
+}
+public flow abandoned_record(old: Record, id: string, label: string) -> Result<Record, string> {
+    if old.id != id || old.phase != "running" { return Err("interrupted " + label + " identity or phase differs"); }
+    return Ok(Record { format = old.format, phase = "abandoned", id = old.id, workspace = old.workspace, path = old.path,
+        request = old.request, history_version = old.history_version, reserved = old.reserved, settled = old.settled, summary = old.summary });
+}
+public flow admission_chat_error(current: MemoryEntry<string, ChatFrame>, expected: MemoryEntry<string, ChatFrame>) -> string {
+    if current != expected || expected.value.chat.invocation.admitted < 1 || expected.value.chat.phase == "running" || expected.value.chat.pending != "" { return "completed unchanged recoverable chat required"; }
+    return "";
+}
+public flow claim_chat_error(current: MemoryEntry<string, ChatFrame>, expected: MemoryEntry<string, ChatFrame>, work: Record, label: string) -> string {
+    if current != expected || work.history_version != current.version.opaque || work.phase != "running" { return label + " chat binding changed; no retry"; }
+    return "";
+}
+
 public flow work_data_error(work: Record, events: EventFrame, policy: Policy) -> string {
     let work_error = invalid_work(work); if work_error != "" { return work_error; }
     let event_error = invalid_events(events, policy); if event_error != "" { return event_error; }
@@ -77,13 +99,10 @@ flow write(value: Frame, expected: Option<MemoryEntry<string, Frame>>, policy: P
 
 public flow admit(id: string, workspace: string, path: string, request: string, chat: MemoryEntry<string, ChatFrame>, policy: Policy, binding: string) -> Result<Ticket, string> ![Memory, Error<StorageError>, Error<IndexError>] {
     let current = match load_chat(policy, binding) { Ok(Some(item)) => item, _ => { return Err("recoverable chat missing or invalid"); } };
-    if current != chat || chat.value.chat.invocation.admitted < 1 || chat.value.chat.phase == "running" || chat.value.chat.pending != "" {
-        return Err("completed unchanged recoverable chat required");
-    }
+    let chat_error = admission_chat_error(current, chat); if chat_error != "" { return Err(chat_error); }
     match load(policy, binding) { Ok(None()) => {} Ok(Some(_)) => { return Err("recoverable work already admitted; no retry"); } Err(error) => { return Err(error); } }
     let wide = chat.value.chat.format >= 13;
-    let row = Record { format = if wide { 8 } else { 5 }, phase = "running", id = id, workspace = workspace, path = path,
-        request = request, history_version = chat.version.opaque, reserved = full(wide), settled = None(), summary = "" };
+    let row = running_record(id, workspace, path, request, chat.version.opaque, wide);
     let frame = Frame { format = 1, policy_binding = binding, work = row, events = empty_events() };
     let version = match write(frame, None(), policy, binding) { Ok(item) => item, Err(error) => { return Err(error); } };
     return Ok(Ticket { frame = frame, version = version, chat = chat });
@@ -91,9 +110,7 @@ public flow admit(id: string, workspace: string, path: string, request: string, 
 
 public flow claim(ticket: Ticket, policy: Policy, binding: string) -> Result<bool, string> {
     let current_chat = match load_chat(policy, binding) { Ok(Some(item)) => item, _ => { return Err("recoverable chat missing or invalid"); } };
-    if current_chat != ticket.chat || ticket.frame.work.history_version != current_chat.version.opaque || ticket.frame.work.phase != "running" {
-        return Err("recoverable work chat binding changed; no retry");
-    }
+    let chat_error = claim_chat_error(current_chat, ticket.chat, ticket.frame.work, "recoverable work"); if chat_error != "" { return Err(chat_error); }
     let current = match load(policy, binding) { Ok(Some(item)) => item, _ => { return Err("recoverable work missing or invalid"); } };
     if current.value != ticket.frame || current.version.opaque != ticket.version.opaque { return Err("recoverable work reservation changed; no retry"); }
     return Ok(true);
@@ -102,9 +119,7 @@ public flow claim(ticket: Ticket, policy: Policy, binding: string) -> Result<boo
 public flow finish(ticket: Ticket, summary: string, spent: Ledger, records: Array<Event>, policy: Policy, binding: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
     match claim(ticket, policy, binding) { Ok(_) => {} Err(error) => { return Err(error); } }
     let events = match work_batch(records, policy) { Ok(item) => item, Err(error) => { return Err(error); } };
-    let old = ticket.frame.work;
-    let row = Record { format = old.format, phase = "complete", id = old.id, workspace = old.workspace, path = old.path,
-        request = old.request, history_version = old.history_version, reserved = zero(), settled = Some(spent), summary = summary };
+    let row = completed_record(ticket.frame.work, summary, spent);
     let frame = Frame { format = 1, policy_binding = binding, work = row, events = events };
     let current = match load(policy, binding) { Ok(Some(item)) => item, _ => { return Err("recoverable work missing or invalid"); } };
     if current.value != ticket.frame || current.version.opaque != ticket.version.opaque { return Err("recoverable work reservation changed; no retry"); }
@@ -114,9 +129,7 @@ public flow finish(ticket: Ticket, summary: string, spent: Ledger, records: Arra
 // Only the owner which observed successful cleanup may call this decision flow.
 public flow abandon(id: string, policy: Policy, binding: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
     let current = match load(policy, binding) { Ok(Some(value)) => value, _ => { return Err("interrupted work missing"); } };
-    let old = current.value.work;
-    if old.id != id || old.phase != "running" { return Err("interrupted work identity or phase differs"); }
-    let row = Record { format = old.format, phase = "abandoned", id = old.id, workspace = old.workspace, path = old.path, request = old.request, history_version = old.history_version, reserved = old.reserved, settled = old.settled, summary = old.summary };
+    let row = match abandoned_record(current.value.work, id, "work") { Ok(value) => value, Err(error) => { return Err(error); } };
     let frame = Frame { format = current.value.format, policy_binding = binding, work = row, events = current.value.events };
     return match write(frame, Some(current), policy, binding) { Ok(_) => Ok(true), Err(error) => Err(error) };
 }
