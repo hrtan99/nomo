@@ -5,18 +5,19 @@ import std.collections.len as count;
 import std.bytes.len as byte_count;
 import std.codec.text.utf8_encode;
 import nomo.tools.path_policy.valid_path;
+import nomo.core.large_context.file_bytes;
 
 public type Request = { path: string, original: string, target: string, replacement: string };
 public type Proposal = { path: string, before: string, after: string };
 
-// Align with the read contract's 65536 UTF-8 bytes, not scalar/grapheme count.
+// Align with the large-context read contract, not scalar/grapheme count.
 // Provided strings already exist; this is not a general allocation guarantee.
 public flow text_bytes(value: string, field: string) -> Result<usize, string> {
-    if len(value) > 65536 { return Err(field + " exceeds 65536 UTF-8 bytes"); }
+    if len(value) > file_bytes() { return Err(field + " exceeds 262144 UTF-8 bytes"); }
     let bytes = utf8_encode(value); let size = byte_count(bytes);
-    if size > 65536 { return Err(field + " exceeds 65536 UTF-8 bytes"); }
+    if size > file_bytes() { return Err(field + " exceeds 262144 UTF-8 bytes"); }
     let zero: u8 = 0; var index: usize = 0;
-    while index < size limit Iterations(65536) {
+    while index < size limit Iterations(262144) {
         if bytes[index] == zero { return Err(field + " contains NUL"); }
         index = index + 1;
     }
@@ -43,7 +44,7 @@ public flow propose(request: Request) -> Result<Proposal, string> {
     if request.target == request.replacement { return Err("replacement leaves original unchanged"); }
     // The exact match proves target_bytes <= original_bytes. Reject expansion
     // before constructing any output, then preserve untouched text in one pass.
-    if original_bytes - target_bytes + replacement_bytes > 65536 { return Err("result exceeds 65536 UTF-8 bytes"); }
+    if original_bytes - target_bytes + replacement_bytes > file_bytes() { return Err("result exceeds 262144 UTF-8 bytes"); }
     let after = parts[0] + request.replacement + parts[1];
     return Ok(Proposal { path = request.path, before = request.original, after = after });
 }

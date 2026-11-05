@@ -14,6 +14,7 @@ import std.io.{println, IOError as ConsoleError};
 import std.effects.Fs;
 import nomo.tools.read_contract.{NomoRead, NomoSearch};
 import nomo.tools.read_capabilities.{FileReader, LiteralSearcher, SearchBounds};
+import nomo.core.large_context.file_bytes;
 public import nomo.tools.read_contract.{Outcome, outcome, display};
 
 public type ReadOnlyRoot;
@@ -26,7 +27,7 @@ impl StandardFiles ~ FileReader<ReadOnlyRoot> {
     flow read(self, name: string) -> Outcome { return read_bounded(name, self.maximum_bytes()); }
 }
 impl WideFiles ~ FileReader<ReadOnlyRoot> {
-    flow maximum_bytes(self) -> usize ![] { return 65536; }
+    flow maximum_bytes(self) -> usize ![] { return file_bytes(); }
     flow read(self, name: string) -> Outcome { return read_bounded(name, self.maximum_bytes()); }
 }
 impl StandardFiles ~ LiteralSearcher<ReadOnlyRoot> {
@@ -34,11 +35,11 @@ impl StandardFiles ~ LiteralSearcher<ReadOnlyRoot> {
     flow search(self, names: Array<string>, literal: string) -> Outcome { return search_files(names, literal); }
 }
 impl WideFiles ~ LiteralSearcher<ReadOnlyRoot> {
-    flow bounds(self) -> SearchBounds ![] { return SearchBounds { files = 4, file_bytes = 65536, total_bytes = 65536, partial_results = false }; }
+    flow bounds(self) -> SearchBounds ![] { return SearchBounds { files = 4, file_bytes = file_bytes(), total_bytes = file_bytes(), partial_results = false }; }
     flow search(self, names: Array<string>, literal: string) -> Outcome { return search_wide(names, literal); }
 }
 impl MultiFiles ~ LiteralSearcher<ReadOnlyRoot> {
-    flow bounds(self) -> SearchBounds ![] { return SearchBounds { files = 256, file_bytes = 65536, total_bytes = 4194304, partial_results = true }; }
+    flow bounds(self) -> SearchBounds ![] { return SearchBounds { files = 256, file_bytes = file_bytes(), total_bytes = 4194304, partial_results = true }; }
     flow search(self, names: Array<string>, literal: string) -> Outcome { return if names[0] == "*" { search_files(names, literal) } else { search_wide(names, literal) }; }
 }
 flow target(name: string) -> WorkspacePath<ReadOnlyRoot> {
@@ -116,7 +117,7 @@ flow read_bounded(name: string, bound: usize) -> Outcome ![Fs.read<ReadOnlyRoot>
     } with {
         Error<ReadLimitError>.raise(ReadLimitError.LimitExceeded(maximum)) => {
             if maximum != bound { abort("unexpected workspace read limit"); }
-            finish outcome("refused", if bound == 16384 { "file exceeds 16384 bytes" } else { if bound == 65536 { "file exceeds 65536 bytes" } else { if bound == 2048 { "file exceeds 2048 bytes" } else { "file exceeds remaining scan allowance" } } }, 0);
+            finish outcome("refused", if bound == 16384 { "file exceeds 16384 bytes" } else { if bound == file_bytes() { "file exceeds 262144 bytes" } else { if bound == 2048 { "file exceeds 2048 bytes" } else { "file exceeds remaining scan allowance" } } }, 0);
         }
     };
 }
@@ -154,7 +155,7 @@ flow search_with(names: Array<string>, literal: string, maximum: usize) -> Outco
     var matches: usize = 0; var skipped: usize = 0; var skipped_names = "";
     for name in names limit Iterations(256) {
         let remaining = maximum - consumed;
-        let per_file = if maximum == 4194304 || maximum == 65536 { 65536 } else { if maximum == 4096 { 2048 } else { 16384 } };
+        let per_file = if maximum == 4194304 || maximum == file_bytes() { file_bytes() } else { if maximum == 4096 { 2048 } else { 16384 } };
         let bound = if remaining < per_file { remaining } else { per_file };
         let file = read_bounded(name, bound);
         if file.status != "complete" {
@@ -194,7 +195,7 @@ public flow search_files(names: Array<string>, literal: string) -> Outcome ![Fs.
     }
     return search_with(names, literal, 16384);
 }
-public flow search_wide(names: Array<string>, literal: string) -> Outcome ![Fs.read<ReadOnlyRoot>, Error<FileError>, Error<IndexError>] ~ NomoSearch<ReadOnlyRoot> { return search_with(names, literal, 65536); }
+public flow search_wide(names: Array<string>, literal: string) -> Outcome ![Fs.read<ReadOnlyRoot>, Error<FileError>, Error<IndexError>] ~ NomoSearch<ReadOnlyRoot> { return search_with(names, literal, file_bytes()); }
 
 public flow search_legacy(names: Array<string>, literal: string) -> Outcome ![Fs.read<ReadOnlyRoot>, Error<FileError>, Error<IndexError>] ~ NomoSearch<ReadOnlyRoot> {
     return search_with(names, literal, 4096);

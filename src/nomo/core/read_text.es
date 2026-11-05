@@ -5,6 +5,7 @@ import std.json.parse;
 import std.agent.message.Message;
 import std.codec.text.utf8_encode;
 import std.bytes.len as bytes_len;
+import nomo.core.large_context.event_bytes;
 
 // Read-only conversational text: UTF-8 byte ceilings remain explicit.
 // Reject C0/C1 controls, terminal escape, Unicode line separators and common
@@ -14,7 +15,7 @@ public flow within(text: string, maximum: usize) -> bool {
 }
 
 public flow safe(text: string, maximum: usize) -> bool {
-    if maximum == 0 || maximum > 524288 || !within(text, maximum) { return false; }
+    if maximum == 0 || maximum > event_bytes() || !within(text, maximum) { return false; }
     let bytes = utf8_encode(text); let size = bytes_len(bytes); var index: usize = 0;
     if size <= 256 {
         while index < size limit Iterations(256) {

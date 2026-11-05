@@ -6,6 +6,7 @@ import std.bytes.len as byte_count;
 import std.codec.text.utf8_encode;
 import std.crypto.sha256;
 import std.agent.message.Message;
+import nomo.core.large_context.{file_bytes, edit_json_bytes};
 
 // All callers produce a nibble by division/modulo or valid UTF-8 bit groups.
 flow nibble(value: u8) -> string {
@@ -51,12 +52,12 @@ flow scalar(value: string) -> Result<string, string> {
 }
 
 flow quoted(value: string) -> Result<string, string> {
-    if len(value) > 65536 { return Err("edit JSON field exceeds bound"); }
+    if len(value) > file_bytes() { return Err("edit JSON field exceeds bound"); }
     var pieces: Array<string> = []; var chunk = ""; var size: usize = 1;
-    for codepoint in std.text.chars(value) limit Iterations(65538) { let character = std.text.from_char(codepoint);
+    for codepoint in std.text.chars(value) limit Iterations(262146) { let character = std.text.from_char(codepoint);
         if character != "" {
             let escaped = match scalar(character) { Ok(item) => item, Err(error) => { return Err(error); } };
-            size = size + len(escaped); if size > 2097150 { return Err("edit JSON output exceeds bound"); }
+            size = size + len(escaped); if size > edit_json_bytes() - 2 { return Err("edit JSON output exceeds bound"); }
             chunk = chunk + escaped;
             if len(chunk) >= 4096 { pieces = pieces.push(chunk); chunk = ""; }
         }
@@ -71,10 +72,10 @@ public flow json(values: Array<string>) -> Result<string, string> {
         let encoded = match quoted(value) { Ok(item) => item, Err(error) => { return Err(error); } };
         if !first { output = output + ","; } first = false;
         output = output + encoded;
-        if len(output) > 2097151 { return Err("edit JSON output exceeds bound"); }
+        if len(output) > edit_json_bytes() - 1 { return Err("edit JSON output exceeds bound"); }
     }
     output = output + "]";
-    if len(output) > 2097152 { return Err("edit JSON output exceeds bound"); }
+    if len(output) > edit_json_bytes() { return Err("edit JSON output exceeds bound"); }
     return Ok(output);
 }
 
@@ -88,7 +89,7 @@ public flow object(keys: Array<string>, values: Array<string>) -> Result<string,
         let value = match quoted(values[index]) { Ok(item) => item, Err(error) => { return Err(error); } };
         if index != 0 { output = output + ","; }
         output = output + key + ":" + value;
-        if len(output) > 2097151 { return Err("edit JSON output exceeds bound"); }
+        if len(output) > edit_json_bytes() - 1 { return Err("edit JSON output exceeds bound"); }
         index = index + 1;
     }
     return Ok(output + "}");

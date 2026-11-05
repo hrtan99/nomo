@@ -1,7 +1,7 @@
 module nomo.session.work_fact_projection;
 
 import std.text.{char_count, get_char_slice};
-import nomo.session.work_fact_events.{summary_source, selection};
+import nomo.session.work_fact_events.{summary_source, selection, evidence};
 import nomo.session.history_work_guard.Record;
 import nomo.session.recoverable_events.Frame as EventFrame;
 import nomo.application.check_contract.CheckFacts;
@@ -12,14 +12,15 @@ import nomo.application.history_contract.{WorkFacts, CheckOutput};
 
 // Pure projections of captured historical records; no storage, file or model calls.
 public flow extra_fact(item: Entry, policy: Policy) -> Result<WorkFacts, string> {
-    if item.result.phase == "abandoned" && (item.check.phase == "none" || item.check.phase == "planned") { return Ok(WorkFacts { id = item.core.id, summary = "User abandoned interrupted work; its effect is unknown. Inspect the file before a new edit.", summary_source = "system", selection = None(), check = "unknown", exit_code = "", output = None() }); }
+    if item.result.phase == "abandoned" && (item.check.phase == "none" || item.check.phase == "planned") { return Ok(WorkFacts { id = item.core.id, summary = "User abandoned interrupted work; its effect is unknown. Inspect the file before a new edit.", summary_source = "system", selection = None(), evidence = None(), check = "unknown", exit_code = "", output = None() }); }
     if item.result.phase != "complete" || (item.check.phase != "none" && item.check.phase != "complete" && item.check.phase != "abandoned") { return Err("continuous work unresolved"); }
     var output: Option<CheckOutput> = None();
     if item.check.phase == "complete" {
         output = Some(match check_values(item.check.stdout, item.check.stderr, item.check.stdout_truncated, item.check.stderr_truncated, policy) { Ok(value) => value, Err(error) => { return Err(error); } });
     }
     let chosen = match selection(item.result.events, policy) { Ok(value) => value, Err(error) => { return Err(error); } };
-    return Ok(WorkFacts { id = item.core.id, summary = item.result.summary, summary_source = if (item.result.source == "model-v2" || item.result.source == "model-v3" || item.result.source == "model-v4") { "model" } else { if (item.result.source == "system-v2" || item.result.source == "system-v3" || item.result.source == "system-v4") { "system" } else { item.result.source } }, selection = chosen,
+    let observed = match evidence(item.result.events, policy) { Ok(value) => value, Err(error) => { return Err(error); } };
+    return Ok(WorkFacts { id = item.core.id, summary = item.result.summary, summary_source = if (item.result.source == "model-v2" || item.result.source == "model-v3" || item.result.source == "model-v4" || item.result.source == "model-v5") { "model" } else { if (item.result.source == "system-v2" || item.result.source == "system-v3" || item.result.source == "system-v4" || item.result.source == "system-v5") { "system" } else { item.result.source } }, selection = chosen, evidence = observed,
         check = if item.check.phase == "none" { "not requested" } else { if item.check.phase == "abandoned" { "abandoned; outcome unknown" } else { item.check.outcome } }, exit_code = item.check.exit_code, output = output });
 }
 // Keep older diagnostics at the original per-stream context bound; the stored
@@ -36,7 +37,7 @@ public flow compact(value: WorkFacts) -> WorkFacts {
         let out = short_text(item.stdout); let err = short_text(item.stderr);
         Some(CheckOutput { stdout = out, stderr = err, stdout_truncated = item.stdout_truncated || out != item.stdout, stderr_truncated = item.stderr_truncated || err != item.stderr })
     } };
-    return WorkFacts { id = value.id, summary = value.summary, summary_source = value.summary_source, selection = value.selection, check = value.check, exit_code = value.exit_code, output = output };
+    return WorkFacts { id = value.id, summary = value.summary, summary_source = value.summary_source, selection = value.selection, evidence = None(), check = value.check, exit_code = value.exit_code, output = output };
 }
 // Only completed recorded actions become untrusted model context. An uncertain
 // edit or check is not retried and cannot be represented as a successful fact.
@@ -55,5 +56,6 @@ public flow completed_fact(work: Record, events: EventFrame, check: Option<Check
     } None() => {} }
     let origin = match summary_source(events, work.summary, policy) { Ok(value) => value, Err(error) => { return Err(error); } };
     let chosen = match selection(events.events, policy) { Ok(value) => value, Err(error) => { return Err(error); } };
-    return Ok(WorkFacts { id = work.id, summary = work.summary, summary_source = origin, selection = chosen, check = outcome, exit_code = exit, output = output });
+    let observed = match evidence(events.events, policy) { Ok(value) => value, Err(error) => { return Err(error); } };
+    return Ok(WorkFacts { id = work.id, summary = work.summary, summary_source = origin, selection = chosen, evidence = observed, check = outcome, exit_code = exit, output = output });
 }

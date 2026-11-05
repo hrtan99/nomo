@@ -1,6 +1,6 @@
 module nomo.application.harness.work.controller;
 
-import std.text.from_i32;
+import std.text.{from_i32, from_usize};
 import nomo.application.work.request.WorkRequest;
 import nomo.application.work.ports.{Failure, Pending, Completed, Summary};
 import nomo.harness.harness_work_contract.{Context, Ledger, WorkBudgetPolicy, HistoricalWorkBudget, ExpandedWorkBudget, LargeWorkBudget, fresh, ledger_error, bump_edit, native_tokens, native_budget, collect, finish_evidence, context_error};
@@ -17,6 +17,7 @@ import nomo.model.diagnostic_output.DiagnosticOutput;
 import nomo.tools.edit_contract.Confirmed;
 import nomo.tools.edit_file.{prepare_original, prepare_original_legacy};
 import nomo.tools.edit_encoding.json;
+import nomo.core.large_context.{file_bytes, scan_i32};
 
 // Stage observations are an application port.  Entry points decide how to
 // render or inspect them without coupling this controller to Console effects.
@@ -76,7 +77,8 @@ flow prepare_policy<P ~ WorkBudgetPolicy>(policy: P, input: WorkRequest, origina
     let maximum = policy.maximum();
     let selected = input.selected;
     let invalid = ledger_error(state); if invalid != "" { return failed(state, invalid); }
-    progress(if wide { "RESERVATION work" + from_i32(maximum.steps) + " steps/" + from_i32(maximum.calls) + " calls/" + from_i32(maximum.generation) + " generation/" + from_i32(maximum.native_tokens) + " native; edit tail6 steps/3 calls/143360 generation/1524288 native; one read/search up to 65540 bytes, three edit reads up to 65537 bytes each, and one atomic maximum" } else { if expanded { "RESERVATION work13 steps/7 calls/51200 generation/1335296 native; edit tail6 steps/3 calls/38912 generation/786432 native; one read/search up to 65540 bytes, three edit reads up to 65537 bytes each, and one atomic maximum" } else { "RESERVATION work13 steps/7 calls/47104 generation/196608 historical native allowance (not a provider cap); edit tail6 steps/3 calls/38912 generation/163840 historical allowance; one read/search and one atomic maximum" } });
+    let capacity = "one read/search up to " + from_i32(scan_i32()) + " bytes, three edit reads up to " + from_usize(file_bytes()) + " bytes each, and one atomic maximum";
+    progress(if wide { "RESERVATION work" + from_i32(maximum.steps) + " steps/" + from_i32(maximum.calls) + " calls/" + from_i32(maximum.generation) + " generation/" + from_i32(maximum.native_tokens) + " native; edit tail6 steps/3 calls/143360 generation/1524288 native; " + capacity } else { if expanded { "RESERVATION work13 steps/7 calls/51200 generation/1335296 native; edit tail6 steps/3 calls/38912 generation/786432 native; " + capacity } else { "RESERVATION work13 steps/7 calls/47104 generation/196608 historical native allowance (not a provider cap); edit tail6 steps/3 calls/38912 generation/163840 historical allowance; one read/search and one atomic maximum" } });
     let read_result = if unicode { unicode_read(input.request, input.allowed, state.read, expanded, wide) }
         else { read_context(input.request, input.allowed, state.read, "read-", true, chain_read, inspect_plan, inspect_all) };
     let read = match read_result {

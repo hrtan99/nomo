@@ -26,7 +26,7 @@ flow failed(session: Session, message: string, status: i32) -> LoopTurn {
 
 flow tool_failure(result: Outcome) -> string {
     if contains(result.text, "file is not UTF-8") { return "non-UTF-8 file"; }
-    if contains(result.text, "file exceeds 65536 bytes") || contains(result.text, "file exceeds 16384 bytes") || contains(result.text, "file exceeds 2048 bytes") { return "per-file byte limit"; }
+    if contains(result.text, "file exceeds 262144 bytes") || contains(result.text, "file exceeds 65536 bytes") || contains(result.text, "file exceeds 16384 bytes") || contains(result.text, "file exceeds 2048 bytes") { return "per-file byte limit"; }
     if contains(result.text, "file exceeds remaining scan allowance") { return "scan allowance"; }
     if result.status == "truncated" { return "match limit"; }
     return if result.status == "unsupported" { "unsupported output" } else { if result.status == "refused" { "refused input or limit" } else { "invalid tool outcome" } };
@@ -77,7 +77,7 @@ flow run_policy<P ~ ChildLoopPolicy, D ~ ToolActionDecoder>(policy: P, decoder: 
         var result = if action.operation == "read" { display(perform ReadTools.read(files[0])) } else { display(perform ReadTools.search(files, action.literal)) };
         if shape.result_characters == 256 {
             if len(result.text) > 256 { result = outcome("refused", "tool result exceeds 256 display characters", result.scanned); }
-        } else if !safe(result.text, shape.result_characters) { result = outcome("refused", "tool result exceeds 262144 display bytes", result.scanned); }
+        } else if !safe(result.text, shape.result_characters) { result = outcome("refused", "tool result exceeds large-context display bound", result.scanned); }
         if result.status == "incomplete" { perform DiagnosticOutput.write("Search incomplete: results are partial; some candidates were skipped or the match limit was reached."); }
         let complete = result.status == "complete" || (shape.partial_search && action.operation == "search" && result.status == "incomplete");
         if !complete {

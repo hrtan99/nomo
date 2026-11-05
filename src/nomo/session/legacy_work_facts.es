@@ -32,7 +32,7 @@ flow read_snapshot() -> Result<Facts, string> {
                 }
                 None() => {}
             }
-            work_facts = Some(WorkFacts { id = work.id, summary = work.summary, summary_source = "unknown", selection = None(), check = outcome, exit_code = exit, output = output });
+            work_facts = Some(WorkFacts { id = work.id, summary = work.summary, summary_source = "unknown", selection = None(), evidence = None(), check = outcome, exit_code = exit, output = output });
             let spent = match work.settled { Some(value) => value, None() => { return Err("first work ledger missing"); } };
             work_calls = spent.read.calls + spent.edit.calls; work_generation = spent.read.tokens + spent.edit.tokens;
         }
@@ -62,7 +62,7 @@ flow read_snapshot() -> Result<Facts, string> {
             let second = match item.settled { Some(value) => value, None() => { return Err("followup ledger missing"); } };
             work_calls = first.read.calls + first.edit.calls + second.read.calls + second.edit.calls;
             work_generation = first.read.tokens + first.edit.tokens + second.read.tokens + second.edit.tokens;
-            followup_facts = Some(WorkFacts { id = item.id, summary = item.summary, summary_source = "unknown", selection = None(), check = outcome, exit_code = exit, output = output });
+            followup_facts = Some(WorkFacts { id = item.id, summary = item.summary, summary_source = "unknown", selection = None(), evidence = None(), check = outcome, exit_code = exit, output = output });
         }
     }
     return Ok(Facts { first = work_facts, followup = followup_facts, additional = [], calls = work_calls, generation = work_generation });

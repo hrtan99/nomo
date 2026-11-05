@@ -14,6 +14,7 @@ import nomo.model.read_protocol.question_error as utf8_question_error;
 import nomo.harness.harness_model_contract.bounded;
 import nomo.harness.harness_tool_contract.{Ledger, Observed, inspect, ledger_error, inspect_shared};
 import nomo.harness.harness_tool_contract.fresh as fresh_ledger;
+import nomo.core.large_context.outcome_bytes;
 
 // Only validated successful selected data crosses a turn boundary.
 public type Previous = { task: string, result: string, tool: string, outcome: string, answer: string };
@@ -44,7 +45,7 @@ public flow prior_error_mode(prior: Previous, unicode: bool) -> string {
     if invalid { return "invalid selected prior result"; }
     if prior.tool == "" {
         if prior.outcome != "" { return "prior outcome without tool"; }
-    } else if (prior.tool != "read" && prior.tool != "search") || !(if unicode { utf8_bounded(prior.outcome, 262154) } else { bounded(prior.outcome, 266) }) ||
+    } else if (prior.tool != "read" && prior.tool != "search") || !(if unicode { utf8_bounded(prior.outcome, outcome_bytes()) } else { bounded(prior.outcome, 266) }) ||
         !(starts_with(prior.outcome, "complete: ") || (unicode && prior.tool == "search" && starts_with(prior.outcome, "incomplete: "))) { return "invalid selected prior tool"; }
     return "";
 }
@@ -86,7 +87,7 @@ public flow inspect_turn_shared(child: Session, status: i32, request: string, ta
     var input = fresh();
     var characters: usize = 0;
     for event in child.history.events limit Iterations(12) {
-        if len(event.name) > 8 || len(event.text) > (if unicode { 262154 } else { 512 }) || !printable(event.name) || !(if unicode { safe(event.text, 262154) } else { printable(event.text) }) {
+        if len(event.name) > 8 || len(event.text) > (if unicode { outcome_bytes() } else { 512 }) || !printable(event.name) || !(if unicode { safe(event.text, outcome_bytes()) } else { printable(event.text) }) {
             return Err("invalid selected history data");
         }
         characters = characters + len(event.name) + len(event.text);

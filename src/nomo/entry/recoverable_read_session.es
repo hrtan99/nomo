@@ -24,7 +24,7 @@ import nomo.session.event_text_codec.decode;
 import nomo.session.redaction.Policy;
 import nomo.session.recoverable_events.Frame as EventFrame;
 import nomo.session.chat_history.load as load_legacy;
-import nomo.session.recoverable_chat_store.{create, load};
+import nomo.session.recoverable_chat_store.{create, load, load_evidence, chat_omitted};
 import nomo.session.history_work_guard.inspect as inspect_work;
 import nomo.session.history_followup_guard.inspect as inspect_followup;
 import nomo.session.history_check_guard.inspect as inspect_check;
@@ -43,16 +43,26 @@ import nomo.session.chat_format_policy.policy as format_policy;
 
 // Explicit opt-in path. It does not silently migrate v1-v3, establish a
 // workspace identity, or claim comprehensive secret redaction.
-flow conversation(frame: EventFrame, policy: Policy) -> Result<Array<Event>, string> {
-    var selected: Array<Event> = [];
+flow conversation(frame: EventFrame, policy: Policy, binding: string) -> Result<Array<Event>, string> {
+    var selected: Array<Event> = []; var chat_turn: i32 = 0;
     for event in frame.events limit Iterations(4096) {
+        if event.role == "system" && event.kind == "native-budget" && (event.name == "chat" || event.name == "chat-large" || event.name == "chat-resilient") {
+            chat_turn = chat_turn + 1;
+        }
         if (event.role == "user" && event.kind == "request") ||
             (event.role == "model" && event.kind == "request") ||
             (event.role == "tool" && event.kind == "check") ||
             (event.role == "system" && (event.kind == "work-boundary" || event.kind == "notice")) ||
             (event.role == "assistant" && event.kind == "answer") ||
             (event.role == "main" && (event.kind == "consume" || event.kind == "tool" || event.kind == "answer")) {
-            let value = match decode(event.text, policy) { Ok(item) => item, Err(error) => { return Err(error); } };
+            var value = match decode(event.text, policy) { Ok(item) => item, Err(error) => { return Err(error); } };
+            if event.role == "main" && event.kind == "tool" && value == chat_omitted() && chat_turn < frame.turns {
+                value = match load_evidence(chat_turn, policy, binding) {
+                    Ok(Some(item)) => item,
+                    Ok(None()) => { return Err("archived recoverable chat evidence missing"); }
+                    Err(error) => { return Err(error); }
+                };
+            }
             selected = selected.push(Event { role = event.role, kind = event.kind, name = event.name, text = value });
         }
     }
@@ -78,7 +88,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyR
     let repository = recoverable_repository(policy, binding);
     let current = match open_chat<RecoverableTicket, RecoverableChatRepository>(repository, args[0] == "new") { Ok(value) => value, Err(error) => { println("REFUSED " + error); return 1; } };
     let facts = match work_facts(policy, binding) { Ok(item) => item, Err(error) => { println("REFUSED " + error); return 1; } };
-    let history = match conversation(current.value.events, policy) { Ok(item) => item, Err(error) => { println("REFUSED " + error); return 1; } };
+    let history = match conversation(current.value.events, policy, binding) { Ok(item) => item, Err(error) => { println("REFUSED " + error); return 1; } };
     let reservation = match reserve_chat<RecoverableTicket, RecoverableChatRepository>(repository, current, args[4]) { Ok(value) => value, Err(error) => { println("REFUSED " + error); return 1; } };
     let running = reservation.reserved;
     println("RESERVED chat turn; interruption leaves it unresolved and will not retry.");
@@ -138,17 +148,17 @@ public flow status(args: Array<string>) -> i32 ![Console, Memory, Fs.read<Policy
     var additional: Array<ExtraEntry> = [];
     match extra { Some(item) => { additional = item.value.history.push(item.value.current); } None() => {} }
     var chat_reservations: i32 = 0; var native_configured: i32 = 0; var legacy_native_unknown = false;
-    for event in saved.value.events.events limit Iterations(4096) { if event.role == "system" && event.kind == "native-budget" && (event.name == "chat" || event.name == "chat-large") { chat_reservations = chat_reservations + 1; native_configured = native_configured + if event.name == "chat-large" { 3048576 } else { 1179648 }; } }
+    for event in saved.value.events.events limit Iterations(4096) { if event.role == "system" && event.kind == "native-budget" && (event.name == "chat" || event.name == "chat-large" || event.name == "chat-resilient") { chat_reservations = chat_reservations + 1; native_configured = native_configured + if event.name == "chat-resilient" { 3786432 } else { if event.name == "chat-large" { 3048576 } else { 1179648 } }; } }
     let completed_new = if saved.value.chat.phase == "running" && chat_reservations > 0 { chat_reservations - 1 } else { chat_reservations };
     if saved.value.chat.invocation.admitted > completed_new { legacy_native_unknown = true; }
-    match work { Some(item) => { if item.value.work.format >= 4 { native_configured = native_configured + if item.value.work.format == 7 { 2811008 } else { if item.value.work.format == 6 { 2073152 } else { 1335296 } }; } else { legacy_native_unknown = true; } } None() => {} }
-    match followup { Some(item) => { if item.value.work.format >= 4 { native_configured = native_configured + if item.value.work.format == 7 { 2811008 } else { if item.value.work.format == 6 { 2073152 } else { 1335296 } }; } else { legacy_native_unknown = true; } } None() => {} }
-    for item in additional limit Iterations(48) { if ends_with(item.result.source, "-v4") { native_configured = native_configured + 2811008; } else { if ends_with(item.result.source, "-v3") { native_configured = native_configured + 2073152; } else { if item.result.source == "v2" || ends_with(item.result.source, "-v2") { native_configured = native_configured + 1335296; } else { legacy_native_unknown = true; } } } }
+    match work { Some(item) => { if item.value.work.format >= 4 { native_configured = native_configured + if item.value.work.format == 7 || item.value.work.format == 8 { 2811008 } else { if item.value.work.format == 6 { 2073152 } else { 1335296 } }; } else { legacy_native_unknown = true; } } None() => {} }
+    match followup { Some(item) => { if item.value.work.format >= 4 { native_configured = native_configured + if item.value.work.format == 7 || item.value.work.format == 8 { 2811008 } else { if item.value.work.format == 6 { 2073152 } else { 1335296 } }; } else { legacy_native_unknown = true; } } None() => {} }
+    for item in additional limit Iterations(48) { if ends_with(item.result.source, "-v5") || ends_with(item.result.source, "-v4") { native_configured = native_configured + 2811008; } else { if ends_with(item.result.source, "-v3") { native_configured = native_configured + 2073152; } else { if item.result.source == "v2" || ends_with(item.result.source, "-v2") { native_configured = native_configured + 1335296; } else { legacy_native_unknown = true; } } } }
     println("NATIVE configured cumulative reservation=" + from_i32(native_configured) + "; actual provider usage unknown; legacy native budget " + if legacy_native_unknown { "unknown" } else { "not present" });
     for item in additional limit Iterations(48) {
         println("ADDITIONAL WORK " + item.core.id + " phase=" + item.result.phase + " edit=" + item.edit.phase + " check=" + item.check.phase +
             " settled_calls=" + from_i32(item.result.calls) + " settled_generation=" + from_i32(item.result.generation) +
-            if item.result.phase == "running" || item.result.phase == "abandoned" { if item.result.source == "wide-v4" { " reserved_calls=7 reserved_generation=286720" } else { if item.result.source == "wide-v3" { " reserved_calls=7 reserved_generation=188416" } else { if item.result.source == "wide" || item.result.source == "wide-v2" { " reserved_calls=7 reserved_generation=61440" } else { " reserved_calls=7 reserved_generation=51200" } } } } else { " reserved_calls=0 reserved_generation=0" });
+            if item.result.phase == "running" || item.result.phase == "abandoned" { if item.result.source == "wide-v5" || item.result.source == "wide-v4" { " reserved_calls=7 reserved_generation=286720" } else { if item.result.source == "wide-v3" { " reserved_calls=7 reserved_generation=188416" } else { if item.result.source == "wide" || item.result.source == "wide-v2" { " reserved_calls=7 reserved_generation=61440" } else { " reserved_calls=7 reserved_generation=51200" } } } } else { " reserved_calls=0 reserved_generation=0" });
         if item.check.phase == "abandoned" { println("ABANDONED CHECK: outcome unknown; inspect the workspace before further action."); }
     }
     var followup_phase = "none"; var followup_edit_phase = "none"; var followup_reserved_calls: i32 = 0; var followup_reserved_tokens: i32 = 0;

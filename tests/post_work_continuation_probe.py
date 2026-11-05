@@ -29,7 +29,7 @@ class Fake(BaseHTTPRequestHandler):
             elif i==10:
                 assert ctx['current']['edit']['after']=='before green\n';value='Edit completed using current context.'
             elif i==11:
-                assert ctx['work']=={'id':'edit1','summary':'Edit completed using current context.','summary_source':'unknown','selection':{'name':'None','fields':[]},'check':self.server.expected_check,'exit_code':self.server.expected_exit,'output':{'name':'Some','fields':[{'stdout':'FIRST_CHECK_OK','stderr':'','stdout_truncated':False,'stderr_truncated':False}]}};value=['delegate','Read context.txt']
+                assert ctx['work']=={'id':'edit1','summary':'Edit completed using current context.','summary_source':'unknown','selection':{'name':'None','fields':[]},'evidence':{'name':'None','fields':[]},'check':self.server.expected_check,'exit_code':self.server.expected_exit,'output':{'name':'Some','fields':[{'stdout':'FIRST_CHECK_OK','stderr':'','stdout_truncated':False,'stderr_truncated':False}]}};value=['delegate','Read context.txt']
             elif i==12:value=['read','context.txt']
             elif i==13:value=['final','blue CEDAR42']
             else:

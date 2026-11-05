@@ -10,6 +10,7 @@ import nomo.tools.path_policy.valid_path;
 import nomo.harness.edit_original.{OriginalReadFunction, OriginalReader, EditApplier};
 import std.text.from_usize;
 import nomo.tools.edit_proposal.{validate, text_bytes};
+import nomo.core.large_context.{file_bytes, file_metadata_bytes};
 public import nomo.tools.edit_contract.{Prepared, prepare_original};
 
 public type EditableRoot;
@@ -89,11 +90,11 @@ impl LegacyEditFile ~ OriginalReader<EditableRoot> {
     flow read_original(self, name: string) -> Result<string, string> { return read_original_with(name, EditLimit { bytes = 16384, metadata = 16384 }); }
 }
 impl WideEditFile ~ OriginalReader<EditableRoot> {
-    flow read_original(self, name: string) -> Result<string, string> { return read_original_with(name, EditLimit { bytes = 65536, metadata = 65536 }); }
+    flow read_original(self, name: string) -> Result<string, string> { return read_original_with(name, EditLimit { bytes = file_bytes(), metadata = file_metadata_bytes() }); }
 }
 impl LegacyEditFile ~ EditApplier<EditableRoot> {
     flow apply(self, prepared: Prepared) -> Result<bool, string> ![Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<FileError>, Error<IndexError>] { return apply_with(prepared, EditLimit { bytes = 16384, metadata = 16384 }); }
 }
 impl WideEditFile ~ EditApplier<EditableRoot> {
-    flow apply(self, prepared: Prepared) -> Result<bool, string> ![Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<FileError>, Error<IndexError>] { return apply_with(prepared, EditLimit { bytes = 65536, metadata = 65536 }); }
+    flow apply(self, prepared: Prepared) -> Result<bool, string> ![Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<FileError>, Error<IndexError>] { return apply_with(prepared, EditLimit { bytes = file_bytes(), metadata = file_metadata_bytes() }); }
 }

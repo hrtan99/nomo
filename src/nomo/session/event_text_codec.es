@@ -9,6 +9,7 @@ import std.text.char_count as len;
 import std.codec.text.utf8_encode;
 import std.bytes.len as byte_count;
 import nomo.session.redaction.{Policy, text as redact};
+import nomo.core.large_context.{outcome_bytes, event_bytes};
 
 // Canonical JSON string notation is reversible for LF, CR, TAB, quotes and
 // backslashes. Filtering happens on decoded text before encoding. Unsupported
@@ -17,14 +18,14 @@ public type Encoded = { value: string, replacements: usize };
 
 public flow encode(text: string, policy: Policy) -> Result<Encoded, string> {
     let clean = match redact(text, policy) { Ok(item) => item, Err(error) => { return Err(error); } };
-    if len(clean.value) > 262154 || byte_count(utf8_encode(clean.value)) > 262154 { return Err("event text exceeds decoded bound"); }
+    if len(clean.value) > outcome_bytes() || byte_count(utf8_encode(clean.value)) > outcome_bytes() { return Err("event text exceeds decoded bound"); }
     let encoded = match encode_json(clean.value, "event text JSON conversion refused", "event text JSON encoding refused") { Ok(value) => value, Err(error) => { return Err(error); } };
-    if !safe(encoded, 524288) { return Err("encoded event text unsupported or exceeds bound"); }
+    if !safe(encoded, event_bytes()) { return Err("encoded event text unsupported or exceeds bound"); }
     return Ok(Encoded { value = encoded, replacements = clean.replacements });
 }
 
 public flow decode(encoded: string, policy: Policy) -> Result<string, string> {
-    if !safe(encoded, 524288) { return Err("invalid encoded event text"); }
+    if !safe(encoded, event_bytes()) { return Err("invalid encoded event text"); }
     let value = match parse(encoded) { Ok(item) => item, Err(_) => { return Err("invalid event text JSON"); } };
     let converted: Option<Message<string>> = Message.new(value).cast<string>();
     let raw = match converted { Some(item) => item.body, None() => { return Err("event text JSON is not a string"); } };

@@ -82,7 +82,7 @@ public flow admit(id: string, workspace: string, path: string, request: string, 
     }
     match load(policy, binding) { Ok(None()) => {} Ok(Some(_)) => { return Err("recoverable work already admitted; no retry"); } Err(error) => { return Err(error); } }
     let wide = chat.value.chat.format >= 13;
-    let row = Record { format = if wide { 7 } else { 5 }, phase = "running", id = id, workspace = workspace, path = path,
+    let row = Record { format = if wide { 8 } else { 5 }, phase = "running", id = id, workspace = workspace, path = path,
         request = request, history_version = chat.version.opaque, reserved = full(wide), settled = None(), summary = "" };
     let frame = Frame { format = 1, policy_binding = binding, work = row, events = empty_events() };
     let version = match write(frame, None(), policy, binding) { Ok(item) => item, Err(error) => { return Err(error); } };

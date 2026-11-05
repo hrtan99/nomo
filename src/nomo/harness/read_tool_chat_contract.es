@@ -15,6 +15,7 @@ import nomo.harness.read_tool_contract.fresh as fresh_ledger;
 // Only validated successful selected data crosses a turn boundary.
 public import nomo.harness.harness_tool_chat_contract.{Previous, Context, Invocation, Completed, LocalTurn, TurnResult, default_maximum, fresh_invocation, empty, seed, invocation_error, admission_error, combine};
 import nomo.harness.harness_tool_chat_contract.{inspect_turn_shared, same, turn_error_shared, prior_error_mode};
+import nomo.core.large_context.outcome_bytes;
 
 public flow prior_error(prior: Previous) -> string { return prior_error_mode(prior, true); }
 
@@ -121,7 +122,7 @@ public flow inspect_multi_turn(child: Session, status: i32, request: string, tas
     if count(events) != start + 1 + child.tools * 3 + if tool_failure { 0 } else { 2 } { return Err("invalid multi-step event count"); }
     var index: usize = 0; var characters: usize = 0;
     for event in events limit Iterations(18) {
-        if len(event.name) > 8 || len(event.text) > 262154 || !printable(event.name) || !safe(event.text, 262154) { return Err("invalid multi-step event"); }
+        if len(event.name) > 8 || len(event.text) > outcome_bytes() || !printable(event.name) || !safe(event.text, outcome_bytes()) { return Err("invalid multi-step event"); }
         if index < start && !same(event, expected.events[index]) { return Err("selected prior history changed"); }
         characters = characters + len(event.name) + len(event.text); index = index + 1;
     }
@@ -133,7 +134,7 @@ public flow inspect_multi_turn(child: Session, status: i32, request: string, tas
         let request_event = events[cursor + 1]; let action = match decode_child(request_event.text, allowed, false) { Ok(value) => value, Err(error) => { return Err(error); } };
         let result = events[cursor + 2];
         if tool_failure && i + 1 == child.tools {
-            if request_event.role != "model" || request_event.kind != "request" || request_event.name != action.operation || (action.operation != "read" && action.operation != "search") || result.role != "tool" || result.kind != "error" || result.name != action.operation || !bounded(result.text, 262154) { return Err("invalid failed tool outcome"); }
+            if request_event.role != "model" || request_event.kind != "request" || request_event.name != action.operation || (action.operation != "read" && action.operation != "search") || result.role != "tool" || result.kind != "error" || result.name != action.operation || !bounded(result.text, outcome_bytes()) { return Err("invalid failed tool outcome"); }
             return Ok(Observed { result = "", tool = "", outcome = "" });
         }
         if request_event.role != "model" || request_event.kind != "request" || request_event.name != action.operation ||

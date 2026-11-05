@@ -52,6 +52,21 @@ public flow selection(events: Array<Event>, policy: Policy) -> Result<Option<str
     return Ok(None());
 }
 
+// The canonical work record retains the complete selected read/search result.
+// Timeline copies may be compacted, so resumed model context must project this
+// field from the canonical record rather than from the display timeline.
+public flow evidence(events: Array<Event>, policy: Policy) -> Result<Option<string>, string> {
+    var selected: Option<string> = None();
+    for event in events limit Iterations(48) {
+        if event.role == "tool" && event.kind == "result" && (event.name == "read" || event.name == "search") {
+            if selected != None() { return Err("multiple canonical work evidence events"); }
+            let text = match decode(event.text, policy) { Ok(value) => value, Err(error) => { return Err(error); } };
+            selected = Some(text);
+        }
+    }
+    return Ok(selected);
+}
+
 // Older or incomplete records may lack attributable events; never guess their origin.
 public flow summary_source(frame: EventFrame, summary: string, policy: Policy) -> Result<string, string> {
     var origin = "unknown"; var matches: usize = 0;

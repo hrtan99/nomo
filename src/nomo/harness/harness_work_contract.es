@@ -24,6 +24,7 @@ import nomo.harness.harness_edit_contract.bump_mode as edit_bump;
 import nomo.harness.harness_edit_contract.{ledger_error as edit_error, wide_error, large_error};
 import nomo.harness.harness_edit_contract.context_error as edit_context_error;
 import nomo.tools.edit_encoding.json;
+import nomo.core.large_context.{scan_i32, outcome_bytes};
 
 public type Evidence = { request: string, task: string, operation: string, files: Array<string>, literal: string,
     outcome: string, result: string, summary: string, allowed: Array<string>, ledger: ReadLedger };
@@ -59,7 +60,7 @@ impl LargeWorkBudget ~ WorkBudgetPolicy {
 public flow fresh() -> Ledger { return Ledger { read = read_fresh(), edit = edit_fresh() }; }
 
 flow read_complete(value: ReadLedger) -> bool {
-    return value.steps == 7 && value.calls == 4 && (value.tokens == 8192 || value.tokens == 12288 || value.tokens == 16384 || value.tokens == 20480 || value.tokens == 143360) && value.tools == 1 && (value.scan == 4096 || value.scan == 16384 || value.scan == 65540);
+    return value.steps == 7 && value.calls == 4 && (value.tokens == 8192 || value.tokens == 12288 || value.tokens == 16384 || value.tokens == 20480 || value.tokens == 143360) && value.tools == 1 && (value.scan == 4096 || value.scan == 16384 || value.scan == 65540 || value.scan == scan_i32());
 }
 
 flow selected_edit_error(state: Ledger) -> string {
@@ -108,7 +109,7 @@ public flow bump_edit(state: Ledger, call: bool) -> Result<Ledger, string> {
 
 flow selected_error(value: Evidence, complete: bool) -> string {
     if !bounded(value.request, 512) || !bounded(value.task, 512) || !bounded(value.result, 256) ||
-        !bounded(value.outcome, 262154) || !starts_with(value.outcome, "complete: ") { return "invalid read evidence text"; }
+        !bounded(value.outcome, outcome_bytes()) || !starts_with(value.outcome, "complete: ") { return "invalid read evidence text"; }
     let allowed = allowed_error(value.allowed); if allowed != "" { return allowed; }
     let files = allowed_error(value.files); if files != "" { return files; }
     var fields: Array<string> = [];
@@ -125,7 +126,7 @@ flow selected_error(value: Evidence, complete: bool) -> string {
     if complete {
         if !read_complete(value.ledger) || !bounded(value.summary, 512) { return "read evidence is not settled"; }
     } else if value.summary != "" || value.ledger.steps != 5 || value.ledger.calls != 3 || (value.ledger.tokens != 6144 && value.ledger.tokens != 10240 && value.ledger.tokens != 12288 && value.ledger.tokens != 16384 && value.ledger.tokens != 139264) ||
-        value.ledger.tools != 1 || (value.ledger.scan != 4096 && value.ledger.scan != 16384 && value.ledger.scan != 65540) { return "invalid pending read evidence"; }
+        value.ledger.tools != 1 || (value.ledger.scan != 4096 && value.ledger.scan != 16384 && value.ledger.scan != 65540 && value.ledger.scan != scan_i32()) { return "invalid pending read evidence"; }
     return "";
 }
 

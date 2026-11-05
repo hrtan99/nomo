@@ -4,6 +4,7 @@ import argparse, importlib.util, json, os, stat, sys
 from pathlib import Path
 
 ROOT=Path(__file__).resolve().parent.parent
+EVENT_TEXT_BYTES=524312
 _spec=importlib.util.spec_from_file_location('nomo_edit_launcher',ROOT/'scripts/nomo-edit.py')
 _edit_launcher=importlib.util.module_from_spec(_spec);_spec.loader.exec_module(_edit_launcher)
 run_owned=_edit_launcher.run_owned
@@ -68,7 +69,7 @@ def event_lines(raw):
             if any(not isinstance(value,str) for value in fields):raise ValueError('invalid event fields')
             try:text=json.loads(fields[3])
             except ValueError as error:raise ValueError('invalid event text encoding') from error
-            if not isinstance(text,str) or len(text.encode('utf-8'))>262154 or any(len(value)>128 for value in fields[:3]):raise ValueError('event text or metadata exceeds bound')
+            if not isinstance(text,str) or len(text.encode('utf-8'))>EVENT_TEXT_BYTES or any(len(value)>128 for value in fields[:3]):raise ValueError('event text or metadata exceeds bound')
             encoding=getattr(sys.stdout,'encoding',None) or 'utf-8'
             values=[display_json_string(value,encoding) for value in (*fields[:3],text)]
             rendered.append(label+' '+str(index)+' role='+values[0]+' kind='+values[1]+' name='+values[2]+' text='+values[3])

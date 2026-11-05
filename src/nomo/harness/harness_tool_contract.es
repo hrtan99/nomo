@@ -10,6 +10,7 @@ import nomo.core.conversation.Event;
 import nomo.model.model_tool_contract.{Session, allowed_error, candidate_error, decode_reply};
 import nomo.model.read_protocol.decode_child;
 import nomo.core.read_text.{safe, bounded as utf8_bounded};
+import nomo.core.large_context.{scan_bytes, scan_i32, outcome_bytes};
 import nomo.harness.harness_model_contract.bounded;
 
 public type Context = { phase: string, request: string, task: string, result: string, tool: string, outcome: string, allowed: Array<string> };
@@ -42,11 +43,11 @@ public flow bump(state: Ledger, call: bool) -> Result<Ledger, string> {
 
 flow child_ledger_error(child: Session, work: bool) -> string {
     if child.history.spent < 1 || child.history.spent > 3 || child.calls < 1 || child.calls > 2 ||
-        child.tokens > (if work { 135168 } else { 4096 }) || child.tools > 1 || child.scan > (if work { 65540 } else { 16384 }) { return "invalid child ledger"; }
+        child.tokens > (if work { 135168 } else { 4096 }) || child.tools > 1 || child.scan > (if work { scan_bytes() } else { 16384 }) { return "invalid child ledger"; }
     let calls: i32 = if child.calls == 2 { 2 } else { 1 };
     let tools: i32 = if child.tools == 1 { 1 } else { 0 };
     if child.history.spent != calls + tools || (child.tokens != child.calls * 2048 && !(work && (child.tokens == child.calls * 4096 || (child.calls == 2 && (child.tokens == 12288 || child.tokens == 135168))))) ||
-        (child.scan != child.tools * 4096 && child.scan != child.tools * 16384 && !(work && child.scan == child.tools * 65540)) || (child.calls == 2 && child.tools != 1) { return "invalid child ledger"; }
+        (child.scan != child.tools * 4096 && child.scan != child.tools * 16384 && !(work && (child.scan == child.tools * 65540 || child.scan == child.tools * scan_bytes()))) || (child.calls == 2 && child.tools != 1) { return "invalid child ledger"; }
     return "";
 }
 
@@ -66,9 +67,9 @@ public flow settle(state: Ledger, child: Session) -> Result<Ledger, string> {
 // attempts, and one 2048-token parent aggregate. Legacy ledgers remain valid.
 public flow work_error(state: Ledger) -> string {
     if ledger_error(state) == "" { return ""; }
-    if state.steps >= 0 && state.steps <= 7 && state.calls >= 0 && state.calls <= 4 && (state.tokens == state.calls * 4096 || (state.calls >= 3 && (state.tokens == state.calls * 4096 + 4096 || state.tokens == state.calls * 4096 + 126976))) && state.tools >= 0 && state.tools <= 1 && (state.scan == state.tools * 4096 || state.scan == state.tools * 16384 || state.scan == state.tools * 65540) && state.steps >= state.calls + state.tools && state.steps <= state.calls + state.tools + 2 { return ""; }
+    if state.steps >= 0 && state.steps <= 7 && state.calls >= 0 && state.calls <= 4 && (state.tokens == state.calls * 4096 || (state.calls >= 3 && (state.tokens == state.calls * 4096 + 4096 || state.tokens == state.calls * 4096 + 126976))) && state.tools >= 0 && state.tools <= 1 && (state.scan == state.tools * 4096 || state.scan == state.tools * 16384 || state.scan == state.tools * 65540 || state.scan == state.tools * scan_i32()) && state.steps >= state.calls + state.tools && state.steps <= state.calls + state.tools + 2 { return ""; }
     if state.steps < 0 || state.steps > 7 || state.calls < 2 || state.calls > 4 ||
-        state.tools < 0 || state.tools > 1 || (state.scan != state.tools * 4096 && state.scan != state.tools * 16384 && state.scan != state.tools * 65540) ||
+        state.tools < 0 || state.tools > 1 || (state.scan != state.tools * 4096 && state.scan != state.tools * 16384 && state.scan != state.tools * 65540 && state.scan != state.tools * scan_i32()) ||
         state.steps < state.calls + state.tools || state.steps > state.calls + state.tools + 2 { return "invalid expanded work read ledger"; }
     let expected = if state.calls == 2 { 6144 } else { if state.calls == 3 { 10240 } else { 12288 } };
     return if state.tokens == expected { "" } else { "invalid expanded work read ledger" };
@@ -90,10 +91,10 @@ public flow work_settle(state: Ledger, child: Session) -> Result<Ledger, string>
     let expected = Ledger { steps = 2, calls = 1, tokens = if state.tokens == 4096 { 4096 } else { 2048 }, tools = 0, scan = 0 };
     if state != expected ||
         child.calls < 1 || child.calls > 2 || (child.tokens != child.calls * 4096 && !(state.tokens == 4096 && child.calls == 2 && (child.tokens == 12288 || child.tokens == 135168))) || child.tools > 1 ||
-        (child.scan != child.tools * 4096 && child.scan != child.tools * 16384 && child.scan != child.tools * 65540) || child.history.spent != (if child.calls == 2 { 2 } else { 1 }) + (if child.tools == 1 { 1 } else { 0 }) ||
+        (child.scan != child.tools * 4096 && child.scan != child.tools * 16384 && child.scan != child.tools * 65540 && child.scan != child.tools * scan_bytes()) || child.history.spent != (if child.calls == 2 { 2 } else { 1 }) + (if child.tools == 1 { 1 } else { 0 }) ||
         (child.calls == 2 && child.tools != 1) { return Err("invalid expanded child ledger"); }
     let calls = if child.calls == 2 { 2 } else { 1 }; let tools = if child.tools == 1 { 1 } else { 0 };
-    let value = Ledger { steps = 2 + child.history.spent, calls = 1 + calls, tokens = state.tokens + if child.tokens == 135168 { 135168 } else { if child.tokens == 12288 { 12288 } else { calls * 4096 } }, tools = tools, scan = if child.scan == 65540 { 65540 } else { if child.scan == 16384 { 16384 } else { tools * 4096 } } };
+    let value = Ledger { steps = 2 + child.history.spent, calls = 1 + calls, tokens = state.tokens + if child.tokens == 135168 { 135168 } else { if child.tokens == 12288 { 12288 } else { calls * 4096 } }, tools = tools, scan = if child.scan == scan_bytes() { scan_i32() } else { if child.scan == 65540 { 65540 } else { if child.scan == 16384 { 16384 } else { tools * 4096 } } } };
     let error = work_error(value); if error != "" { return Err(error); } return Ok(value);
 }
 
@@ -116,7 +117,7 @@ public flow inspect_shared(child: Session, status: i32, request: string, task: s
     if size < 4 || size > 7 || child.history.stopped || child.history.characters > (if unicode { 8388608 } else { 8192 }) { return Err("invalid child history"); }
     var characters: usize = 0;
     for event in events limit Iterations(7) {
-        if len(event.name) > 8 || len(event.text) > (if unicode { 262154 } else { 512 }) || !printable(event.name) || !(if unicode { safe(event.text, 262154) } else { printable(event.text) }) {
+        if len(event.name) > 8 || len(event.text) > (if unicode { outcome_bytes() } else { 512 }) || !printable(event.name) || !(if unicode { safe(event.text, outcome_bytes()) } else { printable(event.text) }) {
             return Err("invalid child event data");
         }
         characters = characters + len(event.name) + len(event.text);
@@ -138,7 +139,7 @@ public flow inspect_shared(child: Session, status: i32, request: string, task: s
                 return Err("invalid failed tool shape");
             }
         } else {
-            if events[4].kind != "complete" || !(if unicode { utf8_bounded(events[4].text, 262154) } else { bounded(events[4].text, 266) }) || !starts_with(events[4].text, "complete: ") {
+            if events[4].kind != "complete" || !(if unicode { utf8_bounded(events[4].text, outcome_bytes()) } else { bounded(events[4].text, 266) }) || !starts_with(events[4].text, "complete: ") {
                 return Err("invalid completed tool outcome");
             }
             if size == 6 {

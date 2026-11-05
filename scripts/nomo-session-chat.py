@@ -113,7 +113,7 @@ def show_resume(args, *, show_id):
     if args.events_policy_dir is None:
         print('Read turns and bounded work use this session; each edit requires fresh confirmations.', flush=True)
     else:
-        print('Event recording supports successive work operations, each with an optional check and fresh approval; each new-session work reserves up to 7 model calls, 286720 output tokens, 2811008 configured native tokens, 65540 read/search bytes and three edit reads of up to 65537 bytes each; the work read final and edit child stages each allow up to 1000000 configured input-plus-output tokens.', flush=True)
+        print('Event recording supports successive work operations, each with an optional check and fresh approval; each new-session work reserves up to 7 model calls, 286720 output tokens, 2811008 configured native tokens, 262148 read/search bytes and three edit reads of up to 262144 bytes each; the work read final and edit child stages each allow up to 1000000 configured input-plus-output tokens.', flush=True)
     policy = '' if args.events_policy_dir is None else ' --events-policy-dir ' + shlex.quote(args.events_policy_dir)
     print('Resume: nomo-read.sh session-id resume --sessions-dir ' + shlex.quote(args.sessions_dir)
           + ' --id ' + shlex.quote(args.id) + ' --root DIR --allow FILE' + policy + ' --once QUESTION', flush=True)
@@ -275,7 +275,7 @@ def main(argv=None):
     else:
         print('New session: the first question starts a read turn.', flush=True)
         if args.events_policy_dir is not None:
-            print('Event recording supports successive work operations, each with an optional check and fresh approval; each new-session work reserves up to 7 model calls, 286720 output tokens, 2811008 configured native tokens, 65540 read/search bytes and three edit reads of up to 65537 bytes each; the work read final and edit child stages each allow up to 1000000 configured input-plus-output tokens.', flush=True)
+            print('Event recording supports successive work operations, each with an optional check and fresh approval; each new-session work reserves up to 7 model calls, 286720 output tokens, 2811008 configured native tokens, 262148 read/search bytes and three edit reads of up to 262144 bytes each; the work read final and edit child stages each allow up to 1000000 configured input-plus-output tokens.', flush=True)
         else:
             print('Work requires a completed first turn.', flush=True)
     if tty and args.once is None:

@@ -5,6 +5,7 @@ import nomo.model.model_tool_contract.{Session, Limits, Context, budget_error, c
 
 import nomo.core.conversation.charge;
 import nomo.core.read_text.bounded;
+import nomo.core.large_context.{scan_bytes, display_bytes, outcome_bytes};
 
 public type Shape = { calls: usize, tools: usize, context_bytes: usize, input_characters: usize, result_characters: usize, slots: usize, characters: usize, tool_characters: usize, whole_scope: bool, partial_search: bool, named_final: bool };
 public spec ChildLoopPolicy {
@@ -20,7 +21,7 @@ public type ExpandedChild = { wide: bool };
 public type MultiChild = { resilient: bool };
 public type LegacyChild = { limits: Limits };
 
-flow single_shape(input_characters: usize) -> Shape { return Shape { calls = 2, tools = 1, context_bytes = 8388608, input_characters = input_characters, result_characters = 262144, slots = 2, characters = 518, tool_characters = 65556, whole_scope = false, partial_search = false, named_final = true }; }
+flow single_shape(input_characters: usize) -> Shape { return Shape { calls = 2, tools = 1, context_bytes = 8388608, input_characters = input_characters, result_characters = display_bytes(), slots = 2, characters = 518, tool_characters = outcome_bytes() + 20, whole_scope = false, partial_search = false, named_final = true }; }
 flow request_error(request: string, work: bool) -> string {
     if work { return if bounded(request, 512) { "" } else { "work delegation requires 1..512 safe UTF-8 bytes" }; }
     return if bounded(request, 128) { "" } else { "question requires 1..128 safe UTF-8 bytes, not only spaces" };
@@ -46,17 +47,17 @@ impl ExpandedChild ~ ChildLoopPolicy {
     flow request_error(self, request: string) -> string { return request_error(request, true); }
     flow validate_context(self, context: Context) -> string { return context_error(context); }
     flow reserve_model(self, state: Session, final_only: bool) -> Result<Session, string> {
-        if state.history.spent >= 3 || state.calls >= 2 || state.tokens != state.calls * 4096 || state.tools > 1 || state.scan > 65540 { return Err("expanded work model reservation exhausted"); }
+        if state.history.spent >= 3 || state.calls >= 2 || state.tokens != state.calls * 4096 || state.tools > 1 || state.scan > scan_bytes() { return Err("expanded work model reservation exhausted"); }
         return Ok(charged(state, if final_only && self.wide { 131072 } else { 4096 }, 0));
     }
     flow reserve_tool(self, state: Session) -> Result<Session, string> {
         if state.tools != 0 || state.scan != 0 || state.history.spent >= 3 { return Err("expanded work tool reservation exhausted"); }
-        return Ok(charged(state, 0, 65540));
+        return Ok(charged(state, 0, scan_bytes()));
     }
 }
 impl MultiChild ~ ChildLoopPolicy {
     flow allowed_error(self, allowed: Array<string>) -> string { return candidate_error(allowed); }
-    flow shape(self) -> Shape ![] { return Shape { calls = 4, tools = 3, context_bytes = 8388608, input_characters = 512, result_characters = 262144, slots = 4, characters = 262688, tool_characters = 0, whole_scope = true, partial_search = true, named_final = false }; }
+    flow shape(self) -> Shape ![] { return Shape { calls = 4, tools = 3, context_bytes = 8388608, input_characters = 512, result_characters = display_bytes(), slots = 4, characters = outcome_bytes() + 534, tool_characters = 0, whole_scope = true, partial_search = true, named_final = false }; }
     flow request_error(self, request: string) -> string { return if bounded(request, 512) { "" } else { "invalid selected child context" }; }
     flow validate_context(self, context: Context) -> string ![] { return ""; }
     flow reserve_model(self, state: Session, final_only: bool) -> Result<Session, string> ![] {

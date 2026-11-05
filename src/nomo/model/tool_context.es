@@ -4,6 +4,7 @@ import std.text.char_count as len;
 import std.collections.len as count;
 import nomo.core.conversation.Event;
 import nomo.tools.path_policy.valid_path;
+import nomo.core.large_context.outcome_bytes;
 
 public type Context = { history: Array<Event>, allowed: Array<string>, final_only: bool };
 
@@ -33,7 +34,7 @@ public flow bounded_context_error(value: Context) -> string {
     let invalid = candidate_error(value.allowed); if invalid != "" { return invalid; }
     if count(value.history) > 32 { return "context history exceeds 32 events"; }
     for event in value.history limit Iterations(32) {
-        if len(event.role) > 128 || len(event.kind) > 128 || len(event.name) > 128 || len(event.text) > 262154 {
+        if len(event.role) > 128 || len(event.kind) > 128 || len(event.name) > 128 || len(event.text) > outcome_bytes() {
             return "context event exceeds bounded input";
         }
     }

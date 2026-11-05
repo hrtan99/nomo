@@ -9,6 +9,7 @@ import nomo.model.read_protocol.question_error;
 import nomo.harness.harness_edit_contract.history_summary_error;
 import std.text.char_count as len;
 import nomo.harness.harness_work_contract.{Ledger, ledger_error, native_tokens, native_budget};
+import nomo.core.large_context.scan_i32;
 
 // This record prevents a second dispatched work request for this session.
 // It is not a File receipt, root identity, user approval, or Host witness.
@@ -17,23 +18,30 @@ public type Record = { format: i32, phase: string, id: string, workspace: string
     request: string, history_version: string, reserved: Budget, settled: Option<Ledger>, summary: string };
 flow full() -> Budget { return Budget { steps = 13, calls = 7, generation = 47104, native_tokens = 196608 }; }
 flow zero() -> Budget { return Budget { steps = 0, calls = 0, generation = 0, native_tokens = 0 }; }
+flow generation(format: i32) -> i32 {
+    return if format == 1 { 47104 } else { if format == 7 || format == 8 { 286720 } else { if format == 6 { 188416 } else { if format == 3 || format == 4 { 61440 } else { 51200 } } } };
+}
+flow configured_native(format: i32) -> i32 {
+    return if format == 7 || format == 8 { 2811008 } else { if format == 6 { 2073152 } else { if format >= 4 { 1335296 } else { 196608 } } };
+}
+flow expected_scan(format: i32) -> i32 { return if format == 8 { scan_i32() } else { 65540 }; }
 public type Ticket = { record: Record, version: MemoryVersion, history: Entry };
 alias Schema = MemoryRegion<{ Rows: Store<string, Record> }>;
 let Runs = std.memory.region<Schema>(stable_id = "nomo-history-work-v1", store = "history-work");
 flow read() -> Option<MemoryEntry<string, Record>> { return get_entry(Runs.Rows, "work"); }
 public flow invalid(value: Record) -> string {
-    if (value.format < 1 || value.format > 7) || (value.phase != "running" && value.phase != "complete" && value.phase != "abandoned") { return "invalid history-work phase"; }
+    if (value.format < 1 || value.format > 8) || (value.phase != "running" && value.phase != "complete" && value.phase != "abandoned") { return "invalid history-work phase"; }
     let selected = selector_error(value.id, value.workspace, value.path); if selected != "" { return selected; }
     let question = question_error(value.request); if question != "" { return question; }
     if value.history_version == "" || len(value.history_version) > 512 { return "invalid history version"; }
     if value.phase == "running" || value.phase == "abandoned" {
-        let expected = if value.format == 1 { full() } else { Budget { steps = 13, calls = 7, generation = if value.format == 7 { 286720 } else { if value.format == 6 { 188416 } else { if value.format == 3 || value.format == 4 { 61440 } else { 51200 } } }, native_tokens = if value.format == 7 { 2811008 } else { if value.format == 6 { 2073152 } else { if value.format >= 4 { 1335296 } else { 196608 } } } } };
+        let expected = if value.format == 1 { full() } else { Budget { steps = 13, calls = 7, generation = generation(value.format), native_tokens = configured_native(value.format) } };
         if value.summary != "" || value.reserved != expected || value.settled != None() { return "invalid running work reservation"; }
     } else {
         if history_summary_error(value.summary, "summary") != "" || value.reserved != zero() { return "invalid completed work summary or reservation"; }
         let spent = match value.settled { Some(item) => item, None() => { return "missing settled work ledger"; } };
         if ledger_error(spent) != "" || spent.read.steps + spent.edit.steps != 13 || spent.read.calls + spent.edit.calls != 7 ||
-            spent.read.tokens + spent.edit.tokens != (if value.format == 1 { 47104 } else { if value.format == 7 { 286720 } else { if value.format == 6 { 188416 } else { if value.format == 3 || value.format == 4 { 61440 } else { 51200 } } } }) || (if value.format >= 4 { native_budget(spent) != (if value.format == 7 { 2811008 } else { if value.format == 6 { 2073152 } else { 1335296 } }) || spent.read.scan != 65540 } else { native_tokens(spent) != 196608 }) { return "invalid settled work ledger"; }
+            spent.read.tokens + spent.edit.tokens != generation(value.format) || (if value.format >= 4 { native_budget(spent) != configured_native(value.format) || spent.read.scan != expected_scan(value.format) } else { native_tokens(spent) != 196608 }) { return "invalid settled work ledger"; }
     }
     return "";
 }

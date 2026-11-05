@@ -3,6 +3,7 @@ module nomo.session.edit_operation;
 import std.text.{char_count as len, trim};
 import nomo.core.text.{printable, hex_digest};
 import nomo.tools.path_policy.valid_path;
+import nomo.core.large_context.file_bytes;
 
 public type Binding = { id: string, workspace: string, region: string, path: string,
     request_digest: string, before_digest: string, after_digest: string, before_bytes: usize, after_bytes: usize };
@@ -28,7 +29,7 @@ public flow binding_error(value: Binding) -> string {
     if !hex_digest(value.request_digest) || !hex_digest(value.before_digest) || !hex_digest(value.after_digest) {
         return "invalid edit SHA-256 digest";
     }
-    if value.before_bytes > 65536 || value.after_bytes > 65536 {
+    if value.before_bytes > file_bytes() || value.after_bytes > file_bytes() {
         return "invalid edit byte lengths";
     }
     if value.before_digest == value.after_digest { return "edit digests do not describe a change"; }

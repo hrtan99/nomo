@@ -4,7 +4,7 @@ import std.io.{println, read_line};
 import std.io.IOError as ConsoleError;
 import std.fs.IOError as FileError;
 import std.effects.Fs;
-import std.text.{trim, lowercase, char_count as len, from_usize};
+import std.text.{trim, lowercase, char_count as len, from_usize, is_ascii};
 import nomo.tools.edit_file.{EditableRoot, Prepared, apply};
 import nomo.tools.edit_proposal.validate;
 import nomo.tools.edit_encoding.object;
@@ -12,10 +12,29 @@ import nomo.tools.edit_binding.bind;
 import nomo.ui.edit_diff.render;
 import nomo.session.edit_operation.{Binding, selector_error};
 import nomo.session.edit_operation_store.{begin, complete};
+import nomo.core.json.encode as encode_json;
 public import nomo.application.edit.effects.Approval;
 public import nomo.tools.edit_contract.{Selector, Confirmed};
 
+type PreviewMachine = { format: string, id: string, workspace: string, region: string, path: string,
+    before: string, target: string, replacement: string, after: string, before_bytes: string, after_bytes: string,
+    before_digest: string, after_digest: string, request_digest: string };
+
 flow preview(value: Prepared, selected: Binding) -> Result<string, string> {
+    // The runtime JSON codec handles large ASCII previews in one bounded
+    // operation. Keep the historical ASCII-only encoder as the safe fallback
+    // for Unicode, including invisible and bidirectional scalars that must not
+    // be emitted raw to a terminal.
+    let machine = PreviewMachine { format = "nomo-edit-preview-v1", id = selected.id, workspace = selected.workspace,
+        region = selected.region, path = selected.path, before = value.proposal.before, target = value.request.target,
+        replacement = value.request.replacement, after = value.proposal.after, before_bytes = from_usize(selected.before_bytes),
+        after_bytes = from_usize(selected.after_bytes), before_digest = selected.before_digest,
+        after_digest = selected.after_digest, request_digest = selected.request_digest };
+    if is_ascii(selected.id) && is_ascii(selected.workspace) && is_ascii(selected.region) && is_ascii(selected.path) &&
+        is_ascii(value.proposal.before) && is_ascii(value.request.target) && is_ascii(value.request.replacement) &&
+        is_ascii(value.proposal.after) {
+        return encode_json(machine, "edit preview JSON conversion refused", "edit preview JSON encoding refused");
+    }
     return object(["format", "id", "workspace", "region", "path", "before", "target", "replacement", "after",
         "before_bytes", "after_bytes", "before_digest", "after_digest", "request_digest"],
         ["nomo-edit-preview-v1", selected.id, selected.workspace, selected.region, selected.path,
