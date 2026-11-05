@@ -7,15 +7,52 @@ spec=importlib.util.spec_from_file_location('session_id',ROOT/'scripts/nomo-sess
 class SessionIDTest(unittest.TestCase):
  def setUp(self):
   self.tmp=tempfile.TemporaryDirectory();self.addCleanup(self.tmp.cleanup);self.base=Path(self.tmp.name).resolve();self.identifier='1'*32
+  self.workspace=self.base/'workspace';self.workspace.mkdir(mode=0o700)
  def call(self,args):
   out=io.StringIO();err=io.StringIO()
   with contextlib.redirect_stdout(out),contextlib.redirect_stderr(err):code=module.main(args)
   return code,out.getvalue(),err.getvalue()
  def test_start_and_resume_same_state(self):
-  start=['start','--sessions-dir',str(self.base),'--root','/root','--allow','context.txt','--once','question']
+  start=['start','--sessions-dir',str(self.base),'--root',str(self.workspace),'--allow','context.txt','--once','question']
   with patch.object(module.secrets,'token_hex',return_value=self.identifier),patch.object(module._edit,'run_owned',return_value=0) as call:
    code,out,_=self.call(start);self.assertEqual(code,0);self.assertIn('SESSION ID '+self.identifier,out);self.assertIn('Resume: nomo-read.sh session-id resume',out);self.assertTrue((self.base/self.identifier).is_dir());self.assertIn(str(self.base/self.identifier),call.call_args.args[0])
-   code,out,_=self.call(['resume','--sessions-dir',str(self.base),'--id',self.identifier,'--root','/root2','--allow','context.txt','--once','again']);self.assertEqual(code,0);self.assertIn('newly selected',out);self.assertIn(str(self.base/self.identifier),call.call_args.args[0])
+   code,out,_=self.call(['resume','--sessions-dir',str(self.base),'--id',self.identifier,'--root',str(self.workspace),'--allow','context.txt','--once','again']);self.assertEqual(code,0);self.assertIn('Workspace binding recorded and verified',out);self.assertIn(str(self.base/self.identifier),call.call_args.args[0])
+  other=self.base/'other';other.mkdir()
+  with patch.object(module._edit,'run_owned') as call:
+   code,_,err=self.call(['resume','--sessions-dir',str(self.base),'--id',self.identifier,'--root',str(other),'--allow','context.txt','--once','again']);self.assertNotEqual(code,0);self.assertIn('different workspace',err);call.assert_not_called()
+ def test_latest_uses_most_recent_compatible_physical_workspace(self):
+  identity=module.workspace_identity(str(self.workspace))
+  def candidate(identifier,used,graph=b'latest041\n',workspace=None):
+   state=self.base/identifier;state.mkdir(mode=0o700)
+   with patch.object(module.secrets,'token_hex',return_value='f'*32),patch.object(module.time,'time_ns',return_value=used):module.bind_workspace(state,workspace or identity)
+   lock=state/'.nomo-session.lock';lock.write_bytes(graph);lock.chmod(0o600)
+   history=state/'history.sqlite3';history.write_bytes(b'sqlite');history.chmod(0o600)
+  candidate('2'*32,20);candidate('3'*32,30);candidate('4'*32,40,b'future\n')
+  other=self.base/'other-latest';other.mkdir();candidate('5'*32,50,workspace=module.workspace_identity(str(other)))
+  with patch.object(module,'probe_session',side_effect=lambda state,policy:state.name=='2'*32),patch.object(module._edit,'run_owned',return_value=0) as launch:
+   code,out,_=self.call(['resume','--sessions-dir',str(self.base),'--id','latest','--root',str(self.workspace),'--allow','f','--once','q'])
+  self.assertEqual(code,0);self.assertIn('SESSION ID '+'2'*32,out);self.assertIn(str(self.base/('2'*32)),launch.call_args.args[0])
+ def test_runtime_probe_controls_recoverability_without_model_credentials(self):
+  state=self.base/'probe';state.mkdir()
+  def result(code,output=b'',truncated=False):
+   def run(command,env,capture,**kwargs):
+    capture['stdout']={'data':bytearray(output),'truncated':truncated}
+    self.assertNotIn('MINIMAX_API_KEY',env);self.assertIn('status',command)
+    return code
+   return run
+  with patch.dict(os.environ,{'MINIMAX_API_KEY':'secret'}),patch.object(module._edit,'run_owned',side_effect=result(0)):
+   self.assertTrue(module.probe_session(state,'/policy'))
+  with patch.object(module._edit,'run_owned',side_effect=result(1)):
+   self.assertFalse(module.probe_session(state,None))
+  for run in (result(125),result(1,b'REFUSED session already in use\n'),result(0,truncated=True)):
+   with self.subTest(run=run),patch.object(module._edit,'run_owned',side_effect=run),self.assertRaises(ValueError):module.probe_session(state,None)
+ def test_replaced_workspace_at_same_path_is_not_the_bound_workspace(self):
+  state=self.base/self.identifier;state.mkdir(mode=0o700)
+  with patch.object(module.secrets,'token_hex',return_value='e'*32):module.bind_workspace(state,module.workspace_identity(str(self.workspace)))
+  old=self.base/'workspace-old';self.workspace.rename(old);self.workspace.mkdir(mode=0o700)
+  with patch.object(module._edit,'run_owned') as launch:
+   code,_,err=self.call(['resume','--sessions-dir',str(self.base),'--id',self.identifier,'--root',str(self.workspace),'--allow','f','--once','q'])
+  self.assertNotEqual(code,0);self.assertIn('different workspace',err);launch.assert_not_called()
  def test_init_creates_random_session_without_question_or_workspace(self):
   args=['init','--sessions-dir',str(self.base),'--events-policy-dir','/policy']
   with patch.object(module.secrets,'token_hex',return_value=self.identifier),patch.object(module._edit,'run_owned',return_value=0) as launch:

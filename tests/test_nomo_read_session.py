@@ -26,6 +26,15 @@ class ReadSessionLauncherTest(unittest.TestCase):
             self.assertEqual(cache.stat().st_mode & 0o777,0o700);return 0
         with patch.object(launcher,'run_owned',side_effect=owned) as run:
             self.assertEqual(self.invoke(self.newargs()),0);run.assert_called_once()
+    def test_new_bound_session_accepts_only_a_valid_private_workspace_sidecar(self):
+        identity=launcher._registry.workspace_identity(str(self.context))
+        with patch.object(launcher._registry.secrets,'token_hex',return_value='d'*32):launcher._registry.bind_workspace(self.state,identity)
+        with patch.object(launcher,'run_owned',return_value=0) as run:
+            self.assertEqual(self.invoke(self.newargs()),0);run.assert_called_once()
+        other=self.root/'bad-state';other.mkdir(mode=0o700);self.state=other
+        sidecar=other/launcher._registry.WORKSPACE_FILE;sidecar.write_text('{}');sidecar.chmod(0o600)
+        with patch.object(launcher,'run_owned') as run:
+            self.assertNotEqual(self.invoke(self.newargs()),0);run.assert_not_called()
     def test_cache_symlink_refused_before_start(self):
         (self.project/'.etas').symlink_to(self.context,target_is_directory=True)
         with patch.object(launcher,'run_owned') as run:

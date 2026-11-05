@@ -9,6 +9,8 @@ _edit_launcher=importlib.util.module_from_spec(_spec);_spec.loader.exec_module(_
 run_owned=_edit_launcher.run_owned
 _storage_spec=importlib.util.spec_from_file_location('nomo_session_storage',ROOT/'scripts/nomo-session-storage.py')
 _storage=importlib.util.module_from_spec(_storage_spec);_storage_spec.loader.exec_module(_storage)
+_registry_spec=importlib.util.spec_from_file_location('nomo_session_registry',ROOT/'scripts/nomo-session-id.py')
+_registry=importlib.util.module_from_spec(_registry_spec);_registry_spec.loader.exec_module(_registry)
 _policy_spec=importlib.util.spec_from_file_location('nomo_event_policy',ROOT/'scripts/nomo-event-policy.py')
 _policy=importlib.util.module_from_spec(_policy_spec);_policy_spec.loader.exec_module(_policy)
 
@@ -113,7 +115,12 @@ def main(argv=None):
         try:
             _edit_launcher.check_history_lock(fd,verify=False)
             names={p.name for p in state.iterdir()}
-            if creating and names!={'.nomo-session.lock'}:raise ValueError('new session state must otherwise be empty')
+            if creating:
+                if names not in ({'.nomo-session.lock'},{'.nomo-session.lock',_registry.WORKSPACE_FILE}):raise ValueError('new session state must otherwise be empty')
+                if _registry.WORKSPACE_FILE in names:
+                    directory=os.open(state,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW|os.O_CLOEXEC)
+                    try:_registry.read_workspace_binding(directory,required=True)
+                    finally:os.close(directory)
             if not creating and 'history.sqlite3' not in names:raise ValueError('existing session history is missing')
             _edit_launcher.session_graph(fd,create=creating)
             _storage.prepare(state,create=creating)
@@ -133,13 +140,13 @@ def main(argv=None):
                 if policy is None:print('Conversation snapshots may retain request, tool-result and answer text; event labels omit free text. Full secret redaction is not available.',flush=True)
                 else:print('Event records retain bounded conversation and tool-result text. Only supplied exact literals are filtered; unknown secrets and live terminal output are not comprehensively filtered.',flush=True)
                 print('MiniMax thinking counts against output limits; ETAS 0.2.4 does not expose the provider finish reason.',flush=True)
-                print('A running or uncertain turn cannot be retried; this does not establish workspace identity continuity.',flush=True)
+                print('A running or uncertain turn cannot be retried; recorded history alone does not establish workspace identity continuity.',flush=True)
             if policy is not None:
                 profile='nomo-read-events-status' if status else ('nomo-read-events-new' if args.action=='new' else 'nomo-read-events-existing')
                 flow='recoverable_read_status' if status else 'recoverable_read_session'
                 if status:native_args=['--args','--policy-binding',policy_binding,*(['--initialize'] if creating else [])]
                 else:native_args+=['--policy-binding',policy_binding]
-                print('Event recording is opt-in; policy filters only supplied exact literals. Unknown secrets may remain. Keep the same private policy and binding key; workspace identity is not established.',flush=True)
+                print('Event recording is opt-in; policy filters only supplied exact literals. Unknown secrets may remain. Keep the same private policy and binding key; recorded history alone does not establish workspace identity.',flush=True)
             if args.natural_work:native_args+=['--natural-work']
             compose+=['--file',str(ROOT/'config/nomo-read-session-compose.yaml')]
             runner='/workspace/scripts/nomo-event-policy-bootstrap.py' if policy is not None else '/workspace/scripts/nomo-verified-etas.py'

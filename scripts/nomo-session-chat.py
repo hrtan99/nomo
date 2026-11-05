@@ -193,6 +193,7 @@ def offer_recovery(args, operation_id, action):
 
 def chat_turn(args, question, starting, natural, tty):
     command = [sys.executable, str(ROOT / 'scripts/nomo-session-id.py'), 'init' if question is None else 'start' if starting else 'resume', '--sessions-dir', args.sessions_dir]
+    if question is None: command += ['--workspace-root', args.root]
     if not starting: command += ['--id', args.id]
     if question is not None: command += ['--root', args.root, '--allow=' + args.allow, '--once=' + question]
     if args.events_policy_dir is not None: command += ['--events-policy-dir', args.events_policy_dir]

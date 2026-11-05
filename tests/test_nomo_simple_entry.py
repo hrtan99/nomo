@@ -37,6 +37,25 @@ class SimpleEntryTests(unittest.TestCase):
                 self.assertIn('--id='+'a'*32, execute.call_args.args[1])
                 self.assertEqual((policy/'binding.key').read_bytes(), key)
 
+    def test_latest_routes_the_newest_compatible_workspace_session(self):
+        with tempfile.TemporaryDirectory(prefix='nomo-latest-') as tmp:
+            base = Path(tmp).resolve(); workspace = base/'workspace'; workspace.mkdir(); state = base/'state'
+            with patch.dict(os.environ, {'NOMO_STATE_DIR': str(state)}), \
+                 patch.object(module.sys, 'argv', ['nomo', '--root', str(workspace)]), \
+                 patch.object(module.os, 'execv'):
+                module.main()
+            identifier='b'*32;session=state/'sessions'/identifier;session.mkdir(mode=0o700)
+            with patch.object(module.registry.secrets,'token_hex',return_value='c'*32):
+                module.registry.bind_workspace(session,module.registry.workspace_identity(str(workspace)))
+            lock=session/'.nomo-session.lock';lock.write_bytes(b'latest041\n');lock.chmod(0o600)
+            history=session/'history.sqlite3';history.write_bytes(b'sqlite');history.chmod(0o600)
+            with patch.dict(os.environ, {'NOMO_STATE_DIR': str(state)}), \
+                 patch.object(module.sys, 'argv', ['nomo', '--root', str(workspace), '--latest', '--once', 'continue']), \
+                 patch.object(module.registry, 'probe_session', return_value=True), \
+                 patch.object(module.os, 'execv') as execute:
+                module.main();command=execute.call_args.args[1]
+            self.assertIn('--id='+identifier,command);self.assertNotIn('--new',command)
+
     def test_once_can_select_a_discovery_page(self):
         with tempfile.TemporaryDirectory(prefix='nomo-page-') as tmp:
             base = Path(tmp).resolve(); workspace = base/'workspace'; workspace.mkdir(); state = base/'state'

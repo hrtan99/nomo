@@ -12,7 +12,7 @@ Usage:
   nomo-read.sh session-status --state PRIVATE_DIRECTORY [--outputs | --events --events-policy-dir PRIVATE_DIRECTORY]
   nomo-read.sh session-decision --state PRIVATE_DIRECTORY --id OPERATION_ID --target work|check|followup|followup-check
   nomo-read.sh session-id start --sessions-dir PRIVATE_DIRECTORY --root DIR --allow FILE[,FILE...] --once QUESTION
-  nomo-read.sh session-id resume --sessions-dir PRIVATE_DIRECTORY --id SESSION_ID --root DIR --allow FILE[,FILE...] --once QUESTION
+  nomo-read.sh session-id resume --sessions-dir PRIVATE_DIRECTORY --id SESSION_ID|latest --root DIR --allow FILE[,FILE...] --once QUESTION
   nomo-read.sh session-id status --sessions-dir PRIVATE_DIRECTORY --id SESSION_ID [--outputs | --events --events-policy-dir PRIVATE_DIRECTORY]
   nomo-read.sh session-id decision --sessions-dir PRIVATE_DIRECTORY --id SESSION_ID --operation-id ID --target work|check|followup|followup-check
   nomo-read.sh session-chat --sessions-dir PRIVATE_DIRECTORY (--new | --id SESSION_ID) --root DIR (--allow FILE[,FILE...] | --discover) [--events-policy-dir PRIVATE_DIRECTORY] [--once QUESTION] [--check COMMAND ARG ...]
@@ -32,6 +32,9 @@ Usage:
   nomo-read.sh resume --id SESSION_ID  (not available yet)
 
 Explicit --allow selects one to four files for read/session workflows; --discover uses the stated discovery bounds.
+New session IDs are bound to the canonical workspace path and directory identity. Resume with
+--id latest to select the most recently used compatible session for that physical workspace.
+Historical sessions without a binding remain available only through their explicit ID.
 Each file read is limited to 16384 bytes; standalone work remains limited to two. The default model
 is MiniMax M Plan (China), MiniMax-M3.1-Flash at https://api.minimax.cn/v1.
 Provide its subscription key through MINIMAX_API_KEY in the environment.
@@ -72,7 +75,7 @@ For opt-in event recording, create a private 0700 policy directory,
 run event-policy-init for its private binding key, and create a 0600 policy.json
 with {"format":1,"literals":["YOUR_SENSITIVE_LITERAL"]}. Do not put actual
 secrets in shell arguments. This filters exact known literals only, not unknown
-secrets, and does not bind the workspace. Keep policy bytes and binding.key
+secrets, and the policy itself does not bind the workspace. Keep policy bytes and binding.key
 unchanged for the session; a mismatch refuses resume. Existing sessions are not
 automatically migrated. Event-recording mode supports two work operations plus up
 to 32 additional followups, each with an optional check. Check output recording is bounded.

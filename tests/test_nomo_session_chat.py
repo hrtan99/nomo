@@ -33,6 +33,13 @@ class SessionChatTest(unittest.TestCase):
             code = module.main(args)
         return code, output.getvalue(), error.getvalue(), call
 
+    def test_empty_event_session_initialization_carries_workspace_identity(self):
+        args=module.argparse.Namespace(sessions_dir='/private/sessions',id=None,root='/workspace',allow='file.txt',events_policy_dir='/policy',discover=False)
+        with patch.object(module.edit,'run_owned',return_value=0) as launch:
+            code,_=module.chat_turn(args,None,True,False,False)
+        self.assertEqual(code,0);command=launch.call_args.args[0]
+        self.assertEqual(command[command.index('--workspace-root')+1],'/workspace')
+
     def test_interactive_automatic_check_can_be_set_viewed_and_cleared(self):
         self.args += ['--events-policy-dir', '/private-policy']
         source = Terminal('/check python3 -c "assert 2 == 2"\n/check\nedit one\n/check --clear\nedit two\n/exit\n')

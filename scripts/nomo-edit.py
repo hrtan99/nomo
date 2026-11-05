@@ -114,6 +114,13 @@ def history_environment(state, workspace, context, version, root, overlay):
     return env, compose
 
 
+COMPATIBLE_SESSION_GRAPHS=(b'',b'026-v68\n',b'030-20261104-a\n',b'030-pr67\n',b'latest041\n')
+
+
+def compatible_session_graph(saved):
+    return saved in COMPATIBLE_SESSION_GRAPHS
+
+
 def session_graph(fd, *, create=False):
     graph = os.environ.get('NOMO_ETAS_GRAPH', 'latest041')
     if graph not in ('latest041', '041-20261105-a'):
@@ -127,7 +134,7 @@ def session_graph(fd, *, create=False):
         saved = current
     # These markers record the session's original graph. 0.4.1 reads the old
     # data formats without rewriting the marker or their versioned allowances.
-    if saved not in (b'', b'026-v68\n', b'030-20261104-a\n', b'030-pr67\n', current):
+    if not compatible_session_graph(saved):
         raise ValueError('unrecognized session graph identity')
 
 

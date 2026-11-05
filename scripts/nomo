@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Start a workspace session, or resume one by its displayed ID."""
+"""Start a workspace session, or resume one by ID or workspace binding."""
 import argparse
 import importlib.util
 import os
@@ -49,9 +49,11 @@ def state_paths(resume, workspace):
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__, epilog='Set NOMO_STATE_DIR to select a private state directory. --id resumes only that ID; it does not verify workspace identity. This revision uses ETAS 0.4.1; historical sessions retain their recorded budget versions.')
+    parser = argparse.ArgumentParser(description=__doc__, epilog='Set NOMO_STATE_DIR to select a private state directory. --latest resumes the most recently used compatible session bound to the current workspace. Explicit historical IDs remain usable but are not automatically bound. This revision uses ETAS 0.4.1; historical sessions retain their recorded budget versions.')
     parser.add_argument('--root', default=os.getcwd(), help='workspace directory (default: current directory)')
-    parser.add_argument('--id', help='resume this exact session ID')
+    selection = parser.add_mutually_exclusive_group()
+    selection.add_argument('--id', help='resume this exact session ID')
+    selection.add_argument('--latest', action='store_true', help='resume the latest compatible session for this workspace')
     parser.add_argument('--status', action='store_true', help='inspect the selected session offline')
     parser.add_argument('--events', action='store_true', help='include recorded events with --status')
     parser.add_argument('--once', help='run one read-only question')
@@ -61,27 +63,34 @@ def main():
     parser.add_argument('--check', nargs=argparse.REMAINDER, help='offline command after a confirmed edit')
     args = parser.parse_args()
     if args.events and not args.status: parser.error('--events requires --status')
-    if args.status and (args.id is None or args.once is not None or args.page is not None or args.allow is not None or args.check is not None):
-        parser.error('--status requires --id and accepts no question, scope or check')
+    if args.status and ((args.id is None and not args.latest) or args.once is not None or args.page is not None or args.allow is not None or args.check is not None):
+        parser.error('--status requires --id or --latest and accepts no question, scope or check')
     if args.check == []:
         parser.error('--check requires a command')
     try:
         os.umask(0o077)
         if args.allow is not None and (len(args.allow.encode('utf-8')) > 515 or '*' in args.allow or not 1 <= len(args.allow.split(',')) <= 4 or not all(args.allow.split(','))):
             raise ValueError('--allow requires one to four explicit relative files')
-        workspace = None if args.status else Path(args.root)
+        workspace = None if args.status and not args.latest else Path(args.root)
         if workspace is not None:
             if not workspace.is_dir() or workspace.is_symlink():
                 raise ValueError('workspace must be an existing directory with a non-symlink leaf')
             workspace = workspace.resolve(strict=True)
-        sessions, policy = state_paths(args.id is not None, workspace)
+        sessions, policy = state_paths(args.id is not None or args.latest, workspace)
+        selected_id=args.id
+        if args.latest:
+            identity=registry.workspace_identity(str(workspace))
+            _,fd=registry.registry(str(sessions))
+            try:selected_id=registry.latest_compatible(fd,sessions,identity,str(policy))
+            finally:os.close(fd)
+            print('Selected latest compatible workspace session: '+selected_id,flush=True)
         if args.status:
-            command = [str(ROOT/'scripts/nomo-read.sh'), 'session-id', 'status', '--sessions-dir', str(sessions), '--id', args.id, '--events-policy-dir', str(policy), *(['--events'] if args.events else [])]
+            command = [str(ROOT/'scripts/nomo-read.sh'), 'session-id', 'status', '--sessions-dir', str(sessions), '--id', selected_id, '--events-policy-dir', str(policy), *(['--events'] if args.events else [])]
         else:
             print('Saved event text may contain sensitive data; no secret filter is configured by default.', flush=True)
-            print(('Discovery is bounded and does not interpret .gitignore' if args.allow is None else 'Only explicitly selected files are in scope') + '; session IDs do not verify workspace identity.', flush=True)
+            print(('Discovery is bounded and does not interpret .gitignore' if args.allow is None else 'Only explicitly selected files are in scope') + '; new sessions bind the canonical workspace path and directory identity.', flush=True)
             command = [str(ROOT/'scripts/nomo-read.sh'), 'session-chat', '--sessions-dir', str(sessions),
-                       '--id='+args.id if args.id is not None else '--new', '--root', str(workspace),
+                       '--id='+selected_id if selected_id is not None else '--new', '--root', str(workspace),
                        *(['--discover', '--page', str(args.page or 0)] if args.allow is None else ['--allow='+args.allow]),
                        '--events-policy-dir', str(policy)]
             if args.once is not None:
