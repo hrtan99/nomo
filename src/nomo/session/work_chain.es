@@ -2,10 +2,8 @@ module nomo.session.work_chain;
 
 import nomo.core.json.encode as encode_json;
 
-import std.text.{char_count as len, split, parse_i32, from_i32, from_usize};
+import std.text.{char_count as len, len as byte_len, split, parse_i32, from_i32, from_usize};
 import std.collections.len as count;
-import std.bytes.len as byte_count;
-import std.codec.text.utf8_encode;
 
 
 import nomo.session.edit_operation.selector_error;
@@ -83,7 +81,7 @@ public flow policy(raw: string) -> Result<Caps, string> { return parse_policy(ra
 
 flow serialized(row: Record) -> Result<string, string> {
     let encoded = match encode_json(row, "work-chain row conversion refused", "work-chain row serialization refused") { Ok(value) => value, Err(error) => { return Err(error); } };
-    if byte_count(utf8_encode(encoded)) > 262144 { return Err("work-chain row exceeds 262144 serialized UTF-8 bytes"); }
+    if byte_len(encoded) > 262144 { return Err("work-chain row exceeds 262144 serialized UTF-8 bytes"); }
     return Ok(encoded);
 }
 
@@ -109,7 +107,7 @@ public flow validate(row: Record) -> string {
         }
     } else {
         if row.id == row.chain || row.parent_id != row.chain || len(row.parent_version) == 0 ||
-            byte_count(utf8_encode(row.parent_version)) > 512 || len(row.parent_digest) != 64 {
+            byte_len(row.parent_version) > 512 || len(row.parent_digest) != 64 {
             return "invalid work-chain successor lineage";
         }
         if row.available != turn_caps() || row.remaining != zero() { return "work-chain second-turn allowance mismatch"; }
@@ -128,9 +126,9 @@ public flow validate(row: Record) -> string {
     var decoded: usize = 0;
     for field in [row.phase, row.chain, row.id, row.workspace, row.region, row.path, row.request,
         row.parent_id, row.parent_version, row.parent_digest] limit Iterations(10) {
-        decoded = decoded + byte_count(utf8_encode(field));
+        decoded = decoded + byte_len(field);
     }
-    for field in row.allowed limit Iterations(2) { decoded = decoded + byte_count(utf8_encode(field)); }
+    for field in row.allowed limit Iterations(2) { decoded = decoded + byte_len(field); }
     // Count the separately bounded decoded projection rather than its escaped body.
     // The fixed scalar/counter overhead is conservatively included as 512 bytes.
     decoded = decoded + 512;
@@ -140,7 +138,7 @@ public flow validate(row: Record) -> string {
             for field in [value.phase, binding.id, binding.workspace, binding.region, binding.path,
                 binding.request_digest, binding.before_digest, binding.after_digest,
                 from_usize(binding.before_bytes), from_usize(binding.after_bytes)] limit Iterations(10) {
-                decoded = decoded + byte_count(utf8_encode(field));
+                decoded = decoded + byte_len(field);
             }
             decoded = decoded + 12288;
         }

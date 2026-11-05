@@ -5,9 +5,7 @@ import nomo.core.json.encode as encode_json;
 import std.agent.message.Message;
 import std.json.parse;
 import nomo.core.read_text.safe;
-import std.text.char_count as len;
-import std.codec.text.utf8_encode;
-import std.bytes.len as byte_count;
+import std.text.len;
 import nomo.session.redaction.{Policy, text as redact};
 import nomo.core.large_context.{outcome_bytes, event_bytes};
 
@@ -18,7 +16,7 @@ public type Encoded = { value: string, replacements: usize };
 
 public flow encode(text: string, policy: Policy) -> Result<Encoded, string> {
     let clean = match redact(text, policy) { Ok(item) => item, Err(error) => { return Err(error); } };
-    if len(clean.value) > outcome_bytes() || byte_count(utf8_encode(clean.value)) > outcome_bytes() { return Err("event text exceeds decoded bound"); }
+    if len(clean.value) > outcome_bytes() { return Err("event text exceeds decoded bound"); }
     let encoded = match encode_json(clean.value, "event text JSON conversion refused", "event text JSON encoding refused") { Ok(value) => value, Err(error) => { return Err(error); } };
     if !safe(encoded, event_bytes()) { return Err("encoded event text unsupported or exceeds bound"); }
     return Ok(Encoded { value = encoded, replacements = clean.replacements });
@@ -40,11 +38,11 @@ public flow decode(encoded: string, policy: Policy) -> Result<string, string> {
 public type Prefix = { value: string, truncated: bool };
 public flow encode_prefix(text: string, truncated: bool, policy: Policy) -> Result<Prefix, string> {
     let clean = match redact(text, policy) { Ok(item) => item.value, Err(error) => { return Err(error); } };
-    let size = byte_count(utf8_encode(clean)); let clipped = truncated || size > 4096;
+    let size = len(clean); let clipped = truncated || size > 4096;
     var selected = ""; var seen: usize = 0; var marked = false;
     for codepoint in std.text.chars(clean) limit Iterations(262146) { let character = std.text.from_char(codepoint);
         if character != "" {
-            let width = byte_count(utf8_encode(character));
+            let width = len(character);
             if size <= 4096 || seen + width <= 2000 || seen >= size - 2000 { selected = selected + character; }
             else if !marked { selected = selected + "\n[... output omitted ...]\n"; marked = true; }
             seen = seen + width;

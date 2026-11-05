@@ -1,8 +1,6 @@
 module nomo.context.preflight;
 
-import std.text.char_count as len;
-import std.bytes.len as byte_count;
-import std.codec.text.utf8_encode;
+import std.text.{char_count as len, len as byte_len};
 import std.json.{JsonValue, stringify};
 import std.agent.message.Message;
 import nomo.model.tool_context.{Context, bounded_context_error};
@@ -18,9 +16,9 @@ flow encoded_measure(json: JsonValue, maximum_bytes: usize) -> Result<Measuremen
         Ok(text) => text,
         Err(_) => { return Err(Refusal.Encoding); },
     };
-    // A scalar takes at least one UTF-8 byte. Bound the extra byte allocation.
+    // Preserve scalar admission, then measure exact UTF-8 bytes without an encoded copy.
     if len(encoded) > maximum_bytes { return Err(Refusal.TooLarge); }
-    let size = byte_count(utf8_encode(encoded));
+    let size = byte_len(encoded);
     if size > maximum_bytes { return Err(Refusal.TooLarge); }
     return Ok(Measurement { encoded = encoded, encoded_bytes = size, tokens = None() });
 }

@@ -1,10 +1,8 @@
 module nomo.core.text;
 
-import std.text.{contains, char_count as len, trim, starts_with, from_char};
+import std.text.{contains, char_count as len, len as byte_len, trim, starts_with, from_char};
 import std.json.{JsonValue, stringify};
 import std.agent.message.Message;
-import std.codec.text.utf8_encode;
-import std.bytes.len as byte_count;
 
 public flow printable(text: string) -> bool {
     let allowed = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 !\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~";
@@ -27,13 +25,13 @@ public flow input_error(raw: string) -> string {
 public flow context_json_error(value: Option<Message<JsonValue>>, maximum: usize, bytes: bool, overflow: string) -> string {
     let json = match value { Some(item) => item.body, None() => { return "context conversion refused"; } };
     let encoded = match stringify(json) { Ok(item) => item, Err(_) => { return "context JSON refused"; } };
-    if (if bytes { byte_count(utf8_encode(encoded)) } else { len(encoded) }) > maximum { return overflow; }
+    if (if bytes { byte_len(encoded) } else { len(encoded) }) > maximum { return overflow; }
     return "";
 }
 
 // Bound a flat JSON string array before its caller invokes the JSON parser.
 public flow flat_string_frame(raw: string, maximum: usize, exact: bool) -> bool {
-    if len(raw) > 65536 || byte_count(utf8_encode(raw)) > 65536 { return false; }
+    if len(raw) > 65536 || byte_len(raw) > 65536 { return false; }
     var opened = false; var closed = false; var quoted = false; var escaped = false;
     var leaves: usize = 0; let slash = from_char('\\');
     for codepoint in std.text.chars(raw) limit Iterations(65538) { let character = std.text.from_char(codepoint);

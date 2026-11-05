@@ -1,8 +1,7 @@
 module nomo.session.recoverable_events;
 
 import std.collections.len as count;
-import std.codec.text.utf8_encode;
-import std.bytes.len as byte_count;
+import std.text.len as byte_len;
 import nomo.core.conversation.Event;
 import nomo.core.read_text.safe;
 import nomo.session.redaction.{Policy, policy_error, text as redact};
@@ -42,8 +41,7 @@ public flow invalid(frame: Frame, policy: Policy) -> string {
     var bytes: usize = 0;
     for item in frame.events limit Iterations(4096) {
         let error = event_error(item, policy); if error != "" { return error; }
-        bytes = bytes + byte_count(utf8_encode(item.role)) + byte_count(utf8_encode(item.kind)) +
-            byte_count(utf8_encode(item.name)) + byte_count(utf8_encode(item.text));
+        bytes = bytes + byte_len(item.role) + byte_len(item.kind) + byte_len(item.name) + byte_len(item.text);
         if bytes > 8388608 { return "recoverable event frame exceeds byte limit"; }
     }
     return "";

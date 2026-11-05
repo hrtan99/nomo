@@ -2,10 +2,8 @@ module nomo.harness.harness_work_contract;
 
 import nomo.core.json.encode as encode_json;
 
-import std.text.starts_with;
+import std.text.{starts_with, len as byte_len};
 import std.collections.len as count;
-import std.bytes.len as byte_count;
-import std.codec.text.utf8_encode;
 
 
 import nomo.model.model_tool_contract.{Session, allowed_error};
@@ -174,6 +172,6 @@ public flow context_error(value: Context) -> string {
     let edit = edit_context_error(value.edit); if edit != "" { return edit; }
     if value.edit.request != value.evidence.request { return "read and edit original request changed"; }
     let encoded = match encode_json(value, "work context conversion refused", "work context JSON refused") { Ok(value) => value, Err(error) => { return error; } };
-    if byte_count(utf8_encode(encoded)) > 8388608 { return "work context exceeds 8388608 serialized UTF-8 bytes"; }
+    if byte_len(encoded) > 8388608 { return "work context exceeds 8388608 serialized UTF-8 bytes"; }
     return "";
 }

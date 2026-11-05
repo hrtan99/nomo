@@ -6,10 +6,8 @@ public import nomo.application.decoder_contract.EditText as Child;
 import nomo.application.decoder_contract.EditProposalDecoder;
 import nomo.core.json.{FieldError, decode_fields as json_fields};
 
-import std.text.{char_count as len, trim, contains, from_char};
+import std.text.{char_count as len, len as byte_len, trim, contains, from_char};
 import std.collections.len as count;
-import std.bytes.len as byte_count;
-import std.codec.text.utf8_encode;
 import std.json.{JsonValue, stringify};
 import std.agent.message.Message;
 import nomo.tools.edit_proposal.text_bytes;
@@ -21,7 +19,7 @@ import nomo.session.edit_operation.{Binding, selector_error, binding_error};
 public flow history_bound(converted: Option<Message<JsonValue>>, maximum: usize, kind: string) -> unit {
     let data = match converted { Some(item) => item.body, None() => { abort("history " + kind + " context conversion refused"); } };
     let raw = match stringify(data) { Ok(item) => item, Err(_) => { abort("history " + kind + " context encoding refused"); } };
-    if byte_count(utf8_encode(raw)) > maximum { abort(if kind == "read" { "history read context exceeds 8388608 bytes" } else { "history edit context exceeds 8388608 bytes" }); }
+    if byte_len(raw) > maximum { abort(if kind == "read" { "history read context exceeds 8388608 bytes" } else { "history edit context exceeds 8388608 bytes" }); }
 }
 
 public type Context = { phase: string, request: string, task: string, id: string, workspace: string, path: string,
@@ -90,7 +88,7 @@ public flow history_summary_error(text: string, field: string) -> string {
 // classification changes no accepted wire: outside-string JSON whitespace was
 // already supported, while quoted data is left for the complete JSON parser.
 flow frame_error(raw: string, maximum: usize, fields: usize, diagnostic: bool) -> string {
-    if len(raw) == 0 || len(raw) > maximum || byte_count(utf8_encode(raw)) > maximum { return "limit"; }
+    if len(raw) == 0 || len(raw) > maximum || byte_len(raw) > maximum { return "limit"; }
     var opened = false; var closed = false; var quoted = false; var escaped = false;
     var leaves: usize = 0; let slash = from_char('\\');
     for codepoint in std.text.chars(raw) limit Iterations(32770) { let character = std.text.from_char(codepoint);
@@ -153,7 +151,7 @@ public flow decode_empty_edit(raw: string) -> Result<Child, string> { let decode
 public flow decode_work_plan(raw: string) -> Result<string, string> { return plan(raw, true); }
 public flow decode_work_edit(raw: string) -> Result<Child, string> { let decoder = EditProposal { diagnostic = true, empty = false }; return decoder.decode(raw); }
 public flow work_summary_error(raw: string) -> string {
-    if len(raw) == 0 || len(raw) > 512 || byte_count(utf8_encode(raw)) > 512 { return response_error(raw, "edit-aggregate", "limit", 512); }
+    if len(raw) == 0 || len(raw) > 512 || byte_len(raw) > 512 { return response_error(raw, "edit-aggregate", "limit", 512); }
     let invalid = text_error(raw, "final answer");
     return if invalid == "" { "" } else { response_error(raw, "edit-aggregate", "summary", 512) };
 }
@@ -187,6 +185,6 @@ public flow context_error(context: Context) -> string {
         if before_digest != context.before_digest || after_digest != context.after_digest { return "edit context digest mismatch"; }
     }
     let encoded = match encode_json(context, "edit context conversion refused", "edit context JSON refused") { Ok(value) => value, Err(error) => { return error; } };
-    if byte_count(utf8_encode(encoded)) > 8388608 { return "edit context exceeds 8388608 serialized UTF-8 bytes"; }
+    if byte_len(encoded) > 8388608 { return "edit context exceeds 8388608 serialized UTF-8 bytes"; }
     return "";
 }

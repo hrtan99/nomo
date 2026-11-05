@@ -1,8 +1,6 @@
 module nomo.harness.model_plan_diagnostic;
 
-import std.text.{char_count as len, contains, from_usize, lowercase};
-import std.bytes.len as byte_count;
-import std.codec.text.utf8_encode;
+import std.text.{char_count as len, len as byte_len, contains, from_usize, lowercase};
 import nomo.tools.edit_encoding.json;
 
 flow phase_name(value: string) -> string {
@@ -18,7 +16,7 @@ flow limit(maximum: usize) -> usize { return if maximum > 0 && maximum <= 32768 
 // only after the response is within the configured scalar bound.
 public flow response_error(raw: string, phase: string, category: string, maximum: usize) -> string {
     var bytes = "unmeasured";
-    if len(raw) <= limit(maximum) { bytes = from_usize(byte_count(utf8_encode(raw))); }
+    if len(raw) <= limit(maximum) { bytes = from_usize(byte_len(raw)); }
     return "phase=" + phase_name(phase) + " category=" + category_name(category) + " chars=" + from_usize(len(raw)) + " utf8=" + bytes;
 }
 public flow read_plan_error(raw: string, category: string) -> string { return response_error(raw, "read-plan", category, 384); }

@@ -1,14 +1,13 @@
 module nomo.harness.edit_context;
 
-import std.bytes.len as byte_count;
-import std.codec.text.utf8_encode;
+import std.text.len as byte_len;
 import nomo.harness.harness_edit_contract.Context;
 import nomo.tools.edit_contract.{Selector, Confirmed};
 
 public flow context(phase: string, selector: Selector, request: string, task: string, before: string) -> Context {
     return Context { phase = phase, request = request, task = task, id = selector.id, workspace = selector.workspace,
         path = selector.path, before = before, after = "", request_digest = "", before_digest = "", after_digest = "",
-        before_bytes = byte_count(utf8_encode(before)), after_bytes = 0, completed = false };
+        before_bytes = byte_len(before), after_bytes = 0, completed = false };
 }
 public flow completed_context(request: string, task: string, before: string, outcome: Confirmed) -> Context {
     let selected = outcome.binding;

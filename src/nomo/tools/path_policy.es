@@ -1,8 +1,6 @@
 module nomo.tools.path_policy;
 
-import std.text.{split, contains, starts_with, ends_with};
-import std.bytes.len as byte_count;
-import std.codec.text.utf8_encode;
+import std.text.{split, contains, starts_with, ends_with, is_ascii};
 import nomo.core.read_text.safe;
 import std.collections.len as count;
 
@@ -14,7 +12,7 @@ public flow valid_path(name: string) -> bool {
     for part in parts limit Iterations(8) {
         if part == "" || part == "." || part == ".." || starts_with(part, " ") || ends_with(part, " ") { return false; }
         for codepoint in std.text.chars(part) limit Iterations(130) { let character = std.text.from_char(codepoint);
-            if character != "" && byte_count(utf8_encode(character)) == 1 && !contains("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._- @+()[]", character) { return false; }
+            if character != "" && is_ascii(character) && !contains("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._- @+()[]", character) { return false; }
         }
     }
     return true;

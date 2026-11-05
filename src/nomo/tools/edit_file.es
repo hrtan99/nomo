@@ -8,7 +8,7 @@ import std.codec.text.{utf8_encode, utf8_decode, Strict};
 import std.agent.message.Message;
 import nomo.tools.path_policy.valid_path;
 import nomo.harness.edit_original.{OriginalReadFunction, OriginalReader, EditApplier};
-import std.text.from_usize;
+import std.text.{from_usize, len as byte_len};
 import nomo.tools.edit_proposal.{validate, text_bytes};
 import nomo.core.large_context.{file_bytes, file_metadata_bytes};
 public import nomo.tools.edit_contract.{Prepared, prepare_original};
@@ -58,9 +58,9 @@ public flow read_original(name: string) -> Result<string, string> ![Fs.stat<Edit
 public flow read_original_wide(name: string) -> Result<string, string> ![Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Error<FileError>, Error<IndexError>] ~ OriginalReadFunction<EditableRoot> { let reader = WideEditFile {}; return reader.read_original(name); }
 
 public flow prepare_original_legacy(name: string, original: string, target: string, replacement: string) -> Result<Prepared, string> {
-    if byte_count(utf8_encode(original)) > 16384 || byte_count(utf8_encode(target)) > 16384 || byte_count(utf8_encode(replacement)) > 16384 { return Err("edit text exceeds 16384 UTF-8 bytes"); }
+    if byte_len(original) > 16384 || byte_len(target) > 16384 || byte_len(replacement) > 16384 { return Err("edit text exceeds 16384 UTF-8 bytes"); }
     let prepared = match prepare_original(name, original, target, replacement) { Ok(value) => value, Err(error) => { return Err(error); } };
-    if byte_count(utf8_encode(prepared.proposal.after)) > 16384 { return Err("edit result exceeds 16384 UTF-8 bytes"); }
+    if byte_len(prepared.proposal.after) > 16384 { return Err("edit result exceeds 16384 UTF-8 bytes"); }
     return Ok(prepared);
 }
 
@@ -73,7 +73,7 @@ public flow prepare(name: string, target: string, replacement: string) -> Result
 // exception can follow publication: no caller may infer rollback or retry it.
 flow apply_with(prepared: Prepared, maximum: EditLimit) -> Result<bool, string> {
     let proposal = match validate(prepared.request, prepared.proposal) { Ok(value) => value, Err(error) => { return Err(error); } };
-    if byte_count(utf8_encode(proposal.after)) > (maximum.bytes) { return Err("edit result exceeds its byte limit"); }
+    if byte_len(proposal.after) > (maximum.bytes) { return Err("edit result exceeds its byte limit"); }
     let before = match read_existing(proposal.path, maximum) { Ok(value) => value, Err(error) => { return Err(error); } };
     if before != utf8_encode(proposal.before) { return Err("edit original changed; intent retained, no write"); }
     let target = match checked_path(proposal.path) { Ok(value) => value, Err(error) => { return Err(error); } };

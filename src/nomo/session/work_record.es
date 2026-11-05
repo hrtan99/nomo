@@ -2,7 +2,7 @@ module nomo.session.work_record;
 
 import nomo.core.json.{encode as encode_json, string_fields};
 
-import std.text.{char_count as len, from_char, from_i32, from_usize};
+import std.text.{char_count as len, len as byte_len, from_char, from_i32, from_usize};
 import std.collections.len as count;
 import std.bytes.len as byte_count;
 import std.codec.text.utf8_encode;
@@ -36,7 +36,7 @@ flow fields_error(fields: Array<string>) -> string {
     var total: usize = 0;
     for field in fields limit Iterations(52) {
         if len(field) > 2048 { return "work record field exceeds 2048 decoded UTF-8 bytes"; }
-        let size = byte_count(utf8_encode(field)); total = total + size;
+        let size = byte_len(field); total = total + size;
         if size > 2048 || total > 12288 { return "work record exceeds decoded UTF-8 byte bounds"; }
     }
     return "";
@@ -51,7 +51,7 @@ flow decode(body: string) -> Result<Array<string>, string> {
 
 flow outer_error(row: Record) -> string {
     let encoded = match encode_json(row, "work row conversion refused", "work row serialization refused") { Ok(value) => value, Err(error) => { return error; } };
-    if byte_count(utf8_encode(encoded)) > 131072 { return "work row exceeds 131072 serialized UTF-8 bytes"; }
+    if byte_len(encoded) > 131072 { return "work row exceeds 131072 serialized UTF-8 bytes"; }
     return "";
 }
 

@@ -11,10 +11,8 @@ import nomo.session.history_check_guard.invalid_values;
 import nomo.core.conversation.Event;
 import std.collections.len as count;
 import nomo.core.text.hex_digest;
-import std.bytes.len as byte_count;
-import std.codec.text.utf8_encode;
 import nomo.core.large_context.timeline_inline_bytes;
-import std.text.from_i32;
+import std.text.{from_i32, len as byte_len};
 
 // The opt-in read-only path joins the chat reservation and filtered event batch
 // in one CAS record. Each access must supply the same bound trusted policy.
@@ -35,12 +33,12 @@ let EvidenceFrames = std.memory.region<EvidenceSchema>(stable_id = "nomo-recover
 flow binding_error(binding: string) -> string { return if hex_digest(binding) { "" } else { "invalid event policy binding" }; }
 flow large_work_duplicate(item: Event) -> bool {
     return ((item.role == "main" && item.kind == "tool") || (item.role == "tool" && (item.kind == "complete" || item.kind == "result"))) &&
-        byte_count(utf8_encode(item.text)) > timeline_inline_bytes();
+        byte_len(item.text) > timeline_inline_bytes();
 }
 flow large_chat_duplicate(item: Event, outcome: string) -> bool {
     return ((item.role == "main" && item.kind == "tool") ||
         (item.role == "tool" && (item.kind == "complete" || item.kind == "result"))) && item.text == outcome &&
-        byte_count(utf8_encode(item.text)) > timeline_inline_bytes();
+        byte_len(item.text) > timeline_inline_bytes();
 }
 public flow chat_omitted() -> string { return "Large selected tool outcome retained by canonical chat state and archived by turn before a later turn; duplicate timeline text omitted."; }
 flow context_omitted() -> string { return "Large prior tool outcome retained by canonical turn evidence; duplicate child context text omitted."; }
@@ -60,7 +58,7 @@ flow compact_context_duplicates(value: Frame, policy: Policy, binding: string) -
             chat_turn = chat_turn + 1;
         }
         let duplicate = item.role == "user" && item.kind == "context" && item.name == "outcome" &&
-            byte_count(utf8_encode(item.text)) > timeline_inline_bytes();
+            byte_len(item.text) > timeline_inline_bytes();
         var compact = false;
         if duplicate && chat_turn >= 2 {
             let decoded = match decode(item.text, policy) { Ok(text) => text, Err(error) => { return Err(error); } };
@@ -128,7 +126,7 @@ public flow conversation(frame: EventFrame, latest: Previous, policy: Policy, bi
     return Ok(selected);
 }
 flow archive_evidence(turn: i32, outcome: string, policy: Policy, binding: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
-    if byte_count(utf8_encode(outcome)) <= timeline_inline_bytes() { return Ok(false); }
+    if byte_len(outcome) <= timeline_inline_bytes() { return Ok(false); }
     let text = match encode(outcome, policy) { Ok(value) => value.value, Err(error) => { return Err(error); } };
     let value = Evidence { format = 1, policy_binding = binding, turn = turn, text = text };
     let problem = evidence_error(value, policy, binding); if problem != "" { return Err(problem); }

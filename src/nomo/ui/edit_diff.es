@@ -1,9 +1,7 @@
 module nomo.ui.edit_diff;
 
-import std.text.{char_count as len, concat, split, strip_prefix, strip_suffix, from_usize};
+import std.text.{char_count as len, len as byte_len, concat, split, strip_prefix, strip_suffix, from_usize};
 import std.collections.len as count;
-import std.bytes.len as byte_count;
-import std.codec.text.utf8_encode;
 import nomo.tools.edit_proposal.text_bytes;
 import nomo.tools.edit_encoding.json;
 
@@ -115,6 +113,6 @@ public flow render(before: string, after: string) -> Result<string, string> {
     output = output.push(trailing);
     if suffix > visible { output = output.push(omitted(suffix - visible, "unchanged")); }
     let rendered = concat(output);
-    if len(rendered) > 8192 || byte_count(utf8_encode(rendered)) > 8192 { return Err("edit preview output exceeds 8192 bytes"); }
+    if len(rendered) > 8192 || byte_len(rendered) > 8192 { return Err("edit preview output exceeds 8192 bytes"); }
     return Ok(rendered);
 }

@@ -1,7 +1,6 @@
 module nomo.tools.edit_binding;
 
-import std.bytes.len as byte_count;
-import std.codec.text.utf8_encode;
+import std.text.len as byte_len;
 import nomo.tools.edit_contract.Prepared;
 import nomo.tools.edit_proposal.validate;
 import nomo.tools.edit_encoding.{json, digest};
@@ -21,7 +20,7 @@ public flow bind(id: string, workspace: string, path: string, value: Prepared) -
     let request = match digest(canonical) { Ok(item) => item, Err(error) => { return Err(error); } };
     let result = Binding { id = id, workspace = workspace, region = REGION, path = proposal.path,
         request_digest = request, before_digest = before, after_digest = after,
-        before_bytes = byte_count(utf8_encode(proposal.before)), after_bytes = byte_count(utf8_encode(proposal.after)) };
+        before_bytes = byte_len(proposal.before), after_bytes = byte_len(proposal.after) };
     let invalid = binding_error(result); if invalid != "" { return Err(invalid); }
     return Ok(result);
 }

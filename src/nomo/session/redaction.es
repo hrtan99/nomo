@@ -1,9 +1,7 @@
 module nomo.session.redaction;
 
-import std.text.{contains, count as match_count, replace};
+import std.text.{contains, count as match_count, replace, len as byte_len};
 import std.collections.len as count;
-import std.bytes.len as byte_count;
-import std.codec.text.utf8_encode;
 import nomo.core.read_text.safe;
 import nomo.core.conversation.Event;
 import nomo.harness.harness_tool_chat_contract.Previous;
@@ -22,7 +20,7 @@ public flow policy_error(policy: Policy) -> string {
     if policy.format != 1 || count(policy.literals) == 0 || count(policy.literals) > 8 { return "invalid redaction policy"; }
     var i: usize = 0;
     for literal in policy.literals limit Iterations(8) {
-        let bytes = byte_count(utf8_encode(literal));
+        let bytes = byte_len(literal);
         if bytes < 8 || bytes > 256 || !safe(literal, 256) { return "invalid redaction literal"; }
         var j: usize = 0;
         for other in policy.literals limit Iterations(8) {
@@ -36,12 +34,12 @@ public flow policy_error(policy: Policy) -> string {
 
 public flow text(value: string, policy: Policy) -> Result<Text, string> {
     let policy_problem = policy_error(policy); if policy_problem != "" { return Err(policy_problem); }
-    if byte_count(utf8_encode(value)) > event_bytes() { return Err("redaction input exceeds bound"); }
+    if byte_len(value) > event_bytes() { return Err("redaction input exceeds bound"); }
     var output = value; var replacements: usize = 0;
     for literal in policy.literals limit Iterations(8) {
         let matches = match_count(output, literal);
         if matches > 0 { replacements = replacements + matches; output = replace(output, literal, "[REDACTED]"); }
-        if byte_count(utf8_encode(output)) > event_bytes() { return Err("redaction output exceeds bound"); }
+        if byte_len(output) > event_bytes() { return Err("redaction output exceeds bound"); }
     }
     for literal in policy.literals limit Iterations(8) {
         if contains(output, literal) { return Err("redaction result still contains sensitive literal"); }
