@@ -64,22 +64,16 @@ public flow ascii_json(json: string, maximum: usize, encoded_error: string, disp
     return ascii_json_with(json, 131072, maximum, encoded_error, display_error);
 }
 
-flow printable_ascii(value: string) -> bool {
-    if !is_ascii(value) { return false; }
-    let data = utf8_encode(value); var index: usize = 0;
-    while index < byte_count(data) limit Iterations(16777218) {
-        if data[index] < 32 || data[index] == 127 { return false; }
-        index = index + 1;
-    }
-    return true;
-}
-
 // The standard JSON codec owns JSON framing and string escaping. This final
 // terminal-safety pass only converts remaining non-ASCII scalars to JSON
 // Unicode escapes; chunked std.text.concat avoids quadratic large-string growth.
 public flow ascii_json_with(json: string, encoded_maximum: usize, maximum: usize, encoded_error: string, display_error: string) -> Result<string, string> {
     if len(json) > encoded_maximum || byte_len(json) > encoded_maximum { return Err(encoded_error); }
-    if printable_ascii(json) { if len(json) > maximum { return Err(display_error); } return Ok(json); }
+    // stringify() already escapes every ASCII control in its compact output,
+    // so the standard constant-time ASCII query is the complete fast-path
+    // check; rescanning every byte duplicated the codec and made MiB previews
+    // interpreter-bound.
+    if is_ascii(json) { if byte_len(json) > maximum { return Err(display_error); } return Ok(json); }
     var pieces: Array<string> = []; var chunk = ""; var size: usize = 0;
     // The largest caller accepts 16 Mi scalar inputs; keep its established
     // iteration envelope even when smaller callers select tighter byte bounds.

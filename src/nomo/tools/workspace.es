@@ -117,7 +117,7 @@ flow read_bounded(name: string, bound: usize) -> Outcome ![Fs.read<ReadOnlyRoot>
     } with {
         Error<ReadLimitError>.raise(ReadLimitError.LimitExceeded(maximum)) => {
             if maximum != bound { abort("unexpected workspace read limit"); }
-            finish outcome("refused", if bound == 16384 { "file exceeds 16384 bytes" } else { if bound == file_bytes() { "file exceeds 262144 bytes" } else { if bound == 2048 { "file exceeds 2048 bytes" } else { "file exceeds remaining scan allowance" } } }, 0);
+            finish outcome("refused", if bound == 16384 { "file exceeds 16384 bytes" } else { if bound == file_bytes() { "file exceeds " + from_usize(file_bytes()) + " bytes" } else { if bound == 2048 { "file exceeds 2048 bytes" } else { "file exceeds remaining scan allowance" } } }, 0);
         }
     };
 }

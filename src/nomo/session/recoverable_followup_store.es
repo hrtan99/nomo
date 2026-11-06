@@ -1,7 +1,7 @@
 module nomo.session.recoverable_followup_store;
 
-import nomo.session.cas_rows.{CasRows, Target, Submission, submit_native, commit_once};
-import std.memory.{get_entry, commit, MemoryEntry, MemoryVersion, WriteCondition, Missing, Match};
+import nomo.session.cas_rows.{Target, commit_native};
+import std.memory.{get_entry, MemoryEntry, MemoryVersion, WriteCondition, Missing, Match};
 import nomo.core.conversation.Event;
 import nomo.session.redaction.Policy;
 import nomo.session.recoverable_events.{Frame as EventFrame, empty as empty_events, work_batch};
@@ -27,45 +27,41 @@ flow frame_error(value: Frame, policy: Policy, binding: string) -> string {
     return work_data_error(value.work, value.events, policy);
 }
 
-public flow load(policy: Policy, binding: string) -> Result<Option<MemoryEntry<string, Frame>>, string> {
+public flow load(policy: Policy, binding: string) -> Result<Option<MemoryEntry<string, Frame>>, string> ![Memory, Error<StorageError>, Error<IndexError>] {
     // Validate the policy/binding against the actual chat frame first; a stale
     // or mismatched policy cannot make an existing work slot look absent.
     match load_chat(policy, binding) { Ok(Some(_)) => {} Ok(None()) => { return Err("recoverable chat missing"); } Err(error) => { return Err(error); } }
     let row = get_entry(Runs.Rows, "followup");
-    match row {
+    return match row {
         Some(item) => {
             if item.key != "followup" { return Err("recoverable followup key mismatch"); }
-            let error = frame_error(item.value, policy, binding); if error != "" { return Err(error); }
+            let value = item.value;
+            let error = frame_error(value, policy, binding); if error != "" { return Err(error); }
             let parent_work = match load_parent_work(policy, binding) { Ok(Some(value)) => value, _ => { return Err("first work missing"); } };
-            if (parent_work.value.work.phase != "complete" && parent_work.value.work.phase != "abandoned") || parent_work.version.opaque != item.value.parent_work_version || parent_work.value.work.id == item.value.work.id { return Err("first work changed"); }
+            if (parent_work.value.work.phase != "complete" && parent_work.value.work.phase != "abandoned") || parent_work.version.opaque != value.parent_work_version || parent_work.value.work.id == value.work.id { return Err("first work changed"); }
             if parent_work.value.work.phase == "complete" {
             let parent_edit = match inspect_parent_edit(parent_work.value.work.id, parent_work.value.work.workspace, parent_work.value.work.path) { Ok(Some(value)) => value, _ => { return Err("first edit missing"); } };
             if parent_edit.phase != "completed" { return Err("first edit unresolved"); }
             }
             let parent_check = match load_parent_check(policy, binding) { Ok(value) => value, Err(error) => { return Err(error); } };
             let check_version = match parent_check { Some(value) => { if value.value.check.phase != "complete" && value.value.check.phase != "abandoned" && !(parent_work.value.work.phase == "abandoned" && value.value.check.phase == "planned") { return Err("first check unresolved"); } value.version.opaque }, None() => "" };
-            if check_version != item.value.parent_check_version { return Err("first check changed"); }
+            if check_version != value.parent_check_version { return Err("first check changed"); }
+            Ok(Some(item))
         }
-        None() => {}
-    }
-    return Ok(row);
-}
-
-type FollowupRows = { redaction: Policy, binding: string };
-impl FollowupRows ~ CasRows<Frame> {
-    flow target(self) -> Target ![] { return Target { store = ["Rows"], region = "nomo-recoverable-followup-v1", key = "followup", label = "recoverable followup" }; }
-    flow submit(self, value: Frame, condition: WriteCondition) -> Submission ![Memory, Error<StorageError>] { return submit_native(Runs.Rows, "followup", value, condition); }
-    flow read(self) -> Result<Option<MemoryEntry<string, Frame>>, string> { return load(self.redaction, self.binding); }
-    flow same(self, left: Frame, right: Frame) -> bool ![] { return left == right; }
+        None() => Ok(None())
+    };
 }
 flow write(value: Frame, expected: Option<MemoryEntry<string, Frame>>, policy: Policy, binding: string) -> Result<MemoryVersion, string> ![Memory, Error<StorageError>, Error<IndexError>] {
-    let error = frame_error(value, policy, binding); if error != "" { return Err(error); }
+    let desired = Frame { format = 1, policy_binding = value.policy_binding, parent_work_version = value.parent_work_version,
+        parent_check_version = value.parent_check_version, work = value.work, events = value.events };
+    let error = frame_error(desired, policy, binding); if error != "" { return Err(error); }
     let before = match load(policy, binding) { Ok(item) => item, Err(problem) => { return Err(problem); } };
     if before != expected { return Err("recoverable followup changed; no retry"); }
     let condition: WriteCondition = match expected { Some(item) => Match(item.version), None() => Missing };
-    let rows = FollowupRows { redaction = policy, binding = binding };
-    let previous = match expected { Some(item) => Some(item.version), None() => None() };
-    return commit_once<Frame, FollowupRows>(rows, value, condition, previous);
+    let target = Target { store = ["Rows"], region = "nomo-recoverable-followup-v1", key = "followup", label = "recoverable followup" };
+    let version = match commit_native(Runs.Rows, target, desired, condition) { Ok(item) => item, Err(problem) => { return Err(problem); } };
+    match expected { Some(item) => { if item.version.opaque == version.opaque { return Err("recoverable followup version did not change"); } } None() => {} }
+    return Ok(version);
 }
 
 public flow admit(id: string, workspace: string, path: string, request: string, chat: MemoryEntry<string, ChatFrame>, policy: Policy, binding: string) -> Result<Ticket, string> ![Memory, Error<StorageError>, Error<IndexError>] {
@@ -87,7 +83,7 @@ public flow admit(id: string, workspace: string, path: string, request: string, 
     return Ok(Ticket { frame = frame, version = version, chat = chat });
 }
 
-public flow claim(ticket: Ticket, policy: Policy, binding: string) -> Result<bool, string> {
+public flow claim(ticket: Ticket, policy: Policy, binding: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
     let current_chat = match load_chat(policy, binding) { Ok(Some(item)) => item, _ => { return Err("recoverable chat missing or invalid"); } };
     let chat_error = claim_chat_error(current_chat, ticket.chat, ticket.frame.work, "recoverable followup"); if chat_error != "" { return Err(chat_error); }
     let current = match load(policy, binding) { Ok(Some(item)) => item, _ => { return Err("recoverable followup missing or invalid"); } };

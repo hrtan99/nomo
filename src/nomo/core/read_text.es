@@ -1,11 +1,12 @@
 module nomo.core.read_text;
 
-import std.text.{char_count as len, trim, contains};
+import std.text.{char_count as len, trim, contains, count as occurrences, from_char, is_ascii};
 import std.json.parse;
 import std.agent.message.Message;
 import std.codec.text.utf8_encode;
 import std.bytes.len as bytes_len;
 import nomo.core.large_context.event_bytes;
+import nomo.core.json.encode as encode_json;
 
 // Read-only conversational text: UTF-8 byte ceilings remain explicit.
 // Reject C0/C1 controls, terminal escape, Unicode line separators and common
@@ -31,6 +32,15 @@ public flow safe(text: string, maximum: usize) -> bool {
     let value = match parse("[\"\u0000\",\"\u0001\",\"\u0002\",\"\u0003\",\"\u0004\",\"\u0005\",\"\u0006\",\"\u0007\",\"\u0008\",\"\u0009\",\"\u000a\",\"\u000b\",\"\u000c\",\"\u000d\",\"\u000e\",\"\u000f\",\"\u0010\",\"\u0011\",\"\u0012\",\"\u0013\",\"\u0014\",\"\u0015\",\"\u0016\",\"\u0017\",\"\u0018\",\"\u0019\",\"\u001a\",\"\u001b\",\"\u001c\",\"\u001d\",\"\u001e\",\"\u001f\",\"\u007f\",\"\u0080\",\"\u0081\",\"\u0082\",\"\u0083\",\"\u0084\",\"\u0085\",\"\u0086\",\"\u0087\",\"\u0088\",\"\u0089\",\"\u008a\",\"\u008b\",\"\u008c\",\"\u008d\",\"\u008e\",\"\u008f\",\"\u0090\",\"\u0091\",\"\u0092\",\"\u0093\",\"\u0094\",\"\u0095\",\"\u0096\",\"\u0097\",\"\u0098\",\"\u0099\",\"\u009a\",\"\u009b\",\"\u009c\",\"\u009d\",\"\u009e\",\"\u009f\",\"\u200b\",\"\u200c\",\"\u200d\",\"\u200e\",\"\u200f\",\"\u2028\",\"\u2029\",\"\u202a\",\"\u202b\",\"\u202c\",\"\u202d\",\"\u202e\",\"\u2060\",\"\u2061\",\"\u2062\",\"\u2063\",\"\u2064\",\"\u2065\",\"\u2066\",\"\u2067\",\"\u2068\",\"\u2069\",\"\ufeff\"]") { Ok(item) => item, Err(_) => { return false; } };
     let decoded: Option<Message<Array<string>>> = Message.new(value).cast<Array<string>>();
     let controls = match decoded { Some(item) => item.body, None() => { return false; } };
+    // For ASCII, standard JSON encoding exposes every C0 control as an
+    // additional escape. Quotes and backslashes are the only legal ASCII
+    // scalars that also grow, so account for them and check DEL directly.
+    // This keeps the large common path to a few native string operations.
+    if is_ascii(text) {
+        let encoded = match encode_json(text, "safe text conversion refused", "safe text JSON encoding refused") { Ok(item) => item, Err(_) => { return false; } };
+        let expected = size + 2 + occurrences(text, "\"") + occurrences(text, from_char('\\'));
+        return bytes_len(utf8_encode(encoded)) == expected && !contains(text, controls[32]);
+    }
     for character in controls limit Iterations(90) {
         if contains(text, character) { return false; }
     }

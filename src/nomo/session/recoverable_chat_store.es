@@ -1,11 +1,11 @@
 module nomo.session.recoverable_chat_store;
 
-import nomo.session.cas_rows.{CasRows, Target, Submission, submit_native, commit_once, commit_native};
-import std.memory.{get_entry, commit, MemoryEntry, MemoryVersion, WriteCondition, Missing, Match};
+import nomo.session.cas_rows.{Target, commit_native};
+import std.memory.{get_entry, MemoryEntry, MemoryVersion, WriteCondition, Missing, Match};
 import nomo.session.chat_session_contract.{Session, fresh_events, fresh_high_input_events, invalid as invalid_chat, begin, complete, extend};
 import nomo.harness.harness_tool_chat_contract.{TurnResult, Previous};
 import nomo.session.redaction.{Policy, policy_error, text as redact};
-import nomo.session.recoverable_events.{Frame as EventFrame, empty as empty_events, invalid as invalid_events, append, work_batch};
+import nomo.session.recoverable_events.{Frame as EventFrame, empty as empty_events, invalid as invalid_events, shape_error as event_shape_error, append_encoded, work_batch};
 import nomo.session.event_text_codec.{encode, decode, encode_prefix};
 import nomo.session.history_check_guard.invalid_values;
 import nomo.core.conversation.Event;
@@ -49,7 +49,7 @@ flow work_omitted() -> string { return "Large selected tool outcome retained in 
 // main/tool event is restored from the per-turn evidence row instead. Compact
 // every outgoing frame so sessions written by earlier versions are repaired on
 // their next reserve/finish without changing the durable schema or CAS head.
-flow compact_context_duplicates(value: Frame, policy: Policy, binding: string) -> Result<Frame, string> {
+flow compact_context_duplicates(value: Frame, policy: Policy, binding: string) -> Result<Frame, string> ![Memory, Error<StorageError>, Error<IndexError>] {
     let marker = match encode(context_omitted(), policy) { Ok(item) => item.value, Err(error) => { return Err(error); } };
     var events: Array<Event> = []; var chat_turn: i32 = 0;
     for item in value.events.events limit Iterations(4096) {
@@ -82,15 +82,16 @@ flow evidence_error(value: Evidence, policy: Policy, binding: string) -> string 
     if value.format != 1 || value.policy_binding != binding || value.turn < 1 || value.turn > 48 { return "invalid recoverable chat evidence identity"; }
     return match decode(value.text, policy) { Ok(_) => "", Err(error) => error };
 }
-public flow load_evidence(turn: i32, policy: Policy, binding: string) -> Result<Option<string>, string> {
+public flow load_evidence(turn: i32, policy: Policy, binding: string) -> Result<Option<string>, string> ![Memory, Error<StorageError>, Error<IndexError>] {
     if turn < 1 || turn > 48 { return Err("invalid recoverable chat evidence turn"); }
     let key = from_i32(turn); let entry = get_entry(EvidenceFrames.Rows, key);
     return match entry {
         None() => Ok(None()),
         Some(item) => {
             if item.key != key { return Err("recoverable chat evidence key mismatch"); }
-            let problem = evidence_error(item.value, policy, binding); if problem != "" { return Err(problem); }
-            match decode(item.value.text, policy) { Ok(value) => Ok(Some(value)), Err(error) => Err(error) }
+            let value = item.value;
+            let problem = evidence_error(value, policy, binding); if problem != "" { return Err(problem); }
+            match decode(value.text, policy) { Ok(decoded) => Ok(Some(decoded)), Err(error) => Err(error) }
         }
     };
 }
@@ -100,7 +101,7 @@ public flow load_evidence(turn: i32, policy: Policy, binding: string) -> Result<
 // canonical selection separately, so replace only its exact projected copies
 // with explicit references. Earlier turns and non-selected work/check events
 // stay in their original order, including their positions around the references.
-public flow conversation(frame: EventFrame, latest: Previous, policy: Policy, binding: string) -> Result<Array<Event>, string> {
+public flow conversation(frame: EventFrame, latest: Previous, policy: Policy, binding: string) -> Result<Array<Event>, string> ![Memory, Error<StorageError>, Error<IndexError>] {
     var selected: Array<Event> = []; var chat_turn: i32 = 0; var chat_open = false;
     for event in frame.events limit Iterations(4096) {
         if event.role == "system" && event.kind == "native-budget" &&
@@ -141,7 +142,11 @@ flow archive_evidence(turn: i32, outcome: string, policy: Policy, binding: strin
     let key = from_i32(turn);
     match get_entry(EvidenceFrames.Rows, key) {
         Some(item) => {
-            if item.key != key || item.value != value { return Err("recoverable chat evidence changed; no retry"); }
+            if item.key != key { return Err("recoverable chat evidence changed; no retry"); }
+            let old = item.value;
+            if old.format != 1 || old.policy_binding != binding || old.turn != turn || old.text != text {
+                return Err("recoverable chat evidence changed; no retry");
+            }
             return Ok(false);
         }
         None() => {}
@@ -167,43 +172,63 @@ flow frame_error(value: Frame, policy: Policy, binding: string) -> string {
     return "";
 }
 
-public flow load(policy: Policy, binding: string) -> Result<Option<MemoryEntry<string, Frame>>, string> {
+// Values reaching write() are assembled from a previously validated frame and
+// text returned by event_text_codec.encode in the same call. Preserve all
+// identity, ledger, redaction and aggregate bounds without reparsing every
+// encoded event before it is stored. load() remains the trust boundary
+// and performs the full canonical frame_error validation.
+flow constructed_frame_error(value: Frame, policy: Policy, binding: string) -> string {
+    let bound = binding_error(binding); if bound != "" { return bound; }
+    if value.format != 1 || value.encoding != "json-string-v1" || value.policy_binding != binding { return "invalid recoverable chat format, encoding or policy binding"; }
+    let chat_error = invalid_chat(value.chat); if chat_error != "" { return chat_error; }
+    let event_error = event_shape_error(value.events, policy); if event_error != "" { return event_error; }
+    if value.chat.invocation.admitted != value.events.turns { return "chat and event turns differ"; }
+    let prior = value.chat.invocation.prior;
+    for field in [value.chat.last_request, value.chat.pending, prior.task, prior.result, prior.tool, prior.outcome, prior.answer] limit Iterations(7) {
+        let checked = match redact(field, policy) { Ok(item) => item, Err(error) => { return error; } };
+        if checked.replacements != 0 || checked.value != field { return "chat contains a known sensitive literal"; }
+    }
+    return "";
+}
+
+public flow load(policy: Policy, binding: string) -> Result<Option<MemoryEntry<string, Frame>>, string> ![Memory, Error<StorageError>, Error<IndexError>] {
     let problem = policy_error(policy); if problem != "" { return Err(problem); }
     let invalid = binding_error(binding); if invalid != "" { return Err(invalid); }
     let entry = get_entry(Frames.Rows, "latest");
-    match entry {
+    return match entry {
         Some(item) => {
             if item.key != "latest" { return Err("recoverable chat key mismatch"); }
             let error = frame_error(item.value, policy, binding); if error != "" { return Err(error); }
+            Ok(Some(item))
         }
-        None() => {}
-    }
-    return Ok(entry);
+        None() => Ok(None())
+    };
 }
-
-type ChatRows = { redaction: Policy, binding: string };
-impl ChatRows ~ CasRows<Frame> {
-    flow target(self) -> Target ![] { return Target { store = ["Rows"], region = "nomo-recoverable-chat-v1", key = "latest", label = "recoverable chat" }; }
-    flow submit(self, value: Frame, condition: WriteCondition) -> Submission ![Memory, Error<StorageError>] { return submit_native(Frames.Rows, "latest", value, condition); }
-    flow read(self) -> Result<Option<MemoryEntry<string, Frame>>, string> { return load(self.redaction, self.binding); }
-    flow same(self, left: Frame, right: Frame) -> bool ![] { return left == right; }
-}
-flow write(value: Frame, expected: Option<MemoryEntry<string, Frame>>, policy: Policy, binding: string) -> Result<MemoryVersion, string> ![Memory, Error<StorageError>, Error<IndexError>] {
-    let stored = match compact_context_duplicates(value, policy, binding) { Ok(item) => item, Err(error) => { return Err(error); } };
-    let error = frame_error(stored, policy, binding); if error != "" { return Err(error); }
-    let observed = match load(policy, binding) { Ok(item) => item, Err(problem) => { return Err(problem); } };
-    if observed != expected { return Err("recoverable chat changed; no retry"); }
+flow write(value: Frame, expected: Option<MemoryEntry<string, Frame>>, policy: Policy, binding: string) -> Result<MemoryEntry<string, Frame>, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+    let compact = match compact_context_duplicates(value, policy, binding) { Ok(item) => item, Err(error) => { return Err(error); } };
+    let desired = Frame { format = 1, encoding = compact.encoding, policy_binding = compact.policy_binding, chat = compact.chat, events = compact.events };
+    let error = constructed_frame_error(desired, policy, binding); if error != "" { return Err(error); }
     let condition: WriteCondition = match expected { Some(item) => Match(item.version), None() => Missing };
-    let rows = ChatRows { redaction = policy, binding = binding };
-    let previous = match expected { Some(item) => Some(item.version), None() => None() };
-    return commit_once<Frame, ChatRows>(rows, stored, condition, previous);
+    let target = Target { store = ["Rows"], region = "nomo-recoverable-chat-v1", key = "latest", label = "recoverable chat" };
+    let version = match commit_native(Frames.Rows, target, desired, condition) { Ok(item) => item, Err(problem) => { return Err(problem); } };
+    // commit_native already performs exact raw stored-value and version
+    // readback. Do not immediately reload and parse the same MiB-scale frame.
+    match expected { Some(item) => { if item.version.opaque == version.opaque { return Err("recoverable chat version did not change"); } } None() => {} }
+    return Ok(MemoryEntry { key = "latest", value = desired, version = version });
 }
 
-public flow create(policy: Policy, binding: string, high_input: bool) -> Result<MemoryVersion, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+public flow matches_version(expected: MemoryVersion) -> Result<bool, string> ![Memory, Error<StorageError>] {
+    return match get_entry(Frames.Rows, "latest") {
+        Some(item) => Ok(item.key == "latest" && item.version.opaque == expected.opaque),
+        None() => Ok(false),
+    };
+}
+
+public flow create(policy: Policy, binding: string, high_input: bool) -> Result<MemoryEntry<string, Frame>, string> ![Memory, Error<StorageError>, Error<IndexError>] {
     return write(Frame { format = 1, encoding = "json-string-v1", policy_binding = binding, chat = if high_input { fresh_high_input_events() } else { fresh_events() }, events = empty_events() }, None(), policy, binding);
 }
 
-public flow reserve(expected: MemoryEntry<string, Frame>, request: string, policy: Policy, binding: string) -> Result<MemoryVersion, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+public flow reserve(expected: MemoryEntry<string, Frame>, request: string, policy: Policy, binding: string) -> Result<MemoryEntry<string, Frame>, string> ![Memory, Error<StorageError>, Error<IndexError>] {
     let error = frame_error(expected.value, policy, binding); if error != "" { return Err(error); }
     let saved = expected.value.chat;
     if saved.invocation.prior.tool != "" {
@@ -217,7 +242,7 @@ public flow reserve(expected: MemoryEntry<string, Frame>, request: string, polic
     return write(Frame { format = 1, encoding = "json-string-v1", policy_binding = binding, chat = pending, events = events }, Some(expected), policy, binding);
 }
 
-public flow finish(expected: MemoryEntry<string, Frame>, result: TurnResult, policy: Policy, binding: string) -> Result<MemoryVersion, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+public flow finish(expected: MemoryEntry<string, Frame>, result: TurnResult, policy: Policy, binding: string) -> Result<MemoryEntry<string, Frame>, string> ![Memory, Error<StorageError>, Error<IndexError>] {
     let error = frame_error(expected.value, policy, binding); if error != "" { return Err(error); }
     let completed = match result.completed { Some(item) => item, None() => { return Err("completed event batch missing"); } };
     let chat = match complete(expected.value.chat, result) { Ok(item) => item, Err(problem) => { return Err(problem); } };
@@ -234,15 +259,16 @@ public flow finish(expected: MemoryEntry<string, Frame>, result: TurnResult, pol
         let name = if item.role == "model" && item.kind == "text" && item.name == "qwen" { "" } else { item.name };
         encoded = encoded.push(Event { role = item.role, kind = item.kind, name = name, text = text });
     }
-    let events = match append(expected.value.events, chat.invocation.admitted, encoded, policy) {
+    let events = match append_encoded(expected.value.events, chat.invocation.admitted, encoded, policy) {
         Ok(item) => item.frame, Err(problem) => { return Err(problem); }
     };
     return write(Frame { format = 1, encoding = "json-string-v1", policy_binding = binding, chat = chat, events = events }, Some(expected), policy, binding);
 }
 
 // Work facts commit separately; only a confirmed subsequent copy enters this order.
-public flow record_work(id: string, records: Array<Event>, policy: Policy, binding: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
-    let before = match load(policy, binding) { Ok(Some(value)) => value, _ => { return Err("existing recoverable session required"); } };
+// Callers which already crossed the load() trust boundary retain that exact CAS
+// entry through their work transaction instead of inflating the chat again.
+public flow record_work_from(before: MemoryEntry<string, Frame>, id: string, records: Array<Event>, policy: Policy, binding: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
     if before.value.chat.phase == "running" { return Err("chat turn unresolved"); }
     var timeline_records: Array<Event> = [];
     for item in records limit Iterations(24) {
@@ -256,6 +282,11 @@ public flow record_work(id: string, records: Array<Event>, policy: Policy, bindi
     let events = EventFrame { format = 2, turns = previous.turns, first_count = previous.first_count, events = ordered };
     let frame = Frame { format = before.value.format, encoding = before.value.encoding, policy_binding = before.value.policy_binding, chat = before.value.chat, events = events };
     return match write(frame, Some(before), policy, binding) { Ok(_) => Ok(true), Err(error) => Err(error) };
+}
+
+public flow record_work(id: string, records: Array<Event>, policy: Policy, binding: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+    let before = match load(policy, binding) { Ok(Some(value)) => value, _ => { return Err("existing recoverable session required"); } };
+    return record_work_from(before, id, records, policy, binding);
 }
 
 // Record a completed independent check as its own event, without a work/edit row.

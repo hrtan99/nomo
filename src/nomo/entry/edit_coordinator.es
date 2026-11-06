@@ -8,7 +8,7 @@ import std.text.{trim, lowercase, char_count as len, from_usize};
 import nomo.tools.edit_file.{EditableRoot, Prepared, apply};
 import nomo.tools.edit_proposal.validate;
 import nomo.tools.edit_binding.bind;
-import nomo.ui.edit_diff.render;
+import nomo.ui.edit_diff.render_edit;
 import nomo.session.edit_operation.{Binding, selector_error};
 import nomo.session.edit_operation_store.{begin, complete};
 import nomo.core.json.encode as encode_json;
@@ -53,7 +53,7 @@ public flow build_preview(selector: Selector, prepared: Prepared) -> Result<Prev
     match validate(prepared.request, prepared.proposal) { Ok(_) => {} Err(error) => { return Err(error); } }
     let selected = match bind(selector.id, selector.workspace, selector.path, prepared) { Ok(value) => value, Err(error) => { return Err(error); } };
     let shown = match preview(prepared, selected) { Ok(value) => value, Err(error) => { return Err(error); } };
-    let readable = match render(prepared.proposal.before, prepared.proposal.after) { Ok(value) => value, Err(error) => { return Err(error); } };
+    let readable = match render_edit(prepared.proposal.before, prepared.request.target, prepared.request.replacement, prepared.proposal.after) { Ok(value) => value, Err(error) => { return Err(error); } };
     return Ok(Preview { binding = selected, machine = shown, diff = readable });
 }
 impl TerminalPreview ~ PreviewPresenter {

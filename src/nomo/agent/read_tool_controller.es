@@ -17,7 +17,8 @@ import nomo.model.model_tool_contract.{Session, Limits, Context};
 import nomo.tools.read_contract.{outcome, Outcome, ReadTools};
 import nomo.tools.read_display.display;
 import nomo.model.action_decoder.{ToolActionDecoder, LegacyActions, UnicodeActions};
-import nomo.core.large_context.child_answer_frame_bytes;
+import nomo.core.large_context.{child_answer_frame_bytes, file_bytes};
+import std.text.from_usize;
 import nomo.harness.legacy_string_stages.LegacyChildModel;
 public import nomo.model.model_tool_contract.LoopTurn;
 flow failed(session: Session, message: string, status: i32) -> LoopTurn {
@@ -27,7 +28,7 @@ flow failed(session: Session, message: string, status: i32) -> LoopTurn {
 
 flow tool_failure(result: Outcome) -> string {
     if contains(result.text, "file is not UTF-8") { return "non-UTF-8 file"; }
-    if contains(result.text, "file exceeds 262144 bytes") || contains(result.text, "file exceeds 65536 bytes") || contains(result.text, "file exceeds 16384 bytes") || contains(result.text, "file exceeds 2048 bytes") { return "per-file byte limit"; }
+    if contains(result.text, "file exceeds " + from_usize(file_bytes()) + " bytes") || contains(result.text, "file exceeds 262144 bytes") || contains(result.text, "file exceeds 65536 bytes") || contains(result.text, "file exceeds 16384 bytes") || contains(result.text, "file exceeds 2048 bytes") { return "per-file byte limit"; }
     if contains(result.text, "file exceeds remaining scan allowance") { return "scan allowance"; }
     if result.status == "truncated" { return "match limit"; }
     return if result.status == "unsupported" { "unsupported output" } else { if result.status == "refused" { "refused input or limit" } else { "invalid tool outcome" } };

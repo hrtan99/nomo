@@ -84,7 +84,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
     let high_input = ticket.frame.work.format == 9;
     let stages = HistoryStages { prior_request = prior_request, previous = previous, conversation = conversation, wide = wide || high_input, high_input = high_input, historical = false };
     let persistence = FirstPersistence { ticket = ticket, redaction = policy, binding = binding };
-    return execute<HistoryStages, EditTicket, bool, FirstPersistence, NativeWorkEditor, EventWorkTimeline, TerminalWorkOutput>(stages, persistence, native_editor(), event_timeline(), TerminalWorkOutput {}, input, Run { redaction = policy, binding = binding, wide = wide || high_input, high_input = high_input, saved = "SAVED event work facts; no grant or root identity is persisted." });
+    return execute<HistoryStages, EditTicket, bool, FirstPersistence, NativeWorkEditor, EventWorkTimeline, TerminalWorkOutput>(stages, persistence, native_editor(), event_timeline(history), TerminalWorkOutput {}, input, Run { redaction = policy, binding = binding, wide = wide || high_input, high_input = high_input, saved = "SAVED event work facts; no grant or root identity is persisted." });
 }
 
 public flow abandon(args: Array<string>) -> i32 ![Console, Memory, Fs.read<PolicyRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {

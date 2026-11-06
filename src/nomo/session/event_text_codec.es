@@ -5,7 +5,7 @@ import nomo.core.json.encode as encode_json;
 import std.agent.message.Message;
 import std.json.parse;
 import nomo.core.read_text.safe;
-import std.text.len;
+import std.text.{is_ascii, len};
 import nomo.session.redaction.{Policy, text as redact};
 import nomo.core.large_context.{outcome_bytes, event_bytes};
 
@@ -18,12 +18,12 @@ public flow encode(text: string, policy: Policy) -> Result<Encoded, string> {
     let clean = match redact(text, policy) { Ok(item) => item, Err(error) => { return Err(error); } };
     if len(clean.value) > outcome_bytes() { return Err("event text exceeds decoded bound"); }
     let encoded = match encode_json(clean.value, "event text JSON conversion refused", "event text JSON encoding refused") { Ok(value) => value, Err(error) => { return Err(error); } };
-    if !safe(encoded, event_bytes()) { return Err("encoded event text unsupported or exceeds bound"); }
+    if len(encoded) > event_bytes() || (!is_ascii(encoded) && !safe(encoded, event_bytes())) { return Err("encoded event text unsupported or exceeds bound"); }
     return Ok(Encoded { value = encoded, replacements = clean.replacements });
 }
 
 public flow decode(encoded: string, policy: Policy) -> Result<string, string> {
-    if !safe(encoded, event_bytes()) { return Err("invalid encoded event text"); }
+    if len(encoded) > event_bytes() || (!is_ascii(encoded) && !safe(encoded, event_bytes())) { return Err("invalid encoded event text"); }
     let value = match parse(encoded) { Ok(item) => item, Err(_) => { return Err("invalid event text JSON"); } };
     let converted: Option<Message<string>> = Message.new(value).cast<string>();
     let raw = match converted { Some(item) => item.body, None() => { return Err("event text JSON is not a string"); } };
@@ -40,7 +40,7 @@ public flow encode_prefix(text: string, truncated: bool, policy: Policy) -> Resu
     let clean = match redact(text, policy) { Ok(item) => item.value, Err(error) => { return Err(error); } };
     let size = len(clean); let clipped = truncated || size > 4096;
     var selected = ""; var seen: usize = 0; var marked = false;
-    for codepoint in std.text.chars(clean) limit Iterations(262146) { let character = std.text.from_char(codepoint);
+    for codepoint in std.text.chars(clean) limit Iterations(2097178) { let character = std.text.from_char(codepoint);
         if character != "" {
             let width = len(character);
             if size <= 4096 || seen + width <= 2000 || seen >= size - 2000 { selected = selected + character; }

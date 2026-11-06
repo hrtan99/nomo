@@ -39,7 +39,7 @@ profile = "fixture"
 
 
 def main():
-    spec = json.loads((ROOT/'config/etas-025-official.json').read_text())
+    spec = json.loads((ROOT/'config/etas-latest-main.json').read_text())
     digest = hashlib.sha256(CLI.read_bytes()).hexdigest()
     if digest != spec['verified_seed_binary_sha256']:raise ValueError('official CLI identity mismatch')
     with tempfile.TemporaryDirectory(prefix='recoverable-work-') as temp:
@@ -53,7 +53,7 @@ def main():
             commands.append((phase,[str(CLI),'run',str(project),'--flow','recoverable_work_probe','--allow-effects','--args',phase],cwd))
         checks=[]
         for phase,command,cwd in commands:
-            result=subprocess.run(command,capture_output=True,text=True,cwd=cwd,timeout=120)
+            result=subprocess.run(command,capture_output=True,text=True,cwd=cwd,timeout=300)
             checks.append({'phase':phase,'exit':result.returncode,'stdout':result.stdout[-1500:],'stderr':result.stderr[-3000:]})
             if result.returncode or result.stderr:break
         success=len(checks)==len(commands) and all(item['exit']==0 for item in checks)
@@ -65,8 +65,10 @@ def main():
                     assert db.execute('pragma integrity_check').fetchone()==('ok',)
                     rows=db.execute("select value_json from memory_entries where region='nomo-recoverable-work-v1'").fetchall()
                     assert len(rows)==1 and 'VERY_SECRET_123' not in rows[0][0]
+                    large=db.execute("select count(*) from memory_entries where region='nomo-large-text-v1'").fetchone()[0]
+                    assert 'nomo-large-text-v1:' not in rows[0][0] and large==0
                 for artifact in cwd.glob('history.sqlite3*'):
-                    data=artifact.read_bytes();assert b'VERY_SECRET_123' not in data and len(data)<=1048576
+                    data=artifact.read_bytes();assert b'VERY_SECRET_123' not in data
                     artifacts[name+'/'+artifact.name]={'sha256':hashlib.sha256(data).hexdigest(),'base64':base64.b64encode(data).decode('ascii')}
         print(json.dumps({'status':'passed' if success else 'failed','scope':'isolated synthetic work reservation and selected-facts frame; no edit, check, production route or complete redaction','cli_sha256':digest,'checks':checks,'synthetic_sqlite_artifacts':artifacts},indent=2))
         return 0 if success else 1

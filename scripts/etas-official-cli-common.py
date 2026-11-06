@@ -38,7 +38,7 @@ def configure(label, wrapper):
     SOURCE = ROOT / ('src' if label in ('025', '026', '026-v68', '030') else 'src/cli')
     TARGET = CACHE / SPEC['build_target'] if 'build_target' in SPEC else ROOT / 'target' if label in ('025', '026', '026-v68', '030') else CACHE / 'etas-latest/target'
     INSTALLED = CACHE / SPEC.get('installed_binary', 'bin/etas')
-    PREVIOUS_CONFIG = '765ca4aeae41496467cd35b398f8c40ac4fb3c5c30c6d970fdba66426b7f878b' if label == '041' else None
+    PREVIOUS_CONFIG = '98ff380d7e04ca43bca7f28f4af30dcd72e0a5a80dbe6515df41925f6d032962' if label == '041' else None
     bridge_path = REPO / 'config/etas-official-legacy-bridge.json'
     bridge = json.loads(bridge_path.read_text())
     entry = None if label == '041' else bridge[label]
@@ -324,6 +324,9 @@ def guard(read_only=False):
         '030': '2ebc9bef95b024ef35f8ac4075e8268d2d547f980a8951f91381b22f22a206e7',
         '041': '4da692d577464b972d83189ccca5d7caa74807a38dcbb5f054c8462ec1dff55e'}
     if LABEL in previous_v2: accepted.append(previous_v2[LABEL])
+    # The 0.4.1 storage-limit pin was prepared and built before its independently
+    # reproduced binary hash replaced the prior graph hash in the reviewed spec.
+    if LABEL == '041': accepted.append('ddeb6d22d76a7ad8159e04bc504b38560e87e374df8e921004426bcbb0077c42')
     if LEGACY_SHA is not None: accepted.append(LEGACY_SHA)
     if PREVIOUS_SHARED is not None: accepted.append(PREVIOUS_SHARED)
     if PREVIOUS_BOOTSTRAP is not None: accepted.append(PREVIOUS_BOOTSTRAP)

@@ -1,6 +1,6 @@
 module nomo.ui.edit_diff;
 
-import std.text.{char_count as len, len as byte_len, concat, split, strip_prefix, strip_suffix, from_usize};
+import std.text.{char_count as len, len as byte_len, concat, ends_with, find, split, strip_prefix, strip_suffix, from_usize};
 import std.collections.len as count;
 import nomo.tools.edit_proposal.text_bytes;
 import nomo.tools.edit_encoding.json;
@@ -12,7 +12,7 @@ type Line = { text: string, terminated: bool };
 flow lines(value: string) -> Array<Line> {
     let parts = split(value, "\n");
     var output: Array<Line> = []; var index: usize = 0;
-    while index < count(parts) limit Iterations(262145) {
+    while index < count(parts) limit Iterations(1048577) {
         if index + 1 < count(parts) {
             output = output.push(Line { text = parts[index], terminated = true });
         } else if parts[index] != "" {
@@ -91,12 +91,12 @@ public flow render(before: string, after: string) -> Result<string, string> {
     let original = lines(before); let replacement = lines(after);
     let old_size = count(original); let new_size = count(replacement);
     var prefix: usize = 0;
-    while prefix < old_size && prefix < new_size limit Iterations(262144) {
+    while prefix < old_size && prefix < new_size limit Iterations(1048576) {
         if !same(original[prefix], replacement[prefix]) { break; }
         prefix = prefix + 1;
     }
     var suffix: usize = 0;
-    while suffix < old_size - prefix && suffix < new_size - prefix limit Iterations(262144) {
+    while suffix < old_size - prefix && suffix < new_size - prefix limit Iterations(1048576) {
         if !same(original[old_size - suffix - 1], replacement[new_size - suffix - 1]) { break; }
         suffix = suffix + 1;
     }
@@ -114,5 +114,28 @@ public flow render(before: string, after: string) -> Result<string, string> {
     if suffix > visible { output = output.push(omitted(suffix - visible, "unchanged")); }
     let rendered = concat(output);
     if len(rendered) > 8192 || byte_len(rendered) > 8192 { return Err("edit preview output exceeds 8192 bytes"); }
+    return Ok(rendered);
+}
+
+// A validated edit already supplies its unique literal target.  For large
+// files, render that exact changed span directly instead of materializing and
+// comparing hundreds of thousands of unchanged lines in the interpreter.
+// The complete before/after values remain in the canonical PREVIEW record.
+public flow render_edit(before: string, target: string, replacement: string, after: string) -> Result<string, string> {
+    if byte_len(before) <= 262144 && byte_len(after) <= 262144 { return render(before, after); }
+    match text_bytes(before, "preview before") { Ok(_) => {} Err(error) => { return Err(error); } }
+    match text_bytes(after, "preview after") { Ok(_) => {} Err(error) => { return Err(error); } }
+    if before == after || target == "" { return Err("large edit preview requires a changed literal"); }
+    let start = match find(before, target) { Some(value) => value, None() => { return Err("large edit preview target missing"); } };
+    let tail = byte_len(before) - start - byte_len(target);
+    var output = [if before == "" { "--- before [empty file]\n" } else { if ends_with(before, "\n") { "--- before\n" } else { "--- before [no final newline]\n" } },
+        if after == "" { "+++ after [empty file]\n" } else { if ends_with(after, "\n") { "+++ after\n" } else { "+++ after [no final newline]\n" } }];
+    if start > 0 { output = output.push("... " + from_usize(start) + " unchanged prefix bytes omitted ...\n"); }
+    let removed = lines(target); let added = lines(replacement);
+    let old = match changed(removed, 0, count(removed), "- ", "removed") { Ok(value) => value, Err(error) => { return Err(error); } };
+    let new = match changed(added, 0, count(added), "+ ", "added") { Ok(value) => value, Err(error) => { return Err(error); } };
+    output = output.push(old).push(new);
+    if tail > 0 { output = output.push("... " + from_usize(tail) + " unchanged suffix bytes omitted ...\n"); }
+    let rendered = concat(output); if byte_len(rendered) > 8192 { return Err("edit preview output exceeds 8192 bytes"); }
     return Ok(rendered);
 }

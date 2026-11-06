@@ -1,12 +1,13 @@
 module nomo.tools.edit_encoding;
 
-import std.text.{char_count as len, char_get, concat, from_char, join};
+import std.text.{char_get, concat, from_char, is_ascii, join, len as byte_len};
 import std.collections.len as count;
 import std.bytes.len as byte_count;
 import std.codec.text.utf8_encode;
 import std.crypto.sha256;
 import std.agent.message.Message;
 import nomo.core.large_context.{file_bytes, edit_json_bytes};
+import nomo.core.json.encode as encode_json;
 
 // All callers produce a nibble by division/modulo or valid UTF-8 bit groups.
 flow nibble(value: u8) -> string {
@@ -51,14 +52,24 @@ flow scalar(value: string) -> Result<string, string> {
 }
 
 flow quoted(value: string) -> Result<string, string> {
-    if len(value) > file_bytes() { return Err("edit JSON field exceeds bound"); }
+    if byte_len(value) > file_bytes() { return Err("edit JSON field exceeds bound"); }
+    // The standard serializer handles the overwhelmingly common ASCII file
+    // path in native code.  Retain explicit Unicode escaping below so terminal
+    // previews never emit bidi, C1 or other invisible non-ASCII controls.
+    if is_ascii(value) {
+        let encoded = match encode_json(value, "edit JSON conversion refused", "edit JSON encoding refused") {
+            Ok(item) => item, Err(error) => { return Err(error); }
+        };
+        if byte_len(encoded) > edit_json_bytes() { return Err("edit JSON output exceeds bound"); }
+        return Ok(encoded);
+    }
     var pieces: Array<string> = []; var chunk = ""; var size: usize = 1;
-    for codepoint in std.text.chars(value) limit Iterations(262146) { let character = std.text.from_char(codepoint);
+    for codepoint in std.text.chars(value) limit Iterations(1048578) { let character = std.text.from_char(codepoint);
         if character != "" {
             let escaped = match scalar(character) { Ok(item) => item, Err(error) => { return Err(error); } };
-            size = size + len(escaped); if size > edit_json_bytes() - 2 { return Err("edit JSON output exceeds bound"); }
+            size = size + byte_len(escaped); if size > edit_json_bytes() - 2 { return Err("edit JSON output exceeds bound"); }
             chunk = chunk + escaped;
-            if len(chunk) >= 4096 { pieces = pieces.push(chunk); chunk = ""; }
+            if byte_len(chunk) >= 4096 { pieces = pieces.push(chunk); chunk = ""; }
         }
     }
     return Ok("\"" + concat(pieces) + chunk + "\"");
@@ -69,7 +80,7 @@ public flow json(values: Array<string>) -> Result<string, string> {
     var fields: Array<string> = []; var size: usize = 2;
     for value in values limit Iterations(16) {
         let encoded = match quoted(value) { Ok(item) => item, Err(error) => { return Err(error); } };
-        size = size + len(encoded) + if count(fields) == 0 { 0 } else { 1 };
+        size = size + byte_len(encoded) + if count(fields) == 0 { 0 } else { 1 };
         if size > edit_json_bytes() { return Err("edit JSON output exceeds bound"); }
         fields = fields.push(encoded);
     }
@@ -85,7 +96,7 @@ public flow object(keys: Array<string>, values: Array<string>) -> Result<string,
         let key = match quoted(keys[index]) { Ok(item) => item, Err(error) => { return Err(error); } };
         let value = match quoted(values[index]) { Ok(item) => item, Err(error) => { return Err(error); } };
         let field = key + ":" + value;
-        size = size + len(field) + if count(fields) == 0 { 0 } else { 1 };
+        size = size + byte_len(field) + if count(fields) == 0 { 0 } else { 1 };
         if size > edit_json_bytes() { return Err("edit JSON output exceeds bound"); }
         fields = fields.push(field);
         index = index + 1;

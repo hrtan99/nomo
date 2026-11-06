@@ -1,6 +1,6 @@
 module nomo.session.continuous_work;
 
-import nomo.session.cas_rows.{CasRows, Target, Submission, submit_native, commit_once};
+import nomo.session.cas_rows.{Target, commit_native};
 import std.memory.{get_entry, MemoryEntry, MemoryVersion, WriteCondition, Missing, Match};
 import std.collections.len as count;
 import nomo.core.conversation.Event;
@@ -9,7 +9,7 @@ import nomo.session.redaction.{Policy, text as redact};
 import nomo.session.event_text_codec.encode_prefix;
 import nomo.session.recoverable_events.work_batch;
 import nomo.harness.harness_work_contract.{Ledger, ledger_error, native_budget};
-import nomo.core.large_context.scan_i32;
+import nomo.core.large_context.{scan_i32, compatible_scan_i32};
 
 // All additional rounds share one append-only history and one current slot.
 // Each current edit/check transition is durable before its external effect.
@@ -22,26 +22,16 @@ public type Book = { binding: string, history: Array<Entry>, current: Entry };
 public type Stored = { key: string, value: Book, version: MemoryVersion };
 alias Schema = MemoryRegion<{ Rows: Store<string, Book> }>;
 let Books = std.memory.region<Schema>(stable_id = "nomo-continuous-work-v1", store = "continuous-work");
-
 public flow load(binding: string) -> Result<Option<Stored>, string> {
     let row = get_entry(Books.Rows, "latest");
     match row { Some(item) => { if item.key != "latest" || item.value.binding != binding { return Err("continuous work policy binding mismatch"); } } None() => {} }
     return match row { Some(item) => Ok(Some(Stored { key = item.key, value = item.value, version = item.version })), None() => Ok(None()) };
 }
-type ContinuousRows = { binding: string };
-impl ContinuousRows ~ CasRows<Book> {
-    flow target(self) -> Target ![] { return Target { store = ["Rows"], region = "nomo-continuous-work-v1", key = "latest", label = "continuous work" }; }
-    flow submit(self, value: Book, condition: WriteCondition) -> Submission ![Memory, Error<StorageError>] { return submit_native(Books.Rows, "latest", value, condition); }
-    flow read(self) -> Result<Option<MemoryEntry<string, Book>>, string> {
-        let row = get_entry(Books.Rows, "latest");
-        match row { Some(item) => { if item.key != "latest" || item.value.binding != self.binding { return Err("continuous work policy binding mismatch"); } } None() => {} }
-        return Ok(row);
-    }
-    flow same(self, left: Book, right: Book) -> bool ![] { return left == right; }
-}
 flow write(book: Book, previous: Option<Stored>) -> Result<Stored, string> ![Memory, Error<StorageError>, Error<IndexError>] {
     let condition: WriteCondition = match previous { Some(item) => Match(item.version), None() => Missing };
-    let version = match commit_once<Book, ContinuousRows>(ContinuousRows { binding = book.binding }, book, condition, None()) { Ok(value) => value, Err(error) => { return Err(error); } };
+    let target = Target { store = ["Rows"], region = "nomo-continuous-work-v1", key = "latest", label = "continuous work" };
+    let version = match commit_native(Books.Rows, target, book, condition) { Ok(value) => value, Err(error) => { return Err(error); } };
+    match previous { Some(item) => { if item.version.opaque == version.opaque { return Err("continuous work version did not change"); } } None() => {} }
     return Ok(Stored { key = "latest", value = book, version = version });
 }
 
@@ -83,7 +73,7 @@ public flow finish(ticket: Stored, summary: string, source: string, spent: Ledge
     if ledger_error(spent) != "" || spent.read.calls + spent.edit.calls != 7 || spent.read.tokens + spent.edit.tokens != (if item.result.source == "wide-v5" || item.result.source == "wide-v4" { 286720 } else { if item.result.source == "wide-v3" || item.result.source == "high-input-v1" { 188416 } else { if item.result.source == "wide" || item.result.source == "wide-v2" { 61440 } else { 51200 } } }) { return Err("additional work ledger differs from reservation"); }
     // high-input-v1 stores its 6M configured run ceiling in the durable source;
     // native_budget remains the compatible stage-shape counter, not usage.
-    if (item.result.source == "wide-v5" || item.result.source == "wide-v4" || item.result.source == "wide-v3" || item.result.source == "wide-v2" || item.result.source == "v2" || item.result.source == "high-input-v1") && (native_budget(spent) != (if item.result.source == "wide-v5" || item.result.source == "wide-v4" { 2811008 } else { if item.result.source == "wide-v3" || item.result.source == "high-input-v1" { 2073152 } else { 1335296 } }) || spent.read.scan != (if item.result.source == "wide-v5" || item.result.source == "high-input-v1" { scan_i32() } else { 65540 })) { return Err("additional work native reservation differs"); }
+    if (item.result.source == "wide-v5" || item.result.source == "wide-v4" || item.result.source == "wide-v3" || item.result.source == "wide-v2" || item.result.source == "v2" || item.result.source == "high-input-v1") && (native_budget(spent) != (if item.result.source == "wide-v5" || item.result.source == "wide-v4" { 2811008 } else { if item.result.source == "wide-v3" || item.result.source == "high-input-v1" { 2073152 } else { 1335296 } }) || !(if item.result.source == "wide-v5" || item.result.source == "high-input-v1" { compatible_scan_i32(spent.read.scan) } else { spent.read.scan == 65540 })) { return Err("additional work native reservation differs"); }
     let cleaned = match redact(summary, policy) { Ok(value) => value.value, Err(error) => { return Err(error); } };
     let saved = match work_batch(records, policy) { Ok(value) => value.events, Err(error) => { return Err(error); } };
     let result = ResultData { phase = "complete", summary = cleaned, source = if item.result.source == "high-input-v1" { source + "-high-input" } else { if item.result.source == "wide-v5" { source + "-v5" } else { if item.result.source == "wide-v4" { source + "-v4" } else { if item.result.source == "wide-v3" { source + "-v3" } else { if item.result.source == "wide-v2" || item.result.source == "v2" { source + "-v2" } else { source } } } } }, calls = spent.read.calls + spent.edit.calls, generation = spent.read.tokens + spent.edit.tokens, events = saved };

@@ -1,12 +1,12 @@
 module nomo.session.recoverable_work_store;
 
-import nomo.session.cas_rows.{CasRows, Target, Submission, submit_native, commit_once};
-import std.memory.{get_entry, commit, MemoryEntry, MemoryVersion, WriteCondition, Missing, Match};
+import nomo.session.cas_rows.{Target, commit_native};
+import std.memory.{get_entry, MemoryEntry, MemoryVersion, WriteCondition, Missing, Match};
 import nomo.core.conversation.Event;
 import nomo.session.redaction.{Policy, text as redact};
 import nomo.session.event_text_codec.decode;
 import nomo.session.recoverable_events.{Frame as EventFrame, empty as empty_events, invalid as invalid_events, work_batch};
-import nomo.session.recoverable_chat_store.{Frame as ChatFrame, load as load_chat};
+import nomo.session.recoverable_chat_store.{Frame as ChatFrame, matches_version as chat_matches_version};
 import nomo.session.history_work_guard.{Record, Budget, invalid as invalid_work};
 import nomo.harness.harness_work_contract.Ledger;
 
@@ -70,64 +70,59 @@ flow frame_error(value: Frame, policy: Policy, binding: string) -> string {
     return work_data_error(value.work, value.events, policy);
 }
 
-public flow load(policy: Policy, binding: string) -> Result<Option<MemoryEntry<string, Frame>>, string> {
-    // Validate the policy/binding against the actual chat frame first; a stale
-    // or mismatched policy cannot make an existing work slot look absent.
-    match load_chat(policy, binding) { Ok(Some(_)) => {} Ok(None()) => { return Err("recoverable chat missing"); } Err(error) => { return Err(error); } }
+public flow load(policy: Policy, binding: string) -> Result<Option<MemoryEntry<string, Frame>>, string> ![Memory, Error<StorageError>, Error<IndexError>] {
     let row = get_entry(Runs.Rows, "work");
-    match row {
+    return match row {
         Some(item) => {
             if item.key != "work" { return Err("recoverable work key mismatch"); }
             let error = frame_error(item.value, policy, binding); if error != "" { return Err(error); }
+            Ok(Some(item))
         }
-        None() => {}
-    }
-    return Ok(row);
+        None() => Ok(None())
+    };
 }
-
-type WorkRows = { redaction: Policy, binding: string };
-impl WorkRows ~ CasRows<Frame> {
-    flow target(self) -> Target ![] { return Target { store = ["Rows"], region = "nomo-recoverable-work-v1", key = "work", label = "recoverable work" }; }
-    flow submit(self, value: Frame, condition: WriteCondition) -> Submission ![Memory, Error<StorageError>] { return submit_native(Runs.Rows, "work", value, condition); }
-    flow read(self) -> Result<Option<MemoryEntry<string, Frame>>, string> { return load(self.redaction, self.binding); }
-    flow same(self, left: Frame, right: Frame) -> bool ![] { return left == right; }
-}
-flow write(value: Frame, expected: Option<MemoryEntry<string, Frame>>, policy: Policy, binding: string) -> Result<MemoryVersion, string> ![Memory, Error<StorageError>, Error<IndexError>] {
-    let error = frame_error(value, policy, binding); if error != "" { return Err(error); }
-    let before = match load(policy, binding) { Ok(item) => item, Err(problem) => { return Err(problem); } };
-    if before != expected { return Err("recoverable work changed; no retry"); }
+flow write(value: Frame, expected: Option<MemoryEntry<string, Frame>>, policy: Policy, binding: string) -> Result<MemoryEntry<string, Frame>, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+    let desired = Frame { format = 1, policy_binding = value.policy_binding, work = value.work, events = value.events };
+    let error = frame_error(desired, policy, binding); if error != "" { return Err(error); }
     let condition: WriteCondition = match expected { Some(item) => Match(item.version), None() => Missing };
-    let rows = WorkRows { redaction = policy, binding = binding };
-    let previous = match expected { Some(item) => Some(item.version), None() => None() };
-    return commit_once<Frame, WorkRows>(rows, value, condition, previous);
+    let target = Target { store = ["Rows"], region = "nomo-recoverable-work-v1", key = "work", label = "recoverable work" };
+    let version = match commit_native(Runs.Rows, target, desired, condition) { Ok(item) => item, Err(problem) => { return Err(problem); } };
+    // commit_native already verifies the exact stored value and version. Keep
+    // the value already owned by this process instead of loading it again.
+    match expected { Some(item) => { if item.version.opaque == version.opaque { return Err("recoverable work version did not change"); } } None() => {} }
+    return Ok(MemoryEntry { key = "work", value = desired, version = version });
 }
 
 public flow admit(id: string, workspace: string, path: string, request: string, chat: MemoryEntry<string, ChatFrame>, policy: Policy, binding: string) -> Result<Ticket, string> ![Memory, Error<StorageError>, Error<IndexError>] {
-    let current = match load_chat(policy, binding) { Ok(Some(item)) => item, _ => { return Err("recoverable chat missing or invalid"); } };
-    let chat_error = admission_chat_error(current, chat); if chat_error != "" { return Err(chat_error); }
+    let chat_error = admission_chat_error(chat, chat); if chat_error != "" { return Err(chat_error); }
+    let current = match chat_matches_version(chat.version) { Ok(item) => item, Err(error) => { return Err(error); } };
+    if !current { return Err("completed recoverable chat changed; no retry"); }
     match load(policy, binding) { Ok(None()) => {} Ok(Some(_)) => { return Err("recoverable work already admitted; no retry"); } Err(error) => { return Err(error); } }
     let wide = chat.value.chat.format >= 13;
     let row = running_record_mode(id, workspace, path, request, chat.version.opaque, wide, chat.value.chat.format == 18);
     let frame = Frame { format = 1, policy_binding = binding, work = row, events = empty_events() };
-    let version = match write(frame, None(), policy, binding) { Ok(item) => item, Err(error) => { return Err(error); } };
-    return Ok(Ticket { frame = frame, version = version, chat = chat });
+    let saved = match write(frame, None(), policy, binding) { Ok(item) => item, Err(error) => { return Err(error); } };
+    return Ok(Ticket { frame = frame, version = saved.version, chat = chat });
 }
 
-public flow claim(ticket: Ticket, policy: Policy, binding: string) -> Result<bool, string> {
-    let current_chat = match load_chat(policy, binding) { Ok(Some(item)) => item, _ => { return Err("recoverable chat missing or invalid"); } };
-    let chat_error = claim_chat_error(current_chat, ticket.chat, ticket.frame.work, "recoverable work"); if chat_error != "" { return Err(chat_error); }
+flow claimed(ticket: Ticket, policy: Policy, binding: string) -> Result<MemoryEntry<string, Frame>, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+    if ticket.frame.work.history_version != ticket.chat.version.opaque || ticket.frame.work.phase != "running" { return Err("recoverable work chat binding changed; no retry"); }
+    let current_chat = match chat_matches_version(ticket.chat.version) { Ok(item) => item, Err(error) => { return Err(error); } };
+    if !current_chat { return Err("recoverable work chat binding changed; no retry"); }
     let current = match load(policy, binding) { Ok(Some(item)) => item, _ => { return Err("recoverable work missing or invalid"); } };
     if current.value != ticket.frame || current.version.opaque != ticket.version.opaque { return Err("recoverable work reservation changed; no retry"); }
-    return Ok(true);
+    return Ok(current);
+}
+
+public flow claim(ticket: Ticket, policy: Policy, binding: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+    return match claimed(ticket, policy, binding) { Ok(_) => Ok(true), Err(error) => Err(error) };
 }
 
 public flow finish(ticket: Ticket, summary: string, spent: Ledger, records: Array<Event>, policy: Policy, binding: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
-    match claim(ticket, policy, binding) { Ok(_) => {} Err(error) => { return Err(error); } }
+    let current = match claimed(ticket, policy, binding) { Ok(item) => item, Err(error) => { return Err(error); } };
     let events = match work_batch(records, policy) { Ok(item) => item, Err(error) => { return Err(error); } };
     let row = completed_record(ticket.frame.work, summary, spent);
     let frame = Frame { format = 1, policy_binding = binding, work = row, events = events };
-    let current = match load(policy, binding) { Ok(Some(item)) => item, _ => { return Err("recoverable work missing or invalid"); } };
-    if current.value != ticket.frame || current.version.opaque != ticket.version.opaque { return Err("recoverable work reservation changed; no retry"); }
     match write(frame, Some(current), policy, binding) { Ok(_) => Ok(true), Err(error) => Err(error) }
 }
 

@@ -7,9 +7,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 FILES = ['context.txt', 'second.txt', 'third.txt', 'note.txt']
 TASK = '请把 note.txt 中的 old 改为 new。'
-BEFORE = 'padding\n' * 32767 + 'old\nxxxx'
+BEFORE = 'padding\n' * 131071 + 'old\nxxxx'
 AFTER = BEFORE.replace('old', 'new')
-assert len(BEFORE.encode()) == 262144
+assert len(BEFORE.encode()) == 1048576
 DISPLAYED = BEFORE.replace('%', '%%').replace('\n', '%n').replace('\r', '%r').replace('\t', '%t')
 
 class Fake(BaseHTTPRequestHandler):
@@ -17,7 +17,7 @@ class Fake(BaseHTTPRequestHandler):
     def do_POST(self):
         try:
             req = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
-            ctx = json.loads(req['messages'][1]['content']); i = len(self.server.phases)
+            ctx = json.loads(''.join(message['content'] for message in req['messages'][1:])); i = len(self.server.phases)
             if i == 0:
                 assert ctx['current']['request'] == TASK and ctx['current']['allowed'] == FILES
                 value = ['delegate', 'Read note.txt to identify the requested edit']
@@ -47,7 +47,9 @@ class Fake(BaseHTTPRequestHandler):
             else: raise AssertionError('unexpected request')
             content = json.dumps(value, ensure_ascii=False, separators=(',', ':')) if isinstance(value, list) else value
             body = json.dumps({'choices':[{'message':{'role':'assistant','content':content},'finish_reason':'stop'}], 'usage':{'prompt_tokens':100,'completion_tokens':20,'total_tokens':120}},ensure_ascii=False).encode()
-            self.server.phases.append(i);self.send_response(200);self.send_header('Content-Length',str(len(body)));self.end_headers();self.wfile.write(body)
+            self.server.phases.append(i)
+            print('FAKE_PHASE %d elapsed=%.1fs' % (i, time.monotonic()-self.server.started), flush=True)
+            self.send_response(200);self.send_header('Content-Length',str(len(body)));self.end_headers();self.wfile.write(body)
         except Exception as error:
             detail = ''
             if 'i' in locals() and i == 11:
@@ -61,7 +63,7 @@ class Fake(BaseHTTPRequestHandler):
                         evidence.get('name'), None if field is None else len(field), len('complete: ' + DISPLAYED),
                         None if field is None else field[:40], None if field is None else field[-40:])
                 else: detail = ' evidence=%r' % (evidence,)
-            self.server.failure = repr(error) + detail;self.send_error(500)
+            self.server.failure = repr(error) + detail;print('FAKE_FAILURE '+self.server.failure,flush=True);self.send_error(500)
 
 def interactive(command, env, question, editing):
     master, slave = pty.openpty(); settings = termios.tcgetattr(slave); settings[3] &= ~(termios.ECHO | termios.ECHONL); termios.tcsetattr(slave, termios.TCSANOW, settings)
@@ -69,7 +71,7 @@ def interactive(command, env, question, editing):
     output = bytearray();asked = native = application = exited = events_requested = False;deadline = time.monotonic() + 600
     try:
         while proc.poll() is None:
-            if time.monotonic() > deadline: raise TimeoutError('interactive flow timeout')
+            if time.monotonic() > deadline: raise TimeoutError('interactive flow timeout; '+bytes(output).decode('utf-8','replace')[-3000:])
             if select.select([master], [], [], .1)[0]:
                 try: output.extend(os.read(master, 65536))
                 except OSError: pass
@@ -84,6 +86,8 @@ def interactive(command, env, question, editing):
             done = b'Check recorded. The deterministic outcome above is authoritative' in text if editing else '当前文件包含 new'.encode() in text
             if done and not editing and not events_requested: os.write(master,b'/events\n');events_requested=True
             if (editing and done or events_requested and b'TIMELINE ' in text) and not exited: os.write(master,b'/exit\n');exited=True
+            if asked and not exited and not events_requested and text.count(b'nomo> ') >= 2:
+                raise AssertionError('flow returned to prompt early; '+bytes(output).decode('utf-8','replace')[-3000:])
         while select.select([master],[],[],0)[0]:
             try: data=os.read(master,65536)
             except OSError: break
@@ -98,7 +102,12 @@ def interactive(command, env, question, editing):
 
 def main():
     out=Path(tempfile.mkdtemp(prefix='nomo-natural-work-'));project=out/'project'
-    shutil.copytree(ROOT,project,ignore=shutil.ignore_patterns('.git','.etas','tmp','__pycache__','.pytest_cache'));(project/'.etas').mkdir(mode=0o700)
+    project.mkdir()
+    for name in ('src','scripts','config'):
+        shutil.copytree(ROOT/name,project/name,ignore=shutil.ignore_patterns('__pycache__'))
+    for name in ('etas.toml','etas.lock','compose.yaml','Dockerfile'):
+        shutil.copyfile(ROOT/name,project/name)
+    (project/'.etas').mkdir(mode=0o700)
     workspace=out/'workspace';mask=os.umask(0o022)
     try: workspace.mkdir(mode=0o755)
     finally: os.umask(mask)
@@ -107,7 +116,7 @@ def main():
     sessions=out/'sessions';sessions.mkdir(mode=0o700);policy=out/'policy';policy.mkdir(mode=0o700)
     (policy/'policy.json').write_text(json.dumps({'format':1,'literals':['SYNTHETIC_NEVER_PRESENT']}));(policy/'policy.json').chmod(0o600)
     (policy/'binding.key').write_bytes(b'K'*32);(policy/'binding.key').chmod(0o600)
-    server=HTTPServer(('127.0.0.1',0),Fake);server.phases=[];server.failure=None;server.evidence_matches=False;server.evidence_detail=None
+    server=HTTPServer(('127.0.0.1',0),Fake);server.phases=[];server.started=time.monotonic();server.failure=None;server.evidence_matches=False;server.evidence_detail=None
     thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start()
     try:
         manifest=project/'etas.toml';text=manifest.read_text()
@@ -118,7 +127,7 @@ def main():
         env={'PATH':os.environ['PATH'],'HOME':os.environ['HOME'],'MINIMAX_API_KEY':'SYNTHETIC_ONLY','NOMO_ETAS_VERSION':'0.4.1','NOMO_STATE_DIR':str(out/'state')}
         command=[str(project/'scripts/nomo'),'--root',str(workspace),'--allow',','.join(FILES),'--check','/bin/sh','-c','grep -qx new note.txt']
         first=interactive(command,env,TASK,True);match=re.search(rb'SESSION ID ([0-9a-f]{32})',first);assert match
-        assert b'one read/search up to 262148 bytes' in first
+        assert b'one read/search up to 1048580 bytes' in first
         assert (workspace/'note.txt').read_text()==AFTER and all((workspace/f).read_text()=='unrelated context\n' for f in FILES[:-1])
         assert stat.S_IMODE(workspace.stat().st_mode)==0o755
         command=[str(project/'scripts/nomo'),'--id',match.group(1).decode(),'--root',str(workspace),'--allow',','.join(FILES)]
@@ -131,11 +140,12 @@ def main():
         database=out/'state'/'sessions'/match.group(1).decode()/'history.sqlite3'
         with sqlite3.connect(database) as connection:
             rows=connection.execute("select value_json from memory_entries where region='nomo-recoverable-chat-evidence-v1' order by version").fetchall()
-        assert len(rows)==1 and ('complete: '+DISPLAYED) in rows[0][0]
-        status = subprocess.run([str(project/'scripts/nomo'), '--id', match.group(1).decode(), '--status'], env=env, capture_output=True, timeout=60)
+            large=connection.execute("select count(*) from memory_entries where region='nomo-large-text-v1'").fetchone()[0]
+        assert len(rows)==1 and ('complete: '+DISPLAYED) in rows[0][0] and large == 0
+        status = subprocess.run([str(project/'scripts/nomo'), '--id', match.group(1).decode(), '--status'], env=env, capture_output=True, timeout=300)
         assert status.returncode == 0, status.stderr.decode('utf-8', 'replace')
         assert b'NATIVE configured cumulative reservation=10383872; actual provider usage unknown; legacy native budget not present' in status.stdout, status.stdout.decode('utf-8', 'replace')
-        print(json.dumps({'status':'passed','scope':'256 KiB interactive natural-language selected-file edit, check, same-ID new-process continuation','file_bytes':len(BEFORE.encode()),'fake_requests':len(server.phases),'confirmations':2,'archived_chat_outcomes':len(rows),'selected_file':'note.txt','unchanged_other_files':3}))
+        print(json.dumps({'status':'passed','scope':'1 MiB interactive natural-language selected-file edit, checkpoint, same-ID new-process continuation','file_bytes':len(BEFORE.encode()),'fake_requests':len(server.phases),'confirmations':2,'archived_chat_outcomes':len(rows),'direct_large_text_rows':large,'selected_file':'note.txt','unchanged_other_files':3}))
     finally:server.shutdown();server.server_close();thread.join(timeout=5);print('evidence',out,flush=True)
 
 if __name__=='__main__':main()

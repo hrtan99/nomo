@@ -85,7 +85,7 @@ public type EventWorkFacts = { redaction: Policy, binding: string };
 impl EventWorkFacts ~ WorkFactsReader {
     flow snapshot(self) -> Result<Facts, string> { return read_snapshot(self.redaction, self.binding); }
 }
-public flow snapshot(policy: Policy, binding: string) -> Result<Facts, string> {
+public flow snapshot(policy: Policy, binding: string) -> Result<Facts, string> ![Memory, Error<StorageError>, Error<IndexError>] {
     let reader = EventWorkFacts { redaction = policy, binding = binding };
     return reader.snapshot();
 }

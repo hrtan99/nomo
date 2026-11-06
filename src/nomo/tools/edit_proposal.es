@@ -1,6 +1,6 @@
 module nomo.tools.edit_proposal;
 
-import std.text.{TextError, len, find, find_from, char_get, from_char, replace_range};
+import std.text.{TextError, len, find, find_from, char_get, from_char, from_usize, replace_range};
 import std.codec.text.utf8_encode;
 import nomo.tools.path_policy.valid_path;
 import nomo.core.large_context.file_bytes;
@@ -11,10 +11,10 @@ public type Proposal = { path: string, before: string, after: string };
 // Align with the large-context read contract, not scalar/grapheme count.
 // Provided strings already exist; this is not a general allocation guarantee.
 public flow text_bytes(value: string, field: string) -> Result<usize, string> {
-    let size = len(value); if size > file_bytes() { return Err(field + " exceeds 262144 UTF-8 bytes"); }
+    let size = len(value); if size > file_bytes() { return Err(field + " exceeds " + from_usize(file_bytes()) + " UTF-8 bytes"); }
     let bytes = utf8_encode(value);
     let zero: u8 = 0; var index: usize = 0;
-    while index < size limit Iterations(262144) {
+    while index < size limit Iterations(1048576) {
         if bytes[index] == zero { return Err(field + " contains NUL"); }
         index = index + 1;
     }
@@ -39,7 +39,7 @@ public flow propose(request: Request) -> Result<Proposal, string> {
     if request.target == request.replacement { return Err("replacement leaves original unchanged"); }
     // The exact match proves target_bytes <= original_bytes. Reject expansion
     // before constructing any output, then replace the proven byte interval.
-    if original_bytes - target_bytes + replacement_bytes > file_bytes() { return Err("result exceeds 262144 UTF-8 bytes"); }
+    if original_bytes - target_bytes + replacement_bytes > file_bytes() { return Err("result exceeds " + from_usize(file_bytes()) + " UTF-8 bytes"); }
     let changed: Result<string, TextError> = replace_range(request.original, [first_index, first_index + target_bytes), request.replacement)?;
     let after = match changed { Ok(value) => value, Err(_) => { return Err("literal match framing invalid"); } };
     return Ok(Proposal { path = request.path, before = request.original, after = after });

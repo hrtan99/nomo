@@ -5,7 +5,7 @@ import nomo.application.chat.controller.ChatRepository;
 import nomo.harness.harness_tool_chat_contract.TurnResult;
 import nomo.session.chat_history.{Entry as LegacyEntry, load as load_legacy, save as save_legacy, save_completed};
 import nomo.session.chat_session_contract.{fresh, begin, complete};
-import nomo.session.recoverable_chat_store.{Frame, load as load_recoverable, create as create_recoverable, reserve as reserve_recoverable, finish as finish_recoverable};
+import nomo.session.recoverable_chat_store.{Frame, load as load_recoverable, create as create_recoverable, reserve as reserve_recoverable, finish as finish_recoverable, matches_version};
 import nomo.session.redaction.Policy;
 
 public type LegacyChatRepository = {};
@@ -43,19 +43,15 @@ public type RecoverableChatRepository = { redaction: Policy, binding: string, hi
 impl RecoverableChatRepository ~ ChatRepository<RecoverableTicket> {
     flow load(self) -> Result<Option<RecoverableTicket>, string> { return load_recoverable(self.redaction, self.binding); }
     flow create(self) -> Result<RecoverableTicket, string> {
-        let version = match create_recoverable(self.redaction, self.binding, self.high_input) { Ok(value) => value, Err(error) => { return Err(error); } };
-        let saved = match load_recoverable(self.redaction, self.binding) { Ok(Some(value)) => value, _ => { return Err("recoverable session missing or invalid"); } };
-        if saved.version.opaque != version.opaque { return Err("session creation changed"); }
-        return Ok(saved);
+        return create_recoverable(self.redaction, self.binding, self.high_input);
     }
     flow reserve(self, current: RecoverableTicket, request: string) -> Result<RecoverableTicket, string> {
-        let version = match reserve_recoverable(current, request, self.redaction, self.binding) { Ok(value) => value, Err(error) => { return Err(error); } };
-        let saved = match load_recoverable(self.redaction, self.binding) { Ok(Some(value)) => value, _ => { return Err("reservation missing"); } };
-        if saved.version.opaque != version.opaque || saved.value.chat.phase != "running" { return Err("reservation changed"); }
+        let saved = match reserve_recoverable(current, request, self.redaction, self.binding) { Ok(value) => value, Err(error) => { return Err(error); } };
+        if saved.value.chat.phase != "running" { return Err("reservation changed"); }
         return Ok(saved);
     }
     flow verified(self, ticket: RecoverableTicket) -> Result<bool, string> {
-        return match load_recoverable(self.redaction, self.binding) { Ok(Some(value)) => Ok(value == ticket), Ok(None()) => Ok(false), Err(error) => Err(error) };
+        return matches_version(ticket.version);
     }
     flow finish(self, ticket: RecoverableTicket, result: TurnResult) -> Result<bool, string> {
         return match finish_recoverable(ticket, result, self.redaction, self.binding) { Ok(_) => Ok(true), Err(error) => Err(error) };

@@ -9,6 +9,7 @@ import std.collections.len as count;
 import std.io.IOError as ConsoleError;
 import std.fs.IOError as FileError;
 import std.effects.Fs;
+import std.memory.MemoryEntry;
 import nomo.cli.harness_work_args.{parse_recorded, application};
 import nomo.application.work.request.WorkRequest;
 
@@ -23,7 +24,7 @@ import nomo.session.event_text_codec.decode;
 
 import nomo.harness.harness_tool_chat_contract.Previous;
 import nomo.entry.harness_work_entry.{simple_refused as refused, Summary};
-import nomo.session.recoverable_chat_store.{load as load_chat, conversation as restore_conversation};
+import nomo.session.recoverable_chat_store.{Frame as ChatFrame, load as load_chat, conversation as restore_conversation};
 import nomo.session.recoverable_followup_store.{Ticket as WorkTicket, admit, claim, finish as finish_work, abandon as abandon_followup};
 import nomo.session.recoverable_followup_store.load as load_followup;
 import nomo.session.continuous_work.{Stored, load as load_extra, admit as admit_extra, edit_intent, edit_complete, finish as finish_extra, abandon as abandon_extra, abandon_check as abandon_extra_check};
@@ -71,7 +72,7 @@ flow historical(value: WorkFacts) -> HistoryWork {
 
 // Subsequent operations use a single durable append-only book. Earlier fixed
 // work/check records remain in place and continue to provide session history.
-flow more(input: WorkRequest, prior_request: string, previous: Previous, conversation: Array<Event>, first_id: string, check_digest: string, policy: Policy, binding: string, wide: bool, high_input: bool) -> i32 {
+flow more(input: WorkRequest, prior_request: string, previous: Previous, conversation: Array<Event>, chat: MemoryEntry<string, ChatFrame>, first_id: string, check_digest: string, policy: Policy, binding: string, wide: bool, high_input: bool) -> i32 {
     let second = match load_followup(policy, binding) { Ok(Some(value)) => value, _ => { return refused("completed followup required"); } };
     let work = second.value.work;
     if input.selected.id == first_id || input.selected.id == work.id { return refused("distinct work ID required"); }
@@ -88,7 +89,7 @@ flow more(input: WorkRequest, prior_request: string, previous: Previous, convers
     println(if high_input { "RESERVED high-input additional work: 7 calls, 188416 output tokens, 6000000 configured native tokens; interruption leaves this work unresolved." } else { if wide { "RESERVED additional work: 7 calls, 286720 output tokens, 2811008 configured native tokens; interruption leaves this work unresolved." } else { "RESERVED additional work: 7 calls, 51200 output tokens, 1335296 configured native tokens; interruption leaves this work unresolved." } });
     let stages = HistoryStages { prior_request = prior_request, previous = previous, conversation = conversation, prior_work = prior, wide = wide, high_input = high_input, historical = false };
     let persistence = ContinuousPersistence { ticket = ticket, redaction = policy };
-    return execute<HistoryStages, Stored, Stored, ContinuousPersistence, NativeWorkEditor, EventWorkTimeline, TerminalWorkOutput>(stages, persistence, native_editor(), event_timeline(), TerminalWorkOutput {}, input, Run { redaction = policy, binding = binding, wide = wide, high_input = high_input, saved = "SAVED additional work facts" });
+    return execute<HistoryStages, Stored, Stored, ContinuousPersistence, NativeWorkEditor, EventWorkTimeline, TerminalWorkOutput>(stages, persistence, native_editor(), event_timeline(chat), TerminalWorkOutput {}, input, Run { redaction = policy, binding = binding, wide = wide, high_input = high_input, saved = "SAVED additional work facts" });
 }
 
 // Current roots and current approval are supplied by this invocation. Saved
@@ -107,7 +108,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
     let first_work = match inspect_first_work(policy, binding) { Ok(Some(value)) => value, _ => { return refused("completed first work required"); } };
     if first_work.value.work.phase != "complete" && first_work.value.work.phase != "abandoned" { return refused("first work unresolved"); }
     match load_followup(policy, binding) {
-        Ok(Some(_)) => { return more(input, history.value.chat.last_request, history.value.chat.invocation.prior, conversation, first_work.value.work.id, parsed.digest, policy, binding, history.value.chat.format >= 13, history.value.chat.format == 18); }
+        Ok(Some(_)) => { return more(input, history.value.chat.last_request, history.value.chat.invocation.prior, conversation, history, first_work.value.work.id, parsed.digest, policy, binding, history.value.chat.format >= 13, history.value.chat.format == 18); }
         Ok(None()) => {}
         Err(error) => { return refused(error); }
     }
@@ -143,7 +144,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
     let high_input = ticket.frame.work.format == 9;
     let stages = HistoryStages { prior_request = prior_request, previous = previous, conversation = conversation, prior_work = prior_work, wide = wide || high_input, high_input = high_input, historical = false };
     let persistence = FollowupPersistence { ticket = ticket, redaction = policy, binding = binding };
-    return execute<HistoryStages, EditTicket, bool, FollowupPersistence, NativeWorkEditor, EventWorkTimeline, TerminalWorkOutput>(stages, persistence, native_editor(), event_timeline(), TerminalWorkOutput {}, input, Run { redaction = policy, binding = binding, wide = wide || high_input, high_input = high_input, saved = "SAVED event followup facts; no grant or root identity is persisted." });
+    return execute<HistoryStages, EditTicket, bool, FollowupPersistence, NativeWorkEditor, EventWorkTimeline, TerminalWorkOutput>(stages, persistence, native_editor(), event_timeline(history), TerminalWorkOutput {}, input, Run { redaction = policy, binding = binding, wide = wide || high_input, high_input = high_input, saved = "SAVED event followup facts; no grant or root identity is persisted." });
 }
 
 public flow abandon(args: Array<string>) -> i32 ![Console, Memory, Fs.read<PolicyRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {

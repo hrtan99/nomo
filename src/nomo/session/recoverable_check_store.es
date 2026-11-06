@@ -26,7 +26,7 @@ impl FirstCheckAdapter ~ CheckAccess {
         return if edit.phase == "completed" { "" } else { "completed edit required" };
     }
 }
-public flow load(policy: Policy, binding: string) -> Result<Option<MemoryEntry<string, Frame>>, string> {
+public flow load(policy: Policy, binding: string) -> Result<Option<MemoryEntry<string, Frame>>, string> ![Memory, Error<StorageError>, Error<IndexError>] {
     return load_rows(get_entry(Checks.Rows, "check"), FirstCheckAdapter { redaction = policy, binding = binding }, policy, binding);
 }
 public flow plan(ticket: Ticket, digest: string, policy: Policy, binding: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
