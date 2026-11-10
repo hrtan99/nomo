@@ -1,0 +1,25 @@
+{
+  "date": "2026-11-11",
+  "compiler_config": "config/etas-latest-main.json",
+  "binary": {
+    "sha256": "fb3e472c80a3b3e33829e47f22188ea6513cc708a040f9845774eb6d42f7211e",
+    "version": "etas 0.12.1"
+  },
+  "status": "designed_representation_difference_observed",
+  "compiler_bug_claim": false,
+  "public_issue": null,
+  "evidence_directory": "/private/tmp/nomo-json-object-api-0121",
+  "stdout": "CLOSED_RECORD 7\nJSON_OBJECT_MAP_UNAVAILABLE\n",
+  "trace_outcome": "completed",
+  "artifacts_sha256": {
+    "stdout.txt": "f3698d6c832b3ed5e8ac9121d7ba5982c307f09df3fe27ac602dcf97dadc864a",
+    "stderr.txt": "4091aa67b161356028edbb8b6a6d3999a60f61d24dacd1377f7934d8131787ed",
+    "trace.json": "996bcf53faaa239a1ef62b257bd21faf4538060d15c9a95b8a7a7e830271517a"
+  },
+  "source_sha256": {
+    "examples/repros/json-object-access-0.12.1/src/app/main.es": "41a1a82bd2e6ca5e7cab0b2cce572f2df5c5c916854c402ae29f53ffcdf0b167",
+    "examples/repros/json-object-access-0.12.1/etas.toml": "08f94fa94174d87a66e59f1521b592e96e1320a622940f45bc641b7f65b51aba",
+    "examples/repros/json-object-access-0.12.1/etas.lock": "45ee9c0f3b729e180ccba519d5fc9259eb25c2562c6276f0cd6cb7706b5fa54a"
+  },
+  "application_contract": "Generic entry-array codec plus native typed entry projection; all Nomo field/default/policy decisions stay in Etas"
+}

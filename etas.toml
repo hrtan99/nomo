@@ -967,7 +967,7 @@ root = "/project"
 read = true
 write = true
 [runtime.profiles.nomo-native.command]
-allow = ["/usr/bin/git", "/usr/bin/python3", "/bin/sh", "/bin/cp", "/bin/mkdir", "/bin/rm", "/bin/mv", "/usr/bin/diff", "/usr/bin/rg"]
+allow = ["/usr/bin/git", "/usr/bin/python3", "/bin/sh", "/bin/cp", "/bin/mkdir", "/bin/rm", "/bin/mv", "/usr/bin/diff", "/usr/bin/rg", "/usr/bin/jq", "/home/nomo/.cargo/nomo-native-tools/taplo-0.10.0/bin/taplo"]
 isolation = "trusted-unconfined"
 [runtime.profiles.nomo-native.policy]
 mode = "local-static"

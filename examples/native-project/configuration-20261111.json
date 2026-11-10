@@ -1,0 +1,200 @@
+{
+  "date": "2026-11-11",
+  "compiler_config": "config/etas-latest-main.json",
+  "tool_identities": {
+    "/home/nomo/.cargo/bin/etas": {
+      "sha256": "fb3e472c80a3b3e33829e47f22188ea6513cc708a040f9845774eb6d42f7211e",
+      "version": "etas 0.12.1"
+    },
+    "/home/nomo/.cargo/nomo-native-tools/taplo-0.10.0/bin/taplo": {
+      "sha256": "eb13b6e283bb02d92294c20ad8ff5b3c0c63506e60e9bd921a73956966ec69dd",
+      "version": "taplo 0.10.0"
+    },
+    "/usr/bin/jq": {
+      "sha256": "7795412e97a7bee761a2291ea06f61a3a786d27c4dfd385c4ab0147a5c778a36",
+      "version": "jq-1.8.1"
+    }
+  },
+  "functional_status": "passed_in_recorded_scopes",
+  "approval_status": "failed on etas-interpreter#102",
+  "probe_exit_code": 1,
+  "evidence_directory": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-configuration-7um1s3g9",
+  "observed": {
+    "functional_status": "passed",
+    "model_http_requests": 5,
+    "native_command_dispatches": 4,
+    "restored_command_dispatches": 0,
+    "configuration": {
+      "command_timeout_active": false,
+      "context_window_is_estimate": true,
+      "effective_context_window": 400000.0,
+      "requested": {
+        "check": [
+          "python3",
+          "-c",
+          "print('configured check passed')"
+        ],
+        "command_timeout": 7.0,
+        "compact_ratio": 0.6,
+        "context_window": 400000.0,
+        "ignore": [
+          "generated/**"
+        ],
+        "instructions": [
+          "Follow the configured coding style.",
+          "Keep caf\u00e9 characters and\nscoped guidance."
+        ],
+        "keep_messages": 2.0,
+        "max_output_tokens": 131072.0
+      },
+      "runtime_context_tokens": 1048576.0,
+      "runtime_output_tokens": 131072.0
+    },
+    "changed_command_dispatches": 2,
+    "changed_configuration": {
+      "command_timeout_active": false,
+      "context_window_is_estimate": true,
+      "effective_context_window": 1048576.0,
+      "requested": {
+        "check": [],
+        "command_timeout": 600.0,
+        "compact_ratio": 0.75,
+        "context_window": 1048576.0,
+        "ignore": [],
+        "instructions": [
+          "Updated configured style."
+        ],
+        "keep_messages": 12.0,
+        "max_output_tokens": 131072.0
+      },
+      "runtime_context_tokens": 1048576.0,
+      "runtime_output_tokens": 131072.0
+    },
+    "status": {
+      "first_user": 0.0,
+      "id": "native-0",
+      "ledger": {
+        "compactions": 1.0,
+        "context_bytes": 4485.0,
+        "generation_allowance": 163840.0,
+        "tools": 4.0,
+        "turns": 1.0
+      },
+      "next_event": 11.0,
+      "pending": "",
+      "summary_event": 10.0,
+      "summary_through": 7.0,
+      "title": "New conversation",
+      "workspace": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-configuration-7um1s3g9/project"
+    },
+    "approval_audit": [
+      {
+        "request": 68,
+        "action": "Command.run",
+        "authority": {
+          "active_trace_specs": [],
+          "approval_count": 0,
+          "grant_count": 13
+        },
+        "approval": 10000069
+      },
+      {
+        "request": 122,
+        "action": "Command.run",
+        "authority": {
+          "active_trace_specs": [],
+          "approval_count": 1,
+          "grant_count": 13
+        },
+        "approval": 10000123
+      },
+      {
+        "request": 233,
+        "action": "Command.run",
+        "authority": {
+          "active_trace_specs": [],
+          "approval_count": 2,
+          "grant_count": 13
+        },
+        "approval": 10000234
+      },
+      {
+        "request": 290,
+        "action": "Command.run",
+        "authority": {
+          "active_trace_specs": [],
+          "approval_count": 3,
+          "grant_count": 13
+        },
+        "approval": 10000291
+      },
+      {
+        "request": 54,
+        "action": "Command.run",
+        "authority": {
+          "active_trace_specs": [],
+          "approval_count": 0,
+          "grant_count": 13
+        },
+        "approval": 10000055
+      },
+      {
+        "request": 108,
+        "action": "Command.run",
+        "authority": {
+          "active_trace_specs": [],
+          "approval_count": 1,
+          "grant_count": 13
+        },
+        "approval": 10000109
+      }
+    ]
+  },
+  "source_sha256": {
+    "src/nomo/native/configuration.es": "c99e697c5adf27c6e95f127e0c49a0d5448b7528f0350dba36bf0558d4050ce1",
+    "src/nomo/native/context.es": "cd1d1635e9fa827551cab4a5ab2371491b2fff08590449601e724c6aa85a54b1",
+    "src/nomo/native/entry.es": "82763dac4ba8bb85736c2223e07357042a70ba5b632310d196eea95348ce6185",
+    "src/nomo/native/navigation.es": "8e8af65350efb3ac464cfd55755eea2124a7925a3803334736507794099b50da",
+    "src/nomo/native/terminal.es": "0f51f7579313cfe762216fcf397d08365794ef7de19e0afe48b238fa289a6ed5",
+    "src/nomo/native/agent.es": "82782b36696a5d77e75f545ce713bb2d596c31e54d7ba53b44b4758388083288",
+    "src/nomo/native/workspace.es": "2bafa765bae136e13379960cad5ef78b29ff89ca6e25c9ebf787c445102928f6",
+    "src/nomo/native/lifecycle.es": "1e7dd5e165e81cc64fae39c3cd430f387373e45c3af14f63606c5a2b9079a1c7",
+    "etas.toml": "b1c138ba53eb4a6a356a458d145ba2df1612df811862fdb50ca94a4d30cb5250",
+    "config/native-tools.json": "5c17a12b60284ea787c5cb8c285fbfaa52e2d3c023bf722fbfe40fc04b6716df",
+    "scripts/nomo-native-tools.sh": "073a458bfc7d0a6a63f43d69c844fcd8dbca1f7a7bb019a10a8244d3335b0ebb",
+    "tests/native_configuration_probe.py": "ad4e2231039e95b872829f3bb4b0900fa485f4aafcb11e1436f9e3066525f708"
+  },
+  "artifacts_sha256": {
+    "restored-stdout.txt": "5d95e3dba38c2f768c38bc03a5ae502f02e9a5e098bf7f6a0c3e261dd364eabd",
+    "terminal.txt": "ef425593ed6b74c8da28af75048d88117db03e8a738bf717bdbfb309abb5851b",
+    "restored-stderr.txt": "07b86686209b24a4618eebd6d5623e4fa1bb831709c358f6b7132da87b568460",
+    "changed-terminal.txt": "9097a8de6f4d60731a2d623bc644d5c89e5a493f44a9ffad02e0c168d069a6e5",
+    "request-0.json": "e2a606583574fee917b3cb5a8219945f31df1f12f68b5581acad4abe4248b623",
+    "request-1.json": "c2684d1c98784a0e5a0e88f980977bc5c8915868120988530eef2cb082461775",
+    "request-4.json": "12a9d9a1f483bdb4d441630349a1142e12e285c877f9369508a4eb2793e1c55a",
+    "functional.json": "b1c4f814cf3fb935de386cc032f28bbc018849d9536b43ef53b407f52910266a",
+    "request-2.json": "e73431bfde144c765460dadaaf582e270f15e004fc27fa39a75dd26b4e19de43",
+    "request-3.json": "1b4bd7886c02f8b0d7c88a2498cf1db97f0aefcf859aaf00a02bca3592479cd2",
+    "native/changed.json": "f97182bf089b0087c908275f1e7dd54f9eff0f1395de770604c86d4215547258",
+    "native/trace.json": "8bae476f0e79793b33e8f7fbb10473d2dd1e22bebd4435728cac914074d736be",
+    "native/restored.json": "1cd12b1410d0b2f8fbfda285ade4e30443449e00780c6a906a00355ae8db9001"
+  },
+  "executed": [
+    "Original TOML optional project table, numeric underscores and multiline Unicode strings",
+    "Exact native argv/stdin approval for generic Taplo and jq codecs; no Nomo policy in codec arguments",
+    "Etas-selected instructions were visible in actual native model requests",
+    "Configured ignore glob affected actual native ripgrep output",
+    "Configured check argv executed through native Command Host and returned its actual result to inference",
+    "Configured recent-message count affected the restored model projection after native summary",
+    "New process reused cached native configuration without another codec command",
+    "Valid changed root configuration without a project table applied defaults and ignored an unrelated table",
+    "The changed content caused two new codec dispatches; the unchanged restored content caused zero",
+    "All five HTTP responses used a local synthetic model, not paid provider credentials"
+  ],
+  "limitations": [
+    "Context settings govern text-estimate admission/projection; the runtime ceiling remains static",
+    "Arbitrary per-call generation limits are not implemented; other requested coding output values are not submitted",
+    "command_timeout is retained but explicitly inactive until retained native jobs exist",
+    "Large context acceptance remains blocked by #101; full native workflow remains blocked by #79 and approval #102"
+  ]
+}

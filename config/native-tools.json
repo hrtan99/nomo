@@ -1,0 +1,18 @@
+{
+  "taplo": {
+    "crate": "taplo-cli",
+    "version": "0.10.0",
+    "features": [],
+    "default_features": false,
+    "locked": true,
+    "root": "/home/nomo/.cargo/nomo-native-tools/taplo-0.10.0",
+    "purpose": "Generic TOML-to-JSON conversion only; Nomo configuration decisions remain in Etas",
+    "documentation": "https://taplo.tamasfe.dev/cli/usage/conversion-and-extraction.html"
+  },
+  "jq": {
+    "program": "/usr/bin/jq",
+    "provided_by": "existing Nomo container image",
+    "filter": "walk(if type == \"object\" then to_entries else . end)",
+    "purpose": "Generic data representation conversion only; no Nomo field names, defaults, validation or scheduling"
+  }
+}

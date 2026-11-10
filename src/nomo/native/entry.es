@@ -15,6 +15,20 @@ import nomo.native.mutations.{journals, undo_changes, rollback_changes, reconcil
 import nomo.native.files.read_file;
 import nomo.native.navigation.{find_files, search_project};
 import nomo.native.lifecycle.{attempts, begin, dispatching, returned, complete_attempt, resolve};
+import nomo.native.configuration.{Settings, SettingsContext, load as load_configuration, status as configuration_status, effective_window, as_number, estimated_tokens};
+import nomo.native.terminal.check_project;
+
+flow load_settings(session: string) -> Settings {
+    return handle { load_configuration() } with { SessionContext.current() => { resume session; } };
+}
+
+flow generation_supported(settings: Settings) -> bool {
+    if settings.max_output_tokens != 131072 {
+        println("[CONFIG ] This native runtime has a static 131072 output cap. The requested max_output_tokens needs an upstream per-call limit API; no model request was submitted.");
+        return false;
+    }
+    return true;
+}
 
 flow ready_for_turn(session: string) -> bool {
     for value in attempts(session, true) limit Iterations(2147483647) {
@@ -27,13 +41,14 @@ flow ready_for_turn(session: string) -> bool {
 }
 
 flow navigation_command(session: string, operation: string, argument: string) -> unit {
+    let settings = load_settings(session);
     let result = handle {
         match operation {
             "tree" => find_files(argument, "", 3),
             "glob" => find_files(".", argument, 0),
             _ => search_project(".", argument, true)
         }
-    } with { SessionContext.current() => { resume session; } };
+    } with { SessionContext.current() => { resume session; } SettingsContext.current() => { resume settings; } };
     println(result.stdout);
     if result.stderr != "" { println(result.stderr); }
     if result.exit_code > 1 { println("[ERROR  ] Project discovery exited " + from_i32(result.exit_code)); }
@@ -57,18 +72,25 @@ flow ask(session: string, request: string) -> bool {
     if !ready_for_turn(session) { return false; }
     let archive = NativeHistory {};
     let request_event = archive.append(session, "user", "", request, -1);
+    let settings = load_settings(session);
+    if !generation_supported(settings) { return false; }
     let projection = RollingContext {};
-    var input = projection.build(session, request);
+    var input = projection.build(session, request, settings);
     if projection.needs_compaction(input) {
         println("[CONTEXT] Summarizing; complete original history stays saved.");
-        compact(session);
-        input = projection.build(session, request);
+        compact(session, settings);
+        input = projection.build(session, request, settings);
+    }
+    if estimated_tokens(projection.bytes(input)) > as_number(effective_window(settings) - settings.max_output_tokens) {
+        println("[CONTEXT] Saved summary and retained input still exceed the configured context estimate. No coding model request was submitted; complete original history remains saved.");
+        return false;
     }
     reserve_generation(session, false, projection.bytes(input));
     let attempt = begin(session, "coding", "NativeCoding", request_event, archive.load(session).next_event - 1);
     dispatching(attempt.id);
     let answer = handle { NativeCoding.run(input) } with {
         SessionContext.current() => { resume session; }
+        SettingsContext.current() => { resume settings; }
     };
     returned(attempt.id, "assistant", "", answer.text, request_event);
     complete_attempt(attempt.id);
@@ -151,7 +173,7 @@ public flow run(args: Array<string>) -> i32
         if request == "" { continue; }
         if request == "/help" {
             println("Ask about the project; native tools provide recursive/glob discovery, literal/regex search, file reads, approved editing and Git operations.");
-            println("/new [TITLE], /sessions, /resume ID, /rename TITLE, /history [TEXT], /page EVENT, /fork [EVENT], /export FILE, /import FILE, /copies, /resume-copy ID, /discard-copy ID, /runs, /resolve-run ID [NOTE], /compact, /status, /tree [PATH], /glob PATTERN, /search REGEX, /read FILE, /edits, /undo [EDIT], /rollback EDIT, /recover EDIT, /quit");
+            println("/new [TITLE], /sessions, /resume ID, /rename TITLE, /history [TEXT], /page EVENT, /fork [EVENT], /export FILE, /import FILE, /copies, /resume-copy ID, /discard-copy ID, /runs, /resolve-run ID [NOTE], /config, /check, /compact, /status, /tree [PATH], /glob PATTERN, /search REGEX, /read FILE, /edits, /undo [EDIT], /rollback EDIT, /recover EDIT, /quit");
             continue;
         }
         if request == "/tree" { navigation_command(selected.id, "tree", "."); continue; }
@@ -231,7 +253,28 @@ public flow run(args: Array<string>) -> i32
             None() => {}
         }
         if request == "/compact" {
-            if ready_for_turn(selected.id) { compact(selected.id); println("[CONTEXT] Summary saved; full original events retained."); }
+            if ready_for_turn(selected.id) {
+                let settings = load_settings(selected.id);
+                if generation_supported(settings) { compact(selected.id, settings); println("[CONTEXT] Summary saved; full original events retained."); }
+            }
+            continue;
+        }
+        if request == "/config" {
+            let value = configuration_status(load_settings(selected.id));
+            let text = match encode(value, "configuration conversion failed", "configuration encoding failed") { Ok(value) => value, Err(error) => { abort(error); } };
+            println("[CONFIG ] " + text);
+            println("[CONFIG ] Context policy uses text estimates. Runtime token ceilings are static; command_timeout needs retained native jobs and is not active.");
+            continue;
+        }
+        if request == "/check" {
+            let settings = load_settings(selected.id);
+            let session = selected.id;
+            let value = handle { check_project() } with {
+                SessionContext.current() => { resume session; }
+                SettingsContext.current() => { resume settings; }
+            };
+            let text = match encode(value, "check conversion failed", "check encoding failed") { Ok(value) => value, Err(error) => { abort(error); } };
+            println("[CHECK  ] " + text);
             continue;
         }
         if request == "/status" {

@@ -8,6 +8,7 @@ import std.io.IOError as ConsoleError;
 import nomo.native.workspace.{ProjectRoot, CommandOutput, execute_readonly};
 import nomo.native.files.read_text;
 import nomo.native.history.{SessionContext, observe_started, observe_finished};
+import nomo.native.configuration.SettingsContext;
 
 type Metadata = { is_file: bool, is_dir: bool, len: u64 };
 public type PathInfo = { path: string, is_file: bool, is_dir: bool, bytes: u64 };
@@ -69,12 +70,15 @@ flow discovery_arguments() -> Array<string> {
 }
 
 flow exclude_internal(arguments: Array<string>) -> Array<string> {
-    return arguments.push("--glob").push("!**/.git/**").push("--glob").push("!**/.nomo/**");
+    let settings = perform SettingsContext.current();
+    var selected = arguments;
+    for pattern in settings.ignore limit Iterations(2147483647) { selected = selected.push("--glob").push("!" + pattern); }
+    return selected.push("--glob").push("!**/.git/**").push("--glob").push("!**/.nomo/**");
 }
 
 /// Discover files recursively with ripgrep's glob syntax and ignore rules. Empty glob uses normal ignore rules; an explicit glob has ripgrep's usual override precedence. depth=0 is unlimited. Exit 1 means no matches.
 public tool find_files(pathname: string, glob: string, depth: i32) -> CommandOutput
-    ![SessionContext, Memory, Command.run<DefaultCommandSandbox>, Console, Error<StorageError>, Error<MemoryConflict>, Error<ConsoleError>] {
+    ![SessionContext, SettingsContext, Memory, Command.run<DefaultCommandSandbox>, Console, Error<StorageError>, Error<MemoryConflict>, Error<ConsoleError>] {
     var arguments = discovery_arguments().push("--files").push("--sort").push("path");
     if glob != "" { arguments = arguments.push("--glob").push(glob); }
     if depth > 0 { arguments = arguments.push("--max-depth").push(from_i32(depth)); }
@@ -84,7 +88,7 @@ public tool find_files(pathname: string, glob: string, depth: i32) -> CommandOut
 
 /// Search a file or directory recursively. regex=true uses ripgrep regular expressions; false searches literal text. Results include actual path and line numbers. Exit 1 means no matches; exit 2 reports an error.
 public tool search_project(pathname: string, pattern: string, regex: bool) -> CommandOutput
-    ![SessionContext, Memory, Command.run<DefaultCommandSandbox>, Console, Error<StorageError>, Error<MemoryConflict>, Error<ConsoleError>] {
+    ![SessionContext, SettingsContext, Memory, Command.run<DefaultCommandSandbox>, Console, Error<StorageError>, Error<MemoryConflict>, Error<ConsoleError>] {
     var arguments = discovery_arguments().push("--line-number").push("--with-filename").push("--no-heading").push("--sort").push("path");
     if !regex { arguments = arguments.push("--fixed-strings"); }
     arguments = exclude_internal(arguments).push("--").push(pattern).push(relative_name(location(pathname)));
