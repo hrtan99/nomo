@@ -1,0 +1,17 @@
+services:
+  dev:
+    network_mode: bridge
+    environment:
+      ETAS_HOST_MODEL_API_KEY: "${MINIMAX_API_KEY:?set MINIMAX_API_KEY}"
+      ETAS_HOST_MODEL_REQUEST_DEADLINE_MS: "${NOMO_MODEL_REQUEST_DEADLINE_MS:-600000}"
+      ETAS_HOST_MODEL_BASE_URL: "${NOMO_MODEL_BASE_URL:-https://api.minimax.cn/v1}"
+      ETAS_HOST_MODEL_ALLOW_PRIVATE: "${NOMO_MODEL_ALLOW_PRIVATE:-false}"
+      ETAS_HOST_APPROVAL: "deny"
+      NOMO_REASONING_EFFORT: "${NOMO_REASONING_EFFORT:-medium}"
+    volumes:
+      - type: bind
+        source: "${NOMO_PROJECT_REQUEST:?select model request directory}"
+        target: /project-request
+        read_only: true
+        bind:
+          create_host_path: false

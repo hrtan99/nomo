@@ -1008,3 +1008,34 @@ name = "nomo-history-events-work"
 module = "nomo.main"
 flow = "recoverable_history_work"
 profile = "nomo-history-events-work"
+
+[runtime.profiles.nomo-project]
+boundary_policy = "nomo-project"
+[runtime.profiles.nomo-project.model]
+adapter = "openai"
+model = "MiniMax-M3.1-Flash"
+base_url = "https://api.minimax.cn/v1"
+api_key_env = "MINIMAX_API_KEY"
+allow_private = false
+typed_output_encoding = "output-tool"
+[runtime.profiles.nomo-project.model.timeout]
+request_deadline_ms = 600000
+connect_timeout_ms = 10000
+[runtime.profiles.nomo-project.model.retry]
+attempts = 1
+delay_ms = 0
+[runtime.profiles.nomo-project.filesystem.regions."nomo.project.entry.RequestRoot"]
+root = "/project-request"
+read = true
+write = false
+[runtime.profiles.nomo-project.policy]
+mode = "local-static"
+rules = ["console=allow", "model=allow", "filesystem:Fs.read=allow"]
+[runtime.profiles.nomo-project.approval]
+mode = "deny"
+
+[[bin]]
+name = "nomo-project"
+module = "nomo.main"
+flow = "project_agent"
+profile = "nomo-project"

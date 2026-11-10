@@ -53,12 +53,15 @@ import nomo.entry.terminal_entry.run_once as terminal_once_run;
 import nomo.entry.terminal_help.help as terminal_help_run;
 import nomo.entry.work_chain_sessions.{run_sessions as chain_sessions_run, run_show as chain_show_run};
 import nomo.entry.user_context_entry.run as user_context_new_run;
+import nomo.project.entry.run as project_run;
 
 // The runtime returns i32 as data; every command uses this same OS-failure boundary.
 flow completed(status: i32, message: string) -> i32 {
     if status != 0 { abort(message); }
     return status;
 }
+
+flow project_agent(args: Array<string>) -> i32 { return completed(project_run(args), "Nomo project worker stopped"); }
 
 flow terminal(args: Array<string>) -> i32 {
     return completed(terminal_run(args), "Nomo terminal stopped; inspect current journal and work state");
