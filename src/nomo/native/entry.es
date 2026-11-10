@@ -1,7 +1,7 @@
 module nomo.native.entry;
 
 import std.io.{println, print, read_line};
-import std.text.{trim, strip_prefix, contains, parse_i64, from_i64};
+import std.text.{trim, strip_prefix, contains, parse_i64, from_i64, from_i32};
 import nomo.native.agent.NativeCoding;
 import nomo.native.workspace.ProjectRoot;
 import std.effects.Fs;
@@ -13,6 +13,20 @@ import nomo.native.context.{RollingContext, ContextProjection, compact};
 import nomo.native.transfer.{save_archive, load_archive};
 import nomo.native.mutations.{journals, undo_changes, rollback_changes, reconcile_changes};
 import nomo.native.files.read_file;
+import nomo.native.navigation.{find_files, search_project};
+
+flow navigation_command(session: string, operation: string, argument: string) -> unit {
+    let result = handle {
+        match operation {
+            "tree" => find_files(argument, "", 3),
+            "glob" => find_files(".", argument, 0),
+            _ => search_project(".", argument, true)
+        }
+    } with { SessionContext.current() => { resume session; } };
+    println(result.stdout);
+    if result.stderr != "" { println(result.stderr); }
+    if result.exit_code > 1 { println("[ERROR  ] Project discovery exited " + from_i32(result.exit_code)); }
+}
 
 flow show(value: Session) -> unit {
     println("[SESSION] " + value.id + " · " + value.title);
@@ -108,10 +122,14 @@ public flow run(args: Array<string>) -> i32
         if request == "/quit" || request == "/exit" { return 0; }
         if request == "" { continue; }
         if request == "/help" {
-            println("Ask about the project; native tools provide directory listing, metadata, literal search, file reads, approved editing and Git operations.");
-            println("/new [TITLE], /sessions, /resume ID, /rename TITLE, /history [TEXT], /page EVENT, /fork [EVENT], /export FILE, /import FILE, /compact, /status, /read FILE, /edits, /undo [EDIT], /rollback EDIT, /recover EDIT, /quit");
+            println("Ask about the project; native tools provide recursive/glob discovery, literal/regex search, file reads, approved editing and Git operations.");
+            println("/new [TITLE], /sessions, /resume ID, /rename TITLE, /history [TEXT], /page EVENT, /fork [EVENT], /export FILE, /import FILE, /compact, /status, /tree [PATH], /glob PATTERN, /search REGEX, /read FILE, /edits, /undo [EDIT], /rollback EDIT, /recover EDIT, /quit");
             continue;
         }
+        if request == "/tree" { navigation_command(selected.id, "tree", "."); continue; }
+        match strip_prefix(request, "/tree ") { Some(pathname) => { navigation_command(selected.id, "tree", trim(pathname)); continue; } None() => {} }
+        match strip_prefix(request, "/glob ") { Some(pattern) => { navigation_command(selected.id, "glob", trim(pattern)); continue; } None() => {} }
+        match strip_prefix(request, "/search ") { Some(pattern) => { navigation_command(selected.id, "search", trim(pattern)); continue; } None() => {} }
         if request == "/history" || request == "/events" { show_history(selected.id, "", 0, -1); continue; }
         match strip_prefix(request, "/history ") {
             Some(query) => { show_history(selected.id, trim(query), 0, -1); continue; } None() => {}

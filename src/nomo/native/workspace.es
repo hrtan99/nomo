@@ -5,7 +5,7 @@ import std.host.command.{command, with_cwd, run};
 import std.codec.text.{utf8_decode, Replace};
 import std.io.{println, IOError};
 import nomo.core.json.encode;
-import nomo.native.history.{SessionContext, record, tool_finished};
+import nomo.native.history.{SessionContext, record, tool_finished, observe_started, observe_finished};
 
 public type ProjectRoot;
 impl ProjectRoot ~ Region;
@@ -20,21 +20,36 @@ flow text(value: bytes) -> string {
     };
 }
 
-public flow execute(program: string, arguments: Array<string>) -> CommandOutput
-    ![SessionContext, Memory, Command.run<DefaultCommandSandbox>, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>] {
+flow dispatch(program: string, arguments: Array<string>) -> CommandOutput {
     let root = match path<ProjectRoot>(".") {
         Ok(value) => value,
         Err(_) => { abort("project root is unavailable"); }
     };
     let request = CommandPreview { program = program, arguments = arguments };
-    let call = record("tool_call", "command", request, -1);
     let preview = match encode(request, "command preview conversion failed", "command preview encoding failed") {
         Ok(value) => value, Err(error) => { abort(error); }
     };
     println("[COMMAND] " + preview);
     let result = run(with_cwd(command(program, arguments), root), DefaultCommandSandbox);
     let output = CommandOutput { exit_code = result.exit_code, stdout = text(result.stdout), stderr = text(result.stderr) };
+    return output;
+}
+
+public flow execute(program: string, arguments: Array<string>) -> CommandOutput
+    ![SessionContext, Memory, Command.run<DefaultCommandSandbox>, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>] {
+    let call = record("tool_call", "command", CommandPreview { program = program, arguments = arguments }, -1);
+    let output = dispatch(program, arguments);
     tool_finished("command", call, output);
+    return output;
+}
+
+// Observations can inspect an interrupted operation without replacing its ticket.
+// This does not change the Command Host's per-operation approval policy.
+public flow execute_readonly(name: string, program: string, arguments: Array<string>) -> CommandOutput
+    ![SessionContext, Memory, Command.run<DefaultCommandSandbox>, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>] {
+    let call = observe_started(name, CommandPreview { program = program, arguments = arguments });
+    let output = dispatch(program, arguments);
+    observe_finished(name, call, output);
     return output;
 }
 
@@ -44,13 +59,7 @@ public flow execute_step(program: string, arguments: Array<string>, parent: i64)
     ![SessionContext, Memory, Command.run<DefaultCommandSandbox>, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>] {
     let request = CommandPreview { program = program, arguments = arguments };
     record("operation", "command", request, parent);
-    let preview = match encode(request, "command preview conversion failed", "command preview encoding failed") {
-        Ok(value) => value, Err(error) => { abort(error); }
-    };
-    println("[COMMAND] " + preview);
-    let root = match path<ProjectRoot>(".") { Ok(value) => value, Err(_) => { abort("project root is unavailable"); } };
-    let result = run(with_cwd(command(program, arguments), root), DefaultCommandSandbox);
-    let output = CommandOutput { exit_code = result.exit_code, stdout = text(result.stdout), stderr = text(result.stderr) };
+    let output = dispatch(program, arguments);
     record("operation_result", "command", output, parent);
     return output;
 }

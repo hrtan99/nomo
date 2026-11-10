@@ -1,0 +1,65 @@
+{
+  "date": "2026-11-11",
+  "compiler_config": "config/etas-latest-main.json",
+  "compiler_config_sha256": "9bfa9bd247fc148d05a5e6403947eadc76d78b8288a50c5425b799e2f7512024",
+  "evidence_directory": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-navigation-n7p_l5lg",
+  "functional_status": "passed",
+  "approval_audit_status": "failed",
+  "approval_dependency": "https://github.com/etas-project/etas-interpreter/issues/102",
+  "probe_exit_code": 1,
+  "model_http_requests": 5,
+  "native_command_approvals": 3,
+  "measured_provider_usage": false,
+  "source_sha256": {
+    "src/nomo/native/agent.es": "eb8c5fcbec7fc39828386ab5369e72844795c2d928bb4eceaaa2035f1d6a6642",
+    "src/nomo/native/entry.es": "52525525a441824173ab7bee744f94dccabc47d1e4f7ef3dc4b19e7f9f4522b1",
+    "src/nomo/native/navigation.es": "99a394444c6ac0cf4f6e1e006f6c8a3630c9dd490fbc8aa8820e1ed456a8f094",
+    "src/nomo/native/workspace.es": "be210d69032e76aca3f12cd6244b00d05c37649b7191b63df12cc84108e79d77",
+    "src/nomo/native/git.es": "baa4184a944be26ce7c9efc4ab5a9aa3f69f6f794e715f13f85909aa6b233fb9",
+    "src/nomo/native/history.es": "da9fffcbf5bba16542585cf13e8d132b9952f1e063e9024b8c53c3c57d5eaf4e",
+    "src/nomo/native/mutations.es": "c413389c448ee2ed5be8613c956f66499df3d44058c924f9f8fb201f05ec5391",
+    "etas.toml": "bc1422f448adb8908386fa9a0bad02ea737d577ef66cb51df11907107e7d5262",
+    "tests/native_navigation_probe.py": "417545fad0f352cf20129013fbe4ae290ac85aabce9af6764a213ab32333666a"
+  },
+  "artifacts_sha256": {
+    "terminal.txt": "4208cc5fc2e5a6ceba3d129c99107289b2de5ace9dd72cd7e2da10ea7f11733a",
+    "functional.json": "86591b435fda905376cc85d7b146a1c0fcbad66ad8a0241eb0973714211fd0ef",
+    "native/trace.json": "e004dd3f8087b4843ff981a6cef79dc27ba70c379f76de8741c1b8f2a20b513e",
+    "request-0.json": "ee9db6a07e503cd9347911b6e8bb1f8215ff544d6c6fd932380685c16f0ebff6",
+    "request-1.json": "04db3334faa3e34a35cd2ca4d94ee456749df49e0815bbfcfe98aeabfcfe131d",
+    "request-2.json": "7a2f68099e3771a2e5e11bcda9e1d48b397cdabc26942f1e8430ede327b61d11",
+    "request-3.json": "4fbc272c1e03fb6ced671f9452bf6a0e737c994d41e6a3382333c20e4ce645ac",
+    "request-4.json": "b1f62fe284cefdd9f656366a4a24153d1e8b85b547d76fe7bdc26a277fa8ee37"
+  },
+  "executed": [
+    "Native find_files recursively discovered files with ordinary .gitignore filtering",
+    "Native glob returned Python files, including explicit glob override precedence",
+    "Native regex search returned actual paths and one-based matching lines",
+    "Native read_file returned exact contents of a path containing a space",
+    "All results returned to subsequent native model inference and final answer",
+    "Three exact argv previews preceded three separately answered native Host prompts"
+  ],
+  "authority_observations": [
+    {
+      "request_id": 53,
+      "preceding_approval_count": 0,
+      "dispatch_approval_count": 0
+    },
+    {
+      "request_id": 80,
+      "preceding_approval_count": 1,
+      "dispatch_approval_count": 1
+    },
+    {
+      "request_id": 107,
+      "preceding_approval_count": 2,
+      "dispatch_approval_count": 2
+    }
+  ],
+  "limitations": [
+    "Approval provenance remains rejected at the unchanged strict audit (#102)",
+    "The five local synthetic HTTP replies are not paid MiniMax calls or real token usage",
+    "The /tree shortcut lists files to depth three, omitting empty directories",
+    "Full native end-to-end acceptance remains separately blocked by etas#79"
+  ]
+}

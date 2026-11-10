@@ -1,6 +1,6 @@
 module nomo.native.git;
 
-import nomo.native.workspace.{CommandOutput, execute};
+import nomo.native.workspace.{CommandOutput, execute, execute_readonly};
 import std.text.from_i32;
 import std.collections.len;
 import std.io.IOError;
@@ -8,7 +8,7 @@ import nomo.native.history.SessionContext;
 
 /// Read the current project's Git branch and working tree status.
 public tool git_status() -> CommandOutput ![SessionContext, Memory, Command.run<DefaultCommandSandbox>, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>] {
-    return execute("/usr/bin/git", ["--no-optional-locks", "-c", "core.fsmonitor=false", "status", "--short", "--branch"]);
+    return execute_readonly("git_status", "/usr/bin/git", ["--no-optional-locks", "-c", "core.fsmonitor=false", "status", "--short", "--branch"]);
 }
 
 /// Read the working-tree or staged diff, optionally restricted to exact paths.
@@ -18,18 +18,18 @@ public tool git_diff(staged: bool, paths: Array<string>) -> CommandOutput
     if staged { arguments = arguments.push("--cached"); }
     arguments = arguments.push("--");
     for pathname in paths limit Iterations(2147483647) { arguments = arguments.push(pathname); }
-    return execute("/usr/bin/git", arguments);
+    return execute_readonly("git_diff", "/usr/bin/git", arguments);
 }
 
 /// Read the most recent count commits.
 public tool git_log(count: i32) -> CommandOutput
     ![SessionContext, Memory, Command.run<DefaultCommandSandbox>, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>] {
-    return execute("/usr/bin/git", ["--no-optional-locks", "log", "--oneline", "-n", from_i32(count)]);
+    return execute_readonly("git_log", "/usr/bin/git", ["--no-optional-locks", "log", "--oneline", "-n", from_i32(count)]);
 }
 
 /// List local branches.
 public tool git_branches() -> CommandOutput ![SessionContext, Memory, Command.run<DefaultCommandSandbox>, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>] {
-    return execute("/usr/bin/git", ["--no-optional-locks", "branch", "--list"]);
+    return execute_readonly("git_branches", "/usr/bin/git", ["--no-optional-locks", "branch", "--list"]);
 }
 
 /// Initialize this project as a Git repository after native Host approval.
