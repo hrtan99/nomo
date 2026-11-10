@@ -1,4 +1,4 @@
-"""Native discovery -> glob -> regex -> read -> model result; synthetic HTTP only."""
+"""Native discovery -> glob -> regex -> scoped instructions -> read -> result."""
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 import json
@@ -28,6 +28,7 @@ class Model(BaseHTTPRequestHandler):
         index = len(self.server.requests)
         self.server.requests.append(request)
         (self.server.evidence / f'request-{index}.json').write_text(json.dumps(request, indent=2))
+        assert 'ROOT native project rule' in json.dumps(request['messages'])
         if index:
             result = json.loads(next(item['content'] for item in reversed(request['messages']) if item['role'] == 'tool'))
             if index < 4:
@@ -43,14 +44,20 @@ class Model(BaseHTTPRequestHandler):
                     assert 'docs/page.html' not in output, result
                 else:
                     assert 'src/with space.py:2:Pelican cycles' in output and 'docs/page.html:1:Pelican rides' in output, result
+            elif index == 4:
+                assert [item['path'] for item in result] == ['AGENTS.md', 'src/AGENTS.md'], result
+                assert [item['scope'] for item in result] == ['.', 'src'], result
+                assert result[1]['text'] == 'NESTED native project rule\n', result
             else:
                 assert result['text'] == '# Synthetic project\nPelican cycles\n', result
+                assert [item['path'] for item in result['instructions']] == ['AGENTS.md', 'src/AGENTS.md'], result
         plan = [
             ('find_files', {'pathname': '.', 'glob': '', 'depth': 0}),
             ('find_files', {'pathname': '.', 'glob': '**/*.py', 'depth': 0}),
             ('search_project', {'pathname': '.', 'pattern': 'Pelican (cycles|rides)', 'regex': True}),
+            ('project_instructions', {'pathname': 'src/with space.py'}),
             ('read_file', {'pathname': 'src/with space.py'}),
-            ('etas_emit_output', {'text': 'Native discovery, glob, regex and file read completed.'}),
+            ('etas_emit_output', {'text': 'Native discovery, scoped project instructions and file read completed.'}),
         ]
         name, arguments = plan[index]
         assert any(tool['function']['name'] == name for tool in request['tools'])
@@ -74,6 +81,7 @@ def main():
         directory.chmod(0o777)
     for name, content in {
         '.gitignore': 'ignored.py\n', 'src/with space.py': '# Synthetic project\nPelican cycles\n',
+        'AGENTS.md': 'ROOT native project rule\n', 'src/AGENTS.md': 'NESTED native project rule\n',
         'docs/page.html': 'Pelican rides\n', 'ignored.py': 'Ignored Pelican cycles\n',
         '.git/internal.py': 'Internal\n', '.nomo/internal.py': 'Internal\n',
     }.items():
@@ -123,10 +131,10 @@ def main():
             os.close(master)
         (evidence / 'terminal.txt').write_bytes(output)
         assert code == 0, output.decode()
-        assert len(server.requests) == 5 and approvals == 3
+        assert len(server.requests) == 6 and approvals == 3
         trace = json.loads((traces / 'trace.json').read_text())
         assert trace['outcome']['kind'] == 'completed'
-        (evidence / 'functional.json').write_text(json.dumps({'status': 'passed', 'http_requests': 5, 'native_command_approvals': 3, 'provider_tokens': 'synthetic, not measured usage'}))
+        (evidence / 'functional.json').write_text(json.dumps({'status': 'passed', 'http_requests': 6, 'native_command_approvals': 3, 'provider_tokens': 'synthetic, not measured usage', 'scoped_instructions': 'root plus src guidance returned by native tool and read_file'}))
         print('FUNCTIONAL PASS native navigation: ' + str(evidence), flush=True)
         approval = None
         for event in trace['events']:

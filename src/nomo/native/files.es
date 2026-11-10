@@ -6,9 +6,10 @@ import std.effects.Fs;
 import nomo.native.workspace.ProjectRoot;
 import nomo.native.history.{SessionContext, record, tool_finished, observe_started, observe_finished};
 import nomo.native.mutations.{Change, apply_plan};
+import nomo.native.project.{ProjectInstruction, load_instructions};
 public import nomo.native.file_io.read_text;
 
-public type FileContent = { path: string, text: string };
+public type FileContent = { path: string, text: string, instructions: Array<ProjectInstruction> };
 public type FileChange = { path: string, before: string, after: string };
 public type FileOutcome = { path: string, status: string, edit: string };
 
@@ -18,9 +19,9 @@ spec ScopedReplace: trace = +Fs.read<ProjectRoot> & +Fs.list<ProjectRoot> & +Fs.
 
 /// Read a UTF-8 project file, including while another operation awaits recovery.
 public tool read_file(pathname: string) -> FileContent
-    ![SessionContext, Memory, Fs.read<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>] {
+    ![SessionContext, Memory, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>] {
     let call = observe_started("read_file", pathname);
-    let result = FileContent { path = pathname, text = read_text(pathname) };
+    let result = FileContent { path = pathname, text = read_text(pathname), instructions = load_instructions(pathname) };
     observe_finished("read_file", call, result);
     return result;
 }

@@ -4,9 +4,13 @@ import std.text.len as text_bytes;
 import nomo.core.json.encode;
 import nomo.native.history.{NativeHistory, ConversationStore, ChatMessage, message, reserve_generation, publish_summary};
 import nomo.native.agent.Turn;
+import nomo.native.project.load_instructions;
+import nomo.native.workspace.ProjectRoot;
+import std.effects.Fs;
+import std.fs.{ReadLimitError, IOError as FileError};
 
 public spec ContextProjection {
-    flow build(self, session: string, request: string) -> Turn ![Memory, Error<StorageError>];
+    flow build(self, session: string, request: string) -> Turn ![Memory, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Error<StorageError>, Error<FileError>, Error<ReadLimitError>];
     flow bytes(self, input: Turn) -> usize ![];
     flow needs_compaction(self, input: Turn) -> bool ![];
 }
@@ -24,7 +28,7 @@ impl RollingContext ~ ContextProjection {
             if item.role != "summary" && item.role != "archive" { projected = projected.push(item); }
         }
         return Turn { session = session, workspace = value.workspace, initial_request = initial,
-            request = request, summary = summary, pending = value.pending, history = projected };
+            request = request, summary = summary, pending = value.pending, history = projected, instructions = load_instructions(".") };
     }
     flow bytes(self, input: Turn) -> usize {
         let json = match encode(input, "context conversion failed", "context encoding failed") {
@@ -46,7 +50,7 @@ agent CompactHistory(input: Turn) -> Summary {
         .data(input));
 }
 
-public flow compact(session: string) -> unit ![Agentic, Memory, Error<StorageError>, Error<MemoryConflict>] {
+public flow compact(session: string) -> unit ![Agentic, Memory, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>] {
     let projection = RollingContext {};
     let archive = NativeHistory {};
     let before = archive.load(session);

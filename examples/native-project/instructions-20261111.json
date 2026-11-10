@@ -1,0 +1,49 @@
+{
+  "date": "2026-11-11",
+  "compiler_config": "config/etas-latest-main.json",
+  "compiler_config_sha256": "9bfa9bd247fc148d05a5e6403947eadc76d78b8288a50c5425b799e2f7512024",
+  "evidence_directory": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-navigation-japkk1dh",
+  "functional_status": "passed",
+  "approval_audit_status": "failed",
+  "approval_dependency": "https://github.com/etas-project/etas-interpreter/issues/102",
+  "probe_exit_code": 1,
+  "model_http_requests": 6,
+  "native_command_approvals": 3,
+  "measured_provider_usage": false,
+  "source_sha256": {
+    "src/nomo/native/agent.es": "0f63542b8dfba80116ff6fba669216ff79ed295136438ca4d2e3370ddc8bed55",
+    "src/nomo/native/context.es": "99be10b1a00deaa30aae90455659d429265fa4f0e8fbb2796d4665eba571a991",
+    "src/nomo/native/files.es": "67f22dad790c4105b872668f02edb3248cd981fc6a07e35fbb04404f7014bb28",
+    "src/nomo/native/project.es": "a23866b0c3cea8386f89a0b7d5f60605cefed560acf521ed7a8f6e2d8b493df6",
+    "src/nomo/native/navigation.es": "99a394444c6ac0cf4f6e1e006f6c8a3630c9dd490fbc8aa8820e1ed456a8f094",
+    "src/nomo/native/workspace.es": "be210d69032e76aca3f12cd6244b00d05c37649b7191b63df12cc84108e79d77",
+    "src/nomo/native/history.es": "da9fffcbf5bba16542585cf13e8d132b9952f1e063e9024b8c53c3c57d5eaf4e",
+    "etas.toml": "bc1422f448adb8908386fa9a0bad02ea737d577ef66cb51df11907107e7d5262",
+    "tests/native_navigation_probe.py": "ce21928f3276d04652855675c2ee5e705692628b158b335d969348d6706d8163"
+  },
+  "artifacts_sha256": {
+    "terminal.txt": "615e5211fcfa582f6edc16badca9e1017ed87a5f47ec69127b1ac6d195efd0f5",
+    "functional.json": "fc2294d39aedb5e259451e62f8ab0f6c944d5004cd0280d32e566e7343ce462c",
+    "native/trace.json": "e19f15d79de98928a2a976a18c1cb948a86eb40975382ce5bcc2d0255bb04824",
+    "request-0.json": "97e01009cfb096eb0da59bd6c4d224dbf99f5823b5e7b0d067b23e4ee5883b39",
+    "request-1.json": "858d22c9adfe3824f80d080aaf1ee26c670d2a39ac954c66e5a1cc3496266c1d",
+    "request-2.json": "53a528e81772bf81b08d4c2ff7dc1e997450171e2c7f3b5a422cefbdd2f06c58",
+    "request-3.json": "d4b90c53de894383d0d9f0033f2b26674df769f9d3ff6ec603e94e9864eadb73",
+    "request-4.json": "ad62262d50437e26a4bba1a158f2586e46959b1ee3e0242eb3d2a3ae0b76badd",
+    "request-5.json": "541e548f172e3c8e1b16af2bc6b0dae580c4c505c306ada7d9a6293bd30596d4"
+  },
+  "executed": [
+    "Current root AGENTS.md content was visible in the first native inference request",
+    "Native project_instructions returned root and src guides in ancestor order with actual scope/path/text",
+    "Native read_file returned exact file contents plus applicable root and src guidance",
+    "Recursive discovery, glob and regex results still reached subsequent native model inference",
+    "The native agent returned its final answer after all actual tool results",
+    "Native filesystem reads/listing owned all guidance discovery; no Python project scanner was used"
+  ],
+  "limitations": [
+    "Full approval provenance gate remains failed at the unchanged strict audit (#102)",
+    "Guidance does not grant execution permission",
+    "Native .nomo.toml parsing and configured instruction/check/budget settings are still unimplemented",
+    "This run uses a local synthetic HTTP model and does not prove MiniMax quality or measured token usage"
+  ]
+}
