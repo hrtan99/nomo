@@ -1,0 +1,94 @@
+{
+  "date": "2026-11-11",
+  "compiler_config": "config/etas-latest-main.json",
+  "binary": {
+    "sha256": "fb3e472c80a3b3e33829e47f22188ea6513cc708a040f9845774eb6d42f7211e",
+    "version": "etas 0.12.1"
+  },
+  "functional_status": "passed",
+  "approval_status": "failed on etas-interpreter#102",
+  "probe_exit_code": 1,
+  "validated_as_batch_with_configuration_changes": true,
+  "evidence_directory": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-stdin-m7ifem4i",
+  "observed": {
+    "functional_status": "passed",
+    "model_http_requests": 2,
+    "native_command_dispatches": 1,
+    "native_approvals": 1,
+    "input": "pelican caf\u00e9\nline two\n",
+    "status": {
+      "first_user": 0.0,
+      "id": "native-0",
+      "ledger": {
+        "compactions": 0.0,
+        "context_bytes": 647.0,
+        "generation_allowance": 131072.0,
+        "tools": 1.0,
+        "turns": 1.0
+      },
+      "next_event": 4.0,
+      "pending": "",
+      "summary_event": -1.0,
+      "summary_through": -1.0,
+      "title": "New conversation",
+      "workspace": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-stdin-m7ifem4i/project"
+    },
+    "runs": [
+      {
+        "id": "native-0-run-0",
+        "input_event": 0.0,
+        "kind": "coding",
+        "label": "NativeCoding",
+        "phase": "completed",
+        "recovery_event": -1.0,
+        "result_event": 3.0,
+        "session": "native-0",
+        "through": 0.0
+      },
+      {
+        "id": "native-0-run-1",
+        "input_event": 1.0,
+        "kind": "command",
+        "label": "/usr/bin/python3",
+        "phase": "completed",
+        "recovery_event": -1.0,
+        "result_event": 2.0,
+        "session": "native-0",
+        "through": 1.0
+      }
+    ],
+    "approval_audit": [
+      {
+        "request": 101,
+        "action": "Command.run",
+        "authority": {
+          "active_trace_specs": [],
+          "approval_count": 0,
+          "grant_count": 13
+        },
+        "approval": 10000102
+      }
+    ]
+  },
+  "source_sha256": {
+    "src/nomo/native/workspace.es": "2bafa765bae136e13379960cad5ef78b29ff89ca6e25c9ebf787c445102928f6",
+    "src/nomo/native/terminal.es": "0f51f7579313cfe762216fcf397d08365794ef7de19e0afe48b238fa289a6ed5",
+    "src/nomo/native/agent.es": "82782b36696a5d77e75f545ce713bb2d596c31e54d7ba53b44b4758388083288",
+    "src/nomo/native/lifecycle.es": "1e7dd5e165e81cc64fae39c3cd430f387373e45c3af14f63606c5a2b9079a1c7",
+    "tests/native_stdin_probe.py": "ec2304116d9ff0d0cb284c5d9772bcd985fdf01983fc23831fd4f150c1a3fb33",
+    "tests/native_recovery_probe.py": "ba4d0df83a65c6ac358016f136775040b7ce326da7e0292d9c7cc01d3b9ae9b0"
+  },
+  "artifacts_sha256": {
+    "terminal.txt": "f08e00d3bfd0b29e0ebbd03ad57748c4a31acca1a359ee863e5e795eda8e8972",
+    "request-0.json": "ed5a5e73832a6158a613a374c0c0a38dd8856a142b2859e291e450d2cce98a34",
+    "request-1.json": "b49c9f95028da8ec67b57bc993e0e5cfc6839bb4e56a1b287219a3f39b9d132d",
+    "functional.json": "d8c17f8ad6ac02d0633afe4b76e985edc6a92d62df0b7cc3797048c1006d1410",
+    "native/trace.json": "64e3863ee7f567d66008089c3e62fa3cd9235af2443bb8a401b6072aa1d8b40e"
+  },
+  "limitations": [
+    "One complete UTF-8 stdin value at foreground launch; no retained interactive process handle",
+    "Standard Host/archive limits still apply; no large-input capacity claim",
+    "Local synthetic model only, not real provider usage",
+    "Strict command approval provenance audit remains failed (#102)"
+  ]
+}

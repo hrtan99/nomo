@@ -68,13 +68,14 @@ public flow dispatching(id: string) -> unit ![Memory, Error<StorageError>, Error
     update(id, "dispatching", -1, -1);
 }
 
-public flow returned(id: string, role: string, name: string, text: string, call: i64) -> unit
+public flow returned(id: string, role: string, name: string, text: string, call: i64) -> i64
     ![Memory, Error<StorageError>, Error<MemoryConflict>] {
     let value = load(id);
     if value.phase != "dispatching" { abort("attempt is not awaiting a result"); }
     let index = reserve_result(value.session, role, name, call);
     update(id, "returned", index, -1);
     complete_result(value.session, index, text);
+    return index;
 }
 
 public flow complete_attempt(id: string) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>] {

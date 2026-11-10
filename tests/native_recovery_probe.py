@@ -12,7 +12,7 @@ import threading
 from native_mutations_probe import ROOT, Model, BINARY, approve_preview
 
 
-def terminal(command, environment, turns, project, interrupt=False):
+def terminal(command, environment, turns, project, interrupt=False, approve=approve_preview):
     master, slave = pty.openpty()
     process = subprocess.Popen(command, cwd=ROOT, env=environment, stdin=slave, stdout=slave, stderr=slave)
     os.close(slave)
@@ -39,7 +39,7 @@ def terminal(command, environment, turns, project, interrupt=False):
                         os.write(master, b'\x03')
                         stopped = True
                     else:
-                        approve_preview(output)
+                        approve(output)
                         os.write(master, b'yes\n')
                         approvals += 1
             elif process.poll() is not None:
