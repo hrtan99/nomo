@@ -2,7 +2,8 @@ module nomo.native.context;
 
 import std.text.len as text_bytes;
 import nomo.core.json.encode;
-import nomo.native.history.{NativeHistory, ConversationStore, ChatMessage, message, reserve_generation, publish_summary};
+import nomo.native.history.{NativeHistory, ConversationStore, ChatMessage, message, reserve_generation};
+import nomo.native.lifecycle.{attempts, begin, dispatching, returned, complete_attempt};
 import nomo.native.agent.Turn;
 import nomo.native.project.load_instructions;
 import nomo.native.workspace.ProjectRoot;
@@ -28,7 +29,8 @@ impl RollingContext ~ ContextProjection {
             if item.role != "summary" && item.role != "archive" { projected = projected.push(item); }
         }
         return Turn { session = session, workspace = value.workspace, initial_request = initial,
-            request = request, summary = summary, pending = value.pending, history = projected, instructions = load_instructions(".") };
+            request = request, summary = summary, pending = value.pending, history = projected,
+            instructions = load_instructions("."), runs = attempts(session, true) };
     }
     flow bytes(self, input: Turn) -> usize {
         let json = match encode(input, "context conversion failed", "context encoding failed") {
@@ -56,7 +58,6 @@ public flow compact(session: string) -> unit ![Agentic, Memory, Fs.read<ProjectR
     let before = archive.load(session);
     let input = projection.build(session, "");
     reserve_generation(session, true, projection.bytes(input));
-    let summary = CompactHistory.run(input);
     // Retain a recent suffix that fits its projection budget. A large event
     // stays complete in the archive and is represented here by the summary.
     var index = before.next_event - 1;
@@ -72,5 +73,9 @@ public flow compact(session: string) -> unit ![Agentic, Memory, Fs.read<ProjectR
         index = index - 1;
     }
     let through = first - 1;
-    publish_summary(session, summary.text, through);
+    let attempt = begin(session, "summary", "CompactHistory", before.next_event - 1, through);
+    dispatching(attempt.id);
+    let summary = CompactHistory.run(input);
+    returned(attempt.id, "summary", "context_summary", summary.text, -1);
+    complete_attempt(attempt.id);
 }

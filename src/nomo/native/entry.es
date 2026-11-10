@@ -1,7 +1,7 @@
 module nomo.native.entry;
 
 import std.io.{println, print, read_line};
-import std.text.{trim, strip_prefix, contains, parse_i64, from_i64, from_i32};
+import std.text.{trim, strip_prefix, split_once, contains, parse_i64, from_i64, from_i32};
 import nomo.native.agent.NativeCoding;
 import nomo.native.workspace.ProjectRoot;
 import std.effects.Fs;
@@ -14,6 +14,17 @@ import nomo.native.transfer.{save_archive, load_archive, resume_import};
 import nomo.native.mutations.{journals, undo_changes, rollback_changes, reconcile_changes};
 import nomo.native.files.read_file;
 import nomo.native.navigation.{find_files, search_project};
+import nomo.native.lifecycle.{attempts, begin, dispatching, returned, complete_attempt, resolve};
+
+flow ready_for_turn(session: string) -> bool {
+    for value in attempts(session, true) limit Iterations(2147483647) {
+        if value.kind == "coding" || value.kind == "summary" {
+            println("[RUN    ] " + value.id + " has no recorded completion. Inspect /runs; /resolve-run ID NOTE records your recovery decision. This prompt was not submitted.");
+            return false;
+        }
+    }
+    return true;
+}
 
 flow navigation_command(session: string, operation: string, argument: string) -> unit {
     let result = handle {
@@ -37,11 +48,15 @@ flow show(value: Session) -> unit {
     if value.pending != "" {
         println("[PENDING] " + value.pending + " has no recorded completion. Inspect actual state; it is not automatically replayed.");
     }
+    for attempt in attempts(value.id, true) limit Iterations(2147483647) {
+        println("[RUN    ] " + attempt.id + " " + attempt.kind + " " + attempt.phase + "; no completion recorded. Inspect actual state, then /resolve-run ID [NOTE].");
+    }
 }
 
-flow ask(session: string, request: string) -> unit {
+flow ask(session: string, request: string) -> bool {
+    if !ready_for_turn(session) { return false; }
     let archive = NativeHistory {};
-    archive.append(session, "user", "", request, -1);
+    let request_event = archive.append(session, "user", "", request, -1);
     let projection = RollingContext {};
     var input = projection.build(session, request);
     if projection.needs_compaction(input) {
@@ -50,11 +65,15 @@ flow ask(session: string, request: string) -> unit {
         input = projection.build(session, request);
     }
     reserve_generation(session, false, projection.bytes(input));
+    let attempt = begin(session, "coding", "NativeCoding", request_event, archive.load(session).next_event - 1);
+    dispatching(attempt.id);
     let answer = handle { NativeCoding.run(input) } with {
         SessionContext.current() => { resume session; }
     };
-    archive.append(session, "assistant", "", answer.text, -1);
+    returned(attempt.id, "assistant", "", answer.text, request_event);
+    complete_attempt(attempt.id);
     println(answer.text);
+    return true;
 }
 
 flow show_history(session: string, query: string, first: i64, count: i64) -> unit {
@@ -121,7 +140,7 @@ public flow run(args: Array<string>) -> i32
             println("[COPY   ] Unfinished " + job.kind + " " + job.id + "; /resume-copy " + job.id + " or /discard-copy " + job.id);
         }
     }
-    match options.once { Some(request) => { ask(selected.id, request); return 0; } None() => {} }
+    match options.once { Some(request) => { return if ask(selected.id, request) { 0 } else { 4 }; } None() => {} }
     println("[NATIVE ] Nomo native chat · /help · /quit");
     while true limit Iterations(2147483647) {
         print("nomo> ");
@@ -132,7 +151,7 @@ public flow run(args: Array<string>) -> i32
         if request == "" { continue; }
         if request == "/help" {
             println("Ask about the project; native tools provide recursive/glob discovery, literal/regex search, file reads, approved editing and Git operations.");
-            println("/new [TITLE], /sessions, /resume ID, /rename TITLE, /history [TEXT], /page EVENT, /fork [EVENT], /export FILE, /import FILE, /copies, /resume-copy ID, /discard-copy ID, /compact, /status, /tree [PATH], /glob PATTERN, /search REGEX, /read FILE, /edits, /undo [EDIT], /rollback EDIT, /recover EDIT, /quit");
+            println("/new [TITLE], /sessions, /resume ID, /rename TITLE, /history [TEXT], /page EVENT, /fork [EVENT], /export FILE, /import FILE, /copies, /resume-copy ID, /discard-copy ID, /runs, /resolve-run ID [NOTE], /compact, /status, /tree [PATH], /glob PATTERN, /search REGEX, /read FILE, /edits, /undo [EDIT], /rollback EDIT, /recover EDIT, /quit");
             continue;
         }
         if request == "/tree" { navigation_command(selected.id, "tree", "."); continue; }
@@ -195,7 +214,26 @@ public flow run(args: Array<string>) -> i32
             Some(id) => { discard_copy(options.workspace, trim(id)); println("[COPY   ] Unfinished copy discarded; original and retained copied records are preserved."); continue; }
             None() => {}
         }
-        if request == "/compact" { compact(selected.id); println("[CONTEXT] Summary saved; full original events retained."); continue; }
+        if request == "/runs" {
+            for attempt in attempts(selected.id, false) limit Iterations(2147483647) {
+                let json = match encode(attempt, "run conversion failed", "run encoding failed") { Ok(value) => value, Err(error) => { abort(error); } };
+                println("[RUN    ] " + json);
+            }
+            continue;
+        }
+        match strip_prefix(request, "/resolve-run ") {
+            Some(value) => {
+                let (id, note) = match split_once(trim(value), " ") { Some(parts) => parts, None() => (trim(value), "") };
+                let result = resolve(selected.id, id, trim(note));
+                println("[RUN    ] " + result.id + " " + result.phase + "; prior operations were not replayed.");
+                continue;
+            }
+            None() => {}
+        }
+        if request == "/compact" {
+            if ready_for_turn(selected.id) { compact(selected.id); println("[CONTEXT] Summary saved; full original events retained."); }
+            continue;
+        }
         if request == "/status" {
             let status = match encode(archive.load(selected.id), "status conversion failed", "status encoding failed") {
                 Ok(value) => value, Err(error) => { abort(error); }

@@ -10,7 +10,8 @@ import std.agent.message.Message;
 import std.crypto.{sha256, constant_time_eq};
 import nomo.core.json.encode;
 import nomo.native.workspace.ProjectRoot;
-import nomo.native.history.{NativeHistory, ConversationStore, Session, ChatMessage, begin_copy, copy_source, copy_events, copy_job, ensure_copy_session, sealed_copy_source, message};
+import nomo.native.history.{NativeHistory, ConversationStore, Session, ChatMessage, CopyJob, copy_status, begin_copy, copy_source, copy_events, copy_job, ensure_copy_session, sealed_copy_source, message};
+import nomo.native.lifecycle.{Attempt, attempts, begin, dispatching, returned, complete_attempt};
 
 type PortableInfo = { id: string, workspace: string, title: string, metadata: string };
 type PortableArchive = { format: string, session: PortableInfo, events: Array<ChatMessage> };
@@ -20,6 +21,8 @@ type LegacyEvent = { id: i64, session: string, role: string, kind: string, name:
     content: string, data: JsonValue, created: f64 };
 type LegacyArchive = { format: string, session: LegacyInfo, events: Array<LegacyEvent> };
 type ExportPreview = { path: string, content: string };
+type ExportOutcome = { path: string, status: string };
+type ExportMetadata = { format: string, conversation: Session, attempts: Array<Attempt>, copies: Array<CopyJob> };
 
 flow json<T>(value: T) -> string {
     return match encode(value, "archive conversion failed", "archive encoding failed") {
@@ -28,16 +31,24 @@ flow json<T>(value: T) -> string {
 }
 
 public flow save_archive(session: string, pathname: string) -> unit
-    ![Memory, Console, Fs.atomic_replace<ProjectRoot>, Error<StorageError>, Error<FileError>, Error<ConsoleError>] {
+    ![Memory, Console, Fs.atomic_replace<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ConsoleError>] {
     let history = NativeHistory {};
     let selected = history.load(session);
-    let info = PortableInfo { id = selected.id, workspace = selected.workspace, title = selected.title, metadata = json(selected) };
+    var copies: Array<CopyJob> = [];
+    match copy_status(session) { Some(value) => { copies = copies.push(value); } None() => {} }
+    let metadata = ExportMetadata { format = "nomo-native-metadata-1", conversation = selected,
+        attempts = attempts(session, false), copies = copies };
+    let info = PortableInfo { id = selected.id, workspace = selected.workspace, title = selected.title, metadata = json(metadata) };
     let content = json(PortableArchive { format = "nomo-native-conversation-1", session = info, events = history.messages(session, 0) });
     let location = match path<ProjectRoot>(pathname) {
         Ok(value) => value, Err(_) => { abort("invalid conversation export path"); }
     };
     println("[EXPORT ] " + json(ExportPreview { path = pathname, content = content }));
+    let attempt = begin(session, "export", pathname, -1, selected.next_event - 1);
+    dispatching(attempt.id);
     atomic_replace(location, utf8_encode(content));
+    returned(attempt.id, "operation_result", "export", json(ExportOutcome { path = pathname, status = "applied" }), -1);
+    complete_attempt(attempt.id);
     println("[EXPORTED] " + pathname);
 }
 

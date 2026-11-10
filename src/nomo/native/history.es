@@ -181,6 +181,34 @@ public flow message(id: string, index: i64) -> ChatMessage ![Memory, Error<Stora
     return ChatMessage { id = from_i64(index), role = event.role, name = event.name, text = text };
 }
 
+public flow reserve_result(id: string, role: string, name: string, call: i64) -> i64
+    ![Memory, Error<StorageError>, Error<MemoryConflict>] {
+    let index = reserve_event(id, role, name, call, false);
+    Data.Events.put(key(id, index), Event { role = role, name = name, call = call, chunks = 0, complete = false });
+    return index;
+}
+
+public flow complete_result(id: string, index: i64, text: string) -> unit
+    ![Memory, Error<StorageError>, Error<MemoryConflict>] {
+    let event = match Data.Events.get(key(id, index)) { Some(value) => value, None() => { abort("reserved result not found"); } };
+    if !event.complete { write_event(id, index, event.role, event.name, text, event.call); }
+}
+
+public flow complete_event(id: string, index: i64) -> bool ![Memory, Error<StorageError>] {
+    return match Data.Events.get(key(id, index)) { Some(value) => value.complete, None() => false };
+}
+
+public flow acknowledge_command(id: string, call: i64, note: string) -> i64
+    ![Memory, Error<StorageError>, Error<MemoryConflict>] {
+    let archive = NativeHistory {};
+    if archive.load(id).pending != key(id, call) + " command" { abort("command recovery does not own the pending request"); }
+    let recovery_event = archive.append(id, "recovery", "command_outcome_unknown", note, call);
+    let before = entry(id); let value = before.value;
+    Data.Sessions.put_versioned(id, copy(value, value.next_event, value.first_user, value.summary_event,
+        value.summary_through, "", value.ledger, value.title), before.version);
+    return recovery_event;
+}
+
 public flow record<T>(role: string, name: string, value: T, call: i64) -> i64
     ![SessionContext, Memory, Error<StorageError>, Error<MemoryConflict>] {
     let id = perform SessionContext.current();
@@ -261,6 +289,13 @@ public flow publish_summary(id: string, text: string, through: i64) -> unit
     ![Memory, Error<StorageError>, Error<MemoryConflict>] {
     let archive = NativeHistory {};
     let index = archive.append(id, "summary", "context_summary", text, -1);
+    adopt_summary(id, index, through);
+}
+
+public flow adopt_summary(id: string, index: i64, through: i64) -> unit
+    ![Memory, Error<StorageError>, Error<MemoryConflict>] {
+    let event = match Data.Events.get(key(id, index)) { Some(value) => value, None() => { abort("summary record missing"); } };
+    if !event.complete || event.role != "summary" { abort("summary record is incomplete"); }
     let before = entry(id); let value = before.value;
     Data.Sessions.put_versioned(id, copy(value, value.next_event, value.first_user, index,
         through, value.pending, value.ledger, value.title), before.version);

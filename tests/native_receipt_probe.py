@@ -14,7 +14,7 @@ def main():
     (package / '.etas').mkdir()
     state.mkdir(mode=0o777)
     state.chmod(0o777)
-    for name in ('src/nomo/native/history.es', 'src/nomo/core/json.es'):
+    for name in ('src/nomo/native/history.es', 'src/nomo/native/lifecycle.es', 'src/nomo/core/json.es'):
         target = package / name
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes((ROOT / name).read_bytes())

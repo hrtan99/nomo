@@ -163,7 +163,7 @@ def main():
                     output.extend(chunk)
                     if args.scenario in ('transfer', 'auto') and output.count(b'nomo> ') > sent_turns:
                         commands = ['/import legacy.json', 'Continue the task after the saved large history.', '/history', '/status', '/quit'] if args.scenario == 'auto' else [
-                            '/import legacy.json', '/history', '/export roundtrip.json',
+                            '/import legacy.json', '/history', '/export roundtrip.json', '/export roundtrip.json',
                             '/import roundtrip.json', '/history', '/status', '/quit']
                         os.write(master, (commands[sent_turns] + '\n').encode())
                         sent_turns += 1
@@ -180,7 +180,7 @@ def main():
                             from native_mutations_probe import approve_preview
                             approve_preview(output)
                         elif args.scenario == 'transfer':
-                            line = next(line for line in output.decode().splitlines() if '[EXPORT ] ' in line)
+                            line = next(line for line in reversed(output.decode().splitlines()) if '[EXPORT ] ' in line)
                             preview = json.loads(line.split('[EXPORT ] ', 1)[1])
                             assert preview['path'] == 'roundtrip.json'
                             payload = json.loads(preview['content'])
@@ -209,6 +209,12 @@ def main():
             assert (project / 'legacy.json').read_bytes() == legacy_file
             assert hashlib.sha256(legacy.database.read_bytes()).hexdigest() == legacy_database
             packet = json.loads((project / 'roundtrip.json').read_text())
+            metadata = json.loads(packet['session']['metadata'])
+            assert metadata['format'] == 'nomo-native-metadata-1'
+            assert metadata['conversation']['id'] == 'native-1'
+            assert len(metadata['attempts']) == 1 and metadata['attempts'][0]['kind'] == 'export'
+            assert metadata['attempts'][0]['phase'] == 'completed'
+            assert metadata['copies'][0]['phase'] == 'ready'
             assert any(item['role'] == 'user' and item['text'] == 'Remember the migration objective.' for item in packet['events'])
             assert any(item['role'] == 'tool' and item['text'] == '{"observed":"legacy file"}' for item in packet['events'])
             assert 'Earlier task saved.' in text and 'Legacy summary preserved.' in text

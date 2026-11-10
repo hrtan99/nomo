@@ -5,7 +5,8 @@ import std.host.command.{command, with_cwd, run};
 import std.codec.text.{utf8_decode, Replace};
 import std.io.{println, IOError};
 import nomo.core.json.encode;
-import nomo.native.history.{SessionContext, record, tool_finished, observe_started, observe_finished};
+import nomo.native.history.{SessionContext, record, observe_started};
+import nomo.native.lifecycle.{begin, dispatching, returned, complete_attempt};
 
 public type ProjectRoot;
 impl ProjectRoot ~ Region;
@@ -35,11 +36,21 @@ flow dispatch(program: string, arguments: Array<string>) -> CommandOutput {
     return output;
 }
 
+flow result_text(output: CommandOutput) -> string {
+    return match encode(output, "command result conversion failed", "command result encoding failed") {
+        Ok(value) => value, Err(error) => { abort(error); }
+    };
+}
+
 public flow execute(program: string, arguments: Array<string>) -> CommandOutput
     ![SessionContext, Memory, Command.run<DefaultCommandSandbox>, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>] {
     let call = record("tool_call", "command", CommandPreview { program = program, arguments = arguments }, -1);
+    let session = perform SessionContext.current();
+    let attempt = begin(session, "command", program, call, call);
+    dispatching(attempt.id);
     let output = dispatch(program, arguments);
-    tool_finished("command", call, output);
+    returned(attempt.id, "tool", "command", result_text(output), call);
+    complete_attempt(attempt.id);
     return output;
 }
 
@@ -48,8 +59,12 @@ public flow execute(program: string, arguments: Array<string>) -> CommandOutput
 public flow execute_readonly(name: string, program: string, arguments: Array<string>) -> CommandOutput
     ![SessionContext, Memory, Command.run<DefaultCommandSandbox>, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>] {
     let call = observe_started(name, CommandPreview { program = program, arguments = arguments });
+    let session = perform SessionContext.current();
+    let attempt = begin(session, "observation", name, call, call);
+    dispatching(attempt.id);
     let output = dispatch(program, arguments);
-    observe_finished(name, call, output);
+    returned(attempt.id, "tool", name, result_text(output), call);
+    complete_attempt(attempt.id);
     return output;
 }
 

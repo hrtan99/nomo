@@ -1,0 +1,257 @@
+{
+  "date": "2026-11-11",
+  "compiler_config": "config/etas-latest-main.json",
+  "compiler_config_sha256": "9bfa9bd247fc148d05a5e6403947eadc76d78b8288a50c5425b799e2f7512024",
+  "functional_status": "passed_in_recorded_scopes",
+  "approval_status": "failed_for_Command_Host_paths",
+  "approval_dependency": "https://github.com/etas-project/etas-interpreter/issues/102",
+  "measured_provider_usage": false,
+  "final_source_sha256": {
+    "src/nomo/native/lifecycle.es": "893a6e7a4676d2f3fd1aff77ae76d20b7580e97568b75797bbe8b6a46dac19dd",
+    "src/nomo/native/history.es": "57ff2a304dc12e7b898f863d615c2c4c86b332f44481a3b56ce5dbddf56022f8",
+    "src/nomo/native/workspace.es": "fc807113f0481098fe54d2a20df35113a7019012cbcb33ea5658bbe0ce474f10",
+    "src/nomo/native/agent.es": "e8e993b05c585ba3459f0ccb584de4a1370b86730581969e1f2a11c620d4cfde",
+    "src/nomo/native/context.es": "407ced8d5d3326e70d039fdd35578595575cd036213e69188ad6266c1102dc39",
+    "src/nomo/native/entry.es": "9a0c65d09eac7babd0dbfd872c4aa459e6f859da51b8f20c879e89245f8a4b81",
+    "src/nomo/native/transfer.es": "0d8c8e02c04111a4369d72fcfe794c61e30113580d45063e9ad45442fb3a2b59",
+    "tests/native_attempt_recovery_probe.py": "618f14ca2dc667b41c515e696801a19fb19570637242ccce4f4fca1e95cc60fa",
+    "tests/native_navigation_probe.py": "ce21928f3276d04652855675c2ee5e705692628b158b335d969348d6706d8163",
+    "tests/native_project_probe.py": "c096f65cee0d4dfb426f8f51bc53551e9619aaf69088c43e9892b1d675fb6751",
+    "tests/native_receipt_probe.py": "3140f4991751d514f4e88ee75e2c586172365a97b78e628ab59e8a377b3dbb69",
+    "tests/fixtures/native_receipt/src/app/main.es": "87af784970a4da63a7e3f541c391c2e874d85f303c23a021d6781ed3071ba71e"
+  },
+  "checks": {
+    "foreground_recovery": {
+      "directory": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-attempt-recovery-xkcl1u_r",
+      "artifacts_sha256": {
+        "recovered-stderr.txt": "f585f720ec9d9095530c2bf1fea79a587708b9aeace7fb0746cb99ba135e8584",
+        "interrupted-terminal.txt": "d995a3e9c09539202ebe21aafd31778d37a78f395864e256e20e777fc188dff2",
+        "recovered-stdout.txt": "1f35f3d9e553c0b664d086f0bfa2fe7d976e0b692bf3830be45cd291ea661401",
+        "native/recovered.json": "9579371366d9ba65e9a9cb2543f572b505be71785284f32545fb74e82deab124",
+        "native/interrupted.json": "83138ed778610f3859cebf4935575e6590e737bb87c9bd5b5fa60f0174c81ebc",
+        "functional.json": "b61b6a19ca6e0f9a72c1e7a381576b0fccbc0b807a78fd80bc101dbbd551d6d5"
+      },
+      "probe_exit_code": 1,
+      "functional": {
+        "functional_status": "passed",
+        "interrupted_exit": 130,
+        "model_http_requests": 2,
+        "native_command_dispatches": 1,
+        "recovery_command_dispatches": 0,
+        "statuses": [
+          {
+            "first_user": 0.0,
+            "id": "native-0",
+            "ledger": {
+              "compactions": 0.0,
+              "context_bytes": 512.0,
+              "generation_allowance": 131072.0,
+              "tools": 1.0,
+              "turns": 1.0
+            },
+            "next_event": 2.0,
+            "pending": "native-0:1 command",
+            "summary_event": -1.0,
+            "summary_through": -1.0,
+            "title": "New conversation",
+            "workspace": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-attempt-recovery-xkcl1u_r/project"
+          },
+          {
+            "first_user": 0.0,
+            "id": "native-0",
+            "ledger": {
+              "compactions": 0.0,
+              "context_bytes": 512.0,
+              "generation_allowance": 131072.0,
+              "tools": 2.0,
+              "turns": 1.0
+            },
+            "next_event": 6.0,
+            "pending": "",
+            "summary_event": -1.0,
+            "summary_through": -1.0,
+            "title": "New conversation",
+            "workspace": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-attempt-recovery-xkcl1u_r/project"
+          }
+        ],
+        "runs": [
+          {
+            "id": "native-0-run-0",
+            "input_event": 0.0,
+            "kind": "coding",
+            "label": "NativeCoding",
+            "phase": "dispatching",
+            "recovery_event": -1.0,
+            "result_event": -1.0,
+            "session": "native-0",
+            "through": 0.0
+          },
+          {
+            "id": "native-0-run-1",
+            "input_event": 1.0,
+            "kind": "command",
+            "label": "/bin/sh",
+            "phase": "dispatching",
+            "recovery_event": -1.0,
+            "result_event": -1.0,
+            "session": "native-0",
+            "through": 1.0
+          },
+          {
+            "id": "native-0-run-0",
+            "input_event": 0.0,
+            "kind": "coding",
+            "label": "NativeCoding",
+            "phase": "closed_unknown",
+            "recovery_event": 5.0,
+            "result_event": -1.0,
+            "session": "native-0",
+            "through": 0.0
+          },
+          {
+            "id": "native-0-run-1",
+            "input_event": 1.0,
+            "kind": "command",
+            "label": "/bin/sh",
+            "phase": "closed_unknown",
+            "recovery_event": 4.0,
+            "result_event": -1.0,
+            "session": "native-0",
+            "through": 1.0
+          },
+          {
+            "id": "native-0-run-0",
+            "input_event": 0.0,
+            "kind": "coding",
+            "label": "NativeCoding",
+            "phase": "closed_unknown",
+            "recovery_event": 5.0,
+            "result_event": -1.0,
+            "session": "native-0",
+            "through": 0.0
+          },
+          {
+            "id": "native-0-run-1",
+            "input_event": 1.0,
+            "kind": "command",
+            "label": "/bin/sh",
+            "phase": "closed_unknown",
+            "recovery_event": 4.0,
+            "result_event": -1.0,
+            "session": "native-0",
+            "through": 1.0
+          },
+          {
+            "id": "native-0-run-2",
+            "input_event": 6.0,
+            "kind": "coding",
+            "label": "NativeCoding",
+            "phase": "completed",
+            "recovery_event": -1.0,
+            "result_event": 7.0,
+            "session": "native-0",
+            "through": 6.0
+          }
+        ],
+        "approval_audit": [
+          {
+            "request": 99,
+            "action": "Command.run",
+            "authority": {
+              "active_trace_specs": [],
+              "approval_count": 0,
+              "grant_count": 13
+            },
+            "approval": 10000100
+          }
+        ]
+      },
+      "assertions": [
+        "One exact native command preview and human approval preceded its dispatch",
+        "Its actual synthetic marker existed before Ctrl-C; the old process exited nonzero",
+        "A new process retained both coding and command attempts without recorded completion",
+        "Native file inspection preserved the original pending command",
+        "Explicit user notes closed both attempts as unknown; no success, exit code or process termination was manufactured",
+        "A new user request reached native inference and returned an actual new answer",
+        "Two local synthetic HTTP requests total; one original command and zero recovery commands",
+        "The unchanged strict command authority audit failed on #102"
+      ]
+    },
+    "normal_native_once": {
+      "directory": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-navigation-m5mv84a7",
+      "artifacts_sha256": {
+        "terminal.txt": "125bdeb598e58f7256cc866db9c8ccf4ddafa48e3d054dd2267a49dd93a496fd",
+        "native/trace.json": "15f592faa22183f4c2eb8c12a7acefb0e7964d96f99cf35b6293904ac079e249",
+        "functional.json": "fc2294d39aedb5e259451e62f8ab0f6c944d5004cd0280d32e566e7343ce462c"
+      },
+      "probe_exit_code": 1,
+      "model_http_requests": 6,
+      "functional_status": "passed",
+      "approval_status": "failed on #102",
+      "assertions": [
+        "Native discovery/glob/regex/guidance/read results reached subsequent inference",
+        "The normal single-turn entry returned its typed answer after lifecycle publication"
+      ]
+    },
+    "summary_restore": {
+      "directory": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-persist-d8um4txm",
+      "artifacts_sha256": {
+        "restored-stdout.txt": "f371ce21185d39e1494cc9c0030285b6fd39e5056f42953931b03981b99376de",
+        "terminal.txt": "3447ef1a5ed6f58fbf3f15b4e338712c646af022003d813b9330e54cd3a3b18e",
+        "restored-stderr.txt": "129357d81e85944878e2169b7fd771015bcf725a15628d02e903ec116ea88f75",
+        "native/trace.json": "44f2c356fd9e262922eb9ad00223e31a5298feff300462be35015924be579e0f",
+        "native/trace-restored.json": "9385b277fc27936bd2a1c29e6ecf0cff27aad663a25c7bd9e537bc72191b0049"
+      },
+      "probe_exit_code": 1,
+      "model_http_requests": 5,
+      "functional_status": "passed",
+      "approval_status": "failed on #102",
+      "assertions": [
+        "Native approved edit, saved complete tool history, summary and new-process continuation passed before the authority audit",
+        "The saved summary and recent original history reached the new inference"
+      ]
+    },
+    "receipt_finalization": {
+      "directory": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-receipt-ji_2nnqd",
+      "artifacts_sha256": {
+        "settle-stderr.txt": "80b2ff02aabd47b663d16a3669c923b2a763312da45d98610e2e3285fa42cf92",
+        "seed-stderr.txt": "80b2ff02aabd47b663d16a3669c923b2a763312da45d98610e2e3285fa42cf92",
+        "settle-stdout.txt": "e0f8e7b14c5c82aadc27f2daa8a5c617ffb19e3644c37e11cdf453481dc1b3d6",
+        "seed-stdout.txt": "f50bd75cd905df0fa2067b1dbb58b7a9c79a67b353f67f9233266ba364332bc9"
+      },
+      "probe_exit_code": 0,
+      "model_http_requests": 0,
+      "assertions": [
+        "Two native processes retained a previously complete tool result without duplication",
+        "Saved coding, summary and synthetic command records finalized after a new process without replacing their result events",
+        "Summary pointer adoption and matching command pending cleanup passed",
+        "The profile permitted only Memory and Console; no project I/O, Model or Command Host execution"
+      ]
+    },
+    "legacy_transfer": {
+      "directory": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-transfer-k96ywj_1",
+      "artifacts_sha256": {
+        "terminal.txt": "f5cc67b1a378438e7b123ec32959e55a00df243d7390701e0d9fd0b40d901ca9",
+        "native/trace.json": "d08542d4dbaf2fde1091c4eb3342338c1999bad42faf45b7400044efd8195ddf"
+      },
+      "probe_exit_code": 0,
+      "model_http_requests": 0,
+      "assertions": [
+        "Old export import, two reviewed native exports and native reimport passed",
+        "The later export retained a completed earlier export attempt and ready copy metadata in nomo-native-metadata-1",
+        "The imported original source retained that exact historical metadata without activating prior attempts or approvals",
+        "Original legacy SQLite/JSON bytes stayed unchanged",
+        "Both native filesystem replacements passed their actual approval audit"
+      ]
+    }
+  },
+  "limitations": [
+    "The actual command interruption exercised a new-process user reconciliation, not automatic inference continuation or a retained process handle",
+    "Returned coding/summary/command fixtures exercise metadata finalization only; they do not execute a command or call a model",
+    "An interrupted export was not separately executed; normal native export and historical lifecycle metadata transfer were executed",
+    "The normal persistence/summary probe preceded the final boolean return change in the entry; its lifecycle/history/context modules are unchanged",
+    "The blocked --once status is implemented and source-inspected; no separate rejection case was added",
+    "These small synthetic cases do not establish large-context capacity, concurrent recovery, full public-tool coverage or delivery readiness",
+    "Full native acceptance remains open for etas#79 and etas-interpreter#101/#102"
+  ]
+}
