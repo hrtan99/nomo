@@ -38,7 +38,7 @@ flow ask(session: string, request: string) -> unit {
 }
 
 public flow run(args: Array<string>) -> i32
-    ![Agentic, Memory, Console, Command.run<DefaultCommandSandbox>, Fs.read<ProjectRoot>, Fs.atomic_replace<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>, Error<IOError>, Error<IndexError>] {
+    ![Agentic, Memory, Console, Command.run<DefaultCommandSandbox>, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Fs.stat<ProjectRoot>, Fs.atomic_replace<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>, Error<IOError>, Error<IndexError>] {
     let options = parse(args);
     let archive = NativeHistory {};
     var selected = match options.resume_id {
@@ -62,7 +62,7 @@ public flow run(args: Array<string>) -> i32
         if request == "/quit" || request == "/exit" { return 0; }
         if request == "" { continue; }
         if request == "/help" {
-            println("Ask about the project; native tools provide Git status, file reads and approved replacement.");
+            println("Ask about the project; native tools provide directory listing, metadata, literal search, file reads, approved editing and Git operations.");
             println("/new [TITLE], /sessions, /resume ID, /rename TITLE, /history, /export FILE, /import FILE, /compact, /status, /quit");
             continue;
         }

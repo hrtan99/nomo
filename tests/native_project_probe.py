@@ -26,7 +26,23 @@ class SyntheticModel(BaseHTTPRequestHandler):
         self.server.requests.append(request)
         (self.server.evidence / f'request-{index}.json').write_text(json.dumps(request, indent=2))
         functions = [tool['function'] for tool in request['tools']]
-        if self.server.scenario == 'auto':
+        if self.server.scenario == 'catalogue':
+            if index == 0:
+                name, arguments = 'list_directory', {'pathname': '.'}
+            elif index == 1:
+                observation = json.loads(next(message['content'] for message in reversed(request['messages']) if message['role'] == 'tool'))
+                assert any(item['path'] == 'note.txt' and item['is_file'] for item in observation), observation
+                name, arguments = 'search_files', {'paths': ['note.txt'], 'literal': 'old'}
+            elif index == 2:
+                observation = json.loads(next(message['content'] for message in reversed(request['messages']) if message['role'] == 'tool'))
+                assert observation == [{'path': 'note.txt', 'line': 1, 'text': 'before old'}], observation
+                name, arguments = 'edit_file', {'pathname': 'note.txt', 'target': 'old', 'replacement': 'new'}
+            else:
+                observation = next(message['content'] for message in reversed(request['messages']) if message['role'] == 'tool')
+                assert 'applied' in observation, observation
+                name, arguments = 'etas_emit_output', {'text': 'Native directory, search and literal edit completed.'}
+            function = next(item for item in functions if item['name'] == name)
+        elif self.server.scenario == 'auto':
             data = json.loads(next(message['content'] for message in reversed(request['messages']) if message['role'] == 'user'))
             assert data['initial_request'] == 'Remember the migration objective.'
             if index == 0:
@@ -85,7 +101,7 @@ class SyntheticModel(BaseHTTPRequestHandler):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--scenario', choices=('git', 'files', 'chat', 'persist', 'transfer', 'auto'), default='git')
+    parser.add_argument('--scenario', choices=('git', 'files', 'chat', 'persist', 'transfer', 'auto', 'catalogue'), default='git')
     args = parser.parse_args()
     evidence = Path(tempfile.mkdtemp(prefix='nomo-native-' + args.scenario + '-')).resolve()
     project = evidence / 'project'
@@ -121,7 +137,7 @@ def main():
     for name in ('compose.yaml', 'config/etas-0120-official-compose.yaml', 'config/local-tryout-compose.yaml',
                  'config/etas-runtime-cache-compose.yaml', 'config/nomo-native-compose.yaml'):
         command += ['--file', str(ROOT / name)]
-    request = 'Read note.txt and change old to new after approval.' if args.scenario in ('files', 'chat', 'persist') else 'Read Git status and report the branch and changed paths.'
+    request = 'Read note.txt and change old to new after approval.' if args.scenario in ('files', 'chat', 'persist', 'catalogue') else 'Read Git status and report the branch and changed paths.'
     command += ['run', '--rm', '--no-deps', '--pull', 'never', '--tty=true', 'dev',
         '/home/nomo/.cargo/bin/etas', 'run', '/workspace', '--flow', 'native_project', '--profile', 'nomo-native',
         '--allow-effects', '--trace-out', '/native-evidence/trace.json', '--args', '--workspace', str(project)]
@@ -159,7 +175,7 @@ def main():
                             os.write(master, b'/history\n/status\n/quit\n')
                         sent_turns += 1
                     if not approved and b'Type `yes` to approve:' in output:
-                        if args.scenario in ('files', 'chat', 'persist'):
+                        if args.scenario in ('files', 'chat', 'persist', 'catalogue'):
                             preview = next(line for line in output.decode().splitlines() if line.startswith('[PREVIEW] '))
                             assert json.loads(preview[len('[PREVIEW] '):]) == {
                                 'path': 'note.txt', 'before': 'before old\n', 'after': 'before new\n'}
@@ -216,6 +232,10 @@ def main():
             assert result.returncode == 0, result.stdout + result.stderr
             assert 'Native process restored full tool history and the saved summary.' in result.stdout
             assert len(server.requests) == 5, len(server.requests)
+        elif args.scenario == 'catalogue':
+            assert len(server.requests) == 4
+            assert (project / 'note.txt').read_text() == 'before new\n'
+            assert 'Native directory, search and literal edit completed.' in text
         elif args.scenario in ('files', 'chat'):
             assert len(server.requests) == (4 if args.scenario == 'chat' else 3), len(server.requests)
             assert (project / 'note.txt').read_text() == 'before new\n'
@@ -227,7 +247,7 @@ def main():
             assert 'Observed main and the untracked native.txt' in text, text
         assert (traces / 'trace.json').is_file()
         trace = json.loads((traces / 'trace.json').read_text())
-        if args.scenario in ('files', 'chat', 'persist'):
+        if args.scenario in ('files', 'chat', 'persist', 'catalogue'):
             events = trace['events']
             approval = next(index for index, event in enumerate(events)
                             if event['kind'] == 'host_request_started' and event['request_kind'] == 'approval')

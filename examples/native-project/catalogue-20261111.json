@@ -1,0 +1,289 @@
+{
+  "date": "2026-11-11",
+  "scenario": "Native directory listing, file metadata projection, literal search and approved literal editing",
+  "command": "python3 -B tests/native_project_probe.py --scenario catalogue",
+  "result": "passed",
+  "model_scope": "Local synthetic HTTP model only; no paid model or credentials",
+  "compiler_pin": {
+    "selector": "latest0120",
+    "version": "0.12.0",
+    "source_overrides": [],
+    "repositories": {
+      "cli": {
+        "repository": "etas",
+        "revision": "fe3de961aa2f1c55ec2ab5fc31383ea1d3e16af9",
+        "tree": "81722b528e8c28bfd8ed04acf3ea381a4f5c0540",
+        "packages": [
+          "etas_cli",
+          "etas_driver",
+          "etas_package",
+          "etas_tests"
+        ]
+      },
+      "core": {
+        "repository": "etas-core",
+        "revision": "3fc5b68bc886c952559003375590ccd0f95a53cb",
+        "tree": "161031222624c169e36b759019c5f85b14c46d7f",
+        "packages": [
+          "etas_builtin",
+          "etas_cache",
+          "etas_code",
+          "etas_core",
+          "etas_host",
+          "etas_memory_derive",
+          "etas_package_metadata",
+          "etas_std",
+          "etas_utils"
+        ]
+      },
+      "frontend": {
+        "repository": "etas-frontend",
+        "revision": "c70b4802768393ed7310a33c4e38a8b8fb2e9692",
+        "tree": "511ea22096a4cbbcebbea567794a4bd8e610afbc",
+        "packages": [
+          "etas_effects",
+          "etas_frontend",
+          "etas_hir",
+          "etas_hir_analysis",
+          "etas_syntax",
+          "etas_syntax_derive",
+          "etas_types"
+        ]
+      },
+      "interpreter": {
+        "repository": "etas-interpreter",
+        "revision": "4f5eae3702605f8630c682d54689167c2dea8394",
+        "tree": "29d47c24195a610bdc2df22baffadef7d50e41ef",
+        "packages": [
+          "etas_interpreter"
+        ]
+      }
+    },
+    "source": "Official ETAS CLI 0.12.0 at the 2026-11-10 main snapshot with its own Cargo.lock and matching Git dependencies; no Nomo source overrides.",
+    "cargo_lock_sha256": "bc363f005b3439661c2c7a28b1a14875217bbf6a128bb7ec727523c826441266",
+    "verified_seed_binary_sha256": "028e82c1b1ed7eef6dbea86c4d56bdd222a700d867e198c761a776b1ef1f883f"
+  },
+  "source_sha256": {
+    "src/nomo/native/agent.es": "780fe8d5b32423eabb12ae6f18924aa29b7d7a22992c3411d3b89d3826cdbaac",
+    "src/nomo/native/context.es": "21a3c2af0e50ed47ce72efc91256877ed7524c737d3100da7cdd4482b42fe167",
+    "src/nomo/native/entry.es": "c5a726640d1c1e7d0a26fff7147635ed3fc8eb6588873f7c29c249bb1d7f7530",
+    "src/nomo/native/files.es": "fc9dab5b0b6e3c1666a54a8281df2a96f7d7a75fc2b41873ed458747bf7ffe6c",
+    "src/nomo/native/git.es": "ee0e360dcc11c4b9d40bcd30495efd7a5ed49306d81b9a48496c032af7d56b24",
+    "src/nomo/native/history.es": "f49df9b106972047f35a66de969b6898ee0fdc3725e4b38db0e2a809123e4178",
+    "src/nomo/native/navigation.es": "fbc8c3e971b5cb6f879405f13143153fc14af4f73988f871640da249650e3e8d",
+    "src/nomo/native/options.es": "60f9bbfc776134f4f5b60ad126d04dfce452d21d9a68087dfa6904386fcc3b0a",
+    "src/nomo/native/transfer.es": "23447522ccca96e16c89614b457d2c79b8dd42be3d48ac2f3e80933a9259f863",
+    "src/nomo/native/workspace.es": "2cf40344fd45de0a6f13f827df1882999700bb27e398ae35510660be37095bff"
+  },
+  "runtime_profile": {
+    "boundary_policy": "nomo-native",
+    "memory": {
+      "backend": "sqlite",
+      "path": "/native-state/conversations.sqlite3"
+    },
+    "model": {
+      "adapter": "openai",
+      "model": "MiniMax-M3.1-Flash",
+      "base_url": "https://api.minimax.cn/v1",
+      "api_key_env": "MINIMAX_API_KEY",
+      "allow_private": false,
+      "typed_output_encoding": "output-tool",
+      "timeout": {
+        "request_deadline_ms": 600000,
+        "connect_timeout_ms": 10000
+      },
+      "retry": {
+        "attempts": 1,
+        "delay_ms": 0
+      }
+    },
+    "filesystem": {
+      "regions": {
+        "nomo.native.workspace.ProjectRoot": {
+          "root": "/project",
+          "read": true,
+          "write": true
+        }
+      }
+    },
+    "command": {
+      "allow": [
+        "/usr/bin/git"
+      ],
+      "isolation": "trusted-unconfined"
+    },
+    "policy": {
+      "mode": "local-static",
+      "rules": [
+        "console=allow",
+        "memory=allow",
+        "model=allow",
+        "tool=allow",
+        "approval=allow",
+        "command=approval",
+        "filesystem:Fs.read=allow",
+        "filesystem:Fs.list=allow",
+        "filesystem:Fs.stat=allow",
+        "filesystem:Fs.atomic_replace=approval"
+      ]
+    },
+    "approval": {
+      "mode": "prompt"
+    }
+  },
+  "model_request_count": 4,
+  "registered_tools": [
+    "git_status",
+    "git_diff",
+    "git_log",
+    "git_branches",
+    "git_init",
+    "git_branch",
+    "git_switch",
+    "git_commit",
+    "read_file",
+    "replace_file",
+    "edit_file",
+    "list_directory",
+    "stat_file",
+    "search_files",
+    "etas_emit_output"
+  ],
+  "tool_observations": [
+    {
+      "content": "[{\"bytes\":288,\"is_dir\":true,\"is_file\":false,\"path\":\".git\"},{\"bytes\":20,\"is_dir\":false,\"is_file\":true,\"path\":\"native.txt\"},{\"bytes\":11,\"is_dir\":false,\"is_file\":true,\"path\":\"note.txt\"}]",
+      "role": "tool",
+      "tool_call_id": "native-0"
+    },
+    {
+      "content": "[{\"bytes\":288,\"is_dir\":true,\"is_file\":false,\"path\":\".git\"},{\"bytes\":20,\"is_dir\":false,\"is_file\":true,\"path\":\"native.txt\"},{\"bytes\":11,\"is_dir\":false,\"is_file\":true,\"path\":\"note.txt\"}]",
+      "role": "tool",
+      "tool_call_id": "native-0"
+    },
+    {
+      "content": "[{\"line\":1,\"path\":\"note.txt\",\"text\":\"before old\"}]",
+      "role": "tool",
+      "tool_call_id": "native-1"
+    },
+    {
+      "content": "[{\"bytes\":288,\"is_dir\":true,\"is_file\":false,\"path\":\".git\"},{\"bytes\":20,\"is_dir\":false,\"is_file\":true,\"path\":\"native.txt\"},{\"bytes\":11,\"is_dir\":false,\"is_file\":true,\"path\":\"note.txt\"}]",
+      "role": "tool",
+      "tool_call_id": "native-0"
+    },
+    {
+      "content": "[{\"line\":1,\"path\":\"note.txt\",\"text\":\"before old\"}]",
+      "role": "tool",
+      "tool_call_id": "native-1"
+    },
+    {
+      "content": "{\"path\":\"note.txt\",\"status\":\"applied\"}",
+      "role": "tool",
+      "tool_call_id": "native-2"
+    }
+  ],
+  "host_requests": [
+    {
+      "index": 121,
+      "action": "Fs.list",
+      "kind": "filesystem",
+      "authority": {
+        "active_trace_specs": [],
+        "approval_count": 0,
+        "grant_count": 13
+      }
+    },
+    {
+      "index": 125,
+      "action": "Fs.stat",
+      "kind": "filesystem",
+      "authority": {
+        "active_trace_specs": [],
+        "approval_count": 0,
+        "grant_count": 13
+      }
+    },
+    {
+      "index": 130,
+      "action": "Fs.stat",
+      "kind": "filesystem",
+      "authority": {
+        "active_trace_specs": [],
+        "approval_count": 0,
+        "grant_count": 13
+      }
+    },
+    {
+      "index": 135,
+      "action": "Fs.stat",
+      "kind": "filesystem",
+      "authority": {
+        "active_trace_specs": [],
+        "approval_count": 0,
+        "grant_count": 13
+      }
+    },
+    {
+      "index": 205,
+      "action": "Fs.read",
+      "kind": "filesystem",
+      "authority": {
+        "active_trace_specs": [],
+        "approval_count": 0,
+        "grant_count": 13
+      }
+    },
+    {
+      "index": 274,
+      "action": "Fs.read",
+      "kind": "filesystem",
+      "authority": {
+        "active_trace_specs": [],
+        "approval_count": 0,
+        "grant_count": 13
+      }
+    },
+    {
+      "index": 303,
+      "action": "Fs.read",
+      "kind": "filesystem",
+      "authority": {
+        "active_trace_specs": [],
+        "approval_count": 0,
+        "grant_count": 13
+      }
+    },
+    {
+      "index": 313,
+      "action": "Approval.request",
+      "kind": "approval",
+      "authority": {
+        "active_trace_specs": [],
+        "approval_count": 0,
+        "grant_count": 13
+      }
+    },
+    {
+      "index": 315,
+      "action": "Fs.atomic_replace",
+      "kind": "filesystem",
+      "authority": {
+        "active_trace_specs": [],
+        "approval_count": 1,
+        "grant_count": 14
+      }
+    }
+  ],
+  "preview": {
+    "path": "note.txt",
+    "before": "before old\n",
+    "after": "before new\n"
+  },
+  "synthetic_file_after": "before new\n",
+  "native_trace_sha256": "5de112a7ea7aadecabe23bc71726fc0f3b52583eab867eccfd634897bf724750",
+  "trace_outcome": "completed",
+  "limitations": [
+    "stat_file is registered; metadata execution was exercised via list_directory",
+    "Only the small synthetic file round trip is accepted; large native slicing remains blocked by etas-interpreter#101",
+    "Remaining file mutation, recursive navigation, regex/glob and terminal tools are not implied by this result"
+  ]
+}
