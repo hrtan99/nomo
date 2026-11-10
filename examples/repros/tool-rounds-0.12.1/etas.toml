@@ -1,0 +1,31 @@
+[package]
+name = "native-tool-rounds"
+version = "0.1.0"
+edition = "2026"
+
+[source]
+root = "src"
+
+[runtime]
+default_profile = "synthetic"
+
+[runtime.profiles.synthetic.model]
+adapter = "openai"
+model = "synthetic"
+base_url = "http://127.0.0.1:18097/v1"
+api_key_env = "SYNTHETIC_KEY"
+allow_private = true
+typed_output_encoding = "output-tool"
+
+[runtime.profiles.synthetic.model.retry]
+attempts = 1
+delay_ms = 0
+
+[runtime.profiles.synthetic.policy]
+mode = "local-static"
+rules = ["console=allow", "model=allow", "tool=allow"]
+
+[[bin]]
+name = "native-tool-rounds"
+module = "app.main"
+flow = "main"
