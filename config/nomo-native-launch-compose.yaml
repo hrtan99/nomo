@@ -1,0 +1,9 @@
+# Run as the invoking user so private host state stays private and writable.
+services:
+  dev:
+    user: "${NOMO_NATIVE_UID:?launcher supplies uid}:${NOMO_NATIVE_GID:?launcher supplies gid}"
+    # /home/nomo is 0750; the read-only tool cache belongs to this image group.
+    group_add: ["10001"]
+    tmpfs:
+      - /workspace/.etas:rw,nosuid,nodev,noexec,size=16m,uid=${NOMO_NATIVE_UID},gid=${NOMO_NATIVE_GID},mode=0700
+      - /home/nomo/.cache:rw,nosuid,nodev,noexec,size=256m,uid=${NOMO_NATIVE_UID},gid=${NOMO_NATIVE_GID},mode=0700

@@ -1,0 +1,239 @@
+{
+  "date": "2026-11-11",
+  "compiler_config": "config/etas-latest-main.json",
+  "binary": {
+    "sha256": "fb3e472c80a3b3e33829e47f22188ea6513cc708a040f9845774eb6d42f7211e",
+    "version": "etas 0.12.1"
+  },
+  "functional_status": "passed",
+  "approval_status": "failed on etas-interpreter#102",
+  "probe_exit_code": 1,
+  "evidence_directory": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-git-v8b9ny2s",
+  "observed": {
+    "functional_status": "passed",
+    "scope": "prepared-index Git tools and launcher; not the full workflow gate",
+    "model_http_requests": 7,
+    "native_command_dispatches": 5,
+    "native_approvals": 5,
+    "restore_commands": 0,
+    "restore_approvals": 0,
+    "status": [
+      {
+        "first_user": 0.0,
+        "id": "native-0",
+        "ledger": {
+          "compactions": 0.0,
+          "context_bytes": 2593.0,
+          "generation_allowance": 262144.0,
+          "tools": 5.0,
+          "turns": 2.0
+        },
+        "next_event": 14.0,
+        "pending": "",
+        "summary_event": -1.0,
+        "summary_through": -1.0,
+        "title": "New conversation",
+        "workspace": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-git-v8b9ny2s/project 鹈鹕"
+      },
+      {
+        "first_user": 0.0,
+        "id": "native-0",
+        "ledger": {
+          "compactions": 0.0,
+          "context_bytes": 2841.0,
+          "generation_allowance": 393216.0,
+          "tools": 5.0,
+          "turns": 3.0
+        },
+        "next_event": 16.0,
+        "pending": "",
+        "summary_event": -1.0,
+        "summary_through": -1.0,
+        "title": "New conversation",
+        "workspace": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-git-v8b9ny2s/project 鹈鹕"
+      }
+    ],
+    "runs": [
+      {
+        "id": "native-0-run-0",
+        "input_event": 0.0,
+        "kind": "coding",
+        "label": "NativeCoding",
+        "phase": "completed",
+        "recovery_event": -1.0,
+        "result_event": 11.0,
+        "session": "native-0",
+        "through": 0.0
+      },
+      {
+        "id": "native-0-run-1",
+        "input_event": 1.0,
+        "kind": "observation",
+        "label": "git_diff",
+        "phase": "completed",
+        "recovery_event": -1.0,
+        "result_event": 2.0,
+        "session": "native-0",
+        "through": 1.0
+      },
+      {
+        "id": "native-0-run-2",
+        "input_event": 3.0,
+        "kind": "command",
+        "label": "/usr/bin/git",
+        "phase": "completed",
+        "recovery_event": -1.0,
+        "result_event": 4.0,
+        "session": "native-0",
+        "through": 3.0
+      },
+      {
+        "id": "native-0-run-3",
+        "input_event": 5.0,
+        "kind": "command",
+        "label": "/usr/bin/git",
+        "phase": "completed",
+        "recovery_event": -1.0,
+        "result_event": 6.0,
+        "session": "native-0",
+        "through": 5.0
+      },
+      {
+        "id": "native-0-run-4",
+        "input_event": 7.0,
+        "kind": "observation",
+        "label": "git_log",
+        "phase": "completed",
+        "recovery_event": -1.0,
+        "result_event": 8.0,
+        "session": "native-0",
+        "through": 7.0
+      },
+      {
+        "id": "native-0-run-5",
+        "input_event": 9.0,
+        "kind": "observation",
+        "label": "git_branches",
+        "phase": "completed",
+        "recovery_event": -1.0,
+        "result_event": 10.0,
+        "session": "native-0",
+        "through": 9.0
+      },
+      {
+        "id": "native-0-run-6",
+        "input_event": 12.0,
+        "kind": "coding",
+        "label": "NativeCoding",
+        "phase": "completed",
+        "recovery_event": -1.0,
+        "result_event": 13.0,
+        "session": "native-0",
+        "through": 12.0
+      },
+      {
+        "id": "native-0-run-7",
+        "input_event": 14.0,
+        "kind": "coding",
+        "label": "NativeCoding",
+        "phase": "completed",
+        "recovery_event": -1.0,
+        "result_event": 15.0,
+        "session": "native-0",
+        "through": 14.0
+      }
+    ],
+    "traces": [
+      "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-git-v8b9ny2s/traces/run-x7AlhLIw/trace.json",
+      "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-git-v8b9ny2s/traces/run-w04KmCol/trace.json"
+    ],
+    "approval_audit": [
+      {
+        "request": 99,
+        "action": "Command.run",
+        "authority": {
+          "active_trace_specs": [],
+          "approval_count": 0,
+          "grant_count": 13
+        },
+        "approval": 10000100
+      },
+      {
+        "request": 156,
+        "action": "Command.run",
+        "authority": {
+          "active_trace_specs": [],
+          "approval_count": 1,
+          "grant_count": 13
+        },
+        "approval": 10000157
+      },
+      {
+        "request": 222,
+        "action": "Command.run",
+        "authority": {
+          "active_trace_specs": [],
+          "approval_count": 2,
+          "grant_count": 13
+        },
+        "approval": 10000223
+      },
+      {
+        "request": 291,
+        "action": "Command.run",
+        "authority": {
+          "active_trace_specs": [],
+          "approval_count": 3,
+          "grant_count": 13
+        },
+        "approval": 10000292
+      },
+      {
+        "request": 348,
+        "action": "Command.run",
+        "authority": {
+          "active_trace_specs": [],
+          "approval_count": 4,
+          "grant_count": 13
+        },
+        "approval": 10000349
+      }
+    ]
+  },
+  "source_sha256": {
+    "scripts/nomo-native": "889809584df70927ea24c60c897b61185d1ffb72eab92277ae6f261d06a40d7e",
+    "config/nomo-native-launch-compose.yaml": "5c480bd74fbc73fbf0ce9a8fa395e9b5b2a46498d516ab64716599c10457f34b",
+    "config/nomo-native-compose.yaml": "3bf6efdfb73587d8c3f0a4071b03442710928c8eaeeca9134c043a818ed05bd9",
+    "config/etas-0121-official-compose.yaml": "3f9f35eee1214670cf9d609c133a57bd986e2d8501c19ff485cc04bf843054b2",
+    "config/local-tryout-compose.yaml": "06652ae5a7b220d898a81867a2302f81d670e0d14da153e675ebfe8a2ec0155c",
+    "compose.yaml": "420d7a623ca73a6e6eef859cad7efc104015fe96590a7a9011571a1900dabb8b",
+    "src/nomo/native/git.es": "baa4184a944be26ce7c9efc4ab5a9aa3f69f6f794e715f13f85909aa6b233fb9",
+    "src/nomo/native/entry.es": "82763dac4ba8bb85736c2223e07357042a70ba5b632310d196eea95348ce6185",
+    "src/nomo/native/history.es": "57ff2a304dc12e7b898f863d615c2c4c86b332f44481a3b56ce5dbddf56022f8",
+    "src/nomo/native/workspace.es": "2bafa765bae136e13379960cad5ef78b29ff89ca6e25c9ebf787c445102928f6",
+    "src/nomo/native/lifecycle.es": "1e7dd5e165e81cc64fae39c3cd430f387373e45c3af14f63606c5a2b9079a1c7",
+    "tests/native_git_probe.py": "a0c34ffc244c3a0de9956e0f21ff17b724370f83b85f9fbf3f9e75d6d9d7cc7d",
+    "tests/native_recovery_probe.py": "ba4d0df83a65c6ac358016f136775040b7ce326da7e0292d9c7cc01d3b9ae9b0"
+  },
+  "artifacts_sha256": {
+    "functional.json": "6ef8453ceaee0d61dbb2440f84aa88b381ae83d71f49c58f5a34397441a466a7",
+    "request-0.json": "c74087e9613d61102de8defa5980a5d1ad4f24ed622b4baa2b79b25c36dd80f1",
+    "request-1.json": "c7f562f82f013d47cf525e2e8f5c51e76fae5c96c819ac2cf19ef9e596d4cd20",
+    "request-2.json": "862cae2ac5a76009bbc1e0877dfee93ca52b146ee6810f75f2a2dc75502d22e4",
+    "request-3.json": "c2dfeace31c6dd021d29b5091f571e8e317947597377908d48cad65ca430e989",
+    "request-4.json": "cfee892f3d871a63d4e23ba224d0d1173de6d18da54c51d718851bf6c5afc8a4",
+    "request-5.json": "9e7c136f1061fca9448b1e4b94904abbc9f321a4e7990951b8117a567c16cfd9",
+    "request-6.json": "902cb9a4c1a62b31519379bc320e3c0bf5845881a48a941c36e9ccbd2c01ec2b",
+    "restored-terminal.txt": "eedf4acf74530344a811e4dedd7df0b2e01e9439d1211afe86366634197d2037",
+    "terminal.txt": "a904f3bb159d7c9f4a165788ecaee2273f05fb1f2930fc7d8bf655068899dd82",
+    "traces/run-w04KmCol/trace.json": "89b491d852fc60b43b2d9f03bccc28c8ea2841b648a2a5cb55694631828d521e",
+    "traces/run-x7AlhLIw/trace.json": "d122d73cb16095f61437c19f3f9df9588ae8d994a85c52c4e10d22050943a862"
+  },
+  "limitations": [
+    "Prepared-index Git task, not the full read/edit/check/Git workflow gate; the unchanged full acceptance still fails at etas#79",
+    "Separate approvals observed for every command; strict authority snapshot audit remains failed (#102)",
+    "Local synthetic model only, not real provider inference or measured usage",
+    "Launcher remains opt-in; default Python project entry has not switched",
+    "Native state is separate from Python-era history; explicit import required"
+  ]
+}
