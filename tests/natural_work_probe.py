@@ -133,18 +133,18 @@ def main():
             part=text[start:end].replace('https://api.minimax.cn/v1','http://host.docker.internal:%d/v1'%server.server_port).replace('allow_private = false','allow_private = true');text=text[:start]+part+text[end:]
         manifest.write_text(text)
         env={'PATH':os.environ['PATH'],'HOME':os.environ['HOME'],'MINIMAX_API_KEY':'SYNTHETIC_ONLY','NOMO_ETAS_VERSION':'0.4.1','NOMO_STATE_DIR':str(state)}
-        command=[str(project/'scripts/nomo'),'--root',str(workspace),'--allow',','.join(FILES),'--high-input','--check','/bin/sh','-c','grep -qx "before green" note.txt']
+        command=[str(project/'scripts/nomo'),'--legacy','--root',str(workspace),'--allow',','.join(FILES),'--high-input','--check','/bin/sh','-c','grep -qx "before green" note.txt']
         first=interactive(command,env,TASK,True);match=re.search(rb'SESSION ID ([0-9a-f]{32})',first);assert match
         assert b'High-input mode is persisted for this new session' in first
         assert (workspace/'note.txt').read_text()==AFTER and all((workspace/f).read_text()=='unrelated context\n' for f in FILES[:-1])
         assert stat.S_IMODE(workspace.stat().st_mode)==0o755
-        command=[str(project/'scripts/nomo'),'--root',str(workspace),'--id',match.group(1).decode(),'--allow',','.join(FILES)]
+        command=[str(project/'scripts/nomo'),'--legacy','--root',str(workspace),'--id',match.group(1).decode(),'--allow',','.join(FILES)]
         second=interactive(command,env,'现在文件的颜色是什么？',False)
         assert not server.failure and server.phases==list(range(19));assert '当前内容是 before green'.encode() in second
-        status=subprocess.run([str(project/'scripts/nomo'),'--status','--id',match.group(1).decode()],env=env,capture_output=True,timeout=120)
+        status=subprocess.run([str(project/'scripts/nomo'),'--legacy','--status','--id',match.group(1).decode()],env=env,capture_output=True,timeout=120)
         assert status.returncode==0, status.stderr[-3000:]
         assert b'NATIVE configured cumulative reservation=26214400; actual provider usage unknown; legacy native budget not present' in status.stdout, status.stdout[-3000:]
-        events=subprocess.run([str(project/'scripts/nomo'),'--status','--id',match.group(1).decode(),'--events'],env=env,capture_output=True,timeout=120)
+        events=subprocess.run([str(project/'scripts/nomo'),'--legacy','--status','--id',match.group(1).decode(),'--events'],env=env,capture_output=True,timeout=120)
         assert events.returncode==0, events.stderr[-3000:]
         assert b'line 000: unchanged marker content' in events.stdout and b'line 6999: unchanged marker content' in events.stdout and CHILD_DETAIL.encode() in events.stdout
         print(json.dumps({'status':'passed','scope':'persisted high-input natural-language edit, check, same-ID new-process continuation','file_bytes':len(BEFORE.encode()),'fake_requests':len(server.phases),'confirmations':2,'selected_file':'note.txt','unchanged_other_files':3}))

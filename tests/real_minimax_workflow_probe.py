@@ -120,17 +120,17 @@ def main():
         (workspace / "settings.py").write_text(BEFORE)
         (workspace / "README.txt").write_text("The application color is the COLOR setting in settings.py.\n")
         env = dict(os.environ, MINIMAX_API_KEY="SYNTHETIC_PROXY_ONLY", NOMO_STATE_DIR=str(out / "state"), NOMO_ETAS_VERSION="0.4.1")
-        command = [str(project / "scripts/nomo"), "--root", str(workspace), "--high-input", "--check", "python3", "-c", 'from settings import COLOR; assert COLOR == "new"; print("COLOR_CHECK_OK")']
+        command = [str(project / "scripts/nomo"), "--legacy", "--root", str(workspace), "--high-input", "--check", "python3", "-c", 'from settings import COLOR; assert COLOR == "new"; print("COLOR_CHECK_OK")']
         output = interact(command, env, out)
         identifier = re.search(rb"SESSION ID ([0-9a-f]{32})", output).group(1).decode()
         assert (workspace / "settings.py").read_text() == AFTER
-        resumed = subprocess.run([str(project / "scripts/nomo"), "--root", str(workspace), "--latest", "--once", "Report the previous COLOR change and its recorded check result. Do not modify files or run a check."], env=env, capture_output=True, timeout=300)
+        resumed = subprocess.run([str(project / "scripts/nomo"), "--legacy", "--root", str(workspace), "--latest", "--once", "Report the previous COLOR change and its recorded check result. Do not modify files or run a check."], env=env, capture_output=True, timeout=300)
         (out / "resumed.stdout").write_bytes(resumed.stdout)
         (out / "resumed.stderr").write_bytes(resumed.stderr)
         assert resumed.returncode == 0 and identifier.encode() in resumed.stdout
         assert b"FINAL " in resumed.stdout and b"new" in resumed.stdout and b"PREVIEW " not in resumed.stdout
         assert (workspace / "settings.py").read_text() == AFTER
-        status = subprocess.run([str(project / "scripts/nomo"), "--id", identifier, "--status", "--events"], env=env, capture_output=True, timeout=180)
+        status = subprocess.run([str(project / "scripts/nomo"), "--legacy", "--id", identifier, "--status", "--events"], env=env, capture_output=True, timeout=180)
         (out / "status.log").write_bytes(status.stdout + status.stderr)
         assert status.returncode == 0 and b"work-boundary" in status.stdout and b"work-check" in status.stdout
         assert status.stdout.index(b"work-boundary") < status.stdout.index(b"work-check")

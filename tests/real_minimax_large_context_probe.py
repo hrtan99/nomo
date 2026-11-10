@@ -121,7 +121,7 @@ def persisted_context(out, proxy, timeout):
     for turn in range(5):
         name = f"part{turn}.txt" if turn < 4 else "note.txt"
         question = f"Read {name} completely and report its marker." if turn < 4 else TASK
-        command = [str(project / "scripts/nomo"), "--root", str(workspace), "--allow", name, "--once", question]
+        command = [str(project / "scripts/nomo"), "--legacy", "--root", str(workspace), "--allow", name, "--once", question]
         command += ["--high-input"] if identifier is None else ["--latest"]
         if turn == 4:
             assert proxy.seed_requests == 16
@@ -164,7 +164,7 @@ def continue_to_million(previous, out, proxy, timeout):
     proxy.seed_requests = 16
     for index, name, question in ((0, "part4.txt", "Read part4.txt completely and report its marker."), (1, "note.txt", TASK)):
         if index == 1: proxy.live = True
-        completed = subprocess.run([str(project / "scripts/nomo"), "--root", str(workspace), "--latest", "--allow", name, "--once", question],
+        completed = subprocess.run([str(project / "scripts/nomo"), "--legacy", "--root", str(workspace), "--latest", "--allow", name, "--once", question],
                                    env=env, capture_output=True, timeout=timeout)
         (out / f"extension{index}.stdout").write_bytes(completed.stdout)
         (out / f"extension{index}.stderr").write_bytes(completed.stderr)

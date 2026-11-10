@@ -40,11 +40,11 @@ def finish_recorded(args):
         (out / 'resume.log').write_bytes(resumed_log)
     else:
         env['MINIMAX_API_KEY'] = args.credential_file.read_text().strip()
-        resumed = subprocess.run([str(ROOT / 'scripts/nomo'), '--root', str(args.workspace), '--id', identifier,
+        resumed = subprocess.run([str(ROOT / 'scripts/nomo'), '--legacy', '--root', str(args.workspace), '--id', identifier,
             '--once', '说明已完成的鹈鹕网页及其已记录的检查结果。不要修改文件，也不要重跑检查。'], env=env, capture_output=True, timeout=900)
         (out / 'resume.log').write_bytes(resumed.stdout + resumed.stderr)
         assert resumed.returncode == 0 and b'FINAL ' in resumed.stdout, resumed.stderr[-2000:]
-    status = subprocess.run([str(ROOT / 'scripts/nomo'), '--id', identifier, '--status', '--events'], env=env, capture_output=True, timeout=300)
+    status = subprocess.run([str(ROOT / 'scripts/nomo'), '--legacy', '--id', identifier, '--status', '--events'], env=env, capture_output=True, timeout=300)
     (out / 'status.log').write_bytes(status.stdout + status.stderr)
     assert status.returncode == 0 and b'work-boundary' in status.stdout and b'kind="check" name="independent-check"' in status.stdout
     assert b'Outcome passed.' in status.stdout and status.stdout.index(b'work-boundary') < status.stdout.index(b'kind="check" name="independent-check"')
@@ -78,7 +78,7 @@ def main():
         NOMO_STATE_DIR=str(state), NOMO_ETAS_VERSION='0.4.1', NOMO_ETAS_GRAPH='latest041', NOMO_LOG_FORMAT='raw')
     master, slave = pty.openpty()
     settings = termios.tcgetattr(slave); settings[3] &= ~(termios.ECHO | termios.ECHONL); termios.tcsetattr(slave, termios.TCSANOW, settings)
-    command = [str(ROOT / 'scripts/nomo'), '--root', str(args.workspace), '--allow', 'index.html']
+    command = [str(ROOT / 'scripts/nomo'), '--legacy', '--root', str(args.workspace), '--allow', 'index.html']
     question = PROMPT
     if previous:
         identifier = re.search(rb'SESSION ID ([0-9a-f]{32})', previous).group(1).decode()
@@ -133,11 +133,11 @@ def main():
             output.extend(data)
         assert process.returncode == 0 and cursor, 'interactive coding loop did not complete'
         identifier = re.search(rb'SESSION ID ([0-9a-f]{32})', output).group(1).decode()
-        resume = subprocess.run([str(ROOT / 'scripts/nomo'), '--root', str(args.workspace), '--id', identifier,
+        resume = subprocess.run([str(ROOT / 'scripts/nomo'), '--legacy', '--root', str(args.workspace), '--id', identifier,
             '--once', '说明刚才完成的网页修改和已记录的检查结果，不要修改文件或重跑检查。'], env=env, capture_output=True, timeout=900)
         (out / 'resume.log').write_bytes(resume.stdout + resume.stderr)
         assert resume.returncode == 0 and b'FINAL ' in resume.stdout, 'new-process resume failed'
-        status = subprocess.run([str(ROOT / 'scripts/nomo'), '--id', identifier, '--status', '--events'], env=env, capture_output=True, timeout=300)
+        status = subprocess.run([str(ROOT / 'scripts/nomo'), '--legacy', '--id', identifier, '--status', '--events'], env=env, capture_output=True, timeout=300)
         (out / 'status.log').write_bytes(status.stdout + status.stderr)
         assert status.returncode == 0 and b'work-boundary' in status.stdout and b'kind="check" name="independent-check"' in status.stdout
         payload = (args.workspace / 'index.html').read_bytes()

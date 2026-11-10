@@ -14,16 +14,16 @@ module = importlib.util.module_from_spec(spec)
 loader.exec_module(module)
 
 
-class SimpleEntryTests(unittest.TestCase):
+class LegacyEntryTests(unittest.TestCase):
     def test_high_input_is_new_session_only_and_reaches_main_launcher(self):
         with tempfile.TemporaryDirectory(prefix='nomo-high-input-') as tmp:
             base=Path(tmp).resolve();workspace=base/'workspace';workspace.mkdir();state=base/'state'
             with patch.dict(os.environ,{'NOMO_STATE_DIR':str(state)}),patch.object(module.sys,'argv',['nomo','--root',str(workspace),'--high-input','--once','read']),patch.object(module.os,'execv') as execute:
-                module.main();command=execute.call_args.args[1]
+                module.legacy_main();command=execute.call_args.args[1]
             self.assertIn('--new',command);self.assertIn('--high-input',command)
             for selection in (['--id','a'*32],['--latest'],['--status','--id','a'*32]):
                 with self.subTest(selection=selection),patch.object(module.sys,'argv',['nomo','--root',str(workspace),'--high-input',*selection]),patch.object(module.os,'execv') as execute:
-                    with self.assertRaises(SystemExit):module.main()
+                    with self.assertRaises(SystemExit):module.legacy_main()
                     execute.assert_not_called()
 
     def test_initialize_then_resume_preserves_policy_and_uses_current_root(self):
@@ -33,7 +33,7 @@ class SimpleEntryTests(unittest.TestCase):
             with patch.dict(os.environ, {'NOMO_STATE_DIR': str(state)}), \
                  patch.object(module.sys, 'argv', ['nomo', '--root', str(workspace)]), \
                  patch.object(module.os, 'execv') as execute:
-                module.main()
+                module.legacy_main()
                 command = execute.call_args.args[1]
                 self.assertIn('--new', command)
                 self.assertIn('--discover', command)
@@ -44,7 +44,7 @@ class SimpleEntryTests(unittest.TestCase):
                 self.assertEqual((policy/'policy.json').stat().st_mode & 0o777, 0o600)
                 self.assertEqual(json.loads((policy/'policy.json').read_bytes())['format'], 1)
                 module.sys.argv = ['nomo', '--root', str(workspace), '--id', 'a'*32]
-                module.main()
+                module.legacy_main()
                 self.assertIn('--id='+'a'*32, execute.call_args.args[1])
                 self.assertEqual((policy/'binding.key').read_bytes(), key)
 
@@ -54,7 +54,7 @@ class SimpleEntryTests(unittest.TestCase):
             with patch.dict(os.environ, {'NOMO_STATE_DIR': str(state)}), \
                  patch.object(module.sys, 'argv', ['nomo', '--root', str(workspace)]), \
                  patch.object(module.os, 'execv'):
-                module.main()
+                module.legacy_main()
             identifier='b'*32;session=state/'sessions'/identifier;session.mkdir(mode=0o700)
             with patch.object(module.registry.secrets,'token_hex',return_value='c'*32):
                 module.registry.bind_workspace(session,module.registry.workspace_identity(str(workspace)))
@@ -64,7 +64,7 @@ class SimpleEntryTests(unittest.TestCase):
                  patch.object(module.sys, 'argv', ['nomo', '--root', str(workspace), '--latest', '--once', 'continue']), \
                  patch.object(module.registry, 'probe_session', return_value=True), \
                  patch.object(module.os, 'execv') as execute:
-                module.main();command=execute.call_args.args[1]
+                module.legacy_main();command=execute.call_args.args[1]
             self.assertIn('--id='+identifier,command);self.assertNotIn('--new',command)
 
     def test_once_can_select_a_discovery_page(self):
@@ -74,13 +74,13 @@ class SimpleEntryTests(unittest.TestCase):
                 with self.subTest(page=page), patch.dict(os.environ, {'NOMO_STATE_DIR': str(state)}), \
                      patch.object(module.sys, 'argv', ['nomo', '--root', str(workspace), '--page', page, '--once', 'read']), \
                      patch.object(module.os, 'execv') as execute:
-                    module.main(); command = execute.call_args.args[1]
+                    module.legacy_main(); command = execute.call_args.args[1]
                     self.assertEqual(command[command.index('--page')+1], page)
                     self.assertEqual(command[command.index('--once')+1], 'read')
             for page in ('-1', '8'):
                 with self.subTest(invalid=page), patch.object(module.sys, 'argv', ['nomo', '--page', page]), \
                      patch.object(module.os, 'execv') as execute:
-                    with self.assertRaises(SystemExit): module.main()
+                    with self.assertRaises(SystemExit): module.legacy_main()
                     execute.assert_not_called()
 
     def test_explicit_files_disable_discovery_for_new_and_resumed_sessions(self):
@@ -89,7 +89,7 @@ class SimpleEntryTests(unittest.TestCase):
             with patch.dict(os.environ, {'NOMO_STATE_DIR': str(state)}), patch.object(module.os, 'execv') as execute:
                 for extra in ([], ['--id', 'a'*32]):
                     with self.subTest(resume=bool(extra)), patch.object(module.sys, 'argv', ['nomo', '--root', str(workspace), '--allow', 'src/a.py,README.md', '--once', 'read', *extra]):
-                        module.main(); command = execute.call_args.args[1]
+                        module.legacy_main(); command = execute.call_args.args[1]
                         self.assertIn('--allow=src/a.py,README.md', command)
                         self.assertNotIn('--discover', command); self.assertNotIn('--page', command)
                         self.assertEqual(command[command.index('--once')+1], 'read')
@@ -101,18 +101,18 @@ class SimpleEntryTests(unittest.TestCase):
                 with self.subTest(value=value), patch.dict(os.environ, {'NOMO_STATE_DIR': str(state)}), \
                      patch.object(module.sys, 'argv', ['nomo', '--root', str(workspace), '--allow', value]), \
                      patch.object(module.os, 'execv') as execute:
-                    self.assertEqual(module.main(), 1); execute.assert_not_called(); self.assertFalse(state.exists())
+                    self.assertEqual(module.legacy_main(), 1); execute.assert_not_called(); self.assertFalse(state.exists())
             with patch.object(module.sys, 'argv', ['nomo', '--allow', 'a', '--page', '1']), patch.object(module.os, 'execv') as execute:
-                with self.assertRaises(SystemExit): module.main()
+                with self.assertRaises(SystemExit): module.legacy_main()
                 execute.assert_not_called()
 
     def test_status_uses_offline_session_route_without_workspace(self):
         with tempfile.TemporaryDirectory(prefix='nomo-status-') as tmp:
             base = Path(tmp).resolve(); workspace = base/'workspace'; workspace.mkdir(); state = base/'state'
             with patch.dict(os.environ, {'NOMO_STATE_DIR': str(state)}), patch.object(module.os, 'execv') as execute:
-                with patch.object(module.sys, 'argv', ['nomo', '--root', str(workspace)]): module.main()
+                with patch.object(module.sys, 'argv', ['nomo', '--root', str(workspace)]): module.legacy_main()
                 with patch.object(module.sys, 'argv', ['nomo', '--status', '--id', 'a'*32, '--root', str(base/'missing')]):
-                    module.main(); command = execute.call_args.args[1]
+                    module.legacy_main(); command = execute.call_args.args[1]
                     self.assertEqual(command[1:3], ['session-id', 'status'])
                     self.assertEqual(command[command.index('--id')+1], 'a'*32)
                     self.assertNotIn('--root', command); self.assertNotIn('--once', command)
@@ -121,19 +121,19 @@ class SimpleEntryTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix='nomo-events-') as tmp:
             base = Path(tmp).resolve(); workspace = base/'workspace'; workspace.mkdir(); state = base/'state'
             with patch.dict(os.environ, {'NOMO_STATE_DIR': str(state)}), patch.object(module.os, 'execv') as execute:
-                with patch.object(module.sys, 'argv', ['nomo', '--root', str(workspace)]): module.main()
+                with patch.object(module.sys, 'argv', ['nomo', '--root', str(workspace)]): module.legacy_main()
                 with patch.object(module.sys, 'argv', ['nomo', '--status', '--events', '--id', 'a'*32]):
-                    module.main(); command = execute.call_args.args[1]
+                    module.legacy_main(); command = execute.call_args.args[1]
                     self.assertEqual(command[1:3], ['session-id', 'status']); self.assertIn('--events', command)
             with patch.object(module.sys, 'argv', ['nomo', '--events', '--id', 'a'*32]), patch.object(module.os, 'execv') as execute:
-                with self.assertRaises(SystemExit): module.main()
+                with self.assertRaises(SystemExit): module.legacy_main()
                 execute.assert_not_called()
 
     def test_status_rejects_missing_id_and_incompatible_options(self):
         for options in ([], ['--once', 'q'], ['--page', '0'], ['--allow', 'a'], ['--check', 'true']):
             args = ['nomo', '--status'] + ([] if not options else ['--id', 'a'*32, *options])
             with self.subTest(args=args), patch.object(module.sys, 'argv', args), patch.object(module.os, 'execv') as execute:
-                with self.assertRaises(SystemExit): module.main()
+                with self.assertRaises(SystemExit): module.legacy_main()
                 execute.assert_not_called()
 
     def test_resume_missing_state_and_overlapping_workspace_do_not_create_state(self):
@@ -143,14 +143,14 @@ class SimpleEntryTests(unittest.TestCase):
             with patch.dict(os.environ, {'NOMO_STATE_DIR': str(state)}), \
                  patch.object(module.sys, 'argv', ['nomo', '--root', str(workspace), '--id', 'a'*32]), \
                  patch.object(module.os, 'execv') as execute:
-                self.assertEqual(module.main(), 1)
+                self.assertEqual(module.legacy_main(), 1)
                 self.assertFalse(state.exists())
                 execute.assert_not_called()
             nested = workspace/'state'
             with patch.dict(os.environ, {'NOMO_STATE_DIR': str(nested)}), \
                  patch.object(module.sys, 'argv', ['nomo', '--root', str(workspace)]), \
                  patch.object(module.os, 'execv') as execute:
-                self.assertEqual(module.main(), 1)
+                self.assertEqual(module.legacy_main(), 1)
                 self.assertFalse(nested.exists())
                 execute.assert_not_called()
 
