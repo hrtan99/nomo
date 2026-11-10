@@ -32,6 +32,7 @@ class NativeModel:
         self.usage_events = []
 
     def start(self, operation):
+        (ROOT / '.etas').mkdir(mode=0o700, exist_ok=True)
         # The read-only container worker runs as the existing nomo user.
         environment = dict(os.environ, NOMO_PROJECT_REQUEST=str(self.request))
         command = ['docker', 'compose', '--env-file', '/dev/null']
