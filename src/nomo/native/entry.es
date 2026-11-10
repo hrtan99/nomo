@@ -11,6 +11,8 @@ import nomo.native.options.parse;
 import nomo.native.history.{SessionContext, NativeHistory, ConversationStore, Session, reserve_generation, rename, message, fork};
 import nomo.native.context.{RollingContext, ContextProjection, compact};
 import nomo.native.transfer.{save_archive, load_archive};
+import nomo.native.mutations.{journals, undo_changes, rollback_changes};
+import nomo.native.files.read_file;
 
 flow show(value: Session) -> unit {
     println("[SESSION] " + value.id + " · " + value.title);
@@ -53,6 +55,27 @@ flow show_history(session: string, query: string, first: i64, count: i64) -> uni
     if index < selected.next_event { println("[HISTORY] More events remain; /page " + from_i64(index)); }
 }
 
+flow edit_command(session: string, operation: string, id: string) -> unit {
+    handle {
+        if operation == "read" {
+            let result = read_file(id);
+            let json = match encode(result, "file conversion failed", "file encoding failed") { Ok(value) => value, Err(error) => { abort(error); } };
+            println("[FILE   ] " + json);
+        }
+        else if operation == "list" {
+            for item in journals() limit Iterations(2147483647) {
+                let json = match encode(item, "edit conversion failed", "edit encoding failed") { Ok(value) => value, Err(error) => { abort(error); } };
+                println("[EDIT   ] " + json);
+            }
+        }
+        else {
+            let result = if operation == "undo" { undo_changes(id) } else { rollback_changes(id) };
+            let json = match encode(result, "edit result conversion failed", "edit result encoding failed") { Ok(value) => value, Err(error) => { abort(error); } };
+            println("[EDIT   ] " + json);
+        }
+    } with { SessionContext.current() => { resume session; } };
+}
+
 flow event_index(raw: string) -> i64 {
     return match parse_i64(trim(raw)) {
         Ok(value) => { if value < 0 { abort("event index must be nonnegative"); } value },
@@ -86,7 +109,7 @@ public flow run(args: Array<string>) -> i32
         if request == "" { continue; }
         if request == "/help" {
             println("Ask about the project; native tools provide directory listing, metadata, literal search, file reads, approved editing and Git operations.");
-            println("/new [TITLE], /sessions, /resume ID, /rename TITLE, /history [TEXT], /page EVENT, /fork [EVENT], /export FILE, /import FILE, /compact, /status, /quit");
+            println("/new [TITLE], /sessions, /resume ID, /rename TITLE, /history [TEXT], /page EVENT, /fork [EVENT], /export FILE, /import FILE, /compact, /status, /read FILE, /edits, /undo [EDIT], /rollback EDIT, /quit");
             continue;
         }
         if request == "/history" || request == "/events" { show_history(selected.id, "", 0, -1); continue; }
@@ -100,6 +123,11 @@ public flow run(args: Array<string>) -> i32
         match strip_prefix(request, "/fork ") {
             Some(index) => { selected = fork(selected.id, event_index(index)); show(selected); continue; } None() => {}
         }
+        match strip_prefix(request, "/read ") { Some(pathname) => { edit_command(selected.id, "read", trim(pathname)); continue; } None() => {} }
+        if request == "/edits" { edit_command(selected.id, "list", ""); continue; }
+        if request == "/undo" { edit_command(selected.id, "undo", ""); continue; }
+        match strip_prefix(request, "/undo ") { Some(id) => { edit_command(selected.id, "undo", trim(id)); continue; } None() => {} }
+        match strip_prefix(request, "/rollback ") { Some(id) => { edit_command(selected.id, "rollback", trim(id)); continue; } None() => {} }
         if request == "/sessions" {
             for item in archive.sessions(options.workspace) limit Iterations(2147483647) { show(item); }
             continue;

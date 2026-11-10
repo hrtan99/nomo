@@ -129,7 +129,7 @@ def main():
         master, slave = pty.openpty()
         process = subprocess.Popen(command, cwd=ROOT, env=environment, stdin=slave, stdout=slave, stderr=slave)
         os.close(slave)
-        output, sent, approved = bytearray(), 0, 0
+        output, sent, approved, business_approved = bytearray(), 0, 0, 0
         try:
             while True:
                 ready, _, _ = select.select([master], [], [], 1)
@@ -147,8 +147,14 @@ def main():
                         sent += 1
                     if output.count(b'Type `yes` to approve:') > approved:
                         previews = [line for line in output.decode().splitlines() if '[PREVIEW] ' in line or '[COMMAND] ' in line]
-                        preview = previews[-1].split('[PREVIEW] ' if approved == 0 else '[COMMAND] ', 1)[1]
-                        assert json.loads(preview) == approvals[approved], preview
+                        line = previews[-1]
+                        value = json.loads(line.split('[PREVIEW] ' if '[PREVIEW] ' in line else '[COMMAND] ', 1)[1])
+                        if value.get('program') in ('/bin/cp', '/bin/mkdir'):
+                            from native_mutations_probe import approve_preview
+                            approve_preview(output)
+                        else:
+                            assert value == approvals[business_approved], value
+                            business_approved += 1
                         os.write(master, b'yes\n')
                         approved += 1
                 elif process.poll() is not None:
@@ -160,7 +166,7 @@ def main():
         (evidence / 'terminal.txt').write_text(text)
         (evidence / 'command.json').write_text(json.dumps(command, indent=2))
         assert code == 0, text
-        assert approved == len(approvals) and len(server.requests) == 14
+        assert business_approved == len(approvals) and len(server.requests) == 14
         assert (project / 'note.txt').read_text() == 'before new\n'
         assert subprocess.check_output(['git', '-C', str(project), 'branch', '--show-current'], text=True).strip() == 'accepted'
         assert subprocess.check_output(['git', '-C', str(project), 'status', '--porcelain'], text=True) == ''
@@ -176,10 +182,8 @@ def main():
         for name in ('trace.json', 'restored.json'):
             trace = json.loads((traces / name).read_text())
             assert trace['outcome']['kind'] == 'completed'
-            for event in trace['events']:
-                if event['kind'] == 'host_request_started' and event.get('request_kind') in ('command', 'filesystem'):
-                    if event.get('qualified_action') in ('Command.run', 'Fs.atomic_replace'):
-                        assert event['authority']['approval_count'] == 1, event
+            from native_recovery_probe import audit
+            assert not audit(trace['events']), 'native approval provenance audit failed'
         print('PASS complete native read/edit/check/Git/chat/restore: ' + str(evidence))
     finally:
         server.shutdown()

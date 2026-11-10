@@ -37,3 +37,20 @@ public flow execute(program: string, arguments: Array<string>) -> CommandOutput
     tool_finished("command", call, output);
     return output;
 }
+
+// A journalled file transaction owns this operation. Keep its outer pending
+// request intact instead of creating and completing another top-level tool.
+public flow execute_step(program: string, arguments: Array<string>, parent: i64) -> CommandOutput
+    ![SessionContext, Memory, Command.run<DefaultCommandSandbox>, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>] {
+    let request = CommandPreview { program = program, arguments = arguments };
+    record("operation", "command", request, parent);
+    let preview = match encode(request, "command preview conversion failed", "command preview encoding failed") {
+        Ok(value) => value, Err(error) => { abort(error); }
+    };
+    println("[COMMAND] " + preview);
+    let root = match path<ProjectRoot>(".") { Ok(value) => value, Err(_) => { abort("project root is unavailable"); } };
+    let result = run(with_cwd(command(program, arguments), root), DefaultCommandSandbox);
+    let output = CommandOutput { exit_code = result.exit_code, stdout = text(result.stdout), stderr = text(result.stderr) };
+    record("operation_result", "command", output, parent);
+    return output;
+}

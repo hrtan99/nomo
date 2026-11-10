@@ -6,7 +6,7 @@ import std.effects.Fs;
 import std.text.{lines, contains};
 import nomo.native.workspace.ProjectRoot;
 import nomo.native.files.read_text;
-import nomo.native.history.{SessionContext, record, tool_finished};
+import nomo.native.history.{SessionContext, observe_started, observe_finished};
 
 type Metadata = { is_file: bool, is_dir: bool, len: u64 };
 public type PathInfo = { path: string, is_file: bool, is_dir: bool, bytes: u64 };
@@ -31,26 +31,26 @@ flow info(pathname: WorkspacePath<ProjectRoot>) -> PathInfo {
 /// List the actual named entries and metadata in a project directory; use '.' for the root.
 public tool list_directory(pathname: string) -> Array<PathInfo>
     ![SessionContext, Memory, Fs.list<ProjectRoot>, Fs.stat<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>] {
-    let call = record("tool_call", "list_directory", pathname, -1);
+    let call = observe_started("list_directory", pathname);
     var entries: Array<PathInfo> = [];
     for item in list(location(pathname)) limit Iterations(2147483647) { entries = entries.push(info(item)); }
-    tool_finished("list_directory", call, entries);
+    observe_finished("list_directory", call, entries);
     return entries;
 }
 
 /// Read actual metadata for an explicit project path.
 public tool stat_file(pathname: string) -> PathInfo
     ![SessionContext, Memory, Fs.stat<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>] {
-    let call = record("tool_call", "stat_file", pathname, -1);
+    let call = observe_started("stat_file", pathname);
     let result = info(location(pathname));
-    tool_finished("stat_file", call, result);
+    observe_finished("stat_file", call, result);
     return result;
 }
 
 /// Search exact UTF-8 text in selected files and return every matching line, numbered from one.
 public tool search_files(paths: Array<string>, literal: string) -> Array<MatchLine>
     ![SessionContext, Memory, Fs.read<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>] {
-    let call = record("tool_call", "search_files", SearchRequest { paths = paths, literal = literal }, -1);
+    let call = observe_started("search_files", SearchRequest { paths = paths, literal = literal });
     var matches: Array<MatchLine> = [];
     for pathname in paths limit Iterations(2147483647) {
         var number: usize = 1;
@@ -59,6 +59,6 @@ public tool search_files(paths: Array<string>, literal: string) -> Array<MatchLi
             number = number + 1;
         }
     }
-    tool_finished("search_files", call, matches);
+    observe_finished("search_files", call, matches);
     return matches;
 }

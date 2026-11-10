@@ -967,7 +967,7 @@ root = "/project"
 read = true
 write = true
 [runtime.profiles.nomo-native.command]
-allow = ["/usr/bin/git", "/usr/bin/python3", "/bin/sh"]
+allow = ["/usr/bin/git", "/usr/bin/python3", "/bin/sh", "/bin/cp", "/bin/mkdir", "/bin/rm", "/bin/mv", "/usr/bin/diff"]
 isolation = "trusted-unconfined"
 [runtime.profiles.nomo-native.policy]
 mode = "local-static"

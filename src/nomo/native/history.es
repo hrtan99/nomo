@@ -98,10 +98,11 @@ flow append_event(id: string, role: string, name: string, text: string, call: i6
     let before = entry(id);
     let value = before.value;
     let index = value.next_event;
+    if live && role == "tool_call" && value.pending != "" { abort("resolve the pending native operation before starting another tool: " + value.pending); }
     let first = if role == "user" && value.first_user < 0 { index } else { value.first_user };
     let pending = if live && role == "tool_call" { key(id, index) + " " + name } else { value.pending };
     let ledger = Ledger { turns = value.ledger.turns, compactions = value.ledger.compactions,
-        tools = value.ledger.tools + if live && role == "tool_call" { 1 } else { 0 },
+        tools = value.ledger.tools + if live && (role == "tool_call" || role == "observation_call") { 1 } else { 0 },
         generation_allowance = value.ledger.generation_allowance, context_bytes = value.ledger.context_bytes };
     // Reserve first. An interrupted archive write remains a visible gap;
     // its index is never reused and no tool is dispatched before append finishes.
@@ -168,8 +169,19 @@ public flow tool_finished<T>(name: string, call: i64, result: T) -> unit
     let id = perform SessionContext.current();
     let before = entry(id);
     let value = before.value;
+    if value.pending != key(id, call) + " " + name { abort("native completion does not match the pending request"); }
     Data.Sessions.put_versioned(id, copy(value, value.next_event, value.first_user, value.summary_event,
         value.summary_through, "", value.ledger, value.title), before.version);
+}
+
+public flow observe_started<T>(name: string, request: T) -> i64
+    ![SessionContext, Memory, Error<StorageError>, Error<MemoryConflict>] {
+    return record("observation_call", name, request, -1);
+}
+
+public flow observe_finished<T>(name: string, call: i64, result: T) -> unit
+    ![SessionContext, Memory, Error<StorageError>, Error<MemoryConflict>] {
+    record("tool", name, result, call);
 }
 
 public flow rename(id: string, title: string) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>] {

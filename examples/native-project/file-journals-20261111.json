@@ -1,0 +1,708 @@
+{
+  "date": "2026-11-11",
+  "compiler_pin": {
+    "selector": "latest0121",
+    "version": "0.12.1",
+    "source_overrides": [],
+    "repositories": {
+      "cli": {
+        "repository": "etas",
+        "revision": "a3c49ffb19d2b3770c9232eb975f605fcf6ac876",
+        "tree": "79db85bcab1a73972aef1d794a8802b85e8cf767",
+        "packages": [
+          "etas_cli",
+          "etas_driver",
+          "etas_package",
+          "etas_tests"
+        ]
+      },
+      "core": {
+        "repository": "etas-core",
+        "revision": "0f599a84dd00c3abe71f6549004776672f62f02f",
+        "tree": "d83ae2011f290df2b638716b40b2c3a325eae6e7",
+        "packages": [
+          "etas_builtin",
+          "etas_cache",
+          "etas_code",
+          "etas_core",
+          "etas_host",
+          "etas_memory_derive",
+          "etas_package_metadata",
+          "etas_std",
+          "etas_utils"
+        ]
+      },
+      "frontend": {
+        "repository": "etas-frontend",
+        "revision": "88764266e384ae8035f44892c9093aabc1761d0f",
+        "tree": "7aeaf95183129782ace53d80c7b1a8a9e6b4049f",
+        "packages": [
+          "etas_effects",
+          "etas_frontend",
+          "etas_hir",
+          "etas_hir_analysis",
+          "etas_syntax",
+          "etas_syntax_derive",
+          "etas_types"
+        ]
+      },
+      "interpreter": {
+        "repository": "etas-interpreter",
+        "revision": "cb8c48c0d09c78ce24201ceb13d2ec72a14a2555",
+        "tree": "5d495fe0151a8b08ac968635c1eac503f8685dde",
+        "packages": [
+          "etas_interpreter"
+        ]
+      }
+    },
+    "source": "Official ETAS CLI 0.12.1 at the 2026-11-11 main snapshot with its own Cargo.lock and matching Git dependencies; includes the upstream root cwd fix, without Nomo source overrides.",
+    "cargo_lock_sha256": "17c6917c08188ad98daaea2a230a6ff31a58756568fb6c627bf2dd8248af628f",
+    "verified_seed_binary_sha256": "fb3e472c80a3b3e33829e47f22188ea6513cc708a040f9845774eb6d42f7211e"
+  },
+  "current_source_sha256": {
+    "src/nomo/native/agent.es": "431b09b7a582071c12875f392be4a5e610e8bb3c918449e474444ccc6f9fb0d4",
+    "src/nomo/native/context.es": "21a3c2af0e50ed47ce72efc91256877ed7524c737d3100da7cdd4482b42fe167",
+    "src/nomo/native/entry.es": "3c2e6f1d181ff59c43ae9a49ce750c54ebe6e98d148ce477642c8b559134d009",
+    "src/nomo/native/file_io.es": "d530d2d3885067eff708167b9c4ab39d8af0e278bcb505bff1c95869b0761e65",
+    "src/nomo/native/files.es": "edb11a9b3c0b6f10f863e49104dd9fca0bcc1697b038a930c2f982fbf0c55b16",
+    "src/nomo/native/git.es": "ee0e360dcc11c4b9d40bcd30495efd7a5ed49306d81b9a48496c032af7d56b24",
+    "src/nomo/native/history.es": "a97746c96cf02ef782b5a1912db59876923726342dd23aa462f31afa8c89f341",
+    "src/nomo/native/mutations.es": "27863f9fe690245a4a2ef19db24f159afa087fba37b596dc0159c90b8314134e",
+    "src/nomo/native/navigation.es": "31d59b6264f96f08d72b18e9e8526e0fcd85e34c441784080f98f98cb8f3bd4e",
+    "src/nomo/native/options.es": "60f9bbfc776134f4f5b60ad126d04dfce452d21d9a68087dfa6904386fcc3b0a",
+    "src/nomo/native/terminal.es": "21e0ea9cc8d81d3833e576fbc41a99a45f5f8397a6aac4e16850409c780d6cbd",
+    "src/nomo/native/transfer.es": "23447522ccca96e16c89614b457d2c79b8dd42be3d48ac2f3e80933a9259f863",
+    "src/nomo/native/workspace.es": "de19d2db0c465c0079cd3a9b814d398407f97633383c7e8ffc18aa9cebbc2e46"
+  },
+  "result": "functional_evidence_with_failed_approval_gate",
+  "approval_gate": {
+    "result": "failed",
+    "upstream": "https://github.com/etas-project/etas-interpreter/issues/102",
+    "observation": "Every executed command had a separate preceding approval, but CommandRequest/trace used the pre-approval authority snapshot. This does not establish an approval bypass. The audit is not waived."
+  },
+  "model_scope": "Local synthetic HTTP only; no real provider, private source or credentials.",
+  "batch_and_undo": {
+    "command": "python3 -B tests/native_mutations_probe.py",
+    "source_scope": "Executed before the later single-file/readonly API unification. The final write/persistence and interruption flows below compile and execute the current shared journal; this earlier batch run is not an exact hash match to current sources.",
+    "functional_result": "passed before final approval audit",
+    "model_requests": 4,
+    "operations_observed": [
+      "automatic parent directories",
+      "create UTF-8 file",
+      "literal edit",
+      "mkdir",
+      "binary move",
+      "recursive directory delete",
+      "undo all seven steps including auto-created parents"
+    ],
+    "original_text_binary_directory_and_mode_restored": true,
+    "mode_restored": "0751",
+    "pending_after": "",
+    "trace": {
+      "outcome": "completed",
+      "sha256": "6ff69aaa9cf8c90ebc5f67809f6bc5f7ce9fb428495a2ca43193c336ab1c0716",
+      "actions": {
+        "Policy.evaluate": 790,
+        "Memory.read": 235,
+        "Memory.write": 409,
+        "Console.stdout_write": 60,
+        "Console.stdin_read_line": 5,
+        "Agentic.infer": 4,
+        "Approval.request": 32,
+        "Command.run": 30,
+        "Fs.list": 42,
+        "Fs.atomic_replace": 2,
+        "Fs.read": 1
+      },
+      "sensitive_boundaries": [
+        {
+          "request": 73,
+          "event": 176,
+          "action": "Command.run",
+          "approval_request": 10000074,
+          "approval_event": 174,
+          "authority_approvals_before": 0,
+          "authority_approvals_at_dispatch": 0
+        },
+        {
+          "request": 121,
+          "event": 295,
+          "action": "Command.run",
+          "approval_request": 10000122,
+          "approval_event": 293,
+          "authority_approvals_before": 1,
+          "authority_approvals_at_dispatch": 1
+        },
+        {
+          "request": 147,
+          "event": 361,
+          "action": "Command.run",
+          "approval_request": 10000148,
+          "approval_event": 359,
+          "authority_approvals_before": 2,
+          "authority_approvals_at_dispatch": 2
+        },
+        {
+          "request": 207,
+          "event": 510,
+          "action": "Command.run",
+          "approval_request": 10000208,
+          "approval_event": 508,
+          "authority_approvals_before": 3,
+          "authority_approvals_at_dispatch": 3
+        },
+        {
+          "request": 233,
+          "event": 576,
+          "action": "Command.run",
+          "approval_request": 10000234,
+          "approval_event": 574,
+          "authority_approvals_before": 4,
+          "authority_approvals_at_dispatch": 4
+        },
+        {
+          "request": 283,
+          "event": 700,
+          "action": "Fs.atomic_replace",
+          "approval_request": 10000284,
+          "approval_event": 698,
+          "authority_approvals_before": 5,
+          "authority_approvals_at_dispatch": 6
+        },
+        {
+          "request": 299,
+          "event": 741,
+          "action": "Command.run",
+          "approval_request": 10000300,
+          "approval_event": 739,
+          "authority_approvals_before": 6,
+          "authority_approvals_at_dispatch": 6
+        },
+        {
+          "request": 341,
+          "event": 845,
+          "action": "Command.run",
+          "approval_request": 10000342,
+          "approval_event": 843,
+          "authority_approvals_before": 7,
+          "authority_approvals_at_dispatch": 7
+        },
+        {
+          "request": 375,
+          "event": 931,
+          "action": "Fs.atomic_replace",
+          "approval_request": 10000376,
+          "approval_event": 929,
+          "authority_approvals_before": 8,
+          "authority_approvals_at_dispatch": 9
+        },
+        {
+          "request": 391,
+          "event": 972,
+          "action": "Command.run",
+          "approval_request": 10000392,
+          "approval_event": 970,
+          "authority_approvals_before": 9,
+          "authority_approvals_at_dispatch": 9
+        },
+        {
+          "request": 449,
+          "event": 1117,
+          "action": "Command.run",
+          "approval_request": 10000450,
+          "approval_event": 1115,
+          "authority_approvals_before": 10,
+          "authority_approvals_at_dispatch": 10
+        },
+        {
+          "request": 475,
+          "event": 1183,
+          "action": "Command.run",
+          "approval_request": 10000476,
+          "approval_event": 1181,
+          "authority_approvals_before": 11,
+          "authority_approvals_at_dispatch": 11
+        },
+        {
+          "request": 523,
+          "event": 1299,
+          "action": "Command.run",
+          "approval_request": 10000524,
+          "approval_event": 1297,
+          "authority_approvals_before": 12,
+          "authority_approvals_at_dispatch": 12
+        },
+        {
+          "request": 567,
+          "event": 1410,
+          "action": "Command.run",
+          "approval_request": 10000568,
+          "approval_event": 1408,
+          "authority_approvals_before": 13,
+          "authority_approvals_at_dispatch": 13
+        },
+        {
+          "request": 597,
+          "event": 1484,
+          "action": "Command.run",
+          "approval_request": 10000598,
+          "approval_event": 1482,
+          "authority_approvals_before": 14,
+          "authority_approvals_at_dispatch": 14
+        },
+        {
+          "request": 639,
+          "event": 1588,
+          "action": "Command.run",
+          "approval_request": 10000640,
+          "approval_event": 1586,
+          "authority_approvals_before": 15,
+          "authority_approvals_at_dispatch": 15
+        },
+        {
+          "request": 681,
+          "event": 1695,
+          "action": "Command.run",
+          "approval_request": 10000682,
+          "approval_event": 1693,
+          "authority_approvals_before": 16,
+          "authority_approvals_at_dispatch": 16
+        },
+        {
+          "request": 1014,
+          "event": 2407,
+          "action": "Command.run",
+          "approval_request": 10001015,
+          "approval_event": 2405,
+          "authority_approvals_before": 17,
+          "authority_approvals_at_dispatch": 17
+        },
+        {
+          "request": 1056,
+          "event": 2511,
+          "action": "Command.run",
+          "approval_request": 10001057,
+          "approval_event": 2509,
+          "authority_approvals_before": 18,
+          "authority_approvals_at_dispatch": 18
+        },
+        {
+          "request": 1086,
+          "event": 2587,
+          "action": "Command.run",
+          "approval_request": 10001087,
+          "approval_event": 2585,
+          "authority_approvals_before": 19,
+          "authority_approvals_at_dispatch": 19
+        },
+        {
+          "request": 1114,
+          "event": 2658,
+          "action": "Command.run",
+          "approval_request": 10001115,
+          "approval_event": 2656,
+          "authority_approvals_before": 20,
+          "authority_approvals_at_dispatch": 20
+        },
+        {
+          "request": 1154,
+          "event": 2758,
+          "action": "Command.run",
+          "approval_request": 10001155,
+          "approval_event": 2756,
+          "authority_approvals_before": 21,
+          "authority_approvals_at_dispatch": 21
+        },
+        {
+          "request": 1184,
+          "event": 2834,
+          "action": "Command.run",
+          "approval_request": 10001185,
+          "approval_event": 2832,
+          "authority_approvals_before": 22,
+          "authority_approvals_at_dispatch": 22
+        },
+        {
+          "request": 1224,
+          "event": 2934,
+          "action": "Command.run",
+          "approval_request": 10001225,
+          "approval_event": 2932,
+          "authority_approvals_before": 23,
+          "authority_approvals_at_dispatch": 23
+        },
+        {
+          "request": 1254,
+          "event": 3010,
+          "action": "Command.run",
+          "approval_request": 10001255,
+          "approval_event": 3008,
+          "authority_approvals_before": 24,
+          "authority_approvals_at_dispatch": 24
+        },
+        {
+          "request": 1278,
+          "event": 3072,
+          "action": "Command.run",
+          "approval_request": 10001279,
+          "approval_event": 3070,
+          "authority_approvals_before": 25,
+          "authority_approvals_at_dispatch": 25
+        },
+        {
+          "request": 1318,
+          "event": 3172,
+          "action": "Command.run",
+          "approval_request": 10001319,
+          "approval_event": 3170,
+          "authority_approvals_before": 26,
+          "authority_approvals_at_dispatch": 26
+        },
+        {
+          "request": 1348,
+          "event": 3248,
+          "action": "Command.run",
+          "approval_request": 10001349,
+          "approval_event": 3246,
+          "authority_approvals_before": 27,
+          "authority_approvals_at_dispatch": 27
+        },
+        {
+          "request": 1388,
+          "event": 3348,
+          "action": "Command.run",
+          "approval_request": 10001389,
+          "approval_event": 3346,
+          "authority_approvals_before": 28,
+          "authority_approvals_at_dispatch": 28
+        },
+        {
+          "request": 1418,
+          "event": 3424,
+          "action": "Command.run",
+          "approval_request": 10001419,
+          "approval_event": 3422,
+          "authority_approvals_before": 29,
+          "authority_approvals_at_dispatch": 29
+        },
+        {
+          "request": 1458,
+          "event": 3524,
+          "action": "Command.run",
+          "approval_request": 10001459,
+          "approval_event": 3522,
+          "authority_approvals_before": 30,
+          "authority_approvals_at_dispatch": 30
+        },
+        {
+          "request": 1488,
+          "event": 3600,
+          "action": "Command.run",
+          "approval_request": 10001489,
+          "approval_event": 3598,
+          "authority_approvals_before": 31,
+          "authority_approvals_at_dispatch": 31
+        }
+      ]
+    }
+  },
+  "single_file_unification": {
+    "command": "python3 -B tests/native_project_probe.py --scenario persist",
+    "functional_result": "passed before final approval audit",
+    "model_requests": 5,
+    "file_after": "before new\n",
+    "new_process_full_archive_contains_original_read": true,
+    "model_context_is_summary_plus_recent_events_not_full_archive": true,
+    "native_model_summary_retained": true,
+    "initial_trace": {
+      "outcome": "completed",
+      "sha256": "db7dbda7ee24e4ec3808e43ffb0997dcc2902777dead0d26a25065ed5c9a05f8",
+      "actions": {
+        "Policy.evaluate": 254,
+        "Memory.read": 124,
+        "Memory.write": 77,
+        "Console.stdout_write": 33,
+        "Console.stdin_read_line": 5,
+        "Agentic.infer": 4,
+        "Fs.read": 3,
+        "Approval.request": 4,
+        "Command.run": 3,
+        "Fs.list": 2,
+        "Fs.atomic_replace": 1
+      },
+      "sensitive_boundaries": [
+        {
+          "request": 100,
+          "event": 240,
+          "action": "Command.run",
+          "approval_request": 10000101,
+          "approval_event": 238,
+          "authority_approvals_before": 0,
+          "authority_approvals_at_dispatch": 0
+        },
+        {
+          "request": 128,
+          "event": 310,
+          "action": "Command.run",
+          "approval_request": 10000129,
+          "approval_event": 308,
+          "authority_approvals_before": 1,
+          "authority_approvals_at_dispatch": 1
+        },
+        {
+          "request": 172,
+          "event": 421,
+          "action": "Fs.atomic_replace",
+          "approval_request": 10000173,
+          "approval_event": 419,
+          "authority_approvals_before": 2,
+          "authority_approvals_at_dispatch": 3
+        },
+        {
+          "request": 188,
+          "event": 462,
+          "action": "Command.run",
+          "approval_request": 10000189,
+          "approval_event": 460,
+          "authority_approvals_before": 3,
+          "authority_approvals_at_dispatch": 3
+        }
+      ]
+    },
+    "restored_trace": {
+      "outcome": "completed",
+      "sha256": "c27405f8286eec5cad4262559f2b291e913d0063901df9508c7045c87008f645",
+      "actions": {
+        "Policy.evaluate": 119,
+        "Memory.read": 77,
+        "Memory.write": 10,
+        "Console.stdout_write": 27,
+        "Console.stdin_read_line": 4,
+        "Agentic.infer": 1
+      },
+      "sensitive_boundaries": []
+    }
+  },
+  "interrupt_and_new_process_rollback": {
+    "command": "python3 -B tests/native_recovery_probe.py",
+    "functional_result": "passed",
+    "model_requests": 1,
+    "interrupt_after": "new/sub/index.html was published; after-snapshot copy was awaiting approval and not approved",
+    "recovery_commands": [
+      "/edits",
+      "/read new/sub/index.html",
+      "/rollback native-0-1",
+      "/edits",
+      "/status",
+      "/quit"
+    ],
+    "read_only_inspection_preserved_pending": true,
+    "status_after": {
+      "first_user": 0.0,
+      "id": "native-0",
+      "ledger": {
+        "compactions": 0.0,
+        "context_bytes": 422.0,
+        "generation_allowance": 131072.0,
+        "tools": 2.0,
+        "turns": 1.0
+      },
+      "next_event": 33.0,
+      "pending": "",
+      "summary_event": -1.0,
+      "summary_through": -1.0,
+      "title": "New conversation",
+      "workspace": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-recovery-cud_mqth/project"
+    },
+    "forward_task_not_replayed": true,
+    "project_original_state_restored": true,
+    "first_trace": {
+      "outcome": "cancelled",
+      "sha256": "2c5f7c36c9d7d58339cb40aa983415e5b9270c63d549319f0eb66c3f742d9bca",
+      "actions": {
+        "Policy.evaluate": 156,
+        "Memory.read": 31,
+        "Memory.write": 92,
+        "Console.stdout_write": 14,
+        "Console.stdin_read_line": 1,
+        "Agentic.infer": 1,
+        "Approval.request": 7,
+        "Command.run": 5,
+        "Fs.list": 9,
+        "Fs.atomic_replace": 1
+      },
+      "sensitive_boundaries": [
+        {
+          "request": 73,
+          "event": 176,
+          "action": "Command.run",
+          "approval_request": 10000074,
+          "approval_event": 174,
+          "authority_approvals_before": 0,
+          "authority_approvals_at_dispatch": 0
+        },
+        {
+          "request": 121,
+          "event": 295,
+          "action": "Command.run",
+          "approval_request": 10000122,
+          "approval_event": 293,
+          "authority_approvals_before": 1,
+          "authority_approvals_at_dispatch": 1
+        },
+        {
+          "request": 147,
+          "event": 361,
+          "action": "Command.run",
+          "approval_request": 10000148,
+          "approval_event": 359,
+          "authority_approvals_before": 2,
+          "authority_approvals_at_dispatch": 2
+        },
+        {
+          "request": 207,
+          "event": 510,
+          "action": "Command.run",
+          "approval_request": 10000208,
+          "approval_event": 508,
+          "authority_approvals_before": 3,
+          "authority_approvals_at_dispatch": 3
+        },
+        {
+          "request": 233,
+          "event": 576,
+          "action": "Command.run",
+          "approval_request": 10000234,
+          "approval_event": 574,
+          "authority_approvals_before": 4,
+          "authority_approvals_at_dispatch": 4
+        },
+        {
+          "request": 293,
+          "event": 725,
+          "action": "Fs.atomic_replace",
+          "approval_request": 10000294,
+          "approval_event": 723,
+          "authority_approvals_before": 5,
+          "authority_approvals_at_dispatch": 6
+        }
+      ]
+    },
+    "recovered_trace": {
+      "outcome": "completed",
+      "sha256": "ded3cdf12532718c3c455a4323944d802a2d241efd1f82ac2bc129d2e0c3e3e8",
+      "actions": {
+        "Policy.evaluate": 130,
+        "Memory.read": 28,
+        "Memory.write": 65,
+        "Console.stdout_write": 21,
+        "Console.stdin_read_line": 6,
+        "Fs.read": 1,
+        "Fs.list": 6,
+        "Approval.request": 3,
+        "Command.run": 3
+      },
+      "sensitive_boundaries": [
+        {
+          "request": 88,
+          "event": 209,
+          "action": "Command.run",
+          "approval_request": 10000089,
+          "approval_event": 207,
+          "authority_approvals_before": 0,
+          "authority_approvals_at_dispatch": 0
+        },
+        {
+          "request": 134,
+          "event": 323,
+          "action": "Command.run",
+          "approval_request": 10000135,
+          "approval_event": 321,
+          "authority_approvals_before": 1,
+          "authority_approvals_at_dispatch": 1
+        },
+        {
+          "request": 180,
+          "event": 437,
+          "action": "Command.run",
+          "approval_request": 10000181,
+          "approval_event": 435,
+          "authority_approvals_before": 2,
+          "authority_approvals_at_dispatch": 2
+        }
+      ]
+    }
+  },
+  "remaining_scope": [
+    "Upstream #102 current command approval provenance",
+    "Full task loop #79 and large-string slicing #101",
+    "Complete finalization/publication-window and generic command/model/import/fork recovery",
+    "Remaining project navigation/configuration and full CLI surface",
+    "Retained interactive process Host substrate",
+    "Official default entry cutover and full complete product acceptance"
+  ],
+  "runtime_profile": {
+    "boundary_policy": "nomo-native",
+    "memory": {
+      "backend": "sqlite",
+      "path": "/native-state/conversations.sqlite3"
+    },
+    "model": {
+      "adapter": "openai",
+      "model": "MiniMax-M3.1-Flash",
+      "base_url": "https://api.minimax.cn/v1",
+      "api_key_env": "MINIMAX_API_KEY",
+      "allow_private": false,
+      "typed_output_encoding": "output-tool",
+      "timeout": {
+        "request_deadline_ms": 600000,
+        "connect_timeout_ms": 10000
+      },
+      "retry": {
+        "attempts": 1,
+        "delay_ms": 0
+      }
+    },
+    "filesystem": {
+      "regions": {
+        "nomo.native.workspace.ProjectRoot": {
+          "root": "/project",
+          "read": true,
+          "write": true
+        }
+      }
+    },
+    "command": {
+      "allow": [
+        "/usr/bin/git",
+        "/usr/bin/python3",
+        "/bin/sh",
+        "/bin/cp",
+        "/bin/mkdir",
+        "/bin/rm",
+        "/bin/mv",
+        "/usr/bin/diff"
+      ],
+      "isolation": "trusted-unconfined"
+    },
+    "policy": {
+      "mode": "local-static",
+      "rules": [
+        "console=allow",
+        "memory=allow",
+        "model=allow",
+        "tool=allow",
+        "approval=allow",
+        "command=approval",
+        "filesystem:Fs.read=allow",
+        "filesystem:Fs.list=allow",
+        "filesystem:Fs.stat=allow",
+        "filesystem:Fs.atomic_replace=approval"
+      ]
+    },
+    "approval": {
+      "mode": "prompt"
+    }
+  },
+  "runtime_override": "Each probe overrides the model endpoint/key with a local synthetic HTTP server and dummy credential."
+}

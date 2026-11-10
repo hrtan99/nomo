@@ -59,7 +59,8 @@ class SyntheticModel(BaseHTTPRequestHandler):
         elif self.server.scenario in ('chat', 'persist') and index >= 3:
             data = json.loads(next(message['content'] for message in reversed(request['messages']) if message['role'] == 'user'))
             assert data['initial_request'] == 'Read note.txt and change old to new after approval.', data
-            assert any(item['role'] == 'tool' and item['name'] == 'read_file' and 'before old' in item['text'] for item in data['history']), data
+            if self.server.scenario == 'chat':
+                assert any(item['role'] == 'tool' and item['name'] == 'read_file' and 'before old' in item['text'] for item in data['history']), data
             assert any(item['role'] == 'tool' and item['name'] == 'replace_file' and 'applied' in item['text'] for item in data['history']), data
             if self.server.scenario == 'persist':
                 assert data['summary'] == 'Saved summary: note.txt changed from before old to before new after native approval.', data
@@ -148,7 +149,7 @@ def main():
         master, slave = pty.openpty()
         process = subprocess.Popen(command, cwd=ROOT, env=environment, stdin=slave, stdout=slave, stderr=slave)
         os.close(slave)
-        output, approved, sent_turns = bytearray(), False, 0
+        output, approved, sent_turns, approval_count = bytearray(), False, 0, 0
         try:
             while True:
                 ready, _, _ = select.select([master], [], [], 1)
@@ -174,12 +175,11 @@ def main():
                         elif sent_turns == 2:
                             os.write(master, b'/history\n/status\n/quit\n')
                         sent_turns += 1
-                    if not approved and b'Type `yes` to approve:' in output:
+                    if output.count(b'Type `yes` to approve:') > approval_count:
                         if args.scenario in ('files', 'chat', 'persist', 'catalogue'):
-                            preview = next(line for line in output.decode().splitlines() if line.startswith('[PREVIEW] '))
-                            assert json.loads(preview[len('[PREVIEW] '):]) == {
-                                'path': 'note.txt', 'before': 'before old\n', 'after': 'before new\n'}
-                        if args.scenario == 'transfer':
+                            from native_mutations_probe import approve_preview
+                            approve_preview(output)
+                        elif args.scenario == 'transfer':
                             line = next(line for line in output.decode().splitlines() if '[EXPORT ] ' in line)
                             preview = json.loads(line.split('[EXPORT ] ', 1)[1])
                             assert preview['path'] == 'roundtrip.json'
@@ -188,8 +188,7 @@ def main():
                             assert any(item['name'] == 'imported_source' and item['text'] == legacy_file.decode() for item in payload['events'])
                         os.write(master, b'yes\n')
                         approved = True
-                elif process.poll() is not None:
-                    break
+                        approval_count += 1
             code = process.wait()
         finally:
             os.close(master)
@@ -225,12 +224,12 @@ def main():
             restored = list(command)
             restored[restored.index('--tty=true')] = '--tty=false'
             restored[restored.index('/native-evidence/trace.json')] = '/native-evidence/trace-restored.json'
-            restored += ['--once', 'What did you just complete?']
-            result = subprocess.run(restored, cwd=ROOT, env=environment, capture_output=True, text=True)
+            result = subprocess.run(restored, cwd=ROOT, env=environment, input='What did you just complete?\n/history\n/status\n/quit\n', capture_output=True, text=True)
             (evidence / 'restored-stdout.txt').write_text(result.stdout)
             (evidence / 'restored-stderr.txt').write_text(result.stderr)
             assert result.returncode == 0, result.stdout + result.stderr
             assert 'Native process restored full tool history and the saved summary.' in result.stdout
+            assert '[tool/read_file #2]' in result.stdout and 'before old' in result.stdout
             assert len(server.requests) == 5, len(server.requests)
         elif args.scenario == 'catalogue':
             assert len(server.requests) == 4
@@ -249,12 +248,14 @@ def main():
         trace = json.loads((traces / 'trace.json').read_text())
         if args.scenario in ('files', 'chat', 'persist', 'catalogue'):
             events = trace['events']
-            approval = next(index for index, event in enumerate(events)
-                            if event['kind'] == 'host_request_started' and event['request_kind'] == 'approval')
-            write = next(index for index, event in enumerate(events)
-                         if event['kind'] == 'host_request_started' and event['qualified_action'] == 'Fs.atomic_replace')
-            assert approval < write
-            assert events[write]['authority']['approval_count'] == 1
+            approval = None
+            for event in events:
+                if event['kind'] == 'host_request_started' and event.get('request_kind') == 'approval':
+                    approval = event
+                elif event['kind'] == 'host_request_started' and event.get('qualified_action') in ('Command.run', 'Fs.atomic_replace'):
+                    assert approval is not None, event
+                    assert event['authority']['approval_count'] == approval['authority']['approval_count'] + 1, event
+                    approval = None
             assert trace['outcome']['kind'] == 'completed'
         label = 'legacy import + reviewed export + native reimport; no model calls' if args.scenario == 'transfer' else args.scenario + ' native conversation flow'
         print('PASS native ' + label + ': ' + str(evidence))
