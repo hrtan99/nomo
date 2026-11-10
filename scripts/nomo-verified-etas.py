@@ -43,7 +43,8 @@ def main():
     if not verify(cli, spec, lock, selected):
         print('The ETAS installation does not match the selected configuration; verify the installation.', file=sys.stderr)
         return 1
-    os.execv(str(cli), [str(cli), *sys.argv[1:]])
+    from nomo_model_transport import run
+    return run(cli, sys.argv[1:])
 
 
 if __name__ == '__main__':
