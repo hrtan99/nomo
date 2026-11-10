@@ -1,0 +1,308 @@
+{
+  "date": "2026-11-11",
+  "scope": "Native sessions, full logical tool history, new-process restore, summary and history transfer; not full native migration acceptance",
+  "compiler_pin": {
+    "selector": "latest0120",
+    "version": "0.12.0",
+    "source_overrides": [],
+    "repositories": {
+      "cli": {
+        "repository": "etas",
+        "revision": "fe3de961aa2f1c55ec2ab5fc31383ea1d3e16af9",
+        "tree": "81722b528e8c28bfd8ed04acf3ea381a4f5c0540",
+        "packages": [
+          "etas_cli",
+          "etas_driver",
+          "etas_package",
+          "etas_tests"
+        ]
+      },
+      "core": {
+        "repository": "etas-core",
+        "revision": "3fc5b68bc886c952559003375590ccd0f95a53cb",
+        "tree": "161031222624c169e36b759019c5f85b14c46d7f",
+        "packages": [
+          "etas_builtin",
+          "etas_cache",
+          "etas_code",
+          "etas_core",
+          "etas_host",
+          "etas_memory_derive",
+          "etas_package_metadata",
+          "etas_std",
+          "etas_utils"
+        ]
+      },
+      "frontend": {
+        "repository": "etas-frontend",
+        "revision": "c70b4802768393ed7310a33c4e38a8b8fb2e9692",
+        "tree": "511ea22096a4cbbcebbea567794a4bd8e610afbc",
+        "packages": [
+          "etas_effects",
+          "etas_frontend",
+          "etas_hir",
+          "etas_hir_analysis",
+          "etas_syntax",
+          "etas_syntax_derive",
+          "etas_types"
+        ]
+      },
+      "interpreter": {
+        "repository": "etas-interpreter",
+        "revision": "4f5eae3702605f8630c682d54689167c2dea8394",
+        "tree": "29d47c24195a610bdc2df22baffadef7d50e41ef",
+        "packages": [
+          "etas_interpreter"
+        ]
+      }
+    },
+    "source": "Official ETAS CLI 0.12.0 at the 2026-11-10 main snapshot with its own Cargo.lock and matching Git dependencies; no Nomo source overrides.",
+    "cargo_lock_sha256": "bc363f005b3439661c2c7a28b1a14875217bbf6a128bb7ec727523c826441266",
+    "verified_seed_binary_sha256": "028e82c1b1ed7eef6dbea86c4d56bdd222a700d867e198c761a776b1ef1f883f"
+  },
+  "current_source_sha256": {
+    "src/nomo/native/agent.es": "ee7288f4066d4645dfa1c873e69d0aa8d947d5861cda5fa3780d46e530971849",
+    "src/nomo/native/context.es": "21a3c2af0e50ed47ce72efc91256877ed7524c737d3100da7cdd4482b42fe167",
+    "src/nomo/native/entry.es": "80ea4799c05af02a1867beda5de52a25d27718c0e952de584286e45aa795e180",
+    "src/nomo/native/files.es": "eb70b2584004b8461f864da0760fd9512c26a683d0afb875cec6e449aeba34ce",
+    "src/nomo/native/git.es": "ee0e360dcc11c4b9d40bcd30495efd7a5ed49306d81b9a48496c032af7d56b24",
+    "src/nomo/native/history.es": "f49df9b106972047f35a66de969b6898ee0fdc3725e4b38db0e2a809123e4178",
+    "src/nomo/native/options.es": "60f9bbfc776134f4f5b60ad126d04dfce452d21d9a68087dfa6904386fcc3b0a",
+    "src/nomo/native/transfer.es": "23447522ccca96e16c89614b457d2c79b8dd42be3d48ac2f3e80933a9259f863",
+    "src/nomo/native/workspace.es": "2cf40344fd45de0a6f13f827df1882999700bb27e398ae35510660be37095bff"
+  },
+  "source_scope": "Persistence and transfer passed before the recent-suffix byte-budget change in context.es. The changed large-event path was not accepted: native get_char_slice hung before inference. Current hashes identify delivery sources, not an assertion that every changed path passed.",
+  "runtime_profile": {
+    "boundary_policy": "nomo-native",
+    "memory": {
+      "backend": "sqlite",
+      "path": "/native-state/conversations.sqlite3"
+    },
+    "model": {
+      "adapter": "openai",
+      "model": "MiniMax-M3.1-Flash",
+      "base_url": "https://api.minimax.cn/v1",
+      "api_key_env": "MINIMAX_API_KEY",
+      "allow_private": false,
+      "typed_output_encoding": "output-tool",
+      "timeout": {
+        "request_deadline_ms": 600000,
+        "connect_timeout_ms": 10000
+      },
+      "retry": {
+        "attempts": 1,
+        "delay_ms": 0
+      }
+    },
+    "filesystem": {
+      "regions": {
+        "nomo.native.workspace.ProjectRoot": {
+          "root": "/project",
+          "read": true,
+          "write": true
+        }
+      }
+    },
+    "command": {
+      "allow": [
+        "/usr/bin/git"
+      ],
+      "isolation": "trusted-unconfined"
+    },
+    "policy": {
+      "mode": "local-static",
+      "rules": [
+        "console=allow",
+        "memory=allow",
+        "model=allow",
+        "tool=allow",
+        "approval=allow",
+        "command=approval",
+        "filesystem:Fs.read=allow",
+        "filesystem:Fs.atomic_replace=approval"
+      ]
+    },
+    "approval": {
+      "mode": "prompt"
+    }
+  },
+  "model_scope": "Local synthetic HTTP model only; no real provider calls, credentials or 1M-token provider capacity proof.",
+  "persist": {
+    "command": "python3 -B tests/native_project_probe.py --scenario persist",
+    "result": "passed",
+    "model_requests": 5,
+    "synthetic_file_after": "before new\n",
+    "status_before_exit": {
+      "first_user": 0.0,
+      "id": "native-0",
+      "ledger": {
+        "compactions": 1.0,
+        "context_bytes": 859.0,
+        "generation_allowance": 163840.0,
+        "tools": 2.0,
+        "turns": 1.0
+      },
+      "next_event": 7.0,
+      "pending": "",
+      "summary_event": 6.0,
+      "summary_through": -1.0,
+      "title": "New conversation",
+      "workspace": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-persist-6axh5ngy/project"
+    },
+    "new_process_model_context": {
+      "history": [
+        {
+          "id": "0",
+          "name": "",
+          "role": "user",
+          "text": "Read note.txt and change old to new after approval."
+        },
+        {
+          "id": "1",
+          "name": "read_file",
+          "role": "tool_call",
+          "text": "\"note.txt\""
+        },
+        {
+          "id": "2",
+          "name": "read_file",
+          "role": "tool",
+          "text": "{\"path\":\"note.txt\",\"text\":\"before old\\n\"}"
+        },
+        {
+          "id": "3",
+          "name": "replace_file",
+          "role": "tool_call",
+          "text": "{\"after\":\"before new\\n\",\"before\":\"before old\\n\",\"path\":\"note.txt\"}"
+        },
+        {
+          "id": "4",
+          "name": "replace_file",
+          "role": "tool",
+          "text": "{\"path\":\"note.txt\",\"status\":\"applied\"}"
+        },
+        {
+          "id": "5",
+          "name": "",
+          "role": "assistant",
+          "text": "Native file edit applied after approval."
+        },
+        {
+          "id": "7",
+          "name": "",
+          "role": "user",
+          "text": "What did you just complete?"
+        }
+      ],
+      "initial_request": "Read note.txt and change old to new after approval.",
+      "pending": "",
+      "request": "What did you just complete?",
+      "session": "native-0",
+      "summary": "Saved summary: note.txt changed from before old to before new after native approval.",
+      "workspace": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-persist-6axh5ngy/project"
+    },
+    "initial_trace": {
+      "sha256": "59d2193f83175a041c6fa1fec8100b7d0c182f5e5b9a9e08e79bc809e6ae882d",
+      "outcome": "completed",
+      "host_actions": {
+        "Policy.evaluate": 122,
+        "Memory.read": 53,
+        "Memory.write": 36,
+        "Console.stdout_write": 19,
+        "Console.stdin_read_line": 5,
+        "Agentic.infer": 4,
+        "Fs.read": 2,
+        "Approval.request": 1,
+        "Fs.atomic_replace": 1
+      },
+      "local_work_settled": true
+    },
+    "restored_trace": {
+      "sha256": "4725adba8e7b8d868bb5659d2843fcab7021367b252f7dcd141d0caf541ea858",
+      "outcome": "completed",
+      "host_actions": {
+        "Policy.evaluate": 40,
+        "Memory.read": 27,
+        "Memory.write": 10,
+        "Console.stdout_write": 2,
+        "Agentic.infer": 1
+      },
+      "local_work_settled": true
+    },
+    "terminal_sha256": "374969a8308f606fb1d2cfe0158c52b173b6da40d9afd0668091116a5b5a577d",
+    "restored_stdout": "[SESSION] native-0 \u00b7 New conversation\nNative process restored full tool history and the saved summary.\n"
+  },
+  "transfer": {
+    "command": "python3 -B tests/native_project_probe.py --scenario transfer",
+    "result": "passed",
+    "model_requests": 0,
+    "old_json_unchanged": true,
+    "old_sqlite_unchanged": true,
+    "retained_source_exact": true,
+    "source_sha256": "d2fcb1619a6eadfdff1b9fea7b11833f7c79ffd6bb1f051db31d4847e824a8e9",
+    "export_sha256": "2a471d0b6e5e0581b819d3dcf2630d8208be9f12c23240738efaa1122cf29d26",
+    "status": {
+      "first_user": 2.0,
+      "id": "native-2",
+      "ledger": {
+        "compactions": 0.0,
+        "context_bytes": 0.0,
+        "generation_allowance": 0.0,
+        "tools": 0.0,
+        "turns": 0.0
+      },
+      "next_event": 8.0,
+      "pending": "",
+      "summary_event": 7.0,
+      "summary_through": -1.0,
+      "title": "Earlier conversation",
+      "workspace": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-transfer-k6b1h_th/project"
+    },
+    "trace": {
+      "sha256": "8a2cf600f7c4b33b85424c59a83056e1aaa3eacc81c9dec5c4b16982327a9176",
+      "outcome": "completed",
+      "host_actions": {
+        "Policy.evaluate": 173,
+        "Memory.read": 67,
+        "Memory.write": 67,
+        "Console.stdout_write": 29,
+        "Console.stdin_read_line": 7,
+        "Fs.read": 2,
+        "Approval.request": 1,
+        "Fs.atomic_replace": 1
+      },
+      "local_work_settled": true
+    }
+  },
+  "automatic_large_message": {
+    "command": "python3 -B tests/native_project_probe.py --scenario auto",
+    "result": "blocked",
+    "message_bytes": 2400000,
+    "model_requests": 0,
+    "observed": "Native import stopped advancing after 36 full 65536-scalar chunks. One native process held about 100% of one CPU for several minutes; interrupted with SIGINT. No automatic summary ran.",
+    "trace": {
+      "sha256": "bc0c768f5ce0a1186d9e9d8431d7bf41b7eda5cf6f4879a8ed8d43430152ac4d",
+      "outcome": "cancelled",
+      "host_actions": {
+        "Policy.evaluate": 53,
+        "Memory.read": 4,
+        "Memory.write": 44,
+        "Console.stdout_write": 3,
+        "Console.stdin_read_line": 1,
+        "Fs.read": 1
+      },
+      "local_work_settled": true
+    },
+    "upstream": "https://github.com/etas-project/etas-interpreter/issues/101",
+    "minimal_reproduction": "examples/repros/char-slice-resume-0.12.0",
+    "reproduction_exit": 124
+  },
+  "remaining_gates": [
+    "Git root cwd: etas-core#62",
+    "Large-event native slicing: etas-interpreter#101",
+    "Complete native file/navigation/terminal catalogue",
+    "Task lifecycle and interrupted import/tool recovery",
+    "Official default entry cutover",
+    "Continuous dialogue/read/approved edit/check/Git/exit/new-process acceptance"
+  ]
+}

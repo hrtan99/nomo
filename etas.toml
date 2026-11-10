@@ -946,6 +946,9 @@ profile = "nomo-project"
 
 [runtime.profiles.nomo-native]
 boundary_policy = "nomo-native"
+[runtime.profiles.nomo-native.memory]
+backend = "sqlite"
+path = "/native-state/conversations.sqlite3"
 [runtime.profiles.nomo-native.model]
 adapter = "openai"
 model = "MiniMax-M3.1-Flash"
@@ -968,7 +971,7 @@ allow = ["/usr/bin/git"]
 isolation = "trusted-unconfined"
 [runtime.profiles.nomo-native.policy]
 mode = "local-static"
-rules = ["console=allow", "model=allow", "tool=allow", "approval=allow", "command=approval", "filesystem:Fs.read=allow", "filesystem:Fs.atomic_replace=approval"]
+rules = ["console=allow", "memory=allow", "model=allow", "tool=allow", "approval=allow", "command=approval", "filesystem:Fs.read=allow", "filesystem:Fs.atomic_replace=approval"]
 [runtime.profiles.nomo-native.approval]
 mode = "prompt"
 
