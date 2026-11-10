@@ -1,0 +1,426 @@
+{
+  "date": "2026-11-11",
+  "scenario": "Etas-owned continuous native chat using local synthetic model and actual TTY approval",
+  "command": "python3 -B tests/native_project_probe.py --scenario chat",
+  "result": "passed",
+  "compiler_pin": {
+    "selector": "latest0120",
+    "version": "0.12.0",
+    "source_overrides": [],
+    "repositories": {
+      "cli": {
+        "repository": "etas",
+        "revision": "fe3de961aa2f1c55ec2ab5fc31383ea1d3e16af9",
+        "tree": "81722b528e8c28bfd8ed04acf3ea381a4f5c0540",
+        "packages": [
+          "etas_cli",
+          "etas_driver",
+          "etas_package",
+          "etas_tests"
+        ]
+      },
+      "core": {
+        "repository": "etas-core",
+        "revision": "3fc5b68bc886c952559003375590ccd0f95a53cb",
+        "tree": "161031222624c169e36b759019c5f85b14c46d7f",
+        "packages": [
+          "etas_builtin",
+          "etas_cache",
+          "etas_code",
+          "etas_core",
+          "etas_host",
+          "etas_memory_derive",
+          "etas_package_metadata",
+          "etas_std",
+          "etas_utils"
+        ]
+      },
+      "frontend": {
+        "repository": "etas-frontend",
+        "revision": "c70b4802768393ed7310a33c4e38a8b8fb2e9692",
+        "tree": "511ea22096a4cbbcebbea567794a4bd8e610afbc",
+        "packages": [
+          "etas_effects",
+          "etas_frontend",
+          "etas_hir",
+          "etas_hir_analysis",
+          "etas_syntax",
+          "etas_syntax_derive",
+          "etas_types"
+        ]
+      },
+      "interpreter": {
+        "repository": "etas-interpreter",
+        "revision": "4f5eae3702605f8630c682d54689167c2dea8394",
+        "tree": "29d47c24195a610bdc2df22baffadef7d50e41ef",
+        "packages": [
+          "etas_interpreter"
+        ]
+      }
+    },
+    "source": "Official ETAS CLI 0.12.0 at the 2026-11-10 main snapshot with its own Cargo.lock and matching Git dependencies; no Nomo source overrides.",
+    "cargo_lock_sha256": "bc363f005b3439661c2c7a28b1a14875217bbf6a128bb7ec727523c826441266",
+    "verified_seed_binary_sha256": "028e82c1b1ed7eef6dbea86c4d56bdd222a700d867e198c761a776b1ef1f883f"
+  },
+  "source_sha256": {
+    "src/nomo/native/agent.es": "3e2807c2594fb7930d9ca860707a3a4e74675262de35ecfac09134d1315c4205",
+    "src/nomo/native/entry.es": "60cffabab6f6e92a61349da68863fddfd60192a9b128498b821827c1126570a8",
+    "src/nomo/native/files.es": "7c5fb5bcb191f0baa930cf3b9acba68cb44e5a07a607c3f79f12775418250163",
+    "src/nomo/native/git.es": "0529ac30535842ed05660c4b6f81a62b45c9eda0ac302c498aae7f0801214a1d",
+    "src/nomo/native/workspace.es": "0ca8a69dc292c85d305ff9074a95aabcc95eb2f8443f09af1537884fc4e75ee6"
+  },
+  "runtime_profile": {
+    "boundary_policy": "nomo-native",
+    "model": {
+      "adapter": "openai",
+      "model": "MiniMax-M3.1-Flash",
+      "base_url": "https://api.minimax.cn/v1",
+      "api_key_env": "MINIMAX_API_KEY",
+      "allow_private": false,
+      "typed_output_encoding": "output-tool",
+      "timeout": {
+        "request_deadline_ms": 600000,
+        "connect_timeout_ms": 10000
+      },
+      "retry": {
+        "attempts": 1,
+        "delay_ms": 0
+      }
+    },
+    "filesystem": {
+      "regions": {
+        "nomo.native.workspace.ProjectRoot": {
+          "root": "/project",
+          "read": true,
+          "write": true
+        }
+      }
+    },
+    "command": {
+      "allow": [
+        "/usr/bin/git"
+      ],
+      "isolation": "trusted-unconfined"
+    },
+    "policy": {
+      "mode": "local-static",
+      "rules": [
+        "console=allow",
+        "model=allow",
+        "tool=allow",
+        "approval=allow",
+        "command=approval",
+        "filesystem:Fs.read=allow",
+        "filesystem:Fs.atomic_replace=approval"
+      ]
+    },
+    "approval": {
+      "mode": "prompt"
+    }
+  },
+  "registered_tools": [
+    "git_status",
+    "git_diff",
+    "git_log",
+    "git_branches",
+    "git_init",
+    "git_branch",
+    "git_switch",
+    "git_commit",
+    "read_file",
+    "replace_file",
+    "etas_emit_output"
+  ],
+  "model_request_count": 4,
+  "second_turn_model_context": {
+    "history": [
+      {
+        "role": "user",
+        "text": "Read note.txt and change old to new after approval."
+      },
+      {
+        "role": "assistant",
+        "text": "Native file edit applied after approval."
+      }
+    ],
+    "request": "What did you just complete?"
+  },
+  "synthetic_file_after": "before new\n",
+  "native_trace_sha256": "9d1747c1ab7cd70f2678c013a92c1f6a435445b325234ce5be174321a1fab52c",
+  "host_requests": [
+    {
+      "event_index": 4,
+      "id": 0,
+      "kind": "console",
+      "action": "Console.stdout_write",
+      "authority": {
+        "active_trace_specs": [],
+        "approval_count": 0,
+        "grant_count": 11
+      }
+    },
+    {
+      "event_index": 8,
+      "id": 2,
+      "kind": "console",
+      "action": "Console.stdout_write",
+      "authority": {
+        "active_trace_specs": [],
+        "approval_count": 0,
+        "grant_count": 11
+      }
+    },
+    {
+      "event_index": 12,
+      "id": 4,
+      "kind": "console",
+      "action": "Console.stdin_read_line",
+      "authority": {
+        "active_trace_specs": [],
+        "approval_count": 0,
+        "grant_count": 11
+      }
+    },
+    {
+      "event_index": 16,
+      "id": 6,
+      "kind": "model",
+      "action": "Agentic.infer",
+      "authority": {
+        "active_trace_specs": [],
+        "approval_count": 0,
+        "grant_count": 11
+      }
+    },
+    {
+      "event_index": 22,
+      "id": 9,
+      "kind": "filesystem",
+      "action": "Fs.read",
+      "authority": {
+        "active_trace_specs": [],
+        "approval_count": 0,
+        "grant_count": 11
+      }
+    },
+    {
+      "event_index": 26,
+      "id": 11,
+      "kind": "model",
+      "action": "Agentic.infer",
+      "authority": {
+        "active_trace_specs": [],
+        "approval_count": 0,
+        "grant_count": 11
+      }
+    },
+    {
+      "event_index": 32,
+      "id": 14,
+      "kind": "filesystem",
+      "action": "Fs.read",
+      "authority": {
+        "active_trace_specs": [],
+        "approval_count": 0,
+        "grant_count": 11
+      }
+    },
+    {
+      "event_index": 37,
+      "id": 16,
+      "kind": "console",
+      "action": "Console.stdout_write",
+      "authority": {
+        "active_trace_specs": [],
+        "approval_count": 0,
+        "grant_count": 11
+      }
+    },
+    {
+      "event_index": 42,
+      "id": 10000019,
+      "kind": "approval",
+      "action": "Approval.request",
+      "authority": {
+        "active_trace_specs": [],
+        "approval_count": 0,
+        "grant_count": 11
+      }
+    },
+    {
+      "event_index": 44,
+      "id": 18,
+      "kind": "filesystem",
+      "action": "Fs.atomic_replace",
+      "authority": {
+        "active_trace_specs": [],
+        "approval_count": 1,
+        "grant_count": 12
+      }
+    },
+    {
+      "event_index": 48,
+      "id": 20,
+      "kind": "model",
+      "action": "Agentic.infer",
+      "authority": {
+        "active_trace_specs": [],
+        "approval_count": 0,
+        "grant_count": 11
+      }
+    },
+    {
+      "event_index": 52,
+      "id": 22,
+      "kind": "console",
+      "action": "Console.stdout_write",
+      "authority": {
+        "active_trace_specs": [],
+        "approval_count": 1,
+        "grant_count": 12
+      }
+    },
+    {
+      "event_index": 56,
+      "id": 24,
+      "kind": "console",
+      "action": "Console.stdout_write",
+      "authority": {
+        "active_trace_specs": [],
+        "approval_count": 1,
+        "grant_count": 12
+      }
+    },
+    {
+      "event_index": 60,
+      "id": 26,
+      "kind": "console",
+      "action": "Console.stdin_read_line",
+      "authority": {
+        "active_trace_specs": [],
+        "approval_count": 1,
+        "grant_count": 12
+      }
+    },
+    {
+      "event_index": 64,
+      "id": 28,
+      "kind": "model",
+      "action": "Agentic.infer",
+      "authority": {
+        "active_trace_specs": [],
+        "approval_count": 1,
+        "grant_count": 12
+      }
+    },
+    {
+      "event_index": 68,
+      "id": 30,
+      "kind": "console",
+      "action": "Console.stdout_write",
+      "authority": {
+        "active_trace_specs": [],
+        "approval_count": 1,
+        "grant_count": 12
+      }
+    },
+    {
+      "event_index": 72,
+      "id": 32,
+      "kind": "console",
+      "action": "Console.stdout_write",
+      "authority": {
+        "active_trace_specs": [],
+        "approval_count": 1,
+        "grant_count": 12
+      }
+    },
+    {
+      "event_index": 76,
+      "id": 34,
+      "kind": "console",
+      "action": "Console.stdin_read_line",
+      "authority": {
+        "active_trace_specs": [],
+        "approval_count": 1,
+        "grant_count": 12
+      }
+    },
+    {
+      "event_index": 80,
+      "id": 36,
+      "kind": "console",
+      "action": "Console.stdout_write",
+      "authority": {
+        "active_trace_specs": [],
+        "approval_count": 1,
+        "grant_count": 12
+      }
+    },
+    {
+      "event_index": 84,
+      "id": 38,
+      "kind": "console",
+      "action": "Console.stdout_write",
+      "authority": {
+        "active_trace_specs": [],
+        "approval_count": 1,
+        "grant_count": 12
+      }
+    },
+    {
+      "event_index": 88,
+      "id": 40,
+      "kind": "console",
+      "action": "Console.stdout_write",
+      "authority": {
+        "active_trace_specs": [],
+        "approval_count": 1,
+        "grant_count": 12
+      }
+    },
+    {
+      "event_index": 92,
+      "id": 42,
+      "kind": "console",
+      "action": "Console.stdout_write",
+      "authority": {
+        "active_trace_specs": [],
+        "approval_count": 1,
+        "grant_count": 12
+      }
+    },
+    {
+      "event_index": 96,
+      "id": 44,
+      "kind": "console",
+      "action": "Console.stdout_write",
+      "authority": {
+        "active_trace_specs": [],
+        "approval_count": 1,
+        "grant_count": 12
+      }
+    },
+    {
+      "event_index": 100,
+      "id": 46,
+      "kind": "console",
+      "action": "Console.stdin_read_line",
+      "authority": {
+        "active_trace_specs": [],
+        "approval_count": 1,
+        "grant_count": 12
+      }
+    }
+  ],
+  "native_outcome": {
+    "kind": "completed"
+  },
+  "remaining": [
+    "native Git execution blocked by etas-core#62",
+    "durable sessions and full archive",
+    "context compaction and budgets",
+    "remaining tool catalogue and process lifecycle",
+    "default entry cutover and complete acceptance"
+  ]
+}
