@@ -9,6 +9,7 @@ import json
 import os
 import secrets
 import shutil
+from nomo_jobs import ProcessService
 from nomo_project import write_json
 
 
@@ -216,14 +217,39 @@ class FileTool:
         return self.editor.undo(action['target']) if self.name == 'undo' else self.editor.apply(self.prepared)
 
 
+@dataclass
+class TerminalTool:
+    name: str
+    processes: ProcessService
+    timeout: int
+    mutates: bool = True
+
+    def preview(self, action):
+        return json.dumps(action['arguments'] if self.name in ('exec', 'spawn') else {'job': action['target'], 'text': action['text'], 'operation': self.name}, ensure_ascii=False)
+
+    def execute(self, action):
+        if self.name == 'exec':
+            return self.processes.execute(action['arguments'], self.timeout)
+        if self.name == 'spawn':
+            return self.processes.start(action['arguments'])
+        if self.name == 'poll':
+            return self.processes.poll(action['target'], action['start'])
+        if self.name == 'jobs':
+            return self.processes.jobs()
+        return self.processes.send(action['target'], action['text'], self.name == 'stop')
+
+
 class ToolRegistry:
     def __init__(self, workspace, state, session):
         self.tools = {}
         editor = BatchEditor(workspace, state, session)
+        processes = ProcessService(state, workspace.root)
         for name in ('tree', 'glob', 'read', 'search', 'regex'):
             self.register(NavigationTool(name, workspace))
         for name in ('write', 'create', 'edit', 'mkdir', 'delete', 'move', 'batch', 'undo'):
             self.register(FileTool(name, editor))
+        for name in ('exec', 'spawn', 'poll', 'jobs', 'write_stdin', 'stop'):
+            self.register(TerminalTool(name, processes, workspace.config.command_timeout, name not in ('poll', 'jobs')))
 
     def register(self, tool: ProjectTool):
         self.tools[tool.name] = tool
