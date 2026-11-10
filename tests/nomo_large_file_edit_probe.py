@@ -7,6 +7,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 FILES = ['context.txt', 'second.txt', 'third.txt', 'note.txt']
 TASK = '请把 note.txt 中的 old 改为 new。'
+LARGE_TEXT = os.environ.get('NOMO_PROBE_LARGE_TEXT') == '1'
+if LARGE_TEXT: TASK += '保留其他内容和原有换行。' * 24
+DELEGATION_DETAIL = '\n' + 'Inspect the selected file and preserve all unrelated content. ' * 40
+ANSWER_DETAIL = '\n' + '已读取完整文件并核对相关内容。' * 400
 BEFORE = 'padding\n' * 131071 + 'old\nxxxx'
 AFTER = BEFORE.replace('old', 'new')
 assert len(BEFORE.encode()) == 1048576
@@ -17,15 +21,15 @@ class Fake(BaseHTTPRequestHandler):
     def do_POST(self):
         try:
             req = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
-            ctx = json.loads(''.join(message['content'] for message in req['messages'][1:])); i = len(self.server.phases)
+            ctx = json.loads(next(message['content'] for message in reversed(req['messages']) if message['role'] == 'user')); i = len(self.server.phases)
             if i == 0:
                 assert ctx['current']['request'] == TASK and ctx['current']['allowed'] == FILES
                 value = ['delegate', 'Read note.txt to identify the requested edit']
-            elif i in (1, 5, 12): value = ['read', 'note.txt']
-            elif i in (2, 6, 13): value = ['final', 'note.txt contains the relevant color']
+            elif i in (1, 5, 12, 16): value = ['read', 'note.txt']
+            elif i in (2, 6, 13, 17): value = ['final', 'note.txt contains the relevant color']
             elif i == 3: value = 'EDIT note.txt'
             elif i == 4:
-                assert ctx['current']['request'] == TASK and ctx['previous']['answer'] == 'EDIT note.txt'
+                assert ctx['current']['request'] == TASK and ctx['previous']['answer'] == 'EDIT_CHECK note.txt'
                 assert ctx['previous']['outcome'] == 'complete: ' + DISPLAYED
                 value = ['delegate', 'Read note.txt before editing']
             elif i == 7: value = 'note.txt contains before old'
@@ -34,7 +38,7 @@ class Fake(BaseHTTPRequestHandler):
                 value = ['delegate', 'Replace old with green']
             elif i == 9: value = ['edit', 'old', 'new']
             elif i == 10: value = '已将 old 改为 new'
-            elif i == 11:
+            elif i in (11, 15):
                 work = ctx['work'];assert work.get('name') == 'Some' and isinstance(work.get('fields'),list) and len(work['fields']) == 1
                 evidence = work['fields'][0]['evidence'];fields = evidence.get('fields') if isinstance(evidence,dict) else None
                 field = fields[0] if isinstance(fields,list) and len(fields)==1 and isinstance(fields[0],str) else None
@@ -43,10 +47,25 @@ class Fake(BaseHTTPRequestHandler):
                     'length':None if field is None else len(field),'expected_length':len('complete: '+DISPLAYED),
                     'prefix':None if field is None else field[:40],'suffix':None if field is None else field[-40:]}
                 value = ['delegate', 'Read note.txt to report its current color']
-            elif i == 14: value = '当前文件包含 new'
+            elif i in (14, 18): value = '当前文件包含 new'
             else: raise AssertionError('unexpected request')
+            if LARGE_TEXT:
+                if isinstance(value, list) and value[0] == 'delegate': value[1] += DELEGATION_DETAIL
+                elif isinstance(value, list) and value[0] == 'final': value[1] += ANSWER_DETAIL
+                elif i == 9: value = ['edit', BEFORE[-65536:], AFTER[-65536:]]
+                elif i in (7, 10, 14, 18): value += ANSWER_DETAIL
             content = json.dumps(value, ensure_ascii=False, separators=(',', ':')) if isinstance(value, list) else value
-            body = json.dumps({'choices':[{'message':{'role':'assistant','content':content},'finish_reason':'stop'}], 'usage':{'prompt_tokens':100,'completion_tokens':20,'total_tokens':120}},ensure_ascii=False).encode()
+            if req.get('tools'):
+                properties = req['tools'][0]['function']['parameters']['properties']
+                output = ({'action':'EDIT' if i == 3 else 'ANSWER','path':'note.txt' if i == 3 else '', 'command':[], 'answer':'' if i == 3 else value} if 'action' in properties else
+                          {'target':value[1],'replacement':value[2]} if 'target' in properties else
+                          {'operation':value[0],'files':value[1:] if value[0]=='read' else value[2:] if value[0]=='search' else [],'literal':value[1] if value[0]=='search' else '', 'text':value[1] if value[0]=='final' else ''} if 'operation' in properties else
+                          {'task' if 'task' in properties else 'text':value[1]})
+                message = {'role':'assistant','content':None,'tool_calls':[{'id':'synthetic-output','type':'function','function':{'name':'etas_emit_output','arguments':json.dumps(output,ensure_ascii=False)}}]}
+                finish = 'tool_calls'
+            else:
+                message = {'role':'assistant','content':content}; finish = 'stop'
+            body = json.dumps({'choices':[{'message':message,'finish_reason':finish}], 'usage':{'prompt_tokens':100,'completion_tokens':20,'total_tokens':120}},ensure_ascii=False).encode()
             self.server.phases.append(i)
             print('FAKE_PHASE %d elapsed=%.1fs' % (i, time.monotonic()-self.server.started), flush=True)
             self.send_response(200);self.send_header('Content-Length',str(len(body)));self.end_headers();self.wfile.write(body)
@@ -75,7 +94,8 @@ def interactive(command, env, question, editing):
             if select.select([master], [], [], .1)[0]:
                 try: output.extend(os.read(master, 65536))
                 except OSError: pass
-            text = bytes(output)
+            text = re.sub(rb'\x1b\[[0-9;]*m', b'', bytes(output))
+            text = re.sub(rb'(?m)^\[[A-Z ]{7}\] ', b'', text)
             if not asked and b'nomo> ' in text: os.write(master, question.encode()+b'\n');asked = True
             if editing and not native and b'Type `yes` to approve:' in text:
                 previews = [line.removeprefix(b'PREVIEW ') for line in text.splitlines() if line.startswith(b'PREVIEW ')]
@@ -83,7 +103,7 @@ def interactive(command, env, question, editing):
                 os.write(master,b'yes\n');native=True
             if editing and not application and b'CONFIRM Apply this exact preview? [y/N]' in text:
                 assert native;os.write(master,b'yes\n');application=True
-            done = b'Check recorded. The deterministic outcome above is authoritative' in text if editing else '当前文件包含 new'.encode() in text
+            done = '当前文件包含 new'.encode() in text
             if done and not editing and not events_requested: os.write(master,b'/events\n');events_requested=True
             if (editing and done or events_requested and b'TIMELINE ' in text) and not exited: os.write(master,b'/exit\n');exited=True
             if asked and not exited and not events_requested and text.count(b'nomo> ') >= 2:
@@ -126,13 +146,13 @@ def main():
         manifest.write_text(text)
         env={'PATH':os.environ['PATH'],'HOME':os.environ['HOME'],'MINIMAX_API_KEY':'SYNTHETIC_ONLY','NOMO_ETAS_VERSION':'0.4.1','NOMO_STATE_DIR':str(out/'state')}
         command=[str(project/'scripts/nomo'),'--root',str(workspace),'--allow',','.join(FILES),'--check','/bin/sh','-c','grep -qx new note.txt']
-        first=interactive(command,env,TASK,True);match=re.search(rb'SESSION ID ([0-9a-f]{32})',first);assert match
+        first=interactive(command,env,TASK,True);(out/'first.stdout').write_bytes(first);match=re.search(rb'SESSION ID ([0-9a-f]{32})',first);assert match
         assert b'one read/search up to 1048580 bytes' in first
         assert (workspace/'note.txt').read_text()==AFTER and all((workspace/f).read_text()=='unrelated context\n' for f in FILES[:-1])
         assert stat.S_IMODE(workspace.stat().st_mode)==0o755
         command=[str(project/'scripts/nomo'),'--id',match.group(1).decode(),'--root',str(workspace),'--allow',','.join(FILES)]
-        second=interactive(command,env,'现在文件的颜色是什么？',False)
-        assert not server.failure and server.phases==list(range(15));assert '当前文件包含 new'.encode() in second
+        second=interactive(command,env,'现在文件的颜色是什么？',False);(out/'resumed.stdout').write_bytes(second)
+        assert not server.failure and server.phases==list(range(19));assert '当前文件包含 new'.encode() in second
         assert server.evidence_matches, server.evidence_detail
         assert b'work-boundary' in second and b'work-check' in second and b'UNORDERED WORK' not in second
         assert b'duplicate timeline text omitted' in second
@@ -144,8 +164,9 @@ def main():
         assert len(rows)==1 and ('complete: '+DISPLAYED) in rows[0][0] and large == 0
         status = subprocess.run([str(project/'scripts/nomo'), '--id', match.group(1).decode(), '--status'], env=env, capture_output=True, timeout=300)
         assert status.returncode == 0, status.stderr.decode('utf-8', 'replace')
-        assert b'NATIVE configured cumulative reservation=10383872; actual provider usage unknown; legacy native budget not present' in status.stdout, status.stdout.decode('utf-8', 'replace')
-        print(json.dumps({'status':'passed','scope':'1 MiB interactive natural-language selected-file edit, checkpoint, same-ID new-process continuation','file_bytes':len(BEFORE.encode()),'fake_requests':len(server.phases),'confirmations':2,'archived_chat_outcomes':len(rows),'direct_large_text_rows':large,'selected_file':'note.txt','unchanged_other_files':3}))
+        assert b'NATIVE configured cumulative reservation=14170304; actual provider usage unknown; legacy native budget not present' in status.stdout, status.stdout.decode('utf-8', 'replace')
+        result={'status':'passed','scope':'1 MiB interactive natural-language selected-file edit, checkpoint, same-ID new-process continuation','file_bytes':len(BEFORE.encode()),'fake_requests':len(server.phases),'confirmations':2,'archived_chat_outcomes':len(rows),'direct_large_text_rows':large,'selected_file':'note.txt','unchanged_other_files':3,'expanded_text':LARGE_TEXT,'request_bytes':len(TASK.encode()),'delegation_extra_bytes':len(DELEGATION_DETAIL.encode()) if LARGE_TEXT else 0,'answer_extra_bytes':len(ANSWER_DETAIL.encode()) if LARGE_TEXT else 0,'edit_literal_bytes':65536 if LARGE_TEXT else 3}
+        (out/'result.json').write_text(json.dumps(result,indent=2)+'\n');print(json.dumps(result))
     finally:server.shutdown();server.server_close();thread.join(timeout=5);print('evidence',out,flush=True)
 
 if __name__=='__main__':main()

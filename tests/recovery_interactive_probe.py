@@ -2,7 +2,7 @@ import json,os,pty,re,select,signal,subprocess,termios,threading,time,tempfile,s
 from pathlib import Path
 from http.server import HTTPServer,BaseHTTPRequestHandler
 root=Path(__file__).resolve().parent.parent
-out=Path(tempfile.mkdtemp(prefix='nomo-recovery-',dir='/private/tmp'));project=out/'project';shutil.copytree(root,project,ignore=shutil.ignore_patterns('.etas','__pycache__'));(project/'.etas').mkdir()
+out=Path(tempfile.mkdtemp(prefix='nomo-recovery-',dir='/private/tmp'));project=out/'project';shutil.copytree(root,project,ignore=shutil.ignore_patterns('.git','.etas','tmp','docs','__pycache__'));(project/'.etas').mkdir()
 workspace=out/'workspace';workspace.mkdir(mode=0o700);(workspace/'note.txt').write_text('before old\n')
 sessions=out/'sessions';sessions.mkdir(mode=0o700);policy=out/'policy';policy.mkdir(mode=0o700)
 (policy/'policy.json').write_text('{"format":1,"literals":["SYNTHETIC_SECRET"]}');(policy/'policy.json').chmod(0o600);(policy/'binding.key').write_bytes(b'K'*32);(policy/'binding.key').chmod(0o600)
@@ -10,9 +10,9 @@ class Fake(BaseHTTPRequestHandler):
  def log_message(self,*a):pass
  def do_POST(self):
   try:
-   req=json.loads(self.rfile.read(int(self.headers['Content-Length'])));ctx=json.loads(req['messages'][1]['content']);i=len(self.server.seen)
-   if i in (0,4,10,14):v=['delegate','Read note.txt before the edit']
-   elif i in (1,5,11,15):v=['read','note.txt']
+   req=json.loads(self.rfile.read(int(self.headers['Content-Length'])));ctx=json.loads(next(m['content'] for m in reversed(req['messages']) if m['role']=='user'));i=len(self.server.seen)
+   if i in (0,4,10,14,21):v=['delegate','Read note.txt before the edit']
+   elif i in (1,5,11,15,22):v=['read','note.txt']
    elif i in (2,6,12,16):v=['final','note.txt contains before old']
    elif i in (3,13):v='EDIT note.txt'
    elif i in (7,17):v='note.txt contains before old'
@@ -21,9 +21,16 @@ class Fake(BaseHTTPRequestHandler):
     v=['delegate','Change old to green']
    elif i in (9,19):v=['edit','old','green']
    elif i==20:v='Edited note.txt to green'
+   elif i==23:v=['final','note.txt now contains before green']
+   elif i==24:v='No additional verification command is established in this interruption fixture.'
    else:raise ValueError('unexpected request '+str(i))
    content=json.dumps(v,ensure_ascii=False,separators=(',',':')) if isinstance(v,list) else v
-   body=json.dumps({'choices':[{'message':{'role':'assistant','content':content},'finish_reason':'stop'}],'usage':{'prompt_tokens':100,'completion_tokens':20,'total_tokens':120}}).encode();self.server.seen.append(i);self.send_response(200);self.send_header('Content-Length',str(len(body)));self.end_headers();self.wfile.write(body)
+   message={'role':'assistant','content':content};finish='stop'
+   if req.get('tools'):
+    properties=req['tools'][0]['function']['parameters']['properties']
+    output=({'action':'ANSWER' if i==24 else 'EDIT','path':'' if i==24 else 'note.txt','command':[],'answer':v if i==24 else ''} if 'action' in properties else {'target':v[1],'replacement':v[2]} if 'target' in properties else {'operation':v[0],'files':v[1:] if v[0]=='read' else v[2:] if v[0]=='search' else [],'literal':v[1] if v[0]=='search' else '', 'text':v[1] if v[0]=='final' else ''} if 'operation' in properties else {'task' if 'task' in properties else 'text':v[1]})
+    message={'role':'assistant','content':None,'tool_calls':[{'id':'synthetic-output','type':'function','function':{'name':'etas_emit_output','arguments':json.dumps(output)}}]};finish='tool_calls'
+   body=json.dumps({'choices':[{'message':message,'finish_reason':finish}],'usage':{'prompt_tokens':100,'completion_tokens':20,'total_tokens':120}}).encode();self.server.seen.append(i);self.send_response(200);self.send_header('Content-Length',str(len(body)));self.end_headers();self.wfile.write(body)
   except Exception as e:
    self.server.error=repr(e);self.send_error(500)
 server=HTTPServer(('127.0.0.1',0),Fake);server.seen=[];server.error=None;threading.Thread(target=server.serve_forever,daemon=True).start()
@@ -31,7 +38,7 @@ manifest=project/'etas.toml';text=manifest.read_text()
 for name in ('nomo-read-events-new','nomo-read-events-existing','nomo-history-events-work'):
  start=text.index('[runtime.profiles.'+name+'.model]');end=text.index('[runtime.profiles.'+name+'.model.timeout]',start);part=text[start:end].replace('https://api.minimax.cn/v1','http://host.docker.internal:%d/v1'%server.server_port).replace('allow_private = false','allow_private = true');text=text[:start]+part+text[end:]
 manifest.write_text(text)
-env={'PATH':'/Applications/Docker.app/Contents/Resources/bin:'+os.environ['PATH'],'HOME':os.environ['HOME'],'MINIMAX_API_KEY':'SYNTHETIC_ONLY','NOMO_ETAS_VERSION':'0.2.6','NOMO_ETAS_GRAPH':'026-v68'}
+env={'PATH':'/Applications/Docker.app/Contents/Resources/bin:'+os.environ['PATH'],'HOME':os.environ['HOME'],'MINIMAX_API_KEY':'SYNTHETIC_ONLY','NOMO_ETAS_VERSION':'0.4.1','NOMO_ETAS_GRAPH':'latest041'}
 cmd=[str(project/'scripts/nomo-read.sh'),'session-chat','--sessions-dir',str(sessions),'--new','--root',str(workspace),'--allow','note.txt','--events-policy-dir',str(policy)]
 master,slave=pty.openpty();setting=termios.tcgetattr(slave);setting[3]&=~(termios.ECHO|termios.ECHONL);termios.tcsetattr(slave,termios.TCSANOW,setting)
 proc=subprocess.Popen(cmd,stdin=slave,stdout=slave,stderr=slave,env=env,start_new_session=True);os.close(slave);log=bytearray();step=0;deadline=time.monotonic()+240

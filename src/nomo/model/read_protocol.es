@@ -1,71 +1,36 @@
 module nomo.model.read_protocol;
 
+import nomo.core.large_context.{request_bytes, message_bytes, message_frame_bytes};
+
 import std.text.{char_count as len, len as byte_len, concat, trim, replace, from_char};
 import std.collections.len as count;
 import nomo.application.decoder_contract.ReadPlanDecoder;
 import nomo.core.json.string_fields;
+import nomo.core.json.encode as encode_json;
 import nomo.core.read_text.{safe, bounded};
 import nomo.core.large_context.{child_answer_bytes, child_answer_frame_bytes};
 import nomo.model.model_tool_contract.{Action, candidate_error, read_selection_error};
 
 public flow question_error(raw: string) -> string {
-    return if bounded(raw, 512) { "" } else { "question requires 1..512 safe UTF-8 bytes, not only spaces" };
+    return if bounded(raw, request_bytes()) { "" } else { "question requires 1..65536 safe UTF-8 bytes, not only spaces" };
 }
 
-// This protocol is scoped to the new non-durable read-only entry. Limits are
-// UTF-8 bytes, including serialized JSON, rather than just scalar counts.
-flow frame(raw: string, maximum: usize) -> bool {
-    if raw == "" || maximum == 0 || maximum > child_answer_frame_bytes() || len(raw) > maximum || byte_len(raw) > maximum { return false; }
-    var opened = false; var closed = false; var quoted = false; var escaped = false;
-    var leaves: usize = 0; let slash = from_char('\\');
-    for codepoint in std.text.chars(raw) limit Iterations(16386) { let character = std.text.from_char(codepoint);
-        if quoted {
-            if character != "" && !safe(character, 4) { return false; }
-            if escaped { escaped = false; }
-            else if character == slash { escaped = true; }
-            else if character == "\"" { quoted = false; }
-        } else if character == "" || character == " " || character == "\n" || character == "\r" || character == "\t" {
-        } else if character == "[" {
-            if opened || closed { return false; } opened = true;
-        } else if character == "]" {
-            if !opened || closed { return false; } closed = true;
-        } else if character == "\"" {
-            if !opened || closed { return false; }
-            leaves = leaves + 1; if leaves > 6 { return false; } quoted = true;
-        } else if character != "," || !opened || closed { return false; }
-    }
-    return opened && closed && !quoted;
-}
-
+// Decode the native flat string-array representation within its byte envelope.
 flow fields(raw: string, maximum: usize) -> Result<Array<string>, string> {
-    if !frame(raw, maximum) { return Err("expected bounded flat JSON string array"); }
+    if raw == "" || byte_len(raw) > maximum { return Err("expected bounded flat JSON string array"); }
     return string_fields(raw, "invalid JSON", "expected string fields");
 }
 
-// Call only after decoding a valid frame. Keep string bytes and escapes intact.
 public flow compact_frame(raw: string) -> string {
-    var result: Array<string> = []; var quoted = false; var escaped = false;
-    let slash = from_char('\\');
-    for codepoint in std.text.chars(raw) limit Iterations(16386) { let character = std.text.from_char(codepoint);
-        if quoted {
-            result = result.push(character);
-            if escaped { escaped = false; }
-            else if character == slash { escaped = true; }
-            else if character == "\"" { quoted = false; }
-        } else if character == "\"" {
-            quoted = true; result = result.push(character);
-        } else if character != "" && character != " " && character != "\n" && character != "\r" && character != "\t" {
-            result = result.push(character);
-        }
-    }
-    return concat(result);
+    let values = match string_fields(raw, "invalid JSON", "expected string fields") { Ok(value) => value, Err(error) => { abort(error); } };
+    return match encode_json(values, "action conversion refused", "action encoding refused") { Ok(value) => value, Err(error) => { abort(error); } };
 }
 
 public type Utf8ReadPlan = { work: bool };
 impl Utf8ReadPlan ~ ReadPlanDecoder {
     flow decode(self, raw: string) -> Result<string, string> {
-        let values = match fields(raw, if self.work { 4096 } else { 384 }) { Ok(item) => item, Err(error) => { return Err(error); } };
-        if count(values) != 2 || values[0] != "delegate" || !bounded(values[1], if self.work { 512 } else { 128 }) { return Err("invalid bounded delegated task"); }
+        let values = match fields(raw, message_frame_bytes()) { Ok(item) => item, Err(error) => { return Err(error); } };
+        if count(values) != 2 || values[0] != "delegate" || !bounded(values[1], message_bytes()) { return Err("invalid bounded delegated task"); }
         return Ok(values[1]);
     }
 }
@@ -73,24 +38,24 @@ public flow decode_plan(raw: string) -> Result<string, string> { let decoder = U
 public flow decode_work_plan(raw: string) -> Result<string, string> { let decoder = Utf8ReadPlan { work = true }; return decoder.decode(raw); }
 
 public flow work_plan_rejection(raw: string) -> string {
-    let values = match fields(raw, 4096) { Ok(item) => item, Err(_) => { return "unknown"; } };
+    let values = match fields(raw, message_frame_bytes()) { Ok(item) => item, Err(_) => { return "unknown"; } };
     if count(values) != 2 || values[0] != "delegate" { return "unknown"; }
     if values[1] == "" || trim(values[1]) == "" { return "blank"; }
-    if len(values[1]) > 512 || byte_len(values[1]) > 512 { return "length"; }
-    if !safe(values[1], 512) { return "unsafe"; }
+    if len(values[1]) > message_bytes() || byte_len(values[1]) > message_bytes() { return "length"; }
+    if !bounded(values[1], message_bytes()) { return "unsafe"; }
     return "unknown";
 }
 
 
 public flow answer(raw: string) -> Result<string, string> {
-    if !bounded(raw, 512) { return Err("invalid bounded final answer"); }
+    if !bounded(raw, message_bytes()) { return Err("invalid bounded final answer"); }
     return Ok(raw);
 }
 
 // Report only the violated constraint; never display the model's rejected text.
 flow child_final(text: string) -> Result<string, string> {
-    if len(text) > child_answer_bytes() || byte_len(text) > child_answer_bytes() { return Err("child final exceeds 4096 UTF-8 bytes"); }
-    let line = replace(replace(replace(text, "\n", " "), "\r", " "), "\t", " ");
+    if len(text) > child_answer_bytes() || byte_len(text) > child_answer_bytes() { return Err("child final exceeds 1048576 UTF-8 bytes"); }
+    let line = text;
     if !bounded(line, child_answer_bytes()) { return Err("child final contains unsupported control or formatting characters or is empty"); }
     return Ok(line);
 }
@@ -106,7 +71,7 @@ public flow decode_child(raw: string, allowed: Array<string>, final_only: bool) 
     }
     if final_only { return Err("second response must be final"); }
     // fields already checked structural whitespace and string safety above.
-    if byte_len(raw) > 384 { return Err("tool action exceeds 384 UTF-8 bytes"); }
+    if byte_len(raw) > message_frame_bytes() { return Err("tool action exceeds 8388608 UTF-8 bytes"); }
     if values[0] == "search" && count(values) == 3 && values[2] == "*" {
         let selected = read_selection_error("search", [allowed[0]], values[1], allowed); if selected != "" { return Err(selected); }
         return Ok(Action { operation = "search", files = ["*"], literal = values[1], text = "" });

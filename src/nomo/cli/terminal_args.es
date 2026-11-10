@@ -1,5 +1,7 @@
 module nomo.cli.terminal_args;
 
+import nomo.core.large_context.{request_bytes};
+
 import std.collections.len as count;
 import std.text.{char_count as len, split, trim, starts_with, strip_suffix};
 import nomo.core.text.printable;
@@ -94,11 +96,11 @@ public flow parse_once(args: Array<string>) -> Result<Config, string> {
 // Console returns an empty raw string for EOF; a blank LF/CRLF line is not EOF.
 public flow line(raw: string) -> Result<LineCommand, string> {
     if raw == "" { return Ok(LineCommand.Eof); }
-    if len(raw) > 130 { return Err("raw terminal line exceeds 128 characters plus LF/CRLF"); }
+    if len(raw) > request_bytes() + 2 { return Err("raw terminal line exceeds 65536 characters plus LF/CRLF"); }
     let body = match strip_suffix(raw, "\r\n") { Some(value) => value,
         None() => match strip_suffix(raw, "\n") { Some(value) => value, None() => raw } };
     if !printable(body) { return Err("expected printable ASCII terminal line"); }
-    if len(body) > 128 { return Err("terminal line exceeds 128 characters before trimming"); }
+    if len(body) > request_bytes() { return Err("terminal line exceeds 65536 characters before trimming"); }
     let text = trim(body);
     match text {
         "/help" => { return Ok(LineCommand.Help); }

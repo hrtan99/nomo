@@ -1,5 +1,9 @@
 module nomo.harness.harness_work_contract;
 
+import nomo.core.large_context.{context_bytes};
+
+import nomo.core.large_context.{message_bytes};
+
 import nomo.core.json.encode as encode_json;
 
 import std.text.{starts_with, len as byte_len};
@@ -13,7 +17,7 @@ import nomo.harness.read_tool_contract.inspect_work as inspect;
 import nomo.harness.harness_tool_contract.work_settle as settle;
 import nomo.harness.harness_tool_contract.Ledger as ReadLedger;
 import nomo.harness.harness_tool_contract.fresh as read_fresh;
-import nomo.harness.harness_tool_contract.{wide_bump, work_bump as read_bump};
+import nomo.harness.harness_tool_contract.{wide_bump, work_bump as read_bump, high_input_bump, high_input_error as high_input_read_error, high_input_settle};
 import nomo.harness.harness_tool_contract.work_error as read_error;
 import nomo.harness.harness_edit_contract.Context as EditContext;
 import nomo.harness.harness_edit_contract.Ledger as EditLedger;
@@ -56,7 +60,7 @@ impl LargeWorkBudget ~ WorkBudgetPolicy {
     flow reserve_edit(self, state: Ledger, call: bool) -> Result<Ledger, string> ![] { return bump_selected(state, call, true, true); }
 }
 impl HighInputWorkBudget ~ WorkBudgetPolicy {
-    flow maximum(self) -> WorkMaximum ![] { return WorkMaximum { steps = 13, calls = 7, generation = 188416, native_tokens = 6000000 }; }
+    flow maximum(self) -> WorkMaximum ![] { return WorkMaximum { steps = 13, calls = 7, generation = 917504, native_tokens = 7340032 }; }
     flow parameters(self) -> WorkParameters ![] { return WorkParameters { expanded = true, wide = true, large = false, high_input = true }; }
     flow reserve_edit(self, state: Ledger, call: bool) -> Result<Ledger, string> ![] { return bump_selected(state, call, true, false); }
 }
@@ -64,32 +68,34 @@ impl HighInputWorkBudget ~ WorkBudgetPolicy {
 public flow fresh() -> Ledger { return Ledger { read = read_fresh(), edit = edit_fresh() }; }
 
 flow read_complete(value: ReadLedger) -> bool {
-    return value.steps == 7 && value.calls == 4 && (value.tokens == 8192 || value.tokens == 12288 || value.tokens == 16384 || value.tokens == 20480 || value.tokens == 143360) && value.tools == 1 && (value.scan == 4096 || value.scan == 16384 || value.scan == 65540 || compatible_scan_i32(value.scan));
+    return value.steps == 7 && value.calls == 4 && (value.tokens == 8192 || value.tokens == 12288 || value.tokens == 16384 || value.tokens == 20480 || value.tokens == 143360 || value.tokens == 524288) && value.tools == 1 && (value.scan == 4096 || value.scan == 16384 || value.scan == 65540 || compatible_scan_i32(value.scan));
 }
 
 flow selected_edit_error(state: Ledger) -> string {
     if state.read.tokens == 143360 && wide_error(state.edit) != "" { return large_error(state.edit); }
-    return if state.read.tokens == 16384 || state.read.tokens == 20480 || state.read.tokens == 143360 { wide_error(state.edit) } else { edit_error(state.edit) };
+    return if state.read.tokens == 16384 || state.read.tokens == 20480 || state.read.tokens == 143360 || state.read.tokens == 524288 { wide_error(state.edit) } else { edit_error(state.edit) };
 }
 
 // Historical ledger allowance; it is not the interpreter total-token cap.
 public flow native_tokens(state: Ledger) -> i32 {
-    if read_error(state.read) != "" || selected_edit_error(state) != "" { return 0; }
+    if (read_error(state.read) != "" && high_input_read_error(state.read) != "") || selected_edit_error(state) != "" { return 0; }
     return state.read.calls * 8192 + state.edit.native_tokens;
 }
 
 // New event-work stages reserve interpreter-enforced total-token maxima.
 public flow native_budget(state: Ledger) -> i32 {
+    if state.read.tokens == 131072 || state.read.tokens == 393216 || state.read.tokens == 524288 { return (state.read.calls + state.edit.calls) * 1048576; }
     let read = match state.read.calls { 0 => 0, 1 => 8192, 2 => 24576, 3 => 286720, _ => 548864 };
     return read + state.edit.calls * 262144 + (if state.read.tokens >= 139264 { 737856 } else { 0 }) + (if state.read.tokens == 143360 && state.edit.tokens >= 139264 { 737856 } else { 0 });
 }
 
 public flow ledger_error(state: Ledger) -> string {
-    let read = read_error(state.read); if read != "" { return read; }
+    let read = read_error(state.read); if read != "" { let high = high_input_read_error(state.read); if high != "" { return read; } }
     let edit = selected_edit_error(state); if edit != "" { return edit; }
     if state.edit.steps != 0 && !read_complete(state.read) { return "edit tail requires settled read work"; }
+    let high_input = state.read.tokens == 131072 || state.read.tokens == 393216 || state.read.tokens == 524288;
     if state.read.steps + state.edit.steps > 13 || state.read.calls + state.edit.calls > 7 ||
-        state.read.tokens + state.edit.tokens > 286720 || native_tokens(state) > 196608 || native_budget(state) > 2811008 {
+        state.read.tokens + state.edit.tokens > if high_input { 917504 } else { 286720 } || native_tokens(state) > 196608 || native_budget(state) > if high_input { 7340032 } else { 2811008 } {
         return "shared work reservation exhausted";
     }
     return "";
@@ -116,7 +122,7 @@ public flow bump_edit_mode(state: Ledger, call: bool, high_input: bool) -> Resul
 }
 
 flow selected_error(value: Evidence, complete: bool) -> string {
-    if !bounded(value.request, 512) || !bounded(value.task, 512) || !bounded(value.result, child_answer_bytes()) ||
+    if !bounded(value.request, message_bytes()) || !bounded(value.task, message_bytes()) || !bounded(value.result, child_answer_bytes()) ||
         !bounded(value.outcome, outcome_bytes()) || !starts_with(value.outcome, "complete: ") { return "invalid read evidence text"; }
     let allowed = allowed_error(value.allowed); if allowed != "" { return allowed; }
     let files = allowed_error(value.files); if files != "" { return files; }
@@ -130,10 +136,12 @@ flow selected_error(value: Evidence, complete: bool) -> string {
     } else { return "read evidence requires a read or search"; }
     let raw = match json(fields) { Ok(item) => item, Err(error) => { return error; } };
     match decode_reply(raw, value.allowed, false) { Ok(_) => {} Err(error) => { return error; } }
-    let invalid = read_error(value.ledger); if invalid != "" { return invalid; }
+    let invalid = read_error(value.ledger); if invalid != "" {
+        let high_input = high_input_read_error(value.ledger); if high_input != "" { return invalid; }
+    }
     if complete {
-        if !read_complete(value.ledger) || !bounded(value.summary, 512) { return "read evidence is not settled"; }
-    } else if value.summary != "" || value.ledger.steps != 5 || value.ledger.calls != 3 || (value.ledger.tokens != 6144 && value.ledger.tokens != 10240 && value.ledger.tokens != 12288 && value.ledger.tokens != 16384 && value.ledger.tokens != 139264) ||
+        if !read_complete(value.ledger) || !bounded(value.summary, message_bytes()) { return "read evidence is not settled"; }
+    } else if value.summary != "" || value.ledger.steps != 5 || value.ledger.calls != 3 || (value.ledger.tokens != 6144 && value.ledger.tokens != 10240 && value.ledger.tokens != 12288 && value.ledger.tokens != 16384 && value.ledger.tokens != 139264 && value.ledger.tokens != 393216) ||
         value.ledger.tools != 1 || (value.ledger.scan != 4096 && value.ledger.scan != 16384 && value.ledger.scan != 65540 && !compatible_scan_i32(value.ledger.scan)) { return "invalid pending read evidence"; }
     return "";
 }
@@ -142,12 +150,12 @@ public flow evidence_error(value: Evidence) -> string { return selected_error(va
 
 // Admit only the ordinary, source-constructed successful tool-child shape.
 // A direct final answer cannot substitute for an actual complete tool outcome.
-public flow collect(child: Session, status: i32, request: string, task: string, allowed: Array<string>, wide: bool) -> Result<Evidence, string> {
+public flow collect(child: Session, status: i32, request: string, task: string, allowed: Array<string>, wide: bool, high_input: bool) -> Result<Evidence, string> {
     let observed = match inspect(child, status, request, task, allowed) { Ok(value) => value, Err(error) => { return Err(error); } };
     if status != 0 || (observed.tool != "read" && observed.tool != "search") { return Err("work requires a successful read or search child"); }
     let selected = match decode_reply(child.history.events[3].text, allowed, false) { Ok(value) => value, Err(error) => { return Err(error); } };
-    let reserved = ReadLedger { steps = 2, calls = 1, tokens = if wide { 4096 } else { 2048 }, tools = 0, scan = 0 };
-    let ledger = match settle(reserved, child) { Ok(value) => value, Err(error) => { return Err(error); } };
+    let reserved = ReadLedger { steps = 2, calls = 1, tokens = if high_input { 131072 } else { if wide { 4096 } else { 2048 } }, tools = 0, scan = 0 };
+    let ledger = match if high_input { high_input_settle(reserved, child) } else { settle(reserved, child) } { Ok(value) => value, Err(error) => { return Err(error); } };
     let evidence = Evidence { request = request, task = task, operation = selected.operation, files = selected.files,
         literal = selected.literal, outcome = observed.outcome, result = observed.result, summary = "", allowed = allowed, ledger = ledger };
     let invalid = selected_error(evidence, false); if invalid != "" { return Err(invalid); }
@@ -158,9 +166,10 @@ public flow collect(child: Session, status: i32, request: string, task: string, 
 // Model call, then compares the returned ledger with its invocation ledger.
 public flow finish_evidence(value: Evidence, summary: string) -> Result<Evidence, string> {
     let invalid = selected_error(value, false); if invalid != "" { return Err(invalid); }
+    let high_input = value.ledger.tokens == 393216;
     let wide = value.ledger.tokens == 12288 || value.ledger.tokens == 16384 || value.ledger.tokens == 139264;
-    let consumed = match if wide { wide_bump(value.ledger, false) } else { read_bump(value.ledger, false) } { Ok(item) => item, Err(error) => { return Err(error); } };
-    let ledger = match if wide { wide_bump(consumed, true) } else { read_bump(consumed, true) } { Ok(item) => item, Err(error) => { return Err(error); } };
+    let consumed = match if high_input { high_input_bump(value.ledger, false) } else { if wide { wide_bump(value.ledger, false) } else { read_bump(value.ledger, false) } } { Ok(item) => item, Err(error) => { return Err(error); } };
+    let ledger = match if high_input { high_input_bump(consumed, true) } else { if wide { wide_bump(consumed, true) } else { read_bump(consumed, true) } } { Ok(item) => item, Err(error) => { return Err(error); } };
     let result = Evidence { request = value.request, task = value.task, operation = value.operation, files = value.files,
         literal = value.literal, outcome = value.outcome, result = value.result, summary = summary, allowed = value.allowed, ledger = ledger };
     let error = evidence_error(result); if error != "" { return Err(error); }
@@ -172,6 +181,6 @@ public flow context_error(value: Context) -> string {
     let edit = edit_context_error(value.edit); if edit != "" { return edit; }
     if value.edit.request != value.evidence.request { return "read and edit original request changed"; }
     let encoded = match encode_json(value, "work context conversion refused", "work context JSON refused") { Ok(value) => value, Err(error) => { return error; } };
-    if byte_len(encoded) > 8388608 { return "work context exceeds 8388608 serialized UTF-8 bytes"; }
+    if byte_len(encoded) > context_bytes() { return "work context exceeds 33554432 serialized UTF-8 bytes"; }
     return "";
 }

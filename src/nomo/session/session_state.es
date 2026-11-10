@@ -1,5 +1,9 @@
 module nomo.session.session_state;
 
+import nomo.core.large_context.{event_bytes};
+
+import nomo.core.large_context.{message_bytes, history_bytes};
+
 import std.collections.len as count;
 import std.text.char_count as len;
 import nomo.core.text.printable;
@@ -110,16 +114,16 @@ public flow validate(saved: Snapshot, requested: Request) -> Result<Projection, 
     if count(saved.history.events) > 32 || count(saved.references) != count(saved.history.events) || count(saved.operations) > 32 {
         return Err("event or operation count invalid");
     }
-    if saved.history.characters > 8192 { return Err("history content capacity exceeded"); }
+    if saved.history.characters > history_bytes() { return Err("history content capacity exceeded"); }
     var characters: usize = 0;
     for event in saved.history.events limit Iterations(32) {
         if !event_valid(event, saved.mode) { return Err("invalid event metadata"); }
-        if len(event.text) > 8192 { return Err("history content capacity exceeded"); }
+        if len(event.text) > event_bytes() { return Err("history content capacity exceeded"); }
         characters = characters + len(event.name) + len(event.text);
-        if characters > 8192 { return Err("history content capacity exceeded"); }
+        if characters > history_bytes() { return Err("history content capacity exceeded"); }
     }
     if characters != saved.history.characters { return Err("cached character count mismatch"); }
-    if !saved.history.stopped && (count(saved.history.events) > 31 || characters > 8128) {
+    if !saved.history.stopped && (count(saved.history.events) > 31 || characters > history_bytes() - 64) {
         return Err("missing terminal headroom");
     }
     var attempts: i32 = 0;

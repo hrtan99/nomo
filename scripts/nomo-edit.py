@@ -15,6 +15,8 @@ import threading
 import time
 
 ROOT = Path(__file__).resolve().parent.parent
+REQUEST_BYTES = 65536
+MESSAGE_BYTES = 1048576
 
 def safe_text(value, maximum):
     """Mirror the source UTF-8 byte and terminal-safety bounds."""
@@ -26,7 +28,7 @@ def safe_text(value, maximum):
 
 
 def safe_read_question(value):
-    return bool(value.strip()) and safe_text(value, 512)
+    return bool(value.strip()) and safe_text(value, REQUEST_BYTES)
 
 
 def safe_path(value, maximum=128):
@@ -53,8 +55,9 @@ def format_check_capture(entry, env, literals=(), excerpt=False):
     if not excerpt:return text
     if any(value and value in text for value in values):raise ValueError('filtered check output contains a sensitive literal')
     raw = text.encode('utf-8')
-    if len(raw) <= 4096:return text,False
-    return raw[:2000].decode('utf-8',errors='ignore')+'\n[... output omitted ...]\n'+raw[-2000:].decode('utf-8',errors='ignore'),True
+    if len(raw) <= MESSAGE_BYTES:return text,False
+    half = MESSAGE_BYTES // 2 - 32
+    return raw[:half].decode('utf-8',errors='ignore')+'\n[... output omitted ...]\n'+raw[-half:].decode('utf-8',errors='ignore'),True
 
 
 def directory(raw, name):
@@ -151,8 +154,8 @@ def validate_history_work(args, workspace, path_maximum):
     deadline=os.environ.get('NOMO_MODEL_REQUEST_DEADLINE_MS','120000')
     if not deadline.isascii() or not deadline.isdigit() or len(deadline)>7 or not 2000<=int(deadline)<=3600000:raise ValueError('model request deadline must be an integer from 2000 to 3600000')
     names=args.allow.split(',')
-    if not 1<=len(names)<=4 or len(set(names))!=len(names) or any(not safe_path(n, path_maximum) for n in names) or len(args.allow.encode('utf-8'))>195:raise ValueError('allow must name one to four distinct safe relative files')
-    if not safe_read_question(args.once):raise ValueError('work task must be 1..512 safe nonblank UTF-8 bytes')
+    if not 1<=len(names)<=4 or len(set(names))!=len(names) or any(not safe_path(n, path_maximum) for n in names) or len(args.allow.encode('utf-8'))>515:raise ValueError('allow must name one to four distinct safe relative files')
+    if not safe_read_question(args.once):raise ValueError('work task must be 1..65536 safe nonblank UTF-8 bytes')
     selected=Path(args.path)
     if not args.id or not safe_path(args.path):raise ValueError('select an ID and relative workspace file')
     current=workspace
@@ -183,8 +186,8 @@ def prepare(args, stdin_tty, stdout_tty):
         if (not 1 <= len(names) <= 2 or len(set(names)) != len(names) or
                 any(not safe_path(name, 48) for name in names)):
             raise ValueError('allow must name one or two distinct safe relative files')
-        if task is None or not task.strip() or len(task) > 128 or not all(32 <= ord(c) <= 126 for c in task):
-            raise ValueError('work task must be 1..128 printable ASCII characters, not only spaces')
+        if task is None or not task.strip() or len(task) > REQUEST_BYTES or not all(32 <= ord(c) <= 126 for c in task):
+            raise ValueError('work task must be 1..65536 printable ASCII characters, not only spaces')
     deadline = None
     if not args.id or not args.path:
         raise ValueError('id and path must be nonempty')
@@ -270,8 +273,8 @@ class RuntimeDiagnostic:
     """
     _length = b'error[analysis::UnhandledRuntimeError]: model generation failed: IncompleteResponse: OpenAI-compatible generation is incomplete (finish_reason=length)'
     _provider_503 = b'error[analysis::UnhandledRuntimeError]: model host boundary failed: OpenAI-compatible endpoint returned an error status (status=503)'
-    _summary_bound = b'REFUSED edit completed; final answer requires 1..512 nonblank UTF-8 bytes'
-    _history_summary_bound = b'REFUSED edit completed; final answer requires 1..1024 nonblank UTF-8 bytes'
+    _summary_bound = b'REFUSED edit completed; final answer requires 1..1048576 nonblank UTF-8 bytes'
+    _history_summary_bound = _summary_bound
     _read_refusals = {
         b'REFUSED expected bounded flat JSON string array': 'bounded_json_frame_refused',
         b'REFUSED invalid JSON': 'invalid_json_refused',
@@ -353,7 +356,7 @@ def run_owned(command, env, capture=None, input_data=None, diagnostic=None, *, c
     input_errors = []
     forwarded = False
     old = {}
-    if not isinstance(capture_limit,int) or not 1 <= capture_limit <= 67108864:
+    if not isinstance(capture_limit,int) or not 1 <= capture_limit <= 268435456:
         raise ValueError('invalid capture limit')
 
     def interrupted(number, _frame):

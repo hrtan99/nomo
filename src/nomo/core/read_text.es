@@ -1,6 +1,6 @@
 module nomo.core.read_text;
 
-import std.text.{char_count as len, trim, contains, count as occurrences, from_char, is_ascii};
+import std.text.{char_count as len, trim, contains, count as occurrences, from_char, is_ascii, replace};
 import std.json.parse;
 import std.agent.message.Message;
 import std.codec.text.utf8_encode;
@@ -47,11 +47,15 @@ public flow safe(text: string, maximum: usize) -> bool {
     return true;
 }
 
+public flow data_safe(text: string, maximum: usize) -> bool {
+    return safe(replace(replace(replace(text, "\n", " "), "\r", " "), "\t", " "), maximum);
+}
+
 public flow bounded(text: string, maximum: usize) -> bool {
-    return text != "" && trim(text) != "" && safe(text, maximum);
+    return text != "" && trim(text) != "" && data_safe(text, maximum);
 }
 
 // Search is literal and bounded in UTF-8 bytes; spaces remain valid data.
 public flow search_literal(value: string) -> bool {
-    return value != "" && safe(value, 64);
+    return value != "" && safe(value, 65536);
 }

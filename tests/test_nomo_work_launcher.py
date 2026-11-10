@@ -76,7 +76,7 @@ class WorkLauncherTests(unittest.TestCase):
         for allowed in ('', '../secret', '/absolute', 'a//b', 'a,a', 'a,b,c', 'x'*49):
             argv=self.argv.copy();argv[3]=allowed
             code,calls,_,_=self.invoke(argv);self.assertEqual(code,64,allowed);self.assertEqual(calls,[])
-        for task in ('', ' '*3, '汉字', 'x'*129, 'line\nbreak'):
+        for task in ('', ' '*3, '汉字', 'x'*65537, 'line\nbreak'):
             argv=self.argv.copy();argv[-1]=task
             code,calls,_,_=self.invoke(argv);self.assertEqual(code,64,repr(task));self.assertEqual(calls,[])
 

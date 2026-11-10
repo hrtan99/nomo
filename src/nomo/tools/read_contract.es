@@ -1,5 +1,7 @@
 module nomo.tools.read_contract;
 
+import nomo.core.large_context.{file_bytes, outcome_bytes};
+
 import std.fs.Region;
 import std.fs.IOError as FileError;
 import std.effects.Fs;
@@ -23,7 +25,7 @@ public effect ReadTools {
 // Terminal/history text stays one line. Marker encoding escapes '<' as <LT>,
 // so a literal marker cannot impersonate LF/CR/TAB. Other controls are refused.
 public flow display(result: Outcome) -> Outcome {
-    if len(result.text) > 1024 { return outcome("refused", "result exceeds 1024 characters", result.scanned); }
+    if len(result.text) > file_bytes() { return outcome("refused", "result exceeds 1048576 characters", result.scanned); }
     var checked = replace(result.text, "\n", "");
     checked = replace(checked, "\r", "");
     checked = replace(checked, "\t", "");
@@ -32,6 +34,6 @@ public flow display(result: Outcome) -> Outcome {
     escaped = replace(escaped, "\n", "<LF>");
     escaped = replace(escaped, "\r", "<CR>");
     escaped = replace(escaped, "\t", "<TAB>");
-    if len(escaped) > 1024 { return outcome("refused", "escaped result exceeds 1024 characters", result.scanned); }
+    if len(escaped) > outcome_bytes() { return outcome("refused", "escaped result exceeds 1048576 characters", result.scanned); }
     return outcome(result.status, escaped, result.scanned);
 }

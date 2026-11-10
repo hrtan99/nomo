@@ -1,5 +1,7 @@
 module nomo.harness.typed_work_contract;
 
+import nomo.core.large_context.{message_bytes};
+
 import nomo.model.model_tool_contract.{Action, question_error, allowed_error, read_selection_error};
 import nomo.model.model_tool_contract.Context as ToolContext;
 import nomo.model.model_tool_contract.context_error as tool_context_error;
@@ -47,7 +49,7 @@ public flow edit_input_error(input: Input, phase: string) -> string {
 
 public flow project_read_plan(context: ReadContext, value: Delegation) -> Result<string, string> {
     let invalid = read_input_error(context, "plan"); if invalid != "" { return Err(invalid); }
-    if !bounded(value.task, 128) { return Err("invalid bounded delegated task"); }
+    if !unicode_bounded(value.task, message_bytes()) { return Err("invalid bounded delegated task"); }
     return Ok(value.task);
 }
 public flow project_read_action(context: ToolContext, value: ReadAction) -> Result<Action, string> {

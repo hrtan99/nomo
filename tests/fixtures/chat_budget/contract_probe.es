@@ -3,7 +3,7 @@ module app.main;
 import std.io.println;
 import nomo.harness.harness_tool_chat_contract.{Invocation, Previous, Completed, TurnResult, empty};
 import nomo.harness.harness_tool_contract.{Ledger, fresh as fresh_ledger};
-import nomo.harness.read_tool_chat_contract.{multi_maximum, multi_wide_maximum, multi_input_maximum, multi_input_reasoning_maximum, multi_large_maximum, multi_resilient_maximum};
+import nomo.harness.read_tool_chat_contract.{multi_maximum, multi_wide_maximum, multi_input_maximum, multi_input_reasoning_maximum, multi_full_maximum, multi_large_maximum, multi_resilient_maximum};
 import nomo.harness.read_tool_chat.{MainMode, main_mode};
 import nomo.harness.chat_budget_policy.{SelectedBudget, select};
 import nomo.session.chat_session_contract.{Session, fresh, fresh_events, fresh_high_input_events, invalid, begin, complete};
@@ -39,7 +39,12 @@ public flow probe(args: Array<string>) -> i32 ![Console, Error<std.io.IOError>, 
     if early.invocation.usage.tokens != 266240 || invalid(early) != "" { abort("early final usage changed"); }
     let saved = match complete(reserved, completed("question", multi_resilient_maximum(48), 393216)) { Ok(value) => value, Err(_) => { abort("new accounting refused"); } };
     if saved.invocation.usage.tokens != 393216 || saved.phase != "ready" { abort("new usage changed"); }
-    let input = fresh_high_input_events();
+    let full = fresh_high_input_events();
+    if full.format != 19 || full.invocation.maximum != multi_full_maximum(48) || invalid(full) != "" || main_mode(full.invocation) != MainMode.Full { abort("full-output event session refused"); }
+    let full_reserved = match begin(full, "question") { Ok(value) => value, Err(_) => { abort("full reservation refused"); } };
+    let full_saved = match complete(full_reserved, completed("question", multi_full_maximum(48), 393216)) { Ok(value) => value, Err(_) => { abort("full settlement refused"); } };
+    if full_saved.phase != "ready" || full_saved.invocation.usage.tokens != 393216 { abort("full settlement changed"); }
+    let input = Session { format = 18, phase = "ready", invocation = Invocation { usage = fresh_ledger(), maximum = multi_input_reasoning_maximum(48), admitted = 0, prior = empty() }, last_request = "", pending = "" };
     if input.format != 18 || input.invocation.maximum != multi_input_reasoning_maximum(48) || invalid(input) != "" || main_mode(input.invocation) != MainMode.HighInput || !high_input_child(input.invocation) || !reasoning_child(input.invocation) { abort("high-input event session changed"); }
     if high_input_child(new.invocation) { abort("resilient session selected high-input child"); }
     let input_reserved = match begin(input, "question") { Ok(value) => value, Err(_) => { abort("high-input reservation refused"); } };

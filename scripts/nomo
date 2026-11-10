@@ -57,7 +57,7 @@ def main():
     parser.add_argument('--status', action='store_true', help='inspect the selected session offline')
     parser.add_argument('--events', action='store_true', help='include recorded events with --status')
     parser.add_argument('--once', help='run one read-only question')
-    parser.add_argument('--high-input', action='store_true', help='new sessions only: lower output reservations so more of the shared provider context window remains available to input')
+    parser.add_argument('--high-input', action='store_true', help='new sessions only: full history with 131072 output tokens per model call')
     scope = parser.add_mutually_exclusive_group()
     scope.add_argument('--page', type=int, choices=range(8), help='initial discovery page, 0..7 (default: 0)')
     scope.add_argument('--allow', help='read only these one to four comma-separated relative files')

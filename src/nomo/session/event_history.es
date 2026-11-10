@@ -1,5 +1,9 @@
 module nomo.session.event_history;
 
+import nomo.core.read_text.data_safe;
+
+import nomo.core.large_context.{event_bytes};
+
 import nomo.session.cas_rows.{Target, commit_receipt};
 
 import std.memory.{get_entry, WriteCondition, MemoryVersion, MemoryEntry, Missing, Match};
@@ -22,7 +26,7 @@ flow invalid(value: History) -> string {
         (value.turns == 1 && value.first_count != count(value.events)) ||
         (value.turns == 2 && value.first_count == count(value.events)) { return "invalid event turn boundary"; }
     for event in value.events limit Iterations(48) {
-        if !safe(event.role, 128) || !safe(event.kind, 128) || !safe(event.name, 128) || !safe(event.text, 512) {
+        if !safe(event.role, 128) || !safe(event.kind, 128) || !safe(event.name, 128) || !data_safe(event.text, event_bytes()) {
             return "invalid event history content";
         }
     }

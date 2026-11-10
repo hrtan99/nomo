@@ -1,5 +1,7 @@
 module nomo.context.preflight;
 
+import nomo.core.large_context.{context_bytes, message_bytes};
+
 import std.text.{char_count as len, len as byte_len};
 import std.json.{JsonValue, stringify};
 import std.agent.message.Message;
@@ -26,7 +28,7 @@ flow encoded_measure(json: JsonValue, maximum_bytes: usize) -> Result<Measuremen
 // Measure the same concrete value the caller supplies to Prompt.data. Semantic
 // confirmation and the existing stage budget/admission guards remain required.
 public flow measure_context(context: Context, maximum_bytes: usize) -> Result<Measurement, Refusal> {
-    if maximum_bytes > 8388608 { return Err(Refusal.InvalidLimit); }
+    if maximum_bytes > context_bytes() { return Err(Refusal.InvalidLimit); }
     if bounded_context_error(context) != "" { return Err(Refusal.InvalidContext); }
     let message = Message.new(context);
     let conversion: Option<Message<JsonValue>> = message.cast<JsonValue>();
@@ -40,8 +42,8 @@ public flow measure_context(context: Context, maximum_bytes: usize) -> Result<Me
 // This scalar ceiling bounds source allocation before conversion. It is not an
 // estimate of encoded size or Provider tokens; escaping/UTF-8 are measured below.
 public flow measure_text(text: string, maximum_bytes: usize) -> Result<Measurement, Refusal> {
-    if maximum_bytes > 262144 { return Err(Refusal.InvalidLimit); }
-    if len(text) > 262144 { return Err(Refusal.InvalidText); }
+    if maximum_bytes > context_bytes() { return Err(Refusal.InvalidLimit); }
+    if len(text) > message_bytes() { return Err(Refusal.InvalidText); }
     let message = Message.new(text);
     let conversion: Option<Message<JsonValue>> = message.cast<JsonValue>();
     let json = match conversion {

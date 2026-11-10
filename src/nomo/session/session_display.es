@@ -77,7 +77,7 @@ public flow ascii_json_with(json: string, encoded_maximum: usize, maximum: usize
     var pieces: Array<string> = []; var chunk = ""; var size: usize = 0;
     // The largest caller accepts 16 Mi scalar inputs; keep its established
     // iteration envelope even when smaller callers select tighter byte bounds.
-    for codepoint in std.text.chars(json) limit Iterations(16777218) { let character = std.text.from_char(codepoint);
+    for codepoint in std.text.chars(json) limit Iterations(134217730) { let character = std.text.from_char(codepoint);
         let fragment = escaped(character); size = size + len(fragment);
         if size > maximum { return Err(display_error); }
         chunk = chunk + fragment;

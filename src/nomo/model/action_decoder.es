@@ -28,7 +28,7 @@ flow unicode_category(raw: string, error: string) -> string {
     if !starts_with(text, "[") { return "prose"; }
     if error == "invalid action field count" || error == "child final must contain exactly two fields" { return "arity"; }
     if error == "second response must be final" || error == "unsupported action or arity" { return "verb"; }
-    if error == "child final exceeds 4096 UTF-8 bytes" || error == "child final contains unsupported control or formatting characters or is empty" { return "result"; }
+    if error == "child final exceeds 1048576 UTF-8 bytes" || error == "child final contains unsupported control or formatting characters or is empty" { return "result"; }
     if error == "invalid search literal" { return "literal"; }
     return "frame";
 }

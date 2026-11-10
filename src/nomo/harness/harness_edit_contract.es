@@ -1,5 +1,7 @@
 module nomo.harness.harness_edit_contract;
 
+import nomo.core.large_context.{message_bytes, message_frame_bytes, edit_response_bytes, context_bytes};
+
 import nomo.core.json.encode as encode_json;
 
 public import nomo.application.decoder_contract.EditText as Child;
@@ -19,7 +21,7 @@ import nomo.session.edit_operation.{Binding, selector_error, binding_error};
 public flow history_bound(converted: Option<Message<JsonValue>>, maximum: usize, kind: string) -> unit {
     let data = match converted { Some(item) => item.body, None() => { abort("history " + kind + " context conversion refused"); } };
     let raw = match stringify(data) { Ok(item) => item, Err(_) => { abort("history " + kind + " context encoding refused"); } };
-    if byte_len(raw) > maximum { abort(if kind == "read" { "history read context exceeds 8388608 bytes" } else { "history edit context exceeds 8388608 bytes" }); }
+    if byte_len(raw) > maximum { abort(if kind == "read" { "history read context exceeds 33554432 bytes" } else { "history edit context exceeds 33554432 bytes" }); }
 }
 
 public type Context = { phase: string, request: string, task: string, id: string, workspace: string, path: string,
@@ -33,15 +35,17 @@ public flow fresh() -> Ledger { return Ledger { steps = 0, calls = 0, tokens = 0
 // The fixed three-call reservation includes final aggregation from the start.
 flow error_mode(state: Ledger, wide: bool, large: bool) -> string {
     if state.steps < 0 || state.steps > 6 || state.calls < 0 || state.calls > 3 ||
-        state.tokens < 0 || state.tokens > if large { 143360 } else { if wide { 45056 } else { 38912 } } || state.native_tokens < 0 || state.native_tokens > 163840 ||
+        state.tokens < 0 || state.tokens > if large { 143360 } else { if wide { 393216 } else { 38912 } } || state.native_tokens < 0 || state.native_tokens > 163840 ||
         state.boundaries < 0 || state.boundaries > 3 {
         return "invalid shared edit ledger";
     }
-    let allowance: i32 = if large { match state.calls { 0 => 0, 1 => 8192, 2 => 139264, _ => 143360 } } else { if wide { match state.calls { 0 => 0, 1 => 8192, 2 => 40960, _ => 45056 } } else { match state.calls { 0 => 0, 1 => 4096, 2 => 36864, _ => 38912 } } };
+    let allowance: i32 = if large { match state.calls { 0 => 0, 1 => 8192, 2 => 139264, _ => 143360 } } else { if wide { state.calls * 131072 } else { match state.calls { 0 => 0, 1 => 4096, 2 => 36864, _ => 38912 } } };
+    let legacy_wide: i32 = match state.calls { 0 => 0, 1 => 8192, 2 => 40960, _ => 45056 };
+    let transitional_wide: i32 = match state.calls { 0 => 0, 1 => 32768, 2 => 65536, _ => 69632 };
     let native_allowance: i32 = match state.calls { 0 => 0, 1 => 32768, 2 => 98304, _ => 163840 };
     let stage = (state.calls == 0 && state.boundaries == 0) || (state.calls == 1 && state.boundaries <= 1) ||
         (state.calls == 2 && state.boundaries >= 1 && state.boundaries <= 3) || (state.calls == 3 && state.boundaries == 3);
-    if !stage || state.steps != state.calls + state.boundaries || state.tokens != allowance || state.native_tokens != native_allowance {
+    if !stage || state.steps != state.calls + state.boundaries || (state.tokens != allowance && !(wide && !large && (state.tokens == legacy_wide || state.tokens == transitional_wide))) || state.native_tokens != native_allowance {
         return "invalid shared edit ledger";
     }
     return "";
@@ -59,7 +63,7 @@ public flow bump_mode(state: Ledger, call: bool, wide: bool, large: bool) -> Res
     if state.steps >= 6 || (call && !call_stage) || (!call && !boundary_stage) {
         return Err("shared edit reservation exhausted");
     }
-    let allowance: i32 = match state.calls { 0 => if wide { 8192 } else { 4096 }, 1 => if large { 131072 } else { 32768 }, _ => if wide { 4096 } else { 2048 } };
+    let allowance: i32 = if wide && !large { 131072 } else { match state.calls { 0 => if wide { 8192 } else { 4096 }, 1 => if large { 131072 } else { 32768 }, _ => if wide { 4096 } else { 2048 } } };
     let native_allowance: i32 = match state.calls { 0 => 32768, _ => 65536 };
     return Ok(Ledger { steps = state.steps + 1, calls = state.calls + if call { 1 } else { 0 },
         tokens = state.tokens + if call { allowance } else { 0 }, native_tokens = state.native_tokens + if call { native_allowance } else { 0 },
@@ -69,55 +73,27 @@ public flow bump_mode(state: Ledger, call: bool, wide: bool, large: bool) -> Res
 public flow bump(state: Ledger, call: bool) -> Result<Ledger, string> { return bump_mode(state, call, false, false); }
 
 public flow text_error(text: string, field: string) -> string {
-    if len(text) == 0 || len(text) > 512 || trim(text) == "" { return field + " requires 1..512 nonblank UTF-8 bytes"; }
+    if len(text) == 0 || len(text) > message_bytes() || trim(text) == "" { return field + " requires 1..1048576 nonblank UTF-8 bytes"; }
     let size = match text_bytes(text, field) { Ok(value) => value, Err(error) => { return error; } };
-    if size > 512 { return field + " requires 1..512 nonblank UTF-8 bytes"; }
+    if size > message_bytes() { return field + " requires 1..1048576 nonblank UTF-8 bytes"; }
     return "";
 }
 
 // History-work summaries are complete facts, not abbreviated context.
 public flow history_fallback_summary() -> string { return "Edit applied; model summary unavailable (blank or over limit)."; }
 public flow history_summary_error(text: string, field: string) -> string {
-    if len(text) == 0 || len(text) > 1024 || trim(text) == "" { return field + " requires 1..1024 nonblank UTF-8 bytes"; }
+    if len(text) == 0 || len(text) > message_bytes() || trim(text) == "" { return field + " requires 1..1048576 nonblank UTF-8 bytes"; }
     let size = match text_bytes(text, field) { Ok(value) => value, Err(error) => { return error; } };
-    if size > 1024 { return field + " requires 1..1024 nonblank UTF-8 bytes"; }
+    if size > message_bytes() { return field + " requires 1..1048576 nonblank UTF-8 bytes"; }
     return "";
 }
 
-// The same bounded scanner serves legacy and current-v2 decoding. Diagnostic
-// classification changes no accepted wire: outside-string JSON whitespace was
-// already supported, while quoted data is left for the complete JSON parser.
-flow frame_error(raw: string, maximum: usize, fields: usize, diagnostic: bool) -> string {
-    if len(raw) == 0 || len(raw) > maximum || byte_len(raw) > maximum { return "limit"; }
-    var opened = false; var closed = false; var quoted = false; var escaped = false;
-    var leaves: usize = 0; let slash = from_char('\\');
-    for codepoint in std.text.chars(raw) limit Iterations(32770) { let character = std.text.from_char(codepoint);
-        if quoted {
-            if escaped { escaped = false; }
-            else if character == slash { escaped = true; }
-            else if character == "\"" { quoted = false; }
-        } else if character == "" || character == " " || character == "\t" || character == "\r" || character == "\n" {
-        } else if character == "[" {
-            if opened || closed { return if diagnostic && !closed { "shape" } else { "frame" }; } opened = true;
-        } else if character == "]" {
-            if !opened || closed { return "frame"; } closed = true;
-        } else if character == "\"" {
-            if !opened || closed { return if diagnostic && !closed { "shape" } else { "frame" }; }
-            leaves = leaves + 1; if !diagnostic && leaves > fields { return "frame"; } quoted = true;
-        } else if character != "," || !opened || closed {
-            if diagnostic && !closed && contains("{0123456789-tnf", character) { return "shape"; }
-            return "frame";
-        }
-    }
-    if !opened || !closed || quoted { return "frame"; }
-    if !diagnostic && leaves != fields { return "frame"; }
-    return "";
-}
+// Native JSON owns framing and escapes; both routes share the byte envelope.
+
 flow decoded(raw: string, maximum: usize, expected: usize, diagnostic: bool) -> Result<Array<string>, string> {
     let phase = if expected == 2 { "edit-plan" } else { "edit-child" };
     let legacy = if expected == 2 { "delegation" } else { "edit" };
-    let framed = frame_error(raw, maximum, expected, diagnostic);
-    if framed != "" { return Err(if diagnostic { response_error(raw, phase, framed, maximum) } else { "expected bounded flat " + legacy + " JSON" }); }
+    if raw == "" || byte_len(raw) > maximum { return Err(if diagnostic { response_error(raw, phase, "limit", maximum) } else { "expected bounded flat " + legacy + " JSON" }); }
     let fields = match json_fields(raw) {
         Ok(value) => value,
         Err(FieldError.Json) => { return Err(if diagnostic { response_error(raw, phase, "json", maximum) } else { "invalid " + legacy + " JSON" }); }
@@ -129,16 +105,16 @@ flow decoded(raw: string, maximum: usize, expected: usize, diagnostic: bool) -> 
     return Ok(fields);
 }
 flow plan(raw: string, diagnostic: bool) -> Result<string, string> {
-    let fields = match decoded(raw, 4096, 2, diagnostic) { Ok(value) => value, Err(error) => { return Err(error); } };
+    let fields = match decoded(raw, message_frame_bytes(), 2, diagnostic) { Ok(value) => value, Err(error) => { return Err(error); } };
     let invalid = text_error(fields[1], "delegated task");
-    if invalid != "" { return Err(if diagnostic { response_error(raw, "edit-plan", "task", 4096) } else { invalid }); }
+    if invalid != "" { return Err(if diagnostic { response_error(raw, "edit-plan", "task", message_frame_bytes()) } else { invalid }); }
     return Ok(fields[1]);
 }
 flow edit(raw: string, diagnostic: bool, empty: bool) -> Result<Child, string> {
-    let fields = match decoded(raw, 32768, 3, diagnostic) { Ok(value) => value, Err(error) => { return Err(error); } };
-    let size = match text_bytes(fields[1], "target") { Ok(value) => value, Err(error) => { return Err(if diagnostic { response_error(raw, "edit-child", "target", 32768) } else { error }); } };
-    match text_bytes(fields[2], "replacement") { Ok(_) => {} Err(error) => { return Err(if diagnostic { response_error(raw, "edit-child", "replacement", 32768) } else { error }); } }
-    if size == 0 && !empty { return Err(if diagnostic { response_error(raw, "edit-child", "target", 32768) } else { "target must not be empty" }); }
+    let fields = match decoded(raw, edit_response_bytes(), 3, diagnostic) { Ok(value) => value, Err(error) => { return Err(error); } };
+    let size = match text_bytes(fields[1], "target") { Ok(value) => value, Err(error) => { return Err(if diagnostic { response_error(raw, "edit-child", "target", edit_response_bytes()) } else { error }); } };
+    match text_bytes(fields[2], "replacement") { Ok(_) => {} Err(error) => { return Err(if diagnostic { response_error(raw, "edit-child", "replacement", edit_response_bytes()) } else { error }); } }
+    if size == 0 && !empty { return Err(if diagnostic { response_error(raw, "edit-child", "target", edit_response_bytes()) } else { "target must not be empty" }); }
     return Ok(Child { target = fields[1], replacement = fields[2] });
 }
 public flow decode_plan(raw: string) -> Result<string, string> { return plan(raw, false); }
@@ -151,9 +127,9 @@ public flow decode_empty_edit(raw: string) -> Result<Child, string> { let decode
 public flow decode_work_plan(raw: string) -> Result<string, string> { return plan(raw, true); }
 public flow decode_work_edit(raw: string) -> Result<Child, string> { let decoder = EditProposal { diagnostic = true, empty = false }; return decoder.decode(raw); }
 public flow work_summary_error(raw: string) -> string {
-    if len(raw) == 0 || len(raw) > 512 || byte_len(raw) > 512 { return response_error(raw, "edit-aggregate", "limit", 512); }
+    if len(raw) == 0 || len(raw) > message_bytes() || byte_len(raw) > message_bytes() { return response_error(raw, "edit-aggregate", "limit", message_bytes()); }
     let invalid = text_error(raw, "final answer");
-    return if invalid == "" { "" } else { response_error(raw, "edit-aggregate", "summary", 512) };
+    return if invalid == "" { "" } else { response_error(raw, "edit-aggregate", "summary", message_bytes()) };
 }
 
 // All fields remain literal complete data. This validates shape and binding;
@@ -185,6 +161,6 @@ public flow context_error(context: Context) -> string {
         if before_digest != context.before_digest || after_digest != context.after_digest { return "edit context digest mismatch"; }
     }
     let encoded = match encode_json(context, "edit context conversion refused", "edit context JSON refused") { Ok(value) => value, Err(error) => { return error; } };
-    if byte_len(encoded) > 8388608 { return "edit context exceeds 8388608 serialized UTF-8 bytes"; }
+    if byte_len(encoded) > context_bytes() { return "edit context exceeds 33554432 serialized UTF-8 bytes"; }
     return "";
 }

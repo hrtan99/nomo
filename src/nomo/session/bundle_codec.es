@@ -1,5 +1,7 @@
 module nomo.session.bundle_codec;
 
+import nomo.core.large_context.{history_bytes};
+
 import nomo.core.json.{encode as encode_json, string_fields};
 
 import std.collections.len as count;
@@ -21,9 +23,9 @@ flow bundle_error(bundle: Bundle) -> string {
     if count(bundle.bodies) > 32 { return "bundle body count exceeds limit"; }
     var characters: usize = 0;
     for body in bundle.bodies limit Iterations(32) {
-        if len(body) > 8192 { return "bundle aggregate text exceeds limit"; }
+        if len(body) > history_bytes() { return "bundle aggregate text exceeds limit"; }
         characters = characters + len(body);
-        if characters > 8192 { return "bundle aggregate text exceeds limit"; }
+        if characters > history_bytes() { return "bundle aggregate text exceeds limit"; }
     }
     return "";
 }

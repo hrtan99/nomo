@@ -1,5 +1,7 @@
 module nomo.session.event_text_codec;
 
+import nomo.core.large_context.{message_bytes};
+
 import nomo.core.json.encode as encode_json;
 
 import std.agent.message.Message;
@@ -38,12 +40,16 @@ public flow decode(encoded: string, policy: Policy) -> Result<string, string> {
 public type Prefix = { value: string, truncated: bool };
 public flow encode_prefix(text: string, truncated: bool, policy: Policy) -> Result<Prefix, string> {
     let clean = match redact(text, policy) { Ok(item) => item.value, Err(error) => { return Err(error); } };
-    let size = len(clean); let clipped = truncated || size > 4096;
+    let size = len(clean); let clipped = truncated || size > message_bytes();
+    if size <= message_bytes() {
+        let encoded = match encode(clean, policy) { Ok(item) => item.value, Err(error) => { return Err(error); } };
+        return Ok(Prefix { value = encoded, truncated = clipped });
+    }
     var selected = ""; var seen: usize = 0; var marked = false;
-    for codepoint in std.text.chars(clean) limit Iterations(2097178) { let character = std.text.from_char(codepoint);
+    for codepoint in std.text.chars(clean) limit Iterations(8388610) { let character = std.text.from_char(codepoint);
         if character != "" {
             let width = len(character);
-            if size <= 4096 || seen + width <= 2000 || seen >= size - 2000 { selected = selected + character; }
+            if seen + width <= 2000 || seen >= size - 2000 { selected = selected + character; }
             else if !marked { selected = selected + "\n[... output omitted ...]\n"; marked = true; }
             seen = seen + width;
         }

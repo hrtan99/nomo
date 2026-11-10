@@ -1,5 +1,7 @@
 module nomo.core.conversation;
 
+import nomo.core.large_context.{history_bytes};
+
 import std.collections.len;
 import std.text.char_count as text_len;
 
@@ -14,7 +16,7 @@ public flow fresh() -> State {
 // Always preserve one event and 64 characters for a capacity terminal error.
 public flow capacity_error(state: State, slots: usize, characters: usize) -> string {
     if len(state.events) + slots + 1 > 32 { return "history event capacity exhausted; start a new invocation"; }
-    if state.characters + characters + 64 > 8388608 { return "history content capacity exhausted; start a new invocation"; }
+    if state.characters + characters + 64 > history_bytes() { return "history content capacity exhausted; start a new invocation"; }
     return "";
 }
 

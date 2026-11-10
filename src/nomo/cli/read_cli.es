@@ -1,5 +1,7 @@
 module nomo.cli.read_cli;
 
+import nomo.core.large_context.{request_bytes};
+
 import std.collections.len as count;
 import std.text.{trim, starts_with, strip_suffix};
 import std.codec.text.utf8_encode;
@@ -10,8 +12,8 @@ import nomo.cli.cli_request.{Request, LineCommand};
 // Only the non-durable read-only entry uses this parser. Legacy session and
 // edit arguments retain their existing parser and wire contract.
 flow prompt_error(value: string) -> string {
-    if bytes_len(utf8_encode(value)) > 128 { return "question exceeds 128 UTF-8 bytes"; }
-    if trim(value) == "" || !safe(value, 128) { return "question requires nonblank safe single-line UTF-8"; }
+    if bytes_len(utf8_encode(value)) > request_bytes() { return "question exceeds 65536 UTF-8 bytes"; }
+    if trim(value) == "" || !safe(value, request_bytes()) { return "question requires nonblank safe single-line UTF-8"; }
     if starts_with(trim(value), "/") { return "unsupported command; use /help or /exit"; }
     return "";
 }
@@ -26,10 +28,10 @@ public flow parse_args(args: Array<string>) -> Result<Request, string> {
 }
 
 public flow parse_line(raw: string) -> Result<LineCommand, string> {
-    if bytes_len(utf8_encode(raw)) > 130 { return Err("input exceeds 128 UTF-8 bytes plus LF/CRLF"); }
+    if bytes_len(utf8_encode(raw)) > request_bytes() + 2 { return Err("input exceeds 65536 UTF-8 bytes plus LF/CRLF"); }
     let body = match strip_suffix(raw, "\r\n") { Some(value) => value,
         None() => match strip_suffix(raw, "\n") { Some(value) => value, None() => raw } };
-    if !safe(body, 128) { return Err("unsafe terminal character"); }
+    if !safe(body, request_bytes()) { return Err("unsafe terminal character"); }
     let command = trim(body);
     if command == "/help" { return Ok(LineCommand { kind = "help", text = "" }); }
     if command == "/exit" { return Ok(LineCommand { kind = "exit", text = "" }); }

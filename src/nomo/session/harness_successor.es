@@ -1,5 +1,7 @@
 module nomo.session.harness_successor;
 
+import nomo.core.large_context.{message_bytes, history_bytes};
+
 import nomo.core.json.{encode as encode_json, string_fields};
 
 import std.text.{char_count as len, trim, from_i32, from_usize};
@@ -48,7 +50,7 @@ public flow validate(saved: Successor, requested: Identity, predecessor_identity
     if saved.format != 1 || saved.admitted != 2 || saved.lifecycle != "completed" || !saved.resolved {
         return Err("successor is not a completed settled second turn");
     }
-    if !bounded(saved.request, 128) || !bounded(saved.task, 128) { return Err("invalid successor request or task"); }
+    if !bounded(saved.request, message_bytes()) || !bounded(saved.task, message_bytes()) { return Err("invalid successor request or task"); }
     let selected = Previous { task = saved.task, result = saved.result, tool = saved.tool, outcome = saved.outcome, answer = saved.answer };
     let invalid_prior = prior_error(selected); if invalid_prior != "" { return Err(invalid_prior); }
     var tools: i32 = 0; var child_count: usize = 9; var record_count: usize = 14;
@@ -59,7 +61,7 @@ public flow validate(saved: Successor, requested: Identity, predecessor_identity
     if saved.usage != exact || saved.maximum != restored.maximum { return Err("successor cumulative usage or limits mismatch"); }
     let records = saved.records;
     if count(records) != record_count { return Err("invalid successor record count"); }
-    let record_error = records_error(records, 8192, "successor");
+    let record_error = records_error(records, history_bytes(), "successor");
     if record_error != "" { return Err(record_error); }
     if !same(records[0], "user", "request", "", saved.request) || !same(records[1], "main", "plan", "", records[1].text) ||
         !same(records[2], "main", "delegate", "child-1", saved.task) { return Err("invalid successor planning records"); }

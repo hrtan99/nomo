@@ -1,5 +1,7 @@
 module nomo.model.model_tool_contract;
 
+import nomo.core.large_context.{message_bytes, message_frame_bytes, context_bytes};
+
 import std.text.{char_count as len, trim, from_char};
 import std.collections.len as count;
 import std.json.JsonValue;
@@ -23,8 +25,8 @@ public flow fresh_loop() -> Session {
 public flow default_limits() -> Limits { return Limits { steps = 3, calls = 2, tokens = 4096, scan = 16384 }; }
 
 public flow question_error(raw: string) -> string {
-    if len(raw) == 0 || len(raw) > 128 || !printable(raw) || trim(raw) == "" {
-        return "question requires 1..128 printable ASCII chars, not only spaces";
+    if len(raw) == 0 || len(raw) > message_bytes() || !printable(raw) || trim(raw) == "" {
+        return "question requires 1..1048576 printable ASCII chars, not only spaces";
     }
     return "";
 }
@@ -58,14 +60,14 @@ public flow read_selection_error(operation: string, files: Array<string>, litera
 // Bound the raw allocation and reject nested/object/scalar JSON before parsing.
 // JSON parsing below still validates commas, escapes and complete consumption.
 flow frame_error(raw: string) -> string {
-    if len(raw) == 0 || len(raw) > 1152 { return "limit"; }
+    if len(raw) == 0 || len(raw) > message_frame_bytes() { return "limit"; }
     var opened = false;
     var closed = false;
     var quoted = false;
     var escaped = false;
     var leaves: usize = 0;
     let slash = from_char('\\');
-    for codepoint in std.text.chars(raw) limit Iterations(1154) { let character = std.text.from_char(codepoint);
+    for codepoint in std.text.chars(raw) limit Iterations(8388610) { let character = std.text.from_char(codepoint);
         if character != "" && !printable(character) { return "control"; }
         if quoted {
             if escaped { escaped = false; }
@@ -101,13 +103,13 @@ public flow decode_reply(raw: string, allowed: Array<string>, final_only: bool) 
     };
     if count(fields) < 2 || count(fields) > 4 { return Err("invalid action field count"); }
     if fields[0] == "final" {
-        if count(fields) != 2 || len(fields[1]) == 0 || len(fields[1]) > 512 ||
+        if count(fields) != 2 || len(fields[1]) == 0 || len(fields[1]) > message_bytes() ||
             !printable(fields[1]) || trim(fields[1]) == "" { return Err("invalid bounded final answer"); }
         let action = Action { operation = "final", files = [], literal = "", text = fields[1] };
         return Ok(action);
     }
     if final_only { return Err("second response must be final"); }
-    if len(raw) > 384 { return Err("tool action exceeds 384 raw characters"); }
+    if len(raw) > message_frame_bytes() { return Err("tool action exceeds 8388608 raw characters"); }
     var files: Array<string> = [];
     var literal = "";
     if fields[0] == "read" && count(fields) == 2 { files = [fields[1]]; }
@@ -128,7 +130,7 @@ flow work_category(raw: string, error: string) -> string {
     if error == "invalid action field count" { return "arity"; }
     if error == "invalid bounded final answer" { return "answer"; }
     if error == "second response must be final" { return "verb"; }
-    if error == "tool action exceeds 384 raw characters" { return "limit"; }
+    if error == "tool action exceeds 8388608 raw characters" { return "limit"; }
     if error == "invalid search literal" { return "literal"; }
     if error == "unsupported action or arity" {
         let fields = match json_fields(raw) { Ok(value) => value, Err(FieldError.Json) => { return "json"; } Err(FieldError.Shape) => { return "shape"; } };
@@ -140,14 +142,14 @@ flow work_category(raw: string, error: string) -> string {
 // Legacy decode_reply and its history/evidence revalidation remain strict.
 public flow decode_work_reply(raw: string, allowed: Array<string>, final_only: bool) -> Result<Action, string> {
     let phase = if final_only { "read-child-final" } else { "read-child-action" };
-    let maximum: usize = if final_only { 1152 } else { 384 };
+    let maximum: usize = message_frame_bytes();
     if len(raw) == 0 || len(raw) > maximum { return Err(response_error(raw, phase, "limit", maximum)); }
     let frame = frame_error(raw); if frame != "" { return Err(response_error(raw, phase, frame, maximum)); }
     let action = match decode_reply(raw, allowed, final_only) {
         Ok(value) => value, Err(error) => { return Err(response_error(raw, phase, work_category(raw, error), maximum)); }
     };
     if !final_only && action.operation == "final" { return Err(response_error(raw, phase, "verb", maximum)); }
-    if final_only && len(action.text) > 256 { return Err(response_error(raw, phase, "answer", maximum)); }
+    if final_only && len(action.text) > message_bytes() { return Err(response_error(raw, phase, "answer", maximum)); }
     return Ok(action);
 }
 
@@ -155,7 +157,7 @@ public flow decode_work_reply(raw: string, allowed: Array<string>, final_only: b
 // whole serialized record, including escaped strings, metadata and both paths.
 public flow context_error(context: Context) -> string {
     let message = Message.new(context);
-    return context_json_error(message.cast<JsonValue>(), 8388608, false, "model context exceeds 8388608 serialized characters");
+    return context_json_error(message.cast<JsonValue>(), context_bytes(), false, "model context exceeds 33554432 serialized characters");
 }
 
 // Admission and charging are separate pure operations. The caller must perform

@@ -1,5 +1,11 @@
 module nomo.harness.harness_tool_contract;
 
+import nomo.core.read_text.data_safe;
+
+import nomo.core.large_context.{context_bytes};
+
+import nomo.core.large_context.{message_bytes, history_bytes};
+
 import std.text.{char_count as len, starts_with};
 import std.text.from_i32;
 import std.collections.len as count;
@@ -43,10 +49,10 @@ public flow bump(state: Ledger, call: bool) -> Result<Ledger, string> {
 
 flow child_ledger_error(child: Session, work: bool) -> string {
     if child.history.spent < 1 || child.history.spent > 3 || child.calls < 1 || child.calls > 2 ||
-        child.tokens > (if work { 135168 } else { 4096 }) || child.tools > 1 || child.scan > (if work { scan_bytes() } else { 16384 }) { return "invalid child ledger"; }
+        child.tokens > (if work { 262144 } else { 4096 }) || child.tools > 1 || child.scan > (if work { scan_bytes() } else { 16384 }) { return "invalid child ledger"; }
     let calls: i32 = if child.calls == 2 { 2 } else { 1 };
     let tools: i32 = if child.tools == 1 { 1 } else { 0 };
-    if child.history.spent != calls + tools || (child.tokens != child.calls * 2048 && !(work && (child.tokens == child.calls * 4096 || (child.calls == 2 && (child.tokens == 12288 || child.tokens == 135168))))) ||
+    if child.history.spent != calls + tools || (child.tokens != child.calls * 2048 && !(work && (child.tokens == child.calls * 4096 || (child.calls == 2 && (child.tokens == 12288 || child.tokens == 135168 || child.tokens == 262144))))) ||
         (child.scan != child.tools * 4096 && child.scan != child.tools * 16384 && !(work && (child.scan == child.tools * 65540 || (child.tools == 1 && compatible_scan_bytes(child.scan))))) || (child.calls == 2 && child.tools != 1) { return "invalid child ledger"; }
     return "";
 }
@@ -86,6 +92,28 @@ public flow work_bump(state: Ledger, call: bool) -> Result<Ledger, string> {
     let next = Ledger { steps = state.steps + 1, calls = state.calls + if call { 1 } else { 0 }, tokens = state.tokens + if call { 2048 } else { 0 }, tools = state.tools, scan = state.scan };
     let invalid = work_error(next); if invalid != "" { return Err(invalid); } return Ok(next);
 }
+public flow high_input_error(state: Ledger) -> string {
+    if state.steps < 0 || state.steps > 7 || state.calls < 0 || state.calls > 4 ||
+        state.tokens != state.calls * 131072 || state.tools < 0 || state.tools > 1 ||
+        (state.scan != state.tools * 65540 && !(state.tools == 1 && compatible_scan_i32(state.scan))) ||
+        state.steps < state.calls + state.tools || state.steps > state.calls + state.tools + 2 { return "invalid high-input work read ledger"; }
+    return "";
+}
+public flow high_input_bump(state: Ledger, call: bool) -> Result<Ledger, string> {
+    let error = high_input_error(state); if error != "" { return Err(error); }
+    if state.steps >= 7 || (call && state.calls >= 4) || (!call && state.steps >= state.calls + state.tools + 2) { return Err("shared reservation exhausted"); }
+    let next = Ledger { steps = state.steps + 1, calls = state.calls + if call { 1 } else { 0 },
+        tokens = state.tokens + if call { 131072 } else { 0 }, tools = state.tools, scan = state.scan };
+    let invalid = high_input_error(next); if invalid != "" { return Err(invalid); } return Ok(next);
+}
+public flow high_input_settle(state: Ledger, child: Session) -> Result<Ledger, string> {
+    let expected = Ledger { steps = 2, calls = 1, tokens = 131072, tools = 0, scan = 0 };
+    if state != expected || child.history.spent != 3 || child.calls != 2 || child.tokens != 262144 || child.tools != 1 || !compatible_scan_bytes(child.scan) {
+        return Err("invalid high-input child ledger");
+    }
+    let value = Ledger { steps = 5, calls = 3, tokens = 393216, tools = 1, scan = scan_i32() };
+    let error = high_input_error(value); if error != "" { return Err(error); } return Ok(value);
+}
 public flow work_settle(state: Ledger, child: Session) -> Result<Ledger, string> {
     if child.tokens == child.calls * 2048 { return settle(state, child); }
     let expected = Ledger { steps = 2, calls = 1, tokens = if state.tokens == 4096 { 4096 } else { 2048 }, tools = 0, scan = 0 };
@@ -100,7 +128,7 @@ public flow work_settle(state: Ledger, child: Session) -> Result<Ledger, string>
 
 public flow context_error(context: Context) -> string {
     let message = Message.new(context);
-    return context_json_error(message.cast<JsonValue>(), 2048, false, "model context exceeds 2048 serialized characters");
+    return context_json_error(message.cast<JsonValue>(), context_bytes(), false, "model context exceeds 33554432 serialized characters");
 }
 
 public flow same(event: Event, role: string, kind: string, name: string, text: string) -> bool {
@@ -111,13 +139,13 @@ public flow same(event: Event, role: string, kind: string, name: string, text: s
 // Host aborts never reach this function and cannot be represented as settled returns.
 public flow inspect_shared(child: Session, status: i32, request: string, task: string, allowed: Array<string>, work: bool, unicode: bool) -> Result<Observed, string> {
     let invalid = child_ledger_error(child, work); if invalid != "" { return Err(invalid); }
-    if !(if unicode { utf8_bounded(request, 512) } else { bounded(request, 128) }) || !(if unicode { utf8_bounded(task, if work { 512 } else { 128 }) } else { bounded(task, 128) }) || (if unicode { candidate_error(allowed) } else { allowed_error(allowed) }) != "" { return Err("invalid selected child context"); }
+    if !(if unicode { utf8_bounded(request, message_bytes()) } else { bounded(request, message_bytes()) }) || !(if unicode { utf8_bounded(task, message_bytes()) } else { bounded(task, message_bytes()) }) || (if unicode { candidate_error(allowed) } else { allowed_error(allowed) }) != "" { return Err("invalid selected child context"); }
     let events = child.history.events;
     let size = count(events);
-    if size < 4 || size > 7 || child.history.stopped || child.history.characters > (if unicode { 8388608 } else { 8192 }) { return Err("invalid child history"); }
+    if size < 4 || size > 7 || child.history.stopped || child.history.characters > history_bytes() { return Err("invalid child history"); }
     var characters: usize = 0;
     for event in events limit Iterations(7) {
-        if len(event.name) > 8 || len(event.text) > (if unicode { outcome_bytes() } else { 512 }) || !printable(event.name) || !(if unicode { safe(event.text, outcome_bytes()) } else { printable(event.text) }) {
+        if len(event.name) > 8 || len(event.text) > outcome_bytes() || !printable(event.name) || !(if unicode { data_safe(event.text, outcome_bytes()) } else { printable(event.text) }) {
             return Err("invalid child event data");
         }
         characters = characters + len(event.name) + len(event.text);
@@ -135,7 +163,7 @@ public flow inspect_shared(child: Session, status: i32, request: string, task: s
         if (action.operation != "read" && action.operation != "search") || events[3].name != action.operation ||
             events[4].role != "tool" || events[4].name != action.operation { return Err("child tool identity changed"); }
         if size == 5 {
-            if child.calls != 1 || status != 3 || events[4].kind != "error" || !(if unicode { utf8_bounded(events[4].text, 512) } else { bounded(events[4].text, 512) }) {
+            if child.calls != 1 || status != 3 || events[4].kind != "error" || !(if unicode { utf8_bounded(events[4].text, message_bytes()) } else { bounded(events[4].text, message_bytes()) }) {
                 return Err("invalid failed tool shape");
             }
         } else {
@@ -152,12 +180,12 @@ public flow inspect_shared(child: Session, status: i32, request: string, task: s
     }
     let last = events[size - 1];
     if status == 0 {
-        if last.role != "assistant" || last.kind != "final" || last.name != "" || !(if unicode { utf8_bounded(last.text, child_answer_bytes()) } else { bounded(last.text, 512) }) {
+        if last.role != "assistant" || last.kind != "final" || last.name != "" || !(if unicode { utf8_bounded(last.text, child_answer_bytes()) } else { bounded(last.text, message_bytes()) }) {
             return Err("invalid child final event");
         }
         return Ok(Observed { result = last.text, tool = tool, outcome = outcome });
     }
-    if size != 5 && (last.role != "error" || last.kind != "error" || last.name != "" || !(if unicode { utf8_bounded(last.text, 512) } else { bounded(last.text, 512) })) {
+    if size != 5 && (last.role != "error" || last.kind != "error" || last.name != "" || !(if unicode { utf8_bounded(last.text, message_bytes()) } else { bounded(last.text, message_bytes()) })) {
         return Err("invalid child refusal event");
     }
     return Ok(Observed { result = "", tool = "", outcome = "" });

@@ -5,9 +5,11 @@ import argparse
 import json
 import os
 import random
+import re
 import secrets
 import shutil
 import subprocess
+import sqlite3
 import tempfile
 import threading
 import time
@@ -60,7 +62,8 @@ class RecordingProxy(BaseHTTPRequestHandler):
             "index": len(self.server.records),
             "status": status,
             "request_bytes": len(raw),
-            "payload_bytes": len(request_body["messages"][1]["content"].encode()),
+            "payload_bytes": sum(len(message["content"].encode()) for message in request_body["messages"] if message["role"] == "user"),
+            "history_markers": sorted(set(re.findall(r"NOMO-PART-\d+-", raw.decode()))),
             "max_tokens": request_body.get("max_tokens"),
             "seconds": time.monotonic() - started,
         }
@@ -68,16 +71,113 @@ class RecordingProxy(BaseHTTPRequestHandler):
             response_body = json.loads(body)
             record["usage"] = response_body.get("usage")
             record["finish_reason"] = response_body.get("choices", [{}])[0].get("finish_reason")
+            message = response_body.get("choices", [{}])[0].get("message", {})
+            record["output"] = message.get("tool_calls") or message.get("content")
             if status >= 400:
                 record["error"] = response_body.get("error", {}).get("message", "provider error")
         except (UnicodeDecodeError, json.JSONDecodeError):
             record["error"] = "non-JSON provider response"
         self.server.records.append(record)
+        print(json.dumps({"request":record["index"], "status":status, "usage":record.get("usage"), "seconds":round(record["seconds"], 1)}), flush=True)
         self.send_response(status)
         self.send_header("Content-Type", response_headers.get("Content-Type", "application/json"))
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
+
+
+class PersistentProxy(RecordingProxy):
+    def do_POST(self):
+        if self.server.live:
+            return super().do_POST()
+        request = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+        turn, stage = divmod(self.server.seed_requests, 4)
+        value = (["delegate", f"Read part{turn}.txt"] if stage == 0 else
+                 ["read", f"part{turn}.txt"] if stage == 1 else
+                 ["final", f"Captured NOMO-PART-{turn}-"] if stage == 2 else f"Captured NOMO-PART-{turn}-")
+        content = json.dumps(value) if isinstance(value, list) else value
+        message = {"role":"assistant", "content":content}; finish = "stop"
+        if request.get("tools"):
+            output = {"operation":value[0], "files":value[1:] if value[0] == "read" else [], "literal":"", "text":value[1] if value[0] == "final" else ""}
+            message = {"role":"assistant", "content":None, "tool_calls":[{"id":"synthetic-output", "type":"function", "function":{"name":"etas_emit_output", "arguments":json.dumps(output)}}]}
+            finish = "tool_calls"
+        body = json.dumps({"choices":[{"message":message, "finish_reason":finish}],
+                           "usage":{"prompt_tokens":1,"completion_tokens":1,"total_tokens":2}}).encode()
+        self.server.seed_requests += 1
+        self.send_response(200); self.send_header("Content-Length", str(len(body))); self.end_headers(); self.wfile.write(body)
+
+
+def persisted_context(out, proxy, timeout):
+    from real_minimax_workflow_probe import prepare_project
+    project = prepare_project(out, proxy)
+    workspace = out / "workspace"; workspace.mkdir(mode=0o700)
+    (workspace / "note.txt").write_text(ANSWER)
+    alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+-=[]{}|;:,.<>?/~"
+    base = "".join(random.Random(1048576).choices(alphabet, k=167)).replace("%", "")
+    for turn in range(4):
+        (workspace / f"part{turn}.txt").write_text(f"NOMO-PART-{turn}-" + base * 2048)
+    env = dict(os.environ, MINIMAX_API_KEY="SYNTHETIC_PROXY_ONLY", NOMO_STATE_DIR=str(out / "state"), NOMO_ETAS_VERSION="0.4.1")
+    identifier = None
+    for turn in range(5):
+        name = f"part{turn}.txt" if turn < 4 else "note.txt"
+        question = f"Read {name} completely and report its marker." if turn < 4 else TASK
+        command = [str(project / "scripts/nomo"), "--root", str(workspace), "--allow", name, "--once", question]
+        command += ["--high-input"] if identifier is None else ["--latest"]
+        if turn == 4:
+            assert proxy.seed_requests == 16
+            proxy.live = True
+        completed = subprocess.run(command, env=env, capture_output=True, timeout=timeout)
+        (out / f"turn{turn}.stdout").write_bytes(completed.stdout)
+        (out / f"turn{turn}.stderr").write_bytes(completed.stderr)
+        assert completed.returncode == 0, completed.stderr[-2000:]
+        if identifier is None:
+            identifier = re.search(rb"SESSION ID ([0-9a-f]{32})", completed.stdout).group(1).decode()
+        else:
+            assert identifier.encode() in completed.stdout
+        print(json.dumps({"persisted_turn":turn, "real_provider":turn == 4}), flush=True)
+    assert ("FINAL " + ANSWER).encode() in completed.stdout
+    main_calls = [record for record in proxy.records if record["max_tokens"] == 8192]
+    prompt_tokens = [record["usage"]["prompt_tokens"] for record in main_calls]
+    assert len(main_calls) == 2 and min(prompt_tokens) >= 950000
+    assert all(record["history_markers"] == [f"NOMO-PART-{i}-" for i in range(4)] for record in main_calls)
+    assert all(record["usage"]["prompt_tokens"] + record["max_tokens"] <= 1000000 for record in proxy.records)
+    database = out / "state/sessions" / identifier / "history.sqlite3"
+    with sqlite3.connect(database) as connection:
+        assert connection.execute("pragma integrity_check").fetchone() == ("ok",)
+        evidence_rows = connection.execute("select count(*) from memory_entries where region='nomo-recoverable-chat-evidence-v1'").fetchone()[0]
+        assert evidence_rows == 4
+    return {"status":"passed", "scope":"ordinary persisted session, five independent processes, final real MiniMax read chain", "session":identifier,
+            "seed_requests":proxy.seed_requests, "calls":proxy.records, "large_prompt_tokens":prompt_tokens, "archived_evidence_rows":evidence_rows}
+
+
+def continue_to_million(previous, out, proxy, timeout):
+    from real_minimax_workflow_probe import prepare_project
+    baseline = json.loads((previous / "result.json").read_text())
+    assert baseline["status"] == "passed"
+    project = prepare_project(out, proxy)
+    workspace = previous / "workspace"
+    # One further ordinary read fills the measured gap. No stored state or
+    # model payload is edited, and no failed request is retried.
+    padding_tokens = 1001500 - max(baseline["large_prompt_tokens"]) - 500
+    (workspace / "part4.txt").write_text("NOMO-PART-4-" + "a " * padding_tokens)
+    env = dict(os.environ, MINIMAX_API_KEY="SYNTHETIC_PROXY_ONLY", NOMO_STATE_DIR=str(previous / "state"), NOMO_ETAS_VERSION="0.4.1")
+    proxy.seed_requests = 16
+    for index, name, question in ((0, "part4.txt", "Read part4.txt completely and report its marker."), (1, "note.txt", TASK)):
+        if index == 1: proxy.live = True
+        completed = subprocess.run([str(project / "scripts/nomo"), "--root", str(workspace), "--latest", "--allow", name, "--once", question],
+                                   env=env, capture_output=True, timeout=timeout)
+        (out / f"extension{index}.stdout").write_bytes(completed.stdout)
+        (out / f"extension{index}.stderr").write_bytes(completed.stderr)
+        assert completed.returncode == 0, completed.stderr[-2000:]
+        assert baseline["session"].encode() in completed.stdout
+    assert ("FINAL " + ANSWER).encode() in completed.stdout
+    main_calls = [record for record in proxy.records if record["max_tokens"] == 8192]
+    prompt_tokens = [record["usage"]["prompt_tokens"] for record in main_calls]
+    assert len(main_calls) == 2 and min(prompt_tokens) >= 1000000
+    assert all(record["history_markers"] == [f"NOMO-PART-{i}-" for i in range(5)] for record in main_calls)
+    return {"status":"passed", "scope":"ordinary session extended through two further processes; at least one million actual input tokens",
+            "session":baseline["session"], "previous_evidence":str(previous), "calls":proxy.records, "large_prompt_tokens":prompt_tokens,
+            "prompt_plus_output_reservations":[record["usage"]["prompt_tokens"] + record["max_tokens"] for record in main_calls]}
 
 
 def fixture_source():
@@ -125,6 +225,9 @@ def copy_tracked_project(project):
             target.symlink_to(os.readlink(source))
         elif source.is_file():
             shutil.copy2(source, target)
+    # Exercise current runtime additions before they have been staged by PM.
+    for name in ('src', 'scripts'):
+        shutil.copytree(ROOT / name, project / name, dirs_exist_ok=True, ignore=shutil.ignore_patterns('__pycache__'))
 
 
 def prepare(out, port, entry_token):
@@ -177,18 +280,31 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--evidence-dir", type=Path, default=Path("/private/tmp"))
     parser.add_argument("--timeout", type=int, default=2400)
+    parser.add_argument("--credential-file", type=Path)
+    parser.add_argument("--persisted", action="store_true", help="build history through four ordinary local-provider read turns, then restore it into real MiniMax")
+    parser.add_argument("--continue-from", type=Path, help="append one synthetic read to a passed persisted run and measure one million actual input tokens")
     args = parser.parse_args()
+    if args.credential_file:
+        os.environ["MINIMAX_API_KEY"] = args.credential_file.read_text().strip()
     if not os.environ.get("MINIMAX_API_KEY"):
         raise SystemExit("MINIMAX_API_KEY is required")
     out = Path(tempfile.mkdtemp(prefix="nomo-real-minimax-1m-", dir=args.evidence_dir))
-    proxy = ThreadingHTTPServer(("127.0.0.1", 0), RecordingProxy)
+    proxy = ThreadingHTTPServer(("127.0.0.1", 0), PersistentProxy if args.persisted or args.continue_from else RecordingProxy)
     proxy.records = []
+    proxy.live = False
+    proxy.seed_requests = 0
     proxy.entry_token = secrets.token_urlsafe(32)
     thread = threading.Thread(target=proxy.serve_forever, daemon=True)
     thread.start()
     result = {"status": "running", "provider": "MiniMax China", "model": "MiniMax-M3.1-Flash", "evidence": str(out)}
     (out / "result.json").write_text(json.dumps(result, indent=2) + "\n")
     try:
+        if args.continue_from:
+            result.update(continue_to_million(args.continue_from, out, proxy, args.timeout))
+            return
+        if args.persisted:
+            result.update(persisted_context(out, proxy, args.timeout))
+            return
         project, override = prepare(out, proxy.server_port, proxy.entry_token)
         docker = "/Applications/Docker.app/Contents/Resources/bin/docker"
         command = [

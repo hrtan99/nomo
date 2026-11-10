@@ -19,22 +19,22 @@ public type Record = { format: i32, phase: string, id: string, workspace: string
 flow full() -> Budget { return Budget { steps = 13, calls = 7, generation = 47104, native_tokens = 196608 }; }
 flow zero() -> Budget { return Budget { steps = 0, calls = 0, generation = 0, native_tokens = 0 }; }
 flow generation(format: i32) -> i32 {
-    return if format == 1 { 47104 } else { if format == 7 || format == 8 { 286720 } else { if format == 6 || format == 9 { 188416 } else { if format == 3 || format == 4 { 61440 } else { 51200 } } } };
+    return if format == 1 { 47104 } else { if format == 7 || format == 8 { 286720 } else { if format == 10 { 917504 } else { if format == 6 || format == 9 { 188416 } else { if format == 3 || format == 4 { 61440 } else { 51200 } } } } };
 }
 flow configured_native(format: i32) -> i32 {
-    return if format == 9 { 6000000 } else { if format == 7 || format == 8 { 2811008 } else { if format == 6 { 2073152 } else { if format >= 4 { 1335296 } else { 196608 } } } };
+    return if format == 10 { 7340032 } else { if format == 9 { 6000000 } else { if format == 7 || format == 8 { 2811008 } else { if format == 6 { 2073152 } else { if format >= 4 { 1335296 } else { 196608 } } } } };
 }
 // Ledger fields preserve the configured stage-shape accounting used by older
 // records. Format 9 stores its 6M run ceiling in Record.reserved/format; neither
 // number is actual provider usage.
 flow settled_shape_native(format: i32) -> i32 { return if format == 9 { 2073152 } else { configured_native(format) }; }
-flow expected_scan(format: i32, value: i32) -> bool { return if format == 8 || format == 9 { compatible_scan_i32(value) } else { value == 65540 }; }
+flow expected_scan(format: i32, value: i32) -> bool { return if format == 8 || format == 9 || format == 10 { compatible_scan_i32(value) } else { value == 65540 }; }
 public type Ticket = { record: Record, version: MemoryVersion, history: Entry };
 alias Schema = MemoryRegion<{ Rows: Store<string, Record> }>;
 let Runs = std.memory.region<Schema>(stable_id = "nomo-history-work-v1", store = "history-work");
 flow read() -> Option<MemoryEntry<string, Record>> { return get_entry(Runs.Rows, "work"); }
 public flow invalid(value: Record) -> string {
-    if (value.format < 1 || value.format > 9) || (value.phase != "running" && value.phase != "complete" && value.phase != "abandoned") { return "invalid history-work phase"; }
+    if (value.format < 1 || value.format > 10) || (value.phase != "running" && value.phase != "complete" && value.phase != "abandoned") { return "invalid history-work phase"; }
     let selected = selector_error(value.id, value.workspace, value.path); if selected != "" { return selected; }
     let question = question_error(value.request); if question != "" { return question; }
     if value.history_version == "" || len(value.history_version) > 512 { return "invalid history version"; }

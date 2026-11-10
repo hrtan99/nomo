@@ -41,8 +41,8 @@ public flow refused(state: Ledger, error: string) -> i32 { println("REFUSED " + 
 flow stage(name: string, state: Ledger) -> unit { println("STAGE " + name); ledger(state); }
 flow help() -> unit {
     println("One read-context/edit workflow: --id ID --workspace BIND --path EDITFILE --once TASK --allow FILE[,FILE].");
-    println("Overall request/read task1..128 printable ASCII;1..2 read paths<=48 characters, raw allow<=97; complete read context<=2048 serialized characters.");
-    println("One read/search,16384 scan allowance; complete display result<=65536 UTF-8 bytes, search yields locations. Edit original/result<=16384 UTF-8 bytes, whole edit/read data<=262144 bytes.");
+    println("Overall request/read task1..65536 printable ASCII;1..2 read paths<=48 characters, raw allow<=97; complete read context<=33554432 serialized characters.");
+    println("One read/search,16384 scan allowance; complete display result<=65536 UTF-8 bytes, search yields locations. Edit original/result<=1048576 UTF-8 bytes, whole edit/read data<=262144 bytes.");
     println("Maximum13 steps /7 Model calls /47104 generation /196608 historical native allowance (not a provider token cap) /3 edit reads with6144-byte allowance /1 atomic attempt. Edit tail reserved before read.");
     println("Exclusive owned disposable workspace/store; native yes then Nomo y/yes. Data-only edit_status, no automatic retries or mutating resume.");
 }

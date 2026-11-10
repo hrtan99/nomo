@@ -1,7 +1,6 @@
 module nomo.tools.edit_proposal;
 
-import std.text.{TextError, len, find, find_from, char_get, from_char, from_usize, replace_range};
-import std.codec.text.utf8_encode;
+import std.text.{TextError, len, find, find_from, char_get, from_char, from_usize, replace_range, contains};
 import nomo.tools.path_policy.valid_path;
 import nomo.core.large_context.file_bytes;
 
@@ -12,12 +11,7 @@ public type Proposal = { path: string, before: string, after: string };
 // Provided strings already exist; this is not a general allocation guarantee.
 public flow text_bytes(value: string, field: string) -> Result<usize, string> {
     let size = len(value); if size > file_bytes() { return Err(field + " exceeds " + from_usize(file_bytes()) + " UTF-8 bytes"); }
-    let bytes = utf8_encode(value);
-    let zero: u8 = 0; var index: usize = 0;
-    while index < size limit Iterations(1048576) {
-        if bytes[index] == zero { return Err(field + " contains NUL"); }
-        index = index + 1;
-    }
+    if contains(value, "\u0000") { return Err(field + " contains NUL"); }
     return Ok(size);
 }
 

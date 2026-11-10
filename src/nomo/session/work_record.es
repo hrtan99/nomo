@@ -1,5 +1,7 @@
 module nomo.session.work_record;
 
+import nomo.core.large_context.{message_frame_bytes, context_bytes, history_bytes};
+
 import nomo.core.json.{encode as encode_json, string_fields};
 
 import std.text.{char_count as len, len as byte_len, from_char, from_i32, from_usize};
@@ -35,15 +37,15 @@ flow fields_error(fields: Array<string>) -> string {
     if count(fields) != 52 { return "work record requires exactly 52 string fields"; }
     var total: usize = 0;
     for field in fields limit Iterations(52) {
-        if len(field) > 2048 { return "work record field exceeds 2048 decoded UTF-8 bytes"; }
+        if len(field) > message_frame_bytes() { return "work record field exceeds 8388608 decoded UTF-8 bytes"; }
         let size = byte_len(field); total = total + size;
-        if size > 2048 || total > 12288 { return "work record exceeds decoded UTF-8 byte bounds"; }
+        if size > message_frame_bytes() || total > context_bytes() { return "work record exceeds decoded UTF-8 byte bounds"; }
     }
     return "";
 }
 
 flow decode(body: string) -> Result<Array<string>, string> {
-    if !framed(body) { return Err("work record encoded framing or 65536-byte bound invalid"); }
+    if !framed(body) { return Err("work record encoded framing or 33554432-byte bound invalid"); }
     let fields = match string_fields(body, "invalid work record JSON", "work record fields must be strings") { Ok(value) => value, Err(error) => { return Err(error); } };
     let invalid = fields_error(fields); if invalid != "" { return Err(invalid); }
     return Ok(fields);
@@ -51,7 +53,7 @@ flow decode(body: string) -> Result<Array<string>, string> {
 
 flow outer_error(row: Record) -> string {
     let encoded = match encode_json(row, "work row conversion refused", "work row serialization refused") { Ok(value) => value, Err(error) => { return error; } };
-    if byte_len(encoded) > 131072 { return "work row exceeds 131072 serialized UTF-8 bytes"; }
+    if byte_len(encoded) > history_bytes() { return "work row exceeds 67108864 serialized UTF-8 bytes"; }
     return "";
 }
 

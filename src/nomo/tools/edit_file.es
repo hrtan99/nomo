@@ -58,9 +58,9 @@ public flow read_original(name: string) -> Result<string, string> ![Fs.stat<Edit
 public flow read_original_wide(name: string) -> Result<string, string> ![Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Error<FileError>, Error<IndexError>] ~ OriginalReadFunction<EditableRoot> { let reader = WideEditFile {}; return reader.read_original(name); }
 
 public flow prepare_original_legacy(name: string, original: string, target: string, replacement: string) -> Result<Prepared, string> {
-    if byte_len(original) > 16384 || byte_len(target) > 16384 || byte_len(replacement) > 16384 { return Err("edit text exceeds 16384 UTF-8 bytes"); }
+    if byte_len(original) > file_bytes() || byte_len(target) > file_bytes() || byte_len(replacement) > file_bytes() { return Err("edit text exceeds 1048576 UTF-8 bytes"); }
     let prepared = match prepare_original(name, original, target, replacement) { Ok(value) => value, Err(error) => { return Err(error); } };
-    if byte_len(prepared.proposal.after) > 16384 { return Err("edit result exceeds 16384 UTF-8 bytes"); }
+    if byte_len(prepared.proposal.after) > file_bytes() { return Err("edit result exceeds 1048576 UTF-8 bytes"); }
     return Ok(prepared);
 }
 

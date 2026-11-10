@@ -1,5 +1,7 @@
 module nomo.session.work_chain;
 
+import nomo.core.large_context.{context_bytes};
+
 import nomo.core.json.encode as encode_json;
 
 import std.text.{char_count as len, len as byte_len, split, parse_i32, from_i32, from_usize};
@@ -81,7 +83,7 @@ public flow policy(raw: string) -> Result<Caps, string> { return parse_policy(ra
 
 flow serialized(row: Record) -> Result<string, string> {
     let encoded = match encode_json(row, "work-chain row conversion refused", "work-chain row serialization refused") { Ok(value) => value, Err(error) => { return Err(error); } };
-    if byte_len(encoded) > 262144 { return Err("work-chain row exceeds 262144 serialized UTF-8 bytes"); }
+    if byte_len(encoded) > context_bytes() { return Err("work-chain row exceeds 33554432 serialized UTF-8 bytes"); }
     return Ok(encoded);
 }
 
@@ -144,7 +146,7 @@ public flow validate(row: Record) -> string {
         }
         None() => {}
     }
-    if decoded > 16384 { return "work-chain decoded metadata plus work exceeds 16384 bytes"; }
+    if decoded > context_bytes() { return "work-chain decoded metadata plus work exceeds 33554432 bytes"; }
     return match serialized(row) { Ok(_) => "", Err(error) => error };
 }
 

@@ -1,5 +1,7 @@
 module nomo.agent.read_tool_controller;
 
+import nomo.core.large_context.{outcome_bytes};
+
 import std.text.{char_count as len, contains};
 import nomo.core.read_text.{safe};
 import nomo.harness.model_plan_diagnostic.{response_text};
@@ -77,8 +79,8 @@ flow run_policy<P ~ ChildLoopPolicy, D ~ ToolActionDecoder>(policy: P, decoder: 
         var files = action.files;
         if action.operation == "search" && files[0] == "*" { for name in allowed limit Iterations(256) { files = files.push(name); } }
         var result = if action.operation == "read" { display(perform ReadTools.read(files[0])) } else { display(perform ReadTools.search(files, action.literal)) };
-        if shape.result_characters == 256 {
-            if len(result.text) > 256 { result = outcome("refused", "tool result exceeds 256 display characters", result.scanned); }
+        if shape.legacy_text {
+            if len(result.text) > outcome_bytes() { result = outcome("refused", "tool result exceeds 2097176 display characters", result.scanned); }
         } else if !safe(result.text, shape.result_characters) { result = outcome("refused", "tool result exceeds large-context display bound", result.scanned); }
         if result.status == "incomplete" { perform DiagnosticOutput.write("Search incomplete: results are partial; some candidates were skipped or the match limit was reached."); }
         let complete = result.status == "complete" || (shape.partial_search && action.operation == "search" && result.status == "incomplete");
@@ -106,8 +108,8 @@ public flow run_public_chat_loop_controller(raw: string, allowed: Array<string>,
 public flow run_private_chat_loop_controller(raw: string, allowed: Array<string>, limits: Limits, previous: Session) -> LoopTurn {
     return run_output(BoundedChild { limits = limits, work = true, chat = true }, UnicodeActions {}, RedactedChildEvents {}, ConsoleProgress {}, ConsoleDiagnostics {}, raw, allowed, previous, false);
 }
-public flow run_expanded_work_loop_controller(raw: string, allowed: Array<string>, previous: Session, wide: bool) -> LoopTurn {
-    return run_output(ExpandedChild { wide = wide }, UnicodeActions {}, RedactedChildEvents {}, ConsoleProgress {}, ConsoleDiagnostics {}, raw, allowed, previous, false);
+public flow run_expanded_work_loop_controller(raw: string, allowed: Array<string>, previous: Session, wide: bool, high_input: bool) -> LoopTurn {
+    return run_output(ExpandedChild { wide = wide, high_input = high_input }, UnicodeActions {}, RedactedChildEvents {}, ConsoleProgress {}, ConsoleDiagnostics {}, raw, allowed, previous, false);
 }
 public flow run_public_multi_chat_loop_controller(raw: string, allowed: Array<string>, previous: Session, resilient: bool, reasoning: bool) -> LoopTurn {
     return run_output(MultiChild { resilient = resilient, reasoning = reasoning }, UnicodeActions {}, PublicChildEvents {}, SilentProgress {}, ConsoleDiagnostics {}, raw, allowed, previous, false);

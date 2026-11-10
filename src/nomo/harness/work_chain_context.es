@@ -1,5 +1,7 @@
 module nomo.harness.work_chain_context;
 
+import nomo.core.large_context.{context_bytes};
+
 import nomo.core.json.encode as encode_json;
 
 import std.collections.len as count;
@@ -23,7 +25,7 @@ public flow parent_facts(parent: Record) -> Result<Array<ParentFacts>, string> {
         after_digest = value.binding.after_digest, request = read.request, read_task = read.task, operation = read.operation,
         files = read.files, literal = read.literal, outcome = read.outcome, result = read.result, read_summary = read.summary, final_summary = value.summary }];
     let encoded = match encode_json(result, "parent facts conversion refused", "parent facts encoding refused") { Ok(value) => value, Err(error) => { return Err(error); } };
-    if byte_len(encoded) > 8192 { return Err("parent facts exceed 8192 UTF-8 bytes before admission"); }
+    if byte_len(encoded) > context_bytes() { return Err("parent facts exceed 33554432 UTF-8 bytes before admission"); }
     return Ok(result);
 }
 public flow combined(current: Context, parent: Array<ParentFacts>) -> Input {
@@ -33,6 +35,6 @@ public flow combined(current: Context, parent: Array<ParentFacts>) -> Input {
     let message = Message.new(value); let converted: Option<Message<JsonValue>> = message.cast<JsonValue>();
     let data = match converted { Some(item) => item.body, None() => { abort("chain context conversion refused"); } };
     let encoded = match stringify(data) { Ok(item) => item, Err(_) => { abort("chain context encoding refused"); } };
-    if byte_len(encoded) > 81920 { abort("chain edit context exceeds 81920 UTF-8 bytes"); }
+    if byte_len(encoded) > context_bytes() { abort("chain edit context exceeds 33554432 UTF-8 bytes"); }
     return value;
 }

@@ -6,7 +6,7 @@ STUB='''import json,os,sys\ndata=sys.stdin.buffer.read()\nwith open(os.environ['
 class ProcessTests(unittest.TestCase):
  def setUp(self):
   self.tmp=tempfile.TemporaryDirectory();self.addCleanup(self.tmp.cleanup);self.root=Path(self.tmp.name);scripts=self.root/'scripts';scripts.mkdir()
-  for name in ('nomo-read.sh','nomo-session-chat.py','nomo-edit.py'):shutil.copy2(ROOT/'scripts'/name,scripts/name)
+  for name in ('nomo-read.sh','nomo-session-chat.py','nomo-edit.py','nomo_terminal.py'):shutil.copy2(ROOT/'scripts'/name,scripts/name)
   (scripts/'nomo-session-id.py').write_text(STUB);self.record=self.root/'result.json';self.env=dict(os.environ,NOMO_TEST_RECORD=str(self.record))
   self.cmd=['bash',str(scripts/'nomo-read.sh'),'session-chat','--sessions-dir','/tmp/session folder','--id','1'*32,'--root','/tmp/workspace','--allow','file.txt']
  def run_pipe(self,data,*extra):
@@ -14,11 +14,11 @@ class ProcessTests(unittest.TestCase):
  def test_pipe_one_line_and_eof_run_one_read_only_turn(self):
   p=self.run_pipe('提问 test\r\n'.encode());self.assertEqual(0,p.returncode,p.stderr);rec=json.loads(self.record.read_text());self.assertIn('--once=提问 test',rec['args']);self.assertEqual(0,rec['stdin_bytes']);self.assertIn(b'SYNTHETIC RESUME COMPLETED',p.stdout)
  def test_empty_extra_lines_invalid_utf8_and_too_long_refused(self):
-  for raw in (b'',b'\n',b'  \n',b'one\ntwo\n',b'one\n\n',b'\xff\n',b'a'*513+b'\n','é'.encode()*257+b'\n',b'a\rb\n',b'a\x00b\n'):
+  for raw in (b'',b'\n',b'  \n',b'one\ntwo\n',b'one\n\n',b'\xff\n',b'a'*65537+b'\n','é'.encode()*32769+b'\n',b'a\rb\n',b'a\x00b\n'):
    with self.subTest(raw=raw):
     p=self.run_pipe(raw);self.assertEqual(64,p.returncode);self.assertIn(b'REFUSED',p.stderr);self.assertFalse(self.record.exists())
  def test_exact_limit_and_no_newline(self):
-  p=self.run_pipe(b'a'*512);self.assertEqual(0,p.returncode);self.assertEqual(0,json.loads(self.record.read_text())['stdin_bytes'])
+  p=self.run_pipe(b'a'*65536);self.assertEqual(0,p.returncode);self.assertEqual(0,json.loads(self.record.read_text())['stdin_bytes'])
  def test_missing_eof_times_out_and_never_dispatches(self):
   p=subprocess.Popen(self.cmd,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,env=self.env)
   try:
@@ -52,7 +52,7 @@ class ProcessTests(unittest.TestCase):
    until=time.monotonic()+4
    while b'nomo> ' not in data and time.monotonic()<until:
     if select.select([master],[],[],.1)[0]:data.extend(os.read(master,4096))
-   self.assertIn(b'nomo> ',data);os.write(master,b'/help\n');until=time.monotonic()+4
+   self.assertIn(b'nomo> ',data);self.assertIn(b'[SESSION]',data);self.assertIn(b'[YOU    ]',data);os.write(master,b'/help\n');until=time.monotonic()+4
    while b'Quote arguments containing spaces.' not in data and time.monotonic()<until:
     if select.select([master],[],[],.1)[0]:data.extend(os.read(master,4096))
    self.assertIn(b'Quote arguments containing spaces.',data);os.write(master,b'\x04');self.assertEqual(0,p.wait(timeout=4));self.assertFalse(self.record.exists())

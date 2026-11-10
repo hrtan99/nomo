@@ -1,5 +1,7 @@
 module nomo.ui.edit_diff;
 
+import nomo.core.large_context.{message_bytes};
+
 import std.text.{char_count as len, len as byte_len, concat, ends_with, find, split, strip_prefix, strip_suffix, from_usize};
 import std.collections.len as count;
 import nomo.tools.edit_proposal.text_bytes;
@@ -113,7 +115,7 @@ public flow render(before: string, after: string) -> Result<string, string> {
     output = output.push(trailing);
     if suffix > visible { output = output.push(omitted(suffix - visible, "unchanged")); }
     let rendered = concat(output);
-    if len(rendered) > 8192 || byte_len(rendered) > 8192 { return Err("edit preview output exceeds 8192 bytes"); }
+    if len(rendered) > message_bytes() || byte_len(rendered) > message_bytes() { return Err("edit preview output exceeds 1048576 bytes"); }
     return Ok(rendered);
 }
 
@@ -136,6 +138,6 @@ public flow render_edit(before: string, target: string, replacement: string, aft
     let new = match changed(added, 0, count(added), "+ ", "added") { Ok(value) => value, Err(error) => { return Err(error); } };
     output = output.push(old).push(new);
     if tail > 0 { output = output.push("... " + from_usize(tail) + " unchanged suffix bytes omitted ...\n"); }
-    let rendered = concat(output); if byte_len(rendered) > 8192 { return Err("edit preview output exceeds 8192 bytes"); }
+    let rendered = concat(output); if byte_len(rendered) > message_bytes() { return Err("edit preview output exceeds 1048576 bytes"); }
     return Ok(rendered);
 }

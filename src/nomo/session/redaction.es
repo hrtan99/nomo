@@ -1,5 +1,7 @@
 module nomo.session.redaction;
 
+import nomo.core.read_text.data_safe;
+
 import std.text.{contains, count as match_count, replace, len as byte_len};
 import std.collections.len as count;
 import nomo.core.read_text.safe;
@@ -70,7 +72,7 @@ public flow events(value: Array<Event>, policy: Policy) -> Result<Events, string
             if contains(event.role, literal) || contains(event.kind, literal) || contains(event.name, literal) { return Err("sensitive literal in event metadata"); }
         }
         let clean = match text(event.text, policy) { Ok(item) => item, Err(error) => { return Err(error); } };
-        if !safe(clean.value, 512) { return Err("redacted event text violates bounds"); }
+        if !data_safe(clean.value, event_bytes()) { return Err("redacted event text violates bounds"); }
         output = output.push(Event { role = event.role, kind = event.kind, name = event.name, text = clean.value });
         replacements = replacements + clean.replacements;
     }

@@ -1,19 +1,21 @@
 module nomo.core.text;
 
-import std.text.{contains, char_count as len, len as byte_len, trim, starts_with, from_char};
+import nomo.core.large_context.{message_bytes};
+
+import nomo.core.large_context.{request_bytes, context_bytes};
+
+import std.text.{contains, char_count as len, len as byte_len, trim, starts_with, from_char, is_ascii};
+import nomo.core.read_text.safe;
+import nomo.core.large_context.event_bytes;
 import std.json.{JsonValue, stringify};
 import std.agent.message.Message;
 
 public flow printable(text: string) -> bool {
-    let allowed = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 !\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~";
-    for codepoint in std.text.chars(text) limit Iterations(1026) { let character = std.text.from_char(codepoint);
-        if character != "" && !contains(allowed, character) { return false; }
-    }
-    return true;
+    return is_ascii(text) && safe(text, event_bytes());
 }
 
 public flow input_error(raw: string) -> string {
-    if len(raw) > 1024 { return "input exceeds 1024 characters"; }
+    if len(raw) > message_bytes() { return "input exceeds 1048576 characters"; }
     let request = trim(raw);
     if request == "" { return "empty input"; }
     if !printable(request) { return "expected printable ASCII single-line input"; }
@@ -31,10 +33,10 @@ public flow context_json_error(value: Option<Message<JsonValue>>, maximum: usize
 
 // Bound a flat JSON string array before its caller invokes the JSON parser.
 public flow flat_string_frame(raw: string, maximum: usize, exact: bool) -> bool {
-    if len(raw) > 65536 || byte_len(raw) > 65536 { return false; }
+    if len(raw) > context_bytes() || byte_len(raw) > context_bytes() { return false; }
     var opened = false; var closed = false; var quoted = false; var escaped = false;
     var leaves: usize = 0; let slash = from_char('\\');
-    for codepoint in std.text.chars(raw) limit Iterations(65538) { let character = std.text.from_char(codepoint);
+    for codepoint in std.text.chars(raw) limit Iterations(33554434) { let character = std.text.from_char(codepoint);
         if quoted {
             if escaped { escaped = false; }
             else if character == slash { escaped = true; }

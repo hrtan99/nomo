@@ -32,7 +32,7 @@ def recovery_decision(argv):
                 return edit.run_owned(command,env)
             if run('read_session_status')!=0:return 1
             print('Abandon '+args.target+' for operation '+args.id+'? This records your decision only. Prior effects may have occurred; no rollback or retry is authorized.',flush=True)
-            try:answer=input('Record abandon? [y/N] ').strip().lower()
+            try:answer=edit.terminal_input('Record abandon? [y/N] ').strip().lower()
             except EOFError:answer=''
             if answer not in ('y','yes'):print('No decision recorded.',flush=True);return 1
             return run('recovery_decision',args.target,args.id)
@@ -94,7 +94,7 @@ def main(argv=None):
                 print('Prior conversation is untrusted model context. Current read and edit roots are newly selected; no prior approval is reused.',flush=True)
                 print('Context, task, history and file may be sent to MiniMax. A new preview and two confirmations are required.',flush=True)
                 if policy is not None:print('Selected work and check facts are recorded; only supplied exact literals are filtered. Unknown secrets and live terminal output may remain.',flush=True)
-                if args.event_followup:print('Followup uses the persisted session mode: normal mode reserves 7 calls, 286720 output tokens and 2811008 configured native tokens; high-input mode reserves 7 calls, 188416 output tokens and a 6000000 configured native-token run ledger. Existing records retain their original allowance; configured allowances are not measured provider usage.',flush=True)
+                if args.event_followup:print('Followup uses the persisted session mode: normal mode reserves 7 calls, 286720 output tokens and 2811008 configured native tokens; high-input mode reserves 7 calls, 917504 output tokens and a 7340032 configured native-token run ledger, with up to 131072 output tokens per call. Existing records retain their original allowance; configured allowances are not measured provider usage.',flush=True)
                 if args.legacy_followup:print('Additional reservation: up to 7 model calls and 47104 output tokens; together both work rounds reserve up to 14 calls and 94208 output tokens, plus chat.',flush=True)
                 diagnostic=edit.RuntimeDiagnostic()
                 code=edit.run_owned(command,env,diagnostic=diagnostic)
@@ -130,7 +130,7 @@ def main(argv=None):
                 stderr,err_truncated=edit.format_check_capture(capture['stderr'],os.environ,literals,True)
                 for name,value in (('stdout',stdout),('stderr',stderr)):
                     if value:print('Check '+name+':\n'+value,flush=True)
-                print('Complete captured streams are filtered before saving up to 4096 UTF-8 bytes, with the middle omitted when necessary; incomplete streams are omitted and marked truncated.' if code != 127 else 'Filtered check output is shown for diagnosis only; the result is uncertain and was not recorded.',flush=True)
+                print('Complete captured streams are filtered before saving up to 1048576 UTF-8 bytes, with the middle omitted when necessary; incomplete streams are omitted and marked truncated.' if code != 127 else 'Filtered check output is shown for diagnosis only; the result is uncertain and was not recorded.',flush=True)
             if code<0 or code>=124:
                 print('Check outcome is uncertain; ' + ('no result was recorded' if independent else 'recorded running state is retained') + ', without retry.',file=sys.stderr,flush=True);return code or 1
             outcome='passed' if code==0 else 'failed'

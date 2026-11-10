@@ -7,12 +7,12 @@ WORK='''import json,sys\nfrom pathlib import Path\na=sys.argv[1:];state=Path(a[a
 class CombinedTests(unittest.TestCase):
  def setUp(self):
   self.temp=tempfile.TemporaryDirectory();self.addCleanup(self.temp.cleanup);self.root=Path(self.temp.name);self.scripts=self.root/'scripts';self.scripts.mkdir();self.sessions=self.root/'session dir';self.sessions.mkdir(mode=0o700);self.workspace=self.root/'work dir';self.workspace.mkdir(mode=0o700);self.policy=self.root/'policy dir';self.policy.mkdir(mode=0o700)
-  for name in ('nomo-read.sh','nomo-session-chat.py','nomo-session-id.py','nomo-edit.py'):shutil.copy2(ROOT/'scripts'/name,self.scripts/name)
+  for name in ('nomo-read.sh','nomo-session-chat.py','nomo-session-id.py','nomo-edit.py','nomo_terminal.py'):shutil.copy2(ROOT/'scripts'/name,self.scripts/name)
   (self.scripts/'nomo-read-session.py').write_text(READ);(self.scripts/'nomo-history-work.py').write_text(WORK)
   self.base=['bash',str(self.scripts/'nomo-read.sh'),'session-chat','--sessions-dir',str(self.sessions),'--root',str(self.workspace),'--allow','file.txt']
  def interactive(self,events):
   args=self.base+['--new']+(['--events-policy-dir',str(self.policy)] if events else [])
-  master,slave=pty.openpty();p=subprocess.Popen(args,stdin=slave,stdout=slave,stderr=slave,start_new_session=True);os.close(slave);data=bytearray()
+  master,slave=pty.openpty();p=subprocess.Popen(args,stdin=slave,stdout=slave,stderr=slave,env=dict(os.environ,NOMO_LOG_FORMAT='raw'),start_new_session=True);os.close(slave);data=bytearray()
   def wait(needle,start=0):
    end=time.monotonic()+6
    while needle not in data[start:] and time.monotonic()<end:
@@ -44,7 +44,7 @@ class CombinedTests(unittest.TestCase):
   p=subprocess.run(self.base+['--new','--events-policy-dir',str(self.policy)],input=b'one question\n',stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=6)
   self.assertEqual(0,p.returncode,p.stderr);ids=re.findall(rb'^SESSION ID ([0-9a-f]{32})$',p.stdout,re.M);self.assertEqual(1,len(ids));events=(self.sessions/ids[0].decode()/'synthetic.jsonl').read_text().splitlines();self.assertEqual(str(self.policy),json.loads(events[0])['policy'])
  def test_piped_invalid_input_does_not_create_a_session(self):
-  for payload in (b'first\nsecond\n', b'x'*513+b'\n', b'a\x00b\n', 'x\u202ey\n'.encode()):
+  for payload in (b'first\nsecond\n', b'x'*65537+b'\n', b'a\x00b\n', 'x\u202ey\n'.encode()):
    p=subprocess.run(self.base+['--new'],input=payload,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=6)
    self.assertEqual(64,p.returncode,p.stderr);self.assertFalse(list(self.sessions.iterdir()))
 if __name__=='__main__':unittest.main()

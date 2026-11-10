@@ -1,5 +1,7 @@
 module nomo.harness.model_plan_diagnostic;
 
+import nomo.core.large_context.{edit_response_bytes};
+
 import std.text.{char_count as len, len as byte_len, contains, from_usize, lowercase};
 import nomo.tools.edit_encoding.json;
 
@@ -11,7 +13,7 @@ flow category_name(value: string) -> string {
     for known in ["limit", "control", "frame", "json", "shape", "arity", "verb", "task", "target", "replacement", "summary", "proposal", "field", "files", "literal", "result", "answer", "fence", "object", "prose"] limit Iterations(20) { if value == known { return value; } }
     return "unknown";
 }
-flow limit(maximum: usize) -> usize { return if maximum > 0 && maximum <= 32768 { maximum } else { 384 }; }
+flow limit(maximum: usize) -> usize { return if maximum > 0 && maximum <= edit_response_bytes() { maximum } else { 384 }; }
 // Preserve the historical scalar-count diagnostic while measuring UTF-8 bytes
 // only after the response is within the configured scalar bound.
 public flow response_error(raw: string, phase: string, category: string, maximum: usize) -> string {

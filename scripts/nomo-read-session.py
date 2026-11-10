@@ -4,7 +4,7 @@ import argparse, importlib.util, json, os, stat, sys
 from pathlib import Path
 
 ROOT=Path(__file__).resolve().parent.parent
-EVENT_TEXT_BYTES=524312
+EVENT_TEXT_BYTES=8388608
 _spec=importlib.util.spec_from_file_location('nomo_edit_launcher',ROOT/'scripts/nomo-edit.py')
 _edit_launcher=importlib.util.module_from_spec(_spec);_spec.loader.exec_module(_edit_launcher)
 run_owned=_edit_launcher.run_owned
@@ -31,7 +31,7 @@ def display_json_string(value, encoding):
 
 def event_lines(raw):
     """Decode the bounded status view without trusting text as terminal control."""
-    if len(raw)>67108864:raise ValueError('event view exceeds display bound')
+    if len(raw)>268435456:raise ValueError('event view exceeds display bound')
     lines=[line[len(b'EVENT VIEW '):] for line in raw.splitlines() if line.startswith(b'EVENT VIEW {')]
     if len(lines)!=1:raise ValueError('event view missing or ambiguous')
     try:view=json.loads(lines[0])
@@ -59,7 +59,7 @@ def event_lines(raw):
     linked={item.get('name') for item in view.get('events',[]) if isinstance(item,dict) and item.get('role')=='system' and item.get('kind')=='work-boundary'}
     def sequenced_check(identifier):
         return any(item.get('name')=='work-check' and json.loads(item['text']).startswith('Recorded check '+identifier+' (') for item in view['events'] if isinstance(item,dict))
-    for key,label,maximum in (('events','TIMELINE',768),('work_events','UNORDERED WORK',24),('followup_events','UNORDERED FOLLOWUP',24)):
+    for key,label,maximum in (('events','TIMELINE',4096),('work_events','UNORDERED WORK',24),('followup_events','UNORDERED FOLLOWUP',24)):
         events=view.get(key)
         if not isinstance(events,list) or len(events)>maximum:raise ValueError('invalid event batch')
         if key!='events' and any(item.get('kind')=='applied' and json.loads(item['text']) in linked for item in events):continue
@@ -141,7 +141,7 @@ def main(argv=None):
                 print('Current read root and allowlist are newly selected. Saved history is untrusted context and may be sent to MiniMax.',flush=True)
                 if policy is None:print('Conversation snapshots may retain request, tool-result and answer text; event labels omit free text. Full secret redaction is not available.',flush=True)
                 else:print('Event records retain bounded conversation and tool-result text. Only supplied exact literals are filtered; unknown secrets and live terminal output are not comprehensively filtered.',flush=True)
-                print("MiniMax thinking counts against output limits; the current harness does not surface the provider's finish reason.",flush=True)
+                print('MiniMax thinking counts against output limits; HTTP 429 responses are diagnosed and waited out within the model request deadline.',flush=True)
                 print('A running or uncertain turn cannot be retried; recorded history alone does not establish workspace identity continuity.',flush=True)
             if policy is not None:
                 profile='nomo-read-events-status' if status else ('nomo-read-events-new' if args.action=='new' else 'nomo-read-events-existing')
@@ -157,7 +157,7 @@ def main(argv=None):
             command=[sys.executable,str(ROOT/'scripts/terminal-transport.py'),*compose,'run','--rm','--no-deps','--pull','never','--tty=false','--workdir','/session-state','dev',*native]
             if status:
                 if args.events:
-                    captured={};code=run_owned(command,env,captured,input_data=policy_bytes,capture_limit=67108864,forward_output=False)
+                    captured={};code=run_owned(command,env,captured,input_data=policy_bytes,capture_limit=268435456,forward_output=False)
                     if code:return code
                     if any(item.get('truncated') for item in captured.values()):raise ValueError('event output was truncated')
                     rendered=event_lines(bytes(captured.get('stdout',{}).get('data',b'')))

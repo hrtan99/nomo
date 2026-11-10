@@ -1,5 +1,7 @@
 module nomo.harness.shared_chat_controller;
 
+import nomo.core.large_context.{message_bytes};
+
 import nomo.model.harness_progress.{HarnessProgress, ProgressSink};
 import nomo.model.conversation_output.{ConversationOutput, ConversationSink};
 import nomo.agent.console_progress.ConsoleProgress;
@@ -88,7 +90,7 @@ flow execute<P ~ ChatBudgetPolicy>(policy: P, request: string, allowed: Array<st
         " released_calls=" + from_i32(pending.calls - state.calls) + " released_tokens=" + from_i32(pending.tokens - state.tokens) +
         " released_tools=" + from_i32(pending.tools - state.tools) + " released_scan=" + from_i32(pending.scan - state.scan) + " unresolved=false");
     if child.status != 0 { return refused(state, "child returned failure; no aggregation", true); }
-    if !(if unicode { unicode_bounded(observed.result, child_answer_bytes()) } else { bounded(observed.result, 256) }) { return refused(state, "invalid bounded child result", true); }
+    if !(if unicode { unicode_bounded(observed.result, child_answer_bytes()) } else { bounded(observed.result, message_bytes()) }) { return refused(state, "invalid bounded child result", true); }
     perform ConversationOutput.publish(Event { role = "child-1 -> main", kind = "result", name = "child-1", text = observed.result });
     state = match policy.reserve_stage(state, false) { Ok(value) => value, Err(error) => { return refused(state, error, true); } };
     perform ConversationOutput.publish(Event { role = "main -> main", kind = "consume", name = "child-1", text = observed.result });
@@ -101,7 +103,7 @@ flow execute<P ~ ChatBudgetPolicy>(policy: P, request: string, allowed: Array<st
     state = match policy.reserve_stage(state, true) { Ok(value) => value, Err(error) => { return refused(state, error, true); } };
     stage(policy, turn, "aggregate", before, state);
     let answer = perform LegacyChatStages.main(aggregate);
-    if !(if unicode { unicode_bounded(answer, 512) } else { bounded(answer, 512) }) { return refused(state, "invalid bounded final answer", true); }
+    if !(if unicode { unicode_bounded(answer, message_bytes()) } else { bounded(answer, message_bytes()) }) { return refused(state, "invalid bounded final answer", true); }
     perform HarnessProgress.write("FINAL " + answer);
     let selected = Previous { task = task, result = observed.result, tool = observed.tool, outcome = observed.outcome, answer = answer };
     return LocalTurn { status = 0, usage = state, selected = selected, resolved = true,

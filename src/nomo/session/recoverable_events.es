@@ -1,5 +1,9 @@
 module nomo.session.recoverable_events;
 
+import nomo.core.read_text.data_safe;
+
+import nomo.core.large_context.{history_bytes};
+
 import std.collections.len as count;
 import std.text.len as byte_len;
 import nomo.core.conversation.Event;
@@ -18,7 +22,7 @@ public flow empty() -> Frame {
     return Frame { format = 1, turns = 0, first_count = 0, events = [] };
 }
 flow event_error(item: Event, policy: Policy) -> string {
-    if !safe(item.role, 128) || !safe(item.kind, 128) || !safe(item.name, 128) || !safe(item.text, event_bytes()) {
+    if !safe(item.role, 128) || !safe(item.kind, 128) || !safe(item.name, 128) || !data_safe(item.text, event_bytes()) {
         return "invalid recoverable event content";
     }
     for field in [item.role, item.kind, item.name, item.text] limit Iterations(4) {
@@ -54,7 +58,7 @@ public flow shape_error(frame: Frame, policy: Policy) -> string {
         let error = metadata_error(item, policy); if error != "" { return error; }
         if byte_len(item.text) > event_bytes() { return "recoverable event frame exceeds byte limit"; }
         bytes = bytes + byte_len(item.role) + byte_len(item.kind) + byte_len(item.name) + byte_len(item.text);
-        if bytes > 8388608 { return "recoverable event frame exceeds byte limit"; }
+        if bytes > history_bytes() { return "recoverable event frame exceeds byte limit"; }
     }
     return "";
 }
@@ -72,7 +76,7 @@ public flow invalid(frame: Frame, policy: Policy) -> string {
     for item in frame.events limit Iterations(4096) {
         let error = event_error(item, policy); if error != "" { return error; }
         bytes = bytes + byte_len(item.role) + byte_len(item.kind) + byte_len(item.name) + byte_len(item.text);
-        if bytes > 8388608 { return "recoverable event frame exceeds byte limit"; }
+        if bytes > history_bytes() { return "recoverable event frame exceeds byte limit"; }
     }
     return "";
 }
@@ -88,7 +92,7 @@ public flow append(before: Frame, turn: i32, input: Array<Event>, policy: Policy
             if checked.replacements != 0 { return Err("sensitive literal in event metadata"); }
         }
         let clean = match redact(item.text, policy) { Ok(value) => value, Err(problem) => { return Err(problem); } };
-        if !safe(clean.value, event_bytes()) { return Err("recoverable event text exceeds limits or is unsafe"); }
+        if !data_safe(clean.value, event_bytes()) { return Err("recoverable event text exceeds limits or is unsafe"); }
         replacements = replacements + clean.replacements;
         records = records.push(Event { role = item.role, kind = item.kind, name = item.name, text = clean.value });
     }

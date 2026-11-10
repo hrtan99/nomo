@@ -8,9 +8,9 @@ WORK='''import json,sys\nfrom pathlib import Path\na=sys.argv[1:];state=Path(a[a
 class NewChatProcessTests(unittest.TestCase):
  def setUp(self):
   self.temp=tempfile.TemporaryDirectory();self.addCleanup(self.temp.cleanup);self.root=Path(self.temp.name);self.scripts=self.root/'scripts';self.scripts.mkdir();self.sessions=self.root/'session dir';self.sessions.mkdir(mode=0o700);self.workspace=self.root/'work dir';self.workspace.mkdir(mode=0o700)
-  for name in ('nomo-read.sh','nomo-session-chat.py','nomo-session-id.py','nomo-edit.py'):shutil.copy2(ROOT/'scripts'/name,self.scripts/name)
+  for name in ('nomo-read.sh','nomo-session-chat.py','nomo-session-id.py','nomo-edit.py','nomo_terminal.py'):shutil.copy2(ROOT/'scripts'/name,self.scripts/name)
   (self.scripts/'nomo-read-session.py').write_text(BACKEND);(self.scripts/'nomo-history-work.py').write_text(WORK)
-  self.base=['bash',str(self.scripts/'nomo-read.sh'),'session-chat','--sessions-dir',str(self.sessions),'--root',str(self.workspace),'--allow','file.txt'];self.env=dict(os.environ)
+  self.base=['bash',str(self.scripts/'nomo-read.sh'),'session-chat','--sessions-dir',str(self.sessions),'--root',str(self.workspace),'--allow','file.txt'];self.env=dict(os.environ,NOMO_LOG_FORMAT='raw')
  def test_new_read_work_exit_then_separate_process_resume(self):
   master,slave=pty.openpty();p=subprocess.Popen(self.base+['--new'],stdin=slave,stdout=slave,stderr=slave,env=self.env,start_new_session=True);os.close(slave);data=bytearray()
   def wait(needle,start=0):

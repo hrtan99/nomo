@@ -1,5 +1,7 @@
 module nomo.ui.terminal_session;
 
+import nomo.core.large_context.{request_bytes};
+
 import std.text.{char_count as len, from_i32};
 import nomo.tools.edit_encoding.{object, json};
 
@@ -50,6 +52,6 @@ public flow state_line(state: State, root_id: string, child_id: string, workspac
 
 // Escaping is separate from request validation and supplies no execution authority.
 public flow request_line(request: string) -> Result<string, string> {
-    if len(request) > 128 { return Err("terminal request display exceeds 128 characters"); }
+    if len(request) > request_bytes() { return Err("terminal request display exceeds 65536 characters"); }
     return match json([request]) { Ok(value) => Ok("USER " + value), Err(error) => Err(error) };
 }

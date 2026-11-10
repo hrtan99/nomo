@@ -1,5 +1,7 @@
 module nomo.entry.model_tools_chat_loop;
 
+import nomo.core.large_context.{request_bytes};
+
 import std.io.{println, read_line};
 import std.text.{char_count as len, len as byte_len, split, from_i32, starts_with, ends_with};
 import std.collections.len as count;
@@ -16,7 +18,7 @@ import nomo.harness.read_tool_chat.run_turn as run_unicode_turn;
 
 flow help(unicode: bool) -> unit {
     println(if unicode { "Nomo model/tool harness chat: new --allow FILE[,FILE...] [--turns 4]; /help, /exit, EOF." } else { "Nomo model/tool harness chat: new --allow FILE[,FILE]; /help, /exit, EOF." });
-    println(if unicode { "Limits: 2 admitted tasks by default, or 4 with --turns 4; 8 raw reads including EOF; payload <=128 before trim, <=130 with LF/CRLF; child 1..256, parent 1..512, complete model contexts <=2048." } else { "Limits: 2 admitted tasks, 8 raw reads including EOF; payload <=128 before trim, <=130 with LF/CRLF; child 1..256, parent 1..512, complete model contexts <=2048." });
+    println(if unicode { "Limits: 2 admitted tasks by default, or 4 with --turns 4; 8 raw reads including EOF; payload <=65536 before trim, <=65538 with LF/CRLF; child/parent <=1048576 bytes, complete model contexts <=33554432." } else { "Limits: 2 admitted tasks, 8 raw reads including EOF; payload <=65536 before trim, <=65538 with LF/CRLF; child/parent <=1048576 bytes, complete model contexts <=33554432." });
     println(if unicode { "Default maximum: 14 steps / 8 calls / 16384 output-token allowance / 2 tools / 32768 scan; --turns 4: 28 / 16 / 32768 / 4 / 65536. Allowances are not measured usage." } else { "Invocation maximum: 14 steps / 8 calls / 16384 token allowance / 2 read-or-search tools / 8192 scan allowance; allowances are not measured usage." });
     println(if unicode { "Each turn reserves 7/4/8192/1/4096 before work. Only the immediately preceding successful task, child/tool result and answer are carried forward, as data, never replayed actions." } else { "Each turn reserves 7/4/8192/1/4096 before work. Prior successful delegated task, child/tool result and parent answer are data, never replayed actions." });
     println("Read size is checked after reading. One serial depth-one child per turn; fresh in-memory only. No resume, writes, commands, recursion or live setup. Host aborts may leave reservations unresolved.");
@@ -41,7 +43,7 @@ flow refused(error: string, unicode: bool) -> i32 {
 flow line_error(raw: string, unicode: bool) -> string {
     let size = if unicode { byte_len(raw) } else { len(raw) };
     let framing: usize = if ends_with(raw, "\r\n") { 2 } else { if ends_with(raw, "\n") { 1 } else { 0 } };
-    if size > 130 || size - framing > 128 { return if unicode { "raw input exceeds 128 UTF-8 bytes plus LF/CRLF" } else { "raw input exceeds 128 characters plus LF/CRLF" }; }
+    if size > 65538 || size - framing > request_bytes() { return if unicode { "raw input exceeds 65536 UTF-8 bytes plus LF/CRLF" } else { "raw input exceeds 65536 characters plus LF/CRLF" }; }
     return "";
 }
 

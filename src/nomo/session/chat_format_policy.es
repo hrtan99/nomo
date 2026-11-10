@@ -13,6 +13,7 @@ public type FormatPolicy = { format: i32 };
 impl FormatPolicy ~ ChatFormatPolicy {
     flow pending_reservation(self, phase: string) -> Reservation ![] {
         if phase != "running" { return Reservation { calls = 0, generation = 0 }; }
+        if self.format == 19 { return Reservation { calls = 6, generation = 786432 }; }
         let calls = if self.format >= 5 { 6 } else { 4 };
         let generation = if self.format == 18 { 81920 } else { if self.format == 16 { 405504 } else { if self.format == 17 { 32768 } else { if self.format == 15 { 278528 } else {
             if self.format >= 11 { 24576 } else { if self.format >= 9 { 20480 } else { if self.format >= 5 { 12288 } else { 8192 } } }

@@ -28,8 +28,8 @@ flow stage(phase: string, state: Ledger) -> unit {
 }
 flow help() -> unit {
     println("Nomo one-shot model edit: --id ID --workspace BIND --path FILE --once TASK (flags in any order).");
-    println("One exclusive owned disposable workspace/store; one existing NUL-free UTF-8 file, 1..2048 bytes before and at most2048 after.");
-    println("Task/delegation/summary1..512 UTF-8 bytes; child literal edit JSON<=32768 bytes; complete model context<=65536 bytes.");
+    println("One exclusive owned disposable workspace/store; one existing NUL-free UTF-8 file, 1..1048576 bytes before and at most1048576 after.");
+    println("Task/delegation/summary1..1048576 UTF-8 bytes; child literal edit JSON<=16777216 bytes; complete model context<=33554432 bytes.");
     println("Maximum6 orchestration steps /3 Model attempts /38912 token allowance /3 file reads (6144-byte allowance) /1 atomic replacement.");
     println("Native cumulative token ceiling163840 includes input and output; generation limits4096/32768/2048, native allocations32768/65536/65536.");
     println("Current native yes then Nomo y/yes; same/different ID cannot reuse a consumed store. Journal stores edit facts, not model history or resume.");

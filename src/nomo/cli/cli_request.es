@@ -1,5 +1,7 @@
 module nomo.cli.cli_request;
 
+import nomo.core.large_context.{request_bytes};
+
 import std.collections.len as count;
 import std.text.{char_count as len, trim, strip_suffix};
 import nomo.core.text.{printable, input_error};
@@ -45,7 +47,7 @@ public flow parse_args(args: Array<string>) -> Result<Request, string> {
                 session_id = value;
                 selected = true;
             } else {
-                if len(value) > 1024 { return Err("input exceeds 1024 characters"); }
+                if len(value) > request_bytes() { return Err("input exceeds 65536 characters"); }
                 if !printable(value) { return Err("expected printable ASCII single-line input"); }
                 let invalid = input_error(value);
                 if invalid != "" { return Err(invalid); }
@@ -67,7 +69,7 @@ public flow parse_args(args: Array<string>) -> Result<Request, string> {
 // Raw Console line: the ceiling includes an optional single final LF/CRLF.
 // Controls other than that framing cannot disappear silently through trim.
 public flow parse_line(raw: string) -> Result<LineCommand, string> {
-    if len(raw) > 1024 { return Err("input exceeds 1024 characters"); }
+    if len(raw) > request_bytes() { return Err("input exceeds 65536 characters"); }
     let body = match strip_suffix(raw, "\r\n") { Some(value) => value,
         None() => match strip_suffix(raw, "\n") { Some(value) => value, None() => raw } };
     if !printable(body) { return Err("expected printable ASCII single-line input"); }

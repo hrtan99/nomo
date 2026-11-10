@@ -1,5 +1,7 @@
 module nomo.cli.session_cli_args;
 
+import nomo.core.large_context.{request_bytes};
+
 import std.collections.len as count;
 import std.text.{char_count as len, parse_i32, from_i32};
 import nomo.session.store_record.valid_id;
@@ -57,7 +59,7 @@ public flow parse(args: Array<string>) -> Result<Options, string> {
     if !valid_id(session_id) || !valid_id(save_id) || !valid_id(binding) { return Err("explicit valid session, save and binding required"); }
     if verb == "save" {
         if !supplied_input { return Err("save requires input"); }
-        if len(input) > 1024 || !printable(input) { return Err("input must be bounded printable ASCII"); }
+        if len(input) > request_bytes() || !printable(input) { return Err("input must be bounded printable ASCII"); }
         let invalid = input_error(input);
         if invalid != "" { return Err(invalid); }
     } else if supplied_input { return Err("show forbids input"); }

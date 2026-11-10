@@ -86,7 +86,7 @@ flow more(input: WorkRequest, prior_request: string, previous: Previous, convers
     match extra { Some(value) => { request = value.value.current.core.request; } None() => {} }
     let prior = PriorWork { request = request, summary = latest.summary, summary_source = latest.summary_source, selection = latest.selection, check = latest.check, exit_code = latest.exit_code, output = latest.output, history = history };
     let ticket = match admit_extra(binding, input.selected.id, input.selected.workspace, input.selected.path, input.request, check_digest, policy, wide, high_input) { Ok(value) => value, Err(error) => { return refused(error); } };
-    println(if high_input { "RESERVED high-input additional work: 7 calls, 188416 output tokens, 6000000 configured native tokens; interruption leaves this work unresolved." } else { if wide { "RESERVED additional work: 7 calls, 286720 output tokens, 2811008 configured native tokens; interruption leaves this work unresolved." } else { "RESERVED additional work: 7 calls, 51200 output tokens, 1335296 configured native tokens; interruption leaves this work unresolved." } });
+    println(if high_input { "RESERVED high-input additional work: 7 calls, 917504 output tokens, 7340032 configured native tokens; interruption leaves this work unresolved." } else { if wide { "RESERVED additional work: 7 calls, 286720 output tokens, 2811008 configured native tokens; interruption leaves this work unresolved." } else { "RESERVED additional work: 7 calls, 51200 output tokens, 1335296 configured native tokens; interruption leaves this work unresolved." } });
     let stages = HistoryStages { prior_request = prior_request, previous = previous, conversation = conversation, prior_work = prior, wide = wide, high_input = high_input, historical = false };
     let persistence = ContinuousPersistence { ticket = ticket, redaction = policy };
     return execute<HistoryStages, Stored, Stored, ContinuousPersistence, NativeWorkEditor, EventWorkTimeline, TerminalWorkOutput>(stages, persistence, native_editor(), event_timeline(chat), TerminalWorkOutput {}, input, Run { redaction = policy, binding = binding, wide = wide, high_input = high_input, saved = "SAVED additional work facts" });
@@ -108,7 +108,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
     let first_work = match inspect_first_work(policy, binding) { Ok(Some(value)) => value, _ => { return refused("completed first work required"); } };
     if first_work.value.work.phase != "complete" && first_work.value.work.phase != "abandoned" { return refused("first work unresolved"); }
     match load_followup(policy, binding) {
-        Ok(Some(_)) => { return more(input, history.value.chat.last_request, history.value.chat.invocation.prior, conversation, history, first_work.value.work.id, parsed.digest, policy, binding, history.value.chat.format >= 13, history.value.chat.format == 18); }
+        Ok(Some(_)) => { return more(input, history.value.chat.last_request, history.value.chat.invocation.prior, conversation, history, first_work.value.work.id, parsed.digest, policy, binding, history.value.chat.format >= 13, history.value.chat.format == 18 || history.value.chat.format == 19); }
         Ok(None()) => {}
         Err(error) => { return refused(error); }
     }
@@ -141,7 +141,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
     let prior_request = history.value.chat.last_request; let previous = history.value.chat.invocation.prior;
     let prior_work = PriorWork { request = first_work.value.work.request, summary = if first_work.value.work.phase == "abandoned" { "User abandoned interrupted work; its effect is unknown. Inspect the file before a new edit." } else { first_work.value.work.summary }, summary_source = if first_work.value.work.phase == "abandoned" { "system" } else { origin }, selection = chosen, check = checked, exit_code = exit, output = first_output, history = [] };
     let wide = ticket.frame.work.format == 3 || ticket.frame.work.format == 4 || ticket.frame.work.format == 6 || ticket.frame.work.format == 7 || ticket.frame.work.format == 8;
-    let high_input = ticket.frame.work.format == 9;
+    let high_input = ticket.frame.work.format == 9 || ticket.frame.work.format == 10;
     let stages = HistoryStages { prior_request = prior_request, previous = previous, conversation = conversation, prior_work = prior_work, wide = wide || high_input, high_input = high_input, historical = false };
     let persistence = FollowupPersistence { ticket = ticket, redaction = policy, binding = binding };
     return execute<HistoryStages, EditTicket, bool, FollowupPersistence, NativeWorkEditor, EventWorkTimeline, TerminalWorkOutput>(stages, persistence, native_editor(), event_timeline(history), TerminalWorkOutput {}, input, Run { redaction = policy, binding = binding, wide = wide || high_input, high_input = high_input, saved = "SAVED event followup facts; no grant or root identity is persisted." });

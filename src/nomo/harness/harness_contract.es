@@ -1,5 +1,7 @@
 module nomo.harness.harness_contract;
 
+import nomo.core.large_context.{message_bytes, context_bytes};
+
 import std.collections.len as count;
 import std.text.{char_count as len, trim};
 import nomo.core.text.{printable, input_error};
@@ -14,17 +16,17 @@ public type Outcome = { status: string, text: string, ledger: Ledger, messages: 
 public type Reservation = { job: Job, child: ChildTask, ledger: Ledger };
 
 public flow task_error(task: string, context: Array<string>) -> string {
-    if len(task) == 0 || len(task) > 256 || !printable(task) || trim(task) == "" {
+    if len(task) == 0 || len(task) > message_bytes() || !printable(task) || trim(task) == "" {
         return "invalid bounded child task";
     }
     if input_error(task) != "" { return "invalid bounded child task"; }
     if count(context) > 4 { return "invalid selected context"; }
     var characters: usize = 0;
     for item in context limit Iterations(4) {
-        if len(item) == 0 || len(item) > 256 || !printable(item) { return "invalid selected context"; }
+        if len(item) == 0 || len(item) > message_bytes() || !printable(item) { return "invalid selected context"; }
         characters = characters + len(item);
     }
-    if characters > 1024 { return "invalid selected context"; }
+    if characters > context_bytes() { return "invalid selected context"; }
     return "";
 }
 
@@ -43,8 +45,8 @@ public flow fixed_refusal(text: string) -> bool {
 // The accepted whole-input printable helper is capped at 1,026 iterations.
 // Check individual characters here so the larger bounded answers stay checked.
 public flow safe_text(text: string, maximum: usize) -> bool {
-    if maximum > 1280 || len(text) == 0 || len(text) > maximum { return false; }
-    for codepoint in std.text.chars(text) limit Iterations(1282) { let character = std.text.from_char(codepoint);
+    if maximum > message_bytes() || len(text) == 0 || len(text) > maximum { return false; }
+    for codepoint in std.text.chars(text) limit Iterations(1048578) { let character = std.text.from_char(codepoint);
         if !printable(character) { return false; }
     }
     return true;

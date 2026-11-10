@@ -35,7 +35,7 @@ Explicit --allow selects one to four files for read/session workflows; --discove
 New session IDs are bound to the canonical workspace path and directory identity. Resume with
 --id latest to select the most recently used compatible session for that physical workspace.
 Historical sessions without a binding remain available only through their explicit ID.
-Each file read is limited to 16384 bytes; standalone work remains limited to two. The default model
+Each large-context file read is limited to 1048576 bytes; standalone work remains limited to two. The default model
 is MiniMax M Plan (China), MiniMax-M3.1-Flash at https://api.minimax.cn/v1.
 Provide its subscription key through MINIMAX_API_KEY in the environment.
 MiniMax thinking counts against output limits. The current harness does not surface
@@ -47,7 +47,7 @@ This Nomo revision requires verified ETAS 0.4.1. Use an earlier Nomo revision
 for older ETAS versions. Session-chat --discover searches bounded workspace files.
 For Qwen, the endpoint is reached from the container: for a host-local forward, use
 http://host.docker.internal:PORT/v1 rather than 127.0.0.1.
-Session-chat accepts one piped UTF-8 question (at most 512 bytes); the input
+Session-chat accepts one piped UTF-8 question (at most 65536 bytes); the input
 must reach EOF within 2 seconds and contain no extra lines. With terminal input
 and redirected output, specify --once QUESTION.
 Interactive session-chat can propose an edit to a selected file from a natural
@@ -58,13 +58,13 @@ Chat supports two tasks by default, or four with --turns 4, in one process.
 Only the immediately preceding successful task/result/answer is carried forward;
 this is not a durable session. Four-turn maximum: 16 model calls and 32,768
 output-token allowance; per-turn maximum: 4 calls and 8,192 output tokens.
-Questions require 1..512 safe UTF-8 bytes; /help shows all bounds
+Questions require 1..65536 safe UTF-8 bytes; /help shows all bounds
 and /exit ends chat. Successful completion does not verify factual accuracy.
 Model editing sends the selected file and task to the configured model.
 Work first reads or searches one of the allowed context files, then uses that
 evidence to propose an edit to the selected workspace file. It sends context
 and task to the model before write confirmation. Work is one-shot, not resume.
-Its task must be 1..128 printable ASCII characters; allow one or two distinct
+Its task must be 1..65536 printable ASCII characters; allow one or two distinct
 relative context paths of at most 48 UTF-8 bytes each. At most one read/search
 and one confirmed edit occur. The read root can be the edit workspace; state
 must be separate from both. Work allows up to 7 model calls and 47,104 requested

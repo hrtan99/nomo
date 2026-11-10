@@ -8,7 +8,7 @@ out=Path(tempfile.mkdtemp(prefix='nomo-interrupted-check-',dir='/private/tmp'));
 (workspace/'check.py').write_text('import pathlib,time\np=pathlib.Path("ran.txt")\nwith p.open("a") as f: f.write("ran\\n")\ntime.sleep(55)\n')
 sessions=out/'sessions';sessions.mkdir(mode=0o700);policy=out/'policy';policy.mkdir(mode=0o700)
 (policy/'policy.json').write_text('{"format":1,"literals":["SYNTHETIC_SECRET"]}');(policy/'policy.json').chmod(0o600);(policy/'binding.key').write_bytes(b'K'*32);(policy/'binding.key').chmod(0o600)
-env={'PATH':'/Applications/Docker.app/Contents/Resources/bin:'+os.environ['PATH'],'HOME':os.environ['HOME'],'NOMO_ETAS_VERSION':'0.2.6','NOMO_ETAS_GRAPH':'026-v68'}
+env={'PATH':'/Applications/Docker.app/Contents/Resources/bin:'+os.environ['PATH'],'HOME':os.environ['HOME'],'NOMO_ETAS_VERSION':'0.4.1','NOMO_ETAS_GRAPH':'latest041'}
 command=[str(root/'scripts/nomo-read.sh'),'session-chat','--sessions-dir',str(sessions),'--new','--root',str(workspace),'--allow','note.txt','--events-policy-dir',str(policy)]
 master,slave=pty.openpty();settings=termios.tcgetattr(slave);settings[3]&=~(termios.ECHO|termios.ECHONL);termios.tcsetattr(slave,termios.TCSANOW,settings)
 process=subprocess.Popen(command,stdin=slave,stdout=slave,stderr=slave,env=env,start_new_session=True);os.close(slave)

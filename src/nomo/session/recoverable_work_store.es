@@ -20,7 +20,7 @@ alias Schema = MemoryRegion<{ Rows: Store<string, Frame> }>;
 let Runs = std.memory.region<Schema>(stable_id = "nomo-recoverable-work-v1", store = "recoverable-work");
 
 public flow full(wide: bool) -> Budget { return Budget { steps = 13, calls = 7, generation = if wide { 286720 } else { 51200 }, native_tokens = if wide { 2811008 } else { 1335296 } }; }
-public flow full_mode(wide: bool, high_input: bool) -> Budget { return if high_input { Budget { steps = 13, calls = 7, generation = 188416, native_tokens = 6000000 } } else { full(wide) }; }
+public flow full_mode(wide: bool, high_input: bool) -> Budget { return if high_input { Budget { steps = 13, calls = 7, generation = 917504, native_tokens = 7340032 } } else { full(wide) }; }
 public flow zero() -> Budget { return Budget { steps = 0, calls = 0, generation = 0, native_tokens = 0 }; }
 
 public flow running_record(id: string, workspace: string, path: string, request: string, history_version: string, wide: bool) -> Record {
@@ -28,7 +28,7 @@ public flow running_record(id: string, workspace: string, path: string, request:
         request = request, history_version = history_version, reserved = full(wide), settled = None(), summary = "" };
 }
 public flow running_record_mode(id: string, workspace: string, path: string, request: string, history_version: string, wide: bool, high_input: bool) -> Record {
-    return Record { format = if high_input { 9 } else { if wide { 8 } else { 5 } }, phase = "running", id = id, workspace = workspace, path = path,
+    return Record { format = if high_input { 10 } else { if wide { 8 } else { 5 } }, phase = "running", id = id, workspace = workspace, path = path,
         request = request, history_version = history_version, reserved = full_mode(wide, high_input), settled = None(), summary = "" };
 }
 public flow completed_record(old: Record, summary: string, spent: Ledger) -> Record {
@@ -99,7 +99,7 @@ public flow admit(id: string, workspace: string, path: string, request: string, 
     if !current { return Err("completed recoverable chat changed; no retry"); }
     match load(policy, binding) { Ok(None()) => {} Ok(Some(_)) => { return Err("recoverable work already admitted; no retry"); } Err(error) => { return Err(error); } }
     let wide = chat.value.chat.format >= 13;
-    let row = running_record_mode(id, workspace, path, request, chat.version.opaque, wide, chat.value.chat.format == 18);
+    let row = running_record_mode(id, workspace, path, request, chat.version.opaque, wide, chat.value.chat.format == 18 || chat.value.chat.format == 19);
     let frame = Frame { format = 1, policy_binding = binding, work = row, events = empty_events() };
     let saved = match write(frame, None(), policy, binding) { Ok(item) => item, Err(error) => { return Err(error); } };
     return Ok(Ticket { frame = frame, version = saved.version, chat = chat });

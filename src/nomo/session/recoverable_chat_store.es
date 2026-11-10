@@ -7,7 +7,7 @@ import nomo.harness.harness_tool_chat_contract.{TurnResult, Previous};
 import nomo.session.redaction.{Policy, policy_error, text as redact};
 import nomo.session.recoverable_events.{Frame as EventFrame, empty as empty_events, invalid as invalid_events, shape_error as event_shape_error, append_encoded, work_batch};
 import nomo.session.event_text_codec.{encode, decode, encode_prefix};
-import nomo.session.history_check_guard.invalid_values;
+import nomo.session.history_check_store.invalid_values;
 import nomo.core.conversation.Event;
 import std.collections.len as count;
 import nomo.core.text.hex_digest;
@@ -54,7 +54,7 @@ flow compact_context_duplicates(value: Frame, policy: Policy, binding: string) -
     var events: Array<Event> = []; var chat_turn: i32 = 0;
     for item in value.events.events limit Iterations(4096) {
         if item.role == "system" && item.kind == "native-budget" &&
-            (item.name == "chat" || item.name == "chat-large" || item.name == "chat-resilient" || item.name == "chat-high-input") {
+            (item.name == "chat" || item.name == "chat-large" || item.name == "chat-resilient" || item.name == "chat-high-input" || item.name == "chat-full") {
             chat_turn = chat_turn + 1;
         }
         let duplicate = item.role == "user" && item.kind == "context" && item.name == "outcome" &&
@@ -105,7 +105,7 @@ public flow conversation(frame: EventFrame, latest: Previous, policy: Policy, bi
     var selected: Array<Event> = []; var chat_turn: i32 = 0; var chat_open = false;
     for event in frame.events limit Iterations(4096) {
         if event.role == "system" && event.kind == "native-budget" &&
-            (event.name == "chat" || event.name == "chat-large" || event.name == "chat-resilient" || event.name == "chat-high-input") {
+            (event.name == "chat" || event.name == "chat-large" || event.name == "chat-resilient" || event.name == "chat-high-input" || event.name == "chat-full") {
             chat_turn = chat_turn + 1; chat_open = true;
         }
         if event.role == "system" && event.kind == "work-boundary" { chat_open = false; }
@@ -236,9 +236,9 @@ public flow reserve(expected: MemoryEntry<string, Frame>, request: string, polic
     }
     let current = if saved.format == 3 && saved.phase == "complete" { match extend(saved) { Ok(item) => item, Err(problem) => { return Err(problem); } } } else { saved };
     let pending = match begin(current, request) { Ok(item) => item, Err(problem) => { return Err(problem); } };
-    let marker = match encode(if saved.format == 18 { "High-input mode reserves up to 81920 output tokens and 3786432 configured native tokens for this chat turn; child model calls reserve 16384 output tokens each; provider input and output share its context window; actual usage is unknown." } else { if saved.format == 17 { "High-input mode reserves up to 32768 output tokens and 3786432 configured native tokens for this chat turn; provider input and output share its context window; actual usage is unknown." } else { if saved.format == 16 { "Reserved up to 3786432 configured native tokens for this chat turn; actual usage is unknown." } else { if saved.format == 15 { "Reserved up to 3048576 configured native tokens for this chat turn; actual usage is unknown." } else { "Reserved up to 1179648 configured native tokens for this chat turn; actual usage is unknown." } } } }, policy) { Ok(item) => item.value, Err(problem) => { return Err(problem); } };
+    let marker = match encode(if saved.format == 19 { "Reserved up to 786432 output tokens and 6291456 configured native tokens for this chat turn; every model call reserves 131072 output tokens including reasoning; actual usage is unknown." } else { if saved.format == 18 { "High-input mode reserves up to 81920 output tokens and 3786432 configured native tokens for this chat turn; child model calls reserve 16384 output tokens each; provider input and output share its context window; actual usage is unknown." } else { if saved.format == 17 { "High-input mode reserves up to 32768 output tokens and 3786432 configured native tokens for this chat turn; provider input and output share its context window; actual usage is unknown." } else { if saved.format == 16 { "Reserved up to 3786432 configured native tokens for this chat turn; actual usage is unknown." } else { if saved.format == 15 { "Reserved up to 3048576 configured native tokens for this chat turn; actual usage is unknown." } else { "Reserved up to 1179648 configured native tokens for this chat turn; actual usage is unknown." } } } } }, policy) { Ok(item) => item.value, Err(problem) => { return Err(problem); } };
     let prior = expected.value.events;
-    let events = EventFrame { format = 2, turns = prior.turns, first_count = prior.first_count, events = prior.events.push(Event { role = "system", kind = "native-budget", name = if saved.format == 17 || saved.format == 18 { "chat-high-input" } else { if saved.format == 16 { "chat-resilient" } else { if saved.format == 15 { "chat-large" } else { "chat" } } }, text = marker }) };
+    let events = EventFrame { format = 2, turns = prior.turns, first_count = prior.first_count, events = prior.events.push(Event { role = "system", kind = "native-budget", name = if saved.format == 19 { "chat-full" } else { if saved.format == 17 || saved.format == 18 { "chat-high-input" } else { if saved.format == 16 { "chat-resilient" } else { if saved.format == 15 { "chat-large" } else { "chat" } } } }, text = marker }) };
     return write(Frame { format = 1, encoding = "json-string-v1", policy_binding = binding, chat = pending, events = events }, Some(expected), policy, binding);
 }
 

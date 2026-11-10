@@ -41,7 +41,7 @@ public flow historical_ledger_text(state: Ledger) -> string {
 public flow expanded_ledger_text(state: Ledger, wide: bool, high_input: bool) -> string {
     return "LEDGER work steps=" + from_i32(state.read.steps + state.edit.steps) + "/13 calls=" +
         from_i32(state.read.calls + state.edit.calls) + "/7 generation_allowance=" + from_i32(state.read.tokens + state.edit.tokens) +
-        (if high_input { "/188416 native_configured=6000000/6000000" } else { if wide { "/286720 native_configured=" + from_i32(native_budget(state)) + "/2811008" } else { "/51200 native_configured=" + from_i32(native_budget(state)) + "/1335296" } }) +
+        (if high_input { "/917504 native_configured=" + from_i32(native_budget(state)) + "/7340032" } else { if wide { "/286720 native_configured=" + from_i32(native_budget(state)) + "/2811008" } else { "/51200 native_configured=" + from_i32(native_budget(state)) + "/1335296" } }) +
         "; configured allowances are not measured usage";
 }
 public flow historical_stage(name: string, state: Ledger) -> unit {
@@ -61,8 +61,8 @@ public flow chain_stage(name: string, state: Ledger, user_context: bool) -> unit
     });
 }
 
-flow unicode_read(request: string, allowed: Array<string>, state: ReadLedger, expanded: bool, wide: bool) -> Result<ReadReport, ReadFailure> {
-    let result = if expanded { run_expanded_context(request, allowed, state, wide) } else { unicode_read_context(request, allowed, state, "read-", true, false, false, false) };
+flow unicode_read(request: string, allowed: Array<string>, state: ReadLedger, expanded: bool, wide: bool, high_input: bool) -> Result<ReadReport, ReadFailure> {
+    let result = if expanded { run_expanded_context(request, allowed, state, wide, high_input) } else { unicode_read_context(request, allowed, state, "read-", true, false, false, false) };
     return match result {
         Ok(value) => Ok(ReadReport { request = value.request, task = value.task, allowed = value.allowed, child = value.child,
             status = value.status, observed = value.observed, answer = value.answer, ledger = value.ledger }),
@@ -78,8 +78,8 @@ flow prepare_policy<P ~ WorkBudgetPolicy>(policy: P, input: WorkRequest, origina
     let selected = input.selected;
     let invalid = ledger_error(state); if invalid != "" { return failed(state, invalid); }
     let capacity = "one read/search up to " + from_i32(scan_i32()) + " bytes, three edit reads up to " + from_usize(file_bytes()) + " bytes each, and one atomic maximum";
-    progress(if wide { "RESERVATION work" + from_i32(maximum.steps) + " steps/" + from_i32(maximum.calls) + " calls/" + from_i32(maximum.generation) + " generation/" + from_i32(maximum.native_tokens) + " configured native; edit tail6 steps/3 calls/" + if high_input { "45056 generation; " } else { "143360 generation; " } + capacity } else { if expanded { "RESERVATION work13 steps/7 calls/51200 generation/1335296 native; edit tail6 steps/3 calls/38912 generation/786432 native; " + capacity } else { "RESERVATION work13 steps/7 calls/47104 generation/196608 historical native allowance (not a provider cap); edit tail6 steps/3 calls/38912 generation/163840 historical allowance; one read/search and one atomic maximum" } });
-    let read_result = if unicode { unicode_read(input.request, input.allowed, state.read, expanded, wide) }
+    progress(if wide { "RESERVATION work" + from_i32(maximum.steps) + " steps/" + from_i32(maximum.calls) + " calls/" + from_i32(maximum.generation) + " generation/" + from_i32(maximum.native_tokens) + " configured native; edit tail6 steps/3 calls/" + if high_input { "393216 generation; " } else { "143360 generation; " } + capacity } else { if expanded { "RESERVATION work13 steps/7 calls/51200 generation/1335296 native; edit tail6 steps/3 calls/38912 generation/786432 native; " + capacity } else { "RESERVATION work13 steps/7 calls/47104 generation/196608 historical native allowance (not a provider cap); edit tail6 steps/3 calls/38912 generation/163840 historical allowance; one read/search and one atomic maximum" } });
+    let read_result = if unicode { unicode_read(input.request, input.allowed, state.read, expanded, wide, high_input) }
         else { read_context(input.request, input.allowed, state.read, "read-", true, chain_read, inspect_plan, inspect_all) };
     let read = match read_result {
         Ok(value) => value,
@@ -90,7 +90,7 @@ flow prepare_policy<P ~ WorkBudgetPolicy>(policy: P, input: WorkRequest, origina
         }
     };
     state = Ledger { read = read.ledger, edit = state.edit };
-    let pending = match collect(read.child, read.status, read.request, read.task, read.allowed, wide) { Ok(value) => value, Err(error) => { return failed(state, error); } };
+    let pending = match collect(read.child, read.status, read.request, read.task, read.allowed, wide, high_input) { Ok(value) => value, Err(error) => { return failed(state, error); } };
     let evidence = match finish_evidence(pending, read.answer) { Ok(value) => value, Err(error) => { return failed(state, error); } };
     if evidence.ledger.steps != read.ledger.steps || evidence.ledger.calls != read.ledger.calls || evidence.ledger.tokens != read.ledger.tokens ||
         evidence.ledger.tools != read.ledger.tools || evidence.ledger.scan != read.ledger.scan { return failed(state, "read evidence ledger mismatch"); }
@@ -154,7 +154,7 @@ flow finish_mode(completed: Completed, work: bool, inspect_all: bool, history: b
     let answer = perform LegacyEditStages.aggregate(completed.context);
     if inspect_all { diagnostic(response_text(answer, "edit-aggregate", "lab-qwen-", 512)); }
     let error = if history { history_summary_error(answer, "final answer") } else { if work { work_summary_error(answer) } else { text_error(answer, "final answer") } };
-    if history && error == "final answer requires 1..1024 nonblank UTF-8 bytes" {
+    if history && error == "final answer requires 1..1048576 nonblank UTF-8 bytes" {
         progress("MODEL SUMMARY unavailable: blank or over limit; the edit was already confirmed. A factual fallback will be recorded.");
         return Ok(Summary { answer = history_fallback_summary(), state = state, model_generated = false });
     }

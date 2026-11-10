@@ -1,5 +1,7 @@
 module nomo.tools.workspace;
 
+import nomo.core.large_context.{message_bytes};
+
 import std.fs.{Region, WorkspacePath, IOError, ReadLimitError, ListLimitError, path, root, relative_name, list_limited, stat, read_bytes_limited, list};
 import std.bytes.len as byte_len;
 import std.codec.text.{utf8_decode, Strict};
@@ -142,12 +144,12 @@ public flow list_directory(name: string) -> Outcome {
     return outcome("unsupported", "named listing unavailable: opaque WorkspacePath; entries=" + from_usize(count(entries)), 0);
 }
 
-// Search explicit files, never recurse or discover ambient paths. At most four
-// files and 16384 delivered bytes total, with 16384 lines/file and 8 matches.
+// Search selected files within the scan reservation. Result text has the same
+// message capacity as model answers; a byte-sized file can have at most n+1 lines.
 // A Host overflow check may probe one additional byte, never return a prefix.
 flow search_with(names: Array<string>, literal: string, maximum: usize) -> Outcome ![Fs.read<ReadOnlyRoot>, Error<FileError>, Error<IndexError>] {
     if count(names) == 0 || count(names) > (if maximum == 4194304 { 256 } else { 4 }) { return outcome("refused", "search file count exceeds scope", 0); }
-    if !search_literal(literal) { return outcome("refused", "literal must be 1..64 safe UTF-8 bytes", 0); }
+    if !search_literal(literal) { return outcome("refused", "literal must be 1..65536 safe UTF-8 bytes", 0); }
     let invalid = candidate_error(names); if invalid != "" { return outcome("refused", invalid, 0); }
     var output = "";
     var scanned: usize = 0;
@@ -162,19 +164,19 @@ flow search_with(names: Array<string>, literal: string, maximum: usize) -> Outco
             if maximum != 4194304 { return outcome(file.status, name + ": " + file.text, scanned); }
             consumed = consumed + bound + 1;
             skipped = skipped + 1;
-            if len(skipped_names) + len(name) < 1024 { skipped_names = skipped_names + name + "\n"; }
+            if len(skipped_names) + len(name) < message_bytes() { skipped_names = skipped_names + name + "\n"; }
         } else {
         consumed = consumed + file.scanned;
         let lines = split(file.text, "\n");
-        let line_limit = if maximum == 4096 { 128 } else { 16385 };
+        let line_limit = file_bytes() + 1;
         if count(lines) > line_limit { return outcome("refused", "file exceeds line limit", scanned); }
         scanned = scanned + file.scanned;
         var line: usize = 0;
-        for text in lines limit Iterations(16385) {
+        for text in lines limit Iterations(1048577) {
             line = line + 1;
             if contains(text, literal) {
                 let entry = name + ":" + from_usize(line) + "\n";
-                if matches >= 8 || len(output) + len(entry) > 1024 { return outcome(if maximum == 4194304 { "incomplete" } else { "truncated" }, if maximum == 4194304 { "match limit reached; partial results\n" + output } else { output }, scanned); }
+                if matches >= 65536 || len(output) + len(entry) > message_bytes() { return outcome(if maximum == 4194304 { "incomplete" } else { "truncated" }, if maximum == 4194304 { "match limit reached; partial results\n" + output } else { output }, scanned); }
                 output = output + entry;
                 matches = matches + 1;
             }

@@ -1,5 +1,7 @@
 module nomo.session.harness_checkpoint;
 
+import nomo.core.large_context.{message_bytes, message_frame_bytes, context_bytes, history_bytes};
+
 import nomo.core.json.{encode as encode_json, string_fields};
 
 import std.text.{char_count as len, len as byte_len, is_ascii, parse_i32, from_char, from_i32, from_usize};
@@ -32,7 +34,7 @@ public flow validate(saved: Checkpoint, requested: Identity) -> Result<Checkpoin
     if saved.format != 1 || saved.admitted != 1 || saved.lifecycle != "completed" || !saved.resolved {
         return Err("checkpoint is not a completed settled first turn");
     }
-    if !bounded(saved.request, 128) || !bounded(saved.task, 128) { return Err("invalid checkpoint request or task"); }
+    if !bounded(saved.request, message_bytes()) || !bounded(saved.task, message_bytes()) { return Err("invalid checkpoint request or task"); }
     let prior = Previous { task = saved.task, result = saved.result, tool = saved.tool, outcome = saved.outcome, answer = saved.answer };
     let invalid_prior = prior_error(prior); if invalid_prior != "" { return Err(invalid_prior); }
     var tools: i32 = 0;
@@ -48,7 +50,7 @@ public flow validate(saved: Checkpoint, requested: Identity) -> Result<Checkpoin
         exact.tools > maximum.tools || exact.scan > maximum.scan { return Err("checkpoint usage exceeds saved limits"); }
     let records = saved.records;
     if count(records) != record_count { return Err("invalid checkpoint record count"); }
-    let record_error = records_error(records, 4096, "checkpoint");
+    let record_error = records_error(records, history_bytes(), "checkpoint");
     if record_error != "" { return Err(record_error); }
     if !same(records[0], "user", "request", "", saved.request) || !same(records[1], "main", "plan", "", records[1].text) ||
         !same(records[2], "main", "delegate", "child-1", saved.task) { return Err("invalid checkpoint planning records"); }
@@ -95,12 +97,12 @@ public flow from_turn(identity: Identity, turn: TurnResult) -> Result<Checkpoint
 
 // Reject nested shapes and bound encoded bytes before JSON parsing/casting.
 public flow framed(raw: string, successor: bool) -> bool {
-    let limit: usize = if successor { 196608 } else { 65536 };
+    let limit: usize = context_bytes();
     if len(raw) == 0 || len(raw) > limit || byte_len(raw) > limit { return false; }
     var opened = false; var closed = false; var quoted = false; var escaped = false;
     var leaves: usize = 0; var characters: usize = 0; var field_size: usize = 0; var unicode: usize = 0;
     let slash = from_char('\\');
-    for codepoint in std.text.chars(raw) limit Iterations(196610) { let character = std.text.from_char(codepoint);
+    for codepoint in std.text.chars(raw) limit Iterations(33554434) { let character = std.text.from_char(codepoint);
         if character != "" && !is_ascii(character) { return false; }
         if quoted {
             if unicode > 0 { unicode = unicode - 1; }
@@ -108,8 +110,8 @@ public flow framed(raw: string, successor: bool) -> bool {
             else if character == slash { escaped = true; field_size = field_size + 1; characters = characters + 1; }
             else if character == "\"" { quoted = false; }
             else { field_size = field_size + 1; characters = characters + 1; }
-            let maximum: usize = if successor && leaves == 6 { 65536 } else { 1024 };
-            if field_size > maximum || characters > (if successor { 73728 } else { 8192 }) { return false; }
+            let maximum: usize = message_frame_bytes();
+            if field_size > maximum || characters > (context_bytes()) { return false; }
         } else if character == "" || character == " " || character == "\n" || character == "\r" || character == "\t" {
         } else if character == "[" { if opened || closed { return false; } opened = true;
         } else if character == "]" { if !opened || closed { return false; } closed = true;
@@ -142,7 +144,7 @@ public flow read_ledger(fields: Array<string>, offset: usize, label: string) -> 
 public flow records_error(records: Array<Event>, maximum: usize, label: string) -> string {
     var characters: usize = 0;
     for event in records limit Iterations(18) {
-        if len(event.role) > 9 || len(event.kind) > 8 || len(event.name) > 8 || len(event.text) > 512 ||
+        if len(event.role) > 9 || len(event.kind) > 8 || len(event.name) > 8 || len(event.text) > message_bytes() ||
             !printable(event.role) || !printable(event.kind) || !printable(event.name) || !printable(event.text) { return "invalid " + label + " record data"; }
         characters = characters + len(event.name) + len(event.text);
         if characters > maximum { return label + " record content exceeds bound"; }
@@ -154,9 +156,9 @@ public flow fields_error(fields: Array<string>, successor: bool) -> string {
     if count(fields) > (if successor { 100 } else { 80 }) { return error; }
     var characters: usize = 0; var index: usize = 0;
     for field in fields limit Iterations(100) {
-        if len(field) > (if successor && index == 5 { 65536 } else { 1024 }) { return error; }
+        if len(field) > (message_frame_bytes()) { return error; }
         characters = characters + len(field); index = index + 1;
-        if characters > (if successor { 73728 } else { 8192 }) { return error; }
+        if characters > (context_bytes()) { return error; }
     }
     return "";
 }

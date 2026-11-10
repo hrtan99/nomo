@@ -1,5 +1,9 @@
 module nomo.harness.harness_tool_chat_contract;
 
+import nomo.core.read_text.data_safe;
+
+import nomo.core.large_context.{message_bytes, context_bytes};
+
 import std.text.{char_count as len, starts_with};
 import std.collections.len as count;
 import std.json.JsonValue;
@@ -40,8 +44,8 @@ public flow prior_error_mode(prior: Previous, unicode: bool) -> string {
         if prior.result != "" || prior.tool != "" || prior.outcome != "" || prior.answer != "" { return "invalid empty prior selection"; }
         return "";
     }
-    let invalid = if unicode { !utf8_bounded(prior.task, 512) || !utf8_bounded(prior.result, child_answer_bytes()) || !utf8_bounded(prior.answer, 512) }
-        else { question_error(prior.task) != "" || !bounded(prior.result, 256) || !bounded(prior.answer, 512) };
+    let invalid = if unicode { !utf8_bounded(prior.task, message_bytes()) || !utf8_bounded(prior.result, child_answer_bytes()) || !utf8_bounded(prior.answer, message_bytes()) }
+        else { question_error(prior.task) != "" || !bounded(prior.result, message_bytes()) || !bounded(prior.answer, message_bytes()) };
     if invalid { return "invalid selected prior result"; }
     if prior.tool == "" {
         if prior.outcome != "" { return "prior outcome without tool"; }
@@ -53,7 +57,7 @@ public flow prior_error(prior: Previous) -> string { return prior_error_mode(pri
 
 public flow context_error(context: Context) -> string {
     let message = Message.new(context);
-    return context_json_error(message.cast<JsonValue>(), 2048, false, "model context exceeds 2048 serialized characters");
+    return context_json_error(message.cast<JsonValue>(), context_bytes(), false, "model context exceeds 33554432 serialized characters");
 }
 
 public flow seed(request: string, prior: Previous) -> State {
@@ -87,7 +91,7 @@ public flow inspect_turn_shared(child: Session, status: i32, request: string, ta
     var input = fresh();
     var characters: usize = 0;
     for event in child.history.events limit Iterations(12) {
-        if len(event.name) > 8 || len(event.text) > (if unicode { outcome_bytes() } else { 512 }) || !printable(event.name) || !(if unicode { safe(event.text, outcome_bytes()) } else { printable(event.text) }) {
+        if len(event.name) > 8 || len(event.text) > outcome_bytes() || !printable(event.name) || !(if unicode { data_safe(event.text, outcome_bytes()) } else { printable(event.text) }) {
             return Err("invalid selected history data");
         }
         characters = characters + len(event.name) + len(event.text);
@@ -103,11 +107,11 @@ public flow inspect_turn_shared(child: Session, status: i32, request: string, ta
         if count(events) != 3 || status != 4 || child.history.spent != 0 || child.tokens != 0 || child.tools != 0 || child.scan != 0 ||
             !same(events[1], expected_input) ||
             events[2].role != "error" || events[2].kind != "error" || events[2].name != "" ||
-            events[2].text != (if unicode { "model context exceeds 262144 serialized characters" } else { "model context exceeds 2048 serialized characters" }) {
+            events[2].text != (if unicode { "model context exceeds 33554432 serialized characters" } else { "model context exceeds 33554432 serialized characters" }) {
             return Err("invalid unattempted child context refusal");
         }
         let context = ChildContext { history = input.events, allowed = allowed, final_only = false };
-        if (if unicode { utf8_question_error(request) } else { question_error(request) }) != "" || !(if unicode { utf8_bounded(task, 512) } else { question_error(task) == "" }) ||
+        if (if unicode { utf8_question_error(request) } else { question_error(request) }) != "" || !(if unicode { utf8_bounded(task, message_bytes()) } else { question_error(task) == "" }) ||
             child_context_error(context) != events[2].text {
             return Err("unproven child context refusal");
         }

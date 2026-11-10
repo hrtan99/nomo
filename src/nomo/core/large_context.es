@@ -13,10 +13,18 @@ public flow compatible_scan_bytes(value: usize) -> bool { return value == scan_b
 public flow compatible_scan_i32(value: i32) -> bool { return value == scan_i32() || value == legacy_scan_i32(); }
 public flow display_bytes() -> usize { return 2097152; }
 public flow outcome_bytes() -> usize { return 2097176; }
-public flow event_bytes() -> usize { return 4194304; }
+public flow event_bytes() -> usize { return 8388608; }
+// Text capacities are independent of model token reservations. Host requests
+// travel through argv; model-to-model text remains inside typed values.
+public flow request_bytes() -> usize { return 65536; }
+public flow message_bytes() -> usize { return 1048576; }
+public flow message_frame_bytes() -> usize { return 8388608; }
+public flow edit_response_bytes() -> usize { return 16777216; }
+public flow context_bytes() -> usize { return 33554432; }
+public flow history_bytes() -> usize { return 67108864; }
 // Unicode child answers cross the model wire, event history and work evidence.
 // Keep the decoded text and its escaped JSON envelope as one shared contract.
-public flow child_answer_bytes() -> usize { return 4096; }
-public flow child_answer_frame_bytes() -> usize { return 16384; }
+public flow child_answer_bytes() -> usize { return message_bytes(); }
+public flow child_answer_frame_bytes() -> usize { return message_frame_bytes(); }
 public flow timeline_inline_bytes() -> usize { return 131072; }
-public flow edit_json_bytes() -> usize { return 8388608; }
+public flow edit_json_bytes() -> usize { return 33554432; }

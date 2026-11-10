@@ -24,13 +24,13 @@ class Fake(BaseHTTPRequestHandler):
             if i == 0:
                 assert ctx['current']['request'] == TASK and ctx['current']['allowed'] == FILES
                 value = ['delegate', 'Read note.txt to identify the requested edit']
-            elif i in (1, 5, 12): value = ['read', 'note.txt']
-            elif i in (2, 6, 13):
+            elif i in (1, 5, 12, 16): value = ['read', 'note.txt']
+            elif i in (2, 6, 13, 17):
                 data = json.dumps(ctx, ensure_ascii=False);assert 'line 000: unchanged marker content' in data and 'line 6999: unchanged marker content' in data
                 value = ['final', CHILD_DETAIL]
             elif i == 3: value = 'EDIT note.txt'
             elif i == 4:
-                assert ctx['current']['request'] == TASK and ctx['previous']['answer'] == 'EDIT note.txt'
+                assert ctx['current']['request'] == TASK and ctx['previous']['answer'] == 'EDIT_CHECK note.txt'
                 assert 'line 000: unchanged marker content' in ctx['previous']['outcome'] and 'line 6999: unchanged marker content' in ctx['previous']['outcome']
                 recovered = json.dumps(ctx['conversation'], ensure_ascii=False)
                 assert LATEST_TOOL_REFERENCE in recovered and 'line 000: unchanged marker content' not in recovered and 'line 6999: unchanged marker content' not in recovered
@@ -44,17 +44,21 @@ class Fake(BaseHTTPRequestHandler):
                 value = ['delegate', 'Replace old with green']
             elif i == 9: value = ['edit', 'old', 'green']
             elif i == 10: value = '已将 old 改为 green'
-            elif i == 11:
+            elif i in (11, 15):
                 assert ctx['work']['name'] == 'Some'
                 recovered = json.dumps(ctx['history'], ensure_ascii=False)
                 assert 'line 000: unchanged marker content' in ctx['current']['prior']['outcome'] and 'line 6999: unchanged marker content' in ctx['current']['prior']['outcome']
                 assert LATEST_TOOL_REFERENCE in recovered and 'line 000: unchanged marker content' not in recovered and 'line 6999: unchanged marker content' not in recovered
                 value = ['delegate', 'Read note.txt to report its current color']
-            elif i == 14: value = '当前内容是 before green'
+            elif i in (14, 18): value = '当前内容是 before green'
             else: raise AssertionError('unexpected request')
-            if i == 9: assert req['max_tokens'] == 32768
+            if i == 9: assert req['max_tokens'] == 131072
             if req.get('tools'):
-                output = {'text': value[1]}
+                properties = req['tools'][0]['function']['parameters']['properties']
+                output = ({'action':'EDIT' if i == 3 else 'ANSWER','path':'note.txt' if i == 3 else '', 'command':[], 'answer':'' if i == 3 else value} if 'action' in properties else
+                          {'target':value[1],'replacement':value[2]} if 'target' in properties else
+                          {'operation':value[0],'files':value[1:] if value[0]=='read' else value[2:] if value[0]=='search' else [],'literal':value[1] if value[0]=='search' else '', 'text':value[1] if value[0]=='final' else ''} if 'operation' in properties else
+                          {'task' if 'task' in properties else 'text':value[1]})
                 message = {'role':'assistant','content':None,'tool_calls':[{'id':'synthetic-output','type':'function','function':{'name':'etas_emit_output','arguments':json.dumps(output,ensure_ascii=False,separators=(',',':'))}}]}
                 finish_reason = 'tool_calls'
             else:
@@ -85,7 +89,8 @@ def interactive(command, env, question, editing):
             if select.select([master], [], [], .1)[0]:
                 try: output.extend(os.read(master, 65536))
                 except OSError: pass
-            text = bytes(output)
+            text = re.sub(rb'\x1b\[[0-9;]*m', b'', bytes(output))
+            text = re.sub(rb'(?m)^\[[A-Z ]{7}\] ', b'', text)
             if not asked and b'nomo> ' in text: os.write(master, question.encode()+b'\n');asked = True
             if editing and not native and b'Type `yes` to approve:' in text:
                 previews = [line.removeprefix(b'PREVIEW ') for line in text.splitlines() if line.startswith(b'PREVIEW ')]
@@ -95,7 +100,7 @@ def interactive(command, env, question, editing):
                 assert native;os.write(master,b'yes\n');application=True
             if editing and not stopped and b'Abandon this stopped operation and continue this session? [y/N]' in text:
                 os.write(master,b'n\n/exit\n');stopped=True;exited=True
-            done = b'Check passed.' in text if editing else '当前内容是 before green'.encode() in text
+            done = '当前内容是 before green'.encode() in text
             if done and not exited: os.write(master,b'/exit\n');exited=True
         while select.select([master],[],[],0)[0]:
             try: data=os.read(master,65536)
@@ -105,7 +110,7 @@ def interactive(command, env, question, editing):
         if proc.returncode: raise AssertionError('interactive exited '+str(proc.returncode)+'; '+bytes(output).decode('utf-8','replace')[-3000:])
         if not (asked and exited and (not editing or (native and application))):
             raise AssertionError('interactive flow incomplete; '+bytes(output).decode('utf-8','replace')[-3000:])
-        return bytes(output)
+        return re.sub(rb'(?m)^\[[A-Z ]{7}\] ', b'', re.sub(rb'\x1b\[[0-9;]*m', b'', bytes(output)))
     finally:
         if proc.poll() is None: os.killpg(proc.pid,signal.SIGTERM);proc.wait(timeout=25)
         os.close(master)
@@ -135,10 +140,10 @@ def main():
         assert stat.S_IMODE(workspace.stat().st_mode)==0o755
         command=[str(project/'scripts/nomo'),'--root',str(workspace),'--id',match.group(1).decode(),'--allow',','.join(FILES)]
         second=interactive(command,env,'现在文件的颜色是什么？',False)
-        assert not server.failure and server.phases==list(range(15));assert '当前内容是 before green'.encode() in second
+        assert not server.failure and server.phases==list(range(19));assert '当前内容是 before green'.encode() in second
         status=subprocess.run([str(project/'scripts/nomo'),'--status','--id',match.group(1).decode()],env=env,capture_output=True,timeout=120)
         assert status.returncode==0, status.stderr[-3000:]
-        assert b'NATIVE configured cumulative reservation=13572864; actual provider usage unknown; legacy native budget not present' in status.stdout, status.stdout[-3000:]
+        assert b'NATIVE configured cumulative reservation=26214400; actual provider usage unknown; legacy native budget not present' in status.stdout, status.stdout[-3000:]
         events=subprocess.run([str(project/'scripts/nomo'),'--status','--id',match.group(1).decode(),'--events'],env=env,capture_output=True,timeout=120)
         assert events.returncode==0, events.stderr[-3000:]
         assert b'line 000: unchanged marker content' in events.stdout and b'line 6999: unchanged marker content' in events.stdout and CHILD_DETAIL.encode() in events.stdout

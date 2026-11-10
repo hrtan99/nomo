@@ -1,5 +1,7 @@
 module nomo.main;
 
+import nomo.core.large_context.{request_bytes};
+
 import std.io.{println, read_line};
 import std.text.{trim, char_count as len};
 import nomo.cli.config.load;
@@ -259,7 +261,7 @@ flow main(args: Array<string>) -> i32 {
         let input = read_line();
         if input == "" { println("bye: EOF"); return 0; }
         lines = lines + 1;
-        if len(input) > 1024 { let outcome = reject(state, "input exceeds 1024 characters"); state = outcome.state; }
+        if len(input) > request_bytes() { let outcome = reject(state, "input exceeds 65536 characters"); state = outcome.state; }
         else {
             let command = trim(input);
             if command == "/exit" { println("bye: exit"); return 0; }

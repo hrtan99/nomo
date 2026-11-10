@@ -84,9 +84,9 @@ backend = "sqlite"
 path = "memory.sqlite3"
 
 [runtime.profiles.session-demo-create.storage]
-max_pending_bytes = 268435456
-max_value_bytes = 67108864
-max_result_bytes = 16777216
+max_pending_bytes = 4294967296
+max_value_bytes = 536870912
+max_result_bytes = 536870912
 
 [runtime.profiles.session-demo-create.session]
 backend = "sqlite"
@@ -107,9 +107,9 @@ backend = "sqlite"
 path = "file:memory.sqlite3?mode=rw"
 
 [runtime.profiles.session-demo-existing.storage]
-max_pending_bytes = 268435456
-max_value_bytes = 67108864
-max_result_bytes = 16777216
+max_pending_bytes = 4294967296
+max_value_bytes = 536870912
+max_result_bytes = 536870912
 
 [runtime.profiles.session-demo-existing.session]
 backend = "sqlite"
@@ -130,9 +130,9 @@ backend = "sqlite"
 path = "harness.sqlite3"
 
 [runtime.profiles.harness-checkpoint-create.storage]
-max_pending_bytes = 268435456
-max_value_bytes = 67108864
-max_result_bytes = 16777216
+max_pending_bytes = 4294967296
+max_value_bytes = 536870912
+max_result_bytes = 536870912
 
 [runtime.profiles.harness-checkpoint-create.policy]
 mode = "local-static"
@@ -149,9 +149,9 @@ backend = "sqlite"
 path = "file:harness.sqlite3?mode=rw"
 
 [runtime.profiles.harness-checkpoint-save.storage]
-max_pending_bytes = 268435456
-max_value_bytes = 67108864
-max_result_bytes = 16777216
+max_pending_bytes = 4294967296
+max_value_bytes = 536870912
+max_result_bytes = 536870912
 
 [runtime.profiles.harness-checkpoint-save.model]
 adapter = "omlx-openai"
@@ -189,9 +189,9 @@ backend = "sqlite"
 path = "file:harness.sqlite3?mode=rw"
 
 [runtime.profiles.harness-checkpoint-show.storage]
-max_pending_bytes = 268435456
-max_value_bytes = 67108864
-max_result_bytes = 16777216
+max_pending_bytes = 4294967296
+max_value_bytes = 536870912
+max_result_bytes = 536870912
 
 [runtime.profiles.harness-checkpoint-show.policy]
 mode = "local-static"
@@ -242,9 +242,9 @@ boundary_policy = "nomo-owned-edit"
 backend = "sqlite"
 path = "edit.sqlite3"
 [runtime.profiles.edit-apply.storage]
-max_pending_bytes = 268435456
-max_value_bytes = 67108864
-max_result_bytes = 16777216
+max_pending_bytes = 4294967296
+max_value_bytes = 536870912
+max_result_bytes = 536870912
 [runtime.profiles.edit-apply.filesystem.regions."nomo.tools.edit_file.EditableRoot"]
 root = "/edit-fixture"
 read = true
@@ -262,9 +262,9 @@ boundary_policy = "nomo-owned-edit"
 backend = "sqlite"
 path = "file:edit.sqlite3?mode=rw"
 [runtime.profiles.edit-status.storage]
-max_pending_bytes = 268435456
-max_value_bytes = 67108864
-max_result_bytes = 16777216
+max_pending_bytes = 4294967296
+max_value_bytes = 536870912
+max_result_bytes = 536870912
 [runtime.profiles.edit-status.policy]
 mode = "local-static"
 rules = ["console=allow", "memory:Memory.read=allow", "memory:Memory.write=deny"]
@@ -295,9 +295,9 @@ boundary_policy = "nomo-harness-edit"
 backend = "sqlite"
 path = "edit.sqlite3"
 [runtime.profiles.harness-edit.storage]
-max_pending_bytes = 268435456
-max_value_bytes = 67108864
-max_result_bytes = 16777216
+max_pending_bytes = 4294967296
+max_value_bytes = 536870912
+max_result_bytes = 536870912
 [runtime.profiles.harness-edit.model]
 adapter = "omlx-openai"
 model = "qwen3.8-flash-next-ud-iq4_xs"
@@ -334,9 +334,9 @@ boundary_policy = "nomo-harness-work"
 backend = "sqlite"
 path = "edit.sqlite3"
 [runtime.profiles.harness-work.storage]
-max_pending_bytes = 268435456
-max_value_bytes = 67108864
-max_result_bytes = 16777216
+max_pending_bytes = 4294967296
+max_value_bytes = 536870912
+max_result_bytes = 536870912
 [runtime.profiles.harness-work.model]
 adapter = "omlx-openai"
 model = "qwen3.8-flash-next-ud-iq4_xs"
@@ -378,9 +378,9 @@ boundary_policy = "nomo-harness-work-save"
 backend = "sqlite"
 path = "edit.sqlite3"
 [runtime.profiles.harness-work-save.storage]
-max_pending_bytes = 268435456
-max_value_bytes = 67108864
-max_result_bytes = 16777216
+max_pending_bytes = 4294967296
+max_value_bytes = 536870912
+max_result_bytes = 536870912
 [runtime.profiles.harness-work-save.model]
 adapter = "omlx-openai"
 model = "qwen3.8-flash-next-ud-iq4_xs"
@@ -417,9 +417,9 @@ boundary_policy = "nomo-work-show"
 backend = "sqlite"
 path = "file:edit.sqlite3?mode=rw"
 [runtime.profiles.harness-work-show.storage]
-max_pending_bytes = 268435456
-max_value_bytes = 67108864
-max_result_bytes = 16777216
+max_pending_bytes = 4294967296
+max_value_bytes = 536870912
+max_result_bytes = 536870912
 [runtime.profiles.harness-work-show.policy]
 mode = "local-static"
 rules = ["console=allow", "memory:Memory.read=allow", "memory:Memory.write=deny"]
@@ -444,9 +444,9 @@ boundary_policy = "nomo-work-chain"
 backend = "sqlite"
 path = "edit.sqlite3"
 [runtime.profiles.work-chain.storage]
-max_pending_bytes = 268435456
-max_value_bytes = 67108864
-max_result_bytes = 16777216
+max_pending_bytes = 4294967296
+max_value_bytes = 536870912
+max_result_bytes = 536870912
 [runtime.profiles.work-chain.model]
 adapter = "omlx-openai"
 model = "qwen3.8-flash-next-ud-iq4_xs"
@@ -484,9 +484,9 @@ boundary_policy = "nomo-work-chain-show"
 backend = "sqlite"
 path = "file:edit.sqlite3?mode=rw"
 [runtime.profiles.work-chain-show.storage]
-max_pending_bytes = 268435456
-max_value_bytes = 67108864
-max_result_bytes = 16777216
+max_pending_bytes = 4294967296
+max_value_bytes = 536870912
+max_result_bytes = 536870912
 [runtime.profiles.work-chain-show.policy]
 mode = "local-static"
 rules = ["console=allow", "memory:Memory.read=allow", "memory:Memory.write=deny"]
@@ -549,9 +549,9 @@ boundary_policy = "nomo-work-chain"
 backend = "sqlite"
 path = "edit.sqlite3"
 [runtime.profiles.work-chain-once.storage]
-max_pending_bytes = 268435456
-max_value_bytes = 67108864
-max_result_bytes = 16777216
+max_pending_bytes = 4294967296
+max_value_bytes = 536870912
+max_result_bytes = 536870912
 [runtime.profiles.work-chain-once.model]
 adapter = "omlx-openai"
 model = "qwen3.8-flash-next-ud-iq4_xs"
@@ -630,9 +630,9 @@ boundary_policy = "nomo-harness-edit"
 backend = "sqlite"
 path = "edit.sqlite3"
 [runtime.profiles.harness-minimax-edit.storage]
-max_pending_bytes = 268435456
-max_value_bytes = 67108864
-max_result_bytes = 16777216
+max_pending_bytes = 4294967296
+max_value_bytes = 536870912
+max_result_bytes = 536870912
 [runtime.profiles.harness-minimax-edit.model]
 adapter = "openai"
 model = "MiniMax-M3.1-Flash"
@@ -664,9 +664,9 @@ boundary_policy = "nomo-harness-work"
 backend = "sqlite"
 path = "edit.sqlite3"
 [runtime.profiles.harness-minimax-work.storage]
-max_pending_bytes = 268435456
-max_value_bytes = 67108864
-max_result_bytes = 16777216
+max_pending_bytes = 4294967296
+max_value_bytes = 536870912
+max_result_bytes = 536870912
 [runtime.profiles.harness-minimax-work.model]
 adapter = "openai"
 model = "MiniMax-M3.1-Flash"
@@ -703,9 +703,9 @@ boundary_policy = "nomo-model-readonly"
 backend = "sqlite"
 path = "history.sqlite3"
 [runtime.profiles.nomo-read-session-new.storage]
-max_pending_bytes = 268435456
-max_value_bytes = 67108864
-max_result_bytes = 16777216
+max_pending_bytes = 4294967296
+max_value_bytes = 536870912
+max_result_bytes = 536870912
 [runtime.profiles.nomo-read-session-new.model]
 adapter = "openai"
 model = "MiniMax-M3.1-Flash"
@@ -735,9 +735,9 @@ boundary_policy = "nomo-model-readonly"
 backend = "sqlite"
 path = "file:history.sqlite3?mode=rw"
 [runtime.profiles.nomo-read-session-existing.storage]
-max_pending_bytes = 268435456
-max_value_bytes = 67108864
-max_result_bytes = 16777216
+max_pending_bytes = 4294967296
+max_value_bytes = 536870912
+max_result_bytes = 536870912
 [runtime.profiles.nomo-read-session-existing.model]
 adapter = "openai"
 model = "MiniMax-M3.1-Flash"
@@ -773,9 +773,9 @@ boundary_policy = "nomo-read-session-status"
 backend = "sqlite"
 path = "file:history.sqlite3?mode=rw"
 [runtime.profiles.nomo-read-session-status.storage]
-max_pending_bytes = 268435456
-max_value_bytes = 67108864
-max_result_bytes = 16777216
+max_pending_bytes = 4294967296
+max_value_bytes = 536870912
+max_result_bytes = 536870912
 [runtime.profiles.nomo-read-session-status.policy]
 mode = "local-static"
 rules = ["console=allow", "memory=allow"]
@@ -794,9 +794,9 @@ boundary_policy = "nomo-harness-work"
 backend = "sqlite"
 path = "file:history.sqlite3?mode=rw"
 [runtime.profiles.nomo-history-work.storage]
-max_pending_bytes = 268435456
-max_value_bytes = 67108864
-max_result_bytes = 16777216
+max_pending_bytes = 4294967296
+max_value_bytes = 536870912
+max_result_bytes = 536870912
 [runtime.profiles.nomo-history-work.model]
 adapter = "openai"
 model = "MiniMax-M3.1-Flash"
@@ -858,9 +858,9 @@ boundary_policy = "nomo-model-readonly"
 backend = "sqlite"
 path = "history.sqlite3"
 [runtime.profiles.nomo-read-events-new.storage]
-max_pending_bytes = 268435456
-max_value_bytes = 67108864
-max_result_bytes = 16777216
+max_pending_bytes = 4294967296
+max_value_bytes = 536870912
+max_result_bytes = 536870912
 [runtime.profiles.nomo-read-events-new.model]
 adapter = "openai"
 model = "MiniMax-M3.1-Flash"
@@ -869,7 +869,7 @@ api_key_env = "MINIMAX_API_KEY"
 allow_private = false
 typed_output_encoding = "output-tool"
 [runtime.profiles.nomo-read-events-new.model.timeout]
-request_deadline_ms = 120000
+request_deadline_ms = 300000
 connect_timeout_ms = 2000
 [runtime.profiles.nomo-read-events-new.model.retry]
 attempts = 1
@@ -895,9 +895,9 @@ boundary_policy = "nomo-model-readonly"
 backend = "sqlite"
 path = "file:history.sqlite3?mode=rw"
 [runtime.profiles.nomo-read-events-existing.storage]
-max_pending_bytes = 268435456
-max_value_bytes = 67108864
-max_result_bytes = 16777216
+max_pending_bytes = 4294967296
+max_value_bytes = 536870912
+max_result_bytes = 536870912
 [runtime.profiles.nomo-read-events-existing.model]
 adapter = "openai"
 model = "MiniMax-M3.1-Flash"
@@ -906,7 +906,7 @@ api_key_env = "MINIMAX_API_KEY"
 allow_private = false
 typed_output_encoding = "output-tool"
 [runtime.profiles.nomo-read-events-existing.model.timeout]
-request_deadline_ms = 120000
+request_deadline_ms = 300000
 connect_timeout_ms = 2000
 [runtime.profiles.nomo-read-events-existing.model.retry]
 attempts = 1
@@ -932,9 +932,9 @@ boundary_policy = "nomo-read-events-status"
 backend = "sqlite"
 path = "file:history.sqlite3?mode=rw"
 [runtime.profiles.nomo-read-events-status.storage]
-max_pending_bytes = 268435456
-max_value_bytes = 67108864
-max_result_bytes = 16777216
+max_pending_bytes = 4294967296
+max_value_bytes = 536870912
+max_result_bytes = 536870912
 [runtime.profiles.nomo-read-events-status.policy]
 mode = "local-static"
 rules = ["console=allow", "memory=allow", "filesystem:Fs.read=allow"]
@@ -964,9 +964,9 @@ boundary_policy = "nomo-harness-work"
 backend = "sqlite"
 path = "file:history.sqlite3?mode=rw"
 [runtime.profiles.nomo-history-events-work.storage]
-max_pending_bytes = 268435456
-max_value_bytes = 67108864
-max_result_bytes = 16777216
+max_pending_bytes = 4294967296
+max_value_bytes = 536870912
+max_result_bytes = 536870912
 [runtime.profiles.nomo-history-events-work.model]
 adapter = "openai"
 model = "MiniMax-M3.1-Flash"
@@ -976,7 +976,7 @@ allow_private = false
 typed_output_encoding = "output-tool"
 
 [runtime.profiles.nomo-history-events-work.model.timeout]
-request_deadline_ms = 120000
+request_deadline_ms = 300000
 connect_timeout_ms = 2000
 [runtime.profiles.nomo-history-events-work.model.retry]
 attempts = 1

@@ -1,5 +1,7 @@
 module nomo.session.check_output;
 
+import nomo.core.large_context.{message_frame_bytes};
+
 import nomo.session.cas_rows.{Target, commit_native};
 
 import std.memory.{get_entry, Missing};
@@ -26,7 +28,7 @@ flow check_binding(slot: string, id: string, digest: string) -> string {
 }
 
 public flow save(value: Record) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
-    if value.format != 1 || len(value.stdout) > 16384 || len(value.stderr) > 16384 { return Err("invalid check output"); }
+    if value.format != 1 || len(value.stdout) > message_frame_bytes() || len(value.stderr) > message_frame_bytes() { return Err("invalid check output"); }
     let problem = check_binding(value.slot, value.id, value.digest); if problem != "" { return Err(problem); }
     if get_entry(Outputs.Rows, value.slot) != None() { return Err("check output already recorded"); }
     match commit_native<Record>(Outputs.Rows, Target { store = ["Rows"], region = "nomo-check-output-v1", key = value.slot, label = "check output" }, value, Missing) { Ok(_) => Ok(true), Err(error) => Err(error) }
@@ -39,7 +41,7 @@ public flow load(slot: string, id: string, digest: string) -> Result<Option<Reco
         None() => { return Ok(None()); }
         Some(entry) => {
             let value = entry.value;
-            if value.format != 1 || value.slot != slot || value.id != id || value.digest != digest || len(value.stdout) > 16384 || len(value.stderr) > 16384 {
+            if value.format != 1 || value.slot != slot || value.id != id || value.digest != digest || len(value.stdout) > message_frame_bytes() || len(value.stderr) > message_frame_bytes() {
                 return Err("check output record differs");
             }
             if get_entry(Outputs.Rows, slot) != saved { return Err("check output changed during read"); }

@@ -61,7 +61,7 @@ public flow help(args: Array<string>) -> i32 {
     println("--cap has ten canonical decimal counters: steps,calls,generation,native_tokens,read_tools,scan,edit_reads,edit_read_bytes,atomic,atomic_bytes.");
     println("Default/current hard maximum:13,7,47104,196608,1,4096,3,6144,1,2048; any smaller dimension refuses a whole turn before admission/work.");
     println("Declared two-turn lifetime:26,14,94208,393216,2,8192,6,12288,2,4096. These are configured allowances, not measured Provider usage.");
-    println("Requests are1..128 printable ASCII characters; read paths1..2 at most48 characters each; edit path at most128 characters/eight components; edit text at most2048 UTF-8 bytes.");
+    println("Requests are1..65536 printable ASCII characters; read paths1..2 at most48 characters each; edit path at most128 characters/eight components; edit text at most1048576 UTF-8 bytes.");
     println("Show uses captured application/journal facts only and never checks the current File. An admitted row may already have an intent/completed journal without a work snapshot.");
     println("Optional user-context-new reads explicitly allowed files from --read-root ABSOLUTE_DIRECTORY and edits only the prepared demo/value.txt. It is single-turn and cannot resume or continue.");
     println("Example: local-tryout.sh user-context-new DIRECTORY --read-root ABSOLUTE_DIRECTORY --id ID --workspace BIND --path demo/value.txt --once REQUEST --allow FILE[,FILE].");

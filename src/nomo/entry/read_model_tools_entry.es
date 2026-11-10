@@ -11,7 +11,7 @@ import nomo.harness.read_model_tools.refused;
 
 flow help() -> unit {
     println("Nomo model/tool harness: new --once TEXT --allow FILE[,FILE...] (either flag order).");
-    println("Raw request/task 1..128, child 1..256, final 1..512 safe UTF-8 bytes; 1..4 paths of <=128 UTF-8 bytes, raw allowlist <=195 bytes.");
+    println("Raw request/task 1..65536, child 1..1048576, final 1..1048576 safe UTF-8 bytes; 1..4 paths of <=128 UTF-8 bytes, raw allowlist <=195 bytes.");
     println("Shared maximum: 7 steps / 4 model calls / 8192 token allowance / 1 read-or-search / 16384 scan allowance; not measured usage.");
     println("Complete model context <=2048. Read size checked after reading. One fresh serial child; no writes, commands, resume, line mode or persistence. Host aborts may leave reservations unresolved.");
 }

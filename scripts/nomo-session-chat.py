@@ -2,6 +2,7 @@
 """A terminal loop over an existing ID-addressed session."""
 import argparse
 import importlib.util
+import json
 import os
 import re
 import secrets
@@ -20,7 +21,7 @@ spec.loader.exec_module(edit)
 
 # A producer that leaves stdin open must not keep a one-shot run waiting forever.
 PIPE_INPUT_TIMEOUT = 2.0
-PIPE_PAYLOAD_BYTES = 512
+PIPE_PAYLOAD_BYTES = edit.REQUEST_BYTES
 
 
 def piped_question(stream):
@@ -37,7 +38,7 @@ def piped_question(stream):
             break
         data.extend(chunk)
         if len(data) > PIPE_PAYLOAD_BYTES + 2:
-            raise ValueError('piped question exceeds 512 UTF-8 bytes')
+            raise ValueError('piped question exceeds 65536 UTF-8 bytes')
     if data.endswith(b'\n'):
         del data[-1:]
         if data.endswith(b'\r'):
@@ -92,10 +93,10 @@ class NaturalObserver(StartIdObserver):
             try: decoded = line.decode('utf-8', 'strict').rstrip('\r'); fields = decoded.split(' ', 3)
             except UnicodeDecodeError: continue
             if decoded.startswith('FINAL '): self.final = decoded[6:]
-            if decoded.startswith('NATURAL CHECK '):
+            if decoded.startswith(('NATURAL CHECK ', 'NATURAL CHECK_JSON ')):
                 try:
-                    command = shlex.split(decoded[len('NATURAL CHECK '):])
-                    if self.check is not None or not 1 <= len(command) <= 16 or not command[0] or sum(len(arg.encode('utf-8')) for arg in command) > 512 or any(not all(c.isprintable() for c in arg) for arg in command): raise ValueError('invalid check proposal')
+                    command = json.loads(decoded[len('NATURAL CHECK_JSON '):]) if decoded.startswith('NATURAL CHECK_JSON ') else shlex.split(decoded[len('NATURAL CHECK '):])
+                    if self.check is not None or not isinstance(command, list) or not 1 <= len(command) <= 64 or not all(isinstance(arg, str) for arg in command) or not command[0] or sum(len(arg.encode('utf-8')) for arg in command) > edit.REQUEST_BYTES or any(not all(c.isprintable() or c in '\r\n\t' for c in arg) for arg in command): raise ValueError('invalid check proposal')
                     self.check = command
                 except (ValueError, UnicodeEncodeError): self.check_invalid = True
             if len(fields)==4 and fields[0]=='NATURAL' and fields[1] in ('WORK','WORK_CHECK','WORK_MORE','WORK_MORE_CHECK') and fields[2] in ('work','followup') and (edit.safe_path(fields[3]) and (fields[3] in self.allowed or '*' in self.allowed)):
@@ -113,7 +114,7 @@ def show_resume(args, *, show_id):
     if args.events_policy_dir is None:
         print('Read turns and bounded work use this session; each edit requires fresh confirmations.', flush=True)
     else:
-        print('Event recording supports successive work operations, each with an optional check and fresh approval. Normal work reserves 7 calls, 286720 output tokens and 2811008 configured native tokens; persisted high-input work reserves 7 calls, 188416 output tokens and a 6000000 configured native-token run ledger while retaining recovered conversation. Both allow 262148 read/search bytes and three edit reads of up to 262144 bytes each; configured allowances are not measured provider usage.', flush=True)
+        show_work_limits()
     policy = '' if args.events_policy_dir is None else ' --events-policy-dir ' + shlex.quote(args.events_policy_dir)
     print('Resume: nomo-read.sh session-id resume --sessions-dir ' + shlex.quote(args.sessions_dir)
           + ' --id ' + shlex.quote(args.id) + ' --root DIR --allow FILE' + policy + ' --once QUESTION', flush=True)
@@ -183,7 +184,7 @@ def recovery_ready(code, signals, proof, closed):
 
 def offer_recovery(args, operation_id, action):
     print('The stopped edit or check may have had effects. Inspect the workspace before continuing; saved records and budgets remain.' if action != 'check' else 'The stopped check may have changed the workspace; its outcome may not be recorded. Inspect it before continuing. The command will not be repeated.', flush=True)
-    try: answer = input('Continue this session? [y/N] ' if action == 'check' else 'Abandon this stopped operation and continue this session? [y/N] ').strip().lower()
+    try: answer = edit.terminal_input('Continue this session? [y/N] ' if action == 'check' else 'Abandon this stopped operation and continue this session? [y/N] ').strip().lower()
     except (EOFError, KeyboardInterrupt): return False
     if answer not in ('y', 'yes'): return False
     try: return action == 'check' or abandon_stopped_work(args, operation_id, action) == 0
@@ -228,7 +229,7 @@ def work_command(args, action, root, operation_id, path, task, check):
 def show_discovery(mode):
     print('Discovery uses pages of 256 files, up to eight automatic pages, seven directory levels and 512 directories; each directory is limited to 1024 entries and 131072 name bytes. Unsupported paths and file types are excluded; .gitignore is not interpreted.', flush=True)
     if mode == 'high-input':
-        print('Each automatic page uses another bounded high-input chat turn: up to 6 calls and 81920 output tokens. Page contents may change between turns.', flush=True)
+        print('Each automatic page uses another bounded high-input chat turn: up to 6 calls and 786432 output tokens. Page contents may change between turns.', flush=True)
     elif mode == 'default':
         print('Each automatic page uses another bounded chat turn: up to 6 calls and 405504 output tokens for this new event session. Page contents may change between turns.', flush=True)
     else:
@@ -236,6 +237,10 @@ def show_discovery(mode):
     print('Excluded: .git/.hg/.svn/.bzr, dependency and build directories, .venv/.tox/.cache/.mypy_cache/.pytest_cache, .ssh/.aws/.gnupg/.netrc, and .env files except .env.example/.env.sample.', flush=True)
     print('Dotfiles and project configuration in scope may be sent to the model.', flush=True)
     print('A link outside the selected workspace stops discovery; choose a narrower root.', flush=True)
+
+
+def show_work_limits():
+    print('Event recording supports successive work operations, each with an optional check and fresh approval. Normal work reserves 7 calls, 286720 output tokens and 2811008 configured native tokens; persisted high-input work reserves 7 calls, 917504 output tokens and a 7340032 configured native-token run ledger while retaining recovered conversation. Each high-input call may generate up to 131072 tokens, including reasoning. Both modes allow one read/search up to 1048580 bytes and three edit reads of up to 1048576 bytes each; configured allowances are not measured provider usage.', flush=True)
 
 
 def main(argv=None):
@@ -250,7 +255,7 @@ def main(argv=None):
     files.add_argument('--discover', action='store_true')
     parser.add_argument('--page', type=int, default=0, choices=range(8), help='discovery page, 0..7')
     parser.add_argument('--events-policy-dir')
-    parser.add_argument('--high-input', action='store_true', help='new event session only: reserve 8192 output tokens per parent call so more of the shared provider context window remains available to input')
+    parser.add_argument('--high-input', action='store_true', help='new event session only: retain history and reserve 131072 output tokens per model call')
     parser.add_argument('--once', help='run exactly one read-only turn')
     parser.add_argument('--check', nargs=argparse.REMAINDER, help='optional command after each natural-language edit')
     args = parser.parse_args(argv)
@@ -275,7 +280,7 @@ def main(argv=None):
     budget_mode = 'high-input' if args.high_input else 'default' if args.new else 'persisted'
     if args.discover: show_discovery(budget_mode)
     if budget_mode == 'high-input':
-        print('High-input mode is persisted for this new session. A read turn reserves up to 6 calls and 81920 output tokens: up to 3 child action calls and one child final at 16384 each, plus 2 parent calls at 8192 each; at most 3786432 configured native tokens in total. Provider input and output share its context window; actual input and usage are unknown.', flush=True)
+        print('High-input mode is persisted for this new session. A read turn reserves up to 6 calls and 786432 output tokens, with 131072 for every model call including reasoning; at most 6291456 configured native tokens in total. Provider input and output share its context window; actual input and usage are unknown.', flush=True)
     elif budget_mode == 'default':
         print('A read turn in a new event session may reserve up to 6 calls and 405504 output tokens: up to 3 child action calls at 4096 each, one child final and 2 parent calls at 131072 each; at most 3786432 configured native tokens in total; up to 3 read/search operations reserve 4 MiB plus 256 probe bytes each. Older sessions retain their original allowance.', flush=True)
     else:
@@ -286,18 +291,24 @@ def main(argv=None):
     else:
         print('New session: the first question starts a read turn.', flush=True)
         if args.events_policy_dir is not None:
-            print('Event recording supports successive work operations, each with an optional check and fresh approval. Normal work reserves 7 calls, 286720 output tokens and 2811008 configured native tokens; persisted high-input work reserves 7 calls, 188416 output tokens and a 6000000 configured native-token run ledger while retaining recovered conversation. Both allow 262148 read/search bytes and three edit reads of up to 262144 bytes each; configured allowances are not measured provider usage.', flush=True)
+            show_work_limits()
         else:
             print('Work requires a completed first turn.', flush=True)
     if tty and args.once is None:
         saved = '/events' if args.events_policy_dir is not None else '/outputs'
         print('Enter a question or an edit request, /help, /status, ' + saved + ', /check, /work, /followup, /scope, /allow FILES, /discover [N], /page N or /exit.', flush=True)
+    pending_review = None
+    active_request = ''
+    review_count = 0
     while True:
-        if args.once is not None:
+        automatic = pending_review is not None
+        if automatic:
+            question, pending_review = pending_review, None
+        elif args.once is not None:
             question = args.once
         else:
             try:
-                question = input('nomo> ')
+                question = edit.terminal_input('nomo> ')
             except EOFError:
                 print()
                 return 0
@@ -407,8 +418,11 @@ def main(argv=None):
                     show_status_hint(args, args.id)
                     return code
                 continue
+        if not automatic:
+            active_request = question
+            review_count = 0
         if not edit.safe_read_question(question):
-            print('REFUSED question requires 1..512 safe UTF-8 bytes and non-empty text.', file=sys.stderr)
+            print('REFUSED question requires 1..65536 safe UTF-8 bytes and non-empty text.', file=sys.stderr)
             if args.once is not None:
                 return 64
             continue
@@ -433,7 +447,7 @@ def main(argv=None):
             else:
                 extra_read = True
                 print('The agent is gathering more evidence using one additional chat turn (' +
-                      ('up to 6 calls and 81920 output tokens in this new high-input session' if args.high_input else
+                      ('up to 6 calls and 786432 output tokens in this new high-input session' if args.high_input else
                        'the same persisted limits as this session' if not starting else
                        'up to 6 calls and 405504 output tokens in this new event session') + ').', flush=True)
             code, observer = chat_turn(args, question, False, natural, tty)
@@ -461,7 +475,8 @@ def main(argv=None):
                 return code
             edits_left -= 1; requested_check = requested_check or observer.work_marker in ('WORK_CHECK', 'WORK_MORE_CHECK')
             if args.check and args.events_policy_dir is not None:
-                print('Check recorded. The deterministic outcome above is authoritative and available to resumed turns; no model summary was started and the command will not run again.', flush=True)
+                print('Check recorded. Reviewing its result against the original request.', flush=True)
+                pending_review = 'AUTO-CONTINUATION: Review the latest recorded edit and check against this original user request: ' + active_request + ' If the check failed, select the file needing repair with EDIT_CHECK; otherwise report completion or identify an unmet requirement using current evidence. Do not repeat a passed check.'
             if observer.work_marker in ('WORK_MORE', 'WORK_MORE_CHECK'):
                 if not edits_left or args.events_policy_dir is None:
                     print('Further requested edits remain; automatic continuation stopped. Review the session and ask for the next file.', flush=True); break
@@ -497,7 +512,7 @@ def main(argv=None):
                 print('REFUSED proposed checks require event recording; use /check to run a selected command.', file=sys.stderr, flush=True)
                 continue
             print('Proposed check: ' + shlex.join(observer.check) + '\nRuns offline in the selected workspace and may modify its files. Filtered output is saved and may be sent to the model.', flush=True)
-            try: approval = input('Run this exact command? [y/N] ').strip().lower()
+            try: approval = edit.terminal_input('Run this exact command? [y/N] ').strip().lower()
             except EOFError: approval = ''
             except KeyboardInterrupt: print('\nCheck cancelled.', file=sys.stderr, flush=True); return 130
             if approval not in ('y', 'yes'):
