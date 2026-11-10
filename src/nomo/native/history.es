@@ -1,12 +1,13 @@
 module nomo.native.history;
 
 import std.memory.{get_entry, MemoryEntry, MemoryCursor};
-import std.text.{from_i64, from_usize, char_count, get_char_slice};
+import std.text.{from_i64, from_usize, char_count, get_char_slice, split_once, strip_prefix, parse_i64};
 import nomo.core.json.encode;
 
 public effect SessionContext { action current() -> string; }
 
 public type ChatMessage = { id: string, role: string, name: string, text: string };
+public type PendingRequest = { call: i64, name: string, complete: bool };
 public type Ledger = { turns: i64, compactions: i64, tools: i64, generation_allowance: i64, context_bytes: usize };
 public type Session = { id: string, workspace: string, title: string, next_event: i64,
     first_user: i64, summary_event: i64, summary_through: i64, pending: string, ledger: Ledger };
@@ -165,13 +166,42 @@ public flow record<T>(role: string, name: string, value: T, call: i64) -> i64
 
 public flow tool_finished<T>(name: string, call: i64, result: T) -> unit
     ![SessionContext, Memory, Error<StorageError>, Error<MemoryConflict>] {
-    record("tool", name, result, call);
     let id = perform SessionContext.current();
+    let current = entry(id).value;
+    if current.pending != key(id, call) + " " + name { abort("native completion does not match the pending request"); }
+    if !result_published(id, call, name) { record("tool", name, result, call); }
     let before = entry(id);
     let value = before.value;
-    if value.pending != key(id, call) + " " + name { abort("native completion does not match the pending request"); }
     Data.Sessions.put_versioned(id, copy(value, value.next_event, value.first_user, value.summary_event,
         value.summary_through, "", value.ledger, value.title), before.version);
+}
+
+public flow result_published(id: string, call: i64, name: string) -> bool ![Memory, Error<StorageError>] {
+    let current = entry(id).value;
+    var index = call + 1;
+    var published = false;
+    while index < current.next_event limit Iterations(2147483647) {
+        match Data.Events.get(key(id, index)) {
+            Some(event) => { if event.complete && event.role == "tool" && event.name == name && event.call == call { published = true; break; } }
+            None() => {}
+        }
+        index = index + 1;
+    }
+    return published;
+}
+
+public flow pending_request(id: string) -> Option<PendingRequest> ![Memory, Error<StorageError>] {
+    let value = entry(id).value;
+    if value.pending == "" { return None(); }
+    let (reference, name) = match split_once(value.pending, " ") {
+        Some(parts) => parts, None() => { abort("invalid native pending reference"); }
+    };
+    let raw = match strip_prefix(reference, id + ":") {
+        Some(value) => value, None() => { abort("pending reference belongs to another conversation"); }
+    };
+    let call = match parse_i64(raw) { Ok(value) => value, Err(_) => { abort("invalid pending event index"); } };
+    let complete = match Data.Events.get(key(id, call)) { Some(event) => event.complete, None() => false };
+    return Some(PendingRequest { call = call, name = name, complete = complete });
 }
 
 public flow observe_started<T>(name: string, request: T) -> i64

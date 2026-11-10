@@ -6,14 +6,17 @@ import std.io.{println, IOError as ConsoleError};
 import std.text.{split, rsplit_once, from_i64, from_usize, count, replace_n};
 import std.memory.MemoryCursor;
 import std.effects.Fs;
+import std.json.parse;
+import std.agent.message.Message;
 import nomo.core.json.encode;
 import nomo.native.workspace.{ProjectRoot, execute_step};
 import nomo.native.file_io.read_text;
-import nomo.native.history.{SessionContext, NativeHistory, ConversationStore, record, tool_finished, observe_started, observe_finished};
+import nomo.native.history.{SessionContext, NativeHistory, ConversationStore, record, tool_finished, observe_started, observe_finished, pending_request, message, result_published};
 
 /// create/write/edit/mkdir/delete/move. edit uses target as a unique literal;
 /// move uses target as the destination. Unused target/text fields are empty.
 public type Change = { operation: string, path: string, target: string, text: string };
+type PlanRequest = { format: string, changes: Array<Change> };
 public type ChangeOutcome = { edit: string, status: string, completed: i64, message: string };
 public type Journal = { id: string, session: string, name: string, call: i64, phase: string, steps: i64, message: string, owner_call: i64, owner_name: string };
 type SavedPath = { path: string, before_exists: bool, before: string, after_exists: bool, after: string };
@@ -170,7 +173,7 @@ flow outcome(value: Journal, status: string) -> ChangeOutcome {
 public flow apply_plan(name: string, changes: Array<Change>) -> ChangeOutcome
     ![SessionContext, Memory, Console, Command.run<DefaultCommandSandbox>, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Fs.atomic_replace<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>, Error<ConsoleError>] {
     let session = perform SessionContext.current();
-    let call = record("tool_call", name, changes, -1);
+    let call = record("tool_call", name, PlanRequest { format = "nomo-native-file-plan-1", changes = changes }, -1);
     let id = session + "-" + from_i64(call);
     let value = Journal { id = id, session = session, name = name, call = call, phase = "preparing", steps = 0, message = "", owner_call = call, owner_name = name };
     Data.Journals.insert(id, value);
@@ -330,5 +333,63 @@ public tool list_changes() -> Array<Journal>
     let call = observe_started("list_changes", "");
     let result = journals();
     observe_finished("list_changes", call, result);
+    return result;
+}
+
+/// Reconcile a completed journal/result after interruption without executing any project operation. Unfinished changes still require explicit rollback.
+public tool reconcile_changes(edit: string) -> ChangeOutcome
+    ![SessionContext, Memory, Error<StorageError>, Error<MemoryConflict>] {
+    let session = perform SessionContext.current();
+    let pending = match pending_request(session) {
+        Some(value) => value,
+        None() => { return ChangeOutcome { edit = edit, status = "no_pending_request", completed = 0, message = "No pending operation needs reconciliation." }; }
+    };
+    let source = match Data.Journals.get(edit) {
+        Some(value) => value,
+        None() => {
+            let expected = session + "-" + from_i64(pending.call);
+            let file_request = pending.name == "apply_changes" || pending.name == "create_file" || pending.name == "write_file"
+                || pending.name == "make_directory" || pending.name == "delete_path" || pending.name == "move_path"
+                || pending.name == "replace_file" || pending.name == "edit_file";
+            if edit != expected { abort("edit ID does not match the pending request"); }
+            if result_published(session, pending.call, pending.name) {
+                let result = ChangeOutcome { edit = edit, status = "recorded_result_retained", completed = 0, message = "The existing complete result was retained; no project operation was replayed." };
+                record("recovery", "reconcile_changes", result, pending.call);
+                tool_finished(pending.name, pending.call, result);
+                return result;
+            }
+            var undispatched = !pending.complete;
+            if pending.complete && file_request {
+                let body = match parse(message(session, pending.call).text) { Ok(value) => value, Err(_) => { abort("pending request is not JSON"); } };
+                let converted: Option<Message<PlanRequest>> = Message.new(body).cast<PlanRequest>();
+                undispatched = match converted { Some(value) => value.body.format == "nomo-native-file-plan-1", None() => false };
+            }
+            if !undispatched {
+                return ChangeOutcome { edit = edit, status = "recovery_required", completed = 0, message = "An older or unjournalled operation has no recorded outcome. Inspect actual state; execution is not inferred and the request remains pending." };
+            }
+            // Versioned file plans insert their journal before dispatch. Older
+            // unversioned records do not establish this invariant.
+            let result = ChangeOutcome { edit = edit, status = "not_dispatched", completed = 0, message = "Request preparation stopped before project dispatch; no operation was replayed." };
+            record("recovery", "reconcile_changes", result, pending.call);
+            tool_finished(pending.name, pending.call, result);
+            return result;
+        }
+    };
+    if source.session != session { abort("edit belongs to another conversation"); }
+    if source.phase == "applied" && pending.name == "undo_changes" && pending.complete
+        && message(session, pending.call).text == text(source.id) && source.owner_call != pending.call {
+        let result = ChangeOutcome { edit = edit, status = "undo_not_started", completed = source.steps, message = "Undo stopped before claiming the journal; the recorded edit remains applied." };
+        record("recovery", "reconcile_changes", result, pending.call);
+        tool_finished(pending.name, pending.call, result);
+        return result;
+    }
+    if source.owner_call != pending.call || source.owner_name != pending.name { abort("journal does not own the pending request"); }
+    if source.phase != "applied" && source.phase != "undone" && source.phase != "rolled_back" {
+        return ChangeOutcome { edit = edit, status = "recovery_required", completed = outcome(source, source.phase).completed,
+            message = "The journal is unfinished. Inspect the actual state, then explicitly roll back; no forward operation was replayed." };
+    }
+    let result = outcome(source, source.phase);
+    record("recovery", "reconcile_changes", result, pending.call);
+    tool_finished(pending.name, pending.call, result);
     return result;
 }

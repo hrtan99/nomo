@@ -11,7 +11,7 @@ import nomo.native.options.parse;
 import nomo.native.history.{SessionContext, NativeHistory, ConversationStore, Session, reserve_generation, rename, message, fork};
 import nomo.native.context.{RollingContext, ContextProjection, compact};
 import nomo.native.transfer.{save_archive, load_archive};
-import nomo.native.mutations.{journals, undo_changes, rollback_changes};
+import nomo.native.mutations.{journals, undo_changes, rollback_changes, reconcile_changes};
 import nomo.native.files.read_file;
 
 flow show(value: Session) -> unit {
@@ -69,7 +69,7 @@ flow edit_command(session: string, operation: string, id: string) -> unit {
             }
         }
         else {
-            let result = if operation == "undo" { undo_changes(id) } else { rollback_changes(id) };
+            let result = match operation { "undo" => undo_changes(id), "reconcile" => reconcile_changes(id), _ => rollback_changes(id) };
             let json = match encode(result, "edit result conversion failed", "edit result encoding failed") { Ok(value) => value, Err(error) => { abort(error); } };
             println("[EDIT   ] " + json);
         }
@@ -109,7 +109,7 @@ public flow run(args: Array<string>) -> i32
         if request == "" { continue; }
         if request == "/help" {
             println("Ask about the project; native tools provide directory listing, metadata, literal search, file reads, approved editing and Git operations.");
-            println("/new [TITLE], /sessions, /resume ID, /rename TITLE, /history [TEXT], /page EVENT, /fork [EVENT], /export FILE, /import FILE, /compact, /status, /read FILE, /edits, /undo [EDIT], /rollback EDIT, /quit");
+            println("/new [TITLE], /sessions, /resume ID, /rename TITLE, /history [TEXT], /page EVENT, /fork [EVENT], /export FILE, /import FILE, /compact, /status, /read FILE, /edits, /undo [EDIT], /rollback EDIT, /recover EDIT, /quit");
             continue;
         }
         if request == "/history" || request == "/events" { show_history(selected.id, "", 0, -1); continue; }
@@ -124,6 +124,7 @@ public flow run(args: Array<string>) -> i32
             Some(index) => { selected = fork(selected.id, event_index(index)); show(selected); continue; } None() => {}
         }
         match strip_prefix(request, "/read ") { Some(pathname) => { edit_command(selected.id, "read", trim(pathname)); continue; } None() => {} }
+        match strip_prefix(request, "/recover ") { Some(id) => { edit_command(selected.id, "reconcile", trim(id)); continue; } None() => {} }
         if request == "/edits" { edit_command(selected.id, "list", ""); continue; }
         if request == "/undo" { edit_command(selected.id, "undo", ""); continue; }
         match strip_prefix(request, "/undo ") { Some(id) => { edit_command(selected.id, "undo", trim(id)); continue; } None() => {} }

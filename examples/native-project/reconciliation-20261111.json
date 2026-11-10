@@ -1,0 +1,37 @@
+{
+  "date": "2026-11-11",
+  "compiler_config": "config/etas-latest-main.json",
+  "compiler_config_sha256": "9bfa9bd247fc148d05a5e6403947eadc76d78b8288a50c5425b799e2f7512024",
+  "scope": "Result publication and pending-slot finalization; no model or project mutation",
+  "receipt": {
+    "status": "passed",
+    "evidence_directory": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-receipt-61q912pq",
+    "seed_stdout_sha256": "f50bd75cd905df0fa2067b1dbb58b7a9c79a67b353f67f9233266ba364332bc9",
+    "settle_stdout_sha256": "e0f8e7b14c5c82aadc27f2daa8a5c617ffb19e3644c37e11cdf453481dc1b3d6",
+    "history_source_sha256": "da9fffcbf5bba16542585cf13e8d132b9952f1e063e9024b8c53c3c57d5eaf4e",
+    "assertions": [
+      "First Etas process persisted a complete result while retaining pending",
+      "New Etas process settled the pending slot through production tool_finished",
+      "Original result remained unchanged and no duplicate event was added"
+    ]
+  },
+  "existing_state": {
+    "status": "passed",
+    "evidence_directory": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-persist-xaaldn9p",
+    "stdout": "reconcile-compat-stdout.txt",
+    "stdout_sha256": "6973a49bb5140e115165d16a7a3a7169ca085dd3acf6dcf5197365130b3ac62d",
+    "trace": "native/reconcile-compat-trace.json",
+    "trace_sha256": "c91298e2ba9e8388d96f88afceb6d1264c8fe442beb30953db9a6d60f97c381e",
+    "assertions": [
+      "Full product compiled and reopened the earlier native SQLite schema",
+      "Existing applied journal, conversation and ledger were retained",
+      "No-pending reconciliation returned without any project dispatch"
+    ]
+  },
+  "limitations": [
+    "This does not establish every interruption window or full lifecycle acceptance",
+    "Unfinished file journals still require explicit rollback",
+    "Unversioned complete requests without a journal retain unknown outcome",
+    "Native command approval provenance still depends on etas-interpreter#102"
+  ]
+}
