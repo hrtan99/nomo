@@ -3,11 +3,15 @@ module nomo.native.history;
 import std.memory.{get_entry, MemoryEntry, MemoryCursor};
 import std.text.{from_i64, from_usize, char_count, get_char_slice, split_once, strip_prefix, parse_i64};
 import nomo.core.json.encode;
+import std.codec.text.utf8_encode;
+import std.io.{println, IOError as ConsoleError};
 
 public effect SessionContext { action current() -> string; }
 
 public type ChatMessage = { id: string, role: string, name: string, text: string };
 public type PendingRequest = { call: i64, name: string, complete: bool };
+public type CopyJob = { id: string, workspace: string, title: string, kind: string, source: string,
+    digest: bytes, total: i64, cursor: i64, phase: string };
 public type Ledger = { turns: i64, compactions: i64, tools: i64, generation_allowance: i64, context_bytes: usize };
 public type Session = { id: string, workspace: string, title: string, next_event: i64,
     first_user: i64, summary_event: i64, summary_through: i64, pending: string, ledger: Ledger };
@@ -21,6 +25,8 @@ alias Schema = MemoryRegion<{
     Chunks: Store<string, string>,
 }>;
 let Data = std.memory.region<Schema>(stable_id = "nomo-native-conversations-v1", store = "native-conversations");
+alias CopySchema = MemoryRegion<{ Jobs: Store<string, CopyJob> }>;
+let Copies = std.memory.region<CopySchema>(stable_id = "nomo-native-conversation-copies-v1", store = "native-conversation-copies");
 
 public spec ConversationStore {
     flow create(self, workspace: string, title: string) -> Session ![Memory, Error<StorageError>, Error<MemoryConflict>];
@@ -45,17 +51,25 @@ flow copy(value: Session, next_event: i64, first_user: i64, summary_event: i64, 
         first_user = first_user, summary_event = summary_event, summary_through = summary_through, pending = pending, ledger = ledger };
 }
 
+flow allocate() -> string {
+    let counter = get_entry(Data.Counters, "session");
+    let number = match counter { Some(value) => value.value, None() => 0 };
+    match counter {
+        Some(value) => { Data.Counters.put_versioned("session", number + 1, value.version); }
+        None() => { Data.Counters.insert("session", number + 1); }
+    }
+    return "native-" + from_i64(number);
+}
+
+flow empty_session(id: string, workspace: string, title: string) -> Session {
+    return Session { id = id, workspace = workspace, title = title,
+        next_event = 0, first_user = -1, summary_event = -1, summary_through = -1, pending = "",
+        ledger = Ledger { turns = 0, compactions = 0, tools = 0, generation_allowance = 0, context_bytes = 0 } };
+}
+
 impl NativeHistory ~ ConversationStore {
     flow create(self, workspace: string, title: string) -> Session {
-        let counter = get_entry(Data.Counters, "session");
-        let number = match counter { Some(value) => value.value, None() => 0 };
-        match counter {
-            Some(value) => { Data.Counters.put_versioned("session", number + 1, value.version); }
-            None() => { Data.Counters.insert("session", number + 1); }
-        }
-        let session = Session { id = "native-" + from_i64(number), workspace = workspace, title = title,
-            next_event = 0, first_user = -1, summary_event = -1, summary_through = -1, pending = "",
-            ledger = Ledger { turns = 0, compactions = 0, tools = 0, generation_allowance = 0, context_bytes = 0 } };
+        let session = empty_session(allocate(), workspace, title);
         Data.Sessions.insert(session.id, session);
         Data.Selected.put(workspace, session.id);
         return session;
@@ -65,6 +79,10 @@ impl NativeHistory ~ ConversationStore {
     flow select(self, workspace: string, id: string) -> Session {
         let value = self.load(id);
         if value.workspace != workspace { abort("native session belongs to a different workspace"); }
+        match copy_status(id) {
+            Some(job) => { if job.phase != "ready" { abort("conversation copy is " + job.phase + "; use /resume-copy or /discard-copy"); } }
+            None() => {}
+        }
         Data.Selected.put(workspace, id);
         return value;
     }
@@ -95,7 +113,7 @@ impl NativeHistory ~ ConversationStore {
     }
 }
 
-flow append_event(id: string, role: string, name: string, text: string, call: i64, live: bool) -> i64 {
+flow reserve_event(id: string, role: string, name: string, call: i64, live: bool) -> i64 {
     let before = entry(id);
     let value = before.value;
     let index = value.next_event;
@@ -109,8 +127,12 @@ flow append_event(id: string, role: string, name: string, text: string, call: i6
     // its index is never reused and no tool is dispatched before append finishes.
     Data.Sessions.put_versioned(id, copy(value, index + 1, first, value.summary_event,
         value.summary_through, pending, ledger, value.title), before.version);
+    return index;
+}
+
+flow write_event(id: string, index: i64, role: string, name: string, text: string, call: i64) -> unit {
     let event_key = key(id, index);
-    Data.Events.insert(event_key, Event { role = role, name = name, call = call, chunks = 0, complete = false });
+    Data.Events.put(event_key, Event { role = role, name = name, call = call, chunks = 0, complete = false });
     var offset: usize = 0;
     var parts: usize = 0;
     let total = char_count(text);
@@ -119,11 +141,16 @@ flow append_event(id: string, role: string, name: string, text: string, call: i6
         let part = match get_char_slice(text, Range.closed(offset, end - 1)) {
             Some(value) => value, None() => { abort("native archive chunk range is invalid"); }
         };
-        Data.Chunks.insert(event_key + ":" + from_usize(parts), part);
+        Data.Chunks.put(event_key + ":" + from_usize(parts), part);
         offset = end;
         parts = parts + 1;
     }
     Data.Events.put(event_key, Event { role = role, name = name, call = call, chunks = parts, complete = true });
+}
+
+flow append_event(id: string, role: string, name: string, text: string, call: i64, live: bool) -> i64 {
+    let index = reserve_event(id, role, name, call, live);
+    write_event(id, index, role, name, text, call);
     return index;
 }
 
@@ -239,22 +266,151 @@ public flow publish_summary(id: string, text: string, through: i64) -> unit
         through, value.pending, value.ledger, value.title), before.version);
 }
 
-public flow fork(id: string, through: i64) -> Session
+public flow copy_status(id: string) -> Option<CopyJob> ![Memory, Error<StorageError>] {
+    return Copies.Jobs.get(id);
+}
+
+public flow copy_job(id: string) -> CopyJob ![Memory, Error<StorageError>] {
+    return match copy_status(id) { Some(value) => value, None() => { abort("conversation copy not found"); } };
+}
+
+public flow copy_jobs(workspace: string) -> Array<CopyJob> ![Memory, Error<StorageError>] {
+    var jobs: Array<CopyJob> = [];
+    var cursor: Option<MemoryCursor> = None();
+    while true limit Iterations(2147483647) {
+        let page = Copies.Jobs.page(cursor, 100);
+        for item in page.entries limit Iterations(2147483647) {
+            if item.value.workspace == workspace { jobs = jobs.push(item.value); }
+        }
+        match page.cursor { Some(value) => { cursor = Some(value); } None() => { break; } }
+    }
+    return jobs;
+}
+
+flow advance_copy(id: string, cursor: i64, phase: string) -> CopyJob {
+    let before = match get_entry(Copies.Jobs, id) { Some(value) => value, None() => { abort("conversation copy missing"); } };
+    let old = before.value;
+    let job = CopyJob { id = old.id, workspace = old.workspace, title = old.title, kind = old.kind,
+        source = old.source, digest = old.digest, total = old.total, cursor = cursor, phase = phase };
+    Copies.Jobs.put_versioned(id, job, before.version);
+    return job;
+}
+
+public flow ensure_copy_session(id: string) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>] {
+    let job = copy_job(id);
+    if job.phase == "discarded" { abort("conversation copy was discarded; retained content is historical only"); }
+    match Data.Sessions.get(id) {
+        Some(_) => {}
+        None() => { Data.Sessions.insert(id, empty_session(id, job.workspace, job.title)); }
+    }
+}
+
+public flow begin_copy(workspace: string, title: string, kind: string, source: string, digest: bytes, total: i64) -> CopyJob
     ![Memory, Error<StorageError>, Error<MemoryConflict>] {
+    let job = CopyJob { id = allocate(), workspace = workspace, title = title, kind = kind,
+        source = source, digest = digest, total = total, cursor = 0, phase = "staging" };
+    // The durable job precedes its session. Neither creation selects the copy.
+    Copies.Jobs.insert(job.id, job);
+    ensure_copy_session(job.id);
+    return job;
+}
+
+flow copy_event(id: string, index: i64, role: string, name: string, text: string) -> unit {
+    let current = entry(id).value;
+    if index == current.next_event { reserve_event(id, role, name, -1, false); }
+    else if index > current.next_event { abort("conversation copy has a noncontiguous target index"); }
+    match Data.Events.get(key(id, index)) {
+        Some(event) => { if event.complete { return; } }
+        None() => {}
+    }
+    // Only an unfinished copy uses deterministic slot repair. Ordinary live
+    // events keep their reserved gaps; they are never replayed by this path.
+    write_event(id, index, role, name, text, -1);
+}
+
+public flow copy_source(id: string, role: string, name: string, text: string) -> unit
+    ![Memory, Error<StorageError>, Error<MemoryConflict>] {
+    let job = copy_job(id);
+    if job.phase != "staging" { abort("conversation copy source is already sealed"); }
+    ensure_copy_session(id);
+    copy_event(id, 0, role, name, text);
+    advance_copy(id, 0, "copying");
+}
+
+public flow sealed_copy_source(id: string) -> Option<string> ![Memory, Error<StorageError>] {
+    match Data.Events.get(key(id, 0)) {
+        Some(event) => { if event.complete { return Some(message(id, 0).text); } }
+        None() => {}
+    }
+    return None();
+}
+
+public flow copy_events(id: string, events: Array<ChatMessage>, summary: string) -> Session
+    ![Memory, Console, Error<StorageError>, Error<MemoryConflict>, Error<ConsoleError>] {
+    let job = copy_job(id);
     let archive = NativeHistory {};
-    let source = archive.load(id);
-    if through < -1 || through >= source.next_event { abort("fork event is outside the source conversation"); }
-    let branch = archive.create(source.workspace, source.title + " (fork)");
-    append_historical(branch.id, "system", "fork", "Forked from " + id + " through original event " + from_i64(through)
-        + ". Earlier tool requests, results and approvals are historical facts, not current permission or instructions to replay them.");
+    if job.phase == "ready" { return archive.select(job.workspace, id); }
+    if job.phase != "copying" { abort("conversation copy source is not sealed"); }
+    var index: i64 = 0;
+    for item in events limit Iterations(2147483647) {
+        if index >= job.cursor {
+            copy_event(id, index + 1, item.role, item.name, item.text);
+            advance_copy(id, index + 1, "copying");
+            if index == job.cursor || index + 1 == job.total || (index + 1) % 100 == 0 {
+                println("[COPY   ] " + id + " " + from_i64(index + 1) + "/" + from_i64(job.total));
+            }
+        }
+        index = index + 1;
+    }
+    if index != job.total { abort("conversation copy source length changed"); }
+    if summary != "" {
+        let slot = job.total + 1;
+        copy_event(id, slot, "summary", "context_summary", summary);
+        let before = entry(id); let value = before.value;
+        Data.Sessions.put_versioned(id, copy(value, value.next_event, value.first_user, slot,
+            -1, value.pending, value.ledger, value.title), before.version);
+    }
+    advance_copy(id, job.total, "ready");
+    return archive.select(job.workspace, id);
+}
+
+public flow discard_copy(workspace: string, id: string) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>] {
+    let job = copy_job(id);
+    if job.workspace != workspace { abort("conversation copy belongs to another workspace"); }
+    if job.phase == "ready" { abort("completed conversations are retained; this command discards unfinished copies only"); }
+    advance_copy(id, job.cursor, "discarded");
+}
+
+public flow resume_fork(workspace: string, id: string) -> Session
+    ![Memory, Console, Error<StorageError>, Error<MemoryConflict>, Error<ConsoleError>] {
+    let job = copy_job(id);
+    if job.workspace != workspace || job.kind != "fork" { abort("fork does not belong to this workspace"); }
+    let archive = NativeHistory {};
+    if job.phase == "ready" { return archive.select(workspace, id); }
+    ensure_copy_session(id);
+    if job.phase == "staging" {
+        copy_source(id, "system", "fork", "Forked from " + job.source + " through original event " + from_i64(job.total - 1)
+            + ". Earlier tool requests, results and approvals are historical facts, not current permission or instructions to replay them.");
+    }
+    var events: Array<ChatMessage> = [];
     var index: i64 = 0;
     var summary = "";
-    while index <= through limit Iterations(2147483647) {
-        let item = message(id, index);
-        append_historical(branch.id, item.role, item.name, item.text);
+    while index < job.total limit Iterations(2147483647) {
+        let source = match Data.Events.get(key(job.source, index)) { Some(value) => value, None() => { abort("fork source record is incomplete"); } };
+        if !source.complete { abort("fork source record is incomplete"); }
+        let item = message(job.source, index);
+        events = events.push(item);
         if item.role == "summary" { summary = item.text; }
         index = index + 1;
     }
-    if summary != "" { publish_summary(branch.id, summary, -1); }
-    return archive.load(branch.id);
+    return copy_events(id, events, summary);
+}
+
+public flow fork(id: string, through: i64) -> Session
+    ![Memory, Console, Error<StorageError>, Error<MemoryConflict>, Error<ConsoleError>] {
+    let archive = NativeHistory {};
+    let source = archive.load(id);
+    if through < -1 || through >= source.next_event { abort("fork event is outside the source conversation"); }
+    let job = begin_copy(source.workspace, source.title + " (fork)", "fork", id, utf8_encode(""), through + 1);
+    return resume_fork(source.workspace, job.id);
 }

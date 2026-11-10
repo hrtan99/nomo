@@ -1,0 +1,176 @@
+{
+  "date": "2026-11-11",
+  "compiler_config": "config/etas-latest-main.json",
+  "compiler_config_sha256": "9bfa9bd247fc148d05a5e6403947eadc76d78b8288a50c5425b799e2f7512024",
+  "status": "passed_in_recorded_scopes",
+  "source_sha256": {
+    "src/nomo/native/history.es": "7d8f30452bb83ffcdff83487edf2c409423e37b1a5672b607e4ea1b4c6455350",
+    "src/nomo/native/transfer.es": "ce14707713e95e8051fe9130942203871badd87e49255d9114523cd28a87f5e4",
+    "src/nomo/native/entry.es": "13bc0ee80e66fb834dcd43b63e677e646f3e270a9bf4e048b958d594e76ce1cd",
+    "tests/native_copy_recovery_probe.py": "4e14c9beb55c129a85407478fdbced25ee5660a900949577afbe48ab5b720c80",
+    "tests/native_project_probe.py": "a4cc4111fe654e17b5aa9dfc68be62a10024eabea5e7aaf6c709ac7fc0b0b36d",
+    "tests/native_receipt_probe.py": "7791c1b6c4f18230e486928b2dd1e302a8baae5d06d2a72b39018f6d229de2f6"
+  },
+  "copy_recovery": {
+    "directory": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-copy-recovery-898yq38r",
+    "status": "passed",
+    "observed": {
+      "status": "passed",
+      "interrupted_exit": 130,
+      "interrupted_copy": {
+        "cursor": 1.0,
+        "digest": [
+          127.0,
+          42.0,
+          123.0,
+          51.0,
+          175.0,
+          119.0,
+          119.0,
+          99.0,
+          123.0,
+          35.0,
+          201.0,
+          51.0,
+          68.0,
+          37.0,
+          177.0,
+          86.0,
+          233.0,
+          221.0,
+          63.0,
+          113.0,
+          231.0,
+          109.0,
+          242.0,
+          20.0,
+          13.0,
+          25.0,
+          147.0,
+          101.0,
+          26.0,
+          240.0,
+          36.0,
+          216.0
+        ],
+        "id": "native-1",
+        "kind": "import",
+        "phase": "copying",
+        "source": "history.json",
+        "title": "Sealed original",
+        "total": 300.0,
+        "workspace": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-copy-recovery-898yq38r/project"
+      },
+      "statuses": [
+        {
+          "first_user": -1.0,
+          "id": "native-0",
+          "ledger": {
+            "compactions": 0.0,
+            "context_bytes": 0.0,
+            "generation_allowance": 0.0,
+            "tools": 0.0,
+            "turns": 0.0
+          },
+          "next_event": 0.0,
+          "pending": "",
+          "summary_event": -1.0,
+          "summary_through": -1.0,
+          "title": "New conversation",
+          "workspace": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-copy-recovery-898yq38r/project"
+        },
+        {
+          "first_user": 1.0,
+          "id": "native-1",
+          "ledger": {
+            "compactions": 0.0,
+            "context_bytes": 0.0,
+            "generation_allowance": 0.0,
+            "tools": 0.0,
+            "turns": 0.0
+          },
+          "next_event": 301.0,
+          "pending": "",
+          "summary_event": -1.0,
+          "summary_through": -1.0,
+          "title": "Sealed original",
+          "workspace": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-copy-recovery-898yq38r/project"
+        },
+        {
+          "first_user": 2.0,
+          "id": "native-2",
+          "ledger": {
+            "compactions": 0.0,
+            "context_bytes": 0.0,
+            "generation_allowance": 0.0,
+            "tools": 0.0,
+            "turns": 0.0
+          },
+          "next_event": 5.0,
+          "pending": "",
+          "summary_event": -1.0,
+          "summary_through": -1.0,
+          "title": "Sealed original (fork)",
+          "workspace": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-copy-recovery-898yq38r/project"
+        }
+      ],
+      "trace_outcomes": {
+        "interrupted": "cancelled",
+        "resumed": "completed",
+        "restored": "completed"
+      },
+      "original_sha256": "7f2a7b33af7777637b23c9334425b156e9dd3f71e76df2140d1993651af024d8",
+      "model_requests": 0
+    },
+    "artifacts_sha256": {
+      "result.json": "e20093bbffd2b5e51288ac5a9ca71716e57a04e33d46f0ebaeea961de2c8947a",
+      "interrupted-terminal.txt": "d40a4c60df4bb5d029326f113192b14c30dcfc62a707d536787ab79e19fe98a2",
+      "resumed-stdout.txt": "6c662b1c8c65d3daa80c0121daa8ab0ce8c382b31b6fd61302b7a09545c57dab",
+      "restored-stdout.txt": "adadc4b223ebad11f3d361e411fc783ea775571394da81e4ecaef4e18924a1c1",
+      "native/interrupted.json": "14b150ca392b33e3b87afc6155bd24d95c17571c309a14bc1061a9bb86b04cea",
+      "native/resumed.json": "46e36cc073005e3a886fc539f8e10c6bac297411b2f7eb5a98f4512769cdc5ba",
+      "native/restored.json": "5930ede423a7180f15a095a0c22212456ace1315aabf8381b53b5ff81bd956d9"
+    },
+    "assertions": [
+      "Actual Ctrl-C exited 130 after one durable copied logical event",
+      "A new Etas process retained the original selected conversation while the copy was incomplete",
+      "Resume completed the same copy while the original import filename no longer existed",
+      "Every restored logical role, event index and text matched all 300 source messages exactly",
+      "The retained original archive text remained byte-identical to the import package",
+      "Native SHA-256 source identity matched an independently computed fixture digest",
+      "A bounded history fork completed and became selected only after its full copy",
+      "Another fresh Etas process restored the completed fork and could select/read the complete imported history",
+      "Zero model calls, Command Host calls or project writes in the recovery trace"
+    ]
+  },
+  "legacy_transfer": {
+    "directory": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-transfer-tw1ofi0_",
+    "status": "passed",
+    "terminal_sha256": "ead8caf724850f7c6e3cc8af3df0a2ea99757a574da563e6e9941f17fa495b81",
+    "trace_sha256": "c02fd53fbd64e95fb5d9e8229b35307ec11aea4b10203432bbba4ef8a3376d06",
+    "assertions": [
+      "Python-era export imported through native JSON/filesystem/Memory APIs",
+      "Reviewed native export and native reimport completed",
+      "Original legacy SQLite and JSON bytes were unchanged",
+      "Zero model calls; native atomic export approval audit passed"
+    ]
+  },
+  "result_finalization": {
+    "directory": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-receipt-h464oayd",
+    "status": "passed",
+    "seed_stdout_sha256": "f50bd75cd905df0fa2067b1dbb58b7a9c79a67b353f67f9233266ba364332bc9",
+    "settle_stdout_sha256": "e0f8e7b14c5c82aadc27f2daa8a5c617ffb19e3644c37e11cdf453481dc1b3d6",
+    "assertions": [
+      "Result publication survived a new process",
+      "Original complete result was retained while clearing pending without duplicate events"
+    ]
+  },
+  "limitations": [
+    "The executed interruption was an import; fork interruption uses the same implementation but was not separately interrupted",
+    "The complete-source-before-phase-update recovery branch was implemented and compiled, not separately fault-injected",
+    "This does not establish concurrent resumption of one job or repair pre-journal partial copies automatically",
+    "This is a small synthetic archive, not large-context capacity acceptance",
+    "Generic model/command/export interruption outcomes remain unfinished",
+    "Full native acceptance remains open for etas#79 and etas-interpreter#101/#102"
+  ]
+}

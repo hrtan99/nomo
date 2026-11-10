@@ -8,9 +8,9 @@ import std.effects.Fs;
 import std.fs.{ReadLimitError, IOError as FileError};
 import nomo.core.json.encode;
 import nomo.native.options.parse;
-import nomo.native.history.{SessionContext, NativeHistory, ConversationStore, Session, reserve_generation, rename, message, fork};
+import nomo.native.history.{SessionContext, NativeHistory, ConversationStore, Session, reserve_generation, rename, message, fork, copy_status, copy_jobs, copy_job, resume_fork, discard_copy};
 import nomo.native.context.{RollingContext, ContextProjection, compact};
-import nomo.native.transfer.{save_archive, load_archive};
+import nomo.native.transfer.{save_archive, load_archive, resume_import};
 import nomo.native.mutations.{journals, undo_changes, rollback_changes, reconcile_changes};
 import nomo.native.files.read_file;
 import nomo.native.navigation.{find_files, search_project};
@@ -30,6 +30,10 @@ flow navigation_command(session: string, operation: string, argument: string) ->
 
 flow show(value: Session) -> unit {
     println("[SESSION] " + value.id + " · " + value.title);
+    match copy_status(value.id) {
+        Some(job) => { if job.phase != "ready" { println("[COPY   ] " + job.phase + "; /resume-copy " + job.id + " or /discard-copy " + job.id); } }
+        None() => {}
+    }
     if value.pending != "" {
         println("[PENDING] " + value.pending + " has no recorded completion. Inspect actual state; it is not automatically replayed.");
     }
@@ -112,6 +116,11 @@ public flow run(args: Array<string>) -> i32
         id => archive.select(options.workspace, id)
     };
     show(selected);
+    for job in copy_jobs(options.workspace) limit Iterations(2147483647) {
+        if job.phase == "staging" || job.phase == "copying" {
+            println("[COPY   ] Unfinished " + job.kind + " " + job.id + "; /resume-copy " + job.id + " or /discard-copy " + job.id);
+        }
+    }
     match options.once { Some(request) => { ask(selected.id, request); return 0; } None() => {} }
     println("[NATIVE ] Nomo native chat · /help · /quit");
     while true limit Iterations(2147483647) {
@@ -123,7 +132,7 @@ public flow run(args: Array<string>) -> i32
         if request == "" { continue; }
         if request == "/help" {
             println("Ask about the project; native tools provide recursive/glob discovery, literal/regex search, file reads, approved editing and Git operations.");
-            println("/new [TITLE], /sessions, /resume ID, /rename TITLE, /history [TEXT], /page EVENT, /fork [EVENT], /export FILE, /import FILE, /compact, /status, /tree [PATH], /glob PATTERN, /search REGEX, /read FILE, /edits, /undo [EDIT], /rollback EDIT, /recover EDIT, /quit");
+            println("/new [TITLE], /sessions, /resume ID, /rename TITLE, /history [TEXT], /page EVENT, /fork [EVENT], /export FILE, /import FILE, /copies, /resume-copy ID, /discard-copy ID, /compact, /status, /tree [PATH], /glob PATTERN, /search REGEX, /read FILE, /edits, /undo [EDIT], /rollback EDIT, /recover EDIT, /quit");
             continue;
         }
         if request == "/tree" { navigation_command(selected.id, "tree", "."); continue; }
@@ -166,6 +175,25 @@ public flow run(args: Array<string>) -> i32
         }
         match strip_prefix(request, "/import ") {
             Some(pathname) => { selected = load_archive(options.workspace, trim(pathname)); show(selected); continue; } None() => {}
+        }
+        if request == "/copies" {
+            for job in copy_jobs(options.workspace) limit Iterations(2147483647) {
+                let json = match encode(job, "copy conversion failed", "copy encoding failed") { Ok(value) => value, Err(error) => { abort(error); } };
+                println("[COPY   ] " + json);
+            }
+            continue;
+        }
+        match strip_prefix(request, "/resume-copy ") {
+            Some(id) => {
+                let job = copy_job(trim(id));
+                selected = if job.kind == "fork" { resume_fork(options.workspace, job.id) } else { resume_import(options.workspace, job.id) };
+                show(selected); continue;
+            }
+            None() => {}
+        }
+        match strip_prefix(request, "/discard-copy ") {
+            Some(id) => { discard_copy(options.workspace, trim(id)); println("[COPY   ] Unfinished copy discarded; original and retained copied records are preserved."); continue; }
+            None() => {}
         }
         if request == "/compact" { compact(selected.id); println("[CONTEXT] Summary saved; full original events retained."); continue; }
         if request == "/status" {
