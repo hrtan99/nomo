@@ -1,0 +1,19 @@
+services:
+  dev:
+    network_mode: bridge
+    environment:
+      ETAS_HOST_MODEL_API_KEY: "${MINIMAX_API_KEY:?set MINIMAX_API_KEY}"
+      ETAS_HOST_MODEL_BASE_URL: "${NOMO_MODEL_BASE_URL:-https://api.minimax.cn/v1}"
+      ETAS_HOST_MODEL_ALLOW_PRIVATE: "${NOMO_MODEL_ALLOW_PRIVATE:-false}"
+      ETAS_HOST_APPROVAL: prompt
+    volumes:
+      - type: bind
+        source: "${NOMO_NATIVE_WORKSPACE:?select the project folder}"
+        target: /project
+        bind:
+          create_host_path: false
+      - type: bind
+        source: "${NOMO_NATIVE_EVIDENCE:?select the trace directory}"
+        target: /native-evidence
+        bind:
+          create_host_path: false

@@ -943,3 +943,37 @@ name = "nomo-project"
 module = "nomo.main"
 flow = "project_agent"
 profile = "nomo-project"
+
+[runtime.profiles.nomo-native]
+boundary_policy = "nomo-native"
+[runtime.profiles.nomo-native.model]
+adapter = "openai"
+model = "MiniMax-M3.1-Flash"
+base_url = "https://api.minimax.cn/v1"
+api_key_env = "MINIMAX_API_KEY"
+allow_private = false
+typed_output_encoding = "output-tool"
+[runtime.profiles.nomo-native.model.timeout]
+request_deadline_ms = 600000
+connect_timeout_ms = 10000
+[runtime.profiles.nomo-native.model.retry]
+attempts = 1
+delay_ms = 0
+[runtime.profiles.nomo-native.filesystem.regions."nomo.native.workspace.ProjectRoot"]
+root = "/project"
+read = true
+write = true
+[runtime.profiles.nomo-native.command]
+allow = ["/usr/bin/git"]
+isolation = "trusted-unconfined"
+[runtime.profiles.nomo-native.policy]
+mode = "local-static"
+rules = ["console=allow", "model=allow", "tool=allow", "approval=allow", "command=approval", "filesystem:Fs.read=allow", "filesystem:Fs.atomic_replace=approval"]
+[runtime.profiles.nomo-native.approval]
+mode = "prompt"
+
+[[bin]]
+name = "nomo-native"
+module = "nomo.main"
+flow = "native_project"
+profile = "nomo-native"

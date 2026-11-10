@@ -69,3 +69,5 @@ python3 -B tests/project_native_probe.py
 The native probe uses a local synthetic model server. `tests/real_project_workflow_probe.py --credential-file /absolute/path/to/private-key-file` runs the corresponding real MiniMax workflow in a disposable synthetic project. Browser acceptance optionally uses Playwright and a local Chrome installation.
 
 Runtime credentials, conversation databases, generated evidence, local management documents and bytecode caches are not part of the release.
+
+The complete Etas native migration is in progress. [Native migration status](NATIVE_MIGRATION.md) records implemented tools, actual Host/approval evidence, upstream dependencies and remaining delivery gates; the default entry has not switched yet.

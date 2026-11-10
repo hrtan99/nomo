@@ -1,0 +1,374 @@
+{
+  "date": "2026-11-11",
+  "scenario": "native files using local synthetic HTTP model and real TTY approval",
+  "command": "python3 -B tests/native_project_probe.py --scenario files",
+  "result": "passed",
+  "compiler": {
+    "selector": "latest0120",
+    "version": "0.12.0",
+    "source_overrides": [],
+    "repositories": {
+      "cli": {
+        "repository": "etas",
+        "revision": "fe3de961aa2f1c55ec2ab5fc31383ea1d3e16af9",
+        "tree": "81722b528e8c28bfd8ed04acf3ea381a4f5c0540",
+        "packages": [
+          "etas_cli",
+          "etas_driver",
+          "etas_package",
+          "etas_tests"
+        ]
+      },
+      "core": {
+        "repository": "etas-core",
+        "revision": "3fc5b68bc886c952559003375590ccd0f95a53cb",
+        "tree": "161031222624c169e36b759019c5f85b14c46d7f",
+        "packages": [
+          "etas_builtin",
+          "etas_cache",
+          "etas_code",
+          "etas_core",
+          "etas_host",
+          "etas_memory_derive",
+          "etas_package_metadata",
+          "etas_std",
+          "etas_utils"
+        ]
+      },
+      "frontend": {
+        "repository": "etas-frontend",
+        "revision": "c70b4802768393ed7310a33c4e38a8b8fb2e9692",
+        "tree": "511ea22096a4cbbcebbea567794a4bd8e610afbc",
+        "packages": [
+          "etas_effects",
+          "etas_frontend",
+          "etas_hir",
+          "etas_hir_analysis",
+          "etas_syntax",
+          "etas_syntax_derive",
+          "etas_types"
+        ]
+      },
+      "interpreter": {
+        "repository": "etas-interpreter",
+        "revision": "4f5eae3702605f8630c682d54689167c2dea8394",
+        "tree": "29d47c24195a610bdc2df22baffadef7d50e41ef",
+        "packages": [
+          "etas_interpreter"
+        ]
+      }
+    },
+    "source": "Official ETAS CLI 0.12.0 at the 2026-11-10 main snapshot with its own Cargo.lock and matching Git dependencies; no Nomo source overrides.",
+    "cargo_lock_sha256": "bc363f005b3439661c2c7a28b1a14875217bbf6a128bb7ec727523c826441266",
+    "verified_seed_binary_sha256": "028e82c1b1ed7eef6dbea86c4d56bdd222a700d867e198c761a776b1ef1f883f"
+  },
+  "source_sha256": {
+    "src/nomo/native/agent.es": "5f1fa8a9ea5f1a5c36b61a0a2ffa8834f45e5c92ad42633802d8689729932ff9",
+    "src/nomo/native/entry.es": "e38373ba2028fd22aa0b1e3df2e9a241f31c62f089c824e72b52e1a921365d04",
+    "src/nomo/native/files.es": "7c5fb5bcb191f0baa930cf3b9acba68cb44e5a07a607c3f79f12775418250163",
+    "src/nomo/native/git.es": "742da6d76a5022c9b1caaa69ae8853233e7e07bb3b19dd8f0eaebacc6fd94243",
+    "src/nomo/native/workspace.es": "1453a736de3514d15e38b5f89b15f9aa69a984170e927fbbf9b4cfde1f0b2120"
+  },
+  "runtime_profile": {
+    "boundary_policy": "nomo-native",
+    "model": {
+      "adapter": "openai",
+      "model": "MiniMax-M3.1-Flash",
+      "base_url": "https://api.minimax.cn/v1",
+      "api_key_env": "MINIMAX_API_KEY",
+      "allow_private": false,
+      "typed_output_encoding": "output-tool",
+      "timeout": {
+        "request_deadline_ms": 600000,
+        "connect_timeout_ms": 10000
+      },
+      "retry": {
+        "attempts": 1,
+        "delay_ms": 0
+      }
+    },
+    "filesystem": {
+      "regions": {
+        "nomo.native.workspace.ProjectRoot": {
+          "root": "/project",
+          "read": true,
+          "write": true
+        }
+      }
+    },
+    "command": {
+      "allow": [
+        "/usr/bin/git"
+      ],
+      "isolation": "trusted-unconfined"
+    },
+    "policy": {
+      "mode": "local-static",
+      "rules": [
+        "console=allow",
+        "model=allow",
+        "tool=allow",
+        "approval=allow",
+        "command=approval",
+        "filesystem:Fs.read=allow",
+        "filesystem:Fs.atomic_replace=approval"
+      ]
+    },
+    "approval": {
+      "mode": "prompt"
+    }
+  },
+  "model_request_count": 3,
+  "final_model_observations": [
+    {
+      "content": "{\"path\":\"note.txt\",\"text\":\"before old\\n\"}",
+      "role": "tool",
+      "tool_call_id": "native-0"
+    },
+    {
+      "content": "{\"path\":\"note.txt\",\"status\":\"applied\"}",
+      "role": "tool",
+      "tool_call_id": "native-1"
+    }
+  ],
+  "synthetic_file": {
+    "path": "note.txt",
+    "before": "before old\n",
+    "after": "before new\n"
+  },
+  "native_trace_sha256": "6639363ac2e6849877edfdeab3b49f3463b34df9a2c4b581b92e3fc8762394ee",
+  "host_requests": [
+    {
+      "event_index": 2,
+      "id": 1,
+      "request_kind": "policy",
+      "qualified_action": "Policy.evaluate",
+      "payload_digest": "625d5407e2c375dc2a069deb3ed55b34bb30ce621dc56ddbf0ddf2e749633b60",
+      "authority": {
+        "active_trace_specs": [],
+        "approval_count": 0,
+        "grant_count": 11
+      }
+    },
+    {
+      "event_index": 4,
+      "id": 0,
+      "request_kind": "model",
+      "qualified_action": "Agentic.infer",
+      "payload_digest": "680388ba417bbcab2a6503b7f4f407cd2c5fa4fdc8ccb3016c570103efd84b00",
+      "authority": {
+        "active_trace_specs": [],
+        "approval_count": 0,
+        "grant_count": 11
+      }
+    },
+    {
+      "event_index": 6,
+      "id": 2,
+      "request_kind": "policy",
+      "qualified_action": "Policy.evaluate",
+      "payload_digest": "526ee541cae745d6447703f1a0ef9764bdb30e11c10019859865db7140327661",
+      "authority": {
+        "active_trace_specs": [],
+        "approval_count": 0,
+        "grant_count": 11
+      }
+    },
+    {
+      "event_index": 8,
+      "id": 4,
+      "request_kind": "policy",
+      "qualified_action": "Policy.evaluate",
+      "payload_digest": "17bd2e50a9965349ecc16786133e98fc911d6f68c355a82427dd763742983459",
+      "authority": {
+        "active_trace_specs": [],
+        "approval_count": 0,
+        "grant_count": 11
+      }
+    },
+    {
+      "event_index": 10,
+      "id": 3,
+      "request_kind": "filesystem",
+      "qualified_action": "Fs.read",
+      "payload_digest": "126abae5c8e06854b3815067af044a89e3bad71c7f3f1b4f4828752dd2db3c23",
+      "authority": {
+        "active_trace_specs": [],
+        "approval_count": 0,
+        "grant_count": 11
+      }
+    },
+    {
+      "event_index": 12,
+      "id": 6,
+      "request_kind": "policy",
+      "qualified_action": "Policy.evaluate",
+      "payload_digest": "625d5407e2c375dc2a069deb3ed55b34bb30ce621dc56ddbf0ddf2e749633b60",
+      "authority": {
+        "active_trace_specs": [],
+        "approval_count": 0,
+        "grant_count": 11
+      }
+    },
+    {
+      "event_index": 14,
+      "id": 5,
+      "request_kind": "model",
+      "qualified_action": "Agentic.infer",
+      "payload_digest": "90b7c126ee187bed65198c9c129e1c62456295c6a5ef9b206cff1072d1b76627",
+      "authority": {
+        "active_trace_specs": [],
+        "approval_count": 0,
+        "grant_count": 11
+      }
+    },
+    {
+      "event_index": 16,
+      "id": 7,
+      "request_kind": "policy",
+      "qualified_action": "Policy.evaluate",
+      "payload_digest": "146cfb095e782cdd92390b0ef54fe73e8407dac77d76aa36219803d406134b79",
+      "authority": {
+        "active_trace_specs": [],
+        "approval_count": 0,
+        "grant_count": 11
+      }
+    },
+    {
+      "event_index": 18,
+      "id": 9,
+      "request_kind": "policy",
+      "qualified_action": "Policy.evaluate",
+      "payload_digest": "17bd2e50a9965349ecc16786133e98fc911d6f68c355a82427dd763742983459",
+      "authority": {
+        "active_trace_specs": [],
+        "approval_count": 0,
+        "grant_count": 11
+      }
+    },
+    {
+      "event_index": 20,
+      "id": 8,
+      "request_kind": "filesystem",
+      "qualified_action": "Fs.read",
+      "payload_digest": "126abae5c8e06854b3815067af044a89e3bad71c7f3f1b4f4828752dd2db3c23",
+      "authority": {
+        "active_trace_specs": [],
+        "approval_count": 0,
+        "grant_count": 11
+      }
+    },
+    {
+      "event_index": 23,
+      "id": 11,
+      "request_kind": "policy",
+      "qualified_action": "Policy.evaluate",
+      "payload_digest": "614fa40382b4c06eaf2aac925bdeb6553069dcb16a028504f2b188455ffe5f8a",
+      "authority": {
+        "active_trace_specs": [],
+        "approval_count": 0,
+        "grant_count": 11
+      }
+    },
+    {
+      "event_index": 25,
+      "id": 10,
+      "request_kind": "console",
+      "qualified_action": "Console.stdout_write",
+      "payload_digest": "b84faead83b70521b822ce8b6c1a0cb4886fa17add26d2ab58a1c4a2a3f73ef3",
+      "authority": {
+        "active_trace_specs": [],
+        "approval_count": 0,
+        "grant_count": 11
+      }
+    },
+    {
+      "event_index": 27,
+      "id": 13,
+      "request_kind": "policy",
+      "qualified_action": "Policy.evaluate",
+      "payload_digest": "823003dbafc63cf74c07fbae5544b66f97ed101e89f237a02261fc14bd313305",
+      "authority": {
+        "active_trace_specs": [],
+        "approval_count": 0,
+        "grant_count": 11
+      }
+    },
+    {
+      "event_index": 30,
+      "id": 10000013,
+      "request_kind": "approval",
+      "qualified_action": "Approval.request",
+      "payload_digest": "252ee9d803603aa37e2978aeb8616416b5a621bae984cd96e31a2dd4af12316d",
+      "authority": {
+        "active_trace_specs": [],
+        "approval_count": 0,
+        "grant_count": 11
+      }
+    },
+    {
+      "event_index": 32,
+      "id": 12,
+      "request_kind": "filesystem",
+      "qualified_action": "Fs.atomic_replace",
+      "payload_digest": "68557be92715be036934aeb2e86feddcdb0e66925855c76987c0a624ac5986f3",
+      "authority": {
+        "active_trace_specs": [],
+        "approval_count": 1,
+        "grant_count": 12
+      }
+    },
+    {
+      "event_index": 34,
+      "id": 15,
+      "request_kind": "policy",
+      "qualified_action": "Policy.evaluate",
+      "payload_digest": "625d5407e2c375dc2a069deb3ed55b34bb30ce621dc56ddbf0ddf2e749633b60",
+      "authority": {
+        "active_trace_specs": [],
+        "approval_count": 1,
+        "grant_count": 12
+      }
+    },
+    {
+      "event_index": 36,
+      "id": 14,
+      "request_kind": "model",
+      "qualified_action": "Agentic.infer",
+      "payload_digest": "20a20edfe721a1873f9a6187511b3934af1bbbda03583893b07492f5561df542",
+      "authority": {
+        "active_trace_specs": [],
+        "approval_count": 0,
+        "grant_count": 11
+      }
+    },
+    {
+      "event_index": 38,
+      "id": 17,
+      "request_kind": "policy",
+      "qualified_action": "Policy.evaluate",
+      "payload_digest": "3da0e851c81361f177bdc60a16e83723df4c324c672014c4da3e3125b41b6e46",
+      "authority": {
+        "active_trace_specs": [],
+        "approval_count": 1,
+        "grant_count": 12
+      }
+    },
+    {
+      "event_index": 40,
+      "id": 16,
+      "request_kind": "console",
+      "qualified_action": "Console.stdout_write",
+      "payload_digest": "aa86ce03226de7f65e21638525ec0c06edcf2eeb69ce3ac18f01fedbe3c981e7",
+      "authority": {
+        "active_trace_specs": [],
+        "approval_count": 1,
+        "grant_count": 12
+      }
+    }
+  ],
+  "native_outcome": {
+    "kind": "completed"
+  },
+  "git_status": "blocked by etas-project/etas-core#62; not accepted"
+}
