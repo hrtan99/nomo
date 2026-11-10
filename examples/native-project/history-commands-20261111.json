@@ -1,0 +1,64 @@
+{
+  "date": "2026-11-11",
+  "scenario": "Native history search, paging and scoped conversation fork",
+  "command": "python3 -B tests/native_history_commands_probe.py",
+  "result": "passed",
+  "compiler_pin_file": "config/etas-latest-main.json",
+  "compiler_version": "0.12.0",
+  "source_sha256": {
+    "src/nomo/native/history.es": "210f4fe8e3c0aaaa19ee93e579b4650baf716888e1877deb029de8315529cffa",
+    "src/nomo/native/entry.es": "0b3f25556702375ec75c46641f027dafb71e18cf23d04f2e8533c60b7fba13c8"
+  },
+  "model_request_count": 0,
+  "commands": [
+    "/import history.json",
+    "/page 1",
+    "/history synthetic event 54",
+    "/fork 3",
+    "/history",
+    "/status",
+    "/sessions",
+    "/quit"
+  ],
+  "synthetic_source_events": 55,
+  "page_size": 50,
+  "next_page_start": 51,
+  "branch_original_through": 3,
+  "branch_assistant_texts": [
+    "synthetic event 1",
+    "synthetic event 2"
+  ],
+  "status": {
+    "first_user": 2.0,
+    "id": "native-2",
+    "ledger": {
+      "compactions": 0.0,
+      "context_bytes": 0.0,
+      "generation_allowance": 0.0,
+      "tools": 0.0,
+      "turns": 0.0
+    },
+    "next_event": 5.0,
+    "pending": "",
+    "summary_event": -1.0,
+    "summary_through": -1.0,
+    "title": "Saved original (fork)",
+    "workspace": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-history-amet3f0t/project"
+  },
+  "original_archive_preserved": true,
+  "raw_archive_note": "Imported source packages remain complete historical attachments. Their content is excluded from model history projection; forked logical events stop at the selected event.",
+  "native_trace_sha256": "7184359f0fc3978bc17e01a1db00ab052c666617ac3b356d44ec1930edeb096a",
+  "trace_outcome": "completed",
+  "host_action_counts": {
+    "Policy.evaluate": 640,
+    "Memory.read": 303,
+    "Memory.write": 253,
+    "Console.stdout_write": 75,
+    "Console.stdin_read_line": 8,
+    "Fs.read": 1
+  },
+  "limitations": [
+    "Interrupted fork/import recovery is not yet accepted",
+    "Large native string slicing remains blocked by etas-interpreter#101"
+  ]
+}

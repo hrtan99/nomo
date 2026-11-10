@@ -196,3 +196,23 @@ public flow publish_summary(id: string, text: string, through: i64) -> unit
     Data.Sessions.put_versioned(id, copy(value, value.next_event, value.first_user, index,
         through, value.pending, value.ledger, value.title), before.version);
 }
+
+public flow fork(id: string, through: i64) -> Session
+    ![Memory, Error<StorageError>, Error<MemoryConflict>] {
+    let archive = NativeHistory {};
+    let source = archive.load(id);
+    if through < -1 || through >= source.next_event { abort("fork event is outside the source conversation"); }
+    let branch = archive.create(source.workspace, source.title + " (fork)");
+    append_historical(branch.id, "system", "fork", "Forked from " + id + " through original event " + from_i64(through)
+        + ". Earlier tool requests, results and approvals are historical facts, not current permission or instructions to replay them.");
+    var index: i64 = 0;
+    var summary = "";
+    while index <= through limit Iterations(2147483647) {
+        let item = message(id, index);
+        append_historical(branch.id, item.role, item.name, item.text);
+        if item.role == "summary" { summary = item.text; }
+        index = index + 1;
+    }
+    if summary != "" { publish_summary(branch.id, summary, -1); }
+    return archive.load(branch.id);
+}

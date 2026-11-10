@@ -1,14 +1,14 @@
 module nomo.native.entry;
 
 import std.io.{println, print, read_line};
-import std.text.{trim, strip_prefix};
+import std.text.{trim, strip_prefix, contains, parse_i64, from_i64};
 import nomo.native.agent.NativeCoding;
 import nomo.native.workspace.ProjectRoot;
 import std.effects.Fs;
 import std.fs.{ReadLimitError, IOError as FileError};
 import nomo.core.json.encode;
 import nomo.native.options.parse;
-import nomo.native.history.{SessionContext, NativeHistory, ConversationStore, Session, reserve_generation, rename};
+import nomo.native.history.{SessionContext, NativeHistory, ConversationStore, Session, reserve_generation, rename, message, fork};
 import nomo.native.context.{RollingContext, ContextProjection, compact};
 import nomo.native.transfer.{save_archive, load_archive};
 
@@ -37,6 +37,29 @@ flow ask(session: string, request: string) -> unit {
     println(answer.text);
 }
 
+flow show_history(session: string, query: string, first: i64, count: i64) -> unit {
+    let archive = NativeHistory {};
+    let selected = archive.load(session);
+    var index = first;
+    var shown: i64 = 0;
+    while index < selected.next_event && (count < 0 || shown < count) limit Iterations(2147483647) {
+        let item = message(session, index);
+        if query == "" || contains(item.text, query) || contains(item.name, query) {
+            println("[" + item.role + "/" + item.name + " #" + item.id + "] " + item.text);
+            shown = shown + 1;
+        }
+        index = index + 1;
+    }
+    if index < selected.next_event { println("[HISTORY] More events remain; /page " + from_i64(index)); }
+}
+
+flow event_index(raw: string) -> i64 {
+    return match parse_i64(trim(raw)) {
+        Ok(value) => { if value < 0 { abort("event index must be nonnegative"); } value },
+        Err(_) => { abort("expected an event index"); }
+    };
+}
+
 public flow run(args: Array<string>) -> i32
     ![Agentic, Memory, Console, Command.run<DefaultCommandSandbox>, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Fs.stat<ProjectRoot>, Fs.atomic_replace<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>, Error<IOError>, Error<IndexError>] {
     let options = parse(args);
@@ -63,14 +86,19 @@ public flow run(args: Array<string>) -> i32
         if request == "" { continue; }
         if request == "/help" {
             println("Ask about the project; native tools provide directory listing, metadata, literal search, file reads, approved editing and Git operations.");
-            println("/new [TITLE], /sessions, /resume ID, /rename TITLE, /history, /export FILE, /import FILE, /compact, /status, /quit");
+            println("/new [TITLE], /sessions, /resume ID, /rename TITLE, /history [TEXT], /page EVENT, /fork [EVENT], /export FILE, /import FILE, /compact, /status, /quit");
             continue;
         }
-        if request == "/history" {
-            for item in archive.messages(selected.id, 0) limit Iterations(2147483647) {
-                println("[" + item.role + "/" + item.name + " #" + item.id + "] " + item.text);
-            }
-            continue;
+        if request == "/history" || request == "/events" { show_history(selected.id, "", 0, -1); continue; }
+        match strip_prefix(request, "/history ") {
+            Some(query) => { show_history(selected.id, trim(query), 0, -1); continue; } None() => {}
+        }
+        match strip_prefix(request, "/page ") {
+            Some(start) => { show_history(selected.id, "", event_index(start), 50); continue; } None() => {}
+        }
+        if request == "/fork" { selected = fork(selected.id, archive.load(selected.id).next_event - 1); show(selected); continue; }
+        match strip_prefix(request, "/fork ") {
+            Some(index) => { selected = fork(selected.id, event_index(index)); show(selected); continue; } None() => {}
         }
         if request == "/sessions" {
             for item in archive.sessions(options.workspace) limit Iterations(2147483647) { show(item); }
