@@ -25,23 +25,23 @@ def configure(label, wrapper):
                 '023': ('0.2.3', None),
                 '024': ('0.2.4', None),
                 '025': ('0.2.5', None), '026': ('0.2.6', None), '026-v68': ('0.2.6', None), '030': ('0.3.0', None),
-                '041': ('0.4.1', None)}
+                '041': ('0.4.1', None), '0120': ('0.12.0', None)}
     require(label in versions, 'unsupported official graph')
     LABEL = label
     VERSION, LEGACY_SHA = versions[label]
     SELECTOR = 'latest' + label.replace('-', '')
-    CONFIG = REPO / ('config/etas-latest-main.json' if label == '041' else 'config/etas-' + label + '-official.json')
-    LOCK = REPO / ('config/etas-latest.Cargo.lock' if label == '041' else 'config/etas-' + label + '-official.Cargo.lock')
+    CONFIG = REPO / ('config/etas-latest-main.json' if label == '0120' else 'config/etas-' + label + '-official.json')
+    LOCK = REPO / ('config/etas-latest.Cargo.lock' if label == '0120' else 'config/etas-' + label + '-official.Cargo.lock')
     SPEC = json.loads(CONFIG.read_text())
     PINS = SPEC['repositories']
-    ROOT = CACHE / SPEC.get('cache_root', 'etas-latest' if label == '041' else 'etas-eval' if label == '026-v68' else 'etas-' + label if label in ('025', '026', '030') else 'etas-p0-' + label)
+    ROOT = CACHE / SPEC.get('cache_root', 'etas-latest' if label in ('041', '0120') else 'etas-eval' if label == '026-v68' else 'etas-' + label if label in ('025', '026', '030') else 'etas-p0-' + label)
     SOURCE = ROOT / ('src' if label in ('025', '026', '026-v68', '030') else 'src/cli')
     TARGET = CACHE / SPEC['build_target'] if 'build_target' in SPEC else ROOT / 'target' if label in ('025', '026', '026-v68', '030') else CACHE / 'etas-latest/target'
     INSTALLED = CACHE / SPEC.get('installed_binary', 'bin/etas')
     PREVIOUS_CONFIG = '98ff380d7e04ca43bca7f28f4af30dcd72e0a5a80dbe6515df41925f6d032962' if label == '041' else None
     bridge_path = REPO / 'config/etas-official-legacy-bridge.json'
     bridge = json.loads(bridge_path.read_text())
-    entry = None if label == '041' else bridge[label]
+    entry = None if label in ('041', '0120') else bridge[label]
     if entry is not None:
         require(bridge['format'] == 1 and entry['legacy_sha256'] == LEGACY_SHA, 'legacy bridge policy drift')
         require(entry['wrapper_sha256'] == digest(wrapper), 'bootstrap wrapper drift')
@@ -61,7 +61,8 @@ def configure(label, wrapper):
     previous_current = {'012': 'd9136e020ec5cbe83457cabef11c993d1c9eb93d2406dfc68fce0f727f207d61',
                         '022': 'cb5feaeefdbad42b3b1253755e0167e9023664f6b1b38ef2b814aa118638b9bf',
                         '023': '90cb9bba2e7d7a52a688cac3faa4c5b74b144f2f8e87ba36c1f083810288c170',
-                        '024': '89c11a09f408387c5d1e1a801bb9770517c6a30b9b95d366f2d43aa5f3c75274', '025': None, '026': None, '026-v68': None, '030': None}
+                        '024': '89c11a09f408387c5d1e1a801bb9770517c6a30b9b95d366f2d43aa5f3c75274', '025': None, '026': None, '026-v68': None, '030': None,
+                        '041': 'cae41719da26e5bb667992d388aa0f0d23ad0f1fde3f162d31334830ba9bb3fb'}
     PREVIOUS_CURRENT = previous_current.get(label)
     if entry is not None: require(entry.get('previous_current_sha256') == PREVIOUS_CURRENT, 'previous current bootstrap provenance drift')
     # New installations bind the wrapper, shared implementation and reviewed bridge policy.
@@ -261,8 +262,10 @@ def prepare(sources=None, seed=None):
         with (SOURCE / 'Cargo.toml').open('a') as stream:
             stream.write(source_overrides())
     git_guard(SOURCE, 'cli', check_origin=True)
-    require(not (SOURCE / 'Cargo.lock').exists(), 'unexpected source Cargo.lock')
-    shutil.copyfile(LOCK, SOURCE / 'Cargo.lock')
+    if (SOURCE / 'Cargo.lock').exists():
+        require(digest(SOURCE / 'Cargo.lock') == digest(LOCK), 'upstream Cargo.lock differs from the pinned lock')
+    else:
+        shutil.copyfile(LOCK, SOURCE / 'Cargo.lock')
     require(seed is None, 'registry/git seeds are not trusted; resolve from official sources into a fresh cache')
     require(not (CACHE / 'registry').exists() and not (CACHE / 'git').exists(), 'official dependency resolution requires a fresh cache')
     command = ['cargo', 'metadata', '--locked', '--format-version', '1']

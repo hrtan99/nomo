@@ -34,7 +34,7 @@ class GraphSessionTest(unittest.TestCase):
         with patch.object(read, 'run_owned', return_value=0) as run:
             self.assertEqual(self.create(), 0); run.assert_called_once()
         lock = self.state / '.nomo-session.lock'
-        self.assertEqual(lock.read_bytes(), b'latest041\n')
+        self.assertEqual(lock.read_bytes(), b'latest0120\n')
         (self.state / 'history.sqlite3').write_bytes(b'synthetic')
         with patch.object(read, 'run_owned', return_value=0) as run:
             self.assertEqual(self.status(), 0); run.assert_called_once(); run.reset_mock()
@@ -59,7 +59,7 @@ class GraphSessionTest(unittest.TestCase):
                 self.assertNotEqual(self.status(), 0); run.assert_not_called()
     def test_existing_data_not_marked_as_new_graph(self):
         (self.state / 'history.sqlite3').write_bytes(b'synthetic')
-        with patch.dict(os.environ, {'NOMO_ETAS_GRAPH':'latest041'}), patch.object(read, 'run_owned') as run:
+        with patch.dict(os.environ, {'NOMO_ETAS_GRAPH':'latest0120'}), patch.object(read, 'run_owned') as run:
             self.assertNotEqual(self.create(), 0); run.assert_not_called()
         self.assertEqual((self.state / '.nomo-session.lock').read_bytes(), b'')
 

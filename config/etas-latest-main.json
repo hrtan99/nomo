@@ -1,15 +1,12 @@
 {
-  "selector": "latest041",
-  "source_overrides": [
-    "core",
-    "frontend",
-    "interpreter"
-  ],
+  "selector": "latest0120",
+  "version": "0.12.0",
+  "source_overrides": [],
   "repositories": {
     "cli": {
       "repository": "etas",
-      "revision": "e3a2e6b15119da2ffacebc4ac40c73e87344d392",
-      "tree": "e8066337441609362d71779fa1b3d44f17aaf6b3",
+      "revision": "fe3de961aa2f1c55ec2ab5fc31383ea1d3e16af9",
+      "tree": "81722b528e8c28bfd8ed04acf3ea381a4f5c0540",
       "packages": [
         "etas_cli",
         "etas_driver",
@@ -19,8 +16,8 @@
     },
     "core": {
       "repository": "etas-core",
-      "revision": "280c0644a6e549209b58a263dca60ae3f3fe60c3",
-      "tree": "8872b7c5ba20718e80a1f971524b334603b98914",
+      "revision": "3fc5b68bc886c952559003375590ccd0f95a53cb",
+      "tree": "161031222624c169e36b759019c5f85b14c46d7f",
       "packages": [
         "etas_builtin",
         "etas_cache",
@@ -35,8 +32,8 @@
     },
     "frontend": {
       "repository": "etas-frontend",
-      "revision": "9be3d8e508035557ca431810b27dcb9ca7e3ca41",
-      "tree": "86a78a9808e72c2d33adac3b5427f096620c271d",
+      "revision": "c70b4802768393ed7310a33c4e38a8b8fb2e9692",
+      "tree": "511ea22096a4cbbcebbea567794a4bd8e610afbc",
       "packages": [
         "etas_effects",
         "etas_frontend",
@@ -49,14 +46,14 @@
     },
     "interpreter": {
       "repository": "etas-interpreter",
-      "revision": "d4018f325388979b851949ab538a511ec05b7ddf",
-      "tree": "43e82f2e6f3162ba44cd87634f0e4e7c4e4d9331",
+      "revision": "4f5eae3702605f8630c682d54689167c2dea8394",
+      "tree": "29d47c24195a610bdc2df22baffadef7d50e41ef",
       "packages": [
         "etas_interpreter"
       ]
     }
   },
-  "source": "Official ETAS CLI 0.4.1 at the 2026-11-06 upstream main HEAD with configurable runtime storage limits, plus source overrides to the 2026-11-06 upstream HEADs of etas-core, etas-frontend and etas-interpreter; this is a Nomo-pinned four-repository combination, not the CLI repository's unmodified dependency graph",
-  "cargo_lock_sha256": "61d81ddf9ff22181f0cce07a7baa7c6f9950bc16fcee903b40175e2a3f835a42",
-  "verified_seed_binary_sha256": "d2f84bb2218c447defa66ba14f3ae1e69694d4522a071215c9511bab8936e4c6"
+  "source": "Official ETAS CLI 0.12.0 at the 2026-11-10 main snapshot with its own Cargo.lock and matching Git dependencies; no Nomo source overrides.",
+  "cargo_lock_sha256": "bc363f005b3439661c2c7a28b1a14875217bbf6a128bb7ec727523c826441266",
+  "verified_seed_binary_sha256": "028e82c1b1ed7eef6dbea86c4d56bdd222a700d867e198c761a776b1ef1f883f"
 }

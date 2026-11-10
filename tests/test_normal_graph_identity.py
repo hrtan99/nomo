@@ -92,7 +92,7 @@ class NormalGraphIdentityChecks(unittest.TestCase):
 
     def test_unknown_selector_is_rejected_before_resolution(self):
         os.environ['NOMO_NORMAL_GRAPH'] = 'unrecorded-candidate'
-        with self.assertRaisesRegex(RuntimeError, 'must be latest, latest024, latest023, latest022, latest012, latest009, legacy or etas0013'):
+        with self.assertRaisesRegex(RuntimeError, 'must be latest, latest0120, latest024, latest023, latest022, latest012, latest009, legacy or etas0013'):
             self.verify()
         G.shutil.which.assert_not_called()
         G.importlib.util.spec_from_file_location.assert_not_called()
