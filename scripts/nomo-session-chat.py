@@ -511,11 +511,19 @@ def main(argv=None):
             if code:
                 print('Check stopped or its result was not recorded; inspect the workspace and session before continuing.', file=sys.stderr, flush=True)
                 return code
-            print('Check recorded. The deterministic outcome above is authoritative and available to resumed turns; no model summary was started and the command will not run again.', flush=True)
+            print('Check recorded. Reviewing its result against the original request.', flush=True)
+            pending_review = 'AUTO-CONTINUATION: Review the latest recorded check against this original user request: ' + active_request + ' If it failed, select the file needing repair with EDIT_CHECK; otherwise report completion or identify an unmet requirement using current evidence. Do not repeat a passed check.'
+        if pending_review is not None:
+            review_count += 1
+            if review_count >= 12:
+                pending_review = None
+                print('Automatic review reached 12 rounds; completed work and checks are saved.', flush=True)
             continue
         if args.once is not None:
             return 0
 
 
 if __name__ == '__main__':
+    from nomo_terminal import install
+    install()
     raise SystemExit(main())

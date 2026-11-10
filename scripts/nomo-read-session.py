@@ -173,4 +173,7 @@ def main(argv=None):
         finally:os.close(fd)
     except (ValueError,OSError) as error:
         print('REFUSED '+str(error),file=sys.stderr);return 1
-if __name__=='__main__':raise SystemExit(main())
+if __name__=='__main__':
+    from nomo_terminal import install
+    install()
+    raise SystemExit(main())

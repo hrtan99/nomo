@@ -338,6 +338,12 @@ class RuntimeDiagnostic:
             print('The observed text may indicate a blank or over-limit summary. The edit may already be applied; inspect the file and session status before deciding what to do. Do not automatically retry.', file=sys.stderr, flush=True)
 
 
+def terminal_input(prompt):
+    # input(prompt) can bypass sys.stdout through Python's native readline.
+    print(prompt, end='', flush=True)
+    return input()
+
+
 def run_owned(command, env, capture=None, input_data=None, diagnostic=None, *, capture_limit=4096, forward_output=True, signal_state=None):
     """Forward interruption and wait for the owned terminal helper's cleanup."""
     requested = [0, 0.0]
@@ -388,6 +394,9 @@ def run_owned(command, env, capture=None, input_data=None, diagnostic=None, *, c
             for key, _ in selector.select(timeout):
                 data = os.read(key.fileobj.fileno(), 65536)
                 if not data:
+                    target = key.data[1]
+                    if forward_output and hasattr(target, 'write_terminal'):
+                        target.finish()
                     selector.unregister(key.fileobj); key.fileobj.close(); continue
                 label, target = key.data
                 # Write directly after flushing prior output: a failed buffered
@@ -395,18 +404,22 @@ def run_owned(command, env, capture=None, input_data=None, diagnostic=None, *, c
                 # and replace the intended uncertain-status exit code.
                 if forward_output:
                     target.flush()
-                    try:
-                        output_fd = target.fileno()
-                    except (io.UnsupportedOperation, AttributeError):
-                        target.write(data)
+                    if hasattr(target, 'write_terminal'):
+                        target.write_terminal(data)
                         target.flush()
                     else:
-                        view = memoryview(data)
-                        while view:
-                            written = os.write(output_fd, view)
-                            if written <= 0:
-                                raise OSError('terminal output did not advance')
-                            view = view[written:]
+                        try:
+                            output_fd = target.fileno()
+                        except (io.UnsupportedOperation, AttributeError):
+                            target.write(data)
+                            target.flush()
+                        else:
+                            view = memoryview(data)
+                            while view:
+                                written = os.write(output_fd, view)
+                                if written <= 0:
+                                    raise OSError('terminal output did not advance')
+                                view = view[written:]
                 if diagnostic is not None:
                     diagnostic.feed(label, data)
                 if capture is not None:
@@ -658,6 +671,8 @@ def main(argv=None, work=False):
 
 
 if __name__ == '__main__':
+    from nomo_terminal import install
+    install()
     if sys.argv[1:2] == ['--work']:
         raise SystemExit(main(sys.argv[2:], work=True))
     if sys.argv[1:2] == ['--check-only']:

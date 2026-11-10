@@ -108,4 +108,6 @@ def main():
 
 
 if __name__ == '__main__':
+    from nomo_terminal import install
+    install()
     raise SystemExit(main())
