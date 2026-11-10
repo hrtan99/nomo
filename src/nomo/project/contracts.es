@@ -48,7 +48,15 @@ impl CodingTools ~ ProjectToolCatalog {
             Tool { name = "poll", description = "Read job target from byte offset start; returns next offset, output and exit status. Output is also saved in full.", mutates = false },
             Tool { name = "jobs", description = "List retained process jobs for this project.", mutates = false },
             Tool { name = "write_stdin", description = "Send text to the PTY of job target. Include newline to submit interactive input.", mutates = true },
-            Tool { name = "stop", description = "Terminate process group of job target.", mutates = true }
+            Tool { name = "stop", description = "Terminate process group of job target.", mutates = true },
+            Tool { name = "git_status", description = "Show Git working tree status and current branch.", mutates = false },
+            Tool { name = "git_diff", description = "Show Git diff; target=staged selects staged changes, arguments are optional file paths.", mutates = false },
+            Tool { name = "git_log", description = "Show recent commits; end is optional count.", mutates = false },
+            Tool { name = "git_branches", description = "List local Git branches.", mutates = false },
+            Tool { name = "git_init", description = "Initialize this project's Git repository after user approval.", mutates = true },
+            Tool { name = "git_branch", description = "Create a local branch named target.", mutates = true },
+            Tool { name = "git_switch", description = "Switch to existing local branch target.", mutates = true },
+            Tool { name = "git_commit", description = "Commit with message text. arguments selects exact paths to stage first; empty arguments commits only already-staged changes. Propose only when the user requests a commit.", mutates = true }
         ];
     }
     flow contains(self, name: string) -> bool {

@@ -250,6 +250,8 @@ class ToolRegistry:
             self.register(FileTool(name, editor))
         for name in ('exec', 'spawn', 'poll', 'jobs', 'write_stdin', 'stop'):
             self.register(TerminalTool(name, processes, workspace.config.command_timeout, name not in ('poll', 'jobs')))
+        from nomo_git import register_git
+        register_git(self, workspace.root)
 
     def register(self, tool: ProjectTool):
         self.tools[tool.name] = tool
