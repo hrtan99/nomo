@@ -1,7 +1,9 @@
 module nomo.native.git;
 
 import nomo.native.workspace.{CommandOutput, execute, execute_readonly};
-import std.text.from_i32;
+import std.text.{from_i32, trim, split_once, strip_prefix, parse_i32};
+import std.json.parse;
+import std.agent.message.Message;
 import std.collections.len;
 import std.io.IOError;
 import nomo.native.history.SessionContext;
@@ -57,4 +59,43 @@ public tool git_commit(message: string, paths: Array<string>) -> CommandOutput
         if staged.exit_code != 0 { return staged; }
     }
     return execute("/usr/bin/git", ["commit", "-m", message]);
+}
+
+type CommitRequest = { message: string, paths: Array<string> };
+
+flow json_paths(raw: string) -> Array<string> {
+    if trim(raw) == "" { return []; }
+    let parsed = match parse(raw) { Ok(value) => value, Err(_) => { abort("provide paths as a JSON string array"); } };
+    let converted: Option<Message<Array<string>>> = Message.new(parsed).cast<Array<string>>();
+    return match converted { Some(value) => value.body, None() => { abort("paths must be a JSON string array"); } };
+}
+
+/// The native command UI delegates to the same tools and approvals as the model.
+public flow shortcut(raw: string) -> CommandOutput
+    ![SessionContext, Memory, Command.run<DefaultCommandSandbox>, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>] {
+    let (operation, rest) = match split_once(trim(raw), " ") { Some(parts) => parts, None() => (trim(raw), "") };
+    let argument = trim(rest);
+    if operation == "status" { return git_status(); }
+    if operation == "branches" { return git_branches(); }
+    if operation == "init" { return git_init(); }
+    if operation == "branch" { return git_branch(argument); }
+    if operation == "switch" { return git_switch(argument); }
+    if operation == "log" {
+        let count = if argument == "" { 20 } else { match parse_i32(argument) { Ok(value) => value, Err(_) => { abort("expected a Git log count"); } } };
+        return git_log(count);
+    }
+    if operation == "diff" {
+        var staged = false;
+        var selected = argument;
+        if argument == "--staged" { staged = true; selected = ""; }
+        else { match strip_prefix(argument, "--staged ") { Some(value) => { staged = true; selected = value; } None() => {} } }
+        return git_diff(staged, json_paths(selected));
+    }
+    if operation == "commit" {
+        let parsed = match parse(argument) { Ok(value) => value, Err(_) => { abort("use /git commit with JSON containing message and paths"); } };
+        let converted: Option<Message<CommitRequest>> = Message.new(parsed).cast<CommitRequest>();
+        let request = match converted { Some(value) => value.body, None() => { abort("commit JSON requires message:string and paths:Array<string>"); } };
+        return git_commit(request.message, request.paths);
+    }
+    abort("Git command: status, diff [--staged] [JSON_PATHS], log [COUNT], branches, init, branch NAME, switch NAME, commit JSON");
 }

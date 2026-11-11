@@ -1,0 +1,219 @@
+{
+  "date": "2026-11-11",
+  "compiler_version": "0.13.0",
+  "status": "passed",
+  "source_sha256": {
+    "src/nomo/native/git.es": "4aeff4cbc15695050a38aa430620c4fa9a0e48ce2b93531ce6ab37b7233358f7",
+    "src/nomo/native/entry.es": "b1f4c50269c78535a153a25542a2bf2a234a423edb465ca4b01bead89928cc4f",
+    "src/nomo/native/lifecycle.es": "1e7dd5e165e81cc64fae39c3cd430f387373e45c3af14f63606c5a2b9079a1c7",
+    "src/nomo/native/history.es": "57ff2a304dc12e7b898f863d615c2c4c86b332f44481a3b56ce5dbddf56022f8",
+    "tests/native_git_commands_probe.py": "cd1347619b3ec7947e853b4f7dcfb47de4bc969363295d5d324a15f659936754",
+    "tests/native_attempt_recovery_probe.py": "8ee291bd8f158e3aec9268fbb5e2cc1cc9692192ac275050f0e9477cd804117a",
+    "tests/native_recovery_probe.py": "23a1d112144129d3bedb67f5ab9cd763f7ce50c8ea06cca1dc68264dfdfffe24"
+  },
+  "coding_agent_sha256_at_test": "98eaa5f0897e51e8a5185eec7449d99936596bed253142c792b6480e828c02b4",
+  "coding_agent_at_test": "Before the separately validated cumulative-token allowance change; same tool bodies and recovery flow.",
+  "git_commands": {
+    "directory": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-git-commands-zs8f17ll",
+    "artifacts_sha256": {
+      "terminal.txt": "f03196142822fbb63f4f21db7296a99fa7c05430b62f81201af472a6dc1fed6e",
+      "functional.json": "5124530b3250b5f5f2a38d74e0a051076deb2b34228a2324e6c7390cc9566c23",
+      "project/note.txt": "c07d6190ee3b4da91b545a74cd1928acde9afa9966f004f2eccd3a9c839e0177",
+      "traces/run-qV7RXISt/trace.json": "6c1290c27d8616de20c7105d13f7336f60a4fa7c14f371027666b0e2bc29dddf"
+    },
+    "observed": {
+      "status": "passed",
+      "model_http_requests": 0,
+      "native_approvals": 6,
+      "native_commands": 6,
+      "status_record": {
+        "first_user": -1.0,
+        "id": "native-0",
+        "ledger": {
+          "compactions": 0.0,
+          "context_bytes": 0.0,
+          "generation_allowance": 0.0,
+          "tools": 6.0,
+          "turns": 0.0
+        },
+        "next_event": 12.0,
+        "pending": "",
+        "summary_event": -1.0,
+        "summary_through": -1.0,
+        "title": "New conversation",
+        "workspace": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-git-commands-zs8f17ll/project"
+      },
+      "results": [
+        {
+          "exit_code": 0.0,
+          "stderr": "",
+          "stdout": "## main\nM  note.txt\n"
+        },
+        {
+          "exit_code": 0.0,
+          "stderr": "",
+          "stdout": "diff --git a/note.txt b/note.txt\nindex 9e2e9b9..a9b9ecf 100644\n--- a/note.txt\n+++ b/note.txt\n@@ -1 +1 @@\n-before old\n+before new\n"
+        },
+        {
+          "exit_code": 0.0,
+          "stderr": "",
+          "stdout": "[main 91e876a] Native CLI commit\n 1 file changed, 1 insertion(+), 1 deletion(-)\n"
+        },
+        {
+          "exit_code": 0.0,
+          "stderr": "",
+          "stdout": "91e876a Native CLI commit\n"
+        },
+        {
+          "exit_code": 0.0,
+          "stderr": "",
+          "stdout": "* main\n"
+        }
+      ],
+      "trace": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-git-commands-zs8f17ll/traces/run-qV7RXISt/trace.json"
+    },
+    "probe_exit_code": 0
+  },
+  "foreground_recovery": {
+    "directory": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-attempt-recovery-275c5kat",
+    "artifacts_sha256": {
+      "request-0.json": "c80f77284e45b1debfdba90a2919febe401eabad656996f75d73e45ccfc5a6b9",
+      "request-1.json": "27df07527114ee166d1299386bee910f640a48199eed79624f7b8be7d294c288",
+      "recovered-stderr.txt": "5df21c05d120530297d3049277bbf80e55960442a8034fb51f3f29d6c88b97c4",
+      "functional.json": "cea27164dcd7c432daf7642bd5275f47971049018564a54df75839153adce22a",
+      "interrupted-terminal.txt": "2f7ab7c974704f8cec605f0a032c08f8bab035ccdb3c66fac88d4a4f465438ba",
+      "recovered-stdout.txt": "e37a161233d214e0d21f44bf8139aafe9ffc6805fd3d2b8423a5dd2b4bf1a5a4",
+      "native/recovered.json": "811ca1babd996045f75b14ce0a81940547cdf6a100a2ffc8847f5f1f8cb6a065",
+      "native/interrupted.json": "5ff51286dae11c8da092eb4f29996affc6685c8e4382245838d088f27440d37f",
+      "project/command-marker.txt": "914a6892d17e2a29b9761d066a71ff61c81fab1a591feaed67c56e6f7e419d33"
+    },
+    "observed": {
+      "functional_status": "passed",
+      "interrupted_exit": 130,
+      "model_http_requests": 2,
+      "native_command_dispatches": 1,
+      "recovery_command_dispatches": 0,
+      "statuses": [
+        {
+          "first_user": 0.0,
+          "id": "native-0",
+          "ledger": {
+            "compactions": 0.0,
+            "context_bytes": 698.0,
+            "generation_allowance": 131072.0,
+            "tools": 1.0,
+            "turns": 1.0
+          },
+          "next_event": 2.0,
+          "pending": "native-0:1 command",
+          "summary_event": -1.0,
+          "summary_through": -1.0,
+          "title": "New conversation",
+          "workspace": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-attempt-recovery-275c5kat/project"
+        },
+        {
+          "first_user": 0.0,
+          "id": "native-0",
+          "ledger": {
+            "compactions": 0.0,
+            "context_bytes": 698.0,
+            "generation_allowance": 131072.0,
+            "tools": 2.0,
+            "turns": 1.0
+          },
+          "next_event": 6.0,
+          "pending": "",
+          "summary_event": -1.0,
+          "summary_through": -1.0,
+          "title": "New conversation",
+          "workspace": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-attempt-recovery-275c5kat/project"
+        }
+      ],
+      "runs": [
+        {
+          "id": "native-0-run-0",
+          "input_event": 0.0,
+          "kind": "coding",
+          "label": "NativeCoding",
+          "phase": "dispatching",
+          "recovery_event": -1.0,
+          "result_event": -1.0,
+          "session": "native-0",
+          "through": 0.0
+        },
+        {
+          "id": "native-0-run-1",
+          "input_event": 1.0,
+          "kind": "command",
+          "label": "/bin/sh",
+          "phase": "dispatching",
+          "recovery_event": -1.0,
+          "result_event": -1.0,
+          "session": "native-0",
+          "through": 1.0
+        },
+        {
+          "id": "native-0-run-0",
+          "input_event": 0.0,
+          "kind": "coding",
+          "label": "NativeCoding",
+          "phase": "closed_unknown",
+          "recovery_event": 5.0,
+          "result_event": -1.0,
+          "session": "native-0",
+          "through": 0.0
+        },
+        {
+          "id": "native-0-run-1",
+          "input_event": 1.0,
+          "kind": "command",
+          "label": "/bin/sh",
+          "phase": "closed_unknown",
+          "recovery_event": 4.0,
+          "result_event": -1.0,
+          "session": "native-0",
+          "through": 1.0
+        },
+        {
+          "id": "native-0-run-0",
+          "input_event": 0.0,
+          "kind": "coding",
+          "label": "NativeCoding",
+          "phase": "closed_unknown",
+          "recovery_event": 5.0,
+          "result_event": -1.0,
+          "session": "native-0",
+          "through": 0.0
+        },
+        {
+          "id": "native-0-run-1",
+          "input_event": 1.0,
+          "kind": "command",
+          "label": "/bin/sh",
+          "phase": "closed_unknown",
+          "recovery_event": 4.0,
+          "result_event": -1.0,
+          "session": "native-0",
+          "through": 1.0
+        },
+        {
+          "id": "native-0-run-2",
+          "input_event": 6.0,
+          "kind": "coding",
+          "label": "NativeCoding",
+          "phase": "completed",
+          "recovery_event": -1.0,
+          "result_event": 7.0,
+          "session": "native-0",
+          "through": 6.0
+        }
+      ],
+      "approval_audit": []
+    },
+    "probe_exit_code": 0
+  },
+  "limitations": [
+    "Foreground interruption and explicit unknown-outcome reconciliation do not establish live background process reattachment after Host restart",
+    "Recovery never replays a command or fabricates a success/termination result"
+  ]
+}

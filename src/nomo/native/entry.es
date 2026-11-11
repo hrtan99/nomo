@@ -22,6 +22,7 @@ import nomo.native.terminal.check_project;
 import nomo.native.terminal.run_command;
 import nomo.native.processes.{start_job, read_job, write_job, close_job_input, stop_job, list_jobs, job_output};
 import nomo.native.projects.{LaunchRoot, remember, show_projects, request_open};
+import nomo.native.git.shortcut as git_shortcut;
 
 type Argv = { program: string, arguments: Array<string> };
 flow command_argv(raw: string) -> Argv {
@@ -40,6 +41,11 @@ flow command_argv(raw: string) -> Argv {
 
 flow process_json<T>(value: T) -> string {
     return match encode(value, "process conversion failed", "process encoding failed") { Ok(text) => text, Err(error) => { abort(error); } };
+}
+
+flow git_command(session: string, argument: string) -> unit {
+    let output = handle { git_shortcut(argument) } with { SessionContext.current() => { resume session; } };
+    println("[GIT    ] " + process_json(output));
 }
 
 flow process_command(session: string, operation: string, argument: string) -> unit {
@@ -233,12 +239,15 @@ public flow run(args: Array<string>) -> i32
         if request == "" { continue; }
         if request == "/help" {
             println("Projects: /projects, /open [FOLDER_OR_NUMBER]. Project selection is native; the environment launcher remounts the selected folder and starts a new Etas Host.");
+            println("Git: /git status, diff [--staged] [JSON_PATHS], log [COUNT], branches, init, branch NAME, switch NAME, commit JSON. Commit JSON contains message and paths.");
             println("Ask about the project; native tools provide recursive/glob discovery, literal/regex search, file reads, approved editing and Git operations.");
             println("Terminal: /exec JSON_ARGV, /spawn JSON_ARGV, /jobs, /poll JOB [MAX_BYTES], /send JOB JSON_STRING, /close-input JOB, /stop JOB, /job-output JOB. /poll waits for output or termination. Saved job phases are historical observations; current Host handles are not durable across process restart.");
             println("/new [TITLE], /sessions, /resume ID, /rename TITLE, /history [TEXT], /page EVENT, /fork [EVENT], /export FILE, /import FILE, /copies, /resume-copy ID, /discard-copy ID, /runs, /resolve-run ID [NOTE], /config, /check, /compact, /status, /tree [PATH], /glob PATTERN, /search REGEX, /read FILE, /edits, /undo [EDIT], /rollback EDIT, /recover EDIT, /quit");
             continue;
         }
         if request == "/projects" { show_projects(); continue; }
+        if request == "/git" { git_command(selected.id, "status"); continue; }
+        match strip_prefix(request, "/git ") { Some(value) => { git_command(selected.id, value); continue; } None() => {} }
         if request == "/open" { if request_open("", options.workspace) { return 0; } continue; }
         match strip_prefix(request, "/open ") { Some(value) => { if request_open(value, options.workspace) { return 0; } continue; } None() => {} }
         let (operation, argument) = match split_once(request, " ") { Some(parts) => parts, None() => (request, "") };
