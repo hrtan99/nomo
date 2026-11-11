@@ -1,0 +1,175 @@
+{
+  "date": "2026-11-12",
+  "compiler": {
+    "selector": "latest0131",
+    "version": "0.13.1",
+    "source_overrides": [],
+    "verified_seed_binary_sha256": "9da7f127230b4b56233ba7fb350436d6d1021b4702b1e4a38d6eabb5c34a985e",
+    "repositories": {
+      "cli": {
+        "repository": "etas",
+        "revision": "1e7877edad58f8a7dec92c0b9630cd19f6365020",
+        "tree": "b632663a7ca08aed7c0b5743e1ed2acffa9691e4",
+        "packages": [
+          "etas_cli",
+          "etas_driver",
+          "etas_package",
+          "etas_tests"
+        ]
+      },
+      "core": {
+        "repository": "etas-core",
+        "revision": "cdb49367e73aadba56fbc89c984668ee3c1dd0aa",
+        "tree": "379fe96bcc970dbdea2d9974bf878dfb75f3345b",
+        "packages": [
+          "etas_builtin",
+          "etas_cache",
+          "etas_code",
+          "etas_core",
+          "etas_host",
+          "etas_memory_derive",
+          "etas_package_metadata",
+          "etas_std",
+          "etas_utils"
+        ]
+      },
+      "frontend": {
+        "repository": "etas-frontend",
+        "revision": "b09ceec7f57d1791dc92d358150cfc8c87935771",
+        "tree": "01c1fd029d65ff51cc05954f3de200dd1187e1d5",
+        "packages": [
+          "etas_effects",
+          "etas_frontend",
+          "etas_hir",
+          "etas_hir_analysis",
+          "etas_syntax",
+          "etas_syntax_derive",
+          "etas_types"
+        ]
+      },
+      "interpreter": {
+        "repository": "etas-interpreter",
+        "revision": "9a63968fea9bdf958db79d70a6723b992154533d",
+        "tree": "a1cae7bd105b2db699438108906243984eca2d2d",
+        "packages": [
+          "etas_interpreter"
+        ]
+      }
+    },
+    "source": "Official ETAS CLI 0.13.1 with its own Cargo.lock and exact Git dependencies; includes the upstream builtin ModelResponse role fix (#104). No source overrides.",
+    "cargo_lock_sha256": "407a3a06062282bec6662ea1a7e6fc814c2e4098f8165a94732ed11767077a71"
+  },
+  "command": "python3 -B tests/native_export_recovery_probe.py",
+  "exit_code": 0,
+  "evidence_directory": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-export-recovery-c6izgvl5",
+  "result": {
+    "status": "passed",
+    "scope": "real export approval interruption, fresh-Host unknown-outcome resolution without replay, explicitly approved new export, and imported metadata remaining historical",
+    "interrupted_exit_code": 130,
+    "unresolved_attempt": {
+      "id": "native-0-run-0",
+      "input_event": -1.0,
+      "kind": "export",
+      "label": "cancelled.json",
+      "phase": "dispatching",
+      "recovery_event": -1.0,
+      "result_event": -1.0,
+      "session": "native-0",
+      "through": 1.0
+    },
+    "final_attempts": [
+      {
+        "id": "native-0-run-0",
+        "input_event": -1.0,
+        "kind": "export",
+        "label": "cancelled.json",
+        "phase": "closed_unknown",
+        "recovery_event": 4.0,
+        "result_event": -1.0,
+        "session": "native-0",
+        "through": 1.0
+      },
+      {
+        "id": "native-0-run-1",
+        "input_event": -1.0,
+        "kind": "export",
+        "label": "accepted.json",
+        "phase": "completed",
+        "recovery_event": -1.0,
+        "result_event": 5.0,
+        "session": "native-0",
+        "through": 4.0
+      }
+    ],
+    "native_write_approvals": 1,
+    "model_http_requests": 0,
+    "command_dispatches": 0,
+    "exported_path": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-export-recovery-c6izgvl5/project/accepted.json",
+    "traces": [
+      "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-export-recovery-c6izgvl5/traces/run-ejgOPZ0S/trace.json",
+      "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-export-recovery-c6izgvl5/traces/run-7WFmRKy3/trace.json"
+    ],
+    "outcomes": [
+      "cancelled",
+      "completed"
+    ],
+    "limitations": [
+      "This covers interruption before write approval, not every post-write finalization window."
+    ]
+  },
+  "source_sha256": {
+    "src/nomo/native/transfer.es": "0d8c8e02c04111a4369d72fcfe794c61e30113580d45063e9ad45442fb3a2b59",
+    "src/nomo/native/lifecycle.es": "1e7dd5e165e81cc64fae39c3cd430f387373e45c3af14f63606c5a2b9079a1c7",
+    "src/nomo/native/entry.es": "fc4819e0dc3687f3f0d9789cb3bc3c37522fff173dafbd7ac290f1966bf3ad99",
+    "scripts/nomo-native": "4d064febb894c030e0afe8f7d04c00a168d4c694a752e7befe538cbe91fc8ecc",
+    "scripts/native-worker-transport.py": "e476d0c84fa376c58d1ced4cf22cfa096763628e1412bcb2ef7d4b987a31bd20",
+    "tests/native_export_recovery_probe.py": "9416eb9abed9a013f347ed953a04a6fdfca1981a4a8bfc4f6fc474cde371405e",
+    "tests/native_worker_probe.py": "c04d96d8fec2faaa1d7db982b93b647987bbb3e1b67747296dab2461d2460ee7"
+  },
+  "trace_observations": [
+    {
+      "path": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-export-recovery-c6izgvl5/traces/run-ejgOPZ0S/trace.json",
+      "sha256": "d6f3c0b8331b59ff017a81e88398e25db338345517763a1642c65910a0147c5e",
+      "outcome": "cancelled",
+      "approval_requests": [
+        10000103
+      ],
+      "approved_atomic_replacements": []
+    },
+    {
+      "path": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-export-recovery-c6izgvl5/traces/run-7WFmRKy3/trace.json",
+      "sha256": "014558b19374e8453b000d42632af4ca6f22581f903f57f7ce96f61b336a8f37",
+      "outcome": "completed",
+      "approval_requests": [
+        10000129
+      ],
+      "approved_atomic_replacements": [
+        {
+          "request": 128,
+          "approval_request": 10000129,
+          "approval_count_before": 0,
+          "approval_count_at_dispatch": 1
+        }
+      ]
+    }
+  ],
+  "retained_target": {
+    "path": "cancelled.json",
+    "sha256": "85d807630190abc6d29a33af860ef3deace2e7ae53b41b58c5b7d8486fae24e0",
+    "text": "Existing export target · 鹈鹕\n"
+  },
+  "approved_export": {
+    "path": "accepted.json",
+    "sha256": "c43f17cbd589944c66b593320c199163ab57ced99ce2a16354a562310a36c541",
+    "bytes": 1722
+  },
+  "terminal_sha256": {
+    "interrupted.txt": "270f8dcdb8f08cb45b4c5b7ed3cf93984f0d05b2071981ba08f09d699151eba4",
+    "restored.txt": "8d0ff8567e8754ba57bfc10e82d8d619e7033685eb003638eef31a3baf3086d9"
+  },
+  "scope_limits": [
+    "No arbitrary post-write crash guarantee.",
+    "No automatic replay or manufactured successful outcome for the interrupted attempt.",
+    "No real model service was called."
+  ]
+}
