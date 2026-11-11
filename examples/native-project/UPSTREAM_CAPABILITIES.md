@@ -53,6 +53,8 @@ Nomo's existing `command_timeout` means return a retained job after the wait, no
 
 Acceptance: a long command returns a live handle after the configured wait, then its actual later output and exit remain readable. Continuous-output acceptance must exceed the current Host buffer scope before claiming unbounded or complete detached output collection. Current `/poll` waits for the next output/terminal event and `command_timeout_active=false`; this requirement is unaccepted.
 
+There is now a directly reproduced defect in the existing cancellation path, rather than only an API request: [etas-core#65](https://github.com/etas-project/etas-core/issues/65). The runtime requests cancellation for a losing `Command.read` task in `race`, but the real local backend remains blocked until the synthetic producer is terminated. The **Host** needs cooperative pending-read cancellation and cleanup that retains buffered data; the runtime's ownership tracking must not be bypassed to fake completion. `command-read-cancellation-0131-20261112.json` records the valid source, continued liveness, explicit fixture cleanup and delayed Host completion.
+
 ## Stronger execution-endpoint restart survival
 
 Ordinary terminal-client restart and project switching are now handled by Nomo's resident Etas workers. `native_worker_probe.py` accepts detach/new-client live I/O/stop in the same Host. `native_projects_probe.py` accepts A→B→A with the original live job and reconnecting B through a later startup chooser. Neither is an upstream blocker.

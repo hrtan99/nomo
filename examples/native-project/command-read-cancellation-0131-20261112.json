@@ -1,0 +1,151 @@
+{
+  "date": "2026-11-12",
+  "compiler": {
+    "selector": "latest0131",
+    "version": "0.13.1",
+    "source_overrides": [],
+    "verified_seed_binary_sha256": "9da7f127230b4b56233ba7fb350436d6d1021b4702b1e4a38d6eabb5c34a985e",
+    "repositories": {
+      "cli": {
+        "repository": "etas",
+        "revision": "1e7877edad58f8a7dec92c0b9630cd19f6365020",
+        "tree": "b632663a7ca08aed7c0b5743e1ed2acffa9691e4",
+        "packages": [
+          "etas_cli",
+          "etas_driver",
+          "etas_package",
+          "etas_tests"
+        ]
+      },
+      "core": {
+        "repository": "etas-core",
+        "revision": "cdb49367e73aadba56fbc89c984668ee3c1dd0aa",
+        "tree": "379fe96bcc970dbdea2d9974bf878dfb75f3345b",
+        "packages": [
+          "etas_builtin",
+          "etas_cache",
+          "etas_code",
+          "etas_core",
+          "etas_host",
+          "etas_memory_derive",
+          "etas_package_metadata",
+          "etas_std",
+          "etas_utils"
+        ]
+      },
+      "frontend": {
+        "repository": "etas-frontend",
+        "revision": "b09ceec7f57d1791dc92d358150cfc8c87935771",
+        "tree": "01c1fd029d65ff51cc05954f3de200dd1187e1d5",
+        "packages": [
+          "etas_effects",
+          "etas_frontend",
+          "etas_hir",
+          "etas_hir_analysis",
+          "etas_syntax",
+          "etas_syntax_derive",
+          "etas_types"
+        ]
+      },
+      "interpreter": {
+        "repository": "etas-interpreter",
+        "revision": "9a63968fea9bdf958db79d70a6723b992154533d",
+        "tree": "a1cae7bd105b2db699438108906243984eca2d2d",
+        "packages": [
+          "etas_interpreter"
+        ]
+      }
+    },
+    "source": "Official ETAS CLI 0.13.1 with its own Cargo.lock and exact Git dependencies; includes the upstream builtin ModelResponse role fix (#104). No source overrides.",
+    "cargo_lock_sha256": "407a3a06062282bec6662ea1a7e6fc814c2e4098f8165a94732ed11767077a71"
+  },
+  "issue": "https://github.com/etas-project/etas-core/issues/65",
+  "published_payload_verified": true,
+  "public_payload_sha256": "eab05a65ee8dcd772b241e16bb7da54fad2aa53fd5d236e866c4f3f24f03fe02",
+  "source_sha256": {
+    "examples/repros/command-read-cancellation-0.13.1/etas.toml": "22e81fef4ca0472dc4b025c1222882a7d8715272568e2f808dbacc8636b4b1b8",
+    "examples/repros/command-read-cancellation-0.13.1/etas.lock": "bbdc5cf50a4606a8305d1aec2b6984c70921a7a7bc543f620d11d9d6fecac69f",
+    "examples/repros/command-read-cancellation-0.13.1/src/app/main.es": "141ffecba2501122ddd47528dcca6778b8f5aec975c40daee5d0f5cad6801065"
+  },
+  "acceptance_status": "failed",
+  "scope": "real native race winner requests cancellation of a pending Command.read; Host read remains blocked until fixture producer termination",
+  "evidence_directory": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-task-cancel-b8buta95",
+  "initial_observation_timeout_seconds": 10,
+  "stdout_before_cleanup": "WAIT_INPUT\n",
+  "stderr_before_cleanup": "",
+  "authoritative_live_observation": {
+    "container": "4e535c543ac5",
+    "name": "nomo-task-cancel-b8buta95",
+    "status": "running",
+    "etas_pid_in_docker_vm": 950,
+    "producer_pid_in_docker_vm": 951,
+    "producer": "/usr/bin/python3 -u -c import time; print('ready',flush=True); time.sleep(300)"
+  },
+  "native_requests": [
+    {
+      "request": 1,
+      "action": "Command.read",
+      "start_event_index": 8,
+      "finish_event_index": 10,
+      "started_at_unix_micros": 1794417129512725,
+      "finished_at_unix_micros": 1794417129519170,
+      "duration_micros": 6444,
+      "outcome": {
+        "kind": "succeeded"
+      }
+    },
+    {
+      "request": 3,
+      "action": "Command.read",
+      "start_event_index": 18,
+      "finish_event_index": 29,
+      "started_at_unix_micros": 1794417129521253,
+      "finished_at_unix_micros": 1794417268419884,
+      "duration_micros": 138898633,
+      "outcome": {
+        "kind": "succeeded"
+      }
+    },
+    {
+      "request": 5,
+      "action": "Console.stdin_read_line",
+      "start_event_index": 22,
+      "finish_event_index": 24,
+      "started_at_unix_micros": 1794417129521477,
+      "finished_at_unix_micros": 1794417129540884,
+      "duration_micros": 19406,
+      "outcome": {
+        "kind": "succeeded"
+      }
+    }
+  ],
+  "task_cancellation_events": [
+    {
+      "kind": "task_cancellation_requested",
+      "reason": "Requested",
+      "scope": 2,
+      "task": 1,
+      "event_index": 25
+    }
+  ],
+  "explicit_test_cleanup": {
+    "signal": "SIGTERM",
+    "producer_pid_inside_container": 8,
+    "time_unix_ns": 1794417268419120797,
+    "purpose": "diagnosis and cleanup of the same synthetic fixture, not product cancellation or a workaround"
+  },
+  "runtime_exit_after_forced_release": 0,
+  "runtime_trace_outcome_after_forced_release": "completed",
+  "trace_sha256": "65a4a7662c5db443e38e7d4ffd09feeb8c7d58b63e930eff81490daa2f7a27e5",
+  "trace_event_count": 41,
+  "interpretation": "The final successful runtime completion follows external fixture termination and does not establish the original cancellation requirement.",
+  "model_http_requests": 0,
+  "source_overrides": [],
+  "compiler_or_host_patch_installed": false,
+  "product_workaround_installed": false,
+  "independent_of_source_escape_issue": true,
+  "scope_limits": [
+    "Ordinary task.run body completion is not claimed to cancel children.",
+    "No assertion about every command operation; this executed defect concerns a losing pending read in race."
+  ]
+}
