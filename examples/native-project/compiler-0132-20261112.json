@@ -1,0 +1,167 @@
+{
+  "date": "2026-11-12",
+  "compiler": {
+    "selector": "latest0132",
+    "version": "0.13.2",
+    "source_overrides": [],
+    "repositories": {
+      "cli": {
+        "repository": "etas",
+        "revision": "1e9992b2b1a5c38004346c6f65684a7a61dd7943",
+        "tree": "2f4ebe95efef8f4624738d8981442c533d8abdec",
+        "packages": [
+          "etas_cli",
+          "etas_driver",
+          "etas_package",
+          "etas_tests"
+        ]
+      },
+      "core": {
+        "repository": "etas-core",
+        "revision": "cdb49367e73aadba56fbc89c984668ee3c1dd0aa",
+        "tree": "379fe96bcc970dbdea2d9974bf878dfb75f3345b",
+        "packages": [
+          "etas_builtin",
+          "etas_cache",
+          "etas_code",
+          "etas_core",
+          "etas_host",
+          "etas_memory_derive",
+          "etas_package_metadata",
+          "etas_std",
+          "etas_utils"
+        ]
+      },
+      "frontend": {
+        "repository": "etas-frontend",
+        "revision": "8ea14dc8d2adc83bd98150d0de1841162b7719fd",
+        "tree": "2a3180dc582fb734f7b1c9598a39f134505ff793",
+        "packages": [
+          "etas_effects",
+          "etas_frontend",
+          "etas_hir",
+          "etas_hir_analysis",
+          "etas_syntax",
+          "etas_syntax_derive",
+          "etas_types"
+        ]
+      },
+      "interpreter": {
+        "repository": "etas-interpreter",
+        "revision": "2810716ae51899a27b2b9016c5b91cac07273f00",
+        "tree": "5e08825eac29a5c84a31d207e094de0f610b5a64",
+        "packages": [
+          "etas_interpreter"
+        ]
+      }
+    },
+    "source": "Official ETAS CLI 0.13.2 with its own Cargo.lock and exact Git dependencies; includes upstream single-pass string escape decoding (frontend #84/#85). No source overrides.",
+    "cargo_lock_sha256": "de5c7665b3c821e5a109cbc2b9b9890bb79ecb3652ab1403eef97710419762a2",
+    "verified_seed_binary_sha256": "c6d0896cd35bea67948a9a90e1202e898d8cc187ad95f89b72b9f9919a7d5a53"
+  },
+  "binary": {
+    "version": "etas 0.13.2",
+    "sha256": "c6d0896cd35bea67948a9a90e1202e898d8cc187ad95f89b72b9f9919a7d5a53"
+  },
+  "isolated_volume": "nomo-cargo-0132-20261112-1e9992b2",
+  "source_overrides": [],
+  "registered_and_verified": true,
+  "build_seconds": 479,
+  "preserved_0131": {
+    "manifest": "config/etas-0131-official.json",
+    "lock": "config/etas-0131-official.Cargo.lock",
+    "verify_status": "passed",
+    "bootstrap_sha256": "386d93ab539078f835c2f76f4091aa149159c71cfd07372ec96911bcd3755782",
+    "log_sha256": "47c2011e6501333345e9e5873e1a6aba2b82aba2ca06d9166dc2baad61df8f64"
+  },
+  "source_sha256": {
+    "config/etas-latest-main.json": "ac0cb606829ba86fd71097f717b2d08e2431e8396b1bd2cd90cb5fedb63f5716",
+    "config/etas-latest.Cargo.lock": "de5c7665b3c821e5a109cbc2b9b9890bb79ecb3652ab1403eef97710419762a2",
+    "config/etas-0132-official-compose.yaml": "04cc55584740a2f1684cf307071de239748f481b8aff62ee1dfdfbea0fce00b3",
+    "config/etas-0131-official.json": "c11765cb4368365a3d1184cb349f3adb1cfb0c77f94f54407c272146ad2e7d18",
+    "config/etas-0131-official.Cargo.lock": "407a3a06062282bec6662ea1a7e6fc814c2e4098f8165a94732ed11767077a71",
+    "scripts/etas-official-cli-common.py": "196ea923da391c2d5163c056ee04617f0e867e1452b87d2d75791282680d05fe",
+    "scripts/etas-latest-cli-bootstrap.py": "15978da52267cc7aa69a88f5b3980394b687522aa84994bc7907240885eba467",
+    "scripts/etas-0131-official-cli-bootstrap.py": "17b02c924b8f730f9b9b24eabdfb3b1c24f2d21999c2a044ba8c61cb16854fad",
+    "scripts/etas-official-container-common.sh": "1a161b0cdbda02cd4da2fd52465cd28a530f14198ac722dec1b63cbff691d68c",
+    "scripts/nomo-verified-etas.py": "8464c37a0870617966125b61128e89f5d66540ed41963de0cd52319af6597dae",
+    "scripts/nomo-native": "ae9e187793541e624cb14679841dfca2f5e67c3e0f7291a1544815af44c9b4ed",
+    "scripts/native-worker-transport.py": "e476d0c84fa376c58d1ced4cf22cfa096763628e1412bcb2ef7d4b987a31bd20",
+    "scripts/nomo_project_model.py": "7c61c6025deb3d2fb778baac7fba5bcd4a6d47c2b7d5abc6567eebca0d5368e7",
+    "compose.yaml": "46626018a23ac5bdc7205487e08b3ac4a843e892987c6eba48ecb7182fbbbd8b",
+    "tests/native_end_to_end_probe.py": "c1b8e3da4ae407b90bb0ae2199d869b9ccd56779fab901f09e4908046acd96ed",
+    "tests/native_configuration_probe.py": "d75b1e8013a3d0ccc9f56d62d6b4b3520f7640eee924d09d822a09b6fdf6ceaf",
+    "tests/project_native_probe.py": "8e0923064fcff8ab7289404fdafc129a564febfeed026aef71dfce56ec70929e",
+    "src/nomo/native/agent.es": "3de5e21d24a413228bb235b2bb64480d576b346533c20b86aa03810115fa774e",
+    "src/nomo/native/configuration.es": "aeed11661d85e0229673eb66561edbc5c2f8d69e5893d4c481c7317b3814ec2b",
+    "src/nomo/native/context.es": "939ad299455adb728e36efdedfd2696711488ba67f36ef410fdb6f142db1af22",
+    "src/nomo/native/entry.es": "fc4819e0dc3687f3f0d9789cb3bc3c37522fff173dafbd7ac290f1966bf3ad99",
+    "src/nomo/native/file_io.es": "d530d2d3885067eff708167b9c4ab39d8af0e278bcb505bff1c95869b0761e65",
+    "src/nomo/native/files.es": "67f22dad790c4105b872668f02edb3248cd981fc6a07e35fbb04404f7014bb28",
+    "src/nomo/native/git.es": "4aeff4cbc15695050a38aa430620c4fa9a0e48ce2b93531ce6ab37b7233358f7",
+    "src/nomo/native/history.es": "57ff2a304dc12e7b898f863d615c2c4c86b332f44481a3b56ce5dbddf56022f8",
+    "src/nomo/native/lifecycle.es": "1e7dd5e165e81cc64fae39c3cd430f387373e45c3af14f63606c5a2b9079a1c7",
+    "src/nomo/native/mutations.es": "c413389c448ee2ed5be8613c956f66499df3d44058c924f9f8fb201f05ec5391",
+    "src/nomo/native/navigation.es": "8e8af65350efb3ac464cfd55755eea2124a7925a3803334736507794099b50da",
+    "src/nomo/native/options.es": "526c6151fb4dfbc04c5feeeb2e2226784e0ee6176954727812612b65f4089b36",
+    "src/nomo/native/processes.es": "b71b957ba8b83b2a1d366383ffa770373ef690c8b0132addfa04360e3ad9431c",
+    "src/nomo/native/project.es": "a23866b0c3cea8386f89a0b7d5f60605cefed560acf521ed7a8f6e2d8b493df6",
+    "src/nomo/native/projects.es": "5a2b52ee1d0fa1fbdcd7fa357810763c01c5e70e9d410e3bf8833308bd4434a0",
+    "src/nomo/native/terminal.es": "0f51f7579313cfe762216fcf397d08365794ef7de19e0afe48b238fa289a6ed5",
+    "src/nomo/native/transfer.es": "0d8c8e02c04111a4369d72fcfe794c61e30113580d45063e9ad45442fb3a2b59",
+    "src/nomo/native/workspace.es": "2bafa765bae136e13379960cad5ef78b29ff89ca6e25c9ebf787c445102928f6"
+  },
+  "native_acceptance": {
+    "status": "passed",
+    "entry": "scripts/nomo-native",
+    "scope": "native read, approved edit, check, all Git views and commit, second turn, history, shutdown, fresh-Host noninteractive restore",
+    "synthetic_http_requests": 15,
+    "business_approvals": 12,
+    "native_approvals": 15,
+    "approval_audit": [],
+    "traces": [
+      "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-end-to-end-a_eyviki/native/run-YJ9A3wOr/trace.json",
+      "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-end-to-end-a_eyviki/native/run-QVE1bA4Y/trace.json"
+    ],
+    "command": "python3 -B tests/native_end_to_end_probe.py",
+    "evidence_directory": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-end-to-end-a_eyviki",
+    "functional_sha256": "064b5287c945e51eaf3d73c0f09fce11873a31c5ec268d623f52b0fb58717a75",
+    "terminal_sha256": "2324b1b26af0c188908cb8c1be486536f3c2aee5e7e5ac39ed5c8119ac3edbe5",
+    "restored_stdout_sha256": "bf83f25d69852f49d638927e768482f1c38c4e2d89704ca53e4b675d4c937d18",
+    "trace_sha256": {
+      "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-end-to-end-a_eyviki/native/run-YJ9A3wOr/trace.json": "5cf303117010f213ed670d88834fcc03475ede20bf38d7a25259b1524a8d992d",
+      "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-end-to-end-a_eyviki/native/run-QVE1bA4Y/trace.json": "a3b1382f1c3db583f11620b0ab2f517a0424db6b7b304a17862b222ab1f30b16"
+    }
+  },
+  "configuration_acceptance": {
+    "status": "passed",
+    "command": "python3 -B tests/native_configuration_probe.py",
+    "evidence_directory": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-configuration-gau_jv40",
+    "model_http_requests": 5,
+    "approval_audit": [],
+    "functional_sha256": "907790b56edf69640bdaac2f70d88accd7af55697b1fae04fc02243013ebc990",
+    "terminal_sha256": "1ecd8dec13f781ef3ff9a319f4da350011234046f640362a99ce3a4024a08890",
+    "restored_stdout_sha256": "453ebe36ee8260ae5120df5c71329bf57054f4ee41970fe9df763286b9c34715"
+  },
+  "default_entry_compatibility": {
+    "status": "passed",
+    "command": "python3 -B tests/project_native_probe.py",
+    "evidence_directory": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-project-native-yt7bef22",
+    "synthetic_http_requests": 6,
+    "native_migration_proof": false,
+    "log_sha256": "d0945290582f3a81499e8101680f124e93a57112599d746327cb5d959e7e7414"
+  },
+  "string_escape_acceptance": "examples/native-project/string-escape-0132-20261112.json",
+  "remaining_upstream_contracts": "examples/native-project/UPSTREAM_CAPABILITIES.md",
+  "default_entry_switched": false,
+  "core_65_fixed": false,
+  "logs": {
+    "nomo-etas-0132-build.log": "d3a0067563a4d839cf27170c80e90d98cd5dcd839abb1b73f4476cee23677665",
+    "nomo-etas-0132-register.log": "483a4a79fc4239bead12723a1c2cbdf2696ed90bdb9ce246369027e3b6cc970e",
+    "nomo-native-e2e-0132.log": "e42272d7719d5effc2cd0133f0aca912c3682c6a5eb5cad528b802621b6a4344",
+    "nomo-native-config-0132.log": "c92b79f1a4c438e50557db83fef7860f537e8bbc00a27a817c0fff6623320ff3",
+    "nomo-project-compat-0132.log": "d0945290582f3a81499e8101680f124e93a57112599d746327cb5d959e7e7414",
+    "nomo-string-escape-0132-result.log": "79207ef51b740c88782d368b637ba2228695ed461d967aef502d3fd73601e882",
+    "nomo-task-drain-0132-result.log": "3a3129558d2e2cd868cf62d54c331fc7e9077f8485ce9fd044acc1298aa63ab5"
+  }
+}

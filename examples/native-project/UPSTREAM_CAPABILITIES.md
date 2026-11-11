@@ -1,6 +1,6 @@
 # Remaining Etas capabilities for the complete native Nomo product
 
-This is a capability contract, not a list of confirmed compiler bugs. It is based on the official 0.13.1 graph in `config/etas-latest-main.json`. No compiler patch or Python business implementation is substituted. The default entry remains the existing product until the complete native scope is accepted.
+This is a capability contract, not a list of confirmed compiler bugs. The current official graph is 0.13.2 in `config/etas-latest-main.json`; its core/standard-library/Host revision is unchanged from the accepted 0.13.1 graph discussed below. No compiler patch or Python business implementation is substituted. The default entry remains the existing product until the complete native scope is accepted.
 
 ## Layer ownership
 
@@ -13,6 +13,8 @@ This is a capability contract, not a list of confirmed compiler bugs. It is base
 | Environment transport | Container mounts, invoking identity, endpoint/terminal connection and byte forwarding. It does not read the business database or decide model/tool stages. |
 
 Source: [official Host ownership design](https://github.com/etas-project/etas-core/blob/cdb49367e73aadba56fbc89c984668ee3c1dd0aa/docs/architect/etas-host-design.md). Exact source filenames below refer to that pinned graph, not an assertion about future releases.
+
+The minimum upstream work is: PTY/control-terminal operations; cooperative cancellation of pending command reads (#65); a supported timed-wait path; a per-model-round context projection contract; and dynamic inference options with source-visible usage. Each needs the source interface and the implementation at its owning boundary. Continuous output draining and summarization policy remain Nomo source work. Retaining jobs after destruction of the Etas Host is a separate, stronger lifecycle requirement than client detach/project switching, which already retain that Host.
 
 ## Required public contracts
 

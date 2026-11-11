@@ -61,7 +61,7 @@ def main():
     environment = dict(os.environ, MINIMAX_API_KEY='synthetic-unused', NOMO_NATIVE_WORKSPACE=str(project),
                        NOMO_NATIVE_STATE=str(state), NOMO_NATIVE_EVIDENCE=str(traces))
     base = ['docker', 'compose', '--env-file', '/dev/null']
-    for name in ('compose.yaml', 'config/etas-0131-official-compose.yaml', 'config/local-tryout-compose.yaml',
+    for name in ('compose.yaml', 'config/etas-0132-official-compose.yaml', 'config/local-tryout-compose.yaml',
                  'config/etas-runtime-cache-compose.yaml', 'config/nomo-native-compose.yaml'):
         base += ['--file', str(ROOT / name)]
 

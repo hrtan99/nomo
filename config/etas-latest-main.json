@@ -1,13 +1,12 @@
 {
-  "selector": "latest0131",
-  "version": "0.13.1",
+  "selector": "latest0132",
+  "version": "0.13.2",
   "source_overrides": [],
-  "verified_seed_binary_sha256": "9da7f127230b4b56233ba7fb350436d6d1021b4702b1e4a38d6eabb5c34a985e",
   "repositories": {
     "cli": {
       "repository": "etas",
-      "revision": "1e7877edad58f8a7dec92c0b9630cd19f6365020",
-      "tree": "b632663a7ca08aed7c0b5743e1ed2acffa9691e4",
+      "revision": "1e9992b2b1a5c38004346c6f65684a7a61dd7943",
+      "tree": "2f4ebe95efef8f4624738d8981442c533d8abdec",
       "packages": [
         "etas_cli",
         "etas_driver",
@@ -33,8 +32,8 @@
     },
     "frontend": {
       "repository": "etas-frontend",
-      "revision": "b09ceec7f57d1791dc92d358150cfc8c87935771",
-      "tree": "01c1fd029d65ff51cc05954f3de200dd1187e1d5",
+      "revision": "8ea14dc8d2adc83bd98150d0de1841162b7719fd",
+      "tree": "2a3180dc582fb734f7b1c9598a39f134505ff793",
       "packages": [
         "etas_effects",
         "etas_frontend",
@@ -47,13 +46,14 @@
     },
     "interpreter": {
       "repository": "etas-interpreter",
-      "revision": "9a63968fea9bdf958db79d70a6723b992154533d",
-      "tree": "a1cae7bd105b2db699438108906243984eca2d2d",
+      "revision": "2810716ae51899a27b2b9016c5b91cac07273f00",
+      "tree": "5e08825eac29a5c84a31d207e094de0f610b5a64",
       "packages": [
         "etas_interpreter"
       ]
     }
   },
-  "source": "Official ETAS CLI 0.13.1 with its own Cargo.lock and exact Git dependencies; includes the upstream builtin ModelResponse role fix (#104). No source overrides.",
-  "cargo_lock_sha256": "407a3a06062282bec6662ea1a7e6fc814c2e4098f8165a94732ed11767077a71"
+  "source": "Official ETAS CLI 0.13.2 with its own Cargo.lock and exact Git dependencies; includes upstream single-pass string escape decoding (frontend #84/#85). No source overrides.",
+  "cargo_lock_sha256": "de5c7665b3c821e5a109cbc2b9b9890bb79ecb3652ab1403eef97710419762a2",
+  "verified_seed_binary_sha256": "c6d0896cd35bea67948a9a90e1202e898d8cc187ad95f89b72b9f9919a7d5a53"
 }

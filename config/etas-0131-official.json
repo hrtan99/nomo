@@ -1,0 +1,59 @@
+{
+  "selector": "latest0131",
+  "version": "0.13.1",
+  "source_overrides": [],
+  "verified_seed_binary_sha256": "9da7f127230b4b56233ba7fb350436d6d1021b4702b1e4a38d6eabb5c34a985e",
+  "repositories": {
+    "cli": {
+      "repository": "etas",
+      "revision": "1e7877edad58f8a7dec92c0b9630cd19f6365020",
+      "tree": "b632663a7ca08aed7c0b5743e1ed2acffa9691e4",
+      "packages": [
+        "etas_cli",
+        "etas_driver",
+        "etas_package",
+        "etas_tests"
+      ]
+    },
+    "core": {
+      "repository": "etas-core",
+      "revision": "cdb49367e73aadba56fbc89c984668ee3c1dd0aa",
+      "tree": "379fe96bcc970dbdea2d9974bf878dfb75f3345b",
+      "packages": [
+        "etas_builtin",
+        "etas_cache",
+        "etas_code",
+        "etas_core",
+        "etas_host",
+        "etas_memory_derive",
+        "etas_package_metadata",
+        "etas_std",
+        "etas_utils"
+      ]
+    },
+    "frontend": {
+      "repository": "etas-frontend",
+      "revision": "b09ceec7f57d1791dc92d358150cfc8c87935771",
+      "tree": "01c1fd029d65ff51cc05954f3de200dd1187e1d5",
+      "packages": [
+        "etas_effects",
+        "etas_frontend",
+        "etas_hir",
+        "etas_hir_analysis",
+        "etas_syntax",
+        "etas_syntax_derive",
+        "etas_types"
+      ]
+    },
+    "interpreter": {
+      "repository": "etas-interpreter",
+      "revision": "9a63968fea9bdf958db79d70a6723b992154533d",
+      "tree": "a1cae7bd105b2db699438108906243984eca2d2d",
+      "packages": [
+        "etas_interpreter"
+      ]
+    }
+  },
+  "source": "Official ETAS CLI 0.13.1 with its own Cargo.lock and exact Git dependencies; includes the upstream builtin ModelResponse role fix (#104). No source overrides.",
+  "cargo_lock_sha256": "407a3a06062282bec6662ea1a7e6fc814c2e4098f8165a94732ed11767077a71"
+}
