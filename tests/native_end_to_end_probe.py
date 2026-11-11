@@ -106,14 +106,8 @@ def main():
     threading.Thread(target=server.serve_forever, daemon=True).start()
     environment = dict(os.environ, MINIMAX_API_KEY='synthetic-local-only',
         NOMO_MODEL_BASE_URL=f'http://host.docker.internal:{server.server_port}/v1', NOMO_MODEL_ALLOW_PRIVATE='true',
-        NOMO_NATIVE_WORKSPACE=str(project), NOMO_NATIVE_STATE=str(state), NOMO_NATIVE_EVIDENCE=str(traces))
-    command = ['docker', 'compose', '--env-file', '/dev/null']
-    for name in ('compose.yaml', 'config/etas-0131-official-compose.yaml', 'config/local-tryout-compose.yaml',
-                 'config/etas-runtime-cache-compose.yaml', 'config/nomo-native-compose.yaml'):
-        command += ['--file', str(ROOT / name)]
-    command += ['run', '--rm', '--no-deps', '--pull', 'never', '--tty=true', 'dev',
-        '/home/nomo/.cargo/bin/etas', 'run', '/workspace', '--flow', 'native_project', '--profile', 'nomo-native',
-        '--allow-effects', '--max-tool-rounds', '256', '--trace-out', '/native-evidence/trace.json', '--args', '--workspace', str(project)]
+        NOMO_NATIVE_STATE=str(state), NOMO_NATIVE_TRACE_ROOT=str(traces))
+    command = [str(ROOT / 'scripts/nomo-native'), str(project)]
     git_commands = [
         ['--no-optional-locks', '-c', 'core.fsmonitor=false', 'status', '--short', '--branch'],
         ['--no-optional-locks', 'diff', '--no-ext-diff', '--no-textconv', '--', 'note.txt'],
@@ -171,20 +165,23 @@ def main():
         assert (project / 'note.txt').read_text() == 'before new\n'
         assert subprocess.check_output(['git', '-C', str(project), 'branch', '--show-current'], text=True).strip() == 'accepted'
         assert subprocess.check_output(['git', '-C', str(project), 'status', '--porcelain'], text=True) == ''
-        restored = list(command)
-        restored[restored.index('--tty=true')] = '--tty=false'
-        restored[restored.index('/native-evidence/trace.json')] = '/native-evidence/restored.json'
-        restored += ['--once', 'Restore the conversation and describe the completed work.']
-        result = subprocess.run(restored, cwd=ROOT, env=environment, capture_output=True, text=True)
+        restored = command + ['--once', 'Restore the conversation and describe the completed work.']
+        result = subprocess.run(restored, cwd=ROOT, env=environment, stdin=subprocess.DEVNULL, capture_output=True, text=True)
         (evidence / 'restored-stdout.txt').write_text(result.stdout)
         (evidence / 'restored-stderr.txt').write_text(result.stderr)
         assert result.returncode == 0, result.stdout + result.stderr
         assert 'Native history retained' in result.stdout and len(server.requests) == 15
-        for name in ('trace.json', 'restored.json'):
-            trace = json.loads((traces / name).read_text())
+        trace_paths = [Path(next(line.split('[TRACE  ] ', 1)[1] for line in output.splitlines() if '[TRACE  ] ' in line)) / 'trace.json'
+                       for output in (text, result.stdout)]
+        for path in trace_paths:
+            trace = json.loads(path.read_text())
             assert trace['outcome']['kind'] == 'completed'
             from native_recovery_probe import audit
             assert not audit(trace['events']), 'native approval provenance audit failed'
+        (evidence / 'functional.json').write_text(json.dumps({'status': 'passed', 'entry': 'scripts/nomo-native',
+            'scope': 'native read, approved edit, check, all Git views and commit, second turn, history, shutdown, fresh-Host noninteractive restore',
+            'synthetic_http_requests': len(server.requests), 'business_approvals': business_approved,
+            'native_approvals': approved, 'approval_audit': [], 'traces': [str(path) for path in trace_paths]}, indent=2) + '\n')
         print('PASS complete native read/edit/check/Git/chat/restore: ' + str(evidence))
     finally:
         server.shutdown()

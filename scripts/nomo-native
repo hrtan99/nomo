@@ -12,6 +12,8 @@ Set MINIMAX_API_KEY for the configured model endpoint. Native state defaults
 to $XDG_STATE_HOME/nomo/native (or ~/.local/state/nomo/native).
 NOMO_NATIVE_STATE and NOMO_NATIVE_TRACE_ROOT select state and trace directories.
 Inside Nomo, /help lists the commands implemented by Etas.
+Ctrl+P then Ctrl+Q detaches the terminal while Etas and its jobs stay running.
+Run the same command without startup options to reconnect. /quit shuts down Etas.
 This migration has outstanding upstream acceptance gates; see NATIVE_MIGRATION.md.
 HELP
   exit 0
@@ -36,10 +38,9 @@ while true; do
   export NOMO_NATIVE_EVIDENCE="$(mktemp -d "$task_traces/run-XXXXXXXX")"
   export NOMO_NATIVE_CONTROL_DIR="$NOMO_NATIVE_EVIDENCE/control"
   mkdir -- "$NOMO_NATIVE_CONTROL_DIR"
-  printf '[PROJECT] %s\n[STATE  ] %s\n[TRACE  ] %s\n' \
-    "$NOMO_NATIVE_WORKSPACE" "$NOMO_NATIVE_STATE" "$NOMO_NATIVE_EVIDENCE"
   set +e
-  docker compose --project-name nomo-native --env-file /dev/null \
+  python3 "$task_root/scripts/native-worker-transport.py" \
+    docker compose --project-name nomo-native --env-file /dev/null \
     --file "$task_root/compose.yaml" \
     --file "$task_root/config/etas-0131-official-compose.yaml" \
     --file "$task_root/config/local-tryout-compose.yaml" \
