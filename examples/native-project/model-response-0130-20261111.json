@@ -1,0 +1,22 @@
+{
+  "date": "2026-11-11",
+  "compiler_config": "config/etas-latest-main.json",
+  "binary_sha256": "bc6ed758bf9b8c3a0fbca3e42d4cf8607928b185a035d6cdcb12d1edf843c28b",
+  "compiler_version": "0.13.0",
+  "observed_exit_code": 3,
+  "model_http_requests": 0,
+  "model_host_boundaries": 0,
+  "error": "InvalidArguments: tool schema type std.agent.schema.ModelResponse has no representation and cannot be lowered to host schema",
+  "evidence_directory": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-response-api-sk4pfsgw",
+  "source_sha256": {
+    "etas.toml": "8a72536b063e5cbb9b2abedaeb5d89cc11c9542e1e8c9072373014ee2aa6ea38",
+    "etas.lock": "d884ae918f0010950e3f8060c9725734539c5299d4aa3b7c3d6c0e1fbb874c6d",
+    "src/app/main.es": "89a0fe1e069485fa21dc0c5ab450e1af83a6ceb1c5e83c825dc4d6117c9ad08b"
+  },
+  "trace_sha256": "eddd92d85031c20bf5d33c5de7f7122a5884ddea08046ec8bb849315da1a21a5",
+  "stderr_sha256": "6e5109a400e9b64e67904b2a302061c700d5a50be8fc2cde02d8196d6a023309",
+  "no_workaround": true,
+  "unverified": "Whether the returned raw response can be projected to JSON; execution fails before that point.",
+  "upstream_issue": "https://github.com/etas-project/etas-interpreter/issues/104",
+  "upstream_issue_body_sha256": "ba05584634695880d9e2cfbfe29c9f28d2dddd021e54e4234062a106e8d4a578"
+}
