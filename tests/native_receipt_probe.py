@@ -46,7 +46,7 @@ flow = "main"
         {'type': 'bind', 'source': str(package), 'target': '/workspace', 'read_only': True},
         {'type': 'bind', 'source': str(state), 'target': '/state'}]}}}))
     command = ['docker', 'compose', '--env-file', '/dev/null']
-    for name in ('compose.yaml', 'config/etas-0130-official-compose.yaml', 'config/local-tryout-compose.yaml',
+    for name in ('compose.yaml', 'config/etas-0131-official-compose.yaml', 'config/local-tryout-compose.yaml',
                  'config/etas-runtime-cache-compose.yaml', str(overlay)):
         command += ['--file', str(ROOT / name)]
     command += ['run', '--rm', '--no-deps', '--pull', 'never', '--tty=false', 'dev',

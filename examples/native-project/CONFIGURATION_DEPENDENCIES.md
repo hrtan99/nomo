@@ -1,6 +1,6 @@
 # Native project configuration contracts and remaining dependencies
 
-Native `.nomo.toml` loading now retains the optional `[project]` table, omitted field defaults and ignored unrelated keys. Etas owns key selection, defaults, type/value validation, instructions, discovery ignore patterns, configured check argv, context estimates, recent-message selection and the persistent parsed cache. The executed positive flow includes full configuration, multiline Unicode instructions, actual configured tools, summary/restore, a cache hit in a new process and a changed partial root configuration. Full native delivery remains unaccepted at the command approval audit and the dependencies below.
+Native `.nomo.toml` loading now retains the optional `[project]` table, omitted field defaults and ignored unrelated keys. Etas owns key selection, defaults, type/value validation, instructions, discovery ignore patterns, configured check argv, context estimates, recent-message selection and the persistent parsed cache. The executed positive flow includes full configuration, multiline Unicode instructions, actual configured tools, summary/restore, a cache hit in a new process and a changed partial root configuration. The command approval audit passes after the upstream 0.13.0 fix. Full native delivery remains incomplete at the configuration and lifecycle dependencies below.
 
 ## Generic data codecs
 
@@ -22,6 +22,6 @@ The current native coding agent has a static 131072 per-request output cap and 5
 
 ## Retained terminal timing
 
-`command_timeout` is parsed and retained, but `/config` reports `command_timeout_active=false` and the agent is told it is inactive. In the existing product it means returning a retained job after the wait period. The inspected native Command API exposes synchronous run and initial stdin; retained handles, poll/input/stop and restart attachment remain in `COMMAND_LIFECYCLE_DEPENDENCY.md`. Killing the process at the timeout would change the required behavior.
+`command_timeout` is parsed and retained, but `/config` reports `command_timeout_active=false` and the agent is told it is inactive. In the existing product it means returning a retained job after the wait period. The current native Command API has start/read/write/close-stdin/stop/reconnect, and the corresponding Nomo tools are implemented. Applying a soft wait timeout and preserving the job, PTY support and restart attachment remain separate requirements in `COMMAND_LIFECYCLE_DEPENDENCY.md`. Killing the process at the timeout would change the required behavior.
 
 The default shipping entry remains unchanged until the complete native product and full acceptance gates are satisfied.

@@ -1,12 +1,13 @@
 {
-  "selector": "latest0130",
-  "version": "0.13.0",
+  "selector": "latest0131",
+  "version": "0.13.1",
   "source_overrides": [],
+  "verified_seed_binary_sha256": "9da7f127230b4b56233ba7fb350436d6d1021b4702b1e4a38d6eabb5c34a985e",
   "repositories": {
     "cli": {
       "repository": "etas",
-      "revision": "6ceb644a17b159a5ee9a988cbbba0700aebf5e46",
-      "tree": "c1b382ef073bd618bb44247b1fe2c1fcac575d35",
+      "revision": "1e7877edad58f8a7dec92c0b9630cd19f6365020",
+      "tree": "b632663a7ca08aed7c0b5743e1ed2acffa9691e4",
       "packages": [
         "etas_cli",
         "etas_driver",
@@ -46,14 +47,13 @@
     },
     "interpreter": {
       "repository": "etas-interpreter",
-      "revision": "7422fb134d2606cc28b7af9c69e98668ba5411c0",
-      "tree": "f16dbe2e9924f40e98fec6ec4ea53f9d96f49596",
+      "revision": "9a63968fea9bdf958db79d70a6723b992154533d",
+      "tree": "a1cae7bd105b2db699438108906243984eca2d2d",
       "packages": [
         "etas_interpreter"
       ]
     }
   },
-  "source": "Official ETAS CLI 0.13.0 with its own Cargo.lock and matching Git dependencies; includes upstream fixes for tool-round configuration, scalar-slice continuation and command approval authority, plus native command process operations. No source overrides.",
-  "cargo_lock_sha256": "46a976a8681772f78aed6fbc92c9101f877cf123860d68ee902a1b7d6a9c5376",
-  "verified_seed_binary_sha256": "bc6ed758bf9b8c3a0fbca3e42d4cf8607928b185a035d6cdcb12d1edf843c28b"
+  "source": "Official ETAS CLI 0.13.1 with its own Cargo.lock and exact Git dependencies; includes the upstream builtin ModelResponse role fix (#104). No source overrides.",
+  "cargo_lock_sha256": "407a3a06062282bec6662ea1a7e6fc814c2e4098f8165a94732ed11767077a71"
 }

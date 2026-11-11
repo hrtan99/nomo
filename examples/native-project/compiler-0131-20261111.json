@@ -1,0 +1,122 @@
+{
+  "date": "2026-11-11",
+  "compiler": {
+    "selector": "latest0131",
+    "version": "0.13.1",
+    "source_overrides": [],
+    "verified_seed_binary_sha256": "9da7f127230b4b56233ba7fb350436d6d1021b4702b1e4a38d6eabb5c34a985e",
+    "repositories": {
+      "cli": {
+        "repository": "etas",
+        "revision": "1e7877edad58f8a7dec92c0b9630cd19f6365020",
+        "tree": "b632663a7ca08aed7c0b5743e1ed2acffa9691e4",
+        "packages": [
+          "etas_cli",
+          "etas_driver",
+          "etas_package",
+          "etas_tests"
+        ]
+      },
+      "core": {
+        "repository": "etas-core",
+        "revision": "cdb49367e73aadba56fbc89c984668ee3c1dd0aa",
+        "tree": "379fe96bcc970dbdea2d9974bf878dfb75f3345b",
+        "packages": [
+          "etas_builtin",
+          "etas_cache",
+          "etas_code",
+          "etas_core",
+          "etas_host",
+          "etas_memory_derive",
+          "etas_package_metadata",
+          "etas_std",
+          "etas_utils"
+        ]
+      },
+      "frontend": {
+        "repository": "etas-frontend",
+        "revision": "b09ceec7f57d1791dc92d358150cfc8c87935771",
+        "tree": "01c1fd029d65ff51cc05954f3de200dd1187e1d5",
+        "packages": [
+          "etas_effects",
+          "etas_frontend",
+          "etas_hir",
+          "etas_hir_analysis",
+          "etas_syntax",
+          "etas_syntax_derive",
+          "etas_types"
+        ]
+      },
+      "interpreter": {
+        "repository": "etas-interpreter",
+        "revision": "9a63968fea9bdf958db79d70a6723b992154533d",
+        "tree": "a1cae7bd105b2db699438108906243984eca2d2d",
+        "packages": [
+          "etas_interpreter"
+        ]
+      }
+    },
+    "source": "Official ETAS CLI 0.13.1 with its own Cargo.lock and exact Git dependencies; includes the upstream builtin ModelResponse role fix (#104). No source overrides.",
+    "cargo_lock_sha256": "407a3a06062282bec6662ea1a7e6fc814c2e4098f8165a94732ed11767077a71"
+  },
+  "binary": {
+    "version": "etas 0.13.1",
+    "sha256": "9da7f127230b4b56233ba7fb350436d6d1021b4702b1e4a38d6eabb5c34a985e"
+  },
+  "isolated_volume": "nomo-cargo-0131-20261111-1e7877ed",
+  "source_overrides": [],
+  "registered_and_verified": true,
+  "build_seconds": 269,
+  "preserved_0130": {
+    "manifest": "config/etas-0130-official.json",
+    "lock": "config/etas-0130-official.Cargo.lock",
+    "verify_status": "passed",
+    "log_sha256": "36935f33d10a1ff398bb9cb0c96240bf441505be337ed54e3c0da70a6f449363"
+  },
+  "source_sha256": {
+    "config/etas-latest-main.json": "c11765cb4368365a3d1184cb349f3adb1cfb0c77f94f54407c272146ad2e7d18",
+    "config/etas-latest.Cargo.lock": "407a3a06062282bec6662ea1a7e6fc814c2e4098f8165a94732ed11767077a71",
+    "config/etas-0131-official-compose.yaml": "309f3fe961587963f8b84c554a77071d9a5f2c808f221e897ef0281bcfa121a1",
+    "scripts/etas-official-cli-common.py": "abeb9735ceaf60c5d51650f61c35e65b85d4e46ac7d1789508531ac2468e5ce7",
+    "scripts/etas-latest-cli-bootstrap.py": "17b02c924b8f730f9b9b24eabdfb3b1c24f2d21999c2a044ba8c61cb16854fad",
+    "scripts/etas-official-container-common.sh": "b1765df388eb2c62864db9411b844cac497677e839e660561cb84ee9f587d896",
+    "scripts/nomo-verified-etas.py": "0adbe874ca2bee8f435fd7da7ef91fd620a0e44bead83f89de8c09e07db14d67",
+    "scripts/nomo_project_model.py": "2b45b708123acddb89afa75f29e626b466e745d9f01070776091d03bb31614be",
+    "compose.yaml": "28c754e15e3e82b4003f4bb23f9e7b3a00bf33cea19439d3aebec62d81875e86",
+    "tests/native_end_to_end_probe.py": "a8d7d0c1c36fede10b842addf95ff1ed67ede2f498a473f1fce7f87029ff9a2f"
+  },
+  "native_acceptance": {
+    "status": "passed",
+    "command": "python3 -B tests/native_end_to_end_probe.py",
+    "evidence_directory": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-end-to-end-qiv7w8x8",
+    "synthetic_http_requests": 15,
+    "scope": "read, approved edit, check, complete Git catalogue, second turn, exit and fresh-process conversation restore",
+    "trace_outcome": "completed",
+    "trace_sha256": "ee29aa2d3bafc628867b7ef00ec32f04f7573ac4f77e4751fe7135fc0c3c775e",
+    "terminal_sha256": "c9dd2af31e46b409c35e520d73398a763f593c75d081cfa94eedccdd8a1bfb1a",
+    "restored_stdout_sha256": "b0a1ade2ea03b502a7950d78a1ece43b79bb51c67d09267df918b44b21709007"
+  },
+  "default_entry_compatibility": {
+    "status": "passed",
+    "command": "python3 -B tests/project_native_probe.py",
+    "evidence_directory": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-project-native-d4t3no2l",
+    "synthetic_http_requests": 6,
+    "native_migration_proof": false
+  },
+  "raw_response": {
+    "exit_code": 0,
+    "synthetic_http_requests": 1,
+    "stdout": "RAW_RESPONSE_NOT_JSON_PROJECTABLE\n",
+    "evidence_directory": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-response-api-9f1pz252",
+    "source_sha256": "89a0fe1e069485fa21dc0c5ab450e1af83a6ceb1c5e83c825dc4d6117c9ad08b",
+    "request_sha256": "bcb2c54c29e039ec55ab5bc3887a5f0991453af78e45475f2b89626e9065aca5",
+    "trace_sha256": "b3a12c583ac3295e5e122421145a7c4abbeb6634f3db5c077a2138ababc7447f",
+    "classification": "#104 fixed; ModelResponse is still opaque to public JSON projection. Public source accessors not found in the pinned standard schema module; no private checkpoint decoder introduced."
+  },
+  "logs": {
+    "nomo-etas-0131-build.log": "02727c8fa3fc39838cd39685d4a5bf517a9070838692377dd6bf80bc5c9f57ae",
+    "nomo-native-e2e-0131.log": "c360336d1b705a66b51d0392ca1e1a89d792be3682dab430c0ac0c3ed1b44d9a",
+    "nomo-project-compat-0131.log": "0cd24215bc5917d507012310170861f50619d06ea96bc2c09aa3cbbe6b98adf4",
+    "nomo-response-api-result.log": "eef32e65d1ab6d8b545b80d5125c4c9ac1652a992e9a74c6471e2fbb7a6b549e"
+  }
+}

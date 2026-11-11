@@ -1,0 +1,59 @@
+{
+  "selector": "latest0130",
+  "version": "0.13.0",
+  "source_overrides": [],
+  "repositories": {
+    "cli": {
+      "repository": "etas",
+      "revision": "6ceb644a17b159a5ee9a988cbbba0700aebf5e46",
+      "tree": "c1b382ef073bd618bb44247b1fe2c1fcac575d35",
+      "packages": [
+        "etas_cli",
+        "etas_driver",
+        "etas_package",
+        "etas_tests"
+      ]
+    },
+    "core": {
+      "repository": "etas-core",
+      "revision": "cdb49367e73aadba56fbc89c984668ee3c1dd0aa",
+      "tree": "379fe96bcc970dbdea2d9974bf878dfb75f3345b",
+      "packages": [
+        "etas_builtin",
+        "etas_cache",
+        "etas_code",
+        "etas_core",
+        "etas_host",
+        "etas_memory_derive",
+        "etas_package_metadata",
+        "etas_std",
+        "etas_utils"
+      ]
+    },
+    "frontend": {
+      "repository": "etas-frontend",
+      "revision": "b09ceec7f57d1791dc92d358150cfc8c87935771",
+      "tree": "01c1fd029d65ff51cc05954f3de200dd1187e1d5",
+      "packages": [
+        "etas_effects",
+        "etas_frontend",
+        "etas_hir",
+        "etas_hir_analysis",
+        "etas_syntax",
+        "etas_syntax_derive",
+        "etas_types"
+      ]
+    },
+    "interpreter": {
+      "repository": "etas-interpreter",
+      "revision": "7422fb134d2606cc28b7af9c69e98668ba5411c0",
+      "tree": "f16dbe2e9924f40e98fec6ec4ea53f9d96f49596",
+      "packages": [
+        "etas_interpreter"
+      ]
+    }
+  },
+  "source": "Official ETAS CLI 0.13.0 with its own Cargo.lock and matching Git dependencies; includes upstream fixes for tool-round configuration, scalar-slice continuation and command approval authority, plus native command process operations. No source overrides.",
+  "cargo_lock_sha256": "46a976a8681772f78aed6fbc92c9101f877cf123860d68ee902a1b7d6a9c5376",
+  "verified_seed_binary_sha256": "bc6ed758bf9b8c3a0fbca3e42d4cf8607928b185a035d6cdcb12d1edf843c28b"
+}
