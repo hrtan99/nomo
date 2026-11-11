@@ -1,0 +1,59 @@
+{
+  "selector": "latest0121",
+  "version": "0.12.1",
+  "source_overrides": [],
+  "repositories": {
+    "cli": {
+      "repository": "etas",
+      "revision": "a3c49ffb19d2b3770c9232eb975f605fcf6ac876",
+      "tree": "79db85bcab1a73972aef1d794a8802b85e8cf767",
+      "packages": [
+        "etas_cli",
+        "etas_driver",
+        "etas_package",
+        "etas_tests"
+      ]
+    },
+    "core": {
+      "repository": "etas-core",
+      "revision": "0f599a84dd00c3abe71f6549004776672f62f02f",
+      "tree": "d83ae2011f290df2b638716b40b2c3a325eae6e7",
+      "packages": [
+        "etas_builtin",
+        "etas_cache",
+        "etas_code",
+        "etas_core",
+        "etas_host",
+        "etas_memory_derive",
+        "etas_package_metadata",
+        "etas_std",
+        "etas_utils"
+      ]
+    },
+    "frontend": {
+      "repository": "etas-frontend",
+      "revision": "88764266e384ae8035f44892c9093aabc1761d0f",
+      "tree": "7aeaf95183129782ace53d80c7b1a8a9e6b4049f",
+      "packages": [
+        "etas_effects",
+        "etas_frontend",
+        "etas_hir",
+        "etas_hir_analysis",
+        "etas_syntax",
+        "etas_syntax_derive",
+        "etas_types"
+      ]
+    },
+    "interpreter": {
+      "repository": "etas-interpreter",
+      "revision": "cb8c48c0d09c78ce24201ceb13d2ec72a14a2555",
+      "tree": "5d495fe0151a8b08ac968635c1eac503f8685dde",
+      "packages": [
+        "etas_interpreter"
+      ]
+    }
+  },
+  "source": "Official ETAS CLI 0.12.1 at the 2026-11-11 main snapshot with its own Cargo.lock and matching Git dependencies; includes the upstream root cwd fix, without Nomo source overrides.",
+  "cargo_lock_sha256": "17c6917c08188ad98daaea2a230a6ff31a58756568fb6c627bf2dd8248af628f",
+  "verified_seed_binary_sha256": "fb3e472c80a3b3e33829e47f22188ea6513cc708a040f9845774eb6d42f7211e"
+}

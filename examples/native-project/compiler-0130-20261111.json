@@ -1,0 +1,99 @@
+{
+  "date": "2026-11-11",
+  "compiler": {
+    "selector": "latest0130",
+    "version": "0.13.0",
+    "source_overrides": [],
+    "repositories": {
+      "cli": {
+        "repository": "etas",
+        "revision": "6ceb644a17b159a5ee9a988cbbba0700aebf5e46",
+        "tree": "c1b382ef073bd618bb44247b1fe2c1fcac575d35",
+        "packages": [
+          "etas_cli",
+          "etas_driver",
+          "etas_package",
+          "etas_tests"
+        ]
+      },
+      "core": {
+        "repository": "etas-core",
+        "revision": "cdb49367e73aadba56fbc89c984668ee3c1dd0aa",
+        "tree": "379fe96bcc970dbdea2d9974bf878dfb75f3345b",
+        "packages": [
+          "etas_builtin",
+          "etas_cache",
+          "etas_code",
+          "etas_core",
+          "etas_host",
+          "etas_memory_derive",
+          "etas_package_metadata",
+          "etas_std",
+          "etas_utils"
+        ]
+      },
+      "frontend": {
+        "repository": "etas-frontend",
+        "revision": "b09ceec7f57d1791dc92d358150cfc8c87935771",
+        "tree": "01c1fd029d65ff51cc05954f3de200dd1187e1d5",
+        "packages": [
+          "etas_effects",
+          "etas_frontend",
+          "etas_hir",
+          "etas_hir_analysis",
+          "etas_syntax",
+          "etas_syntax_derive",
+          "etas_types"
+        ]
+      },
+      "interpreter": {
+        "repository": "etas-interpreter",
+        "revision": "7422fb134d2606cc28b7af9c69e98668ba5411c0",
+        "tree": "f16dbe2e9924f40e98fec6ec4ea53f9d96f49596",
+        "packages": [
+          "etas_interpreter"
+        ]
+      }
+    },
+    "source": "Official ETAS CLI 0.13.0 with its own Cargo.lock and matching Git dependencies; includes upstream fixes for tool-round configuration, scalar-slice continuation and command approval authority, plus native command process operations. No source overrides.",
+    "cargo_lock_sha256": "46a976a8681772f78aed6fbc92c9101f877cf123860d68ee902a1b7d6a9c5376",
+    "verified_seed_binary_sha256": "bc6ed758bf9b8c3a0fbca3e42d4cf8607928b185a035d6cdcb12d1edf843c28b"
+  },
+  "binary": {
+    "version": "etas 0.13.0",
+    "sha256": "bc6ed758bf9b8c3a0fbca3e42d4cf8607928b185a035d6cdcb12d1edf843c28b"
+  },
+  "source_sha256": {
+    "config/etas-latest-main.json": "4fb7a623446469b1da2b7702b81499e8b2ac98ad3af163b1d31d94dc0e1432c0",
+    "config/etas-latest.Cargo.lock": "46a976a8681772f78aed6fbc92c9101f877cf123860d68ee902a1b7d6a9c5376",
+    "config/etas-0130-official-compose.yaml": "d6d4575c658cde2ce4e01a758e24c4bc04304bd83737d4551767a4748fd1f4e7",
+    "scripts/etas-official-cli-common.py": "0e7b4342177fda3f2b8571a00be080c2994da1c700ef5a552bcee8b8af46282f",
+    "scripts/etas-latest-cli-bootstrap.py": "1e0f49e96b8bda29af0eafb99c3221e9524a7b592bf8e28a7b5a84f84d1392de",
+    "scripts/etas-official-container-common.sh": "5c937de26451e9ed59bf8bbe9eb64dfd97952444a2096db7fcc133fdbee2b393",
+    "scripts/nomo-verified-etas.py": "1417ff7353f2b309bf6d063dc0a4cf9942d83e75a3548edb9db839d6f76c3ad5",
+    "scripts/nomo_project_model.py": "756d1e6e1e9ef8ba3213f2baf278719a90294ba9209239b0df16b8e3f37c9b06",
+    "compose.yaml": "fa193c42133627c0f3cd395aea9550631596444bf57ae5f3f996af965264ef3b"
+  },
+  "source_overrides": [],
+  "isolated_volume": "nomo-cargo-0130-20261111-6ceb644a",
+  "build_seconds": 774,
+  "registered_and_verified": true,
+  "logs": {
+    "nomo-etas-0130-build.log": "ce72ce80aef32e8c6d7714ccc1bebb05feb30f33eac68af848db689cc9a6f8c7",
+    "nomo-etas-0130-register.log": "a0ab27c61c08cdf91ed849e37276e14456e6840d52fd62fdda6106ad2235e163",
+    "nomo-etas-0121-preserved.log": "c2a3dfa40aaf5114495563b632b25b617fe4162631c8a6415843922446da74db",
+    "nomo-current-entry-0130.log": "7c7e9f5e36232b3e9d2db1d98eb1ddf8ada142462577ca0df75856449c53865c"
+  },
+  "preserved_0121": {
+    "manifest": "config/etas-0121-official.json",
+    "lock": "config/etas-0121-official.Cargo.lock",
+    "verify_status": "passed"
+  },
+  "default_entry_compatibility": {
+    "status": "passed",
+    "evidence_directory": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-project-native-6z1_5nzi",
+    "synthetic_http_requests": 6,
+    "native_migration_proof": false
+  },
+  "native_acceptance": "regressions-0130-20261111.json"
+}

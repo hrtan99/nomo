@@ -37,12 +37,13 @@ printf '[PROJECT] %s\n[STATE  ] %s\n[TRACE  ] %s\n' \
 
 exec docker compose --project-name nomo-native --env-file /dev/null \
   --file "$task_root/compose.yaml" \
-  --file "$task_root/config/etas-0121-official-compose.yaml" \
+  --file "$task_root/config/etas-0130-official-compose.yaml" \
   --file "$task_root/config/local-tryout-compose.yaml" \
   --file "$task_root/config/nomo-native-launch-compose.yaml" \
   --file "$task_root/config/nomo-native-compose.yaml" \
   run --rm --no-deps --pull never --tty=true dev \
   /home/nomo/.cargo/bin/etas run /workspace \
   --flow native_project --profile nomo-native --allow-effects \
+  --max-tool-rounds "${NOMO_NATIVE_MAX_TOOL_ROUNDS:-256}" \
   --trace-out /native-evidence/trace.json \
   --args "$@" --workspace "$NOMO_NATIVE_WORKSPACE"

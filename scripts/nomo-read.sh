@@ -43,7 +43,7 @@ the provider's finish reason; review the complete edit preview carefully.
 For the earlier Qwen route, explicitly set NOMO_MODEL_PROVIDER=qwen along with
 NOMO_READ_MODEL_BASE_URL and NOMO_QWEN_SERVER_API_KEY; NOMO_READ_MODEL_NAME
 can select a different Qwen model. These provider credentials are separate.
-This Nomo revision requires verified ETAS 0.12.1. Use an earlier Nomo revision
+This Nomo revision requires verified ETAS 0.13.0. Use an earlier Nomo revision
 for older ETAS versions. Session-chat --discover searches bounded workspace files.
 For Qwen, the endpoint is reached from the container: for a host-local forward, use
 http://host.docker.internal:PORT/v1 rather than 127.0.0.1.
@@ -136,10 +136,10 @@ case "$provider" in
         model_overlay="$root/config/read-chat-compose.yaml"; profile=gateway-qwen-readonly ;;
     *) echo 'NOMO_MODEL_PROVIDER must be minimax or qwen.' >&2; exit 64 ;;
 esac
-if [[ "${NOMO_ETAS_VERSION:-0.12.1}" != 0.12.1 ]]; then
-    echo 'this Nomo revision requires ETAS 0.12.1; use an earlier Nomo revision for older ETAS' >&2; exit 64
+if [[ "${NOMO_ETAS_VERSION:-0.13.0}" != 0.13.0 ]]; then
+    echo 'this Nomo revision requires ETAS 0.13.0; use an earlier Nomo revision for older ETAS' >&2; exit 64
 fi
-etas_overlay="$root/config/etas-0121-official-compose.yaml"
+etas_overlay="$root/config/etas-0130-official-compose.yaml"
 # Docker cannot create a tmpfs mountpoint inside the read-only source bind.
 # Create only this disposable, empty project cache directory before mounting.
 if [[ -L "$root/.etas" ]]; then echo 'Project .etas mountpoint must not be a symlink.' >&2; exit 64; fi

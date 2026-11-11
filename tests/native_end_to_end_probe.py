@@ -107,12 +107,12 @@ def main():
         NOMO_MODEL_BASE_URL=f'http://host.docker.internal:{server.server_port}/v1', NOMO_MODEL_ALLOW_PRIVATE='true',
         NOMO_NATIVE_WORKSPACE=str(project), NOMO_NATIVE_STATE=str(state), NOMO_NATIVE_EVIDENCE=str(traces))
     command = ['docker', 'compose', '--env-file', '/dev/null']
-    for name in ('compose.yaml', 'config/etas-0121-official-compose.yaml', 'config/local-tryout-compose.yaml',
+    for name in ('compose.yaml', 'config/etas-0130-official-compose.yaml', 'config/local-tryout-compose.yaml',
                  'config/etas-runtime-cache-compose.yaml', 'config/nomo-native-compose.yaml'):
         command += ['--file', str(ROOT / name)]
     command += ['run', '--rm', '--no-deps', '--pull', 'never', '--tty=true', 'dev',
         '/home/nomo/.cargo/bin/etas', 'run', '/workspace', '--flow', 'native_project', '--profile', 'nomo-native',
-        '--allow-effects', '--trace-out', '/native-evidence/trace.json', '--args', '--workspace', str(project)]
+        '--allow-effects', '--max-tool-rounds', '256', '--trace-out', '/native-evidence/trace.json', '--args', '--workspace', str(project)]
     git_commands = [
         ['--no-optional-locks', '-c', 'core.fsmonitor=false', 'status', '--short', '--branch'],
         ['--no-optional-locks', 'diff', '--no-ext-diff', '--no-textconv', '--', 'note.txt'],

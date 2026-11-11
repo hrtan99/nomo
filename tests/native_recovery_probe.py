@@ -55,7 +55,7 @@ def audit(events):
     for event in events:
         if event['kind'] == 'host_request_started' and event.get('qualified_action') == 'Approval.request':
             approval = event
-        elif event['kind'] == 'host_request_started' and event.get('qualified_action') in ('Command.run', 'Fs.atomic_replace'):
+        elif event['kind'] == 'host_request_started' and (event.get('qualified_action', '').startswith('Command.') or event.get('qualified_action') == 'Fs.atomic_replace'):
             if approval is None or event['authority']['approval_count'] != approval['authority']['approval_count'] + 1:
                 failures.append({'request': event['id'], 'action': event['qualified_action'],
                                  'authority': event['authority'], 'approval': approval['id'] if approval else None})
@@ -81,7 +81,7 @@ def main():
         NOMO_MODEL_BASE_URL=f'http://host.docker.internal:{server.server_port}/v1', NOMO_MODEL_ALLOW_PRIVATE='true',
         NOMO_NATIVE_WORKSPACE=str(project), NOMO_NATIVE_STATE=str(state), NOMO_NATIVE_EVIDENCE=str(traces))
     command = ['docker', 'compose', '--env-file', '/dev/null']
-    for name in ('compose.yaml', 'config/etas-0121-official-compose.yaml', 'config/local-tryout-compose.yaml',
+    for name in ('compose.yaml', 'config/etas-0130-official-compose.yaml', 'config/local-tryout-compose.yaml',
                  'config/etas-runtime-cache-compose.yaml', 'config/nomo-native-compose.yaml'):
         command += ['--file', str(ROOT / name)]
     command += ['run', '--rm', '--no-deps', '--pull', 'never', '--tty=true', 'dev',

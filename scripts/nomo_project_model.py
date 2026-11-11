@@ -36,7 +36,7 @@ class NativeModel:
         # The read-only container worker runs as the existing nomo user.
         environment = dict(os.environ, NOMO_PROJECT_REQUEST=str(self.request))
         command = ['docker', 'compose', '--env-file', '/dev/null']
-        for name in ('compose.yaml', 'config/etas-0121-official-compose.yaml', 'config/local-tryout-compose.yaml',
+        for name in ('compose.yaml', 'config/etas-0130-official-compose.yaml', 'config/local-tryout-compose.yaml',
                      'config/etas-runtime-cache-compose.yaml', 'config/nomo-project-compose.yaml'):
             command += ['--file', str(ROOT / name)]
         command += ['run', '--rm', '--no-deps', '--pull', 'never', '--tty=false', 'dev',
