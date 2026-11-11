@@ -20,6 +20,8 @@ Current source/artifact identities and exact scopes: `examples/native-project/co
 
 The concrete remaining standard-library/runtime/Host contracts and Nomo ownership are in `examples/native-project/UPSTREAM_CAPABILITIES.md`. Missing public capabilities are distinguished from confirmed compiler bugs and from work Nomo can perform itself.
 
+A positive structured-task investigation confirms 98 native output-file writes while console input remains pending, archiving more than 1 MiB. Exact intended payload comparison nevertheless fails: source literal `"\\n"` is decoded to bytes `[92, 10]` instead of `[92, 110]`. A dependency-free, console-only valid source reproduces it and exits 0. This is reported as [etas-frontend#84](https://github.com/etas-project/etas-frontend/issues/84), with exact source and observations in `examples/repros/string-escape-0.13.1` and `examples/native-project/string-escape-0131-20261112.json`. The larger investigation remains failed for exact payload preservation; it is not Nomo continuous-capture acceptance. No compiler patch or payload rewrite is installed. Primitive interleaving evidence and failed byte comparison are retained separately in `task-drain-0131-20261112.json`.
+
 ## Launch the native entry
 
 With the existing Docker image and official 0.13.1 toolchain installed, set `MINIMAX_API_KEY` in your shell and run:

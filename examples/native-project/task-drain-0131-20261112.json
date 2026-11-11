@@ -1,0 +1,91 @@
+{
+  "date": "2026-11-12",
+  "compiler": {
+    "selector": "latest0131",
+    "version": "0.13.1",
+    "source_overrides": [],
+    "verified_seed_binary_sha256": "9da7f127230b4b56233ba7fb350436d6d1021b4702b1e4a38d6eabb5c34a985e",
+    "repositories": {
+      "cli": {
+        "repository": "etas",
+        "revision": "1e7877edad58f8a7dec92c0b9630cd19f6365020",
+        "tree": "b632663a7ca08aed7c0b5743e1ed2acffa9691e4",
+        "packages": [
+          "etas_cli",
+          "etas_driver",
+          "etas_package",
+          "etas_tests"
+        ]
+      },
+      "core": {
+        "repository": "etas-core",
+        "revision": "cdb49367e73aadba56fbc89c984668ee3c1dd0aa",
+        "tree": "379fe96bcc970dbdea2d9974bf878dfb75f3345b",
+        "packages": [
+          "etas_builtin",
+          "etas_cache",
+          "etas_code",
+          "etas_core",
+          "etas_host",
+          "etas_memory_derive",
+          "etas_package_metadata",
+          "etas_std",
+          "etas_utils"
+        ]
+      },
+      "frontend": {
+        "repository": "etas-frontend",
+        "revision": "b09ceec7f57d1791dc92d358150cfc8c87935771",
+        "tree": "01c1fd029d65ff51cc05954f3de200dd1187e1d5",
+        "packages": [
+          "etas_effects",
+          "etas_frontend",
+          "etas_hir",
+          "etas_hir_analysis",
+          "etas_syntax",
+          "etas_syntax_derive",
+          "etas_types"
+        ]
+      },
+      "interpreter": {
+        "repository": "etas-interpreter",
+        "revision": "9a63968fea9bdf958db79d70a6723b992154533d",
+        "tree": "a1cae7bd105b2db699438108906243984eca2d2d",
+        "packages": [
+          "etas_interpreter"
+        ]
+      }
+    },
+    "source": "Official ETAS CLI 0.13.1 with its own Cargo.lock and exact Git dependencies; includes the upstream builtin ModelResponse role fix (#104). No source overrides.",
+    "cargo_lock_sha256": "407a3a06062282bec6662ea1a7e6fc814c2e4098f8165a94732ed11767077a71"
+  },
+  "evidence_directory": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-task-drain-43pizxhr",
+  "primitive_observation": {
+    "console_read_request": 3,
+    "console_read_start_event": 13,
+    "console_read_finish_event": 601,
+    "atomic_writes_while_console_input_pending": 98,
+    "archived_bytes": 2359296,
+    "chunk_files": 97
+  },
+  "exact_payload_acceptance": "failed",
+  "expected_bytes": 2555904,
+  "actual_bytes": 2359296,
+  "missing_newline_bytes": 196608,
+  "expected_sha256": "be80da3736be5f456ae0f698a0ff3f4757fcaee2cd116a6b7d996612155a776b",
+  "actual_sha256": "38a54cf70f31c22d82df569647b45fbe1541d52508d8103c8d81851085a23a2f",
+  "actual_equals_expected_without_newlines": true,
+  "source_literal_issue": "https://github.com/etas-project/etas-frontend/issues/84",
+  "source": "module app.main;\nimport std.task.{run,start,await,Scheduler};\nimport std.host.command.{command,read,CommandEvent};\nimport std.host.command.start as spawn;\nimport std.fs.{Region,path,atomic_replace};\nimport std.fs.IOError as FileError;\nimport std.effects.Fs;\nimport std.io.{println,read_line,IOError};\nimport std.text.from_usize;\nimport std.codec.text.utf8_encode;\nimport std.collections.len;\ntype State;\nimpl State ~ Region;\nflow save(name:string,value:bytes)->unit {\n let location=match path<State>(name) { Ok(value)=>value,Err(_)=>{abort(\"invalid fixture path\");} };\n atomic_replace(location,value);\n}\nflow main(args:Array<string>)->i32 ![Async,Console,Command.start<DefaultCommandSandbox>,Command.read<DefaultCommandSandbox>,Fs.atomic_replace<State>,Error<FileError>,Error<IOError>] {\n return run((scheduler:Scheduler)=> {\n  let process=spawn(command(\"/usr/bin/python3\",[\"-u\",\"-c\",\"import sys,time\\nblock=('鹈鹕 café\\\\n'*4096).encode()\\nfor _ in range(48):\\n sys.stdout.buffer.write(block); sys.stdout.buffer.flush(); time.sleep(0.02)\"]),DefaultCommandSandbox);\n  let reader=start(()=> {\n   var count:usize=0;\n   var index:usize=0;\n   while true limit Iterations(2147483647) {\n    let result=read(process,65536);\n    match result {\n     CommandEvent.Output(output,error)=>{save(\"chunk-\"+from_usize(index),output);count=count+len(output);},\n     CommandEvent.Exited(code,output,error)=>{save(\"chunk-\"+from_usize(index),output);count=count+len(output);save(\"done\",utf8_encode(from_usize(count)));return code;},\n     CommandEvent.Stopped(output,error)=>{abort(\"fixture producer stopped\");}\n    }\n    index=index+1;\n   }\n   return 0;\n  });\n  println(\"WAIT_INPUT\");\n  let input=read_line();\n  println(\"ACK \"+input);\n  return await(reader);\n });\n}\n",
+  "manifest": "[package]\nname=\"native-task-drain\"\nversion=\"0.1.0\"\nedition=\"2026\"\n[source]\nroot=\"src\"\n[runtime]\ndefault_profile=\"local\"\n[runtime.profiles.local.command]\nallow=[\"/usr/bin/python3\"]\nisolation=\"trusted-unconfined\"\n[runtime.profiles.local.filesystem.regions.\"app.main.State\"]\nroot=\"/probe-state\"\nread=false\nwrite=true\n[runtime.profiles.local.policy]\nmode=\"local-static\"\nrules=[\"console=allow\",\"command=allow\",\"filesystem=allow\"]\n[[bin]]\nname=\"native-task-drain\"\nmodule=\"app.main\"\nflow=\"main\"\n",
+  "source_sha256": "5ced1bf8afe94401dedaa0aaa948eefb57c05739bf8ee3b0a0292f85ad55fa09",
+  "trace_sha256": "9564392d3aa5645855f5cdf220cf0bfadf86f274fd24fd2938d5a99b669ae401",
+  "runtime_trace_outcome": "completed",
+  "verifier_exit_code": 1,
+  "model_http_requests": 0,
+  "scope": "isolated real native task/command/filesystem interleaving; fixture allows its synthetic command and output writes and is not production approval evidence",
+  "cleanup": "The verifier failed its byte comparison before sending input. Cleanup closed the input stream; the recorded runtime outcome completed. No intended-payload acceptance is inferred from runtime completion.",
+  "nomo_continuous_capture_implemented": false,
+  "compiler_patch_applied": false,
+  "payload_rewritten": false
+}

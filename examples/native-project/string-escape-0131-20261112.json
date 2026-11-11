@@ -1,0 +1,91 @@
+{
+  "date": "2026-11-12",
+  "compiler": {
+    "selector": "latest0131",
+    "version": "0.13.1",
+    "source_overrides": [],
+    "verified_seed_binary_sha256": "9da7f127230b4b56233ba7fb350436d6d1021b4702b1e4a38d6eabb5c34a985e",
+    "repositories": {
+      "cli": {
+        "repository": "etas",
+        "revision": "1e7877edad58f8a7dec92c0b9630cd19f6365020",
+        "tree": "b632663a7ca08aed7c0b5743e1ed2acffa9691e4",
+        "packages": [
+          "etas_cli",
+          "etas_driver",
+          "etas_package",
+          "etas_tests"
+        ]
+      },
+      "core": {
+        "repository": "etas-core",
+        "revision": "cdb49367e73aadba56fbc89c984668ee3c1dd0aa",
+        "tree": "379fe96bcc970dbdea2d9974bf878dfb75f3345b",
+        "packages": [
+          "etas_builtin",
+          "etas_cache",
+          "etas_code",
+          "etas_core",
+          "etas_host",
+          "etas_memory_derive",
+          "etas_package_metadata",
+          "etas_std",
+          "etas_utils"
+        ]
+      },
+      "frontend": {
+        "repository": "etas-frontend",
+        "revision": "b09ceec7f57d1791dc92d358150cfc8c87935771",
+        "tree": "01c1fd029d65ff51cc05954f3de200dd1187e1d5",
+        "packages": [
+          "etas_effects",
+          "etas_frontend",
+          "etas_hir",
+          "etas_hir_analysis",
+          "etas_syntax",
+          "etas_syntax_derive",
+          "etas_types"
+        ]
+      },
+      "interpreter": {
+        "repository": "etas-interpreter",
+        "revision": "9a63968fea9bdf958db79d70a6723b992154533d",
+        "tree": "a1cae7bd105b2db699438108906243984eca2d2d",
+        "packages": [
+          "etas_interpreter"
+        ]
+      }
+    },
+    "source": "Official ETAS CLI 0.13.1 with its own Cargo.lock and exact Git dependencies; includes the upstream builtin ModelResponse role fix (#104). No source overrides.",
+    "cargo_lock_sha256": "407a3a06062282bec6662ea1a7e6fc814c2e4098f8165a94732ed11767077a71"
+  },
+  "issue": "https://github.com/etas-project/etas-frontend/issues/84",
+  "published_payload_verified": true,
+  "public_payload_sha256": "ceda2ce5612db775cc68f60f12ab74f44d65135fa5266ec8fb61ee54607eecb9",
+  "source_sha256": {
+    "examples/repros/string-escape-0.13.1/etas.toml": "a221d9310cea2254025ed2d583867516f32f6e3480e44730c15383e3e650b015",
+    "examples/repros/string-escape-0.13.1/etas.lock": "943e9aae0929e7937ab283fe4e096b4837bc501ac94769a164a295b7143de6f2",
+    "examples/repros/string-escape-0.13.1/src/app/main.es": "14da3a378e9e8e61f8bf146ad9eeda0c9ee52624980f0fbbf1af31bc5406e4ad"
+  },
+  "observation": {
+    "observed_bytes": [
+      92.0,
+      10.0
+    ],
+    "expected_bytes": [
+      92,
+      110
+    ],
+    "exit_code": 0
+  },
+  "stdout": "[92.0,10.0]\n",
+  "stderr": "",
+  "evidence_directory": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-string-escape-0131-51ewnvj0",
+  "trace_sha256": "be7c620b44cc4bc4eedb9b176de2aa65f7b108463888d7bc0bb4edd68ebdfa42",
+  "trace_outcome": "completed",
+  "model_http_requests": 0,
+  "command_requests": 0,
+  "source_overrides": [],
+  "failure_scope": "valid source literal byte semantics; no claim that runtime JSON decoding is broken",
+  "nomo_continuous_capture_accepted": false
+}
