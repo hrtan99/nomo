@@ -3,6 +3,7 @@ module nomo.native.context;
 import std.text.len as text_bytes;
 import nomo.core.json.encode;
 import nomo.native.history.{NativeHistory, ConversationStore, ChatMessage, message, reserve_generation};
+import nomo.native.processes.jobs;
 import nomo.native.lifecycle.{attempts, begin, dispatching, returned, complete_attempt};
 import nomo.native.agent.Turn;
 import nomo.native.project.load_instructions;
@@ -36,7 +37,7 @@ impl RollingContext ~ ContextProjection {
         }
         return Turn { session = session, workspace = value.workspace, initial_request = initial,
             request = request, summary = summary, pending = value.pending, history = projected,
-            instructions = instructions, runs = attempts(session, true), settings = settings };
+            instructions = instructions, runs = attempts(session, true), settings = settings, jobs = jobs(session) };
     }
     flow bytes(self, input: Turn) -> usize {
         let json = match encode(input, "context conversion failed", "context encoding failed") {

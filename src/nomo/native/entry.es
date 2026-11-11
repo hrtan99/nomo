@@ -1,7 +1,9 @@
 module nomo.native.entry;
 
 import std.io.{println, print, read_line};
-import std.text.{trim, strip_prefix, split_once, contains, parse_i64, from_i64, from_i32};
+import std.text.{trim, strip_prefix, split_once, contains, parse_i64, parse_usize, from_i64, from_i32};
+import std.json.parse as parse_json;
+import std.agent.message.Message;
 import nomo.native.agent.NativeCoding;
 import nomo.native.workspace.ProjectRoot;
 import std.effects.Fs;
@@ -17,6 +19,61 @@ import nomo.native.navigation.{find_files, search_project};
 import nomo.native.lifecycle.{attempts, begin, dispatching, returned, complete_attempt, resolve};
 import nomo.native.configuration.{Settings, SettingsContext, load as load_configuration, status as configuration_status, effective_window, as_number, estimated_tokens};
 import nomo.native.terminal.check_project;
+import nomo.native.terminal.run_command;
+import nomo.native.processes.{start_job, read_job, write_job, close_job_input, stop_job, list_jobs, job_output};
+
+type Argv = { program: string, arguments: Array<string> };
+flow command_argv(raw: string) -> Argv {
+    let parsed = match parse_json(raw) { Ok(value) => value, Err(_) => { abort("use a JSON argv array, for example [\"/usr/bin/git\",\"status\"]"); } };
+    let decoded: Option<Message<Array<string>>> = Message.new(parsed).cast<Array<string>>();
+    let values = match decoded { Some(value) => value.body, None() => { abort("command argv must be a JSON array of strings"); } };
+    var program = "";
+    var first = true;
+    var arguments: Array<string> = [];
+    for value in values limit Iterations(2147483647) {
+        if first { program = value; first = false; } else { arguments = arguments.push(value); }
+    }
+    if program == "" { abort("provide a command program"); }
+    return Argv { program = program, arguments = arguments };
+}
+
+flow process_json<T>(value: T) -> string {
+    return match encode(value, "process conversion failed", "process encoding failed") { Ok(text) => text, Err(error) => { abort(error); } };
+}
+
+flow process_command(session: string, operation: string, argument: string) -> unit {
+    handle {
+        if operation == "jobs" {
+            for value in list_jobs() limit Iterations(2147483647) {
+                println("[JOB    ] " + process_json(value));
+            }
+        }
+        else {
+            var result = "";
+            if operation == "exec" || operation == "spawn" {
+                let argv = command_argv(argument);
+                if operation == "exec" { result = process_json(run_command(argv.program, argv.arguments)); }
+                else { result = process_json(start_job(argv.program, argv.arguments)); }
+            }
+            else if operation == "poll" {
+                let (job, bytes) = match split_once(argument, " ") { Some(parts) => parts, None() => (argument, "65536") };
+                let count = match parse_usize(trim(bytes)) { Ok(value) => value, Err(_) => { abort("expected a read byte count"); } };
+                result = process_json(read_job(job, count));
+            }
+            else if operation == "send" {
+                let (job, input) = match split_once(argument, " ") { Some(parts) => parts, None() => { abort("use /send JOB JSON_STRING"); } };
+                let parsed = match parse_json(input) { Ok(value) => value, Err(_) => { abort("input must be a JSON string; use \\n for a newline"); } };
+                let converted: Option<Message<string>> = Message.new(parsed).cast<string>();
+                let text = match converted { Some(value) => value.body, None() => { abort("input must be a JSON string"); } };
+                result = process_json(write_job(job, text));
+            }
+            else if operation == "close-input" { result = process_json(close_job_input(argument)); }
+            else if operation == "stop" { result = process_json(stop_job(argument)); }
+            else { result = process_json(job_output(argument)); }
+            println("[JOB    ] " + result);
+        }
+    } with { SessionContext.current() => { resume session; } };
+}
 
 flow load_settings(session: string) -> Settings {
     return handle { load_configuration() } with { SessionContext.current() => { resume session; } };
@@ -143,7 +200,7 @@ flow event_index(raw: string) -> i64 {
 }
 
 public flow run(args: Array<string>) -> i32
-    ![Agentic, Memory, Console, Command.run<DefaultCommandSandbox>, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Fs.stat<ProjectRoot>, Fs.atomic_replace<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>, Error<IOError>, Error<IndexError>] {
+    ![Agentic, Memory, Console, Command.run<DefaultCommandSandbox>, Command.start<DefaultCommandSandbox>, Command.reconnect<DefaultCommandSandbox>, Command.read<DefaultCommandSandbox>, Command.write<DefaultCommandSandbox>, Command.stop<DefaultCommandSandbox>, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Fs.stat<ProjectRoot>, Fs.atomic_replace<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>, Error<IOError>, Error<IndexError>] {
     let options = parse(args);
     let archive = NativeHistory {};
     var selected = match options.resume_id {
@@ -173,7 +230,14 @@ public flow run(args: Array<string>) -> i32
         if request == "" { continue; }
         if request == "/help" {
             println("Ask about the project; native tools provide recursive/glob discovery, literal/regex search, file reads, approved editing and Git operations.");
+            println("Terminal: /exec JSON_ARGV, /spawn JSON_ARGV, /jobs, /poll JOB [MAX_BYTES], /send JOB JSON_STRING, /close-input JOB, /stop JOB, /job-output JOB. /poll waits for output or termination. Saved job phases are historical observations; current Host handles are not durable across process restart.");
             println("/new [TITLE], /sessions, /resume ID, /rename TITLE, /history [TEXT], /page EVENT, /fork [EVENT], /export FILE, /import FILE, /copies, /resume-copy ID, /discard-copy ID, /runs, /resolve-run ID [NOTE], /config, /check, /compact, /status, /tree [PATH], /glob PATTERN, /search REGEX, /read FILE, /edits, /undo [EDIT], /rollback EDIT, /recover EDIT, /quit");
+            continue;
+        }
+        let (operation, argument) = match split_once(request, " ") { Some(parts) => parts, None() => (request, "") };
+        if operation == "/exec" || operation == "/spawn" || operation == "/jobs" || operation == "/poll" || operation == "/send" || operation == "/close-input" || operation == "/stop" || operation == "/job-output" {
+            let name = match strip_prefix(operation, "/") { Some(value) => value, None() => operation };
+            process_command(selected.id, name, trim(argument));
             continue;
         }
         if request == "/tree" { navigation_command(selected.id, "tree", "."); continue; }

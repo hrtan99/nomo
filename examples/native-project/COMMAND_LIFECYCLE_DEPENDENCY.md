@@ -1,19 +1,19 @@
-# Native interactive process dependency
+# Native process lifetime dependency — official 0.13.0
 
-The full native migration requires retained background and interactive processes, incremental output, input, stopping, and attachment after a new Nomo process starts. Foreground command completion alone does not satisfy this requirement.
+The full native migration needs background jobs and their output to survive leaving Nomo, with live input/output/stop after a new process starts. Saved metadata/output alone does not satisfy live reattachment.
 
-## Inspected official graph
+## Capabilities now implemented and accepted
 
-ETAS CLI 0.12.1 `a3c49ffb19d2b3770c9232eb975f605fcf6ac876`, core `0f599a84dd00c3abe71f6549004776672f62f02f`, interpreter `cb8c48c0d09c78ce24201ceb13d2ec72a14a2555`, frontend `88764266e384ae8035f44892c9093aabc1761d0f`.
+Official ETAS CLI 0.13.0 `6ceb644a17b159a5ee9a988cbbba0700aebf5e46`, core `cdb49367e73aadba56fbc89c984668ee3c1dd0aa`, interpreter `7422fb134d2606cc28b7af9c69e98668ba5411c0`, frontend `b09ceec7f57d1791dc92d358150cfc8c87935771`.
 
-The public [command module](https://github.com/etas-project/etas-core/blob/0f599a84dd00c3abe71f6549004776672f62f02f/crates/etas_std/src/modules/host/command.rs) exposes command construction, environment, region-bound cwd, pre-supplied stdin and synchronous `run`. `CommandHandle` is declared, but this module registers no handle-producing spawn or handle-consuming poll, send, stop or attach operation.
+The [public command module](https://github.com/etas-project/etas-core/blob/cdb49367e73aadba56fbc89c984668ee3c1dd0aa/crates/etas_std/src/modules/host/command.rs) now exposes `start`, `id`, `reconnect`, `read`, `write`, `close_stdin` and `stop`. Nomo uses these actual operations, with per-conversation job ownership and separate native approval for every boundary. Actual Unicode echo input/output, EOF/exit, stopping another process and saved-output restoration pass. Source/artifact identities: `processes-0130-20261111.json`.
 
-The [Host command protocol](https://github.com/etas-project/etas-core/blob/0f599a84dd00c3abe71f6549004776672f62f02f/crates/etas_host/src/command/protocol.rs) takes complete optional stdin and returns an exit code and collected stdout/stderr. The current public boundary has no job identity or incremental stream cursor.
+## Remaining lifetime / PTY scope
 
-The [structured task API](https://github.com/etas-project/etas-core/blob/0f599a84dd00c3abe71f6549004776672f62f02f/crates/etas_std/src/modules/task/flows.rs) supports scheduler-owned tasks. Scheduling synchronous command work does not supply the missing interactive process input/output or a retained external process identity after the scheduler exits.
+The [local backend registry](https://github.com/etas-project/etas-core/blob/cdb49367e73aadba56fbc89c984668ee3c1dd0aa/crates/etas_host/src/command/local/process.rs) stores process records in an in-memory `Arc<Mutex<HashMap<...>>>` owned by a `LocalCommandClient`. `reconnect` looks up that client's registry. It supplies no external persistent Host/service or fresh-client registry reconstruction. The [protocol](https://github.com/etas-project/etas-core/blob/cdb49367e73aadba56fbc89c984668ee3c1dd0aa/crates/etas_host/src/command/protocol.rs) starts stdin/stdout/stderr pipes; there is no PTY selection or terminal-size operation.
 
-## Required supported contract
+Actual product acceptance, `python3 -B tests/native_process_reconnect_probe.py`: native `/spawn`, `/poll`, `/jobs`, normal exit, then a fresh native launcher with the same conversation. The new process restores job metadata, obtains native approval for reconnect and fails with `background command is not available for reconnection`. Exit status 3; zero model requests; all four native approvals pass the strict provenance audit. Evidence: `process-reconnect-0130-20261111.json`. This remains a failed acceptance, not a passing unavailable-job fallback.
 
-The source program needs a checked native operation to start a process with an actual cwd/argv/PTY or stream binding and obtain a durable process identity; read output by cursor without dropping the original log; send input; stop the owned process; and attach or reconcile its status after a new process starts. Each mutation needs policy/approval bound to the particular process and operation. Native source must receive cancellation, completion and uncertain outcomes so that it can own task recovery.
+The current Docker launcher is disposable, so its exit also ends that container's processes. Keeping a persistent environment alone would not reconstruct the fresh local client's in-memory registry. Nomo needs a supported native Host whose process identities and output remain reachable across client restart, including reconciliation of stale/terminated processes, plus PTY support for the existing interactive-terminal behavior. Its source should receive real status/cancellation outcomes and retain recovery decisions; a stored ID must not be treated as proof of liveness.
 
-This is a documented upstream capability dependency, not an accepted native implementation. No Python process manager, shell-detached process service, local compiler patch or invented `CommandHandle` methods stand in for it. The existing Python product process manager remains outside the opt-in native path, and the official default entry cannot be switched to the complete native product until this requirement is met. This note has not been published as an upstream issue.
+No Python process manager, detached shell supervisor or local compiler/Host patch substitutes for this missing lifetime. The missing scope is documented as an upstream capability dependency; it is not asserted to be a regression of the newly provided same-Host API. No new upstream bug issue is published from this note.

@@ -2,9 +2,21 @@
 
 The shipping `scripts/nomo` entry still uses the existing Python project controller. The opt-in `native_project` flow is the migration implementation, not a completed replacement.
 
+## Current 0.13.0 acceptance
+
+The current official graph is ETAS 0.13.0 (`config/etas-latest-main.json`), with no source overrides. The official 0.12.1 manifest, lock and isolated cache are preserved. ETAS #79 and interpreter #101/#102 are closed upstream, and their original application-level failures have been rerun rather than waived:
+
+- The unchanged full read/edit/check/all-Git/chat/exit/new-process workflow passes, including the strict command approval authority audit. Fifteen local synthetic model requests.
+- The original 2,400,000-byte historical message imports completely and triggers automatic native summarization; the full original remains readable. Two local synthetic requests. This proves this text/history scope, not an actual 1M-token provider capacity.
+- Configuration conversion/checks/summary/fresh-process cache also pass in the new cache. The shipping Python-controller entry passes its existing compatibility scenario with 0.13.0; that compatibility result is not native migration evidence.
+- New native process tools pass start/read/exact Unicode input/EOF/exit/stop and saved-output restoration. Fourteen individually approved native process actions pass the extended authority audit.
+- **Fresh-process live-job reconnection still fails.** The native launcher starts a new Etas Host and the new Host cannot find the old process ID. Saved metadata and output restore; this is not live process reattachment. No detached shell/Python manager is substituted. The native entry also still needs remaining product commands/project selection and full interruption acceptance before default cutover.
+
+Current source/artifact identities and exact scopes: `examples/native-project/compiler-0130-20261111.json`, `regressions-0130-20261111.json`, `processes-0130-20261111.json`, and `process-reconnect-0130-20261111.json`. Earlier evidence below retains its historical results and is superseded by this section for these three fixed bugs.
+
 ## Launch the native entry
 
-With the existing Docker image and official 0.12.1 toolchain installed, set `MINIMAX_API_KEY` in your shell and run:
+With the existing Docker image and official 0.13.0 toolchain installed, set `MINIMAX_API_KEY` in your shell and run:
 
 ```sh
 ./scripts/nomo-native ~/Projects/nomo-test
@@ -13,9 +25,9 @@ With the existing Docker image and official 0.12.1 toolchain installed, set `MIN
 ./scripts/nomo-native ~/Projects/nomo-test --once 'List the project files.'
 ```
 
-The project defaults to the invoking directory when omitted. Install the configuration codec once with `./scripts/nomo-native-tools.sh`. A fresh toolchain installation uses `./scripts/etas-0121-official-container.sh prepare` followed by `build`.
+The project defaults to the invoking directory when omitted. Install the configuration codec once with `./scripts/nomo-native-tools.sh`. A fresh toolchain installation uses `./scripts/etas-0130-official-container.sh prepare` followed by `build`.
 
-The launcher canonicalizes the project path, prepares private state/trace directories, binds the project as `/project` and directly executes `etas run /workspace --flow native_project --profile nomo-native --allow-effects`. It forwards product arguments to Etas. Etas owns session selection, commands, model/tool dispatch, history and recovery. The shell does not open or interpret conversation storage. The process runs as the invoking uid/gid, with read access to the existing tool-cache group; compiler/cache mounts stay read-only. State and each run's separate trace directory are created under umask `077`, without relaxing private host directory permissions.
+The launcher canonicalizes the project path, prepares private state/trace directories, binds the project as `/project` and directly executes `etas run /workspace --flow native_project --profile nomo-native --allow-effects`. It forwards product arguments to Etas. Native inference permits 256 tool rounds through the supported `--max-tool-rounds` option; `NOMO_NATIVE_MAX_TOOL_ROUNDS` selects another CLI-supported value (1–4096). Etas owns session selection, commands, model/tool dispatch, history and recovery. The shell does not open or interpret conversation storage. The process runs as the invoking uid/gid, with read access to the existing tool-cache group; compiler/cache mounts stay read-only. State and each run's separate trace directory are created under umask `077`, without relaxing private host directory permissions.
 
 Native state defaults to `${XDG_STATE_HOME:-~/.local/state}/nomo/native`; `NOMO_NATIVE_STATE` selects another location. `NOMO_NATIVE_TRACE_ROOT` selects the parent of the unique per-run trace directories, otherwise `STATE/traces` is used. The launch output prints both paths. This separate native database does not replace Python-era history; use the explicit export/import path below. Inside Nomo, `/help`, `/sessions`, `/resume ID`, `/history`, `/config`, `/check` and `/quit` are native commands. Changing the project mount currently requires exiting and launching against the other folder.
 
@@ -26,12 +38,12 @@ Native state defaults to `${XDG_STATE_HOME:-~/.local/state}/nomo/native`; `NOMO_
 | Tool | Parameters / return | Native authority | Approval |
 |---|---|---|---|
 | `git_status` | no arguments; `CommandOutput {exit_code, stdout, stderr}` | `Command.run<DefaultCommandSandbox>`; `/usr/bin/git` with region-bound cwd | Host command approval; actual result reaches subsequent native inference on 0.12.1 |
-| `git_diff` | `staged: bool`, `paths: Array<string>`; `CommandOutput` | Same native command boundary | Actual staged and unstaged results returned to inference on 0.12.1; command approval audit remains open |
-| `git_log` | `count: i32`; `CommandOutput` | Same native command boundary | Actual latest commit returned to inference; command approval audit remains open |
-| `git_branches` | no arguments; `CommandOutput` | Same native command boundary | Actual local branch list returned to inference; command approval audit remains open |
+| `git_diff` | `staged: bool`, `paths: Array<string>`; `CommandOutput` | Same native command boundary | Actual staged and unstaged results returned to inference on 0.12.1; strict command approval audit passes on 0.13.0 |
+| `git_log` | `count: i32`; `CommandOutput` | Same native command boundary | Actual latest commit returned to inference; strict command approval audit passes on 0.13.0 |
+| `git_branches` | no arguments; `CommandOutput` | Same native command boundary | Actual local branch list returned to inference; strict command approval audit passes on 0.13.0 |
 | `git_init` | no arguments; `CommandOutput` | Same native command boundary | Actual repository reinitialization accepted on 0.12.1 |
 | `git_branch`, `git_switch` | `name: string`; `CommandOutput` | Same native command boundary | Actual creation and switching accepted on 0.12.1 |
-| `git_commit` | `message: string`, `paths: Array<string>`; `CommandOutput` | Same native command boundary; optional staging then commit | Actual selected-path staging and commit executed after separate approvals; actual commit returned to inference; approval audit remains open; a denied commit does not undo completed staging |
+| `git_commit` | `message: string`, `paths: Array<string>`; `CommandOutput` | Same native command boundary; optional staging then commit | Actual selected-path staging and commit executed after separate approvals; actual commit returned to inference; strict approval audit passes on 0.13.0; a denied commit does not undo completed staging |
 | `run_command` | `program: string`, `arguments: Array<string>`; `CommandOutput` | Native `Command.run<DefaultCommandSandbox>` with project cwd; configured allowlist for Git, Python, shell and the file/snapshot utilities listed in `etas.toml` | Exact argv preview and Host approval; foreground Python file check accepted on 0.12.1 |
 | `run_command_input` | `program`, `arguments`, `input: string`; `CommandOutput` | Same native Command Host plus `with_stdin(utf8_encode(input))` | Complete argv/stdin preview and native approval; actual result and exact request are saved under the command's durable attempt |
 | `check_project` | no arguments; `{configured: bool, output: Array<CommandOutput>}` | Native settings effect supplies check argv; native Command Host executes it | Exact argv approval; empty configuration returns no fabricated process result |
@@ -54,11 +66,11 @@ Native state defaults to `${XDG_STATE_HOME:-~/.local/state}/nomo/native`; `NOMO_
 
 The `ScopedReplace` trace spec permits reads, listing, atomic replacement and the native command actions needed by the shared journal; it forbids `Fs.write<ProjectRoot>`. The runtime requires human approval for every atomic replacement and command. Snapshots, directory operations and restoration use trusted-unconfined Unix utilities through the checked Command Host, not a Python dispatcher or an unapproved filesystem helper. Each command's actual argv is previewed before its runtime approval. This is not a filesystem compare-and-swap guarantee against external writers.
 
-The approval gate is currently **not accepted** for these command paths. The executed positive flow prompted separately for every command, but its actual CommandRequest/trace omitted the just-obtained approval from the authority snapshot. This is the observed consistency bug etas-interpreter#102, not evidence of a prompt bypass. The tests retain a fresh-approval audit, comparing the dispatch snapshot with its own preceding approval rather than assuming a global count of one.
+The earlier 0.12.1 approval gate failed for these command paths; the current 0.13.0 full-workflow and process probes pass the same strict audit. The executed positive flow prompted separately for every command, but its actual CommandRequest/trace omitted the just-obtained approval from the authority snapshot. This was the observed consistency bug etas-interpreter#102, now fixed upstream; it was not evidence of a prompt bypass. The tests retain a fresh-approval audit, comparing the dispatch snapshot with its own preceding approval rather than assuming a global count of one.
 
 File discovery and recursive search execute ripgrep through the existing native Command Host. They use its ignore/glob/regex semantics instead of a Python scanner or a replacement pattern engine. Ordinary discovery honors ignore files, including outside a Git repository; an explicit positive glob has ripgrep's usual override precedence. `.git` and `.nomo` are always excluded. Arguments and patterns are passed as separate argv data. Read-only search and Git status/diff/log/branch listing record observations, so inspecting an unfinished edit does not replace its pending request; native command approval still applies.
 
-Foreground commands can receive one complete UTF-8 stdin value through `run_command_input`. The exact input is archived with argv before dispatch and appears in the full native approval preview. Actual output reaches the next native inference; command/inference attempt completion clears only the matching pending request. This call waits for the process result. Retained PTY output/input/stop still needs the upstream lifecycle substrate.
+Foreground commands can receive one complete UTF-8 stdin value through `run_command_input`. The exact input is archived with argv before dispatch and appears in the full native approval preview. Actual output reaches the next native inference; command/inference attempt completion clears only the matching pending request. This call waits for the process result. The new process tools below add pipe-based background I/O and stopping in the live Host. Durable cross-Host processes and PTYs remain upstream dependencies.
 
 `/tree [PATH]`, `/glob PATTERN` and `/search REGEX` call these same native tools. `/tree` displays files through depth three, omitting empty directories; the agent's `find_files` can select any depth or zero for unlimited traversal. The current Command Host's collected-output bound remains in force.
 
@@ -139,13 +151,40 @@ The parsed cache binds a native SHA-256 of the actual input to its complete arch
 
 ## Remaining scope
 
-1. All eight native Git tools now have actual functional execution evidence across the recorded scopes, including staged diff and selected-path commit. Complete command approval acceptance after #102 and the original continuous workflow after #79; separate tool coverage does not satisfy that full gate.
-2. Complete approval acceptance after etas-interpreter#102: commands do prompt before execution, but their Host authority snapshot is stale. Native file writes and snapshots now have operation previews, actual Host approval and journal ownership. Finish the remaining denial/finalization/error outcomes without waiving the audit.
-3. Finish full public-tool acceptance and retained terminal jobs. Recursive discovery, glob/regex search, named listing, metadata, selected-file literal search and foreground commands are implemented. Create/write/edit/mkdir/delete/move/batch/undo and explicit rollback share one native journal; current functional evidence covers the operation kinds, while the approval gate remains open. The current Command API exposes synchronous `run`; retained PTY jobs, input/output handles and restart attachment need a supported native substrate. `examples/native-project/COMMAND_LIFECYCLE_DEPENDENCY.md` records the inspected public APIs and required contract.
-4. The native entry owns `nomo>`, user input, continuous model/tool calls and the conversation commands listed above. Remaining: the full product command surface, project switching/recent-project selection and the remaining tool shortcuts. Native `/config` and `/check` are now available.
-5. Native persistence, selection, normal new-process restore, manual summaries, ledger records, old-format transfer, history search/paging/fork and root/scoped AGENTS.md loading are implemented and accepted in the recorded scopes. Remaining: automatic-threshold/large-context capacity acceptance after etas-interpreter#101, arbitrary per-call model limits, retained terminal timing, and complete interrupted-operation recovery. Native `.nomo.toml` loading, defaults/cache, instructions, ignore patterns, checks and projection settings are implemented in the recorded functional scopes; command approval acceptance remains open. Provider usage is not currently exposed to this source ledger.
-6. Finish task lifecycle, interruption and recovery decisions in Etas, including remaining untested interruption windows and retained terminal processes. Native coding/summary/foreground-command/observation/export attempts now retain their stages and saved-result references; explicit user reconciliation preserves actual saved results or closes unknown outcomes without replay. Foreground Ctrl-C, new-process unknown-outcome reconciliation and a subsequent new chat passed functionally; full command approval acceptance remains blocked by #102. Normal exports preserve lifecycle metadata; an interrupted export has not been separately executed. Native import/fork jobs, deferred selection, resumable historical slots and explicit discard are implemented; actual import interruption and normal fork/restoration are accepted in the recorded scopes. Completed-file-journal reconciliation and idempotent result finalization are implemented; the two-process result test covers one finalization window. Published partial file work has explicit native rollback and read-only inspection across a new process. Python environment helpers must not retain the product state machine.
-7. The opt-in `scripts/nomo-native` environment launcher now supplies the project/state/trace mounts and directly starts the native Etas flow. Switch the default official entry only when the complete native product can run; retain the working current entry until then.
-8. Complete continuous dialogue → read → approved edit → check → Git → exit → new-process restore. The complete 0.12.1 attempt is blocked by etas#79: `ModelExecutionPolicy` defaults to eight native tool rounds, and the current CLI/profile does not expose the Rust policy field. The observed ninth request aborts before the remaining operations. Minimal recipe and report: `examples/repros/tool-rounds-0.12.1`, https://github.com/etas-project/etas/issues/79. Increasing token limits does not change this policy, and no workaround is installed.
+1. The original full workflow and all eight Git tools now pass on 0.13.0. #79/#101/#102 no longer block the executed scopes; historical failures stay in their original evidence files.
+2. Native job state and complete saved output are durable, and actual process I/O/stop pass within one live Host. Live background processes cannot yet be reconnected after a fresh Nomo/Etas Host starts. The upstream implementation keeps its process registry in memory; start/read/write/stop use pipes, with no PTY request parameter. `COMMAND_LIFECYCLE_DEPENDENCY.md` records current source and actual failed acceptance.
+3. Finish the remaining product command surface and project switching/recent-project selection in the native entry. Model tools, conversation commands, configuration/checks, and the terminal commands below are implemented; the shipping Python controller is still the default.
+4. Finish required interruption/finalization coverage for the completed native process and export paths. Prior file rollback, import resumption and attempt reconciliation evidence remains scoped to its actual executed windows; no exhaustive interruption claim is made. Historical jobs/imports/approvals never become active authority simply by importing a conversation.
+5. Runtime model token annotations remain static, so arbitrary per-call output limits are still an upstream API dependency. `command_timeout` remains retained configuration rather than an enforced per-command timer. Context admission and the ledger report configured allowances/text estimates, not measured provider billing. The new large-history acceptance is not an actual 1M-token provider test.
+6. Switch the default entry only when the complete native product can replace the existing workflow. The opt-in environment launcher already executes Etas directly; Python remains outside its business state machine. Do not substitute the old Python job manager for the missing durable native Host and then declare migration complete.
 
-The migration is incomplete. The accepted native conversation/file/foreground command flows do not establish complete tool coverage, interruption/terminal lifecycle, automatic large-context handling or delivery readiness.
+## Native background processes
+
+`processes.es` owns saved job metadata, per-conversation ownership, exact operation previews, command attempts, result publication and native output storage. The registered tools are:
+
+| Tool | Parameters / return | Native effect / approval |
+|---|---|---|
+| `start_job` | `program`, `arguments`; `Job {id, session, program, arguments, handle, phase}` | `Command.start<DefaultCommandSandbox>`; exact argv and native approval |
+| `read_job` | `job`, `max_bytes: usize`; `JobEvent` | Fresh `Command.reconnect` and `Command.read` approvals; waits for output or termination |
+| `write_job` | `job`, `input`; `{job, operation, status}` | Fresh reconnect and `Command.write` approvals; exact UTF-8 input, no added newline |
+| `close_job_input` | `job`; `{job, operation, status}` | Fresh reconnect and `Command.write` approvals; closes stdin |
+| `stop_job` | `job`; `JobEvent` | Fresh reconnect and `Command.stop` approvals; actual Host terminal event |
+| `list_jobs` | no arguments; `Array<Job>` | Native Memory; phases are last observations, not current liveness |
+| `job_output` | `job`; `Array<JobEvent>` | Native Memory/history; reads saved events without consuming Host output |
+
+`JobEvent` contains the job ID, input-event reference, phase (`output`, `exited`, `stopped`), `Option<i32>` exit status, display stdout/stderr and original byte arrays. Original bytes remain intact even if a bounded read splits a UTF-8 sequence; display text uses replacement decoding. Output is saved in the native process Memory region and conversation archive. Imports preserve historical event data without activating old process handles. An interrupted Host/read publication may have an uncertain result; metadata does not manufacture completion and the request is not replayed.
+
+The native command loop also supports:
+
+```text
+/exec ["/usr/bin/git","status","--short"]
+/spawn ["/usr/bin/python3","-u","-c","import sys; print('ready',flush=True); print(sys.stdin.readline(),flush=True)"]
+/jobs
+/poll JOB 65536
+/send JOB "hello\n"
+/close-input JOB
+/stop JOB
+/job-output JOB
+```
+
+`/exec` and `/spawn` take JSON argv arrays rather than interpreting a shell command line; `/send` takes a JSON string and adds no newline. `/poll` consumes the next Host output event and waits if no output or terminal status is available. Use `/job-output` to revisit retained output. Native Host unread-output limits still apply. A stopped job has no invented exit code. Saved output restores after exit; live process reconnection across a fresh Host is explicitly not accepted.

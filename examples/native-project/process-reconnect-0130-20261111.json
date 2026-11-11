@@ -1,0 +1,79 @@
+{
+  "date": "2026-11-11",
+  "compiler_config": "config/etas-latest-main.json",
+  "binary": {
+    "version": "etas 0.13.0",
+    "sha256": "bc6ed758bf9b8c3a0fbca3e42d4cf8607928b185a035d6cdcb12d1edf843c28b"
+  },
+  "source_sha256": {
+    "src/nomo/native/agent.es": "98eaa5f0897e51e8a5185eec7449d99936596bed253142c792b6480e828c02b4",
+    "src/nomo/native/configuration.es": "c99e697c5adf27c6e95f127e0c49a0d5448b7528f0350dba36bf0558d4050ce1",
+    "src/nomo/native/context.es": "939ad299455adb728e36efdedfd2696711488ba67f36ef410fdb6f142db1af22",
+    "src/nomo/native/entry.es": "d857cb7626a2124938508f58ea630c538888967bb4310c1b7b5af0a6d0107d86",
+    "src/nomo/native/file_io.es": "d530d2d3885067eff708167b9c4ab39d8af0e278bcb505bff1c95869b0761e65",
+    "src/nomo/native/files.es": "67f22dad790c4105b872668f02edb3248cd981fc6a07e35fbb04404f7014bb28",
+    "src/nomo/native/git.es": "baa4184a944be26ce7c9efc4ab5a9aa3f69f6f794e715f13f85909aa6b233fb9",
+    "src/nomo/native/history.es": "57ff2a304dc12e7b898f863d615c2c4c86b332f44481a3b56ce5dbddf56022f8",
+    "src/nomo/native/lifecycle.es": "1e7dd5e165e81cc64fae39c3cd430f387373e45c3af14f63606c5a2b9079a1c7",
+    "src/nomo/native/mutations.es": "c413389c448ee2ed5be8613c956f66499df3d44058c924f9f8fb201f05ec5391",
+    "src/nomo/native/navigation.es": "8e8af65350efb3ac464cfd55755eea2124a7925a3803334736507794099b50da",
+    "src/nomo/native/options.es": "60f9bbfc776134f4f5b60ad126d04dfce452d21d9a68087dfa6904386fcc3b0a",
+    "src/nomo/native/processes.es": "b71b957ba8b83b2a1d366383ffa770373ef690c8b0132addfa04360e3ad9431c",
+    "src/nomo/native/project.es": "a23866b0c3cea8386f89a0b7d5f60605cefed560acf521ed7a8f6e2d8b493df6",
+    "src/nomo/native/terminal.es": "0f51f7579313cfe762216fcf397d08365794ef7de19e0afe48b238fa289a6ed5",
+    "src/nomo/native/transfer.es": "0d8c8e02c04111a4369d72fcfe794c61e30113580d45063e9ad45442fb3a2b59",
+    "src/nomo/native/workspace.es": "2bafa765bae136e13379960cad5ef78b29ff89ca6e25c9ebf787c445102928f6",
+    "etas.toml": "b1c138ba53eb4a6a356a458d145ba2df1612df811862fdb50ca94a4d30cb5250",
+    "scripts/nomo-native": "1ff59e91ed20e01ad0b55be6c1f229ced99cc61a20401b0e51ed23197bbf3f58",
+    "tests/native_end_to_end_probe.py": "8c1d45e9e3d2433262e1f2e5e63a2b7d9f2b24461f32f56044c3bd4434627040",
+    "tests/native_project_probe.py": "08ceea300975b232bc581765385ade12a1af14c43276bbc0d0326db8ee76b8a9",
+    "tests/native_process_probe.py": "50bda59131dce1157980a6e00a71077d4ea95d3ab6aeb5dd8ac1598b0a91b344",
+    "tests/native_process_reconnect_probe.py": "4b77b0798edeb93fa8555eabc489b8df0ab30aa3b06e8a56d2b16720c353a76e",
+    "tests/native_recovery_probe.py": "3c9237658807a4e5d834325db91abc5439b24f1b8312d9f3f8304b60f6a03432"
+  },
+  "model_scope": "Local synthetic HTTP only; no real provider calls or measured usage claim.",
+  "directory": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-reconnect-2jvq8cvf",
+  "artifacts_sha256": {
+    "functional.json": "157a178be0397c144bf369e2788abb71eafa58351eafd62a7ddbe7aaaf2f01f7",
+    "restored-terminal.txt": "d6dbbe7b409d153cdf2158905e9fb7bf7afcaec55fe149ec182c9b4100a1ae61",
+    "terminal.txt": "22700e8a8dcb5fe9ebe2fadc157ceae36b1e99b45f33c7786259db3844e428da",
+    "traces/run-TTr4cs3G/trace.json": "2f2f863e5baa3f7d6f5dd1ea7834c0a56d665ee61a1cadd3103f5e8d6f213130",
+    "traces/run-mJLoNp5U/trace.json": "c234b054165573a86b5460c40eeccd6ed4587e181e489fdd791c6b8251a7c29f"
+  },
+  "traces": [
+    {
+      "path": "traces/run-TTr4cs3G/trace.json",
+      "outcome": "completed",
+      "native_commands": 3,
+      "approvals": 3,
+      "model_boundaries": 0,
+      "approval_audit": []
+    },
+    {
+      "path": "traces/run-mJLoNp5U/trace.json",
+      "outcome": "failed",
+      "native_commands": 1,
+      "approvals": 1,
+      "model_boundaries": 0,
+      "approval_audit": []
+    }
+  ],
+  "observed": {
+    "functional_status": "failed",
+    "scope": "fresh-process live background-job reconnection",
+    "first_exit_code": 0,
+    "restore_exit_code": 3,
+    "native_approvals": 4,
+    "model_http_requests": 0,
+    "traces": [
+      "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-reconnect-2jvq8cvf/traces/run-TTr4cs3G/trace.json",
+      "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-reconnect-2jvq8cvf/traces/run-mJLoNp5U/trace.json"
+    ],
+    "outcomes": [
+      "completed",
+      "failed"
+    ],
+    "native_error": "background command is not available for reconnection"
+  },
+  "probe_exit_code": 1
+}

@@ -1,0 +1,198 @@
+{
+  "date": "2026-11-11",
+  "compiler_config": "config/etas-latest-main.json",
+  "binary": {
+    "version": "etas 0.13.0",
+    "sha256": "bc6ed758bf9b8c3a0fbca3e42d4cf8607928b185a035d6cdcb12d1edf843c28b"
+  },
+  "source_sha256": {
+    "src/nomo/native/agent.es": "98eaa5f0897e51e8a5185eec7449d99936596bed253142c792b6480e828c02b4",
+    "src/nomo/native/configuration.es": "c99e697c5adf27c6e95f127e0c49a0d5448b7528f0350dba36bf0558d4050ce1",
+    "src/nomo/native/context.es": "939ad299455adb728e36efdedfd2696711488ba67f36ef410fdb6f142db1af22",
+    "src/nomo/native/entry.es": "d857cb7626a2124938508f58ea630c538888967bb4310c1b7b5af0a6d0107d86",
+    "src/nomo/native/file_io.es": "d530d2d3885067eff708167b9c4ab39d8af0e278bcb505bff1c95869b0761e65",
+    "src/nomo/native/files.es": "67f22dad790c4105b872668f02edb3248cd981fc6a07e35fbb04404f7014bb28",
+    "src/nomo/native/git.es": "baa4184a944be26ce7c9efc4ab5a9aa3f69f6f794e715f13f85909aa6b233fb9",
+    "src/nomo/native/history.es": "57ff2a304dc12e7b898f863d615c2c4c86b332f44481a3b56ce5dbddf56022f8",
+    "src/nomo/native/lifecycle.es": "1e7dd5e165e81cc64fae39c3cd430f387373e45c3af14f63606c5a2b9079a1c7",
+    "src/nomo/native/mutations.es": "c413389c448ee2ed5be8613c956f66499df3d44058c924f9f8fb201f05ec5391",
+    "src/nomo/native/navigation.es": "8e8af65350efb3ac464cfd55755eea2124a7925a3803334736507794099b50da",
+    "src/nomo/native/options.es": "60f9bbfc776134f4f5b60ad126d04dfce452d21d9a68087dfa6904386fcc3b0a",
+    "src/nomo/native/processes.es": "b71b957ba8b83b2a1d366383ffa770373ef690c8b0132addfa04360e3ad9431c",
+    "src/nomo/native/project.es": "a23866b0c3cea8386f89a0b7d5f60605cefed560acf521ed7a8f6e2d8b493df6",
+    "src/nomo/native/terminal.es": "0f51f7579313cfe762216fcf397d08365794ef7de19e0afe48b238fa289a6ed5",
+    "src/nomo/native/transfer.es": "0d8c8e02c04111a4369d72fcfe794c61e30113580d45063e9ad45442fb3a2b59",
+    "src/nomo/native/workspace.es": "2bafa765bae136e13379960cad5ef78b29ff89ca6e25c9ebf787c445102928f6",
+    "etas.toml": "b1c138ba53eb4a6a356a458d145ba2df1612df811862fdb50ca94a4d30cb5250",
+    "scripts/nomo-native": "1ff59e91ed20e01ad0b55be6c1f229ced99cc61a20401b0e51ed23197bbf3f58",
+    "tests/native_end_to_end_probe.py": "8c1d45e9e3d2433262e1f2e5e63a2b7d9f2b24461f32f56044c3bd4434627040",
+    "tests/native_project_probe.py": "08ceea300975b232bc581765385ade12a1af14c43276bbc0d0326db8ee76b8a9",
+    "tests/native_process_probe.py": "50bda59131dce1157980a6e00a71077d4ea95d3ab6aeb5dd8ac1598b0a91b344",
+    "tests/native_process_reconnect_probe.py": "4b77b0798edeb93fa8555eabc489b8df0ab30aa3b06e8a56d2b16720c353a76e",
+    "tests/native_recovery_probe.py": "3c9237658807a4e5d834325db91abc5439b24f1b8312d9f3f8304b60f6a03432"
+  },
+  "model_scope": "Local synthetic HTTP only; no real provider calls or measured usage claim.",
+  "directory": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-process-0hyf4izu",
+  "artifacts_sha256": {
+    "functional.json": "ba0797d2eac262ebb850b37ff93ee5529ee79bb1c531c0b5b25e80115cffd86c",
+    "request-0.json": "a667be87741d6dfe68a3938045b45f3f004bf47d549e701482eba1862cb06f07",
+    "request-1.json": "26d377ef5d238e4dc00676d47cc958adb61820ab08f1c1f95f85f21734299e4e",
+    "request-10.json": "89be9d2d4df900483558dddfb48b6ad250abba6954094b5b714a12238e3ce8f0",
+    "request-11.json": "2689fcf78434fdab98b9a981a3415cb4e24d34d9a4ad89b4945ea01eebd4471c",
+    "request-2.json": "4a176694c64218c919155184eda26f2dc4dbc5ebabdc3c031056dd3af82fa090",
+    "request-3.json": "846e94fbf55c436cc355eb5c9729d48e8add7f51ea7ba954852ed89ff64e97f8",
+    "request-4.json": "a1a8224a71c2f7168388523ccd36d5d6c6704062a460fbc23254a19ccb3095f2",
+    "request-5.json": "84b4b17254fdb8a0c8a68728b04d7717be58823fc1042b8e9da05e7d86aeab47",
+    "request-6.json": "bd181e37f84821857abb3f29afb978cac5cd8ac4e0213c88eafc319d93e0cb0b",
+    "request-7.json": "9005cf02fcf2c99215480e71b12c548a7730cf0db611ec27161425c2288c0491",
+    "request-8.json": "a52f752413d87cb938a2401e1e73ac13a2e4ff936321713b4e193b83886ff94e",
+    "request-9.json": "ee1cec0037892af3aaa15a7cc32235933aaa74ac1e99034e544e68a4e83809f1",
+    "restored-terminal.txt": "43492136759ce4ff2e85deb4839f0fce15c8223712ba287e3d86051f5525bd51",
+    "terminal.txt": "a945606ef3f4f7031183196a3a4ce0b1810cc1a6d6c56df8773706e08cea83a8",
+    "traces/run-XByRnieo/trace.json": "d74196f5bcf777ab78d75e5e2305edf8caf8f8c4144ed352cd6847544244b435",
+    "traces/run-qcD4bJDh/trace.json": "ef2e10dee6fa0662b44374460df239c011dbbed01e80d8ca17afe9cfc3a04969"
+  },
+  "traces": [
+    {
+      "path": "traces/run-XByRnieo/trace.json",
+      "outcome": "completed",
+      "native_commands": 14,
+      "approvals": 14,
+      "model_boundaries": 11,
+      "approval_audit": []
+    },
+    {
+      "path": "traces/run-qcD4bJDh/trace.json",
+      "outcome": "completed",
+      "native_commands": 0,
+      "approvals": 0,
+      "model_boundaries": 1,
+      "approval_audit": []
+    }
+  ],
+  "observed": {
+    "functional_status": "passed",
+    "approval_status": "passed",
+    "model_http_requests": 12,
+    "native_approvals": 14,
+    "native_actions": [
+      "Command.start",
+      "Command.reconnect",
+      "Command.read",
+      "Command.reconnect",
+      "Command.write",
+      "Command.reconnect",
+      "Command.read",
+      "Command.reconnect",
+      "Command.write",
+      "Command.reconnect",
+      "Command.read",
+      "Command.start",
+      "Command.reconnect",
+      "Command.stop"
+    ],
+    "restored_commands": 0,
+    "jobs": [
+      {
+        "arguments": [
+          "-u",
+          "-c",
+          "import sys; print('ready', flush=True)\nfor line in sys.stdin: print('echo:' + line.rstrip('\\n'), flush=True)"
+        ],
+        "handle": "3fd88d1b76666de546f22abf5f6794fc",
+        "id": "native-0-job-1",
+        "phase": "started",
+        "program": "/usr/bin/python3",
+        "session": "native-0"
+      },
+      {
+        "arguments": [
+          "-u",
+          "-c",
+          "import time; print('sleeping', flush=True); time.sleep(30)"
+        ],
+        "handle": "55fa5aabc4ebbbceb2e5ff3445d0294c",
+        "id": "native-0-job-13",
+        "phase": "started",
+        "program": "/usr/bin/python3",
+        "session": "native-0"
+      }
+    ],
+    "saved_output_events": [
+      {
+        "call": 3.0,
+        "exit_code": {
+          "fields": [],
+          "name": "None"
+        },
+        "job": "native-0-job-1",
+        "phase": "output",
+        "stderr": "",
+        "stderr_bytes": [],
+        "stdout": "ready\n",
+        "stdout_bytes": [
+          114.0,
+          101.0,
+          97.0,
+          100.0,
+          121.0,
+          10.0
+        ]
+      },
+      {
+        "call": 7.0,
+        "exit_code": {
+          "fields": [],
+          "name": "None"
+        },
+        "job": "native-0-job-1",
+        "phase": "output",
+        "stderr": "",
+        "stderr_bytes": [],
+        "stdout": "echo:鹈鹕 café\n",
+        "stdout_bytes": [
+          101.0,
+          99.0,
+          104.0,
+          111.0,
+          58.0,
+          233.0,
+          185.0,
+          136.0,
+          233.0,
+          185.0,
+          149.0,
+          32.0,
+          99.0,
+          97.0,
+          102.0,
+          195.0,
+          169.0,
+          10.0
+        ]
+      },
+      {
+        "call": 11.0,
+        "exit_code": {
+          "fields": [
+            0.0
+          ],
+          "name": "Some"
+        },
+        "job": "native-0-job-1",
+        "phase": "exited",
+        "stderr": "",
+        "stderr_bytes": [],
+        "stdout": "",
+        "stdout_bytes": []
+      }
+    ],
+    "traces": [
+      "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-process-0hyf4izu/traces/run-XByRnieo/trace.json",
+      "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-process-0hyf4izu/traces/run-qcD4bJDh/trace.json"
+    ],
+    "approval_audit": [],
+    "limitation": "Live process operations accepted within one Etas Host; the restart checks saved metadata/output, not a live process reattachment."
+  },
+  "probe_exit_code": 0
+}
