@@ -55,11 +55,11 @@ Acceptance: a long command returns a live handle after the configured wait, then
 
 ## Stronger execution-endpoint restart survival
 
-Ordinary terminal-client restart is now handled by Nomo's resident Etas worker. `native_worker_probe.py` accepts detach/new-client live I/O/stop in the same Host; this is not an upstream blocker.
+Ordinary terminal-client restart and project switching are now handled by Nomo's resident Etas workers. `native_worker_probe.py` accepts detach/new-client live I/O/stop in the same Host. `native_projects_probe.py` accepts A→B→A with the original live job and reconnecting B through a later startup chooser. Neither is an upstream blocker.
 
 Surviving destruction of that Host is stronger: a separately reachable native process backend must retain process identities, pipes/PTY, output and exit states. The runtime/CLI needs supported backend binding and fresh authority checks; standard `reconnect` needs documented lifecycle guarantees. Saving a PID or handle cannot recreate lost file descriptors. A backend's own crash guarantee must be specified separately; a daemon does not automatically solve its own crash.
 
-This stronger guarantee is not currently accepted. `/quit`, project remount, fatal runtime failure and container loss end the local Host. No automatic restart/replay is used to disguise the gap.
+This stronger guarantee is not currently accepted. `/quit`, fatal runtime failure and container loss end the local Host. Project selection now detaches the client and retains that Host. No automatic restart/replay is used to disguise the gap.
 
 ## Delivery status
 

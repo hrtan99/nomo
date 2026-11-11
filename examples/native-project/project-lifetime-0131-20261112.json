@@ -1,0 +1,428 @@
+{
+  "date": "2026-11-12",
+  "compiler": {
+    "selector": "latest0131",
+    "version": "0.13.1",
+    "source_overrides": [],
+    "verified_seed_binary_sha256": "9da7f127230b4b56233ba7fb350436d6d1021b4702b1e4a38d6eabb5c34a985e",
+    "repositories": {
+      "cli": {
+        "repository": "etas",
+        "revision": "1e7877edad58f8a7dec92c0b9630cd19f6365020",
+        "tree": "b632663a7ca08aed7c0b5743e1ed2acffa9691e4",
+        "packages": [
+          "etas_cli",
+          "etas_driver",
+          "etas_package",
+          "etas_tests"
+        ]
+      },
+      "core": {
+        "repository": "etas-core",
+        "revision": "cdb49367e73aadba56fbc89c984668ee3c1dd0aa",
+        "tree": "379fe96bcc970dbdea2d9974bf878dfb75f3345b",
+        "packages": [
+          "etas_builtin",
+          "etas_cache",
+          "etas_code",
+          "etas_core",
+          "etas_host",
+          "etas_memory_derive",
+          "etas_package_metadata",
+          "etas_std",
+          "etas_utils"
+        ]
+      },
+      "frontend": {
+        "repository": "etas-frontend",
+        "revision": "b09ceec7f57d1791dc92d358150cfc8c87935771",
+        "tree": "01c1fd029d65ff51cc05954f3de200dd1187e1d5",
+        "packages": [
+          "etas_effects",
+          "etas_frontend",
+          "etas_hir",
+          "etas_hir_analysis",
+          "etas_syntax",
+          "etas_syntax_derive",
+          "etas_types"
+        ]
+      },
+      "interpreter": {
+        "repository": "etas-interpreter",
+        "revision": "9a63968fea9bdf958db79d70a6723b992154533d",
+        "tree": "a1cae7bd105b2db699438108906243984eca2d2d",
+        "packages": [
+          "etas_interpreter"
+        ]
+      }
+    },
+    "source": "Official ETAS CLI 0.13.1 with its own Cargo.lock and exact Git dependencies; includes the upstream builtin ModelResponse role fix (#104). No source overrides.",
+    "cargo_lock_sha256": "407a3a06062282bec6662ea1a7e6fc814c2e4098f8165a94732ed11767077a71"
+  },
+  "final_source_sha256": {
+    "scripts/native-worker-transport.py": "e476d0c84fa376c58d1ced4cf22cfa096763628e1412bcb2ef7d4b987a31bd20",
+    "scripts/nomo-native": "4d064febb894c030e0afe8f7d04c00a168d4c694a752e7befe538cbe91fc8ecc",
+    "src/nomo/native/entry.es": "fc4819e0dc3687f3f0d9789cb3bc3c37522fff173dafbd7ac290f1966bf3ad99",
+    "src/nomo/native/projects.es": "5a2b52ee1d0fa1fbdcd7fa357810763c01c5e70e9d410e3bf8833308bd4434a0",
+    "tests/native_projects_probe.py": "73560e632bdb1a327a2dfc15ddcde733f2f8ecb7233c9950d28fb9d67577cad9",
+    "tests/native_worker_probe.py": "c04d96d8fec2faaa1d7db982b93b647987bbb3e1b67747296dab2461d2460ee7"
+  },
+  "upstream_heads_checked": {
+    "etas": "1e7877edad58f8a7dec92c0b9630cd19f6365020",
+    "etas-core": "cdb49367e73aadba56fbc89c984668ee3c1dd0aa",
+    "etas-interpreter": "9a63968fea9bdf958db79d70a6723b992154533d"
+  },
+  "project_lifetime": {
+    "command": "python3 -B tests/native_projects_probe.py",
+    "exit_code": 0,
+    "evidence_directory": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-c44c64yz",
+    "result": {
+      "functional_status": "passed",
+      "model_http_requests": 0,
+      "native_command_dispatches": 11,
+      "native_control_write_approvals": 3,
+      "native_approvals": 14,
+      "actual_host_invocations": 3,
+      "project_attachments": 5,
+      "first_worker": "59c9f9af450c32309335d831211958438aef9efa6c7d511552c57baf778cf342",
+      "second_worker": "8a6444e9d724464ff98214fb9abc01a6b5837495db8d978523e6719c4a93bb24",
+      "first_etas_pid": 706,
+      "second_etas_pid": 791,
+      "selected_paths": [
+        "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-c44c64yz/second 鹈鹕",
+        "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-c44c64yz/first project",
+        "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-c44c64yz/second 鹈鹕"
+      ],
+      "restored_status": {
+        "first_user": -1.0,
+        "id": "native-1",
+        "ledger": {
+          "compactions": 0.0,
+          "context_bytes": 0.0,
+          "generation_allowance": 0.0,
+          "tools": 1.0,
+          "turns": 0.0
+        },
+        "next_event": 2.0,
+        "pending": "",
+        "summary_event": -1.0,
+        "summary_through": -1.0,
+        "title": "Second project",
+        "workspace": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-c44c64yz/second 鹈鹕"
+      },
+      "traces": [
+        "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-c44c64yz/traces/run-D2IjjXUQ/trace.json",
+        "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-c44c64yz/traces/run-QC6ezu0q/trace.json",
+        "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-c44c64yz/traces/run-CX8TLX0F/trace.json"
+      ],
+      "scope": "Etas-owned project selection, same-Host project return and original live job Unicode I/O/EOF, separate histories, startup chooser reattaching another retained Host"
+    },
+    "process_observations": {
+      "first-process-before-switch.txt": "PID                 COMMAND\n690                 /sbin/docker-init -- /home/nomo/.cargo/bin/etas run /workspace --flow native_project --profile nomo-native --allow-effects --max-tool-rounds 256 --trace-out /native-evidence/trace.json --args --new --workspace /private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-c44c64yz/first project\n706                 /home/nomo/.cargo/bin/etas run /workspace --flow native_project --profile nomo-native --allow-effects --max-tool-rounds 256 --trace-out /native-evidence/trace.json --args --new --workspace /private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-c44c64yz/first project\n",
+      "first-process-after-return.txt": "PID                 COMMAND\n690                 /sbin/docker-init -- /home/nomo/.cargo/bin/etas run /workspace --flow native_project --profile nomo-native --allow-effects --max-tool-rounds 256 --trace-out /native-evidence/trace.json --args --new --workspace /private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-c44c64yz/first project\n706                 /home/nomo/.cargo/bin/etas run /workspace --flow native_project --profile nomo-native --allow-effects --max-tool-rounds 256 --trace-out /native-evidence/trace.json --args --new --workspace /private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-c44c64yz/first project\n733                 /usr/bin/python3 -u -c import sys; print('ready',flush=True) for line in sys.stdin: print('echo:'+line.rstrip('\\n'),flush=True)\n",
+      "second-process-before-return.txt": "PID                 COMMAND\n777                 /sbin/docker-init -- /home/nomo/.cargo/bin/etas run /workspace --flow native_project --profile nomo-native --allow-effects --max-tool-rounds 256 --trace-out /native-evidence/trace.json --args --workspace /private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-c44c64yz/second ??????\n791                 /home/nomo/.cargo/bin/etas run /workspace --flow native_project --profile nomo-native --allow-effects --max-tool-rounds 256 --trace-out /native-evidence/trace.json --args --workspace /private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-c44c64yz/second ??????\n",
+      "second-process-after-reopen.txt": "PID                 COMMAND\n777                 /sbin/docker-init -- /home/nomo/.cargo/bin/etas run /workspace --flow native_project --profile nomo-native --allow-effects --max-tool-rounds 256 --trace-out /native-evidence/trace.json --args --workspace /private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-c44c64yz/second ??????\n791                 /home/nomo/.cargo/bin/etas run /workspace --flow native_project --profile nomo-native --allow-effects --max-tool-rounds 256 --trace-out /native-evidence/trace.json --args --workspace /private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-c44c64yz/second ??????\n"
+    },
+    "terminal_sha256": {
+      "terminal.txt": "08d6a79b2dfa6f7f0ec08693168c4174fd02ac5f1de40956cb704da2d89a0cc2",
+      "reopened-terminal.txt": "27bd8ac3b38443753778e199e2c78b9f6557dc0faa2192b043b2bde8e9c3372e"
+    },
+    "trace_audit": {
+      "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-c44c64yz/traces/run-D2IjjXUQ/trace.json": {
+        "outcome": "completed",
+        "sha256": "e37e94ad9b6e631f176043860a43f420ad41b9e746404361e5df8bc6eace66a3",
+        "approved_boundaries": [
+          {
+            "request": 98,
+            "action": "Command.start",
+            "approval_request": 10000099,
+            "approval_count_before": 0,
+            "approval_count_at_dispatch": 1
+          },
+          {
+            "request": 174,
+            "action": "Command.reconnect",
+            "approval_request": 10000175,
+            "approval_count_before": 1,
+            "approval_count_at_dispatch": 2
+          },
+          {
+            "request": 178,
+            "action": "Command.read",
+            "approval_request": 10000179,
+            "approval_count_before": 2,
+            "approval_count_at_dispatch": 3
+          },
+          {
+            "request": 232,
+            "action": "Fs.atomic_replace",
+            "approval_request": 10000233,
+            "approval_count_before": 3,
+            "approval_count_at_dispatch": 4
+          },
+          {
+            "request": 276,
+            "action": "Command.reconnect",
+            "approval_request": 10000277,
+            "approval_count_before": 4,
+            "approval_count_at_dispatch": 5
+          },
+          {
+            "request": 280,
+            "action": "Command.write",
+            "approval_request": 10000281,
+            "approval_count_before": 5,
+            "approval_count_at_dispatch": 6
+          },
+          {
+            "request": 354,
+            "action": "Command.reconnect",
+            "approval_request": 10000355,
+            "approval_count_before": 6,
+            "approval_count_at_dispatch": 7
+          },
+          {
+            "request": 358,
+            "action": "Command.read",
+            "approval_request": 10000359,
+            "approval_count_before": 7,
+            "approval_count_at_dispatch": 8
+          },
+          {
+            "request": 436,
+            "action": "Command.reconnect",
+            "approval_request": 10000437,
+            "approval_count_before": 8,
+            "approval_count_at_dispatch": 9
+          },
+          {
+            "request": 440,
+            "action": "Command.write",
+            "approval_request": 10000441,
+            "approval_count_before": 9,
+            "approval_count_at_dispatch": 10
+          },
+          {
+            "request": 514,
+            "action": "Command.reconnect",
+            "approval_request": 10000515,
+            "approval_count_before": 10,
+            "approval_count_at_dispatch": 11
+          },
+          {
+            "request": 518,
+            "action": "Command.read",
+            "approval_request": 10000519,
+            "approval_count_before": 11,
+            "approval_count_at_dispatch": 12
+          }
+        ]
+      },
+      "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-c44c64yz/traces/run-QC6ezu0q/trace.json": {
+        "outcome": "completed",
+        "sha256": "16e9093752372a259f9c1ee5e63e55ee2a6efe6714cd4123fcffc0a0857269b4",
+        "approved_boundaries": [
+          {
+            "request": 88,
+            "action": "Fs.atomic_replace",
+            "approval_request": 10000089,
+            "approval_count_before": 0,
+            "approval_count_at_dispatch": 1
+          }
+        ]
+      },
+      "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-c44c64yz/traces/run-CX8TLX0F/trace.json": {
+        "outcome": "completed",
+        "sha256": "31939c642640c4d38262a5ca2ad2cf2048e0f70b314ed165870abcd30dda2ec3",
+        "approved_boundaries": [
+          {
+            "request": 14,
+            "action": "Fs.atomic_replace",
+            "approval_request": 10000015,
+            "approval_count_before": 0,
+            "approval_count_at_dispatch": 1
+          }
+        ]
+      }
+    }
+  },
+  "pending_approval_client_reconnect": {
+    "command": "python3 -B tests/native_worker_probe.py",
+    "exit_code": 0,
+    "evidence_directory": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-worker-enq_53h6",
+    "result": {
+      "status": "passed",
+      "scope": "terminal client detach during pending approval, new client approves the same request in the same native Host; live Unicode input/output, EOF and stop; fresh-Host archive restore",
+      "worker": "0360a306215eff5a2a2cb926c593a55240f72a5acd7977dba741564e600a29d3",
+      "same_container_init_pid": 704,
+      "same_etas_pid": 718,
+      "started_at": "2026-11-11T16:25:36.682277833Z",
+      "native_command_operations": 16,
+      "model_http_requests": 0,
+      "approval_audit": [],
+      "trace": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-worker-enq_53h6/traces/run-nRo6n49l/trace.json",
+      "pending_approval_reconnected": true,
+      "approved_request": {
+        "arguments": [
+          "-u",
+          "-c",
+          "import time; print('sleeping',flush=True); time.sleep(300)"
+        ],
+        "operation": "start",
+        "program": "/usr/bin/python3"
+      },
+      "limitations": [
+        "Explicit /quit ends the Host; use the terminal detach keys to retain it.",
+        "No PTY is provided to native command children.",
+        "Host or container crash recovery of live jobs is not established."
+      ]
+    },
+    "process_observations": {
+      "processes-before-detach.txt": "PID                 COMMAND\n704                 /sbin/docker-init -- /home/nomo/.cargo/bin/etas run /workspace --flow native_project --profile nomo-native --allow-effects --max-tool-rounds 256 --trace-out /native-evidence/trace.json --args --new --workspace /private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-worker-enq_53h6/project\n718                 /home/nomo/.cargo/bin/etas run /workspace --flow native_project --profile nomo-native --allow-effects --max-tool-rounds 256 --trace-out /native-evidence/trace.json --args --new --workspace /private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-worker-enq_53h6/project\n737                 /usr/bin/python3 -u -c import sys; print('ready',flush=True) for line in sys.stdin: print('echo:'+line.rstrip('\\n'),flush=True)\n",
+      "processes-after-detach.txt": "PID                 COMMAND\n704                 /sbin/docker-init -- /home/nomo/.cargo/bin/etas run /workspace --flow native_project --profile nomo-native --allow-effects --max-tool-rounds 256 --trace-out /native-evidence/trace.json --args --new --workspace /private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-worker-enq_53h6/project\n718                 /home/nomo/.cargo/bin/etas run /workspace --flow native_project --profile nomo-native --allow-effects --max-tool-rounds 256 --trace-out /native-evidence/trace.json --args --new --workspace /private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-worker-enq_53h6/project\n737                 /usr/bin/python3 -u -c import sys; print('ready',flush=True) for line in sys.stdin: print('echo:'+line.rstrip('\\n'),flush=True)\n"
+    },
+    "terminal_sha256": {
+      "first-client.txt": "89f83c203ab4af1813d28c4f96549854254862ab48194a0152e130f961b0ea0a",
+      "second-client.txt": "ba834720b74ef615a6a0568edcc1631fd2168ed1e9c420b53c4d2ce9c9c58147",
+      "fresh-host.txt": "960c32c5e0ed0c0b7332dfab31129fc930218e66081e718a46da5016aa242f47"
+    },
+    "trace_audit": {
+      "outcome": "completed",
+      "sha256": "75401d060221f870f0933b4cfd5b676e4db3b864a2251669754f3896e289bef2",
+      "approved_boundaries": [
+        {
+          "request": 68,
+          "action": "Command.start",
+          "approval_request": 10000069,
+          "approval_count_before": 0,
+          "approval_count_at_dispatch": 1
+        },
+        {
+          "request": 144,
+          "action": "Command.reconnect",
+          "approval_request": 10000145,
+          "approval_count_before": 1,
+          "approval_count_at_dispatch": 2
+        },
+        {
+          "request": 148,
+          "action": "Command.read",
+          "approval_request": 10000149,
+          "approval_count_before": 2,
+          "approval_count_at_dispatch": 3
+        },
+        {
+          "request": 226,
+          "action": "Command.start",
+          "approval_request": 10000227,
+          "approval_count_before": 3,
+          "approval_count_at_dispatch": 4
+        },
+        {
+          "request": 302,
+          "action": "Command.reconnect",
+          "approval_request": 10000303,
+          "approval_count_before": 4,
+          "approval_count_at_dispatch": 5
+        },
+        {
+          "request": 306,
+          "action": "Command.read",
+          "approval_request": 10000307,
+          "approval_count_before": 5,
+          "approval_count_at_dispatch": 6
+        },
+        {
+          "request": 396,
+          "action": "Command.reconnect",
+          "approval_request": 10000397,
+          "approval_count_before": 6,
+          "approval_count_at_dispatch": 7
+        },
+        {
+          "request": 400,
+          "action": "Command.write",
+          "approval_request": 10000401,
+          "approval_count_before": 7,
+          "approval_count_at_dispatch": 8
+        },
+        {
+          "request": 474,
+          "action": "Command.reconnect",
+          "approval_request": 10000475,
+          "approval_count_before": 8,
+          "approval_count_at_dispatch": 9
+        },
+        {
+          "request": 478,
+          "action": "Command.read",
+          "approval_request": 10000479,
+          "approval_count_before": 9,
+          "approval_count_at_dispatch": 10
+        },
+        {
+          "request": 556,
+          "action": "Command.reconnect",
+          "approval_request": 10000557,
+          "approval_count_before": 10,
+          "approval_count_at_dispatch": 11
+        },
+        {
+          "request": 560,
+          "action": "Command.write",
+          "approval_request": 10000561,
+          "approval_count_before": 11,
+          "approval_count_at_dispatch": 12
+        },
+        {
+          "request": 634,
+          "action": "Command.reconnect",
+          "approval_request": 10000635,
+          "approval_count_before": 12,
+          "approval_count_at_dispatch": 13
+        },
+        {
+          "request": 638,
+          "action": "Command.read",
+          "approval_request": 10000639,
+          "approval_count_before": 13,
+          "approval_count_at_dispatch": 14
+        },
+        {
+          "request": 716,
+          "action": "Command.reconnect",
+          "approval_request": 10000717,
+          "approval_count_before": 14,
+          "approval_count_at_dispatch": 15
+        },
+        {
+          "request": 720,
+          "action": "Command.stop",
+          "approval_request": 10000721,
+          "approval_count_before": 15,
+          "approval_count_at_dispatch": 16
+        }
+      ]
+    }
+  },
+  "business_ownership": {
+    "Etas": [
+      "project/session selection",
+      "native command operations",
+      "approval and task recovery",
+      "history"
+    ],
+    "environment_transport": [
+      "consume a private source-written mount request",
+      "detach/attach a container terminal",
+      "bind the selected project"
+    ]
+  },
+  "limitations": [
+    "Explicit /quit still shuts down that Host.",
+    "The unread-output bounds still apply while detached.",
+    "No native child PTY or live job recovery after Host destruction.",
+    "No claim of every interruption/finalization window."
+  ],
+  "default_cutover": false
+}

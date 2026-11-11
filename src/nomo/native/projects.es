@@ -34,7 +34,8 @@ public flow show_projects() -> unit {
 }
 
 // The source selects the next folder. The launcher only transports this
-// mount request to a new Etas invocation; it does not select a conversation.
+// mount request to that folder's execution endpoint; it does not select a
+// conversation or own the current endpoint's task lifecycle.
 public flow request_open(raw: string, workspace: string) -> bool
     ![Memory, Console, Fs.atomic_replace<LaunchRoot>, Error<StorageError>, Error<FileError>, Error<ConsoleError>, Error<IndexError>] {
     var selection = trim(raw);

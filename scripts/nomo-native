@@ -55,9 +55,9 @@ while true; do
   task_status=$?
   set -e
   if [[ "$task_status" -ne 0 ]]; then exit "$task_status"; fi
-  if [[ ! -f "$NOMO_NATIVE_CONTROL_DIR/next-project" ]]; then exit 0; fi
+  if [[ ! -f "$NOMO_NATIVE_EVIDENCE/next-project" ]]; then exit 0; fi
   # Etas has already selected the next folder. Transport only its mount path;
-  # the next Etas entry selects that folder's conversation from native Memory.
-  task_project="$(< "$NOMO_NATIVE_CONTROL_DIR/next-project")"
+  # Etas in that endpoint owns its selected conversation and live tasks.
+  task_project="$(< "$NOMO_NATIVE_EVIDENCE/next-project")"
   set --
 done

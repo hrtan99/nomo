@@ -25,16 +25,22 @@ def execution_pid(worker):
 
 
 class Client:
-    def __init__(self, command, environment, evidence, name):
+    def __init__(self, command, environment, evidence, name, approver=None, prompts=(b'nomo> ',)):
         self.master, slave = pty.openpty()
         self.process = subprocess.Popen(command, cwd=ROOT, env=environment, stdin=slave, stdout=slave, stderr=slave)
         os.close(slave)
         self.output = bytearray()
         self.jobs = []
+        self.approver = approver
+        self.prompts = prompts
+        self.approvals = 0
         self.path = evidence / (name + '.txt')
         self.collect(prompt=True, approve=False)
         # Attach replays previous terminal bytes. Drain the replay before any
         # input; only subsequent, fresh approval prompts may be answered.
+        self.drain()
+
+    def drain(self):
         while select.select([self.master], [], [], 0.2)[0]:
             self.output.extend(os.read(self.master, 65536))
         self.save()
@@ -42,7 +48,7 @@ class Client:
     def save(self):
         self.path.write_bytes(self.output)
 
-    def collect(self, prompt, approve=True):
+    def collect(self, prompt, approve=True, marker=None):
         start, approvals = len(self.output), 0
         deadline = time.monotonic() + 90
         while time.monotonic() < deadline:
@@ -56,18 +62,25 @@ class Client:
                     break
                 self.output.extend(chunk)
                 fresh = self.output[start:]
-                if approve and fresh.count(b'Type `yes` to approve:') > approvals:
-                    preview = json.loads(next(line.split('[PROCESS] ', 1)[1] for line in reversed(fresh.decode().splitlines()) if '[PROCESS] ' in line))
-                    if preview['operation'] == 'start':
-                        assert preview['program'] == '/usr/bin/python3' and preview['arguments'] in (ECHO, SLEEP), preview
+                boundary = fresh.find(marker) if marker is not None else -1
+                approval_bytes = fresh[:boundary] if boundary >= 0 else fresh
+                if approve and approval_bytes.count(b'Type `yes` to approve:') > approvals:
+                    if self.approver is not None:
+                        self.approver(approval_bytes)
                     else:
-                        assert preview['job'] in self.jobs, preview
-                        assert preview['operation'] in ('reconnect', 'read', 'write', 'close_stdin', 'stop'), preview
-                        if preview['operation'] == 'write':
-                            assert preview['input'] == TEXT, preview
+                        preview = json.loads(next(line.split('[PROCESS] ', 1)[1] for line in reversed(approval_bytes.decode().splitlines()) if '[PROCESS] ' in line))
+                        if preview['operation'] == 'start':
+                            assert preview['program'] == '/usr/bin/python3' and preview['arguments'] in (ECHO, SLEEP), preview
+                        else:
+                            assert preview['job'] in self.jobs, preview
+                            assert preview['operation'] in ('reconnect', 'read', 'write', 'close_stdin', 'stop'), preview
+                            if preview['operation'] == 'write':
+                                assert preview['input'] == TEXT, preview
                     os.write(self.master, b'yes\n')
                     approvals += 1
-                if prompt and b'nomo> ' in fresh:
+                    self.approvals += 1
+                response = fresh[boundary:] if boundary >= 0 else b'' if marker is not None else fresh
+                if prompt and any(value in response for value in self.prompts):
                     self.save()
                     return fresh.decode()
             elif self.process.poll() is not None:
@@ -80,6 +93,23 @@ class Client:
     def send(self, text):
         os.write(self.master, (text + '\n').encode())
         return self.collect(prompt=True)
+
+    def pending_approval(self, text):
+        prompts = self.prompts
+        self.prompts = (b'Type `yes` to approve:',)
+        try:
+            os.write(self.master, (text + '\n').encode())
+            return self.collect(prompt=True, approve=False)
+        finally:
+            self.prompts = prompts
+
+    def switch(self, selector, target, startup=False):
+        text = selector if startup else '/open ' + selector
+        start = len(self.output)
+        os.write(self.master, (text + '\n').encode())
+        self.collect(prompt=True, marker=('[PROJECT] ' + str(target)).encode())
+        self.drain()
+        return self.output[start:].decode()
 
     def leave(self, detach=False):
         os.write(self.master, b'\x10\x11' if detach else b'/quit\n')
@@ -104,10 +134,9 @@ def main():
     echo_job = json.loads(next(line.split('[JOB    ] ', 1)[1] for line in started.splitlines() if '[JOB    ] ' in line))['id']
     first.jobs.append(echo_job)
     assert 'ready\\n' in first.send('/poll ' + echo_job + ' 4096')
-    started = first.send('/spawn ' + json.dumps(['/usr/bin/python3', *SLEEP]))
-    sleep_job = json.loads(next(line.split('[JOB    ] ', 1)[1] for line in started.splitlines() if '[JOB    ] ' in line))['id']
-    first.jobs.append(sleep_job)
-    assert 'sleeping\\n' in first.send('/poll ' + sleep_job + ' 4096')
+    pending = first.pending_approval('/spawn ' + json.dumps(['/usr/bin/python3', *SLEEP]))
+    preview = json.loads(next(line.split('[PROCESS] ', 1)[1] for line in pending.splitlines() if '[PROCESS] ' in line))
+    assert preview == {'operation': 'start', 'program': '/usr/bin/python3', 'arguments': SLEEP}, preview
     before = json.loads(subprocess.check_output(['docker', 'inspect', '--format', '{{json .State}}', worker], text=True))
     first_pid, first_top = execution_pid(worker)
     (evidence / 'processes-before-detach.txt').write_text(first_top)
@@ -120,6 +149,16 @@ def main():
     second = Client(command, environment, evidence, 'second-client')
     second.jobs = first.jobs
     assert worker in second.output.decode()
+    retained_preview = json.loads(next(line.split('[PROCESS] ', 1)[1] for line in reversed(second.output.decode().splitlines()) if '[PROCESS] ' in line))
+    assert retained_preview == preview and second.output.rstrip().endswith(b'Type `yes` to approve:'), second.output.decode()
+    # The new client answers the still-pending real approval. The transport has
+    # supplied no startup command, newline, or consent during reattachment.
+    os.write(second.master, b'yes\n')
+    second.approvals += 1
+    started = second.collect(prompt=True)
+    sleep_job = json.loads(next(line.split('[JOB    ] ', 1)[1] for line in started.splitlines() if '[JOB    ] ' in line))['id']
+    second.jobs.append(sleep_job)
+    assert 'sleeping\\n' in second.send('/poll ' + sleep_job + ' 4096')
     assert 'Resident native conversation' in second.send('/sessions')
     second.send('/send ' + echo_job + ' ' + json.dumps(TEXT))
     echo = second.send('/poll ' + echo_job + ' 4096')
@@ -140,10 +179,11 @@ def main():
         ['/sessions', '/jobs', '/job-output ' + echo_job, '/quit'], project)
     (evidence / 'fresh-host.txt').write_text(restored)
     assert code == 0 and approvals == 0 and 'Resident native conversation' in restored and 'echo:鹈鹕 café\\n' in restored, restored
-    result = {'status': 'passed', 'scope': 'terminal client detach/reconnect to the same native Host; live Unicode input/output, EOF and stop; fresh-Host archive restore',
+    result = {'status': 'passed', 'scope': 'terminal client detach during pending approval, new client approves the same request in the same native Host; live Unicode input/output, EOF and stop; fresh-Host archive restore',
         'worker': worker, 'same_container_init_pid': before['Pid'], 'same_etas_pid': first_pid,
         'started_at': before['StartedAt'], 'native_command_operations': len(commands),
         'model_http_requests': 0, 'approval_audit': [], 'trace': str(trace_directory / 'trace.json'),
+        'pending_approval_reconnected': True, 'approved_request': preview,
         'limitations': ['Explicit /quit ends the Host; use the terminal detach keys to retain it.', 'No PTY is provided to native command children.', 'Host or container crash recovery of live jobs is not established.']}
     (evidence / 'functional.json').write_text(json.dumps(result, indent=2) + '\n')
     print('PASS resident Etas native worker: ' + str(evidence), flush=True)

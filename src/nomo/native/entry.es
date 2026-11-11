@@ -238,7 +238,7 @@ public flow run(args: Array<string>) -> i32
         if request == "/quit" || request == "/exit" { return 0; }
         if request == "" { continue; }
         if request == "/help" {
-            println("Projects: /projects, /open [FOLDER_OR_NUMBER]. Project selection is native; the environment launcher remounts the selected folder and starts a new Etas Host.");
+            println("Projects: /projects, /open [FOLDER_OR_NUMBER]. Project selection is native; the launcher attaches that folder's execution endpoint and keeps the current endpoint running.");
             println("Git: /git status, diff [--staged] [JSON_PATHS], log [COUNT], branches, init, branch NAME, switch NAME, commit JSON. Commit JSON contains message and paths.");
             println("Ask about the project; native tools provide recursive/glob discovery, literal/regex search, file reads, approved editing and Git operations.");
             println("Terminal: /exec JSON_ARGV, /spawn JSON_ARGV, /jobs, /poll JOB [MAX_BYTES], /send JOB JSON_STRING, /close-input JOB, /stop JOB, /job-output JOB. /poll waits for output or termination. Saved job phases are historical observations; current Host handles are not durable across process restart.");
@@ -248,8 +248,8 @@ public flow run(args: Array<string>) -> i32
         if request == "/projects" { show_projects(); continue; }
         if request == "/git" { git_command(selected.id, "status"); continue; }
         match strip_prefix(request, "/git ") { Some(value) => { git_command(selected.id, value); continue; } None() => {} }
-        if request == "/open" { if request_open("", options.workspace) { return 0; } continue; }
-        match strip_prefix(request, "/open ") { Some(value) => { if request_open(value, options.workspace) { return 0; } continue; } None() => {} }
+        if request == "/open" { request_open("", options.workspace); continue; }
+        match strip_prefix(request, "/open ") { Some(value) => { request_open(value, options.workspace); continue; } None() => {} }
         let (operation, argument) = match split_once(request, " ") { Some(parts) => parts, None() => (request, "") };
         if operation == "/exec" || operation == "/spawn" || operation == "/jobs" || operation == "/poll" || operation == "/send" || operation == "/close-input" || operation == "/stop" || operation == "/job-output" {
             let name = match strip_prefix(operation, "/") { Some(value) => value, None() => operation };

@@ -29,7 +29,7 @@ def write_bytes(descriptor, data):
         remaining = remaining[os.write(descriptor, remaining):]
 
 
-def attach(identifier, terminal):
+def attach(identifier, terminal, control):
     # Engine attach atomically replays retained terminal output and follows live
     # bytes. No model text is parsed, and no task or approval input is generated.
     diagnostics = tempfile.TemporaryFile()
@@ -72,10 +72,12 @@ def attach(identifier, terminal):
         if initial:
             output(initial)
         while True:
+            if (control / 'next-project').is_file():
+                return 'project'
             descriptors = [connection.stdout.fileno()]
             if input_active:
                 descriptors.append(sys.stdin.fileno())
-            readable, _, _ = select.select(descriptors, [], [])
+            readable, _, _ = select.select(descriptors, [], [], 0.1)
             if connection.stdout.fileno() in readable:
                 chunk = os.read(connection.stdout.fileno(), 65536)
                 if not chunk:
@@ -165,8 +167,22 @@ def main(command):
         print('[PROJECT] ' + workspace + '\n[STATE  ] ' + str(directory) + '\n[TRACE  ] ' + str(evidence) +
               '\n[WORKER ] ' + identifier + '\n[CLIENT ] Ctrl+P then Ctrl+Q detaches; /quit shuts down this execution endpoint. Retained terminal output follows.', flush=True)
         terminal = json.loads(docker('inspect', '--format', '{{json .Config.Tty}}', identifier))
-        attach(identifier, terminal)
+        reason = attach(identifier, terminal, control)
+        destination = Path(os.environ['NOMO_NATIVE_EVIDENCE']) / 'next-project'
         observed = state(identifier)
+        if reason == 'project':
+            # Consume only the native source's private mount request, never a
+            # terminal/model marker. The delivered file is outside LaunchRoot,
+            # so it cannot trigger the same request on a later reattachment.
+            shutil.move(str(control / 'next-project'), destination)
+            if observed['Status'] == 'exited':
+                subprocess.run(['docker', 'rm', identifier], check=True, stdout=subprocess.DEVNULL)
+                if observed['ExitCode'] != 0:
+                    return observed['ExitCode']
+                print('\n[CLIENT ] Project chooser completed; attaching the selected project.', flush=True)
+            else:
+                print('\n[CLIENT ] Switching project; the current execution endpoint remains running.', flush=True)
+            return 0
         if observed['Status'] == 'running':
             print('\n[CLIENT ] Detached; the Etas execution endpoint remains running.', flush=True)
             return 0
@@ -174,9 +190,7 @@ def main(command):
             raise RuntimeError('Execution endpoint is ' + observed['Status'] + '; its result is not established')
         code = observed['ExitCode']
         if code == 0 and (control / 'next-project').is_file():
-            destination = Path(os.environ['NOMO_NATIVE_CONTROL_DIR']) / 'next-project'
-            if destination != control / 'next-project':
-                shutil.copyfile(control / 'next-project', destination)
+            shutil.move(str(control / 'next-project'), destination)
         subprocess.run(['docker', 'rm', identifier], check=True, stdout=subprocess.DEVNULL)
         return code
 
