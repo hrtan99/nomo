@@ -20,7 +20,9 @@ public type Answer = { text: string };
 public type Turn = { session: string, workspace: string, initial_request: string, request: string, summary: string, pending: string, history: Array<ChatMessage>, instructions: Array<ProjectInstruction>, runs: Array<Attempt>, settings: Settings, jobs: Array<Job> };
 
 @tools([start_job, read_job, write_job, close_job_input, stop_job, list_jobs, job_output, git_status, git_diff, git_log, git_branches, git_init, git_branch, git_switch, git_commit, read_file, replace_file, edit_file, list_directory, stat_file, search_files, find_files, search_project, project_instructions, run_command, run_command_input, check_project, apply_changes, create_file, write_file, make_directory, delete_path, move_path, undo_changes, rollback_changes, list_changes, reconcile_changes])
-@limits([Tokens(131072), ContextTokens(1048576)])
+// ContextTokens is the run-owned cumulative input/output allowance, not the
+// provider's per-request context window. Keep enough room for the tool loop.
+@limits([Tokens(131072), ContextTokens(536870912)])
 public agent NativeCoding(input: Turn) -> Answer
     ![SessionContext, SettingsContext, Memory, Command.run<DefaultCommandSandbox>, Command.start<DefaultCommandSandbox>, Command.reconnect<DefaultCommandSandbox>, Command.read<DefaultCommandSandbox>, Command.write<DefaultCommandSandbox>, Command.stop<DefaultCommandSandbox>, Console, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Fs.stat<ProjectRoot>, Fs.atomic_replace<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>, Error<ConsoleError>] {
     return perform infer<Answer>(Prompt.new()

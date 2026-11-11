@@ -38,6 +38,7 @@ class Model(BaseHTTPRequestHandler):
 
     def do_POST(self):
         request = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
+        assert request['max_tokens'] == 131072, request['max_tokens']
         index = len(self.server.requests)
         self.server.requests.append(request)
         (self.server.evidence / f'request-{index}.json').write_text(json.dumps(request, indent=2))
@@ -81,7 +82,7 @@ class Model(BaseHTTPRequestHandler):
             'tool_calls': [{'id': f'call-{index}', 'type': 'function',
                             'function': {'name': name, 'arguments': json.dumps(arguments)}}]},
             'finish_reason': 'tool_calls'}],
-            'usage': {'prompt_tokens': 100, 'completion_tokens': 20, 'total_tokens': 120}}).encode()
+            'usage': {'prompt_tokens': 100000, 'completion_tokens': 20, 'total_tokens': 100020}}).encode()
         self.send_response(200)
         self.send_header('Content-Type', 'application/json')
         self.send_header('Content-Length', str(len(body)))

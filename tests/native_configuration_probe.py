@@ -151,7 +151,8 @@ def main():
         assert updated['requested']['context_window'] == 1048576 and updated['requested']['keep_messages'] == 12
         assert updated['requested']['compact_ratio'] == 0.75 and updated['requested']['check'] == []
         assert updated['requested']['instructions'] == ['Updated configured style.']
-        assert updated['context_window_is_estimate'] and updated['runtime_context_tokens'] == 1048576
+        assert updated['context_window_is_estimate'] and updated['inference_token_allowance'] == 536870912
+        assert updated['summary_token_allowance'] == 1048576
         changed = json.loads((traces / 'changed.json').read_text())
         assert changed['outcome']['kind'] == 'completed'
         failures = audit(first['events']) + audit(final['events']) + audit(changed['events'])

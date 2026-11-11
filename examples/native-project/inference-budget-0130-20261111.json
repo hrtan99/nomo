@@ -1,0 +1,154 @@
+{
+  "date": "2026-11-11",
+  "compiler_version": "0.13.0",
+  "status": "passed",
+  "per_request_output_cap": 131072,
+  "coding_inference_cumulative_input_output_allowance": 536870912,
+  "estimated_context_window_cap": 1048576,
+  "summary_inference_allowance": 1048576,
+  "synthetic_usage_per_response": {
+    "input_tokens": 100000,
+    "output_tokens": 20
+  },
+  "initial_inference_responses": 13,
+  "initial_inference_reported_tokens": 1300260,
+  "total_http_requests": 15,
+  "total_synthetic_reported_tokens": 1500300,
+  "real_provider_usage": false,
+  "source_sha256": {
+    "src/nomo/native/agent.es": "3de5e21d24a413228bb235b2bb64480d576b346533c20b86aa03810115fa774e",
+    "src/nomo/native/configuration.es": "aeed11661d85e0229673eb66561edbc5c2f8d69e5893d4c481c7317b3814ec2b",
+    "tests/native_end_to_end_probe.py": "29dcd3d0a4c41856e8628c622aaa80dd5cbc1c639bce6ce02ff2e5fd9503e368",
+    "tests/native_configuration_probe.py": "b2be46be501abbea7de0024bbec24d89fc0a89dd3e1389f5a3342c6640d48cc0"
+  },
+  "full_workflow": {
+    "directory": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-end-to-end-_855axt8",
+    "artifacts_sha256": {
+      "request-11.json": "a8e99e9a748a0e42ee9f77572de8983a7479fcfdc72768b9cf38c6f18f35f190",
+      "restored-stdout.txt": "b0a1ade2ea03b502a7950d78a1ece43b79bb51c67d09267df918b44b21709007",
+      "terminal.txt": "b069c5e2035ba723384e4e1de58f4d230fec66b5b9d47278dad37158f0499905",
+      "request-0.json": "5dab6920478ff6b928c1423ff77d1d60eb6647a422ef76999a85884c33fdc67b",
+      "request-1.json": "dc73f4165438f0da6c3abde65ca98145b6035d000dc889224f256f56a1a1f555",
+      "request-10.json": "8a81b1f30fa048ebc5cc53270825166ac73789f2858ee380940fa549f0650ec2",
+      "request-6.json": "7ea296b233a00ec1673250383d8ce08899616e8ebbe2ce490c87fd19b3f3affa",
+      "request-7.json": "1517a7cb603173d2cd72a263d2d6868c114f80461361f804e9eb25d4d8329786",
+      "request-4.json": "b71b31b3f35c9e8884f74f053cd77786d921cfb03d6a7fe10c8cb845d4f1f23c",
+      "restored-stderr.txt": "a0be2dea940b8ced4cead9def531d64f98cf7571054b443c18fdda9745d4fd04",
+      "command.json": "232b86a9200344fe3723347d95f10d75025bf11a824e9a450ff17a1695066315",
+      "request-8.json": "45414c92caa5b26f503d528b783288ae9f35e74d0271c85e63f1cb4bd007a7fb",
+      "request-9.json": "c632ec388c6f433cce2cdc88b5557231bd67045838e939f2352f24a9bfb556d2",
+      "request-14.json": "a24982b078cc4561fd77b55d5c403c0f6d8c82377d5f5a7dc24d8033e9b3a66e",
+      "request-5.json": "aadb9416c1ad294cab6b2c131a8a1691e845abbde5bf49fdcf065cd67a723540",
+      "request-13.json": "90d65edba27859728ba3ce7442d4c4e431b394de23b94185084321f3f829549c",
+      "request-2.json": "11897bf3d7974cb0152077e6182b7b29a710fb0f3fabccc4f78fa48111f4d581",
+      "request-3.json": "4a2e1060f32549144b8922d614b31151dd3d919a77704e521ddac7695ccf6ba9",
+      "request-12.json": "5c3b112f876925a1bb0d02fac87261fc36994142e740f2205b007fac706ed2f0",
+      "native/trace.json": "d71a24e9cc141021bb2383fa0b21590ac93dc179ad122cd04289fdbcb7d4b976",
+      "native/restored.json": "063b984a72f210127b3dc1a0d9d594c3cafaf510ef17868b7e54fd9e30a6374b",
+      "project/note.txt": "c07d6190ee3b4da91b545a74cd1928acde9afa9966f004f2eccd3a9c839e0177"
+    },
+    "observed": null,
+    "probe_exit_code": 0
+  },
+  "configuration": {
+    "directory": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-configuration-m5vip552",
+    "artifacts_sha256": {
+      "restored-stdout.txt": "453ebe36ee8260ae5120df5c71329bf57054f4ee41970fe9df763286b9c34715",
+      "terminal.txt": "610980395b7b1fdcd1a854dbfd1125a274e0ce32344b2b1859376e85691244a2",
+      "request-0.json": "14149038709069bf6a9e8a741cc64020d389f3bfa32b07fd924f7b7f79ba8497",
+      "request-1.json": "750162791a7bd7a9e207095297ac3a806724ecbcfcaf155d2c981bdbbead9b81",
+      "request-4.json": "0f40d741526dd873d699fa9b6743fafb8dc7b8d4c9ea65da30071276306839db",
+      "functional.json": "a81e4646e9794c28287f2a1a03e43d27c1cb7236aecaad5f23464c9b5001af94",
+      "restored-stderr.txt": "a0be2dea940b8ced4cead9def531d64f98cf7571054b443c18fdda9745d4fd04",
+      "changed-terminal.txt": "0c53a94a9b1b2b57eae31be000c369913f93a6d0be8652cc060e9048ffd54f6f",
+      "request-2.json": "868d8afa7f44480fe2c9a1e878b6ad8664cd061b1e7e5ff818eb97f5382b213b",
+      "request-3.json": "3b94a5a6e0f6b52cfb0bae8a62b83bd8e88c4f607cdeba83566de07923a2c7f5",
+      "native/changed.json": "5c48b5e0510692a33224dae956485e39d4393d8462cbead981115f1bf1c7a101",
+      "native/trace.json": "70874d7f469f57130e1b00ec73bed2de0804eea3ebe36adb28aeda10241224d1",
+      "native/restored.json": "73a22a785fea73343d82ff3feca51b2e196c1e8ad6df81e731d738983a427751",
+      "project/generated/ignored.txt": "d0185ae741c500ada166667e70da5c8a533fa223186ef5de82ca3cb21c9c05a2"
+    },
+    "observed": {
+      "functional_status": "passed",
+      "model_http_requests": 5,
+      "native_command_dispatches": 4,
+      "restored_command_dispatches": 0,
+      "configuration": {
+        "command_timeout_active": false,
+        "context_window_is_estimate": true,
+        "effective_context_window": 400000.0,
+        "inference_token_allowance": 536870912.0,
+        "requested": {
+          "check": [
+            "python3",
+            "-c",
+            "print('configured check passed')"
+          ],
+          "command_timeout": 7.0,
+          "compact_ratio": 0.6,
+          "context_window": 400000.0,
+          "ignore": [
+            "generated/**"
+          ],
+          "instructions": [
+            "Follow the configured coding style.",
+            "Keep caf\u00e9 characters and\nscoped guidance."
+          ],
+          "keep_messages": 2.0,
+          "max_output_tokens": 131072.0
+        },
+        "runtime_output_tokens": 131072.0,
+        "summary_token_allowance": 1048576.0
+      },
+      "changed_command_dispatches": 2,
+      "changed_configuration": {
+        "command_timeout_active": false,
+        "context_window_is_estimate": true,
+        "effective_context_window": 1048576.0,
+        "inference_token_allowance": 536870912.0,
+        "requested": {
+          "check": [],
+          "command_timeout": 600.0,
+          "compact_ratio": 0.75,
+          "context_window": 1048576.0,
+          "ignore": [],
+          "instructions": [
+            "Updated configured style."
+          ],
+          "keep_messages": 12.0,
+          "max_output_tokens": 131072.0
+        },
+        "runtime_output_tokens": 131072.0,
+        "summary_token_allowance": 1048576.0
+      },
+      "status": {
+        "first_user": 0.0,
+        "id": "native-0",
+        "ledger": {
+          "compactions": 1.0,
+          "context_bytes": 4495.0,
+          "generation_allowance": 163840.0,
+          "tools": 4.0,
+          "turns": 1.0
+        },
+        "next_event": 11.0,
+        "pending": "",
+        "summary_event": 10.0,
+        "summary_through": 7.0,
+        "title": "New conversation",
+        "workspace": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-configuration-m5vip552/project"
+      },
+      "approval_audit": []
+    },
+    "probe_exit_code": 0
+  },
+  "upstream_semantics": [
+    "https://github.com/etas-project/etas-interpreter/blob/7422fb134d2606cc28b7af9c69e98668ba5411c0/crates/etas_interpreter/src/eval/limit.rs",
+    "https://github.com/etas-project/etas-interpreter/blob/7422fb134d2606cc28b7af9c69e98668ba5411c0/crates/etas_interpreter/src/driver/dispatch/model.rs"
+  ],
+  "limitations": [
+    "Synthetic reported usage tests cumulative accounting, not an actual 1M-token input or measured billing",
+    "Provider context/output limits still apply; before-turn context projection is an estimate",
+    "Per-call dynamic output caps remain unavailable in the source-level static annotation API"
+  ]
+}
