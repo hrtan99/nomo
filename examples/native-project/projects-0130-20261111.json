@@ -1,0 +1,106 @@
+{
+  "date": "2026-11-11",
+  "compiler_config": "config/etas-latest-main.json",
+  "compiler_version": "0.13.0",
+  "status": "passed",
+  "source_sha256": {
+    "src/nomo/native/projects.es": "babfe6aa7b60b06f65f016a2c92f2c3972d3c35dbafddd0272a42033d02076ee",
+    "src/nomo/native/options.es": "526c6151fb4dfbc04c5feeeb2e2226784e0ee6176954727812612b65f4089b36",
+    "src/nomo/native/entry.es": "f1ee0fd1f16c26d9799908bbf6087f682aed493347231021743fc51a4cec1c6e",
+    "scripts/nomo-native": "82e5cddea981c62482a983d5af11ce4d4be517b4227da027b978a7365cec124b",
+    "etas.toml": "7c31d01f2c700b3a030bdcb2e3da2973dc4392205f7c80f94ea44f23062d5239",
+    "config/nomo-native-compose.yaml": "c0c05cdd662c12b145c49848f5b5b7f57b551d871ff0990f4d5abf298926a14c",
+    "config/nomo-native-launch-compose.yaml": "5c480bd74fbc73fbf0ce9a8fa395e9b5b2a46498d516ab64716599c10457f34b",
+    "tests/native_projects_probe.py": "b7d44dac77e81bcce58d5f7a50dba4591835566bb5e42e5852135e2565de0b4b",
+    "tests/native_end_to_end_probe.py": "8c1d45e9e3d2433262e1f2e5e63a2b7d9f2b24461f32f56044c3bd4434627040",
+    "tests/native_recovery_probe.py": "23a1d112144129d3bedb67f5ab9cd763f7ce50c8ea06cca1dc68264dfdfffe24"
+  },
+  "projects": {
+    "directory": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-7riky3zj",
+    "artifacts_sha256": {
+      "terminal.txt": "6b09807f904b4ee2ca5811c1ab430165643acb6fd2c764e80f231df196e58875",
+      "functional.json": "7756ac350a955be6f49ceb48baef72347fbc1a2e098f4db63e8212afddd6867e",
+      "reopened-terminal.txt": "c68fba49dec3e2a798626ee88ec008e94061a0ac73b9495343a1ae9ee312f0a8",
+      "second 鹈鹕/marker.txt": "1d9ca280553e90da4cab47f33393abe3f9a664a5fdf5944ddcad0261a2ea6412",
+      "first project/marker.txt": "958e124e95eba7aa025565ce4e6e9f45cd82cc70b533da21077f6d4b866cf989",
+      "traces/run-5Ot036mq/trace.json": "1cf56bd09b58373b2cbad45ad66ff1f1e1f6601f329a5c3f5c7712de5f812956",
+      "traces/run-b3aidfEL/trace.json": "1aa7ad49fce76ba12dbc4782923b29290acd88c265b66c33ae7aed3fce9edb66",
+      "traces/run-2HJxFReD/trace.json": "eeea38b29b88a3ee5282b395c50522f22e13c017814547026ad014b2ca841e50",
+      "traces/run-OG465HhO/trace.json": "c325e4df3feb12e3f8e7c6d5019f43b68e6796344055185d6445a011a3cfa97f",
+      "traces/run-NSrY4Kp6/trace.json": "6de89f052231e94e260c20071c23e975ab94223352e77335c6f48239a92fe04c"
+    },
+    "probe_exit_code": 0,
+    "observed": {
+      "functional_status": "passed",
+      "model_http_requests": 0,
+      "native_command_dispatches": 0,
+      "native_control_write_approvals": 3,
+      "actual_host_invocations": 5,
+      "selected_paths": [
+        "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-7riky3zj/second 鹈鹕",
+        "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-7riky3zj/first project",
+        "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-7riky3zj/second 鹈鹕"
+      ],
+      "restored_status": {
+        "first_user": -1.0,
+        "id": "native-1",
+        "ledger": {
+          "compactions": 0.0,
+          "context_bytes": 0.0,
+          "generation_allowance": 0.0,
+          "tools": 1.0,
+          "turns": 0.0
+        },
+        "next_event": 2.0,
+        "pending": "",
+        "summary_event": -1.0,
+        "summary_through": -1.0,
+        "title": "Second project",
+        "workspace": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-7riky3zj/second 鹈鹕"
+      },
+      "traces": [
+        "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-7riky3zj/traces/run-b3aidfEL/trace.json",
+        "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-7riky3zj/traces/run-NSrY4Kp6/trace.json",
+        "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-7riky3zj/traces/run-OG465HhO/trace.json",
+        "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-7riky3zj/traces/run-2HJxFReD/trace.json",
+        "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-7riky3zj/traces/run-5Ot036mq/trace.json"
+      ],
+      "scope": "Etas-owned recent projects and selection, environment-only remount, distinct conversations and startup chooser"
+    }
+  },
+  "full_workflow_after_launch_control": {
+    "directory": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-end-to-end-x4d3v3kq",
+    "artifacts_sha256": {
+      "request-11.json": "ccef85b85fe36b01495980456458044abb0649389ffe363ccbe52e6c09eb1287",
+      "restored-stdout.txt": "b0a1ade2ea03b502a7950d78a1ece43b79bb51c67d09267df918b44b21709007",
+      "terminal.txt": "438848acb6b4c371fedbd6c3be5c88984ef47b33a838732a07e11de373984711",
+      "request-0.json": "fa358b7e771a9582a18edef5abc9060a56b87829108166b7e2b0e262922f89c5",
+      "request-1.json": "0bfd0600f986405bbf5a2a0bd25fbc6c1d9e9980993ce8eab506b034e05d057e",
+      "request-10.json": "752f494cc71bf3e32ac0b048b9d85d6adffddae1af93f13122cd0b7ae72b7fe2",
+      "request-6.json": "07356dafd20b0d0ee9d2993ef9fea9e685429327e0c664e6b0bd09436c6c4343",
+      "request-7.json": "38301afa737fe248eda5f4e547a47db81209cb84f2c885878e0fe0e35b52ad82",
+      "request-4.json": "1f149f63c8d7b664031ebab1f12e663076341695579d392d0c530c49871e7d6e",
+      "restored-stderr.txt": "0c8238db30dd9b84e34995613a3bca424aeb36d0b34b6d236a7b9935bfe4282d",
+      "command.json": "f10a5835988d6d38afe2cf114243815d4eb852ee0a9a08242cf2f57a6e906f50",
+      "request-8.json": "54dfda69e70900a4ff2f702b1986be836bbc0a742dc6838af2506aa0234f9861",
+      "request-9.json": "92e1635795b7229b67cc62a1f4c25944c4323e31cdfdbda7ddaf2081e35be0bd",
+      "request-14.json": "25b68504923c1813ef563deb9d53172a148c915aba04c8ce66c562e10362ffed",
+      "request-5.json": "27824770ea0a86a54c60737a44fcd8bb5cb7281f04b4b5c40d8b1c479b8394a9",
+      "request-13.json": "a81dac0f1ed45efd6ac8d18b5389d0101c016636e234432ec13dd9a236e41527",
+      "request-2.json": "0da54f39ddfdda0eb5bcb48abe3d86da7598e98613b76dca5d334b2e63216f66",
+      "request-3.json": "20fe38a4266400d371078850395f66074ac47bdd8302ffed00cb3404d974d950",
+      "request-12.json": "5d3d610b2659ff307457bad23bbe8cb54b9b192d0e3c6c130ac2bf4af1126752",
+      "native/trace.json": "4dc95768cc561651dcad0a7e484a4a10acd8baee7646d6a2564839a92e7b975a",
+      "native/restored.json": "c92bf10df091b2f66b4976e46d8efe8fea0533ed14077c25fe07f654935ba4a7",
+      "project/note.txt": "c07d6190ee3b4da91b545a74cd1928acde9afa9966f004f2eccd3a9c839e0177"
+    },
+    "probe_exit_code": 0,
+    "model_http_requests": 15,
+    "scope": "Original unshortened read/edit/check/all-Git/chat/exit/new-process workflow; strict approvals passed"
+  },
+  "limitations": [
+    "Changing projects starts a new Etas Host; this does not solve live background-process reconnection or PTY support",
+    "Control-path writes use the native filesystem approval policy",
+    "Only environment mount/path transport is outside Etas; recent-project and conversation decisions are native"
+  ]
+}

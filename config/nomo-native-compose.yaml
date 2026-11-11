@@ -22,3 +22,8 @@ services:
         target: /native-evidence
         bind:
           create_host_path: false
+      - type: bind
+        source: "${NOMO_NATIVE_CONTROL_DIR:-${NOMO_NATIVE_EVIDENCE}}"
+        target: /native-launch
+        bind:
+          create_host_path: false

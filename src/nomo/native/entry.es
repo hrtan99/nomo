@@ -21,6 +21,7 @@ import nomo.native.configuration.{Settings, SettingsContext, load as load_config
 import nomo.native.terminal.check_project;
 import nomo.native.terminal.run_command;
 import nomo.native.processes.{start_job, read_job, write_job, close_job_input, stop_job, list_jobs, job_output};
+import nomo.native.projects.{LaunchRoot, remember, show_projects, request_open};
 
 type Argv = { program: string, arguments: Array<string> };
 flow command_argv(raw: string) -> Argv {
@@ -200,8 +201,10 @@ flow event_index(raw: string) -> i64 {
 }
 
 public flow run(args: Array<string>) -> i32
-    ![Agentic, Memory, Console, Command.run<DefaultCommandSandbox>, Command.start<DefaultCommandSandbox>, Command.reconnect<DefaultCommandSandbox>, Command.read<DefaultCommandSandbox>, Command.write<DefaultCommandSandbox>, Command.stop<DefaultCommandSandbox>, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Fs.stat<ProjectRoot>, Fs.atomic_replace<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>, Error<IOError>, Error<IndexError>] {
+    ![Agentic, Memory, Console, Command.run<DefaultCommandSandbox>, Command.start<DefaultCommandSandbox>, Command.reconnect<DefaultCommandSandbox>, Command.read<DefaultCommandSandbox>, Command.write<DefaultCommandSandbox>, Command.stop<DefaultCommandSandbox>, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Fs.stat<ProjectRoot>, Fs.atomic_replace<ProjectRoot>, Fs.atomic_replace<LaunchRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>, Error<IOError>, Error<IndexError>] {
     let options = parse(args);
+    if options.choose_project { request_open("", options.workspace); return 0; }
+    remember(options.workspace);
     let archive = NativeHistory {};
     var selected = match options.resume_id {
         "" => {
@@ -229,11 +232,15 @@ public flow run(args: Array<string>) -> i32
         if request == "/quit" || request == "/exit" { return 0; }
         if request == "" { continue; }
         if request == "/help" {
+            println("Projects: /projects, /open [FOLDER_OR_NUMBER]. Project selection is native; the environment launcher remounts the selected folder and starts a new Etas Host.");
             println("Ask about the project; native tools provide recursive/glob discovery, literal/regex search, file reads, approved editing and Git operations.");
             println("Terminal: /exec JSON_ARGV, /spawn JSON_ARGV, /jobs, /poll JOB [MAX_BYTES], /send JOB JSON_STRING, /close-input JOB, /stop JOB, /job-output JOB. /poll waits for output or termination. Saved job phases are historical observations; current Host handles are not durable across process restart.");
             println("/new [TITLE], /sessions, /resume ID, /rename TITLE, /history [TEXT], /page EVENT, /fork [EVENT], /export FILE, /import FILE, /copies, /resume-copy ID, /discard-copy ID, /runs, /resolve-run ID [NOTE], /config, /check, /compact, /status, /tree [PATH], /glob PATTERN, /search REGEX, /read FILE, /edits, /undo [EDIT], /rollback EDIT, /recover EDIT, /quit");
             continue;
         }
+        if request == "/projects" { show_projects(); continue; }
+        if request == "/open" { if request_open("", options.workspace) { return 0; } continue; }
+        match strip_prefix(request, "/open ") { Some(value) => { if request_open(value, options.workspace) { return 0; } continue; } None() => {} }
         let (operation, argument) = match split_once(request, " ") { Some(parts) => parts, None() => (request, "") };
         if operation == "/exec" || operation == "/spawn" || operation == "/jobs" || operation == "/poll" || operation == "/send" || operation == "/close-input" || operation == "/stop" || operation == "/job-output" {
             let name = match strip_prefix(operation, "/") { Some(value) => value, None() => operation };

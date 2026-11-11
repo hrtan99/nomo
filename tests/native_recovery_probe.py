@@ -12,7 +12,7 @@ import threading
 from native_mutations_probe import ROOT, Model, BINARY, approve_preview
 
 
-def terminal(command, environment, turns, project, interrupt=False, approve=approve_preview):
+def terminal(command, environment, turns, project, interrupt=False, approve=approve_preview, prompts=(b'nomo> ',)):
     master, slave = pty.openpty()
     process = subprocess.Popen(command, cwd=ROOT, env=environment, stdin=slave, stdout=slave, stderr=slave)
     os.close(slave)
@@ -28,7 +28,7 @@ def terminal(command, environment, turns, project, interrupt=False, approve=appr
                 if not chunk:
                     break
                 output.extend(chunk)
-                if sent < len(turns) and output.count(b'nomo> ') > sent:
+                if sent < len(turns) and sum(output.count(prompt) for prompt in prompts) > sent:
                     os.write(master, (turns[sent] + '\n').encode())
                     sent += 1
                 if not stopped and output.count(b'Type `yes` to approve:') > approvals:

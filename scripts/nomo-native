@@ -5,7 +5,7 @@ set -euo pipefail
 task_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 if [[ "${1:-}" == --help || "${1:-}" == -h ]]; then
   cat <<'HELP'
-Usage: nomo-native [PROJECT_DIRECTORY] [--new | --resume ID] [--once PROMPT]
+Usage: nomo-native [PROJECT_DIRECTORY] [--open | --new | --resume ID] [--once PROMPT]
 
 Launch the opt-in Etas native migration. PROJECT_DIRECTORY defaults to cwd.
 Set MINIMAX_API_KEY for the configured model endpoint. Native state defaults
@@ -22,7 +22,6 @@ if [[ $# -gt 0 && "$1" != --* ]]; then
   task_project="$1"
   shift
 fi
-export NOMO_NATIVE_WORKSPACE="$(cd -- "$task_project" && pwd -P)"
 umask 077
 task_state="${NOMO_NATIVE_STATE:-${XDG_STATE_HOME:-$HOME/.local/state}/nomo/native}"
 mkdir -p -- "$task_state"
@@ -30,20 +29,34 @@ export NOMO_NATIVE_STATE="$(cd -- "$task_state" && pwd -P)"
 task_traces="${NOMO_NATIVE_TRACE_ROOT:-$NOMO_NATIVE_STATE/traces}"
 mkdir -p -- "$task_traces"
 task_traces="$(cd -- "$task_traces" && pwd -P)"
-export NOMO_NATIVE_EVIDENCE="$(mktemp -d "$task_traces/run-XXXXXXXX")"
 export NOMO_NATIVE_UID="$(id -u)" NOMO_NATIVE_GID="$(id -g)"
-printf '[PROJECT] %s\n[STATE  ] %s\n[TRACE  ] %s\n' \
-  "$NOMO_NATIVE_WORKSPACE" "$NOMO_NATIVE_STATE" "$NOMO_NATIVE_EVIDENCE"
-
-exec docker compose --project-name nomo-native --env-file /dev/null \
-  --file "$task_root/compose.yaml" \
-  --file "$task_root/config/etas-0130-official-compose.yaml" \
-  --file "$task_root/config/local-tryout-compose.yaml" \
-  --file "$task_root/config/nomo-native-launch-compose.yaml" \
-  --file "$task_root/config/nomo-native-compose.yaml" \
-  run --rm --no-deps --pull never --tty=true dev \
-  /home/nomo/.cargo/bin/etas run /workspace \
-  --flow native_project --profile nomo-native --allow-effects \
-  --max-tool-rounds "${NOMO_NATIVE_MAX_TOOL_ROUNDS:-256}" \
-  --trace-out /native-evidence/trace.json \
-  --args "$@" --workspace "$NOMO_NATIVE_WORKSPACE"
+while true; do
+  if [[ "$task_project" == "~/"* ]]; then task_project="$HOME/${task_project:2}"; fi
+  export NOMO_NATIVE_WORKSPACE="$(cd -- "$task_project" && pwd -P)"
+  export NOMO_NATIVE_EVIDENCE="$(mktemp -d "$task_traces/run-XXXXXXXX")"
+  export NOMO_NATIVE_CONTROL_DIR="$NOMO_NATIVE_EVIDENCE/control"
+  mkdir -- "$NOMO_NATIVE_CONTROL_DIR"
+  printf '[PROJECT] %s\n[STATE  ] %s\n[TRACE  ] %s\n' \
+    "$NOMO_NATIVE_WORKSPACE" "$NOMO_NATIVE_STATE" "$NOMO_NATIVE_EVIDENCE"
+  set +e
+  docker compose --project-name nomo-native --env-file /dev/null \
+    --file "$task_root/compose.yaml" \
+    --file "$task_root/config/etas-0130-official-compose.yaml" \
+    --file "$task_root/config/local-tryout-compose.yaml" \
+    --file "$task_root/config/nomo-native-launch-compose.yaml" \
+    --file "$task_root/config/nomo-native-compose.yaml" \
+    run --rm --no-deps --pull never --tty=true dev \
+    /home/nomo/.cargo/bin/etas run /workspace \
+    --flow native_project --profile nomo-native --allow-effects \
+    --max-tool-rounds "${NOMO_NATIVE_MAX_TOOL_ROUNDS:-256}" \
+    --trace-out /native-evidence/trace.json \
+    --args "$@" --workspace "$NOMO_NATIVE_WORKSPACE"
+  task_status=$?
+  set -e
+  if [[ "$task_status" -ne 0 ]]; then exit "$task_status"; fi
+  if [[ ! -f "$NOMO_NATIVE_CONTROL_DIR/next-project" ]]; then exit 0; fi
+  # Etas has already selected the next folder. Transport only its mount path;
+  # the next Etas entry selects that folder's conversation from native Memory.
+  task_project="$(< "$NOMO_NATIVE_CONTROL_DIR/next-project")"
+  set --
+done

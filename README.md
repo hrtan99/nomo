@@ -70,4 +70,4 @@ The native probe uses a local synthetic model server. `tests/real_project_workfl
 
 Runtime credentials, conversation databases, generated evidence, local management documents and bytecode caches are not part of the release.
 
-The complete Etas native migration is in progress. Use `./scripts/nomo-native /absolute/project/path` to try the opt-in native entry with the installed toolchain and `MINIMAX_API_KEY`. [Native migration status and launch instructions](NATIVE_MIGRATION.md) record implemented tools, actual Host/approval evidence, upstream dependencies and remaining delivery gates; the default entry has not switched yet.
+The complete Etas native migration is in progress. Use `./scripts/nomo-native /absolute/project/path` to try the opt-in native entry with the installed toolchain and `MINIMAX_API_KEY`; `./scripts/nomo-native --open` uses its native recent-project chooser. [Native migration status and launch instructions](NATIVE_MIGRATION.md) record implemented tools, actual Host/approval evidence, upstream dependencies and remaining delivery gates; the default entry has not switched yet.
