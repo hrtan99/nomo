@@ -1,0 +1,122 @@
+{
+  "date": "2026-11-12",
+  "compiler": {
+    "selector": "latest0135",
+    "version": "0.13.5",
+    "source_overrides": [],
+    "repositories": {
+      "cli": {
+        "repository": "etas",
+        "revision": "826bf13bea02f1c1468e6b97b8d2ec7dad2ebc0e",
+        "tree": "9645fc8556868f54a8e7ab04ffd638f954bd5095",
+        "packages": [
+          "etas_cli",
+          "etas_driver",
+          "etas_package",
+          "etas_tests"
+        ]
+      },
+      "core": {
+        "repository": "etas-core",
+        "revision": "faa01c5752bfe3e46a187ee6e3def3911ab2430b",
+        "tree": "f169fff036cccad7c031a8165cd48e02171c381a",
+        "packages": [
+          "etas_builtin",
+          "etas_cache",
+          "etas_code",
+          "etas_core",
+          "etas_host",
+          "etas_memory_derive",
+          "etas_package_metadata",
+          "etas_std",
+          "etas_utils"
+        ]
+      },
+      "frontend": {
+        "repository": "etas-frontend",
+        "revision": "bff83ed77b6e6bfa289117f0a96bf7c786a6b0a1",
+        "tree": "e343f31effd9a1b5dab92a332e51277d44a808a7",
+        "packages": [
+          "etas_effects",
+          "etas_frontend",
+          "etas_hir",
+          "etas_hir_analysis",
+          "etas_syntax",
+          "etas_syntax_derive",
+          "etas_types"
+        ]
+      },
+      "interpreter": {
+        "repository": "etas-interpreter",
+        "revision": "3c0b78fbf147e5bb2fc33e13a501a88b97411d1c",
+        "tree": "cfcb6cab708dff74ba988039d584bd92cb301828",
+        "packages": [
+          "etas_interpreter"
+        ]
+      }
+    },
+    "source": "Official ETAS CLI 0.13.5 with its own Cargo.lock and exact Git dependencies; includes store-scoped guards for dynamic Memory keys (frontend #88, interpreter #110). No source overrides.",
+    "cargo_lock_sha256": "8972e6a0c2ec2aaad85214b84b98687360fecaa81092304200804c45e6fd4e86",
+    "verified_seed_binary_sha256": "9be1cb60d532d954538b72206507e27439a427402c67cf384249831bc304c2f2"
+  },
+  "binary": {
+    "version": "etas 0.13.5",
+    "sha256": "9be1cb60d532d954538b72206507e27439a427402c67cf384249831bc304c2f2"
+  },
+  "related_issue": "https://github.com/etas-project/etas-interpreter/issues/108",
+  "candidate": "examples/native-project/candidates/native-output-capture-0133.patch",
+  "baseline_commit": "fddb4ed",
+  "command": "python3 -B tests/native_capture_probe.py",
+  "candidate_source_sha256": {
+    "etas.toml": "d6dc2a78a80833f9bf6736bd7578c36f7ee827303b9e6b073f263058605116b9",
+    "src/nomo/native/agent.es": "17f241f22722f1a831f85f99170e0bf1f7e448df75090079aa243b9619d62fd1",
+    "src/nomo/native/entry.es": "91188a549ba3de4b05eac3190ec244e6d0dcd9274440214f8a46670ff46551a2",
+    "src/nomo/native/processes.es": "d842a7dca90ac1045cbe3f715ba9141adfae1386fee0de1fb75c2468017f75d1",
+    "src/nomo/native/transfer.es": "cc0e644023248a336d7168abcd6d2d0fef583e745ce6dc017fd65043ff544dfe",
+    "tests/native_recovery_probe.py": "af7276fbda93e37f10a9e18840cfb5d6e7a47d6497462401777a20e95b52acdd",
+    "tests/native_capture_probe.py": "246105131e1016f38ddff80c3af15e6120e5cad3d3523159acf195da0a88f04f"
+  },
+  "result": {
+    "status": "failed",
+    "evidence_directory": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-capture-gvko8fxo",
+    "exit_code": 1,
+    "expected_bytes": 2555904,
+    "saved_bytes": 0,
+    "saved_events": 0,
+    "ui_wait_seconds": 20,
+    "command_start_requests": 1,
+    "command_read_requests": 0,
+    "model_http_requests": 0,
+    "scope_serialization": [
+      {
+        "kind": "task_scope_serialized",
+        "reason": "unresolved_resource_selector",
+        "scope": 0
+      },
+      {
+        "kind": "task_scope_serialized",
+        "reason": "unresolved_resource_selector",
+        "scope": 0
+      }
+    ],
+    "trace_outcome": {
+      "kind": "completed"
+    },
+    "flow_value": {
+      "kind": "number",
+      "type": "i32",
+      "value": "0"
+    },
+    "normal_quit_completed": true,
+    "later_fresh_host_and_partial_read_checks_reached": false
+  },
+  "trace_sha256": "6549ea6220b4a8d934ccc8a53cf4e88fb8f00082e21433a33f2ba4921fa1873b",
+  "terminal_sha256": "d76920a488be92d1761767b27fc3a04f4c5b61157a8f825da1c3fa20c3666ba1",
+  "accepted_product_restored": true,
+  "source_overrides": [],
+  "compiler_or_host_patch": false,
+  "scope": "The reduced computed-key case passes on 0.13.5; this unchanged full consumer still fails. Its remaining unresolved resource footprint is not established as a new compiler defect.",
+  "upstream_followup_file": "examples/native-project/candidates/UPSTREAM_0135_FOLLOWUP.md",
+  "upstream_followup": "https://github.com/etas-project/etas-interpreter/issues/108#issuecomment-6822224218",
+  "upstream_body_verified": true
+}

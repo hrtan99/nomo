@@ -13,3 +13,9 @@ The product source was restored byte-for-byte to the official-0.13.3 workflow ac
 The original #108 package passes unchanged on 0.13.4. The same capture patch was then applied without product changes, and its actual-entry scenario still failed: zero output events and zero `Command.read` requests during the 20-second input wait, followed by a normal `/quit`. The product source was restored to the 0.13.4 workflow accepted in `compiler-0134-20261112.json`; its recorded source hashes match exactly.
 
 The smaller remaining case uses computed keys in the child's independent region. It is reported as a [consumer follow-up to #108](https://github.com/etas-project/etas-interpreter/issues/108#issuecomment-6815750299), with explicit acknowledgement that the conservative fallback may be intentional. `task-memory-log-0134-20261112.json` records both the computed-key case and the unchanged candidate result. The patch remains unaccepted; the remaining dependency is a supported dynamic resource ownership contract.
+
+## Official 0.13.5 consumer result
+
+The unchanged computed-key reproduction now passes with both child writes during the owner's input wait and no serialization. The complete candidate was applied unchanged to `fddb4ed` and still fails: zero saved events/bytes out of 2,555,904 intended bytes, zero native reads and two `unresolved_resource_selector` events on scope 0 during the 20-second wait. Normal quit completes. The scenario stops before its fresh-Host/partial-read checks, so neither is accepted. `../capture-consumer-0135-20261112.json` records the exact trace and candidate identities; `UPSTREAM_0135_FOLLOWUP.md` records the consumer follow-up.
+
+The product is restored byte-for-byte to the 0.13.5 source accepted by `../compiler-0135-20261112.json`. This patch remains an unaccepted proposal. The remaining full-consumer ownership/opaque-resource behavior must be resolved without bypassing guards; the reduced dynamic-key fix is accepted.

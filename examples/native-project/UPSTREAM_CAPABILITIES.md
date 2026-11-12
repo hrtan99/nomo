@@ -1,6 +1,6 @@
 # Remaining Etas capabilities for the complete native Nomo product
 
-This is a capability contract, not a list of confirmed compiler bugs. The current official graph is 0.13.4 in `config/etas-latest-main.json`. It includes the accepted #65 pending-read cancellation fix and now accepts #108's original independent constant-Memory-selector case. Full product capture with dynamic log keys remains separate from that original proof. The other source-visible contracts below are unchanged. No compiler patch or Python business implementation is substituted. The default entry remains the existing product until the complete native scope is accepted.
+This is a capability contract, not a list of confirmed compiler bugs. The current official graph is 0.13.5 in `config/etas-latest-main.json`. It includes the accepted #65 pending-read cancellation fix and #108's constant-selector and reduced computed-key fixes. The full Nomo collector still fails its separate actual-entry acceptance. The other source-visible contracts below are unchanged. No compiler patch or Python business implementation is substituted. The default entry remains the existing product until the complete native scope is accepted.
 
 ## Layer ownership
 
@@ -14,7 +14,7 @@ This is a capability contract, not a list of confirmed compiler bugs. The curren
 
 Source: [official Host ownership design](https://github.com/etas-project/etas-core/blob/cdb49367e73aadba56fbc89c984668ee3c1dd0aa/docs/architect/etas-host-design.md). Exact source filenames below refer to that pinned graph, not an assertion about future releases.
 
-The minimum upstream work is: a supported dynamic Memory ownership contract for the UI/capture product path; PTY/control-terminal operations; a supported timed-wait path; a per-model-round context projection contract; and dynamic inference options with source-visible usage. Each needs the source interface and the implementation at its owning boundary. Continuous output draining and summarization policy remain Nomo source work. Retaining jobs after destruction of the Etas Host is a separate, stronger lifecycle requirement than client detach/project switching, which already retain that Host.
+The minimum upstream work is: resolve the remaining ownership/opaque-resource contract for the complete UI/capture product path; PTY/control-terminal operations; a supported timed-wait path; a per-model-round context projection contract; and dynamic inference options with source-visible usage. Each needs the source interface and the implementation at its owning boundary. Continuous output draining and summarization policy remain Nomo source work. Retaining jobs after destruction of the Etas Host is a separate, stronger lifecycle requirement than client detach/project switching, which already retain that Host.
 
 ## Required public contracts
 
@@ -64,11 +64,13 @@ The earlier 0.13.3 actual-entry capture candidate exposed [etas-interpreter#108]
 The unchanged actual candidate has now been executed on 0.13.4 and still saves zero output events during a 20-second UI wait; it dispatches no `Command.read`. A separate reduced computed-key log reproduces the remaining serialization with independent regions. The original constant-key case is accepted as fixed. The remaining consumer limitation and request for a supported ownership contract are recorded in the [#108 follow-up](https://github.com/etas-project/etas-interpreter/issues/108#issuecomment-6815750299) and `task-memory-log-0134-20261112.json`; conservative fallback is not bypassed or automatically classified as a new compiler defect.
 
 - Standard library: a supported, documented ownership contract for disjoint persistent resources across a scheduler owner and its children. The existing `run`/`start` interface should make the required ownership and serialization behavior usable from Source.
-- Runtime: preserve genuine conflict guards while allowing verified disjoint owner/child resources to progress during Host waits. The current owner resource fallback emits `unresolved_resource_selector` on scope 0, even for the reduced independent regions.
+- Runtime: preserve genuine conflict guards while allowing verified disjoint owner/child resources to progress during Host waits. The reduced independent regions now progress on 0.13.5; the complete consumer still emits `unresolved_resource_selector` on scope 0.
 - Host: the two SQLite writes eventually succeed; this reproduction does not identify a storage-backend failure or require a new model/command transport.
 - Nomo: retain a single writer for each capture stream, independent log publication/read cursors, and normal cancellation/restore semantics. The failed implementation and its positive acceptance scenario are preserved as `candidates/native-output-capture-0133.patch`; the validated product source is restored unchanged.
 
 Exact minimal source, native event times, candidate failure and public-report identity: `task-memory-owner-0133-20261112.json` and `examples/repros/task-memory-owner-0.13.3/`. Complete native capture remains unaccepted; no resource guards are disabled to hide serialization.
+
+Official 0.13.5 passes the unchanged reduced computed-key package with both child writes before console input finishes and no serialization (`task-memory-log-0135-20261112.json`). The complete unchanged candidate still saves zero of 2,555,904 intended bytes during the 20-second UI wait, dispatches zero native reads and records two root serialization events. Normal quit completes. `capture-consumer-0135-20261112.json` records the actual consumer failure and exact identities. Unknown/opaque footprints deliberately retain global fallback upstream; the cause of this full consumer's unresolved footprint is not established. The required follow-up is the supported complete-consumer ownership contract, not another claim that the accepted dynamic-key fix failed.
 
 ## Stronger execution-endpoint restart survival
 
