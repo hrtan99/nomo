@@ -4,7 +4,7 @@ Nomo is a local project coding agent built with [ETAS](https://github.com/etas-p
 
 ## Get started
 
-Use the existing Docker image, pinned ETAS 0.13.4 installation and `MINIMAX_API_KEY` configuration. Open any existing project folder, including an empty one:
+Use the existing Docker image, pinned ETAS 0.13.5 installation and `MINIMAX_API_KEY` configuration. Open any existing project folder, including an empty one:
 
 ```sh
 ./scripts/nomo --root ~/Projects/nomo-test
@@ -49,9 +49,9 @@ Python 3.11+, Docker with Compose, and Git are required. For a fresh local toolc
 
 ```sh
 ./scripts/container-build.sh
-./scripts/etas-0134-official-container.sh prepare
-./scripts/etas-0134-official-container.sh build
-./scripts/etas-0134-official-container.sh verify
+./scripts/etas-0135-official-container.sh prepare
+./scripts/etas-0135-official-container.sh build
+./scripts/etas-0135-official-container.sh verify
 ```
 
 Set `MINIMAX_API_KEY` in your shell before starting a model-backed task. The pinned toolchain identity is recorded in `config/etas-latest-main.json`.

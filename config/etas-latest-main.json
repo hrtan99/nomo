@@ -1,12 +1,12 @@
 {
-  "selector": "latest0134",
-  "version": "0.13.4",
+  "selector": "latest0135",
+  "version": "0.13.5",
   "source_overrides": [],
   "repositories": {
     "cli": {
       "repository": "etas",
-      "revision": "256b2e0c58f2bb9dbdc158e1dc298f4bbf35eec6",
-      "tree": "99a43667a641aa3b140fb56895ab0616a43a002f",
+      "revision": "826bf13bea02f1c1468e6b97b8d2ec7dad2ebc0e",
+      "tree": "9645fc8556868f54a8e7ab04ffd638f954bd5095",
       "packages": [
         "etas_cli",
         "etas_driver",
@@ -32,8 +32,8 @@
     },
     "frontend": {
       "repository": "etas-frontend",
-      "revision": "821780a02120ded06ddd601c3a3d358b85436101",
-      "tree": "9c480e0583724906fdae8b41646757f7b9f03717",
+      "revision": "bff83ed77b6e6bfa289117f0a96bf7c786a6b0a1",
+      "tree": "e343f31effd9a1b5dab92a332e51277d44a808a7",
       "packages": [
         "etas_effects",
         "etas_frontend",
@@ -46,14 +46,14 @@
     },
     "interpreter": {
       "repository": "etas-interpreter",
-      "revision": "31bcd4ad16b6cac05f71e093341536329c48c80f",
-      "tree": "afbe27977c94a5b77795713ff236cdfcf2e6eb3b",
+      "revision": "3c0b78fbf147e5bb2fc33e13a501a88b97411d1c",
+      "tree": "cfcb6cab708dff74ba988039d584bd92cb301828",
       "packages": [
         "etas_interpreter"
       ]
     }
   },
-  "source": "Official ETAS CLI 0.13.4 with its own Cargo.lock and exact Git dependencies; includes disjoint Memory owner/child task progress (interpreter #108/#109). No source overrides.",
-  "cargo_lock_sha256": "17b3f4baaa9c460fc891fdc923efe3d715a572c34b30653e439099c7391b5b69",
-  "verified_seed_binary_sha256": "46c94628f825e4e84a952a59619331651f074edc13be61a1876606f8c5e87320"
+  "source": "Official ETAS CLI 0.13.5 with its own Cargo.lock and exact Git dependencies; includes store-scoped guards for dynamic Memory keys (frontend #88, interpreter #110). No source overrides.",
+  "cargo_lock_sha256": "8972e6a0c2ec2aaad85214b84b98687360fecaa81092304200804c45e6fd4e86",
+  "verified_seed_binary_sha256": "9be1cb60d532d954538b72206507e27439a427402c67cf384249831bc304c2f2"
 }

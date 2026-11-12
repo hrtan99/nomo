@@ -4,7 +4,7 @@ set -euo pipefail
 task_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 exec docker compose --env-file /dev/null \
   --file "$task_root/compose.yaml" \
-  --file "$task_root/config/etas-0134-official-compose.yaml" \
+  --file "$task_root/config/etas-0135-official-compose.yaml" \
   run --rm --no-deps --pull never --tty=false dependency /bin/bash -c '
     set -euo pipefail
     tool_root=/home/nomo/.cargo/nomo-native-tools/taplo-0.10.0

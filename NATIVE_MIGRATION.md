@@ -2,9 +2,9 @@
 
 The shipping `scripts/nomo` entry still uses the existing Python project controller. The opt-in `native_project` flow is the migration implementation, not a completed replacement.
 
-## Current 0.13.4 acceptance
+## Current 0.13.5 acceptance
 
-The current official graph is ETAS 0.13.4 (`config/etas-latest-main.json`), with no source overrides. The frozen 0.13.3 installation verifies after this upgrade. The unchanged #108 package now runs its disjoint Memory child while the owner waits for input, with no scope serialization. The actual native read/edit/check/Git/chat/fresh-process workflow and separate default-entry compatibility scenario both pass on 0.13.4. Exact sources and executed evidence: `examples/native-project/compiler-0134-20261112.json` and `task-memory-owner-0134-20261112.json`. The earlier 0.13.3 acceptance of #65 pending-read cancellation remains recorded in its original artifact.
+The current official graph is ETAS 0.13.5 (`config/etas-latest-main.json`), with no source overrides. The frozen 0.13.4 installation verifies after this upgrade. The unchanged computed-key follow-up package now writes its two child log entries while the owner waits for input, with no scope serialization. The actual native read/edit/check/Git/chat/fresh-process workflow and separate default-entry compatibility scenario both pass on 0.13.5. Exact source/compiler/trace identities: `examples/native-project/compiler-0135-20261112.json` and `task-memory-log-0135-20261112.json`. Full product capture remains a separate acceptance scope.
 
 The earlier 0.13.3 real-entry capture implementation remains unaccepted: an approved producer starts, but its reader never dispatches while the UI waits for input. A minimal valid source with two independent Memory regions reproduces the scheduling order; [etas-interpreter#108](https://github.com/etas-project/etas-interpreter/issues/108) records the public report. The failed candidate and its positive scenario are preserved in `examples/native-project/candidates/native-output-capture-0133.patch`; the product files were restored byte-for-byte to the accepted source. Official 0.13.4 now fixes the original constant-selector reproduction; the full capture candidate still needs its separate product acceptance. Exact evidence: `examples/native-project/task-memory-owner-0133-20261112.json`. No resource guard or compiler override is installed.
 
@@ -35,7 +35,7 @@ An independent valid cancellation case uses no escaped-backslash literal: `race`
 
 ## Launch the native entry
 
-With the existing Docker image and official 0.13.4 toolchain installed, set `MINIMAX_API_KEY` in your shell and run:
+With the existing Docker image and official 0.13.5 toolchain installed, set `MINIMAX_API_KEY` in your shell and run:
 
 ```sh
 ./scripts/nomo-native ~/Projects/nomo-test

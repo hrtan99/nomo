@@ -1,0 +1,124 @@
+{
+  "date": "2026-11-12",
+  "compiler": {
+    "selector": "latest0135",
+    "version": "0.13.5",
+    "source_overrides": [],
+    "repositories": {
+      "cli": {
+        "repository": "etas",
+        "revision": "826bf13bea02f1c1468e6b97b8d2ec7dad2ebc0e",
+        "tree": "9645fc8556868f54a8e7ab04ffd638f954bd5095",
+        "packages": [
+          "etas_cli",
+          "etas_driver",
+          "etas_package",
+          "etas_tests"
+        ]
+      },
+      "core": {
+        "repository": "etas-core",
+        "revision": "faa01c5752bfe3e46a187ee6e3def3911ab2430b",
+        "tree": "f169fff036cccad7c031a8165cd48e02171c381a",
+        "packages": [
+          "etas_builtin",
+          "etas_cache",
+          "etas_code",
+          "etas_core",
+          "etas_host",
+          "etas_memory_derive",
+          "etas_package_metadata",
+          "etas_std",
+          "etas_utils"
+        ]
+      },
+      "frontend": {
+        "repository": "etas-frontend",
+        "revision": "bff83ed77b6e6bfa289117f0a96bf7c786a6b0a1",
+        "tree": "e343f31effd9a1b5dab92a332e51277d44a808a7",
+        "packages": [
+          "etas_effects",
+          "etas_frontend",
+          "etas_hir",
+          "etas_hir_analysis",
+          "etas_syntax",
+          "etas_syntax_derive",
+          "etas_types"
+        ]
+      },
+      "interpreter": {
+        "repository": "etas-interpreter",
+        "revision": "3c0b78fbf147e5bb2fc33e13a501a88b97411d1c",
+        "tree": "cfcb6cab708dff74ba988039d584bd92cb301828",
+        "packages": [
+          "etas_interpreter"
+        ]
+      }
+    },
+    "source": "Official ETAS CLI 0.13.5 with its own Cargo.lock and exact Git dependencies; includes store-scoped guards for dynamic Memory keys (frontend #88, interpreter #110). No source overrides.",
+    "cargo_lock_sha256": "8972e6a0c2ec2aaad85214b84b98687360fecaa81092304200804c45e6fd4e86",
+    "verified_seed_binary_sha256": "9be1cb60d532d954538b72206507e27439a427402c67cf384249831bc304c2f2"
+  },
+  "related_issue": "https://github.com/etas-project/etas-interpreter/issues/108",
+  "official_fix": "https://github.com/etas-project/etas-frontend/pull/88",
+  "upstream_response": "https://github.com/etas-project/etas-interpreter/issues/108#issuecomment-6819877970",
+  "result": {
+    "directory": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-task-reachability-9bqxqz31",
+    "exit_code": 0,
+    "before_input": "WAIT_INPUT\nCHILD_RAN\n",
+    "child_ran_before_input": true,
+    "stdout": "WAIT_INPUT\nCHILD_RAN\n",
+    "stderr": ""
+  },
+  "original_source_unchanged": true,
+  "source_sha256": {
+    "examples/repros/task-memory-log-0.13.4/src/app/main.es": "b4f30d500197027082582e88eed4793a0f7da811bd0206bb220df360d4c7d41e",
+    "examples/repros/task-memory-log-0.13.4/etas.toml": "c3d0e31a3621af53c4f3f1a15c6fba6a9b7c9f6ce4dfbe4a85e8b854923942ed",
+    "examples/repros/task-memory-log-0.13.4/etas.lock": "c6ac8e03c6fac4a0d15a712df41aa0f3865ea2ab0d8c549462631ba90a5097a6"
+  },
+  "trace_sha256": "6c82c74f029269f64ca1a98360a704a49ad0cfd5b635c01b16e27d7091893f00",
+  "trace_outcome": "completed",
+  "scope_serialization": [],
+  "host_observations": [
+    {
+      "id": 0,
+      "action": "Memory.write",
+      "started": 1794481928631918,
+      "finished": 1794481928632667
+    },
+    {
+      "id": 1,
+      "action": "Console.stdout_write",
+      "started": 1794481928632732,
+      "finished": 1794481928633017
+    },
+    {
+      "id": 2,
+      "action": "Memory.write",
+      "started": 1794481928632859,
+      "finished": 1794481928633638
+    },
+    {
+      "id": 3,
+      "action": "Console.stdin_read_line",
+      "started": 1794481928633037,
+      "finished": 1794481929168990
+    },
+    {
+      "id": 4,
+      "action": "Memory.write",
+      "started": 1794481928633693,
+      "finished": 1794481928634218
+    },
+    {
+      "id": 5,
+      "action": "Console.stdout_write",
+      "started": 1794481928634245,
+      "finished": 1794481928634304
+    }
+  ],
+  "model_http_requests": 0,
+  "command_requests": 0,
+  "compiler_or_host_patch": false,
+  "scope": "Original computed-key log progresses during owner console wait; the full Nomo consumer remains a separate acceptance scope."
+}
