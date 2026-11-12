@@ -1,6 +1,6 @@
 # Remaining Etas capabilities for the complete native Nomo product
 
-This is a capability contract, not a list of confirmed compiler bugs. The current official graph is 0.13.2 in `config/etas-latest-main.json`; its core/standard-library/Host revision is unchanged from the accepted 0.13.1 graph discussed below. No compiler patch or Python business implementation is substituted. The default entry remains the existing product until the complete native scope is accepted.
+This is a capability contract, not a list of confirmed compiler bugs. The current official graph is 0.13.3 in `config/etas-latest-main.json`. It adopts the official #65 pending-read cancellation fix; the original cancellation source now passes without stopping its producer. The remaining source-visible contracts below are unchanged. No compiler patch or Python business implementation is substituted. The default entry remains the existing product until the complete native scope is accepted.
 
 ## Layer ownership
 
@@ -14,7 +14,7 @@ This is a capability contract, not a list of confirmed compiler bugs. The curren
 
 Source: [official Host ownership design](https://github.com/etas-project/etas-core/blob/cdb49367e73aadba56fbc89c984668ee3c1dd0aa/docs/architect/etas-host-design.md). Exact source filenames below refer to that pinned graph, not an assertion about future releases.
 
-The minimum upstream work is: PTY/control-terminal operations; cooperative cancellation of pending command reads (#65); a supported timed-wait path; a per-model-round context projection contract; and dynamic inference options with source-visible usage. Each needs the source interface and the implementation at its owning boundary. Continuous output draining and summarization policy remain Nomo source work. Retaining jobs after destruction of the Etas Host is a separate, stronger lifecycle requirement than client detach/project switching, which already retain that Host.
+The minimum upstream work is: PTY/control-terminal operations; a supported timed-wait path; a per-model-round context projection contract; and dynamic inference options with source-visible usage. Each needs the source interface and the implementation at its owning boundary. Continuous output draining and summarization policy remain Nomo source work. Retaining jobs after destruction of the Etas Host is a separate, stronger lifecycle requirement than client detach/project switching, which already retain that Host.
 
 ## Required public contracts
 
@@ -55,7 +55,7 @@ Nomo's existing `command_timeout` means return a retained job after the wait, no
 
 Acceptance: a long command returns a live handle after the configured wait, then its actual later output and exit remain readable. Continuous-output acceptance must exceed the current Host buffer scope before claiming unbounded or complete detached output collection. Current `/poll` waits for the next output/terminal event and `command_timeout_active=false`; this requirement is unaccepted.
 
-There is now a directly reproduced defect in the existing cancellation path, rather than only an API request: [etas-core#65](https://github.com/etas-project/etas-core/issues/65). The runtime requests cancellation for a losing `Command.read` task in `race`, but the real local backend remains blocked until the synthetic producer is terminated. The **Host** needs cooperative pending-read cancellation and cleanup that retains buffered data; the runtime's ownership tracking must not be bypassed to fake completion. `command-read-cancellation-0131-20261112.json` records the valid source, continued liveness, explicit fixture cleanup and delayed Host completion.
+The earlier cancellation defect [etas-core#65](https://github.com/etas-project/etas-core/issues/65) is fixed by official 0.13.3. The same valid source now settles the losing pending read with `Cancelled` in 911 microseconds and returns 0; there is no explicit producer termination or `Command.stop`. `command-read-cancellation-0133-20261112.json` records the acceptance, while the 0.13.1 failure remains historical. This removes a Host defect; Nomo still owns continuous capture, durable log publication and orderly task-scope shutdown. A timed wait also still needs a public timer/read-timeout contract.
 
 ## Stronger execution-endpoint restart survival
 

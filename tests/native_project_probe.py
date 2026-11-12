@@ -135,7 +135,7 @@ def main():
         NOMO_MODEL_BASE_URL=f'http://host.docker.internal:{server.server_port}/v1',
         NOMO_MODEL_ALLOW_PRIVATE='true', NOMO_NATIVE_WORKSPACE=str(project), NOMO_NATIVE_EVIDENCE=str(traces), NOMO_NATIVE_STATE=str(state))
     command = ['docker', 'compose', '--env-file', '/dev/null']
-    for name in ('compose.yaml', 'config/etas-0132-official-compose.yaml', 'config/local-tryout-compose.yaml',
+    for name in ('compose.yaml', 'config/etas-0133-official-compose.yaml', 'config/local-tryout-compose.yaml',
                  'config/etas-runtime-cache-compose.yaml', 'config/nomo-native-compose.yaml'):
         command += ['--file', str(ROOT / name)]
     request = 'Read note.txt and change old to new after approval.' if args.scenario in ('files', 'chat', 'persist', 'catalogue') else 'Read Git status and report the branch and changed paths.'

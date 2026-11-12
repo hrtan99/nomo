@@ -1,12 +1,12 @@
 {
-  "selector": "latest0132",
-  "version": "0.13.2",
+  "selector": "latest0133",
+  "version": "0.13.3",
   "source_overrides": [],
   "repositories": {
     "cli": {
       "repository": "etas",
-      "revision": "1e9992b2b1a5c38004346c6f65684a7a61dd7943",
-      "tree": "2f4ebe95efef8f4624738d8981442c533d8abdec",
+      "revision": "7e23eb46a35f3095c173335f15af5692e9d75399",
+      "tree": "d0443819186b0238afe128287fccc565e9e71347",
       "packages": [
         "etas_cli",
         "etas_driver",
@@ -16,8 +16,8 @@
     },
     "core": {
       "repository": "etas-core",
-      "revision": "cdb49367e73aadba56fbc89c984668ee3c1dd0aa",
-      "tree": "379fe96bcc970dbdea2d9974bf878dfb75f3345b",
+      "revision": "faa01c5752bfe3e46a187ee6e3def3911ab2430b",
+      "tree": "f169fff036cccad7c031a8165cd48e02171c381a",
       "packages": [
         "etas_builtin",
         "etas_cache",
@@ -32,8 +32,8 @@
     },
     "frontend": {
       "repository": "etas-frontend",
-      "revision": "8ea14dc8d2adc83bd98150d0de1841162b7719fd",
-      "tree": "2a3180dc582fb734f7b1c9598a39f134505ff793",
+      "revision": "3abd9f84036845a06391d3ede4538eaf11af9bcf",
+      "tree": "479737046c46444b51db35770fb8f04544d71a5e",
       "packages": [
         "etas_effects",
         "etas_frontend",
@@ -46,14 +46,14 @@
     },
     "interpreter": {
       "repository": "etas-interpreter",
-      "revision": "2810716ae51899a27b2b9016c5b91cac07273f00",
-      "tree": "5e08825eac29a5c84a31d207e094de0f610b5a64",
+      "revision": "d175d32d8ecf0d3cba7bdbd8fe37e506ede06fa6",
+      "tree": "3fc4e2401cb88e5acb3b62ff135f3b2c5b71a5ba",
       "packages": [
         "etas_interpreter"
       ]
     }
   },
-  "source": "Official ETAS CLI 0.13.2 with its own Cargo.lock and exact Git dependencies; includes upstream single-pass string escape decoding (frontend #84/#85). No source overrides.",
-  "cargo_lock_sha256": "de5c7665b3c821e5a109cbc2b9b9890bb79ecb3652ab1403eef97710419762a2",
-  "verified_seed_binary_sha256": "c6d0896cd35bea67948a9a90e1202e898d8cc187ad95f89b72b9f9919a7d5a53"
+  "source": "Official ETAS CLI 0.13.3 with its own Cargo.lock and exact Git dependencies; includes cooperative pending Command.read cancellation (core #65/#66). No source overrides.",
+  "cargo_lock_sha256": "f8db6067f6a436b6cdc8a729ce039d835023ea8e982fb016eef0ecfc80956a54",
+  "verified_seed_binary_sha256": "b45ff488a284e8484bc3bef9fa49adf05c35b6fe64220de6dd7728a6723bbb99"
 }

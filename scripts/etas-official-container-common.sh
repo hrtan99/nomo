@@ -6,7 +6,7 @@ label="${1:-}"
 case "$label" in
     012|022|023|024) target=etas-latest ;;
     025|026|030) target="etas-${label}" ;;
-    041|0120|0121|0130|0131|0132) target=etas-latest ;;
+    041|0120|0121|0130|0131|0132|0133) target=etas-latest ;;
     *) echo 'Unsupported official Etas version.' >&2; exit 64 ;;
 esac
 shift
@@ -14,7 +14,7 @@ usage() { echo "Usage: etas-${label}-official-container.sh {prepare|build|regist
 if [[ $# -ne 1 ]]; then usage; exit 64; fi
 compose=(docker compose --env-file /dev/null --file "${project_root}/compose.yaml" --file "${project_root}/config/etas-${label}-official-compose.yaml")
 bootstrap="/workspace/scripts/etas-${label}-official-cli-bootstrap.py"
-if [[ "$label" == 0132 ]]; then bootstrap="/workspace/scripts/etas-latest-cli-bootstrap.py"; fi
+if [[ "$label" == 0133 ]]; then bootstrap="/workspace/scripts/etas-latest-cli-bootstrap.py"; fi
 case "$1" in
     prepare)
         exec "${compose[@]}" --profile networked run --rm --no-deps --tty=false dependency \

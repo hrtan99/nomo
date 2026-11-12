@@ -42,7 +42,7 @@ while true; do
   python3 "$task_root/scripts/native-worker-transport.py" \
     docker compose --project-name nomo-native --env-file /dev/null \
     --file "$task_root/compose.yaml" \
-    --file "$task_root/config/etas-0132-official-compose.yaml" \
+    --file "$task_root/config/etas-0133-official-compose.yaml" \
     --file "$task_root/config/local-tryout-compose.yaml" \
     --file "$task_root/config/nomo-native-launch-compose.yaml" \
     --file "$task_root/config/nomo-native-compose.yaml" \

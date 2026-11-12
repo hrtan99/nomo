@@ -99,7 +99,7 @@ def main():
         NOMO_MODEL_BASE_URL=f'http://host.docker.internal:{server.server_port}/v1', NOMO_MODEL_ALLOW_PRIVATE='true',
         NOMO_NATIVE_WORKSPACE=str(project), NOMO_NATIVE_STATE=str(state), NOMO_NATIVE_EVIDENCE=str(traces))
     base = ['docker', 'compose', '--env-file', '/dev/null']
-    for name in ('compose.yaml', 'config/etas-0132-official-compose.yaml', 'config/local-tryout-compose.yaml',
+    for name in ('compose.yaml', 'config/etas-0133-official-compose.yaml', 'config/local-tryout-compose.yaml',
                  'config/etas-runtime-cache-compose.yaml', 'config/nomo-native-compose.yaml'):
         base += ['--file', str(ROOT / name)]
 

@@ -1,0 +1,118 @@
+{
+  "date": "2026-11-12",
+  "compiler": {
+    "selector": "latest0133",
+    "version": "0.13.3",
+    "source_overrides": [],
+    "repositories": {
+      "cli": {
+        "repository": "etas",
+        "revision": "7e23eb46a35f3095c173335f15af5692e9d75399",
+        "tree": "d0443819186b0238afe128287fccc565e9e71347",
+        "packages": [
+          "etas_cli",
+          "etas_driver",
+          "etas_package",
+          "etas_tests"
+        ]
+      },
+      "core": {
+        "repository": "etas-core",
+        "revision": "faa01c5752bfe3e46a187ee6e3def3911ab2430b",
+        "tree": "f169fff036cccad7c031a8165cd48e02171c381a",
+        "packages": [
+          "etas_builtin",
+          "etas_cache",
+          "etas_code",
+          "etas_core",
+          "etas_host",
+          "etas_memory_derive",
+          "etas_package_metadata",
+          "etas_std",
+          "etas_utils"
+        ]
+      },
+      "frontend": {
+        "repository": "etas-frontend",
+        "revision": "3abd9f84036845a06391d3ede4538eaf11af9bcf",
+        "tree": "479737046c46444b51db35770fb8f04544d71a5e",
+        "packages": [
+          "etas_effects",
+          "etas_frontend",
+          "etas_hir",
+          "etas_hir_analysis",
+          "etas_syntax",
+          "etas_syntax_derive",
+          "etas_types"
+        ]
+      },
+      "interpreter": {
+        "repository": "etas-interpreter",
+        "revision": "d175d32d8ecf0d3cba7bdbd8fe37e506ede06fa6",
+        "tree": "3fc4e2401cb88e5acb3b62ff135f3b2c5b71a5ba",
+        "packages": [
+          "etas_interpreter"
+        ]
+      }
+    },
+    "source": "Official ETAS CLI 0.13.3 with its own Cargo.lock and exact Git dependencies; includes cooperative pending Command.read cancellation (core #65/#66). No source overrides.",
+    "cargo_lock_sha256": "f8db6067f6a436b6cdc8a729ce039d835023ea8e982fb016eef0ecfc80956a54",
+    "verified_seed_binary_sha256": "b45ff488a284e8484bc3bef9fa49adf05c35b6fe64220de6dd7728a6723bbb99"
+  },
+  "issue": "https://github.com/etas-project/etas-core/issues/65",
+  "official_fix": "https://github.com/etas-project/etas-core/pull/66",
+  "result": {
+    "status": "passed",
+    "exit_code": 0,
+    "directory": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-command-read-cancel-0133-lhvr84ny",
+    "seconds_after_input": 0.03499458299484104,
+    "source_sha256": "141ffecba2501122ddd47528dcca6778b8f5aec975c40daee5d0f5cad6801065",
+    "stdout": "WAIT_INPUT\nrun value: {\"kind\":\"number\",\"type\":\"i32\",\"value\":\"0\"}\nevents: 41, checkpoints: 0\n",
+    "reads": [
+      {
+        "request": 1,
+        "start": 1794454148339780,
+        "finish": 1794454148345988,
+        "duration_micros": 6208,
+        "outcome": {
+          "kind": "succeeded"
+        }
+      },
+      {
+        "request": 3,
+        "start": 1794454148347111,
+        "finish": 1794454148348022,
+        "duration_micros": 911,
+        "outcome": {
+          "code": "Cancelled",
+          "details": [],
+          "kind": "failed",
+          "message": "background command read was cancelled"
+        }
+      }
+    ],
+    "cancellations": [
+      {
+        "kind": "task_cancellation_requested",
+        "reason": "Requested",
+        "scope": 2,
+        "task": 1
+      }
+    ],
+    "external_producer_termination": false,
+    "command_stop_requests": 0,
+    "trace_outcome": "completed"
+  },
+  "source_unchanged": true,
+  "source": "module app.main;\nimport std.task.{run,race,Scheduler};\nimport std.host.command.{command,read,CommandEvent};\nimport std.host.command.start as spawn;\nimport std.fs.{Region,path,atomic_replace};\nimport std.fs.IOError as FileError;\nimport std.effects.Fs;\nimport std.io.{println,read_line,IOError};\npublic type State;\nimpl State ~ Region;\nflow main(args:Array<string>)->i32 ![Async,Console,Command.start<DefaultCommandSandbox>,Command.read<DefaultCommandSandbox>,Fs.atomic_replace<State>,Error<FileError>,Error<IOError>] {\n return run((scheduler:Scheduler)=> {\n  let process=spawn(command(\"/usr/bin/python3\",[\"-u\",\"-c\",\"import time; print('ready',flush=True); time.sleep(300)\"]),DefaultCommandSandbox);\n  match read(process,65536) {\n   CommandEvent.Output(output,error)=> {\n    let location=match path<State>(\"ready\") {Ok(value)=>value,Err(_)=>{abort(\"fixture state unavailable\");}};\n    atomic_replace(location,output);\n   },\n   _=>{abort(\"fixture did not produce its ready event\");}\n  }\n  return race<i32,IOError>([\n   ()=> {read(process,65536);return 1;},\n   ()=> {println(\"WAIT_INPUT\");read_line();return 0;}\n  ]);\n });\n}\n",
+  "manifest": "[package]\nname=\"native-task-cancel\"\nversion=\"0.1.0\"\nedition=\"2026\"\n[source]\nroot=\"src\"\n[runtime]\ndefault_profile=\"local\"\n[runtime.profiles.local.command]\nallow=[\"/usr/bin/python3\"]\nisolation=\"trusted-unconfined\"\n[runtime.profiles.local.filesystem.regions.\"app.main.State\"]\nroot=\"/probe-state\"\nread=false\nwrite=true\n[runtime.profiles.local.policy]\nmode=\"local-static\"\nrules=[\"console=allow\",\"command=allow\",\"filesystem=allow\"]\n[[bin]]\nname=\"native-task-cancel\"\nmodule=\"app.main\"\nflow=\"main\"\n",
+  "source_sha256": {
+    "src/app/main.es": "141ffecba2501122ddd47528dcca6778b8f5aec975c40daee5d0f5cad6801065",
+    "etas.toml": "22e81fef4ca0472dc4b025c1222882a7d8715272568e2f808dbacc8636b4b1b8",
+    "etas.lock": "bbdc5cf50a4606a8305d1aec2b6984c70921a7a7bc543f620d11d9d6fecac69f"
+  },
+  "trace_sha256": "175e08794cdac63b4ceed299be65a8c779f55bcdc392c30a496083a837d8d303",
+  "model_http_requests": 0,
+  "compiler_or_host_patch": false,
+  "scope": "Original normal race winner requests cancellation; the losing real Host read settles promptly without stopping the producer. Production capture and scope lifecycle remain separate Nomo work."
+}

@@ -4,7 +4,7 @@ The full native migration needs background jobs and their output to survive leav
 
 ## Capabilities now implemented and accepted
 
-The original command acceptance used official ETAS CLI 0.13.0 `6ceb644a17b159a5ee9a988cbbba0700aebf5e46`, core `cdb49367e73aadba56fbc89c984668ee3c1dd0aa`, interpreter `7422fb134d2606cc28b7af9c69e98668ba5411c0`, frontend `b09ceec7f57d1791dc92d358150cfc8c87935771`. The current official 0.13.1 graph is recorded in `config/etas-latest-main.json`; the resident-worker evidence below uses that version.
+The original command acceptance used official ETAS CLI 0.13.0 `6ceb644a17b159a5ee9a988cbbba0700aebf5e46`, core `cdb49367e73aadba56fbc89c984668ee3c1dd0aa`, interpreter `7422fb134d2606cc28b7af9c69e98668ba5411c0`, frontend `b09ceec7f57d1791dc92d358150cfc8c87935771`. The current official 0.13.3 graph is recorded in `config/etas-latest-main.json`; the resident-worker evidence below uses that version.
 
 The [public command module](https://github.com/etas-project/etas-core/blob/cdb49367e73aadba56fbc89c984668ee3c1dd0aa/crates/etas_std/src/modules/host/command.rs) now exposes `start`, `id`, `reconnect`, `read`, `write`, `close_stdin` and `stop`. Nomo uses these actual operations, with per-conversation job ownership and separate native approval for every boundary. Actual Unicode echo input/output, EOF/exit, stopping another process and saved-output restoration pass. Source/artifact identities: `processes-0130-20261111.json`.
 
@@ -25,3 +25,7 @@ Use Ctrl+P then Ctrl+Q to detach; `/open` switches the terminal without ending t
 The next continuous-reader shutdown investigation found a concrete backend cancellation failure, [etas-core#65](https://github.com/etas-project/etas-core/issues/65). A valid `race` has a console branch complete in 19.4 ms and requests cancellation of the losing command read, yet that Host read remains pending until the fixture producer is externally terminated. The captured read lasts 138.9 seconds. This is independent of the separate string-literal bug and does not claim ordinary `std.task.run` body completion should cancel owned children. The final exit 0 after explicit fixture cleanup is not accepted as proper cancellation. No stop-before-cancel workaround or local Host patch is installed. Exact evidence: `command-read-cancellation-0131-20261112.json`.
 
 Python only identifies/starts the container and transports terminal bytes. It does not manage the tool subprocesses, open conversation storage, decide task recovery or supply task/approval answers. No compiler/Host patch is installed. Nomo-owned resident-worker work is distinguished from the remaining upstream PTY/backend API scope; these feature gaps are not asserted to be regressions of the existing same-Host API.
+
+## Official cancellation fix adopted — 0.13.3
+
+The same original #65 source now returns 0 after a pending read settles with `Cancelled` in 911 microseconds, without an explicit producer termination or `Command.stop`. `command-read-cancellation-0133-20261112.json` and `compiler-0133-20261112.json` record exact sources, trace and official dependency identities. The cancellation prerequisite is satisfied; implementing and accepting Nomo's continuous collector remains product work. PTY, retained-read timing and fresh-Host live reattachment remain distinct requirements.
