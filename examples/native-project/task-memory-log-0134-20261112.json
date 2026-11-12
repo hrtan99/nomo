@@ -1,0 +1,195 @@
+{
+  "date": "2026-11-12",
+  "compiler": {
+    "selector": "latest0134",
+    "version": "0.13.4",
+    "source_overrides": [],
+    "repositories": {
+      "cli": {
+        "repository": "etas",
+        "revision": "256b2e0c58f2bb9dbdc158e1dc298f4bbf35eec6",
+        "tree": "99a43667a641aa3b140fb56895ab0616a43a002f",
+        "packages": [
+          "etas_cli",
+          "etas_driver",
+          "etas_package",
+          "etas_tests"
+        ]
+      },
+      "core": {
+        "repository": "etas-core",
+        "revision": "faa01c5752bfe3e46a187ee6e3def3911ab2430b",
+        "tree": "f169fff036cccad7c031a8165cd48e02171c381a",
+        "packages": [
+          "etas_builtin",
+          "etas_cache",
+          "etas_code",
+          "etas_core",
+          "etas_host",
+          "etas_memory_derive",
+          "etas_package_metadata",
+          "etas_std",
+          "etas_utils"
+        ]
+      },
+      "frontend": {
+        "repository": "etas-frontend",
+        "revision": "821780a02120ded06ddd601c3a3d358b85436101",
+        "tree": "9c480e0583724906fdae8b41646757f7b9f03717",
+        "packages": [
+          "etas_effects",
+          "etas_frontend",
+          "etas_hir",
+          "etas_hir_analysis",
+          "etas_syntax",
+          "etas_syntax_derive",
+          "etas_types"
+        ]
+      },
+      "interpreter": {
+        "repository": "etas-interpreter",
+        "revision": "31bcd4ad16b6cac05f71e093341536329c48c80f",
+        "tree": "afbe27977c94a5b77795713ff236cdfcf2e6eb3b",
+        "packages": [
+          "etas_interpreter"
+        ]
+      }
+    },
+    "source": "Official ETAS CLI 0.13.4 with its own Cargo.lock and exact Git dependencies; includes disjoint Memory owner/child task progress (interpreter #108/#109). No source overrides.",
+    "cargo_lock_sha256": "17b3f4baaa9c460fc891fdc923efe3d715a572c34b30653e439099c7391b5b69",
+    "verified_seed_binary_sha256": "46c94628f825e4e84a952a59619331651f074edc13be61a1876606f8c5e87320"
+  },
+  "related_issue": "https://github.com/etas-project/etas-interpreter/issues/108",
+  "public_followup": "https://github.com/etas-project/etas-interpreter/issues/108#issuecomment-6815750299",
+  "published_payload_verified": true,
+  "public_payload_sha256": "d76d98258f50f747db8d6b44f845b957482d13af92caa1289b0549dd119f3db3",
+  "original_constant_selector_108_fixed": true,
+  "original_acceptance": "examples/native-project/task-memory-owner-0134-20261112.json",
+  "remaining_case": {
+    "directory": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-task-reachability-d0n_mkbc",
+    "exit_code": 0,
+    "before_input": "WAIT_INPUT\n",
+    "child_ran_before_input": false,
+    "stdout": "WAIT_INPUT\nCHILD_RAN\n",
+    "stderr": "",
+    "source_sha256": {
+      "examples/repros/task-memory-log-0.13.4/src/app/main.es": "b4f30d500197027082582e88eed4793a0f7da811bd0206bb220df360d4c7d41e",
+      "examples/repros/task-memory-log-0.13.4/etas.toml": "c3d0e31a3621af53c4f3f1a15c6fba6a9b7c9f6ce4dfbe4a85e8b854923942ed",
+      "examples/repros/task-memory-log-0.13.4/etas.lock": "c6ac8e03c6fac4a0d15a712df41aa0f3865ea2ab0d8c549462631ba90a5097a6"
+    },
+    "trace_sha256": "4ab56ea3f094894bd0551f9f667f5ba39d4a6f8b40a063d6a0acb5a38ca0fa4a",
+    "trace_outcome": "completed",
+    "scope_serialization": [
+      {
+        "kind": "task_scope_serialized",
+        "reason": "unresolved_resource_selector",
+        "scope": 0
+      }
+    ],
+    "host_observations": [
+      {
+        "id": 0,
+        "action": "Memory.write",
+        "started": 1794462062895943,
+        "finished": 1794462062898909
+      },
+      {
+        "id": 1,
+        "action": "Console.stdout_write",
+        "started": 1794462062899116,
+        "finished": 1794462062899801
+      },
+      {
+        "id": 2,
+        "action": "Console.stdin_read_line",
+        "started": 1794462062899888,
+        "finished": 1794462063456697
+      },
+      {
+        "id": 3,
+        "action": "Memory.write",
+        "started": 1794462063457606,
+        "finished": 1794462063460156
+      },
+      {
+        "id": 4,
+        "action": "Memory.write",
+        "started": 1794462063460387,
+        "finished": 1794462063462061
+      },
+      {
+        "id": 5,
+        "action": "Console.stdout_write",
+        "started": 1794462063462161,
+        "finished": 1794462063462340
+      }
+    ],
+    "stored_rows": [
+      [
+        "owner-records",
+        "[\"Values\"]",
+        "{\"kind\":\"string\",\"value\":\"owner\"}",
+        "{\"kind\":\"int\",\"value\":\"1\"}"
+      ],
+      [
+        "peer-records",
+        "[\"Values\"]",
+        "{\"kind\":\"string\",\"value\":\"part-0\"}",
+        "{\"kind\":\"int\",\"value\":\"0\"}"
+      ],
+      [
+        "peer-records",
+        "[\"Values\"]",
+        "{\"kind\":\"string\",\"value\":\"part-1\"}",
+        "{\"kind\":\"int\",\"value\":\"1\"}"
+      ]
+    ],
+    "model_http_requests": 0,
+    "command_requests": 0,
+    "source_filesystem_effects": 0
+  },
+  "candidate": {
+    "applied_to_commit": "ed2db8a",
+    "patch": "examples/native-project/candidates/native-output-capture-0133.patch",
+    "patch_sha256": "13487f38724f22b8e5b6d28c658e6e67f848b714737169198be34650ada4ca4b",
+    "applied_source_sha256": {
+      "etas.toml": "d6dc2a78a80833f9bf6736bd7578c36f7ee827303b9e6b073f263058605116b9",
+      "src/nomo/native/agent.es": "17f241f22722f1a831f85f99170e0bf1f7e448df75090079aa243b9619d62fd1",
+      "src/nomo/native/entry.es": "91188a549ba3de4b05eac3190ec244e6d0dcd9274440214f8a46670ff46551a2",
+      "src/nomo/native/processes.es": "d842a7dca90ac1045cbe3f715ba9141adfae1386fee0de1fb75c2468017f75d1",
+      "src/nomo/native/transfer.es": "cc0e644023248a336d7168abcd6d2d0fef583e745ce6dc017fd65043ff544dfe",
+      "tests/native_recovery_probe.py": "12441d59233198b7b3ed5c93fe1a4c8548e01b17397046a029b9c6951cd5148a",
+      "tests/native_capture_probe.py": "246105131e1016f38ddff80c3af15e6120e5cad3d3523159acf195da0a88f04f"
+    },
+    "evidence_directory": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-capture-tslguxcb",
+    "test_status": "failed",
+    "test_exit_code": 1,
+    "expected_stdout_bytes": 2555904,
+    "saved_stdout_bytes": 0,
+    "captured_events": 0,
+    "command_start_requests": 1,
+    "command_read_requests": 0,
+    "scope_serialization": [
+      {
+        "kind": "task_scope_serialized",
+        "reason": "unresolved_resource_selector",
+        "scope": 0
+      },
+      {
+        "kind": "task_scope_serialized",
+        "reason": "unresolved_resource_selector",
+        "scope": 0
+      }
+    ],
+    "trace_outcome": "completed",
+    "trace_sha256": "094020fa584b929637b09353e255ca99a38a8e84441f1c4a8dbb12afe1e8b5f1",
+    "terminal_sha256": "b67349067cea18913f2adf0592aad4eb4afb8bf4c2657f18d91c315f3706ee78",
+    "test_log_sha256": "4fa8977535200041a22e863e92d49a3fdb5d3883cac166f932b4d4988e7107af",
+    "normal_quit_completed": true,
+    "resource_guards_disabled": false
+  },
+  "validated_product_restored": true,
+  "compiler_or_host_patch": false,
+  "continuous_capture_accepted": false,
+  "classification": "Remaining computed-key ownership/progress limitation. Original #108 constant selectors are fixed. Conservative serialization may be intentional; a supported Source ownership contract is requested without bypassing guards."
+}

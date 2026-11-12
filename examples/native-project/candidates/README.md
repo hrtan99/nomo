@@ -7,3 +7,9 @@ The actual native-entry acceptance failed: after an approved synthetic producer 
 The patch also proposes an explicit read-only command policy for automatic output reads; starts, reconnects, input, stops and filesystem writes keep native approvals. This policy and the other capture changes have not passed acceptance and are not installed in the product.
 
 The product source was restored byte-for-byte to the official-0.13.3 workflow accepted in `compiler-0133-20261112.json`. Once the upstream ownership/scheduling contract is available, the candidate can be reviewed with `git apply --check examples/native-project/candidates/native-output-capture-0133.patch`, applied, and its bundled `tests/native_capture_probe.py` run. The complete capture lifecycle, model tool path, bounded byte reads and archive transfer still require acceptance before shipping.
+
+## Official 0.13.4 consumer result
+
+The original #108 package passes unchanged on 0.13.4. The same capture patch was then applied without product changes, and its actual-entry scenario still failed: zero output events and zero `Command.read` requests during the 20-second input wait, followed by a normal `/quit`. The product source was restored to the 0.13.4 workflow accepted in `compiler-0134-20261112.json`; its recorded source hashes match exactly.
+
+The smaller remaining case uses computed keys in the child's independent region. It is reported as a [consumer follow-up to #108](https://github.com/etas-project/etas-interpreter/issues/108#issuecomment-6815750299), with explicit acknowledgement that the conservative fallback may be intentional. `task-memory-log-0134-20261112.json` records both the computed-key case and the unchanged candidate result. The patch remains unaccepted; the remaining dependency is a supported dynamic resource ownership contract.
