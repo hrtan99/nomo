@@ -14,7 +14,7 @@ This is a capability contract, not a list of confirmed compiler bugs. The curren
 
 Source: [official Host ownership design](https://github.com/etas-project/etas-core/blob/cdb49367e73aadba56fbc89c984668ee3c1dd0aa/docs/architect/etas-host-design.md). Exact source filenames below refer to that pinned graph, not an assertion about future releases.
 
-The minimum upstream work is: PTY/control-terminal operations; a supported timed-wait path; a per-model-round context projection contract; and dynamic inference options with source-visible usage. Each needs the source interface and the implementation at its owning boundary. Continuous output draining and summarization policy remain Nomo source work. Retaining jobs after destruction of the Etas Host is a separate, stronger lifecycle requirement than client detach/project switching, which already retain that Host.
+The minimum upstream work is: progress for disjoint persistent-Memory owner/child tasks (#108); PTY/control-terminal operations; a supported timed-wait path; a per-model-round context projection contract; and dynamic inference options with source-visible usage. Each needs the source interface and the implementation at its owning boundary. Continuous output draining and summarization policy remain Nomo source work. Retaining jobs after destruction of the Etas Host is a separate, stronger lifecycle requirement than client detach/project switching, which already retain that Host.
 
 ## Required public contracts
 
@@ -56,6 +56,17 @@ Nomo's existing `command_timeout` means return a retained job after the wait, no
 Acceptance: a long command returns a live handle after the configured wait, then its actual later output and exit remain readable. Continuous-output acceptance must exceed the current Host buffer scope before claiming unbounded or complete detached output collection. Current `/poll` waits for the next output/terminal event and `command_timeout_active=false`; this requirement is unaccepted.
 
 The earlier cancellation defect [etas-core#65](https://github.com/etas-project/etas-core/issues/65) is fixed by official 0.13.3. The same valid source now settles the losing pending read with `Cancelled` in 911 microseconds and returns 0; there is no explicit producer termination or `Command.stop`. `command-read-cancellation-0133-20261112.json` records the acceptance, while the 0.13.1 failure remains historical. This removes a Host defect; Nomo still owns continuous capture, durable log publication and orderly task-scope shutdown. A timed wait also still needs a public timer/read-timeout contract.
+
+### Task progress alongside persistent Memory
+
+The next actual-entry capture candidate is blocked by [etas-interpreter#108](https://github.com/etas-project/etas-interpreter/issues/108). Its approved producer starts, but no native read runs while the UI waits for input; the capture head remains empty. The smaller valid source uses two independent Memory regions and constant keys. Its child write still waits until the owner's console read finishes. This observed scheduling limitation is separate from the fixed pending-read cancellation defect.
+
+- Standard library: a supported, documented ownership contract for disjoint persistent resources across a scheduler owner and its children. The existing `run`/`start` interface should make the required ownership and serialization behavior usable from Source.
+- Runtime: preserve genuine conflict guards while allowing verified disjoint owner/child resources to progress during Host waits. The current owner resource fallback emits `unresolved_resource_selector` on scope 0, even for the reduced independent regions.
+- Host: the two SQLite writes eventually succeed; this reproduction does not identify a storage-backend failure or require a new model/command transport.
+- Nomo: retain a single writer for each capture stream, independent log publication/read cursors, and normal cancellation/restore semantics. The failed implementation and its positive acceptance scenario are preserved as `candidates/native-output-capture-0133.patch`; the validated product source is restored unchanged.
+
+Exact minimal source, native event times, candidate failure and public-report identity: `task-memory-owner-0133-20261112.json` and `examples/repros/task-memory-owner-0.13.3/`. Complete native capture remains unaccepted; no resource guards are disabled to hide serialization.
 
 ## Stronger execution-endpoint restart survival
 

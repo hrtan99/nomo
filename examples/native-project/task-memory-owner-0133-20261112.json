@@ -1,0 +1,192 @@
+{
+  "date": "2026-11-12",
+  "compiler": {
+    "selector": "latest0133",
+    "version": "0.13.3",
+    "source_overrides": [],
+    "repositories": {
+      "cli": {
+        "repository": "etas",
+        "revision": "7e23eb46a35f3095c173335f15af5692e9d75399",
+        "tree": "d0443819186b0238afe128287fccc565e9e71347",
+        "packages": [
+          "etas_cli",
+          "etas_driver",
+          "etas_package",
+          "etas_tests"
+        ]
+      },
+      "core": {
+        "repository": "etas-core",
+        "revision": "faa01c5752bfe3e46a187ee6e3def3911ab2430b",
+        "tree": "f169fff036cccad7c031a8165cd48e02171c381a",
+        "packages": [
+          "etas_builtin",
+          "etas_cache",
+          "etas_code",
+          "etas_core",
+          "etas_host",
+          "etas_memory_derive",
+          "etas_package_metadata",
+          "etas_std",
+          "etas_utils"
+        ]
+      },
+      "frontend": {
+        "repository": "etas-frontend",
+        "revision": "3abd9f84036845a06391d3ede4538eaf11af9bcf",
+        "tree": "479737046c46444b51db35770fb8f04544d71a5e",
+        "packages": [
+          "etas_effects",
+          "etas_frontend",
+          "etas_hir",
+          "etas_hir_analysis",
+          "etas_syntax",
+          "etas_syntax_derive",
+          "etas_types"
+        ]
+      },
+      "interpreter": {
+        "repository": "etas-interpreter",
+        "revision": "d175d32d8ecf0d3cba7bdbd8fe37e506ede06fa6",
+        "tree": "3fc4e2401cb88e5acb3b62ff135f3b2c5b71a5ba",
+        "packages": [
+          "etas_interpreter"
+        ]
+      }
+    },
+    "source": "Official ETAS CLI 0.13.3 with its own Cargo.lock and exact Git dependencies; includes cooperative pending Command.read cancellation (core #65/#66). No source overrides.",
+    "cargo_lock_sha256": "f8db6067f6a436b6cdc8a729ce039d835023ea8e982fb016eef0ecfc80956a54",
+    "verified_seed_binary_sha256": "b45ff488a284e8484bc3bef9fa49adf05c35b6fe64220de6dd7728a6723bbb99"
+  },
+  "issue": "https://github.com/etas-project/etas-interpreter/issues/108",
+  "published_payload_verified": true,
+  "public_payload_sha256": "6322b5c1d974b4e30c226494a7bbe815a33f1ff67997e9102a78d391abf81269",
+  "minimal": {
+    "directory": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-task-reachability-2wr45m7h",
+    "exit_code": 0,
+    "before_input": "WAIT_INPUT\n",
+    "child_ran_before_input": false,
+    "stdout": "WAIT_INPUT\nCHILD_RAN\n",
+    "stderr": "",
+    "trace_outcome": "completed",
+    "trace_sha256": "46bd8062c78b408b0e0ecb98978f9b941c7e4db8f82f7218fabe3dd156ec9d51",
+    "source_sha256": {
+      "examples/repros/task-memory-owner-0.13.3/src/app/main.es": "f08a6ca682c2c94cf1bbe0795ea1631f62a7834cf18e805ee11c26d2a33d80d9",
+      "examples/repros/task-memory-owner-0.13.3/etas.toml": "4982a3eb358a1c7ac0f763fca95f431d187774070bb99bd482c17d5dff5f4eda",
+      "examples/repros/task-memory-owner-0.13.3/etas.lock": "7dd834944633860df4a4a98338b65cf7017b503dfecb10ece67a67234b46fe91"
+    },
+    "scope_serialization": [
+      {
+        "kind": "task_scope_serialized",
+        "reason": "unresolved_resource_selector",
+        "scope": 0
+      },
+      {
+        "kind": "task_scope_serialized",
+        "reason": "unresolved_resource_selector",
+        "scope": 0
+      }
+    ],
+    "host_observations": [
+      {
+        "request": 0,
+        "action": "Memory.write",
+        "started": 1794455526431458,
+        "finished": 1794455526432369,
+        "outcome": {
+          "kind": "succeeded"
+        }
+      },
+      {
+        "request": 1,
+        "action": "Console.stdout_write",
+        "started": 1794455526432493,
+        "finished": 1794455526433105,
+        "outcome": {
+          "kind": "succeeded"
+        }
+      },
+      {
+        "request": 2,
+        "action": "Console.stdin_read_line",
+        "started": 1794455526433134,
+        "finished": 1794455526963681,
+        "outcome": {
+          "kind": "succeeded"
+        }
+      },
+      {
+        "request": 3,
+        "action": "Memory.write",
+        "started": 1794455526965377,
+        "finished": 1794455526968136,
+        "outcome": {
+          "kind": "succeeded"
+        }
+      },
+      {
+        "request": 4,
+        "action": "Console.stdout_write",
+        "started": 1794455526968267,
+        "finished": 1794455526968426,
+        "outcome": {
+          "kind": "succeeded"
+        }
+      }
+    ],
+    "stored_rows": [
+      [
+        "owner-records",
+        "[\"Values\"]",
+        "{\"kind\":\"string\",\"value\":\"owner\"}",
+        "{\"kind\":\"int\",\"value\":\"1\"}"
+      ],
+      [
+        "peer-records",
+        "[\"Values\"]",
+        "{\"kind\":\"string\",\"value\":\"peer\"}",
+        "{\"kind\":\"int\",\"value\":\"1\"}"
+      ]
+    ],
+    "model_requests": 0,
+    "command_requests": 0,
+    "filesystem_effects": 0
+  },
+  "candidate": {
+    "base_commit": "a4c54f7",
+    "patch": "examples/native-project/candidates/native-output-capture-0133.patch",
+    "patch_sha256": "13487f38724f22b8e5b6d28c658e6e67f848b714737169198be34650ada4ca4b",
+    "evidence_directory": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-capture-v_o40t1e",
+    "positive_test": "python3 -B tests/native_capture_probe.py (after applying candidate)",
+    "test_status": "failed",
+    "test_exit_code": 1,
+    "expected_stdout_bytes": 2555904,
+    "saved_stdout_bytes": 0,
+    "captured_events": 0,
+    "command_start_requests": 1,
+    "command_read_requests": 0,
+    "scope_serialization": [
+      {
+        "kind": "task_scope_serialized",
+        "reason": "unresolved_resource_selector",
+        "scope": 0
+      },
+      {
+        "kind": "task_scope_serialized",
+        "reason": "unresolved_resource_selector",
+        "scope": 0
+      }
+    ],
+    "trace_outcome": "completed",
+    "trace_sha256": "b20fb9ca54e04fbb3bf7d1578e298b13a54636e0f377e8cbef55210a4d067b87",
+    "terminal_sha256": "33e96eed8ce87713adcf4c008ebdb54eecea322d0265b015ab795bc6ffc06c2f",
+    "log_sha256": "359791cc270cbcba9963e9c36dcf4157cb782f82379bc60ae8640cd5f7065537",
+    "normal_quit_completed": true,
+    "resource_guards_disabled": false
+  },
+  "validated_product_restored": true,
+  "compiler_or_host_patch": false,
+  "continuous_capture_accepted": false,
+  "cause_classification": "Observed owner/child Memory serialization. The source resource-owner fallback is a proposed cause; upstream may clarify the supported ownership contract."
+}
