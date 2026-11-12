@@ -118,5 +118,18 @@
   "scope": "The reduced computed-key case passes on 0.13.5; this unchanged full consumer still fails. Its remaining unresolved resource footprint is not established as a new compiler defect.",
   "upstream_followup_file": "examples/native-project/candidates/UPSTREAM_0135_FOLLOWUP.md",
   "upstream_followup": "https://github.com/etas-project/etas-interpreter/issues/108#issuecomment-6822224218",
-  "upstream_body_verified": true
+  "upstream_body_verified": true,
+  "pinned_source_findings": {
+    "method": "read exact released Git objects; no build or additional test",
+    "frontend_revision": "bff83ed77b6e6bfa289117f0a96bf7c786a6b0a1",
+    "interpreter_revision": "3c0b78fbf147e5bb2fc33e13a501a88b97411d1c",
+    "paths": [
+      "MEMORY_INSERT omitted from complete memory operation sets",
+      "ordinary Source flow call with nested read argument marks resource plan incomplete",
+      "Perform/Infer marks resource plan incomplete",
+      "runtime rejects incomplete plan and serializes invocation"
+    ],
+    "scope": "Static paths present in the complete candidate; not attribution of each trace event, not a new executed regression, and not proof a single change suffices.",
+    "report": "examples/native-project/candidates/UPSTREAM_0135_FOLLOWUP.md"
+  }
 }
