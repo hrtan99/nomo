@@ -1,0 +1,117 @@
+{
+  "date": "2026-11-12",
+  "compiler": {
+    "selector": "latest0134",
+    "version": "0.13.4",
+    "source_overrides": [],
+    "repositories": {
+      "cli": {
+        "repository": "etas",
+        "revision": "256b2e0c58f2bb9dbdc158e1dc298f4bbf35eec6",
+        "tree": "99a43667a641aa3b140fb56895ab0616a43a002f",
+        "packages": [
+          "etas_cli",
+          "etas_driver",
+          "etas_package",
+          "etas_tests"
+        ]
+      },
+      "core": {
+        "repository": "etas-core",
+        "revision": "faa01c5752bfe3e46a187ee6e3def3911ab2430b",
+        "tree": "f169fff036cccad7c031a8165cd48e02171c381a",
+        "packages": [
+          "etas_builtin",
+          "etas_cache",
+          "etas_code",
+          "etas_core",
+          "etas_host",
+          "etas_memory_derive",
+          "etas_package_metadata",
+          "etas_std",
+          "etas_utils"
+        ]
+      },
+      "frontend": {
+        "repository": "etas-frontend",
+        "revision": "821780a02120ded06ddd601c3a3d358b85436101",
+        "tree": "9c480e0583724906fdae8b41646757f7b9f03717",
+        "packages": [
+          "etas_effects",
+          "etas_frontend",
+          "etas_hir",
+          "etas_hir_analysis",
+          "etas_syntax",
+          "etas_syntax_derive",
+          "etas_types"
+        ]
+      },
+      "interpreter": {
+        "repository": "etas-interpreter",
+        "revision": "31bcd4ad16b6cac05f71e093341536329c48c80f",
+        "tree": "afbe27977c94a5b77795713ff236cdfcf2e6eb3b",
+        "packages": [
+          "etas_interpreter"
+        ]
+      }
+    },
+    "source": "Official ETAS CLI 0.13.4 with its own Cargo.lock and exact Git dependencies; includes disjoint Memory owner/child task progress (interpreter #108/#109). No source overrides.",
+    "cargo_lock_sha256": "17b3f4baaa9c460fc891fdc923efe3d715a572c34b30653e439099c7391b5b69",
+    "verified_seed_binary_sha256": "46c94628f825e4e84a952a59619331651f074edc13be61a1876606f8c5e87320"
+  },
+  "issue": "https://github.com/etas-project/etas-interpreter/issues/108",
+  "official_fix": "https://github.com/etas-project/etas-interpreter/pull/109",
+  "result": {
+    "directory": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-task-reachability-wmsf_jo0",
+    "exit_code": 0,
+    "before_input": "WAIT_INPUT\nCHILD_RAN\n",
+    "child_ran_before_input": true,
+    "stdout": "WAIT_INPUT\nCHILD_RAN\n",
+    "stderr": ""
+  },
+  "original_source_unchanged": true,
+  "source_sha256": {
+    "examples/repros/task-memory-owner-0.13.3/src/app/main.es": "f08a6ca682c2c94cf1bbe0795ea1631f62a7834cf18e805ee11c26d2a33d80d9",
+    "examples/repros/task-memory-owner-0.13.3/etas.toml": "4982a3eb358a1c7ac0f763fca95f431d187774070bb99bd482c17d5dff5f4eda",
+    "examples/repros/task-memory-owner-0.13.3/etas.lock": "7dd834944633860df4a4a98338b65cf7017b503dfecb10ece67a67234b46fe91"
+  },
+  "trace_sha256": "a7b20ba77d0c23496893eb298db0d8f87df6f2e0d8f54b5904455d5f52373d82",
+  "trace_outcome": "completed",
+  "scope_serialization": [],
+  "host_observations": [
+    {
+      "id": 0,
+      "action": "Memory.write",
+      "started": 1794461811261640,
+      "finished": 1794461811263123
+    },
+    {
+      "id": 1,
+      "action": "Console.stdout_write",
+      "started": 1794461811263227,
+      "finished": 1794461811263581
+    },
+    {
+      "id": 2,
+      "action": "Memory.write",
+      "started": 1794461811263365,
+      "finished": 1794461811264526
+    },
+    {
+      "id": 3,
+      "action": "Console.stdin_read_line",
+      "started": 1794461811263609,
+      "finished": 1794461811793641
+    },
+    {
+      "id": 4,
+      "action": "Console.stdout_write",
+      "started": 1794461811264571,
+      "finished": 1794461811264636
+    }
+  ],
+  "model_http_requests": 0,
+  "command_requests": 0,
+  "compiler_or_host_patch": false,
+  "scope": "Original disjoint constant Memory regions progress during the owner console wait; production capture and dynamic selectors remain separate acceptance."
+}

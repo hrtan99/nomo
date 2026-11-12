@@ -1,12 +1,12 @@
 {
-  "selector": "latest0133",
-  "version": "0.13.3",
+  "selector": "latest0134",
+  "version": "0.13.4",
   "source_overrides": [],
   "repositories": {
     "cli": {
       "repository": "etas",
-      "revision": "7e23eb46a35f3095c173335f15af5692e9d75399",
-      "tree": "d0443819186b0238afe128287fccc565e9e71347",
+      "revision": "256b2e0c58f2bb9dbdc158e1dc298f4bbf35eec6",
+      "tree": "99a43667a641aa3b140fb56895ab0616a43a002f",
       "packages": [
         "etas_cli",
         "etas_driver",
@@ -32,8 +32,8 @@
     },
     "frontend": {
       "repository": "etas-frontend",
-      "revision": "3abd9f84036845a06391d3ede4538eaf11af9bcf",
-      "tree": "479737046c46444b51db35770fb8f04544d71a5e",
+      "revision": "821780a02120ded06ddd601c3a3d358b85436101",
+      "tree": "9c480e0583724906fdae8b41646757f7b9f03717",
       "packages": [
         "etas_effects",
         "etas_frontend",
@@ -46,14 +46,14 @@
     },
     "interpreter": {
       "repository": "etas-interpreter",
-      "revision": "d175d32d8ecf0d3cba7bdbd8fe37e506ede06fa6",
-      "tree": "3fc4e2401cb88e5acb3b62ff135f3b2c5b71a5ba",
+      "revision": "31bcd4ad16b6cac05f71e093341536329c48c80f",
+      "tree": "afbe27977c94a5b77795713ff236cdfcf2e6eb3b",
       "packages": [
         "etas_interpreter"
       ]
     }
   },
-  "source": "Official ETAS CLI 0.13.3 with its own Cargo.lock and exact Git dependencies; includes cooperative pending Command.read cancellation (core #65/#66). No source overrides.",
-  "cargo_lock_sha256": "f8db6067f6a436b6cdc8a729ce039d835023ea8e982fb016eef0ecfc80956a54",
-  "verified_seed_binary_sha256": "b45ff488a284e8484bc3bef9fa49adf05c35b6fe64220de6dd7728a6723bbb99"
+  "source": "Official ETAS CLI 0.13.4 with its own Cargo.lock and exact Git dependencies; includes disjoint Memory owner/child task progress (interpreter #108/#109). No source overrides.",
+  "cargo_lock_sha256": "17b3f4baaa9c460fc891fdc923efe3d715a572c34b30653e439099c7391b5b69",
+  "verified_seed_binary_sha256": "46c94628f825e4e84a952a59619331651f074edc13be61a1876606f8c5e87320"
 }

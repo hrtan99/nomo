@@ -155,7 +155,7 @@ def abandon_stopped_work(args, operation_id, action):
     try:
         edit.check_history_lock(fd)
         env = {k:v for k,v in os.environ.items() if not k.startswith('ETAS_HOST_') and k not in ('MINIMAX_API_KEY', 'NOMO_QWEN_SERVER_API_KEY')}
-        env.update(NOMO_SESSION_STATE=str(state), NOMO_EVENT_POLICY_DIR=str(policy_dir), NOMO_ETAS_VERSION=os.environ.get('NOMO_ETAS_VERSION', '0.13.3'))
+        env.update(NOMO_SESSION_STATE=str(state), NOMO_EVENT_POLICY_DIR=str(policy_dir), NOMO_ETAS_VERSION=os.environ.get('NOMO_ETAS_VERSION', '0.13.4'))
         compose = ['docker', 'compose', '--env-file', '/dev/null']
         for name in ('compose.yaml', 'config/etas-' + env['NOMO_ETAS_VERSION'].replace('.', '') + '-official-compose.yaml', 'config/etas-runtime-cache-compose.yaml', 'config/nomo-read-session-compose.yaml', 'config/nomo-event-policy-work-compose.yaml'):
             compose += ['--file', str(ROOT / name)]

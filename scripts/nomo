@@ -49,7 +49,7 @@ def state_paths(resume, workspace):
 
 
 def legacy_main():
-    parser = argparse.ArgumentParser(description=__doc__, epilog='Set NOMO_STATE_DIR to select a private state directory. --latest resumes the most recently used compatible session bound to the current workspace. Explicit historical IDs remain usable but are not automatically bound. This revision uses ETAS 0.13.3; historical sessions retain their recorded budget versions.')
+    parser = argparse.ArgumentParser(description=__doc__, epilog='Set NOMO_STATE_DIR to select a private state directory. --latest resumes the most recently used compatible session bound to the current workspace. Explicit historical IDs remain usable but are not automatically bound. This revision uses ETAS 0.13.4; historical sessions retain their recorded budget versions.')
     parser.add_argument('--root', default=os.getcwd(), help='workspace directory (default: current directory)')
     selection = parser.add_mutually_exclusive_group()
     selection.add_argument('--id', help='resume this exact session ID')

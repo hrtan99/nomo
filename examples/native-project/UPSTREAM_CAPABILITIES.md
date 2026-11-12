@@ -1,6 +1,6 @@
 # Remaining Etas capabilities for the complete native Nomo product
 
-This is a capability contract, not a list of confirmed compiler bugs. The current official graph is 0.13.3 in `config/etas-latest-main.json`. It adopts the official #65 pending-read cancellation fix; the original cancellation source now passes without stopping its producer. The remaining source-visible contracts below are unchanged. No compiler patch or Python business implementation is substituted. The default entry remains the existing product until the complete native scope is accepted.
+This is a capability contract, not a list of confirmed compiler bugs. The current official graph is 0.13.4 in `config/etas-latest-main.json`. It includes the accepted #65 pending-read cancellation fix and now accepts #108's original independent constant-Memory-selector case. Full product capture with dynamic log keys remains separate from that original proof. The other source-visible contracts below are unchanged. No compiler patch or Python business implementation is substituted. The default entry remains the existing product until the complete native scope is accepted.
 
 ## Layer ownership
 
@@ -14,7 +14,7 @@ This is a capability contract, not a list of confirmed compiler bugs. The curren
 
 Source: [official Host ownership design](https://github.com/etas-project/etas-core/blob/cdb49367e73aadba56fbc89c984668ee3c1dd0aa/docs/architect/etas-host-design.md). Exact source filenames below refer to that pinned graph, not an assertion about future releases.
 
-The minimum upstream work is: progress for disjoint persistent-Memory owner/child tasks (#108); PTY/control-terminal operations; a supported timed-wait path; a per-model-round context projection contract; and dynamic inference options with source-visible usage. Each needs the source interface and the implementation at its owning boundary. Continuous output draining and summarization policy remain Nomo source work. Retaining jobs after destruction of the Etas Host is a separate, stronger lifecycle requirement than client detach/project switching, which already retain that Host.
+The minimum upstream work is: a supported dynamic Memory ownership contract for the UI/capture product path; PTY/control-terminal operations; a supported timed-wait path; a per-model-round context projection contract; and dynamic inference options with source-visible usage. Each needs the source interface and the implementation at its owning boundary. Continuous output draining and summarization policy remain Nomo source work. Retaining jobs after destruction of the Etas Host is a separate, stronger lifecycle requirement than client detach/project switching, which already retain that Host.
 
 ## Required public contracts
 
@@ -59,7 +59,7 @@ The earlier cancellation defect [etas-core#65](https://github.com/etas-project/e
 
 ### Task progress alongside persistent Memory
 
-The next actual-entry capture candidate is blocked by [etas-interpreter#108](https://github.com/etas-project/etas-interpreter/issues/108). Its approved producer starts, but no native read runs while the UI waits for input; the capture head remains empty. The smaller valid source uses two independent Memory regions and constant keys. Its child write still waits until the owner's console read finishes. This observed scheduling limitation is separate from the fixed pending-read cancellation defect.
+The earlier 0.13.3 actual-entry capture candidate exposed [etas-interpreter#108](https://github.com/etas-project/etas-interpreter/issues/108). Official 0.13.4 now passes the unchanged constant-selector reproduction without scope serialization. The full candidate with dynamic log keys still requires its own product acceptance. Its approved producer starts, but no native read runs while the UI waits for input; the capture head remains empty. The smaller valid source uses two independent Memory regions and constant keys. Its child write still waits until the owner's console read finishes. This observed scheduling limitation is separate from the fixed pending-read cancellation defect.
 
 - Standard library: a supported, documented ownership contract for disjoint persistent resources across a scheduler owner and its children. The existing `run`/`start` interface should make the required ownership and serialization behavior usable from Source.
 - Runtime: preserve genuine conflict guards while allowing verified disjoint owner/child resources to progress during Host waits. The current owner resource fallback emits `unresolved_resource_selector` on scope 0, even for the reduced independent regions.

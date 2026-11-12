@@ -5,3 +5,7 @@ The package uses two independent Memory regions and constant keys. Its owner wri
 Observed: `CHILD_RAN` appears only after input is submitted. Native trace records `unresolved_resource_selector` serialization on scope 0; the child write is dispatched after the console read finishes. Both records eventually persist correctly and the flow exits 0. The failure concerns child progress during input wait, rather than storage correctness or final exit status.
 
 The public report is [etas-interpreter#108](https://github.com/etas-project/etas-interpreter/issues/108); `UPSTREAM_ISSUE.md` is its exact body. The native capture candidate and minimal evidence are recorded in `examples/native-project/task-memory-owner-0133-20261112.json`. No resource guards or compiler sources are changed.
+
+## Official 0.13.4 acceptance
+
+The source and manifest are unchanged. The child now writes its independent region and prints `CHILD_RAN` before console input is submitted. The native trace has no scope-serialization events. Exact original-source/compiler/trace identities are recorded in `examples/native-project/task-memory-owner-0134-20261112.json`. This accepts the constant-selector case; the full Nomo collector with dynamic log keys is a separate acceptance scope.

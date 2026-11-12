@@ -25,23 +25,23 @@ def configure(label, wrapper):
                 '023': ('0.2.3', None),
                 '024': ('0.2.4', None),
                 '025': ('0.2.5', None), '026': ('0.2.6', None), '026-v68': ('0.2.6', None), '030': ('0.3.0', None),
-                '041': ('0.4.1', None), '0120': ('0.12.0', None), '0121': ('0.12.1', None), '0130': ('0.13.0', None), '0131': ('0.13.1', None), '0132': ('0.13.2', None), '0133': ('0.13.3', None)}
+                '041': ('0.4.1', None), '0120': ('0.12.0', None), '0121': ('0.12.1', None), '0130': ('0.13.0', None), '0131': ('0.13.1', None), '0132': ('0.13.2', None), '0133': ('0.13.3', None), '0134': ('0.13.4', None)}
     require(label in versions, 'unsupported official graph')
     LABEL = label
     VERSION, LEGACY_SHA = versions[label]
     SELECTOR = 'latest' + label.replace('-', '')
-    CONFIG = REPO / ('config/etas-latest-main.json' if label == '0133' else 'config/etas-' + label + '-official.json')
-    LOCK = REPO / ('config/etas-latest.Cargo.lock' if label == '0133' else 'config/etas-' + label + '-official.Cargo.lock')
+    CONFIG = REPO / ('config/etas-latest-main.json' if label == '0134' else 'config/etas-' + label + '-official.json')
+    LOCK = REPO / ('config/etas-latest.Cargo.lock' if label == '0134' else 'config/etas-' + label + '-official.Cargo.lock')
     SPEC = json.loads(CONFIG.read_text())
     PINS = SPEC['repositories']
-    ROOT = CACHE / SPEC.get('cache_root', 'etas-latest' if label in ('041', '0120', '0121', '0130', '0131', '0132', '0133') else 'etas-eval' if label == '026-v68' else 'etas-' + label if label in ('025', '026', '030') else 'etas-p0-' + label)
+    ROOT = CACHE / SPEC.get('cache_root', 'etas-latest' if label in ('041', '0120', '0121', '0130', '0131', '0132', '0133', '0134') else 'etas-eval' if label == '026-v68' else 'etas-' + label if label in ('025', '026', '030') else 'etas-p0-' + label)
     SOURCE = ROOT / ('src' if label in ('025', '026', '026-v68', '030') else 'src/cli')
     TARGET = CACHE / SPEC['build_target'] if 'build_target' in SPEC else ROOT / 'target' if label in ('025', '026', '026-v68', '030') else CACHE / 'etas-latest/target'
     INSTALLED = CACHE / SPEC.get('installed_binary', 'bin/etas')
     PREVIOUS_CONFIG = '98ff380d7e04ca43bca7f28f4af30dcd72e0a5a80dbe6515df41925f6d032962' if label == '041' else None
     bridge_path = REPO / 'config/etas-official-legacy-bridge.json'
     bridge = json.loads(bridge_path.read_text())
-    entry = None if label in ('041', '0120', '0121', '0130', '0131', '0132', '0133') else bridge[label]
+    entry = None if label in ('041', '0120', '0121', '0130', '0131', '0132', '0133', '0134') else bridge[label]
     if entry is not None:
         require(bridge['format'] == 1 and entry['legacy_sha256'] == LEGACY_SHA, 'legacy bridge policy drift')
         require(entry['wrapper_sha256'] == digest(wrapper), 'bootstrap wrapper drift')
@@ -330,7 +330,8 @@ def guard(read_only=False):
         '0121': '26d5aca7efc077c071ea6736bb1f8cd99fa258f79ae017b70b0bd199fc16dc1c',
         '0130': '97b56a76a05b2a18a86ad70a4e7e60c54c80b9d52236497fc1e9c7eb6a6e0d44',
         '0131': '386d93ab539078f835c2f76f4091aa149159c71cfd07372ec96911bcd3755782',
-        '0132': '9962fae954450a8ff197a79166c45470c4b40c7c65d194337ed342679a18ae58'}
+        '0132': '9962fae954450a8ff197a79166c45470c4b40c7c65d194337ed342679a18ae58',
+        '0133': '3cb755bb0ad828fc49f177b6babbc2ae05840c5632b3284f458b082588264e31'}
     if LABEL in previous_v2: accepted.append(previous_v2[LABEL])
     # The 0.4.1 storage-limit pin was prepared and built before its independently
     # reproduced binary hash replaced the prior graph hash in the reviewed spec.
