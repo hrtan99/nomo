@@ -1,5 +1,13 @@
 # Native output capture candidate
 
+## Language migration for official 0.22.4
+
+`language-migration-0224-20261125.patch` retains the DIP-02 proposal for 72 tracked agent declarations and 77 call sites across 18 files, plus 248 bounded loops in 95 files. It converts each agent to an empty active type with an explicit public `run(self, ...)` method, moves callable constraints onto that method and constructs scoped instances at ordinary call sites. The loop migration uses the specification's prefix `@limits([Iterations(...)])` syntax. Prompts, tool lists and all bound expressions are retained. The combined patch changes 108 tracked product files; untracked session prototypes are excluded.
+
+The official 0.22.4 dev build, matching SDK installation, installation verification and official constructor-injection example passed. The candidate's normal source check failed with `checked effect tag has conflicting package identities`; its cause remains unestablished. A separate one-loop package proves that the documented prefix annotation is rejected by this exact graph: [etas-frontend#97](https://github.com/etas-project/etas-frontend/issues/97). See `../toolchain-0224-build-20261125.json` and `../../repros/scoped-loop-limits-0.22.4/` for actual evidence. The candidate is not accepted. All 108 product files were restored byte-for-byte to the accepted baseline, and default selection remains 0.13.5. Reapply this complete patch when the scoped-loop contract is available, then run the required normal source check and existing positive workflows.
+
+## Historical continuous capture proposal
+
 `native-output-capture-0133.patch` is based on Nomo commit `a4c54f7` and contains the unaccepted Etas implementation plus its positive acceptance scenario. It registers collectors through a Source effect handled inside the lexical scheduler callback, uses a separate Memory region for immutable output chunks/heads and UI-owned read cursors, seals captured prefixes into export metadata, and settles collectors when the UI closes.
 
 The actual native-entry acceptance failed: after an approved synthetic producer started, the UI waited at its prompt for 20 seconds, zero native `Command.read` requests were dispatched, and the capture head remained at zero events. The run trace recorded `unresolved_resource_selector` serialization. Normal `/quit` completed. A smaller valid package with separate, constant Memory region selectors reproduces delayed child progress; it is reported as [etas-interpreter#108](https://github.com/etas-project/etas-interpreter/issues/108).

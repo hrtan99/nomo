@@ -1,0 +1,22 @@
+{
+  "official_graph": "../../native-project/toolchain-0224-build-20261125.json",
+  "binary_sha256": "1037eda142e287257485e38cd0a86f487042ea4a4aa6e9e1943f79eb2e38e3da",
+  "sdk_manifest_sha256": "ed146d0f0aa8545138dc97c3e1a309e2f3c48d5aeb30584d7491a686f5d03f00",
+  "steps": [
+    {
+      "step": "lock",
+      "exit_code": 0,
+      "seconds": 0.642
+    },
+    {
+      "step": "check",
+      "exit_code": 1,
+      "seconds": 0.97
+    }
+  ],
+  "diagnostic": "checked 1 file\nerror[syntax::InvalidExpression]: expected expression\n --> /repro/src/app/main.es:5:5\n  |     @limits([Iterations(3)])\n  |     ^ expected expression\nerror[syntax::InvalidItem]: expected top-level item\n --> /repro/src/app/main.es:9:5\n  |     return total;\n  |     ^ expected top-level item\nerror[syntax::InvalidItem]: expected top-level item\n --> /repro/src/app/main.es:10:1\n  | }\n  | ^ expected top-level item\nerror[syntax::UnexpectedToken]: expected top-level item\n --> /repro/src/app/main.es:10:1\n  | }\n  | ^ expected top-level item\nerror[type::IncompleteTypeFacts]: error statement cannot be typed\n --> /repro/src/app/main.es:5:5\n  |     @limits([Iterations(3)])\n  |     ^ error statement cannot be typed\n",
+  "source_sha256": "d25b61e67535816acb201bdea89b09da00d0f179f5174f4248b1d1e1e74b461e",
+  "upstream_issue": "https://github.com/etas-project/etas-frontend/issues/97",
+  "model_requests": 0,
+  "runtime_enforcement_verified": false
+}
