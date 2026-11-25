@@ -1,0 +1,82 @@
+{
+  "status": "prepared_not_compiler_or_production_accepted",
+  "baseline_commit": "a1a7592b3ce022a93f7ede083d7a88d8c04735da",
+  "source_count": 284,
+  "patch_sha256": "6e158bf221be1c8c080fc422ead8059b05b9990a597c6c3be1f0f90a4acb8e4a",
+  "source_files": {
+    "src/nomo/adapters/command/processes.es": {
+      "before_sha256": null,
+      "candidate_sha256": "86552b37062c7bb0cf41baba98d29fb8ba16917bdb01f943a56962b992c77ec0"
+    },
+    "src/nomo/adapters/etas/processes.es": {
+      "before_sha256": null,
+      "candidate_sha256": "e6096ddbcd3886ed95adab9c06ca9801274173fe796b1524c1b7d87bea12f703"
+    },
+    "src/nomo/adapters/terminal/processes.es": {
+      "before_sha256": null,
+      "candidate_sha256": "5f97d36250cba9757a92287194e4f5f3b4eca93903c2e1b7e1aebaf3be0ff489"
+    },
+    "src/nomo/bootstrap/native.es": {
+      "before_sha256": null,
+      "candidate_sha256": "7b7d14d019ca60ef14cc2bfe5e130b63013c5fad9cb4e2ea859bf00f8ca7f352"
+    },
+    "src/nomo/bootstrap/processes.es": {
+      "before_sha256": null,
+      "candidate_sha256": "d5274649a04a99779adcc0aa7ca061b3bb81c2103e82218d29cec9de41a75191"
+    },
+    "src/nomo/main.es": {
+      "before_sha256": "7b6dc6c6cedb57370700676a9c6ee4ba791b83f7baca4250deb86670411cd202",
+      "candidate_sha256": "3507e50f6baa1c098bb8a9ab6e66ec1765994822fdcf39dfceb8322facc26eb2"
+    },
+    "src/nomo/native/agent.es": {
+      "before_sha256": "f2cb182dac271f03405a98b5b7a62ef5bedfb93f77dbdc6dcbad862786d88cdf",
+      "candidate_sha256": "31557384e9d42cfd9deed262681bc43d35b5c3f459220443441b82e33fb3df7e"
+    },
+    "src/nomo/native/context.es": {
+      "before_sha256": "6ee261390a26a8b6f779a45fb2f71a047f2f71ecabe3d527e4ee0906c03e45a4",
+      "candidate_sha256": "9ee23c61fa0f08c47f9c2211359cb15bb44a417b4b6b6989d12abdd7bc1aee21"
+    },
+    "src/nomo/native/entry.es": {
+      "before_sha256": "3ab5ffd8e6ea0ae00dee7dd25bebe8bd1a6c7ec4cbee1a89a0c38988fa90579d",
+      "candidate_sha256": "973ac5e5c41f042cdb7d946a7224ff461460dcff3da33750f828c981c64f3692"
+    },
+    "src/nomo/native/processes.es": {
+      "before_sha256": "ebf5f70f8b1b0c52feb85a0c760afd69c15be6d32722ae4c78fb3b3312210382",
+      "candidate_sha256": "4fdb0af0d742f08a45b968541ce5d3e20c75be4713b23b559c1ac4897fe13fd5"
+    }
+  },
+  "apply_check_exit": 0,
+  "target_acceptance": false,
+  "full_composition_check": "not executed; target adoption is blocked and the isolated target Host adapter already fails before execution",
+  "retained_controller_fixture": {
+    "exit": 1,
+    "source_count": 17,
+    "diagnostic_counts": {
+      "type::InvalidImplMemberKind": 4
+    },
+    "diagnostic_family": "https://github.com/etas-project/etas-frontend/issues/98",
+    "execution_acceptance": false
+  },
+  "target_host_adapter": {
+    "snapshot": "examples/native-project/candidates/processes-host-0224-check",
+    "source_count": 6,
+    "check_exit": 4,
+    "error": "Pipeline(\"native invocation has no checked implementation witness\")",
+    "issue": "https://github.com/etas-project/etas-frontend/issues/100",
+    "runtime_acceptance": false
+  },
+  "persistent_compatibility": "Original nomo.native.processes.Job/JobEvent, schema, stable ID and resource stay in place. NativeJobs/NativeOutputArchive map every field; key format and publication order are preserved. Runtime restore through the new adapters is not yet accepted.",
+  "cross_overlay_followups": [
+    "With DIP-09: construct one bootstrap.native and install both ProcessOperations and ChangeOperations handlers around the same entry invocation. The two independent new-file overlays are not directly composable.",
+    "With DIP-06: add ProcessOperations to CodingModel/NativeCodingModel/per-turn effect rows. Its context JobReader adapter should use NativeJobs.list directly (Memory), not the model-tool ProcessOperations facade. Regenerate overlapping native.context/entry changes from the common base.",
+    "Canonical migration must recognize native.processes as a facade and the new HostProcessControl as already using the target SDK; the old free-function replacement map cannot be blindly applied to that facade.",
+    "Continuous capture must be ported only after the original full capture consumer passes on the adopted target; do not install the old collector patch or share mutable UI bindings."
+  ],
+  "pending": [
+    "Adopt the official target with required scoped-loop support (#97).",
+    "Resolve or correctly attribute the target native-invocation witness failure (#100).",
+    "Normal combined source check and full controlled application fixture.",
+    "Actual native process, approvals, saved-output restoration and live reconnect through the new adapters.",
+    "Original UI-wait continuous capture, exact bytes, cancellation and interrupted-read restoration acceptance."
+  ]
+}

@@ -1,0 +1,106 @@
+"""Application process sequencing with actual SQLite and controlled process capabilities."""
+from pathlib import Path
+import hashlib
+import json
+import re
+import subprocess
+import tempfile
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def main():
+    evidence = Path(tempfile.mkdtemp(prefix='nomo-native-process-controller-')).resolve()
+    package, state = evidence / 'package', evidence / 'state'
+    package.mkdir()
+    (package / '.etas').mkdir()
+    state.mkdir(mode=0o777)
+    state.chmod(0o777)
+    fixture = ROOT / 'tests/fixtures/native_process_controller/src/app/main.es'
+    entry = package / 'src/app/main.es'
+    entry.parent.mkdir(parents=True)
+    entry.write_bytes(fixture.read_bytes())
+    pending = [fixture]
+    sources = {str(fixture.relative_to(ROOT)): hashlib.sha256(fixture.read_bytes()).hexdigest()}
+    while pending:
+        source = pending.pop()
+        for imported in re.findall(r'(?m)^(?:public\s+)?import\s+(nomo[.A-Za-z0-9_]*)', source.read_text()):
+            parts = imported.rstrip('.').split('.')
+            while parts and not (ROOT / 'src' / '/'.join(parts)).with_suffix('.es').is_file():
+                parts.pop()
+            original = (ROOT / 'src' / '/'.join(parts)).with_suffix('.es')
+            relative = original.relative_to(ROOT)
+            if str(relative) in sources:
+                continue
+            target = package / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(original.read_bytes())
+            sources[str(relative)] = hashlib.sha256(original.read_bytes()).hexdigest()
+            pending.append(original)
+    (evidence / 'sources.json').write_text(json.dumps(sources, indent=2) + '\n')
+    (package / 'etas.toml').write_text('''[package]
+name = "native-process-controller"
+version = "0.1.0"
+edition = "2026"
+[source]
+root = "src"
+[runtime]
+default_profile = "local"
+[runtime.profiles.local.memory]
+backend = "sqlite"
+path = "/state/history.sqlite3"
+[runtime.profiles.local.policy]
+mode = "local-static"
+rules = ["memory=allow", "console=allow"]
+[[bin]]
+name = "native-process-controller"
+module = "app.main"
+flow = "main"
+''')
+    (package / 'etas.lock').write_text('version = 1\nmanifest_fingerprint = "etas-lock-input:v1|package=native-process-controller|version=0.1.0|edition=2026"\npackage = []\n')
+    overlay = evidence / 'compose.json'
+    overlay.write_text(json.dumps({'services': {'dev': {'volumes': [
+        {'type': 'bind', 'source': str(package), 'target': '/workspace', 'read_only': True},
+        {'type': 'bind', 'source': str(state), 'target': '/state'}]}}}))
+    command = ['docker', 'compose', '--env-file', '/dev/null']
+    for name in ('compose.yaml', 'config/etas-0135-official-compose.yaml', 'config/etas-runtime-cache-compose.yaml', str(overlay)):
+        command += ['--file', str(ROOT / name)]
+    inside = '''import json,pathlib,subprocess
+cmd=['/home/nomo/.cargo/bin/etas','--no-config','--cache','off','run','/workspace','--allow-effects','--trace-out','/state/processes.trace.json']
+p=subprocess.run(cmd,capture_output=True,text=True)
+r={name:(pathlib.Path('/sys/fs/cgroup')/name).read_text().strip() for name in ['memory.max','memory.peak','memory.events','cpu.max','pids.max']}
+print(json.dumps({'exit':p.returncode,'stdout':p.stdout,'stderr':p.stderr,'resources':r}))'''
+    command += ['run', '--rm', '--no-deps', '--pull', 'never', '--tty=false', 'dev', 'python3', '-c', inside]
+    print('EVIDENCE ' + str(evidence), flush=True)
+    result = subprocess.run(command, cwd=ROOT, capture_output=True, text=True, timeout=300)
+    (evidence / 'container-stderr.txt').write_text(result.stderr)
+    assert result.returncode == 0, result.stderr
+    record = json.loads(result.stdout)
+    (evidence / 'result.json').write_text(json.dumps(record, indent=2) + '\n')
+    assert record['exit'] == 0 and not record['stderr'], str(evidence) + '\n' + record['stderr'][:2400]
+    selected = [line for line in record['stdout'].splitlines() if line.startswith(('PORT ', 'PASS '))]
+    assert selected == ['PASS process controller exact input and observed bytes', 'PASS process controller durable output ordering'], selected
+    trace = json.loads((state / 'processes.trace.json').read_text())
+    assert trace['outcome']['kind'] == 'completed' and not trace.get('incomplete', False)
+    assert trace['termination']['local_work_settled'] is True
+    starts = [event for event in trace['events'] if event['kind'] == 'host_request_started']
+    ends = [event for event in trace['events'] if event['kind'] == 'host_request_finished']
+    assert len(starts) == len(ends) and {event['id'] for event in starts} == {event['id'] for event in ends}
+    assert all(event['outcome']['kind'] == 'succeeded' for event in ends)
+    actions = {}
+    for event in starts:
+        name = event['qualified_action']
+        actions[name] = actions.get(name, 0) + 1
+    assert set(actions) <= {'Policy.evaluate', 'Memory.read', 'Memory.write', 'Console.stdout_write'}
+    resources = record['resources']
+    assert resources['memory.max'] == '4294967296' and resources['cpu.max'] == '400000 100000' and resources['pids.max'] == '256'
+    events = dict(line.split() for line in resources['memory.events'].splitlines())
+    assert all(events[key] == '0' for key in ('max', 'oom', 'oom_kill', 'oom_group_kill'))
+    record.update(status='passed', source_count=len(sources), paired_host_requests=len(starts), host_actions=actions,
+                  qualification='Application process sequencing, exact input, raw observations and durable output order. Real fixture SQLite jobs, outputs, attempts and conversation history, with a controlled transient Token type rather than a real Host handle. No native process, approval, reconnection or production adapter acceptance is claimed.')
+    (evidence / 'result.json').write_text(json.dumps(record, indent=2) + '\n')
+    print('PASS application process sequencing and durable observations', flush=True)
+
+
+if __name__ == '__main__':
+    main()

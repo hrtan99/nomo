@@ -1,0 +1,108 @@
+{
+  "date": "2026-11-26",
+  "status": "pure_observations_and_application_sources_checked_on_0135; controller_execution_and_production_composition_unaccepted",
+  "baseline_commit": "a1a7592b3ce022a93f7ede083d7a88d8c04735da",
+  "source_sha256": {
+    "src/nomo/native/processes.es": "ebf5f70f8b1b0c52feb85a0c760afd69c15be6d32722ae4c78fb3b3312210382",
+    "src/nomo/domain/process/jobs.es": "639b9dd0dc07013c2f414c6572f37c269961c330dea653253276a616a6995efd",
+    "src/nomo/domain/process/observations.es": "f2a00f6323d04ec19766789674122f99acba9bc2204c54014bb0b770a414a3f9",
+    "src/nomo/application/native/processes/ports.es": "7c559484e1327bf068eaa877b7dd1a98229bacf485bc2ff988a668e94b187d86",
+    "src/nomo/application/native/processes/service.es": "ccb11191a10d8e4a9929919b14277850ff4f0236ce9d37b58369eb49113337b5",
+    "tests/fixtures/native_process_controller/src/app/main.es": "0710e3c29138b32f5d2091e1857da05e490a830c045127f4f39a28348f1f549a",
+    "tests/native_process_controller_probe.py": "c9778f4d58c76d709e3a2e3834934823a5f021c48c101a86d89a87e4dd622564"
+  },
+  "retained_graph": {
+    "cli": "0.13.5",
+    "binary_sha256": "9be1cb60d532d954538b72206507e27439a427402c67cf384249831bc304c2f2",
+    "normal_check_exit": 0,
+    "normal_check_stdout": "checked 279 files\n",
+    "seconds": 111.403
+  },
+  "persistent_compatibility": {
+    "stored_declarations_and_resource_byte_identical": true,
+    "stable_id": "nomo-native-processes-v1",
+    "store": "native-processes",
+    "selected_path": "Original native Host/store orchestration uses the extracted pure observations and request records.",
+    "proposed_path": "Application owns sequencing over ProcessControl<Live>, JobRepository and OutputArchive, reusing existing attempt and conversation contracts. Only the concrete adapter chooses CommandHandle as Live; persisted string IDs do not manufacture that capability."
+  },
+  "retained_production_probe": {
+    "script": "tests/native_process_probe.py",
+    "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-process-gvnt6yz0",
+    "functional_status": "passed",
+    "approval_status": "passed",
+    "model_http_requests": 12,
+    "provider": "local synthetic HTTP responder; no real provider or credential",
+    "native_approvals": 14,
+    "native_actions": [
+      "Command.start",
+      "Command.reconnect",
+      "Command.read",
+      "Command.reconnect",
+      "Command.write",
+      "Command.reconnect",
+      "Command.read",
+      "Command.reconnect",
+      "Command.write",
+      "Command.reconnect",
+      "Command.read",
+      "Command.start",
+      "Command.reconnect",
+      "Command.stop"
+    ],
+    "saved_output_events": 3,
+    "restored_commands": 0,
+    "approval_audit": [],
+    "limitation": "Live process operations accepted within one Etas Host; the restart checks saved metadata/output, not a live process reattachment.",
+    "qualification": "This verifies the selected native path with extracted pure rules, not the unaccepted application/adapter composition."
+  },
+  "controlled_application_fixture": {
+    "script": "tests/native_process_controller_probe.py",
+    "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-process-controller-eckk1d7f",
+    "source_count": 17,
+    "source_hashes_match_final_source": true,
+    "status": "rejected before execution",
+    "exit": 1,
+    "diagnostic_counts": {
+      "type::InvalidImplMemberKind": 4
+    },
+    "diagnostic_family": "https://github.com/etas-project/etas-frontend/issues/98",
+    "execution_acceptance": false
+  },
+  "composition_candidate": {
+    "path": "examples/native-project/candidates/processes-dip10-0224.patch",
+    "patch_sha256": "6e158bf221be1c8c080fc422ead8059b05b9990a597c6c3be1f0f90a4acb8e4a",
+    "source_count": 284,
+    "apply_preflight": true,
+    "target_acceptance": false
+  },
+  "target_host_adapter": {
+    "snapshot": "examples/native-project/candidates/processes-host-0224-check",
+    "source_count": 6,
+    "check_exit": 4,
+    "error": "Pipeline(\"native invocation has no checked implementation witness\")",
+    "issue": "https://github.com/etas-project/etas-frontend/issues/100",
+    "runtime_acceptance": false
+  },
+  "migration_candidate": {
+    "patch_sha256": "95206e5de9b0888e7b98bf320ce9f345fcfcf3b4bbc9233010dc75c61de39043",
+    "agent_declarations": 72,
+    "instance_references": 77,
+    "bounded_loops": 264,
+    "loop_files": 103,
+    "changed_files": 117
+  },
+  "historical_failures_retained": [
+    "examples/native-project/capture-consumer-0135-20261112.json (original full capture case; no success while UI waits is claimed)",
+    "examples/native-project/process-reconnect-0130-20261111.json (version-scoped historical live reconnect failure; not retested or generalized to the target)"
+  ],
+  "not_claimed": [
+    "Application controller execution or new-adapter production acceptance.",
+    "New-process live reconnection, continuous output capture or automatic restart.",
+    "Target compiler compatibility or complete DIP-10/refactor delivery."
+  ],
+  "size_impact": {
+    "new_etas_files": 3,
+    "new_etas_lines": 198,
+    "line_limit_exception": "The user explicitly allowed temporarily exceeding the code line limit; inclusive size acceptance is not claimed."
+  }
+}

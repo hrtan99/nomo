@@ -2,7 +2,9 @@ module nomo.native.processes;
 
 import std.host.command.{CommandHandle, CommandEvent, command, with_cwd, start, reconnect, id as handle_id, read, write, close_stdin, stop};
 import std.fs.path;
-import std.codec.text.{utf8_encode, utf8_decode, Replace};
+import std.codec.text.utf8_encode;
+import nomo.domain.process.observations.{ProcessEvent, observed, recorded_phase};
+import nomo.domain.process.jobs.{StartRequest, JobRequest, ReadRequest, WriteRequest, InputResult};
 import std.io.{println, IOError};
 import std.text.from_i64;
 import std.memory.MemoryCursor;
@@ -17,11 +19,6 @@ import nomo.bootstrap.execution.{begin, dispatching, returned, complete_attempt}
 // phase is the last recorded Host observation, not a claim of current liveness.
 public type Job = { id: string, session: string, program: string, arguments: Array<string>, handle: string, phase: string };
 public type JobEvent = { job: string, call: i64, phase: string, exit_code: Option<i32>, stdout: string, stderr: string, stdout_bytes: bytes, stderr_bytes: bytes };
-type StartRequest = { operation: string, program: string, arguments: Array<string> };
-type JobRequest = { operation: string, job: string, handle: string };
-type ReadRequest = { operation: string, job: string, handle: string, max_bytes: usize };
-type WriteRequest = { operation: string, job: string, handle: string, input: string };
-type InputResult = { job: string, operation: string, status: string };
 alias Schema = MemoryRegion<{ Jobs: Store<string, Job>, Outputs: Store<string, JobEvent> }>;
 let Data = std.memory.region<Schema>(stable_id = "nomo-native-processes-v1", store = "native-processes");
 
@@ -30,9 +27,6 @@ flow json<T>(value: T) -> string {
 }
 
 flow preview<T>(value: T) -> unit { println("[PROCESS] " + json(value)); }
-flow text(value: bytes) -> string {
-    return match utf8_decode(value, Replace) { Ok(text) => text, Err(_) => { abort("process output conversion failed"); } };
-}
 
 flow owned(job: string) -> Job {
     let value = match Data.Jobs.get(job) { Some(value) => value, None() => { abort("native job not found"); } };
@@ -59,12 +53,14 @@ flow attach(job: Job) -> CommandHandle {
 }
 
 flow event(job: Job, call: i64, value: CommandEvent) -> JobEvent {
-    let result = match value {
-        CommandEvent.Output(stdout, stderr) => JobEvent { job = job.id, call = call, phase = "output", exit_code = None(), stdout = text(stdout), stderr = text(stderr), stdout_bytes = stdout, stderr_bytes = stderr },
-        CommandEvent.Exited(code, stdout, stderr) => JobEvent { job = job.id, call = call, phase = "exited", exit_code = Some(code), stdout = text(stdout), stderr = text(stderr), stdout_bytes = stdout, stderr_bytes = stderr },
-        CommandEvent.Stopped(stdout, stderr) => JobEvent { job = job.id, call = call, phase = "stopped", exit_code = None(), stdout = text(stdout), stderr = text(stderr), stdout_bytes = stdout, stderr_bytes = stderr }
+    let value = match value {
+        CommandEvent.Output(stdout, stderr) => observed(job.id, call, ProcessEvent.Output(stdout, stderr)),
+        CommandEvent.Exited(code, stdout, stderr) => observed(job.id, call, ProcessEvent.Exited(code, stdout, stderr)),
+        CommandEvent.Stopped(stdout, stderr) => observed(job.id, call, ProcessEvent.Stopped(stdout, stderr))
     };
-    let phase = if result.phase == "output" { job.phase } else { result.phase };
+    let result = JobEvent { job = value.job, call = value.call, phase = value.phase, exit_code = value.exit_code,
+        stdout = value.stdout, stderr = value.stderr, stdout_bytes = value.stdout_bytes, stderr_bytes = value.stderr_bytes };
+    let phase = recorded_phase(job.phase, result.phase);
     Data.Outputs.insert(job.session + ":" + from_i64(call), result);
     Data.Jobs.put(job.id, Job { id = job.id, session = job.session, program = job.program, arguments = job.arguments, handle = job.handle, phase = phase });
     return result;

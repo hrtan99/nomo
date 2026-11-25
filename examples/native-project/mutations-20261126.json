@@ -82,7 +82,8 @@
     "instance_references": 77,
     "bounded_loops": 263,
     "loop_files": 102,
-    "changed_files": 116
+    "changed_files": 116,
+    "immutable_snapshot": "a1a7592:examples/native-project/candidates/language-migration-0224-20261125.patch"
   },
   "not_claimed": [
     "Production adapter/handler integration or normal target acceptance.",

@@ -1,11 +1,11 @@
 {
   "status": "prepared_not_target_compiler_accepted",
-  "source_baseline": "efaa8b1627cf3f3eb6e370d3607b82ab00467125",
+  "source_baseline": "a1a7592b3ce022a93f7ede083d7a88d8c04735da",
   "agent_declarations": 72,
   "instance_references": 77,
-  "bounded_loops": 263,
-  "loop_files": 102,
-  "changed_files": 116,
+  "bounded_loops": 264,
+  "loop_files": 103,
+  "changed_files": 117,
   "source_files": {
     "src/nomo/adapters/codec/configuration.es": {
       "before_sha256": "db28e9575ed193d5c00a4c5dffc0ffbadfe63e294c752243f7e2c3229744c19d",
@@ -58,6 +58,10 @@
     "src/nomo/application/native/mutations/service.es": {
       "before_sha256": "5ea36e14762160d04b061654fe5b8c4ead57b88b3f19cc0d15168747d4e3fd5c",
       "candidate_sha256": "d3f21e96937e98aed3a29b71ed1e97492d7c32bc641a0fc04e97cc65207a180f"
+    },
+    "src/nomo/application/native/processes/service.es": {
+      "before_sha256": "ccb11191a10d8e4a9929919b14277850ff4f0236ce9d37b58369eb49113337b5",
+      "candidate_sha256": "04affd94ae5624ea6943569dd66e648dce5e63c50988b57afebb848235b834ae"
     },
     "src/nomo/bootstrap/legacy_status.es": {
       "before_sha256": "8e5bbf9fe16cee09e2a1a62851fba55345e028e6e00133a9dbf44b81429d9558",
@@ -340,8 +344,8 @@
       "candidate_sha256": "58d038d2cbaa328b79ebdab265fe6d935d9308caae13d4880e6fde843bdf8723"
     },
     "src/nomo/native/processes.es": {
-      "before_sha256": "f28f59aedd44fdb9221a88b56bccd3f948428e62e6696354c39c9138bb8bcc59",
-      "candidate_sha256": "56050e114a1f9f82af3a19da8af0393110920af02aac598d649eebce5eee8756"
+      "before_sha256": "ebf5f70f8b1b0c52feb85a0c760afd69c15be6d32722ae4c78fb3b3312210382",
+      "candidate_sha256": "08864afd7c734219bc43ec3847aee6a0a7715d9de6f970d60ce29cb9872e9115"
     },
     "src/nomo/native/project.es": {
       "before_sha256": "bd1d655a7172a0330cd540d269c9718606dda69ceba9b6126d5db9a0f226d35c",
@@ -526,6 +530,9 @@
       "2147483647",
       "2147483647",
       "2147483647",
+      "2147483647"
+    ],
+    "src/nomo/application/native/processes/service.es": [
       "2147483647"
     ],
     "src/nomo/bootstrap/legacy_status.es": [
@@ -941,7 +948,7 @@
       "1048576"
     ]
   },
-  "patch_sha256": "99f0a4db50d33890cb6967818d8ae82770e7a517ed391d285c100f0796892209",
+  "patch_sha256": "95206e5de9b0888e7b98bf320ce9f345fcfcf3b4bbc9233010dc75c61de39043",
   "previous_executed_candidate": {
     "path": "examples/native-project/candidates/language-migration-0224-20261125-baseline-a3450bc.patch",
     "sha256": "4ed6e680bf54968d44237f95f825eab070fa01d69603125af9908df37f7b91d9"
