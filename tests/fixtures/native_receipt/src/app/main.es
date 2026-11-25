@@ -1,13 +1,56 @@
 module app.main;
 
 import std.io.println;
-import nomo.native.history.{NativeHistory, ConversationStore, SessionContext, pending_request, tool_finished};
-import nomo.native.lifecycle.{attempts, begin, dispatching, returned, resolve};
+import nomo.native.history.SessionContext;
+import nomo.adapters.etas.conversations.{NativeHistory, pending_request, tool_finished};
+import nomo.adapters.etas.attempts.NativeAttempts;
+import nomo.application.native.conversation.ports.{ConversationReader, ConversationWriter, ConversationCatalog, ResultPublication};
+import nomo.application.native.execution.service.returned as publish_return;
+import nomo.bootstrap.execution.{attempts, begin, dispatching, returned, resolve};
 
 type Result = { status: string };
+type InterruptedPublication = {};
+
+impl InterruptedPublication ~ ResultPublication {
+    flow prepare_result(self, id: string, role: string, name: string, call: i64) -> i64 { return (NativeHistory {}).prepare_result(id, role, name, call); }
+    flow publish_result(self, id: string, index: i64, text: string) -> unit { abort("fixture interrupted before result archive completion"); }
+    flow result_complete(self, id: string, index: i64) -> bool { return (NativeHistory {}).result_complete(id, index); }
+    flow select_summary(self, id: string, index: i64, through: i64) -> unit { (NativeHistory {}).select_summary(id, index, through); }
+    flow finish_command(self, id: string, call: i64) -> unit { (NativeHistory {}).finish_command(id, call); }
+    flow acknowledge(self, id: string, call: i64, note: string) -> i64 { return (NativeHistory {}).acknowledge(id, call, note); }
+}
 
 flow main(args: Array<string>) -> i32 ![Memory, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>, Error<IndexError>] {
     let archive = NativeHistory {};
+    if args[0] == "seed-incomplete" {
+        let saved = archive.create("receipt-incomplete", "Incomplete result archive");
+        let attempt = begin(saved.id, "coding", "synthetic incomplete result; no Host execution", -1, -1);
+        dispatching(attempt.id);
+        publish_return(NativeAttempts {}, InterruptedPublication {}, attempt.id, "assistant", "", "synthetic result not fully archived", -1);
+        abort("interrupted publication unexpectedly returned");
+    }
+    if args[0] == "settle-incomplete" {
+        let id = match archive.selected("receipt-incomplete") { Some(value) => value, None() => { abort("incomplete receipt missing"); } };
+        let outstanding = attempts(id, true);
+        if outstanding.len() != 1 || outstanding[0].phase != "returned" || outstanding[0].result_event < 0 {
+            abort("interrupted result lost its returned phase or reserved slot");
+        }
+        let before = archive.load(id);
+        let index = outstanding[0].result_event;
+        if archive.result_complete(id, index) || archive.message(id, index).name != "archive_interrupted" {
+            abort("incomplete result was presented as complete");
+        }
+        let closed = resolve(id, outstanding[0].id, "Inspected the partial archive; the result remains unknown.");
+        if closed.phase != "closed_unknown" || closed.result_event != index || closed.recovery_event < 0 {
+            abort("incomplete result was not retained as unknown");
+        }
+        if archive.load(id).next_event != before.next_event + 1 || archive.result_complete(id, index)
+            || archive.message(id, index).name != "archive_interrupted" {
+            abort("unknown-result closure rewrote or replayed the result");
+        }
+        println("INCOMPLETE reserved result retained as unknown; no publication replay");
+        return 0;
+    }
     if args[0] == "seed" {
         let selected = archive.create("synthetic", "Recorded receipt");
         let call = archive.append(selected.id, "tool_call", "fixture_command", "{}", -1);

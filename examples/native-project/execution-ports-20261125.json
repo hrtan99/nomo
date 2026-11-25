@@ -1,0 +1,621 @@
+{
+  "date": "2026-11-25",
+  "scope": "DIP-04 generation/result ports and DIP-05 domain transitions/application execution/Memory adapter/bootstrap separation",
+  "status": "implemented_and_checked_on_existing_0135; target_graph_and_remaining_composition_pending",
+  "baseline_commit": "8adbb846bf372dbe8a96183cf43cd37a20c9c8d6",
+  "official_graph": "config/etas-latest-main.json",
+  "official_cli_version": "0.13.5",
+  "binary_sha256": "9be1cb60d532d954538b72206507e27439a427402c67cf384249831bc304c2f2",
+  "application_contracts": {
+    "GenerationReservation": [
+      "reserve"
+    ],
+    "ResultPublication": [
+      "prepare_result",
+      "publish_result",
+      "result_complete",
+      "select_summary",
+      "finish_command",
+      "acknowledge"
+    ],
+    "AttemptRepository": [
+      "list",
+      "load",
+      "prepare",
+      "update"
+    ]
+  },
+  "application_service": "nomo.application.native.execution.service",
+  "domain_rules": "nomo.domain.execution.transitions",
+  "providers": [
+    "nomo.adapters.etas.attempts.NativeAttempts",
+    "nomo.adapters.etas.conversations.NativeHistory"
+  ],
+  "composition_root": "nomo.bootstrap.execution; explicit dependencies per operation",
+  "retained_contract_leaf": "nomo.native.lifecycle.Attempt",
+  "preservation": {
+    "attempt_stable_id": "nomo-native-attempts-v1",
+    "record_fields_and_qualified_identity": "unchanged",
+    "sequence": [
+      "durable prepared",
+      "durable dispatching before external action",
+      "reserve result slot",
+      "record returned phase and result slot",
+      "write actual result",
+      "completion after complete result"
+    ],
+    "unknown_outcomes": "retained; no automatic replay or allowance refund",
+    "new_validation_rules": 0,
+    "application_service_imports_concrete_repositories": false
+  },
+  "normal_source_check": {
+    "command": [
+      "docker",
+      "compose",
+      "--env-file",
+      "/dev/null",
+      "-f",
+      "compose.yaml",
+      "-f",
+      "config/etas-0135-official-compose.yaml",
+      "-f",
+      "config/etas-runtime-cache-compose.yaml",
+      "run",
+      "--rm",
+      "--no-deps",
+      "--tty=false",
+      "dev",
+      "/home/nomo/.cargo/bin/etas",
+      "--no-config",
+      "--cache",
+      "off",
+      "check",
+      "--all",
+      "/workspace"
+    ],
+    "exit_code": 0,
+    "seconds": 114.275,
+    "checked_files": 257,
+    "log_sha256": "8ee23b867cfc8726017b51b0bbd65515c0c325148dc13d4e2ff62879b7d009c7"
+  },
+  "existing_scenarios": {
+    "normal_conversation": {
+      "command": "python3 tests/native_configuration_probe.py",
+      "exit_code": 0,
+      "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-configuration-d01pe3ve",
+      "result": {
+        "functional_status": "passed",
+        "model_http_requests": 5,
+        "native_command_dispatches": 4,
+        "restored_command_dispatches": 0,
+        "configuration": {
+          "command_timeout_active": false,
+          "context_window_is_estimate": true,
+          "effective_context_window": 400000.0,
+          "inference_token_allowance": 536870912.0,
+          "requested": {
+            "check": [
+              "python3",
+              "-c",
+              "print('configured check passed')"
+            ],
+            "command_timeout": 7.0,
+            "compact_ratio": 0.6,
+            "context_window": 400000.0,
+            "ignore": [
+              "generated/**"
+            ],
+            "instructions": [
+              "Follow the configured coding style.",
+              "Keep caf\u00e9 characters and\nscoped guidance."
+            ],
+            "keep_messages": 2.0,
+            "max_output_tokens": 131072.0
+          },
+          "runtime_output_tokens": 131072.0,
+          "summary_token_allowance": 1048576.0
+        },
+        "changed_command_dispatches": 2,
+        "changed_configuration": {
+          "command_timeout_active": false,
+          "context_window_is_estimate": true,
+          "effective_context_window": 1048576.0,
+          "inference_token_allowance": 536870912.0,
+          "requested": {
+            "check": [],
+            "command_timeout": 600.0,
+            "compact_ratio": 0.75,
+            "context_window": 1048576.0,
+            "ignore": [],
+            "instructions": [
+              "Updated configured style."
+            ],
+            "keep_messages": 12.0,
+            "max_output_tokens": 131072.0
+          },
+          "runtime_output_tokens": 131072.0,
+          "summary_token_allowance": 1048576.0
+        },
+        "status": {
+          "first_user": 0.0,
+          "id": "native-0",
+          "ledger": {
+            "compactions": 1.0,
+            "context_bytes": 4495.0,
+            "generation_allowance": 163840.0,
+            "tools": 4.0,
+            "turns": 1.0
+          },
+          "next_event": 11.0,
+          "pending": "",
+          "summary_event": 10.0,
+          "summary_through": 7.0,
+          "title": "New conversation",
+          "workspace": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-configuration-d01pe3ve/project"
+        },
+        "approval_audit": []
+      }
+    },
+    "foreground_interruption": {
+      "command": "python3 tests/native_attempt_recovery_probe.py",
+      "exit_code": 0,
+      "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-attempt-recovery-xybejezu",
+      "result": {
+        "functional_status": "passed",
+        "interrupted_exit": 130,
+        "model_http_requests": 2,
+        "native_command_dispatches": 1,
+        "recovery_command_dispatches": 0,
+        "statuses": [
+          {
+            "first_user": 0.0,
+            "id": "native-0",
+            "ledger": {
+              "compactions": 0.0,
+              "context_bytes": 698.0,
+              "generation_allowance": 131072.0,
+              "tools": 1.0,
+              "turns": 1.0
+            },
+            "next_event": 2.0,
+            "pending": "native-0:1 command",
+            "summary_event": -1.0,
+            "summary_through": -1.0,
+            "title": "New conversation",
+            "workspace": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-attempt-recovery-xybejezu/project"
+          },
+          {
+            "first_user": 0.0,
+            "id": "native-0",
+            "ledger": {
+              "compactions": 0.0,
+              "context_bytes": 698.0,
+              "generation_allowance": 131072.0,
+              "tools": 2.0,
+              "turns": 1.0
+            },
+            "next_event": 6.0,
+            "pending": "",
+            "summary_event": -1.0,
+            "summary_through": -1.0,
+            "title": "New conversation",
+            "workspace": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-attempt-recovery-xybejezu/project"
+          }
+        ],
+        "runs": [
+          {
+            "id": "native-0-run-0",
+            "input_event": 0.0,
+            "kind": "coding",
+            "label": "NativeCoding",
+            "phase": "dispatching",
+            "recovery_event": -1.0,
+            "result_event": -1.0,
+            "session": "native-0",
+            "through": 0.0
+          },
+          {
+            "id": "native-0-run-1",
+            "input_event": 1.0,
+            "kind": "command",
+            "label": "/bin/sh",
+            "phase": "dispatching",
+            "recovery_event": -1.0,
+            "result_event": -1.0,
+            "session": "native-0",
+            "through": 1.0
+          },
+          {
+            "id": "native-0-run-0",
+            "input_event": 0.0,
+            "kind": "coding",
+            "label": "NativeCoding",
+            "phase": "closed_unknown",
+            "recovery_event": 5.0,
+            "result_event": -1.0,
+            "session": "native-0",
+            "through": 0.0
+          },
+          {
+            "id": "native-0-run-1",
+            "input_event": 1.0,
+            "kind": "command",
+            "label": "/bin/sh",
+            "phase": "closed_unknown",
+            "recovery_event": 4.0,
+            "result_event": -1.0,
+            "session": "native-0",
+            "through": 1.0
+          },
+          {
+            "id": "native-0-run-0",
+            "input_event": 0.0,
+            "kind": "coding",
+            "label": "NativeCoding",
+            "phase": "closed_unknown",
+            "recovery_event": 5.0,
+            "result_event": -1.0,
+            "session": "native-0",
+            "through": 0.0
+          },
+          {
+            "id": "native-0-run-1",
+            "input_event": 1.0,
+            "kind": "command",
+            "label": "/bin/sh",
+            "phase": "closed_unknown",
+            "recovery_event": 4.0,
+            "result_event": -1.0,
+            "session": "native-0",
+            "through": 1.0
+          },
+          {
+            "id": "native-0-run-2",
+            "input_event": 6.0,
+            "kind": "coding",
+            "label": "NativeCoding",
+            "phase": "completed",
+            "recovery_event": -1.0,
+            "result_event": 7.0,
+            "session": "native-0",
+            "through": 6.0
+          }
+        ],
+        "approval_audit": []
+      }
+    },
+    "saved_and_incomplete_results": {
+      "command": "python3 tests/native_receipt_probe.py",
+      "exit_code": 0,
+      "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-receipt-ycqk2q54",
+      "modes": [
+        "seed",
+        "settle",
+        "seed-incomplete",
+        "settle-incomplete"
+      ],
+      "incomplete_mode": "controlled ResultPublication stops after real slot reservation and returned persistence, before archive completion; next process retains it as unknown",
+      "real_project_execution_claimed": false,
+      "model_requests": 0,
+      "fixture_dependency_inventory_updated": true,
+      "log_identities": {
+        "seed": {
+          "stdout_sha256": "f50bd75cd905df0fa2067b1dbb58b7a9c79a67b353f67f9233266ba364332bc9",
+          "stderr_sha256": "a9a6830b570a9400107307aa6e31e9002dbb442351c9e1b0d76a08244b7fff20"
+        },
+        "settle": {
+          "stdout_sha256": "e0f8e7b14c5c82aadc27f2daa8a5c617ffb19e3644c37e11cdf453481dc1b3d6",
+          "stderr_sha256": "e137a15d669ffae6756053d71cf9ef3a6880fac50f716cb08b7e4878f4424b60"
+        },
+        "seed-incomplete": {
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stderr_sha256": "e36be9e72ff9a7b78c80818321e0a93dedf664e7766102aba188daed4923b2de"
+        },
+        "settle-incomplete": {
+          "stdout_sha256": "6ee00b756681fd544472d38141c1e39747c4fcf18e3b4cf6d46dfa43c7be68c1",
+          "stderr_sha256": "fd3dd5c4dde963ecdecbd9e8e41fdf6d7e99e0ae5c15e931d3b67bed190f3862"
+        }
+      }
+    }
+  },
+  "old_source_restore": {
+    "result": {
+      "status": "passed",
+      "source_baseline": "6638a37",
+      "seed": {
+        "source_baseline": "6638a37",
+        "source_configuration_evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-configuration-joyvj7rn",
+        "workspace": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-configuration-joyvj7rn/project",
+        "restored_evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-execution-restore-4maj33h9",
+        "expected_runs": [
+          {
+            "id": "native-0-run-0",
+            "input_event": 1.0,
+            "kind": "observation",
+            "label": "project_configuration",
+            "phase": "completed",
+            "recovery_event": -1.0,
+            "result_event": 2.0,
+            "session": "native-0",
+            "through": 1.0
+          },
+          {
+            "id": "native-0-run-1",
+            "input_event": 3.0,
+            "kind": "observation",
+            "label": "configuration_entries",
+            "phase": "completed",
+            "recovery_event": -1.0,
+            "result_event": 4.0,
+            "session": "native-0",
+            "through": 3.0
+          },
+          {
+            "id": "native-0-run-2",
+            "input_event": 0.0,
+            "kind": "coding",
+            "label": "NativeCoding",
+            "phase": "completed",
+            "recovery_event": -1.0,
+            "result_event": 9.0,
+            "session": "native-0",
+            "through": 4.0
+          },
+          {
+            "id": "native-0-run-3",
+            "input_event": 5.0,
+            "kind": "observation",
+            "label": "find_files",
+            "phase": "completed",
+            "recovery_event": -1.0,
+            "result_event": 6.0,
+            "session": "native-0",
+            "through": 5.0
+          },
+          {
+            "id": "native-0-run-4",
+            "input_event": 7.0,
+            "kind": "command",
+            "label": "/usr/bin/python3",
+            "phase": "completed",
+            "recovery_event": -1.0,
+            "result_event": 8.0,
+            "session": "native-0",
+            "through": 7.0
+          },
+          {
+            "id": "native-0-run-5",
+            "input_event": 9.0,
+            "kind": "summary",
+            "label": "CompactHistory",
+            "phase": "completed",
+            "recovery_event": -1.0,
+            "result_event": 10.0,
+            "session": "native-0",
+            "through": 7.0
+          },
+          {
+            "id": "native-0-run-6",
+            "input_event": 11.0,
+            "kind": "coding",
+            "label": "NativeCoding",
+            "phase": "completed",
+            "recovery_event": -1.0,
+            "result_event": 12.0,
+            "session": "native-0",
+            "through": 11.0
+          },
+          {
+            "id": "native-0-run-7",
+            "input_event": 13.0,
+            "kind": "observation",
+            "label": "project_configuration",
+            "phase": "completed",
+            "recovery_event": -1.0,
+            "result_event": 14.0,
+            "session": "native-0",
+            "through": 13.0
+          },
+          {
+            "id": "native-0-run-8",
+            "input_event": 15.0,
+            "kind": "observation",
+            "label": "configuration_entries",
+            "phase": "completed",
+            "recovery_event": -1.0,
+            "result_event": 16.0,
+            "session": "native-0",
+            "through": 15.0
+          }
+        ],
+        "database_sha256_before": "9287840b530b572aaa748900f7d984f58121903653016b911fe6fecb2952e77a"
+      },
+      "exit_code": 0,
+      "runs": [
+        {
+          "id": "native-0-run-0",
+          "input_event": 1.0,
+          "kind": "observation",
+          "label": "project_configuration",
+          "phase": "completed",
+          "recovery_event": -1.0,
+          "result_event": 2.0,
+          "session": "native-0",
+          "through": 1.0
+        },
+        {
+          "id": "native-0-run-1",
+          "input_event": 3.0,
+          "kind": "observation",
+          "label": "configuration_entries",
+          "phase": "completed",
+          "recovery_event": -1.0,
+          "result_event": 4.0,
+          "session": "native-0",
+          "through": 3.0
+        },
+        {
+          "id": "native-0-run-2",
+          "input_event": 0.0,
+          "kind": "coding",
+          "label": "NativeCoding",
+          "phase": "completed",
+          "recovery_event": -1.0,
+          "result_event": 9.0,
+          "session": "native-0",
+          "through": 4.0
+        },
+        {
+          "id": "native-0-run-3",
+          "input_event": 5.0,
+          "kind": "observation",
+          "label": "find_files",
+          "phase": "completed",
+          "recovery_event": -1.0,
+          "result_event": 6.0,
+          "session": "native-0",
+          "through": 5.0
+        },
+        {
+          "id": "native-0-run-4",
+          "input_event": 7.0,
+          "kind": "command",
+          "label": "/usr/bin/python3",
+          "phase": "completed",
+          "recovery_event": -1.0,
+          "result_event": 8.0,
+          "session": "native-0",
+          "through": 7.0
+        },
+        {
+          "id": "native-0-run-5",
+          "input_event": 9.0,
+          "kind": "summary",
+          "label": "CompactHistory",
+          "phase": "completed",
+          "recovery_event": -1.0,
+          "result_event": 10.0,
+          "session": "native-0",
+          "through": 7.0
+        },
+        {
+          "id": "native-0-run-6",
+          "input_event": 11.0,
+          "kind": "coding",
+          "label": "NativeCoding",
+          "phase": "completed",
+          "recovery_event": -1.0,
+          "result_event": 12.0,
+          "session": "native-0",
+          "through": 11.0
+        },
+        {
+          "id": "native-0-run-7",
+          "input_event": 13.0,
+          "kind": "observation",
+          "label": "project_configuration",
+          "phase": "completed",
+          "recovery_event": -1.0,
+          "result_event": 14.0,
+          "session": "native-0",
+          "through": 13.0
+        },
+        {
+          "id": "native-0-run-8",
+          "input_event": 15.0,
+          "kind": "observation",
+          "label": "configuration_entries",
+          "phase": "completed",
+          "recovery_event": -1.0,
+          "result_event": 16.0,
+          "session": "native-0",
+          "through": 15.0
+        }
+      ],
+      "session": {
+        "first_user": 0.0,
+        "id": "native-0",
+        "ledger": {
+          "compactions": 1.0,
+          "context_bytes": 1219.0,
+          "generation_allowance": 294912.0,
+          "tools": 6.0,
+          "turns": 2.0
+        },
+        "next_event": 17.0,
+        "pending": "",
+        "summary_event": 10.0,
+        "summary_through": 7.0,
+        "title": "New conversation",
+        "workspace": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-configuration-joyvj7rn/project"
+      },
+      "configuration": {
+        "command_timeout_active": false,
+        "context_window_is_estimate": true,
+        "effective_context_window": 1048576.0,
+        "inference_token_allowance": 536870912.0,
+        "requested": {
+          "check": [],
+          "command_timeout": 600.0,
+          "compact_ratio": 0.75,
+          "context_window": 1048576.0,
+          "ignore": [],
+          "instructions": [
+            "Updated configured style."
+          ],
+          "keep_messages": 12.0,
+          "max_output_tokens": 131072.0
+        },
+        "runtime_output_tokens": 131072.0,
+        "summary_token_allowance": 1048576.0
+      },
+      "command_dispatches": 0,
+      "approval_audit": [],
+      "model_requests_expected": 0
+    },
+    "exact_saved_attempts_compared": 9,
+    "original_seed_unchanged": true,
+    "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-execution-restore-4maj33h9",
+    "cross_compiler_upgrade_verified": false
+  },
+  "model_service": "local synthetic HTTP only; 7 requests across the two model-backed scenarios",
+  "runtime_size_impact": {
+    "source_sloc_delta": 103,
+    "runtime_script_delta": 0,
+    "inclusive_Core_delta": 103,
+    "inclusive_Core_total_audit": "pending DIP-13; changed-slice delta only"
+  },
+  "source_sha256": {
+    "src/nomo/adapters/etas/conversations.es": "8ed7b7106017336e32a75adcd876e928b9677554c64108609452183f2a639f8a",
+    "src/nomo/application/native/conversation/ports.es": "90039a09dc19afb4c9d633a02324fbfffd433b4b2d4f4a47e145ea08f5d8b2bf",
+    "src/nomo/native/context.es": "4de680d2e9ade1f93719bfc75078dacdca946606f84f5f6c1a2d29d4dc92daa7",
+    "src/nomo/native/entry.es": "3ab5ffd8e6ea0ae00dee7dd25bebe8bd1a6c7ec4cbee1a89a0c38988fa90579d",
+    "src/nomo/native/lifecycle.es": "9cbc6c2efc567c3a0d6efafca68868856055efa79bae7d989e37e29f22b793ae",
+    "src/nomo/native/processes.es": "f28f59aedd44fdb9221a88b56bccd3f948428e62e6696354c39c9138bb8bcc59",
+    "src/nomo/native/transfer.es": "ab86d34495d23e6841617c04f9f62ca6b49e968d4b81a18ebe89b6ad73a64748",
+    "src/nomo/native/workspace.es": "a04235f19a42f8f3c1247011a23fe00bbb36aad154a0cc816a66eadbc50c1694",
+    "src/nomo/domain/execution/transitions.es": "12f0694d1db6cf3ee508e405f3dcb7062258d7f2ee78dbbe434e06fdf10fca89",
+    "src/nomo/application/native/execution/ports.es": "c1a9cc803574401f6f9bcf2d2c6d38fc1a25de7204a82813bef0da00bcc45682",
+    "src/nomo/application/native/execution/service.es": "2b79dd19c4d1841e96f353fb4c9a5cdbb705ac53ac37c15876ba1982e7c86efa",
+    "src/nomo/adapters/etas/attempts.es": "de5a5f078315437bb84f6b1781d3b7e0cb6ba72a7ed66f539e137b62e531e2d8",
+    "src/nomo/bootstrap/execution.es": "809411869b344d9a0cf7b4246ea3a4ee42451d7bb8ba29e7c195b89be6593342"
+  },
+  "target_candidate": {
+    "path": "examples/native-project/candidates/language-migration-0224-20261125.patch",
+    "sha256": "d8644204aa0c6ef5b870490d8bc3b7bdd8069e81ca0663bf405f6e0200e68acd",
+    "agent_declarations": 72,
+    "instance_references": 77,
+    "bounded_loops": 248,
+    "loop_files": 96,
+    "changed_files": 109,
+    "apply_check_exit_code": 0,
+    "compiler_acceptance": false
+  },
+  "remaining": [
+    "DIP-02 target compiler compatibility and required end-to-end acceptance",
+    "DIP-03 remaining views and acquisition ports",
+    "DIP-04 remaining concrete policy dependencies and full conversation composition",
+    "DIP-06 model/context effects and complete per-turn bootstrap",
+    "DIP-07 through DIP-13"
+  ]
+}

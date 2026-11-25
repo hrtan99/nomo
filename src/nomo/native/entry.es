@@ -11,14 +11,14 @@ import std.fs.{ReadLimitError, IOError as FileError};
 import nomo.core.json.encode;
 import nomo.native.options.parse;
 import nomo.native.history.{SessionContext, Session};
-import nomo.adapters.etas.conversations.{NativeHistory, reserve_generation, rename, read_message as message, fork, copy_status, copy_jobs, copy_job, resume_fork, discard_copy};
-import nomo.application.native.conversation.ports.{ConversationReader, ConversationWriter, ConversationCatalog};
+import nomo.adapters.etas.conversations.{NativeHistory, rename, read_message as message, fork, copy_status, copy_jobs, copy_job, resume_fork, discard_copy};
+import nomo.application.native.conversation.ports.{ConversationReader, ConversationWriter, ConversationCatalog, GenerationReservation};
 import nomo.native.context.{RollingContext, ContextProjection, build as build_context, compact};
 import nomo.native.transfer.{save_archive, load_archive, resume_import};
 import nomo.native.mutations.{journals, undo_changes, rollback_changes, reconcile_changes};
 import nomo.native.files.read_file;
 import nomo.native.navigation.{find_files, search_project};
-import nomo.native.lifecycle.{attempts, begin, dispatching, returned, complete_attempt, resolve};
+import nomo.bootstrap.execution.{attempts, begin, dispatching, returned, complete_attempt, resolve};
 import nomo.domain.configuration.settings.{Settings, effective_window, as_number, estimated_tokens};
 import nomo.native.configuration.{SettingsContext, load as load_configuration, status as configuration_status};
 import nomo.native.terminal.check_project;
@@ -145,14 +145,14 @@ flow ask(session: string, request: string) -> bool {
     var input = build_context(archive, session, request, settings);
     if projection.needs_compaction(input) {
         println("[CONTEXT] Summarizing; complete original history stays saved.");
-        compact(archive, session, settings);
+        compact(archive, archive, session, settings);
         input = build_context(archive, session, request, settings);
     }
     if estimated_tokens(projection.bytes(input)) > as_number(effective_window(settings) - settings.max_output_tokens) {
         println("[CONTEXT] Saved summary and retained input still exceed the configured context estimate. No coding model request was submitted; complete original history remains saved.");
         return false;
     }
-    reserve_generation(session, false, projection.bytes(input));
+    archive.reserve(session, false, projection.bytes(input));
     let attempt = begin(session, "coding", "NativeCoding", request_event, archive.load(session).next_event - 1);
     dispatching(attempt.id);
     let answer = handle { NativeCoding.run(input) } with {
@@ -338,7 +338,7 @@ public flow run(args: Array<string>) -> i32
         if request == "/compact" {
             if ready_for_turn(selected.id) {
                 let settings = load_settings(selected.id);
-                if generation_supported(settings) { compact(archive, selected.id, settings); println("[CONTEXT] Summary saved; full original events retained."); }
+                if generation_supported(settings) { compact(archive, archive, selected.id, settings); println("[CONTEXT] Summary saved; full original events retained."); }
             }
             continue;
         }

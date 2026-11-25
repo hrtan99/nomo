@@ -3,10 +3,9 @@ module nomo.native.context;
 import std.text.len as text_bytes;
 import nomo.core.json.encode;
 import nomo.domain.conversation.messages.ChatMessage;
-import nomo.adapters.etas.conversations.reserve_generation;
-import nomo.application.native.conversation.ports.ConversationReader;
+import nomo.application.native.conversation.ports.{ConversationReader, GenerationReservation};
 import nomo.native.processes.jobs;
-import nomo.native.lifecycle.{attempts, begin, dispatching, returned, complete_attempt};
+import nomo.bootstrap.execution.{attempts, begin, dispatching, returned, complete_attempt};
 import nomo.native.agent.Turn;
 import nomo.native.project.load_instructions;
 import nomo.native.workspace.ProjectRoot;
@@ -64,11 +63,11 @@ agent CompactHistory(input: Turn) -> Summary {
         .data(input));
 }
 
-public flow compact<R ~ ConversationReader>(archive: R, session: string, settings: Settings) -> unit ![Agentic, Memory, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>] {
+public flow compact<R ~ ConversationReader, G ~ GenerationReservation>(archive: R, generation: G, session: string, settings: Settings) -> unit ![Agentic, Memory, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>] {
     let projection = RollingContext {};
     let before = archive.load(session);
     let input = build(archive, session, "", settings);
-    reserve_generation(session, true, projection.bytes(input));
+    generation.reserve(session, true, projection.bytes(input));
     // Retain a recent suffix that fits its projection budget. A large event
     // stays complete in the archive and is represented here by the summary.
     var index = before.next_event - 1;

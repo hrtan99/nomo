@@ -14,7 +14,11 @@ def main():
     (package / '.etas').mkdir()
     state.mkdir(mode=0o777)
     state.chmod(0o777)
-    for name in ('src/nomo/native/history.es', 'src/nomo/native/lifecycle.es', 'src/nomo/core/json.es'):
+    for name in ('src/nomo/native/history.es', 'src/nomo/native/lifecycle.es', 'src/nomo/core/json.es',
+                 'src/nomo/domain/conversation/messages.es', 'src/nomo/domain/execution/transitions.es',
+                 'src/nomo/application/native/conversation/ports.es', 'src/nomo/application/native/execution/ports.es',
+                 'src/nomo/application/native/execution/service.es', 'src/nomo/adapters/etas/conversations.es',
+                 'src/nomo/adapters/etas/attempts.es', 'src/nomo/bootstrap/execution.es'):
         target = package / name
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes((ROOT / name).read_bytes())
@@ -52,12 +56,18 @@ flow = "main"
     command += ['run', '--rm', '--no-deps', '--pull', 'never', '--tty=false', 'dev',
                 '/home/nomo/.cargo/bin/etas', 'run', '/workspace', '--allow-effects', '--args']
     print('EVIDENCE ' + str(evidence), flush=True)
-    for mode in ('seed', 'settle'):
+    outputs = {}
+    for mode in ('seed', 'settle', 'seed-incomplete', 'settle-incomplete'):
         result = subprocess.run(command + [mode], cwd=ROOT, capture_output=True, text=True)
         (evidence / (mode + '-stdout.txt')).write_text(result.stdout)
         (evidence / (mode + '-stderr.txt')).write_text(result.stderr)
-        assert result.returncode == 0, result.stdout + result.stderr
-    assert 'SETTLED original result retained' in result.stdout
+        outputs[mode] = result.stdout
+        if mode == 'seed-incomplete':
+            assert result.returncode != 0 and 'fixture interrupted before result archive completion' in result.stdout + result.stderr
+        else:
+            assert result.returncode == 0, result.stdout + result.stderr
+    assert 'SETTLED original result retained' in outputs['settle']
+    assert 'INCOMPLETE reserved result retained as unknown' in outputs['settle-incomplete']
     print('PASS native result publication + new-process pending cleanup: ' + str(evidence))
 
 

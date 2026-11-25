@@ -11,7 +11,8 @@ import nomo.native.workspace.ProjectRoot;
 import nomo.native.history.{SessionContext};
 import nomo.adapters.etas.conversations.{NativeHistory, record, observe_started, observe_finished};
 import nomo.application.native.conversation.ports.{ConversationReader};
-import nomo.native.lifecycle.{Attempt, begin, dispatching, returned, complete_attempt};
+import nomo.native.lifecycle.Attempt;
+import nomo.bootstrap.execution.{begin, dispatching, returned, complete_attempt};
 
 // phase is the last recorded Host observation, not a claim of current liveness.
 public type Job = { id: string, session: string, program: string, arguments: Array<string>, handle: string, phase: string };

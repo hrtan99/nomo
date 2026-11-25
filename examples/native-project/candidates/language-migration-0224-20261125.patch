@@ -1,7 +1,22 @@
+diff --git a/src/nomo/adapters/etas/attempts.es b/src/nomo/adapters/etas/attempts.es
+--- a/src/nomo/adapters/etas/attempts.es
++++ b/src/nomo/adapters/etas/attempts.es
+@@ -15,9 +15,9 @@
+     flow list(self, session: string, unresolved: bool) -> Array<Attempt> ![Memory, Error<StorageError>] {
+         var result: Array<Attempt> = [];
+         var cursor: Option<MemoryCursor> = None();
+-        while true limit Iterations(2147483647) {
++        @limits([Iterations(2147483647)]) while true  {
+             let page = Data.Attempts.page(cursor, 100);
+-            for item in page.entries limit Iterations(2147483647) {
++            @limits([Iterations(2147483647)]) for item in page.entries  {
+                 let value = item.value;
+                 if value.session == session && (!unresolved || is_unresolved(value)) {
+                     result = result.push(value);
 diff --git a/src/nomo/adapters/etas/conversations.es b/src/nomo/adapters/etas/conversations.es
 --- a/src/nomo/adapters/etas/conversations.es
 +++ b/src/nomo/adapters/etas/conversations.es
-@@ -58,7 +58,7 @@
+@@ -76,7 +76,7 @@
          let session = self.load(id);
          var result: Array<ChatMessage> = [];
          var index = after;
@@ -10,7 +25,7 @@ diff --git a/src/nomo/adapters/etas/conversations.es b/src/nomo/adapters/etas/co
              result = result.push(read_message(id, index));
              index = index + 1;
          }
-@@ -94,9 +94,9 @@
+@@ -112,9 +112,9 @@
      flow sessions(self, workspace: string) -> Array<Session> {
          var result: Array<Session> = [];
          var cursor: Option<MemoryCursor> = None();
@@ -22,7 +37,7 @@ diff --git a/src/nomo/adapters/etas/conversations.es b/src/nomo/adapters/etas/co
                  if item.value.workspace == workspace { result = result.push(item.value); }
              }
              match page.cursor { Some(value) => { cursor = Some(value); } None() => { break; } }
-@@ -128,7 +128,7 @@
+@@ -146,7 +146,7 @@
      var offset: usize = 0;
      var parts: usize = 0;
      let total = char_count(text);
@@ -31,7 +46,7 @@ diff --git a/src/nomo/adapters/etas/conversations.es b/src/nomo/adapters/etas/co
          let end = if total - offset > 65536 { offset + 65536 } else { total };
          let part = match get_char_slice(text, Range.closed(offset, end - 1)) {
              Some(value) => value, None() => { abort("native archive chunk range is invalid"); }
-@@ -164,7 +164,7 @@
+@@ -182,7 +182,7 @@
      }
      var text = "";
      var part: usize = 0;
@@ -40,7 +55,7 @@ diff --git a/src/nomo/adapters/etas/conversations.es b/src/nomo/adapters/etas/co
          text = text + match Data.Chunks.get(event_key + ":" + from_usize(part)) {
              Some(value) => value, None() => { abort("native archive content chunk is missing"); }
          };
-@@ -227,7 +227,7 @@
+@@ -245,7 +245,7 @@
      let current = entry(id).value;
      var index = call + 1;
      var published = false;
@@ -49,7 +64,7 @@ diff --git a/src/nomo/adapters/etas/conversations.es b/src/nomo/adapters/etas/co
          match Data.Events.get(key(id, index)) {
              Some(event) => { if event.complete && event.role == "tool" && event.name == name && event.call == call { published = true; break; } }
              None() => {}
-@@ -304,9 +304,9 @@
+@@ -322,9 +322,9 @@
  public flow copy_jobs(workspace: string) -> Array<CopyJob> ![Memory, Error<StorageError>] {
      var jobs: Array<CopyJob> = [];
      var cursor: Option<MemoryCursor> = None();
@@ -61,7 +76,7 @@ diff --git a/src/nomo/adapters/etas/conversations.es b/src/nomo/adapters/etas/co
              if item.value.workspace == workspace { jobs = jobs.push(item.value); }
          }
          match page.cursor { Some(value) => { cursor = Some(value); } None() => { break; } }
-@@ -379,7 +379,7 @@
+@@ -397,7 +397,7 @@
      if job.phase == "ready" { return archive.select(job.workspace, id); }
      if job.phase != "copying" { abort("conversation copy source is not sealed"); }
      var index: i64 = 0;
@@ -70,7 +85,7 @@ diff --git a/src/nomo/adapters/etas/conversations.es b/src/nomo/adapters/etas/co
          if index >= job.cursor {
              copy_event(id, index + 1, item.role, item.name, item.text);
              advance_copy(id, index + 1, "copying");
-@@ -422,7 +422,7 @@
+@@ -440,7 +440,7 @@
      var events: Array<ChatMessage> = [];
      var index: i64 = 0;
      var summary = "";
@@ -381,6 +396,18 @@ diff --git a/src/nomo/agent/stub_loop_controller.es b/src/nomo/agent/stub_loop_c
          if state.spent >= budget { return failure(state, "invocation step budget exhausted", 4); }
          used = used + 1;
          state = charge(state);
+diff --git a/src/nomo/application/native/execution/service.es b/src/nomo/application/native/execution/service.es
+--- a/src/nomo/application/native/execution/service.es
++++ b/src/nomo/application/native/execution/service.es
+@@ -7,7 +7,7 @@
+ import nomo.application.native.conversation.ports.{ConversationReader, ConversationWriter, ResultPublication};
+ 
+ public flow turn_available<R ~ AttemptRepository>(repository: R, session: string) -> unit ![Memory, Error<StorageError>] {
+-    for value in repository.list(session, true) limit Iterations(2147483647) {
++    @limits([Iterations(2147483647)]) for value in repository.list(session, true)  {
+         if value.kind == "coding" || value.kind == "summary" {
+             abort("inference has no recorded completion: " + value.id + "; inspect /runs, then /resolve-run ID NOTE before starting a new turn");
+         }
 diff --git a/src/nomo/bootstrap/legacy_status.es b/src/nomo/bootstrap/legacy_status.es
 --- a/src/nomo/bootstrap/legacy_status.es
 +++ b/src/nomo/bootstrap/legacy_status.es
@@ -1933,7 +1960,7 @@ diff --git a/src/nomo/native/configuration.es b/src/nomo/native/configuration.es
 diff --git a/src/nomo/native/context.es b/src/nomo/native/context.es
 --- a/src/nomo/native/context.es
 +++ b/src/nomo/native/context.es
-@@ -28,11 +28,11 @@
+@@ -27,11 +27,11 @@
      let summary = if value.summary_event >= 0 { archive.message(session, value.summary_event).text } else { "" };
      let history = archive.messages(session, value.summary_through + 1);
      var projected: Array<ChatMessage> = [];
@@ -1947,7 +1974,7 @@ diff --git a/src/nomo/native/context.es b/src/nomo/native/context.es
          instructions = instructions.push(ProjectInstruction { scope = ".", path = ".nomo.toml", text = text });
      }
      return Turn { session = session, workspace = value.workspace, initial_request = initial,
-@@ -58,10 +58,14 @@
+@@ -57,10 +57,14 @@
  
  type Summary = { text: string };
  @limits([Tokens(32768), ContextTokens(1048576)])
@@ -1965,8 +1992,8 @@ diff --git a/src/nomo/native/context.es b/src/nomo/native/context.es
 +    }
  }
  
- public flow compact<R ~ ConversationReader>(archive: R, session: string, settings: Settings) -> unit ![Agentic, Memory, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>] {
-@@ -76,7 +80,7 @@
+ public flow compact<R ~ ConversationReader, G ~ GenerationReservation>(archive: R, generation: G, session: string, settings: Settings) -> unit ![Agentic, Memory, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>] {
+@@ -75,7 +79,7 @@
      var retained: usize = 0;
      var count: i64 = 0;
      let allowance = recent_bytes(settings);
@@ -1975,7 +2002,7 @@ diff --git a/src/nomo/native/context.es b/src/nomo/native/context.es
          let bytes = text_bytes(archive.message(session, index).text);
          if bytes > allowance - retained { break; }
          retained = retained + bytes;
-@@ -87,7 +91,7 @@
+@@ -86,7 +90,7 @@
      let through = first - 1;
      let attempt = begin(session, "summary", "CompactHistory", before.next_event - 1, through);
      dispatching(attempt.id);
@@ -2024,7 +2051,7 @@ diff --git a/src/nomo/native/entry.es b/src/nomo/native/entry.es
      }
  }
 @@ -155,7 +155,7 @@
-     reserve_generation(session, false, projection.bytes(input));
+     archive.reserve(session, false, projection.bytes(input));
      let attempt = begin(session, "coding", "NativeCoding", request_event, archive.load(session).next_event - 1);
      dispatching(attempt.id);
 -    let answer = handle { NativeCoding.run(input) } with {
@@ -2115,30 +2142,6 @@ diff --git a/src/nomo/native/git.es b/src/nomo/native/git.es
          let staged = execute("/usr/bin/git", arguments);
          if staged.exit_code != 0 { return staged; }
      }
-diff --git a/src/nomo/native/lifecycle.es b/src/nomo/native/lifecycle.es
---- a/src/nomo/native/lifecycle.es
-+++ b/src/nomo/native/lifecycle.es
-@@ -14,9 +14,9 @@
- public flow attempts(session: string, unresolved: bool) -> Array<Attempt> ![Memory, Error<StorageError>] {
-     var result: Array<Attempt> = [];
-     var cursor: Option<MemoryCursor> = None();
--    while true limit Iterations(2147483647) {
-+    @limits([Iterations(2147483647)]) while true  {
-         let page = Data.Attempts.page(cursor, 100);
--        for item in page.entries limit Iterations(2147483647) {
-+        @limits([Iterations(2147483647)]) for item in page.entries  {
-             let value = item.value;
-             if value.session == session && (!unresolved || (value.phase != "completed" && value.phase != "closed_unknown")) {
-                 result = result.push(value);
-@@ -28,7 +28,7 @@
- }
- 
- public flow turn_available(session: string) -> unit ![Memory, Error<StorageError>] {
--    for value in attempts(session, true) limit Iterations(2147483647) {
-+    @limits([Iterations(2147483647)]) for value in attempts(session, true)  {
-         if value.kind == "coding" || value.kind == "summary" {
-             abort("inference has no recorded completion: " + value.id + "; inspect /runs, then /resolve-run ID NOTE before starting a new turn");
-         }
 diff --git a/src/nomo/native/mutations.es b/src/nomo/native/mutations.es
 --- a/src/nomo/native/mutations.es
 +++ b/src/nomo/native/mutations.es
@@ -2279,7 +2282,7 @@ diff --git a/src/nomo/native/options.es b/src/nomo/native/options.es
 diff --git a/src/nomo/native/processes.es b/src/nomo/native/processes.es
 --- a/src/nomo/native/processes.es
 +++ b/src/nomo/native/processes.es
-@@ -144,9 +144,9 @@
+@@ -145,9 +145,9 @@
  public flow jobs(session: string) -> Array<Job> ![Memory, Error<StorageError>] {
      var result: Array<Job> = [];
      var cursor: Option<MemoryCursor> = None();
@@ -2291,7 +2294,7 @@ diff --git a/src/nomo/native/processes.es b/src/nomo/native/processes.es
          match page.cursor { Some(value) => { cursor = Some(value); } None() => { break; } }
      }
      return result;
-@@ -163,7 +163,7 @@
+@@ -164,7 +164,7 @@
      let call = observe_started("job_output", job);
      let history = NativeHistory {};
      var result: Array<JobEvent> = [];
@@ -2360,7 +2363,7 @@ diff --git a/src/nomo/native/terminal.es b/src/nomo/native/terminal.es
 diff --git a/src/nomo/native/transfer.es b/src/nomo/native/transfer.es
 --- a/src/nomo/native/transfer.es
 +++ b/src/nomo/native/transfer.es
-@@ -65,7 +65,7 @@
+@@ -66,7 +66,7 @@
              let source = converted.body;
              if source.format != "nomo-native-conversation-1" { abort("unsupported native conversation format"); }
              var summary = "";
@@ -2369,7 +2372,7 @@ diff --git a/src/nomo/native/transfer.es b/src/nomo/native/transfer.es
              return Imported { title = source.session.title, events = source.events, summary = summary };
          }
          None() => {}
-@@ -74,7 +74,7 @@
+@@ -75,7 +75,7 @@
      let source = match legacy { Some(value) => value.body, None() => { abort("unsupported conversation archive shape"); } };
      if source.format != "nomo-conversation-1" { abort("unsupported conversation format"); }
      var events: Array<ChatMessage> = [];
@@ -2378,7 +2381,7 @@ diff --git a/src/nomo/native/transfer.es b/src/nomo/native/transfer.es
          events = events.push(ChatMessage { id = "", role = item.role, name = item.name, text = item.content });
      }
      return Imported { title = source.session.title, events = events, summary = source.session.summary };
-@@ -97,7 +97,7 @@
+@@ -98,7 +98,7 @@
      let raw = read_archive(pathname);
      let source = decode(raw);
      var total: i64 = 0;

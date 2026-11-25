@@ -245,7 +245,9 @@
       "path": "examples/native-project/candidates/language-migration-0224-20261125-baseline-a3450bc.patch",
       "sha256": "4ed6e680bf54968d44237f95f825eab070fa01d69603125af9908df37f7b91d9"
     },
-    "compiler_acceptance": false
+    "compiler_acceptance": false,
+    "source_git_revision": "8adbb846bf372dbe8a96183cf43cd37a20c9c8d6",
+    "snapshot_url": "https://github.com/hrtan99/nomo/blob/8adbb846bf372dbe8a96183cf43cd37a20c9c8d6/examples/native-project/candidates/language-migration-0224-20261125.patch"
   },
   "remaining": [
     "DIP-02 target compiler compatibility and end-to-end acceptance",

@@ -1,15 +1,19 @@
 {
   "status": "prepared_not_target_compiler_accepted",
-  "source_baseline": "6638a37 plus the conversation-port extraction identified by source hashes",
+  "source_baseline": "8adbb84 plus the execution-port extraction identified by source hashes",
   "agent_declarations": 72,
   "instance_references": 77,
   "bounded_loops": 248,
-  "loop_files": 95,
-  "changed_files": 108,
+  "loop_files": 96,
+  "changed_files": 109,
   "source_files": {
+    "src/nomo/adapters/etas/attempts.es": {
+      "before_sha256": "de5a5f078315437bb84f6b1781d3b7e0cb6ba72a7ed66f539e137b62e531e2d8",
+      "candidate_sha256": "47afcf58a7a5bac436e87473173e5e4e19651620da584f0d4d3e9e123420a713"
+    },
     "src/nomo/adapters/etas/conversations.es": {
-      "before_sha256": "dd1bbac65f228aa151a66c433ce1d2acca010536abb9c199805e4df2aadeb754",
-      "candidate_sha256": "477dc3a8dec56611062b6f0c191254d620176cdc5d6922664396a448da366dad"
+      "before_sha256": "8ed7b7106017336e32a75adcd876e928b9677554c64108609452183f2a639f8a",
+      "candidate_sha256": "c883f6a417665b35018de6d02d366569123a57020976b7d337517c07f48954f8"
     },
     "src/nomo/agent/model_context.es": {
       "before_sha256": "27b4b8316eb207066107222e993a3f63e14595af285b9c34f1a9101f856f9ef7",
@@ -34,6 +38,10 @@
     "src/nomo/agent/stub_loop_controller.es": {
       "before_sha256": "d497eeee434782c478fb2e82c2537459d3e641922f1e066daeafb73ea1a22171",
       "candidate_sha256": "43861e9adb692fa4cf22f4120864130024a05ded00d84e4a04c45d6e9581539d"
+    },
+    "src/nomo/application/native/execution/service.es": {
+      "before_sha256": "2b79dd19c4d1841e96f353fb4c9a5cdbb705ac53ac37c15876ba1982e7c86efa",
+      "candidate_sha256": "7a87d9629546a1328d87ce32a18aae8c53db3ebdc7ad76fcc275db84a428c1fa"
     },
     "src/nomo/bootstrap/legacy_status.es": {
       "before_sha256": "8e5bbf9fe16cee09e2a1a62851fba55345e028e6e00133a9dbf44b81429d9558",
@@ -284,20 +292,16 @@
       "candidate_sha256": "ee5c3447b94b3c73dad1ed2b21ae061f03c398cc0bbf39e727921909e735ead3"
     },
     "src/nomo/native/context.es": {
-      "before_sha256": "222dc01fbcaa04c050e2561506a5ae80c83e8091adfd2b9f4098a83b09d2cd34",
-      "candidate_sha256": "a4adad207c0b938fa194819ef5518ba629378a87722dd6bc693710d509e972d8"
+      "before_sha256": "4de680d2e9ade1f93719bfc75078dacdca946606f84f5f6c1a2d29d4dc92daa7",
+      "candidate_sha256": "776275a42d1ed01a9677eb2da9eb39594dab00c5344ee6ff05478cf53dfc4fde"
     },
     "src/nomo/native/entry.es": {
-      "before_sha256": "e913ec3ad0cea4de59b376357b52668ec60bac4973155785aa84c9cc10898081",
-      "candidate_sha256": "f5d87d407ce170c78385da398f98705fa3c0807ef16f5d6535fea08d61c3c834"
+      "before_sha256": "3ab5ffd8e6ea0ae00dee7dd25bebe8bd1a6c7ec4cbee1a89a0c38988fa90579d",
+      "candidate_sha256": "7f74585b455f0b04991453ab262ba62e463216c0b37d5d988acbb3ab6fe4c638"
     },
     "src/nomo/native/git.es": {
       "before_sha256": "4aeff4cbc15695050a38aa430620c4fa9a0e48ce2b93531ce6ab37b7233358f7",
       "candidate_sha256": "d9b4ad9f529152d81747ce29ac80be371e3bd8a018846caa59dec8e8e7b31be6"
-    },
-    "src/nomo/native/lifecycle.es": {
-      "before_sha256": "48a1759330a60fb60c31b5d96d50f110c3866eca215841e933cb014ab138de8e",
-      "candidate_sha256": "50a43cd2585bc0c4488e101ac2388a286752821786f1b3a7e277f9069ec42517"
     },
     "src/nomo/native/mutations.es": {
       "before_sha256": "e6fe52d8d8ee3d9600977799fa86a2fd7f926376dfadf5aaeb3ed3609993e30a",
@@ -312,8 +316,8 @@
       "candidate_sha256": "58d038d2cbaa328b79ebdab265fe6d935d9308caae13d4880e6fde843bdf8723"
     },
     "src/nomo/native/processes.es": {
-      "before_sha256": "b0b72e986aa3537b740e48f8d9c9ef7aedb5e12ff9e6de4714cf0d98ef944597",
-      "candidate_sha256": "c1bb32921e847e34852f167370fc562c21dcdb73ce05b8844ebde132ffdf7440"
+      "before_sha256": "f28f59aedd44fdb9221a88b56bccd3f948428e62e6696354c39c9138bb8bcc59",
+      "candidate_sha256": "58fed2816f6d8dc48effbb834b1ec2e78742e3830ea0386bf0e6a58387067c76"
     },
     "src/nomo/native/project.es": {
       "before_sha256": "b3b2d44fc9dbe0975d974e86d18cb0cde66ef9104c706c864f6f34c409f2eaa1",
@@ -328,8 +332,8 @@
       "candidate_sha256": "59c772a0ea2a8b7cee627584dd5357013e4ac9612e656614d97fc012f4fa53c6"
     },
     "src/nomo/native/transfer.es": {
-      "before_sha256": "e9cf8568da9ad07ee715dad0e08521253ba6a7f3f8b4e3b1b0778143b149767b",
-      "candidate_sha256": "565318536d23a9cf1b6492b2c9f7c3b2eb1d6735d0fd30ca726ea6b43ea762a0"
+      "before_sha256": "ab86d34495d23e6841617c04f9f62ca6b49e968d4b81a18ebe89b6ad73a64748",
+      "candidate_sha256": "d5e1353aa7647b7cc6efaf07dac3377d10b9ac278e7757b2011aa9ee24e2cc4f"
     },
     "src/nomo/project/contracts.es": {
       "before_sha256": "3b690aece0e49678b8f30620a5cca99ef8b88ae91c01d6d123adc4c3f66e4fea",
@@ -441,6 +445,10 @@
     }
   },
   "loop_limit_expressions": {
+    "src/nomo/adapters/etas/attempts.es": [
+      "2147483647",
+      "2147483647"
+    ],
     "src/nomo/adapters/etas/conversations.es": [
       "2147483647",
       "2147483647",
@@ -465,6 +473,9 @@
     ],
     "src/nomo/agent/stub_loop_controller.es": [
       "16"
+    ],
+    "src/nomo/application/native/execution/service.es": [
+      "2147483647"
     ],
     "src/nomo/bootstrap/legacy_status.es": [
       "4"
@@ -683,11 +694,6 @@
       "2147483647",
       "2147483647"
     ],
-    "src/nomo/native/lifecycle.es": [
-      "2147483647",
-      "2147483647",
-      "2147483647"
-    ],
     "src/nomo/native/mutations.es": [
       "2147483647",
       "2147483647",
@@ -880,7 +886,7 @@
       "1048576"
     ]
   },
-  "patch_sha256": "2db8c57fa505786b2332eaf98d28d033db9d2aef6b53f4eddfb41d065a8b773d",
+  "patch_sha256": "d8644204aa0c6ef5b870490d8bc3b7bdd8069e81ca0663bf405f6e0200e68acd",
   "previous_executed_candidate": {
     "path": "examples/native-project/candidates/language-migration-0224-20261125-baseline-a3450bc.patch",
     "sha256": "4ed6e680bf54968d44237f95f825eab070fa01d69603125af9908df37f7b91d9"

@@ -8,7 +8,7 @@ import std.io.{println, IOError as ConsoleError};
 import nomo.domain.conversation.messages.ChatMessage;
 
 import nomo.native.history.{SessionContext, PendingRequest, CopyJob, Ledger, Session, Event};
-import nomo.application.native.conversation.ports.{ConversationReader, ConversationWriter, ConversationCatalog};
+import nomo.application.native.conversation.ports.{ConversationReader, ConversationWriter, ConversationCatalog, GenerationReservation, ResultPublication};
 
 alias Schema = MemoryRegion<{
     Counters: Store<string, i64>,
@@ -23,6 +23,24 @@ let Copies = std.memory.region<CopySchema>(stable_id = "nomo-native-conversation
 
 
 public type NativeHistory = {};
+
+impl NativeHistory ~ GenerationReservation {
+    flow reserve(self, id: string, compact: bool, context_bytes: usize) -> unit {
+        reserve_generation(id, compact, context_bytes);
+    }
+}
+
+impl NativeHistory ~ ResultPublication {
+    flow prepare_result(self, id: string, role: string, name: string, call: i64) -> i64 { return reserve_result(id, role, name, call); }
+    flow publish_result(self, id: string, index: i64, text: string) -> unit { complete_result(id, index, text); }
+    flow result_complete(self, id: string, index: i64) -> bool { return complete_event(id, index); }
+    flow select_summary(self, id: string, index: i64, through: i64) -> unit { adopt_summary(id, index, through); }
+    flow finish_command(self, id: string, call: i64) -> unit {
+        handle { tool_finished("command", call, "recorded result retained"); }
+            with { SessionContext.current() => { resume id; } };
+    }
+    flow acknowledge(self, id: string, call: i64, note: string) -> i64 { return acknowledge_command(id, call, note); }
+}
 
 flow entry(id: string) -> MemoryEntry<string, Session> {
     return match get_entry(Data.Sessions, id) {
