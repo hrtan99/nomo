@@ -190,7 +190,7 @@
     "src/nomo/domain/conversation/messages.es": "7ed8b8d97c4406986f3d6005dce9fb7ee23403213a2fd0823671fe77ad5edee4"
   },
   "candidate_0224": {
-    "patch": "examples/native-project/candidates/language-migration-0224-20261125.patch",
+    "patch": "examples/native-project/candidates/language-migration-0224-20261125-baseline-a3450bc.patch",
     "applies_after_this_slice": true,
     "upstream_issue": "https://github.com/etas-project/etas-frontend/issues/97",
     "target_graph_acceptance": false

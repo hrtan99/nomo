@@ -2,8 +2,9 @@ module nomo.native.lifecycle;
 
 import std.memory.{get_entry, MemoryCursor};
 import std.text.from_i64;
-import nomo.native.history.{SessionContext, NativeHistory, ConversationStore, reserve_result, complete_result,
-    complete_event, tool_finished, acknowledge_command, adopt_summary};
+import nomo.native.history.{SessionContext};
+import nomo.adapters.etas.conversations.{NativeHistory, reserve_result, complete_result, complete_event, tool_finished, acknowledge_command, adopt_summary};
+import nomo.application.native.conversation.ports.{ConversationReader, ConversationWriter};
 
 public type Attempt = { id: string, session: string, kind: string, label: string, phase: string,
     input_event: i64, through: i64, result_event: i64, recovery_event: i64 };

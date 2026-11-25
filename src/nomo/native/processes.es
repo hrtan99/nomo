@@ -8,7 +8,9 @@ import std.text.from_i64;
 import std.memory.MemoryCursor;
 import nomo.core.json.encode;
 import nomo.native.workspace.ProjectRoot;
-import nomo.native.history.{SessionContext, NativeHistory, ConversationStore, record, observe_started, observe_finished};
+import nomo.native.history.{SessionContext};
+import nomo.adapters.etas.conversations.{NativeHistory, record, observe_started, observe_finished};
+import nomo.application.native.conversation.ports.{ConversationReader};
 import nomo.native.lifecycle.{Attempt, begin, dispatching, returned, complete_attempt};
 
 // phase is the last recorded Host observation, not a claim of current liveness.

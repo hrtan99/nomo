@@ -7,7 +7,8 @@ import std.text.{lines, contains, from_i32};
 import std.io.IOError as ConsoleError;
 import nomo.native.workspace.{ProjectRoot, CommandOutput, execute_readonly};
 import nomo.native.files.read_text;
-import nomo.native.history.{SessionContext, observe_started, observe_finished};
+import nomo.native.history.{SessionContext};
+import nomo.adapters.etas.conversations.{observe_started, observe_finished};
 import nomo.native.configuration.SettingsContext;
 
 type Metadata = { is_file: bool, is_dir: bool, len: u64 };

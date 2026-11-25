@@ -11,7 +11,9 @@ import std.agent.message.Message;
 import nomo.core.json.encode;
 import nomo.native.workspace.{ProjectRoot, execute_step};
 import nomo.native.file_io.read_text;
-import nomo.native.history.{SessionContext, NativeHistory, ConversationStore, record, tool_finished, observe_started, observe_finished, pending_request, message, result_published};
+import nomo.native.history.{SessionContext};
+import nomo.adapters.etas.conversations.{NativeHistory, record, tool_finished, observe_started, observe_finished, pending_request, read_message as message, result_published};
+import nomo.application.native.conversation.ports.{ConversationReader};
 
 /// create/write/edit/mkdir/delete/move. edit uses target as a unique literal;
 /// move uses target as the destination. Unused target/text fields are empty.

@@ -5,7 +5,8 @@ import std.host.command.{command, with_cwd, with_stdin, run};
 import std.codec.text.{utf8_decode, utf8_encode, Replace};
 import std.io.{println, IOError};
 import nomo.core.json.encode;
-import nomo.native.history.{SessionContext, record, observe_started};
+import nomo.native.history.{SessionContext};
+import nomo.adapters.etas.conversations.{record, observe_started};
 import nomo.native.lifecycle.{begin, dispatching, returned, complete_attempt};
 
 public type ProjectRoot;

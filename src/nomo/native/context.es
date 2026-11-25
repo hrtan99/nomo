@@ -3,7 +3,8 @@ module nomo.native.context;
 import std.text.len as text_bytes;
 import nomo.core.json.encode;
 import nomo.domain.conversation.messages.ChatMessage;
-import nomo.native.history.{NativeHistory, ConversationStore, message, reserve_generation};
+import nomo.adapters.etas.conversations.reserve_generation;
+import nomo.application.native.conversation.ports.ConversationReader;
 import nomo.native.processes.jobs;
 import nomo.native.lifecycle.{attempts, begin, dispatching, returned, complete_attempt};
 import nomo.native.agent.Turn;
@@ -15,31 +16,31 @@ import nomo.domain.configuration.settings.{Settings, effective_window, as_number
 import nomo.domain.context.instructions.ProjectInstruction;
 
 public spec ContextProjection {
-    flow build(self, session: string, request: string, settings: Settings) -> Turn ![Memory, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Error<StorageError>, Error<FileError>, Error<ReadLimitError>];
     flow bytes(self, input: Turn) -> usize ![];
     flow needs_compaction(self, input: Turn) -> bool ![];
 }
 public type RollingContext = {};
 
-impl RollingContext ~ ContextProjection {
-    flow build(self, session: string, request: string, settings: Settings) -> Turn {
-        let archive = NativeHistory {};
-        let value = archive.load(session);
-        let initial = if value.first_user >= 0 { message(session, value.first_user).text } else { request };
-        let summary = if value.summary_event >= 0 { message(session, value.summary_event).text } else { "" };
-        let history = archive.messages(session, value.summary_through + 1);
-        var projected: Array<ChatMessage> = [];
-        for item in history limit Iterations(2147483647) {
-            if item.role != "summary" && item.role != "archive" { projected = projected.push(item); }
-        }
-        var instructions = load_instructions(".");
-        for text in settings.instructions limit Iterations(2147483647) {
-            instructions = instructions.push(ProjectInstruction { scope = ".", path = ".nomo.toml", text = text });
-        }
-        return Turn { session = session, workspace = value.workspace, initial_request = initial,
-            request = request, summary = summary, pending = value.pending, history = projected,
-            instructions = instructions, runs = attempts(session, true), settings = settings, jobs = jobs(session) };
+public flow build<R ~ ConversationReader>(archive: R, session: string, request: string, settings: Settings) -> Turn
+    ![Memory, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Error<StorageError>, Error<FileError>, Error<ReadLimitError>] {
+    let value = archive.load(session);
+    let initial = if value.first_user >= 0 { archive.message(session, value.first_user).text } else { request };
+    let summary = if value.summary_event >= 0 { archive.message(session, value.summary_event).text } else { "" };
+    let history = archive.messages(session, value.summary_through + 1);
+    var projected: Array<ChatMessage> = [];
+    for item in history limit Iterations(2147483647) {
+        if item.role != "summary" && item.role != "archive" { projected = projected.push(item); }
     }
+    var instructions = load_instructions(".");
+    for text in settings.instructions limit Iterations(2147483647) {
+        instructions = instructions.push(ProjectInstruction { scope = ".", path = ".nomo.toml", text = text });
+    }
+    return Turn { session = session, workspace = value.workspace, initial_request = initial,
+        request = request, summary = summary, pending = value.pending, history = projected,
+        instructions = instructions, runs = attempts(session, true), settings = settings, jobs = jobs(session) };
+}
+
+impl RollingContext ~ ContextProjection {
     flow bytes(self, input: Turn) -> usize {
         let json = match encode(input, "context conversion failed", "context encoding failed") {
             Ok(value) => value, Err(error) => { abort(error); }
@@ -63,11 +64,10 @@ agent CompactHistory(input: Turn) -> Summary {
         .data(input));
 }
 
-public flow compact(session: string, settings: Settings) -> unit ![Agentic, Memory, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>] {
+public flow compact<R ~ ConversationReader>(archive: R, session: string, settings: Settings) -> unit ![Agentic, Memory, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>] {
     let projection = RollingContext {};
-    let archive = NativeHistory {};
     let before = archive.load(session);
-    let input = projection.build(session, "", settings);
+    let input = build(archive, session, "", settings);
     reserve_generation(session, true, projection.bytes(input));
     // Retain a recent suffix that fits its projection budget. A large event
     // stays complete in the archive and is represented here by the summary.
@@ -77,7 +77,7 @@ public flow compact(session: string, settings: Settings) -> unit ![Agentic, Memo
     var count: i64 = 0;
     let allowance = recent_bytes(settings);
     while index >= 0 && count < settings.keep_messages limit Iterations(2147483647) {
-        let bytes = text_bytes(message(session, index).text);
+        let bytes = text_bytes(archive.message(session, index).text);
         if bytes > allowance - retained { break; }
         retained = retained + bytes;
         first = index;

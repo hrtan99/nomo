@@ -56,7 +56,7 @@
       "src/nomo/project/planner.es",
       "src/nomo/native/entry.es"
     ],
-    "patch": "examples/native-project/candidates/language-migration-0224-20261125.patch",
+    "patch": "examples/native-project/candidates/language-migration-0224-20261125-baseline-a3450bc.patch",
     "patch_sha256": "4ed6e680bf54968d44237f95f825eab070fa01d69603125af9908df37f7b91d9",
     "agent_source_files_restored": true
   },

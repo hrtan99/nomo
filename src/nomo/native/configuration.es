@@ -10,7 +10,9 @@ import std.io.IOError as ConsoleError;
 public import nomo.domain.configuration.settings.{Settings, defaults, effective_window, as_number, estimated_tokens, recent_bytes};
 import nomo.domain.configuration.settings.validate;
 import nomo.native.workspace.{ProjectRoot, CommandOutput, execute_readonly_input};
-import nomo.native.history.{SessionContext, NativeHistory, ConversationStore, message};
+import nomo.native.history.{SessionContext};
+import nomo.adapters.etas.conversations.{NativeHistory, read_message as message};
+import nomo.application.native.conversation.ports.{ConversationReader};
 import nomo.native.file_io.read_text;
 
 public effect SettingsContext { action current() -> Settings; }

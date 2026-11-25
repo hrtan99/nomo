@@ -1,0 +1,890 @@
+{
+  "status": "prepared_not_target_compiler_accepted",
+  "source_baseline": "6638a37 plus the conversation-port extraction identified by source hashes",
+  "agent_declarations": 72,
+  "instance_references": 77,
+  "bounded_loops": 248,
+  "loop_files": 95,
+  "changed_files": 108,
+  "source_files": {
+    "src/nomo/adapters/etas/conversations.es": {
+      "before_sha256": "dd1bbac65f228aa151a66c433ce1d2acca010536abb9c199805e4df2aadeb754",
+      "candidate_sha256": "477dc3a8dec56611062b6f0c191254d620176cdc5d6922664396a448da366dad"
+    },
+    "src/nomo/agent/model_context.es": {
+      "before_sha256": "27b4b8316eb207066107222e993a3f63e14595af285b9c34f1a9101f856f9ef7",
+      "candidate_sha256": "a29a4545cf107ec98d333a3c85f685ab12725b713d70cb79376247a046a2b4e0"
+    },
+    "src/nomo/agent/model_tool.es": {
+      "before_sha256": "76652295dd85bbc4764e45d87a525ea85690509a2ea98b19c9fdcf586a40ae63",
+      "candidate_sha256": "3ea09885711a8bb15b1f11626a85ce8abe9b28efa4cd3a2614d6f62e6c3a8433"
+    },
+    "src/nomo/agent/provider.es": {
+      "before_sha256": "a47d03bedd127e38a002417318a9f847a85ec1db3a400ce73f13e7b05a397162",
+      "candidate_sha256": "8b6752872cf343a9c0614a8afe83ff4dac2ae9d09f4de5dd3a3fa3704f9d6c78"
+    },
+    "src/nomo/agent/read_tool.es": {
+      "before_sha256": "3621a21b01f9f079186c7ff31e67c90ae447a7af2bcff54ab73bb71b657765cd",
+      "candidate_sha256": "9e5af2ef7c64b61104ef7720432d1f3d2cc2450632a05a1838f1c53d89e1f77c"
+    },
+    "src/nomo/agent/read_tool_controller.es": {
+      "before_sha256": "7150238eeb86da5dd0c8e07419ae47a7975180c9656846e86491257ddcca88fb",
+      "candidate_sha256": "7da3d07e2abf668febdecd9bd058ffcb7158ebd3432f9353959394b3682ceae5"
+    },
+    "src/nomo/agent/stub_loop_controller.es": {
+      "before_sha256": "d497eeee434782c478fb2e82c2537459d3e641922f1e066daeafb73ea1a22171",
+      "candidate_sha256": "43861e9adb692fa4cf22f4120864130024a05ded00d84e4a04c45d6e9581539d"
+    },
+    "src/nomo/bootstrap/legacy_status.es": {
+      "before_sha256": "8e5bbf9fe16cee09e2a1a62851fba55345e028e6e00133a9dbf44b81429d9558",
+      "candidate_sha256": "1815b9856a5e5382b17b2e789bc1db4c9a03dd17e427a4145087a75f9852f1cb"
+    },
+    "src/nomo/cli/cli_request.es": {
+      "before_sha256": "0b316e3cf229b5166c284f8d1ae86d46e4e88547d2e286f2d00890f4dcf527f1",
+      "candidate_sha256": "a383723c1cbd9c43dce2cae46ae48b815144dd2d3dfc8e1c51a7e4841c4c89a4"
+    },
+    "src/nomo/cli/config.es": {
+      "before_sha256": "3be7e8f2b46fed8b7b59cdecc2fa997eaf3b27d3f1609679fcfa1dffa8a36381",
+      "candidate_sha256": "306be68c40b983937dd8f14c57d0bf71b52771b28363503e6d3fcd5a353fccd2"
+    },
+    "src/nomo/cli/continuation_args.es": {
+      "before_sha256": "10ab3ef6f42f6fd7535ae6aa11ee8db34f217bee76fd51ec4149871a664015ac",
+      "candidate_sha256": "c1bcb78ef1d84cc4ff7552503750377f12295dd91e3df64d9cc306ea6397298b"
+    },
+    "src/nomo/cli/edit_args.es": {
+      "before_sha256": "999f81a5d8b8b0581b1a3550a172fe1b2ef9683c713ccadc747f0daa934d5146",
+      "candidate_sha256": "06057011008db40a7cf0025d25de32708badb35e26622fa11d06cfb0ff8606ec"
+    },
+    "src/nomo/cli/harness_checkpoint_args.es": {
+      "before_sha256": "6f50b246ee0a3a7ebb62f5ebd2eb1b4b473422961fb75639c252347b09fdf21c",
+      "candidate_sha256": "6c19bd21905a36dfda566d9d6680da9185427ebb8ebbb707728017be92698b04"
+    },
+    "src/nomo/cli/harness_edit_args.es": {
+      "before_sha256": "ee970a6946038c2582f23c5608ca98e18b7b2045bb5ab511fc746da55dc88182",
+      "candidate_sha256": "15ec1a4913ec04799e9b3de0bb2d6148f9d31b7d1aeeab553f6502bac80dd106"
+    },
+    "src/nomo/cli/harness_successor_args.es": {
+      "before_sha256": "1246a818fa12d393ea0f23f3f9fd89a428d6b3966b177ad3df9f0e68d05b6867",
+      "candidate_sha256": "c0780f23369d765857f94627cd7a968cd58a6bd41fa36cd5ee5aab822ebbb67c"
+    },
+    "src/nomo/cli/harness_work_args.es": {
+      "before_sha256": "4b8407ec825e1a0c7b7ec5c3730f3b29cc5dc2db29f7527535b5b8c3c3958297",
+      "candidate_sha256": "9eff84426baddb1f7a029b62e94d77eb54e7ba29cd0e5ee4447beec74d303c1e"
+    },
+    "src/nomo/cli/session_cli_args.es": {
+      "before_sha256": "0e3b084e52c25c5d894e820a4f3670cd64184bf8684790fd2776e7a3e1402660",
+      "candidate_sha256": "035d15e925e0a1e10cb05ae53f234922c5f0fd4f0a22209cdbed1ead654d3bf0"
+    },
+    "src/nomo/cli/terminal_args.es": {
+      "before_sha256": "59061b822cb82b83985fa2f9501979812a7df0abdce8498becdff62fe25b9c44",
+      "candidate_sha256": "baf857b7e5b753181182b3307aee5162a46d224b375263abbc898fb2ee109a1c"
+    },
+    "src/nomo/cli/work_chain_args.es": {
+      "before_sha256": "dd9f9fdba701cae88b92a4643a2509230d0d3bb2304b6357f1afb3e53a38b18a",
+      "candidate_sha256": "ac3e5798598f1e780620b94aab125344710b9e86b0edd9cd4e0c5615daa6ef7c"
+    },
+    "src/nomo/cli/work_chain_selection_args.es": {
+      "before_sha256": "4a9fd3e91051b380bae12fa8ad3478796835eed04d4c8c36275cef864c68b815",
+      "candidate_sha256": "2d0212842d4c52e97bcd80f770a68249c3169f1c098812414eaccbbe6fbd0c6d"
+    },
+    "src/nomo/context/selection.es": {
+      "before_sha256": "d9b8c669858c3756e0331001d9b1b9d95bc4e7a22f598caac4361c8f59c00c85",
+      "candidate_sha256": "25aa533e4288e5f823c9ed67a19682440b200b665229f8dc0b39107ef8b84afa"
+    },
+    "src/nomo/core/read_text.es": {
+      "before_sha256": "2dc5425fc33c50c51a393456a96529dad3ae3e1202cd28580726eac26001c4a5",
+      "candidate_sha256": "8a4335647408542ea9899d7f057d632511ed9daf34792924b81dfe792bbd0a30"
+    },
+    "src/nomo/core/text.es": {
+      "before_sha256": "403279c3b6e2658feb7afcd256fbc719d4ce43e568ef37afb4ea2e3448bf637d",
+      "candidate_sha256": "c9bd0cfdd1df99af29c908711a09e3098b8c75eb87dbff5535dcea5960077608"
+    },
+    "src/nomo/entry/harness_chat.es": {
+      "before_sha256": "48a82244f61c5470fe31cf32c0f55eb4dd101af9f14f847317aaeffa1d3e5647",
+      "candidate_sha256": "e0493dbbc64d756eadcbb4facc175e1add83292666ffc3dbba910cc89044fd2e"
+    },
+    "src/nomo/entry/harness_entry.es": {
+      "before_sha256": "5facb1cf4ca2a496238e0a7b275eb4dd5e4e57853c4d584e7fe896cb72ad1fba",
+      "candidate_sha256": "7247184b41708699395220cc02044251b746b4756394353c377fbef8087d1b0d"
+    },
+    "src/nomo/entry/harness_model_tools_entry.es": {
+      "before_sha256": "012250ed47722418de6a31b7acade8f1e30f8d7c7691e97e1d33fe120256830d",
+      "candidate_sha256": "08a5d44224543e14b328154794d0f82d11d37f2bed0699489fcf1f91b7684fac"
+    },
+    "src/nomo/entry/model_entry.es": {
+      "before_sha256": "71a111301d65bb67ac901a09c73bbbe93e53614186438347f93f9eb9f5797de4",
+      "candidate_sha256": "64d9cbacb007855fb7e587e75a98a4bf58be56c6e242bbffa100144f55405087"
+    },
+    "src/nomo/entry/model_tool_entry.es": {
+      "before_sha256": "eb70a1fe360e6f82d369042a26f63a2ea732a19ae2e1ba7a55f5d4856365eb84",
+      "candidate_sha256": "335a9bc2315d380b8ad64a4ac087f9323b35018c12e1b9b46b65c0929afaec35"
+    },
+    "src/nomo/entry/model_tools_chat_loop.es": {
+      "before_sha256": "b36a6a154352e3b615d14dcac542c4c31edb06d8e4ffe44824c5fb6ecb263861",
+      "candidate_sha256": "6c6dc0769b8ed67ddf11a5a61e2859589708773b87f20f8a54255fe902c33366"
+    },
+    "src/nomo/entry/read_session.es": {
+      "before_sha256": "f95fccb6aeca231820e5222e35998e63f117de3dba0fa274b7e8844a5f36351c",
+      "candidate_sha256": "a8c5aeb2ddc5a09d63fcb282abf87c65d34457368c4aa8c135a73d75af08a845"
+    },
+    "src/nomo/entry/recoverable_history_followup.es": {
+      "before_sha256": "ab2c8c151d56140adcac7bb191f62622ba4bb1bdb46d1053e33b784601ac0865",
+      "candidate_sha256": "396e5b43e01e65174aeaa214384ffab59fe22b80de3229f23cc8d581978b8b50"
+    },
+    "src/nomo/entry/recoverable_read_session.es": {
+      "before_sha256": "0a11b76b704b937dec83d650ec74c20c40e5138b4d709530dfdfb5352e9fbcaf",
+      "candidate_sha256": "778bdee7261f6ba0ce570cdc5c34eb64eec758bd817164d536fefe71f9090818"
+    },
+    "src/nomo/entry/session_demo.es": {
+      "before_sha256": "f45bea6482443281e7427efab682ebbd8ea8cfdbf9a4d4873d37270869cfa446",
+      "candidate_sha256": "744b35a5b3e10ee01bba79aa5560685e1ce36e346c72f6b529354e1a519e0cb2"
+    },
+    "src/nomo/entry/session_lifecycle.es": {
+      "before_sha256": "35424d89ee869c321e42541d8e17a0e795d5f517dea577862c2a3ebf903886c0",
+      "candidate_sha256": "7d9e49180a5fb5eaee72f4990db3aa5764bf3467b5059a5c581f0b916a2020a7"
+    },
+    "src/nomo/entry/terminal_entry.es": {
+      "before_sha256": "85febeaad7a3ce1fb777d8c6b1f15fcfa7631a8a739212ec0048031b66980be3",
+      "candidate_sha256": "2cf388c049f63f5cccfa67ed824e4f78e76490fdec56d1772d7757067334ee49"
+    },
+    "src/nomo/entry/user_context_entry.es": {
+      "before_sha256": "3aeeed6fad7ff5452275ef84285a4526eee988054d0845facb04598ded0f7ed8",
+      "candidate_sha256": "d6681f9a6727402095e3670105fc38b73297db68f8a554031db837bc31d7e721"
+    },
+    "src/nomo/entry/work_chain_display.es": {
+      "before_sha256": "3620e08bb738f9897ee5690c983d48593abb2e8b8a16ff507d25de06d04e9970",
+      "candidate_sha256": "51363d4aaddda890189966e01ef648d0fe98acb27cc8229d52293346e796b23d"
+    },
+    "src/nomo/entry/work_chain_entry.es": {
+      "before_sha256": "aafc11c4ae34b021ad00113415abaf7c23e1c3c9e5baf1f53b33e545521dbe65",
+      "candidate_sha256": "38746c3b347f2b56ad1954620f8d207f2f03b714b61c21fcab264af7731ec096"
+    },
+    "src/nomo/entry/work_chain_sessions.es": {
+      "before_sha256": "a311627290fc52a6a52627cbb75e2e001fde0e49e4b96f9687df9aa33f02deed",
+      "candidate_sha256": "4494e2fdb94f04a8b2c2efbeb4b6fdcad32b3d913f9a6fee09e15697850fe22e"
+    },
+    "src/nomo/entry/work_record_display.es": {
+      "before_sha256": "435c48315678ea2756de460ea0317d31d8565bc6c68df4e1e79a4ea010bd56ca",
+      "candidate_sha256": "3ad48b05981434a6b3690d7fe0a0b230007866fc2a9af083a2e5d9cf5004e463"
+    },
+    "src/nomo/entry/work_session_entry.es": {
+      "before_sha256": "be4e9ecb823ff6fceae0913ce9e1dc85f5a6551dadf26bd478352f4ed47ff83c",
+      "candidate_sha256": "2cf271335d98091edaacbe16f3f2258ff9c1b3b007bf2f251ce21a93b2e554da"
+    },
+    "src/nomo/harness/chat_budget_policy.es": {
+      "before_sha256": "c4741f609840621e263cf81ce5603a68abee9c1880ba3cbfca2772e3c15eea58",
+      "candidate_sha256": "55e46fc48a9f1fa8ad94b88ee49b7814a07072fa920f5ba85890aa893da60e10"
+    },
+    "src/nomo/harness/harness_child.es": {
+      "before_sha256": "3ec9c4ca8b55123cef1ffb11402d1d26f5e33e6e9fb3b63f5178c06c3106b3b4",
+      "candidate_sha256": "837df1a8613d49106c1c4e43af059669eea24774549a71cfa7655348e0b1ed9f"
+    },
+    "src/nomo/harness/harness_contract.es": {
+      "before_sha256": "039c5e472398283b452cf67b2f52028f5166d572906223dfaa77003e7578d986",
+      "candidate_sha256": "7745fde3a01a3811151030fe19b4bf6ddc3402bbcb3f623b8e20dfb5551d1bd2"
+    },
+    "src/nomo/harness/harness_model.es": {
+      "before_sha256": "a129bda5a7ff315133d4bf98045b7d73600deae3eaf802c289c80a0fd6301c0a",
+      "candidate_sha256": "57ccbb4fa8fd54de0db2c7a402ed369f9b945bd7370d5e44e8915c355bd2a1a5"
+    },
+    "src/nomo/harness/harness_model_contract.es": {
+      "before_sha256": "782186b96fd4c96a33506293f766ac526b8de83217ecd5f9e6fee06cbd0e979a",
+      "candidate_sha256": "147dbb90ee8f82b0eb4cb1f794090b48b991c1e42d0d75085b08c6e544f92421"
+    },
+    "src/nomo/harness/harness_model_edit.es": {
+      "before_sha256": "1ab0e81ad151eaff3aa640fc7dfce3872897b4def0725a8ce6a33211e938a66a",
+      "candidate_sha256": "b8bc88557e57d50fb947f08956d5f14bbfb578e04b9c24ef32958f074a27a9be"
+    },
+    "src/nomo/harness/harness_model_tools.es": {
+      "before_sha256": "9edfb5b849dd2f55539921708741608350d7585c4f647e02199ee1190477b44a",
+      "candidate_sha256": "61f30f95ad301c18d2e034876c8af010befe68cd04f8a071277ef12255223e8e"
+    },
+    "src/nomo/harness/harness_tool_chat.es": {
+      "before_sha256": "6552132587bd11819e88f4c80a51ed6c4286e7695e7bfaeb570481b50195353c",
+      "candidate_sha256": "0448ba017ad7f7fe594ce1e464f23d331f5fc3485dafbcfec027984f3992e69a"
+    },
+    "src/nomo/harness/harness_tool_chat_contract.es": {
+      "before_sha256": "6d7b8d15c8eaef09fe8937f36344858e4b5727ee63d7bcfc7626b95a0856c661",
+      "candidate_sha256": "f31d4abb07fbf9a8cad9f64e8c519ba537cdc7308433dbf0ed779af59aa35e2f"
+    },
+    "src/nomo/harness/harness_tool_contract.es": {
+      "before_sha256": "66dc902931dc89a67fb13569fbefb21005e99ce2cdf16586dd4e36e04274986e",
+      "candidate_sha256": "7c4ad83f1c213f58f5bd1621e972c3a05775b7b794bf84051c293990b8d2eabd"
+    },
+    "src/nomo/harness/harness_work_model.es": {
+      "before_sha256": "84b59bef76f36b8bf8459fbae53c11df5f93910a0b34091e50b14939a83c9f16",
+      "candidate_sha256": "cc5863f74512ee1c2c85ff32691a9eb4fcc45067f7f4723aa362471f53076d14"
+    },
+    "src/nomo/harness/history_followup_model.es": {
+      "before_sha256": "304a6f76aed2335c6e79785d759c915ac4e73b75bda581734f69def3dc1d0d50",
+      "candidate_sha256": "755cea2f5fea9c678c67a01130a9a99cf48f1ff6d62ae5d3f2aaee4bc10f0e62"
+    },
+    "src/nomo/harness/history_native_stages.es": {
+      "before_sha256": "362e6eddf8350144a9996e625abfca6979d16067dea88b99357c6879a70b2abe",
+      "candidate_sha256": "f3c4dfcbe31d19c399450566862525bc58e5bf66bca5c42040421d6db61e29cd"
+    },
+    "src/nomo/harness/model_plan_diagnostic.es": {
+      "before_sha256": "f69543b8368256e22cc0bffe06d3b63002342f5615e4fb9e6bc18ece50fcc07d",
+      "candidate_sha256": "069abcf7fb8ff9b026448c82d59b8504683dc67e80fcfb72d8981885838a7fb1"
+    },
+    "src/nomo/harness/natural_work_chat.es": {
+      "before_sha256": "37163bf58c5218853f9501f00d6a1299ac27215ae54d237b0932328208719903",
+      "candidate_sha256": "a3fa45c8f92d68cf34cf826651cc3b70d8b5ef8a93e44ad6840a3018feef8119"
+    },
+    "src/nomo/harness/read_model_tools.es": {
+      "before_sha256": "1082aa7431b79a02ac25187823b3346ae7b43fa539b312c34104a589e1704c69",
+      "candidate_sha256": "1710b559dde645a40154c7c83dea7f149b45fedc72879fa9f819d9931f2fe4a3"
+    },
+    "src/nomo/harness/read_tool_chat.es": {
+      "before_sha256": "d0949e5894dc882bf17160950c4b39ee24877204beee769094a9b499f6cb79a0",
+      "candidate_sha256": "25c66c8c78d37f7d3f132a75c5e37a2047155c03ac371b7aa7224896bbaa9145"
+    },
+    "src/nomo/harness/read_tool_chat_contract.es": {
+      "before_sha256": "e61528eeee45a64a37719cf5de6e7edd2bd4900f422bd6eaf7e3d00b9baaba42",
+      "candidate_sha256": "b6d95bfee88227e2d58dcd98d0e14834802471a4d3dbdf5bdfe24bc9935d80bf"
+    },
+    "src/nomo/harness/shared_chat_controller.es": {
+      "before_sha256": "6ca3b2c8224245669526bc660e56b3bbd51cc7c311e55892708ba1e28c0852f8",
+      "candidate_sha256": "462c5ce61b1bd12929444bc9009db88995befc51cad33e4f8b01cf23341b9824"
+    },
+    "src/nomo/harness/typed_edit_pilot.es": {
+      "before_sha256": "9aadf34e883dd2305b0fc157f07b59050fe135c7343b168acedf52cda2c47abf",
+      "candidate_sha256": "3f859dc6d73df9dcc1e61b401fd783e15914ed0f377e87cd5eedc571f41cfce5"
+    },
+    "src/nomo/harness/typed_work_reservation.es": {
+      "before_sha256": "bc3a09bf1c872241c1828e7d3021fd022d3a9e34d963198e698921da87db089a",
+      "candidate_sha256": "15cb5894817e4e9d5ecfe3f85d60a49dae8423640521cfd73ea0ebc207bb5ead"
+    },
+    "src/nomo/harness/work_chain_model.es": {
+      "before_sha256": "49dceb38028b6648d444aa5cfd74d29c573558a1bebdea971b03ea7212aadeb5",
+      "candidate_sha256": "b6cb59f44593cf665538495667abf4d53ffffb2d961ad839df25fde45bcedff6"
+    },
+    "src/nomo/main.es": {
+      "before_sha256": "7b6dc6c6cedb57370700676a9c6ee4ba791b83f7baca4250deb86670411cd202",
+      "candidate_sha256": "83488d730c15abdfa8eb52be416282f07719597745daced60761caf864c3120a"
+    },
+    "src/nomo/model/model_tool_contract.es": {
+      "before_sha256": "f2b4513ccb7b4d365bce3ad6d2010e915a8482151f4fbc5225fd65094a9d4993",
+      "candidate_sha256": "6d223f47747d9089372b297641cfa888ee7bc5313195fd93c3bf04562ecf8877"
+    },
+    "src/nomo/model/stub.es": {
+      "before_sha256": "ae2815db825504ce5529f4b738bf4874c95c486cb5846ffcc099f8e373683920",
+      "candidate_sha256": "322b9bde9f527f8c5e0102d424122696b0d01f152bacd71aaaee7e6c7a8d213f"
+    },
+    "src/nomo/model/tool_context.es": {
+      "before_sha256": "4fa48ac051826ff8908d916e9fd23e0724e8db0e88ce383dd7a8b087f6b2fe0e",
+      "candidate_sha256": "dbd4907fcfd78eb5e259da292af8e7eeb27769801a531ad782b4185f43e28101"
+    },
+    "src/nomo/native/agent.es": {
+      "before_sha256": "6e35038e69d1fa16d539937c03cb662f9767b0dd8d9be477c8625b93657f157c",
+      "candidate_sha256": "05e2538a4bf91a95e4bd452e56aa4f1d53d9b92af0f0ecc8be504f5ff03de492"
+    },
+    "src/nomo/native/configuration.es": {
+      "before_sha256": "67c17bd67393dcfc0a1c1675280c6a5d5c08b0410487b641df5c32c0d29b3ef6",
+      "candidate_sha256": "ee5c3447b94b3c73dad1ed2b21ae061f03c398cc0bbf39e727921909e735ead3"
+    },
+    "src/nomo/native/context.es": {
+      "before_sha256": "222dc01fbcaa04c050e2561506a5ae80c83e8091adfd2b9f4098a83b09d2cd34",
+      "candidate_sha256": "a4adad207c0b938fa194819ef5518ba629378a87722dd6bc693710d509e972d8"
+    },
+    "src/nomo/native/entry.es": {
+      "before_sha256": "e913ec3ad0cea4de59b376357b52668ec60bac4973155785aa84c9cc10898081",
+      "candidate_sha256": "f5d87d407ce170c78385da398f98705fa3c0807ef16f5d6535fea08d61c3c834"
+    },
+    "src/nomo/native/git.es": {
+      "before_sha256": "4aeff4cbc15695050a38aa430620c4fa9a0e48ce2b93531ce6ab37b7233358f7",
+      "candidate_sha256": "d9b4ad9f529152d81747ce29ac80be371e3bd8a018846caa59dec8e8e7b31be6"
+    },
+    "src/nomo/native/lifecycle.es": {
+      "before_sha256": "48a1759330a60fb60c31b5d96d50f110c3866eca215841e933cb014ab138de8e",
+      "candidate_sha256": "50a43cd2585bc0c4488e101ac2388a286752821786f1b3a7e277f9069ec42517"
+    },
+    "src/nomo/native/mutations.es": {
+      "before_sha256": "e6fe52d8d8ee3d9600977799fa86a2fd7f926376dfadf5aaeb3ed3609993e30a",
+      "candidate_sha256": "b2ca94fa61d6347086990ced946b2c42b83d899c3395f8daa84c27642d1c8ae1"
+    },
+    "src/nomo/native/navigation.es": {
+      "before_sha256": "417d0788af7f60ac8755477ea3919b213a11e1d7b98d5adca48a49d0046a4a23",
+      "candidate_sha256": "bf3864c461a8988c9b8ab5bf4cfb6be4ac4044b07a15e878e9636ad6d128dcde"
+    },
+    "src/nomo/native/options.es": {
+      "before_sha256": "526c6151fb4dfbc04c5feeeb2e2226784e0ee6176954727812612b65f4089b36",
+      "candidate_sha256": "58d038d2cbaa328b79ebdab265fe6d935d9308caae13d4880e6fde843bdf8723"
+    },
+    "src/nomo/native/processes.es": {
+      "before_sha256": "b0b72e986aa3537b740e48f8d9c9ef7aedb5e12ff9e6de4714cf0d98ef944597",
+      "candidate_sha256": "c1bb32921e847e34852f167370fc562c21dcdb73ce05b8844ebde132ffdf7440"
+    },
+    "src/nomo/native/project.es": {
+      "before_sha256": "b3b2d44fc9dbe0975d974e86d18cb0cde66ef9104c706c864f6f34c409f2eaa1",
+      "candidate_sha256": "ce675eb705e9ecb6ad09b7ea36c93a8da32e17dbfc3d8cb5e6c417ff421af8ab"
+    },
+    "src/nomo/native/projects.es": {
+      "before_sha256": "5a2b52ee1d0fa1fbdcd7fa357810763c01c5e70e9d410e3bf8833308bd4434a0",
+      "candidate_sha256": "c2db7e45bb33983ed94a6f66a199b6028a346998f38fa92e9d9e627fed9ff0d0"
+    },
+    "src/nomo/native/terminal.es": {
+      "before_sha256": "0f51f7579313cfe762216fcf397d08365794ef7de19e0afe48b238fa289a6ed5",
+      "candidate_sha256": "59c772a0ea2a8b7cee627584dd5357013e4ac9612e656614d97fc012f4fa53c6"
+    },
+    "src/nomo/native/transfer.es": {
+      "before_sha256": "e9cf8568da9ad07ee715dad0e08521253ba6a7f3f8b4e3b1b0778143b149767b",
+      "candidate_sha256": "565318536d23a9cf1b6492b2c9f7c3b2eb1d6735d0fd30ca726ea6b43ea762a0"
+    },
+    "src/nomo/project/contracts.es": {
+      "before_sha256": "3b690aece0e49678b8f30620a5cca99ef8b88ae91c01d6d123adc4c3f66e4fea",
+      "candidate_sha256": "75fb53c827c1e54631a5b16a96f201916f83eda99a3b3deedc972e5f871ebaf1"
+    },
+    "src/nomo/project/planner.es": {
+      "before_sha256": "c6d2435720b1675218ccb507022a85a7a5610a8ef2a2dccf7ebc8bf68d34900a",
+      "candidate_sha256": "8df4fcb9b400c545a0e42e221f3422f3f750e57a4328f2a3101430d3616d91fb"
+    },
+    "src/nomo/session/bundle_codec.es": {
+      "before_sha256": "76446c6f30642642a59fdd9e52925630fcf5555ae27a0117712693c76a5d6c8d",
+      "candidate_sha256": "9b0a9d09f99b7c1a4f8c5f7d721d7c54b3341114c0b3ce7a5afa2d18cf9be59d"
+    },
+    "src/nomo/session/chat_history.es": {
+      "before_sha256": "48e989b37d3867aeddab604c17ae280390c38143d2b5ce392c17ec745aa7f5e0",
+      "candidate_sha256": "50565270010e92841102390f0c7f8518880c59e7a3a2dc6f077a244665371bb7"
+    },
+    "src/nomo/session/continuous_work.es": {
+      "before_sha256": "2af3a0d89fdbd6fdb5f7281aed6609dde4cd7f441fd46cea545591f86ff22ebc",
+      "candidate_sha256": "152f4264a956b32bc77190fad2fa095b40887424beebbc54118acd8fbba70094"
+    },
+    "src/nomo/session/event_history.es": {
+      "before_sha256": "665ac3c057f31a438867daaff747829ae76a5a73fb0713e353abede55aa83d3f",
+      "candidate_sha256": "3fed2b5867e47a25a94a2709e6dfebfe7f068a8d2b4bc4f29dcf724deb0262fa"
+    },
+    "src/nomo/session/event_text_codec.es": {
+      "before_sha256": "df59a562fa3c4a43dfd895af2073ef82b55b662c0eb0fc948a4a3e814ed35057",
+      "candidate_sha256": "6fe624784137c221c5ec015f61fd7e9131fda37159859513223e442bcbc69fbc"
+    },
+    "src/nomo/session/harness_checkpoint.es": {
+      "before_sha256": "97355a4f3dfe3440e25104ec6a262739fac99588a2d2b08c3c4ba6309b47a4d9",
+      "candidate_sha256": "19cca7aee47f0be2b6ac8e7c5dbb40c44120c531db24f6cdc3493af5b3cfcdd7"
+    },
+    "src/nomo/session/harness_successor.es": {
+      "before_sha256": "f6a565493c688703c45b41d340eeb45d5102e34418d4db729347da9929658304",
+      "candidate_sha256": "2359ca566aa9a3e292d34298cfc9d2d2d3861373a311aef8cb47f541f98cd60a"
+    },
+    "src/nomo/session/recoverable_chat_store.es": {
+      "before_sha256": "33373387afd5bad2c6e47dd7973d804a5de4e25cb0afff9e3fa04cbae6ab98f5",
+      "candidate_sha256": "3dbb7a157a54414d858e985515e37fbf11c1a953267cf67fa4a62f4831bfdc69"
+    },
+    "src/nomo/session/recoverable_events.es": {
+      "before_sha256": "6dbd9e73f617054637209f5e7346ec191840a6a262c5dc6c3faebda23f0f0410",
+      "candidate_sha256": "cecc8619380176cb46921b67a6b1a500c1b5b0f3305d4fbceda8ecca2261f538"
+    },
+    "src/nomo/session/recoverable_work_facts.es": {
+      "before_sha256": "f0242415db68f70e14f44bb0e9c7f8c4fdebd5e64d6239b859172178d2e653d8",
+      "candidate_sha256": "3f67b419bedf3ec36d29714ca8652762929d851bbd37bdd2a38bfee027238a6a"
+    },
+    "src/nomo/session/recoverable_work_store.es": {
+      "before_sha256": "35414e3aef24c7f99ad009a92eb1cc6d10bbefce7da75000782a7491909f5f3c",
+      "candidate_sha256": "45fa44c960f39428d3b164bed4f2e61e42c09e1fbd86022336309504bce71af3"
+    },
+    "src/nomo/session/redaction.es": {
+      "before_sha256": "2bade3b7f5066556ab9f51a1f5411d0a7f34944c39a449954f0513ba17912108",
+      "candidate_sha256": "5ae754dfff037614f8413638b3e58360862458ecd768a16d80bf5ea9000a9c11"
+    },
+    "src/nomo/session/session_display.es": {
+      "before_sha256": "11c79e5cb0717fb8d3a3f6fe666e11145bc77418b69dbe88aa005e51340736af",
+      "candidate_sha256": "d11952714101020c191c35b97a47958bc519a9db1f4f501fc90650017ad38a34"
+    },
+    "src/nomo/session/session_state.es": {
+      "before_sha256": "fbd0b751428dd5e53932d677aae9f95f73d7023e33335b71b0fe390ccc847607",
+      "candidate_sha256": "4da1cddec4996cb9d65d808ab97cf510f227263869884aa779aeae2e8c862381"
+    },
+    "src/nomo/session/store_record.es": {
+      "before_sha256": "ae5a863360ef5189deac4ffa816933da320ffbb8adb8aa4030f504b56758344d",
+      "candidate_sha256": "cd46cb8afc66a17514ebeed2648a7183f470cc9ddd3455e889f24c5834f2a8b2"
+    },
+    "src/nomo/session/stub_snapshot.es": {
+      "before_sha256": "e4f0b2e9f49b25c7c8ab8335b8039ad66f5fa558ef9f4b621c46bbc04cc41238",
+      "candidate_sha256": "272b7b1451baf0bc55c8db2161a2ffc72c699066333ff6e4909eb9f683464ad7"
+    },
+    "src/nomo/session/work_chain.es": {
+      "before_sha256": "a90954c8c509c061b634cc39339c787001a2fe7e15efb1ee89d320bc46d74b4d",
+      "candidate_sha256": "3394d878b4011d51bd7cbb0163afacf3b1fac92ac2378318c9d66c5128cacf4e"
+    },
+    "src/nomo/session/work_chain_discovery.es": {
+      "before_sha256": "6b9182345cfab75451186de1b57cc31c17b9acb042aba39106ab72327c675466",
+      "candidate_sha256": "576af8a43662b4a6b81ff67b1ca872218cd1468937df9f609444e75e779b1e46"
+    },
+    "src/nomo/session/work_chain_selection.es": {
+      "before_sha256": "f89e2f7b92b3f494737f6efa606c61fdd3605fbcf9ba19fd66c3006148d08d46",
+      "candidate_sha256": "383e7ca9245dc694aedc525960d51c650a40d88db5f7ae5ef2f8cf9c0c75c461"
+    },
+    "src/nomo/session/work_fact_events.es": {
+      "before_sha256": "41d429ded73258d06f314f36a5c1393a4cd0902cfd824348d2dc248a9ae2d76c",
+      "candidate_sha256": "e5d55119a67682d57cd0b669074fe4d850988b7016c188b8c28763c54a0853dc"
+    },
+    "src/nomo/session/work_record.es": {
+      "before_sha256": "6bf14fb3bcb66cc9aecbb19cc3b56d4b95e2b31e2a7b3001f043c786f09e5f53",
+      "candidate_sha256": "11e7c80bf2894ce95182e9f79e15032fa411fb2df5c1731962fa6bfb44a1db5e"
+    },
+    "src/nomo/tools/edit_encoding.es": {
+      "before_sha256": "9afbea4815b66f8b99afb065ad164f26b9f9fd08941f3a97c737b0cfe0793f88",
+      "candidate_sha256": "b612a25556c8f2c38691c4600e670b6cf4ceb414b1499ba4f7fed01093996cd0"
+    },
+    "src/nomo/tools/path_policy.es": {
+      "before_sha256": "457d8b955e003d4969b204971ce586b9d71dfa15ba026a4760d93bddc01e0cdc",
+      "candidate_sha256": "ba55d5b06acb8b82363dbf6d15c9167337c6cddb7f955bf267281bd2b751747f"
+    },
+    "src/nomo/tools/workspace.es": {
+      "before_sha256": "36b0586951e8c50f7846068e7d6f454c5791f7de93a9614330fcd1dbea109dfb",
+      "candidate_sha256": "9ec6c6b75d070e7386e40cca97688d2b277ee9f1b5ed58cf5cfd8c95df787cd0"
+    },
+    "src/nomo/ui/edit_diff.es": {
+      "before_sha256": "8801a41f707db3611e1c915a56e0fc30f5e6e1f62486d7bcadce26ae66ba23cf",
+      "candidate_sha256": "33be191e36633e53109e6cb2f4e44356a6abbc9d70a52cd3980cb46e420be95f"
+    }
+  },
+  "loop_limit_expressions": {
+    "src/nomo/adapters/etas/conversations.es": [
+      "2147483647",
+      "2147483647",
+      "2147483647",
+      "2147483647",
+      "2147483647",
+      "2147483647",
+      "2147483647",
+      "2147483647",
+      "2147483647",
+      "2147483647"
+    ],
+    "src/nomo/agent/model_context.es": [
+      "32"
+    ],
+    "src/nomo/agent/read_tool.es": [
+      "256"
+    ],
+    "src/nomo/agent/read_tool_controller.es": [
+      "4",
+      "256"
+    ],
+    "src/nomo/agent/stub_loop_controller.es": [
+      "16"
+    ],
+    "src/nomo/bootstrap/legacy_status.es": [
+      "4"
+    ],
+    "src/nomo/cli/cli_request.es": [
+      "4"
+    ],
+    "src/nomo/cli/config.es": [
+      "10"
+    ],
+    "src/nomo/cli/continuation_args.es": [
+      "8"
+    ],
+    "src/nomo/cli/edit_args.es": [
+      "5",
+      "5"
+    ],
+    "src/nomo/cli/harness_checkpoint_args.es": [
+      "4",
+      "4"
+    ],
+    "src/nomo/cli/harness_edit_args.es": [
+      "4",
+      "4"
+    ],
+    "src/nomo/cli/harness_successor_args.es": [
+      "5",
+      "5"
+    ],
+    "src/nomo/cli/harness_work_args.es": [
+      "5",
+      "32"
+    ],
+    "src/nomo/cli/session_cli_args.es": [
+      "6",
+      "6"
+    ],
+    "src/nomo/cli/terminal_args.es": [
+      "8",
+      "8"
+    ],
+    "src/nomo/cli/work_chain_args.es": [
+      "7"
+    ],
+    "src/nomo/cli/work_chain_selection_args.es": [
+      "4",
+      "4"
+    ],
+    "src/nomo/context/selection.es": [
+      "32",
+      "32",
+      "32",
+      "32",
+      "32"
+    ],
+    "src/nomo/core/read_text.es": [
+      "256",
+      "90"
+    ],
+    "src/nomo/core/text.es": [
+      "33554434",
+      "66"
+    ],
+    "src/nomo/entry/harness_chat.es": [
+      "3",
+      "16"
+    ],
+    "src/nomo/entry/harness_entry.es": [
+      "3"
+    ],
+    "src/nomo/entry/harness_model_tools_entry.es": [
+      "7"
+    ],
+    "src/nomo/entry/model_entry.es": [
+      "16"
+    ],
+    "src/nomo/entry/model_tool_entry.es": [
+      "10"
+    ],
+    "src/nomo/entry/model_tools_chat_loop.es": [
+      "8"
+    ],
+    "src/nomo/entry/read_session.es": [
+      "48",
+      "4"
+    ],
+    "src/nomo/entry/recoverable_history_followup.es": [
+      "48"
+    ],
+    "src/nomo/entry/recoverable_read_session.es": [
+      "4096",
+      "48",
+      "48"
+    ],
+    "src/nomo/entry/session_demo.es": [
+      "14"
+    ],
+    "src/nomo/entry/session_lifecycle.es": [
+      "16",
+      "10",
+      "16"
+    ],
+    "src/nomo/entry/terminal_entry.es": [
+      "10",
+      "32"
+    ],
+    "src/nomo/entry/user_context_entry.es": [
+      "514",
+      "16"
+    ],
+    "src/nomo/entry/work_chain_display.es": [
+      "4",
+      "10",
+      "7",
+      "16"
+    ],
+    "src/nomo/entry/work_chain_entry.es": [
+      "16"
+    ],
+    "src/nomo/entry/work_chain_sessions.es": [
+      "2"
+    ],
+    "src/nomo/entry/work_record_display.es": [
+      "7"
+    ],
+    "src/nomo/entry/work_session_entry.es": [
+      "7"
+    ],
+    "src/nomo/harness/chat_budget_policy.es": [
+      "3"
+    ],
+    "src/nomo/harness/harness_child.es": [
+      "4",
+      "3"
+    ],
+    "src/nomo/harness/harness_contract.es": [
+      "4",
+      "1048578"
+    ],
+    "src/nomo/harness/harness_model_contract.es": [
+      "8388610"
+    ],
+    "src/nomo/harness/harness_tool_chat_contract.es": [
+      "12"
+    ],
+    "src/nomo/harness/harness_tool_contract.es": [
+      "7"
+    ],
+    "src/nomo/harness/history_followup_model.es": [
+      "50"
+    ],
+    "src/nomo/harness/model_plan_diagnostic.es": [
+      "7",
+      "20",
+      "32770"
+    ],
+    "src/nomo/harness/natural_work_chat.es": [
+      "256"
+    ],
+    "src/nomo/harness/read_model_tools.es": [
+      "2",
+      "2",
+      "2"
+    ],
+    "src/nomo/harness/read_tool_chat_contract.es": [
+      "18",
+      "3"
+    ],
+    "src/nomo/harness/shared_chat_controller.es": [
+      "18"
+    ],
+    "src/nomo/harness/typed_work_reservation.es": [
+      "3"
+    ],
+    "src/nomo/main.es": [
+      "16"
+    ],
+    "src/nomo/model/model_tool_contract.es": [
+      "4",
+      "256",
+      "8388610"
+    ],
+    "src/nomo/model/stub.es": [
+      "32"
+    ],
+    "src/nomo/model/tool_context.es": [
+      "256",
+      "256",
+      "256",
+      "32"
+    ],
+    "src/nomo/native/configuration.es": [
+      "2147483647",
+      "2147483647",
+      "2147483647"
+    ],
+    "src/nomo/native/context.es": [
+      "2147483647",
+      "2147483647",
+      "2147483647"
+    ],
+    "src/nomo/native/entry.es": [
+      "2147483647",
+      "2147483647",
+      "2147483647",
+      "2147483647",
+      "2147483647",
+      "2147483647",
+      "2147483647",
+      "2147483647",
+      "2147483647",
+      "2147483647",
+      "2147483647"
+    ],
+    "src/nomo/native/git.es": [
+      "2147483647",
+      "2147483647"
+    ],
+    "src/nomo/native/lifecycle.es": [
+      "2147483647",
+      "2147483647",
+      "2147483647"
+    ],
+    "src/nomo/native/mutations.es": [
+      "2147483647",
+      "2147483647",
+      "2147483647",
+      "2147483647",
+      "2147483647",
+      "2147483647",
+      "2147483647",
+      "2147483647",
+      "2147483647",
+      "2147483647",
+      "2147483647"
+    ],
+    "src/nomo/native/navigation.es": [
+      "2147483647",
+      "2147483647",
+      "2147483647",
+      "2147483647"
+    ],
+    "src/nomo/native/options.es": [
+      "2147483647"
+    ],
+    "src/nomo/native/processes.es": [
+      "2147483647",
+      "2147483647",
+      "2147483647"
+    ],
+    "src/nomo/native/project.es": [
+      "2147483647",
+      "2147483647",
+      "2147483647"
+    ],
+    "src/nomo/native/projects.es": [
+      "2147483647",
+      "2147483647"
+    ],
+    "src/nomo/native/terminal.es": [
+      "2147483647"
+    ],
+    "src/nomo/native/transfer.es": [
+      "2147483647",
+      "2147483647",
+      "2147483647"
+    ],
+    "src/nomo/project/contracts.es": [
+      "64"
+    ],
+    "src/nomo/session/bundle_codec.es": [
+      "32",
+      "32",
+      "32"
+    ],
+    "src/nomo/session/chat_history.es": [
+      "48",
+      "24",
+      "24"
+    ],
+    "src/nomo/session/continuous_work.es": [
+      "48",
+      "3"
+    ],
+    "src/nomo/session/event_history.es": [
+      "48",
+      "24",
+      "24"
+    ],
+    "src/nomo/session/event_text_codec.es": [
+      "8388610"
+    ],
+    "src/nomo/session/harness_checkpoint.es": [
+      "7",
+      "33554434",
+      "5",
+      "18",
+      "100",
+      "13",
+      "13"
+    ],
+    "src/nomo/session/harness_successor.es": [
+      "12",
+      "18",
+      "18"
+    ],
+    "src/nomo/session/recoverable_chat_store.es": [
+      "4096",
+      "4096",
+      "4096",
+      "7",
+      "7",
+      "24",
+      "24",
+      "24"
+    ],
+    "src/nomo/session/recoverable_events.es": [
+      "4",
+      "3",
+      "4096",
+      "4096",
+      "24",
+      "3",
+      "24",
+      "24"
+    ],
+    "src/nomo/session/recoverable_work_facts.es": [
+      "48"
+    ],
+    "src/nomo/session/recoverable_work_store.es": [
+      "5",
+      "48"
+    ],
+    "src/nomo/session/redaction.es": [
+      "8",
+      "8",
+      "8",
+      "8",
+      "24",
+      "8"
+    ],
+    "src/nomo/session/session_display.es": [
+      "134217730"
+    ],
+    "src/nomo/session/session_state.es": [
+      "32",
+      "32",
+      "32",
+      "32",
+      "32",
+      "32",
+      "32"
+    ],
+    "src/nomo/session/store_record.es": [
+      "32",
+      "32",
+      "32"
+    ],
+    "src/nomo/session/stub_snapshot.es": [
+      "32"
+    ],
+    "src/nomo/session/work_chain.es": [
+      "10",
+      "10",
+      "10",
+      "10",
+      "10",
+      "2",
+      "10"
+    ],
+    "src/nomo/session/work_chain_discovery.es": [
+      "2"
+    ],
+    "src/nomo/session/work_chain_selection.es": [
+      "2"
+    ],
+    "src/nomo/session/work_fact_events.es": [
+      "4",
+      "48",
+      "48",
+      "48"
+    ],
+    "src/nomo/session/work_record.es": [
+      "52",
+      "512"
+    ],
+    "src/nomo/tools/edit_encoding.es": [
+      "1048578",
+      "16",
+      "16",
+      "16",
+      "32"
+    ],
+    "src/nomo/tools/path_policy.es": [
+      "8",
+      "130"
+    ],
+    "src/nomo/tools/workspace.es": [
+      "8",
+      "512",
+      "1024",
+      "8",
+      "256",
+      "1048577",
+      "256"
+    ],
+    "src/nomo/ui/edit_diff.es": [
+      "1048577",
+      "65538",
+      "2",
+      "12",
+      "1048576",
+      "1048576"
+    ]
+  },
+  "patch_sha256": "2db8c57fa505786b2332eaf98d28d033db9d2aef6b53f4eddfb41d065a8b773d",
+  "previous_executed_candidate": {
+    "path": "examples/native-project/candidates/language-migration-0224-20261125-baseline-a3450bc.patch",
+    "sha256": "4ed6e680bf54968d44237f95f825eab070fa01d69603125af9908df37f7b91d9"
+  },
+  "apply_check_exit_code": 0,
+  "target_acceptance": "pending upstream etas-frontend#97 and the required product scenarios"
+}

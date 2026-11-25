@@ -10,8 +10,10 @@ import std.effects.Fs;
 import std.fs.{ReadLimitError, IOError as FileError};
 import nomo.core.json.encode;
 import nomo.native.options.parse;
-import nomo.native.history.{SessionContext, NativeHistory, ConversationStore, Session, reserve_generation, rename, message, fork, copy_status, copy_jobs, copy_job, resume_fork, discard_copy};
-import nomo.native.context.{RollingContext, ContextProjection, compact};
+import nomo.native.history.{SessionContext, Session};
+import nomo.adapters.etas.conversations.{NativeHistory, reserve_generation, rename, read_message as message, fork, copy_status, copy_jobs, copy_job, resume_fork, discard_copy};
+import nomo.application.native.conversation.ports.{ConversationReader, ConversationWriter, ConversationCatalog};
+import nomo.native.context.{RollingContext, ContextProjection, build as build_context, compact};
 import nomo.native.transfer.{save_archive, load_archive, resume_import};
 import nomo.native.mutations.{journals, undo_changes, rollback_changes, reconcile_changes};
 import nomo.native.files.read_file;
@@ -140,11 +142,11 @@ flow ask(session: string, request: string) -> bool {
     let settings = load_settings(session);
     if !generation_supported(settings) { return false; }
     let projection = RollingContext {};
-    var input = projection.build(session, request, settings);
+    var input = build_context(archive, session, request, settings);
     if projection.needs_compaction(input) {
         println("[CONTEXT] Summarizing; complete original history stays saved.");
-        compact(session, settings);
-        input = projection.build(session, request, settings);
+        compact(archive, session, settings);
+        input = build_context(archive, session, request, settings);
     }
     if estimated_tokens(projection.bytes(input)) > as_number(effective_window(settings) - settings.max_output_tokens) {
         println("[CONTEXT] Saved summary and retained input still exceed the configured context estimate. No coding model request was submitted; complete original history remains saved.");
@@ -336,7 +338,7 @@ public flow run(args: Array<string>) -> i32
         if request == "/compact" {
             if ready_for_turn(selected.id) {
                 let settings = load_settings(selected.id);
-                if generation_supported(settings) { compact(selected.id, settings); println("[CONTEXT] Summary saved; full original events retained."); }
+                if generation_supported(settings) { compact(archive, selected.id, settings); println("[CONTEXT] Summary saved; full original events retained."); }
             }
             continue;
         }

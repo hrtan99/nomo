@@ -5,7 +5,8 @@ import std.effects.Fs;
 import std.text.{split, rsplit_once};
 import nomo.native.workspace.ProjectRoot;
 import nomo.native.file_io.read_text;
-import nomo.native.history.{SessionContext, observe_started, observe_finished};
+import nomo.native.history.{SessionContext};
+import nomo.adapters.etas.conversations.{observe_started, observe_finished};
 
 public import nomo.domain.context.instructions.ProjectInstruction;
 
