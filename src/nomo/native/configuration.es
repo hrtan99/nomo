@@ -7,23 +7,17 @@ import std.effects.Fs;
 import std.crypto.{sha256, constant_time_eq};
 import std.codec.text.utf8_encode;
 import std.io.IOError as ConsoleError;
-import std.text.{from_i64, from_usize, parse_f64, parse_usize};
+public import nomo.domain.configuration.settings.{Settings, defaults, effective_window, as_number, estimated_tokens, recent_bytes};
+import nomo.domain.configuration.settings.validate;
 import nomo.native.workspace.{ProjectRoot, CommandOutput, execute_readonly_input};
 import nomo.native.history.{SessionContext, NativeHistory, ConversationStore, message};
 import nomo.native.file_io.read_text;
 
-public type Settings = { context_window: i64, max_output_tokens: i64, compact_ratio: f64,
-    keep_messages: i64, command_timeout: i64, ignore: Array<string>, instructions: Array<string>, check: Array<string> };
 public effect SettingsContext { action current() -> Settings; }
 type Entry = { key: string, value: JsonValue };
 type Cached = { digest: bytes, session: string, result_event: i64 };
 alias Schema = MemoryRegion<{ Parsed: Store<string, Cached> }>;
 let Data = std.memory.region<Schema>(stable_id = "nomo-native-configuration-v1", store = "native-configuration");
-
-public flow defaults() -> Settings {
-    return Settings { context_window = 1048576, max_output_tokens = 131072, compact_ratio = 0.75,
-        keep_messages = 12, command_timeout = 600, ignore = [], instructions = [], check = [] };
-}
 
 flow cast<T>(value: JsonValue, label: string) -> T {
     let result: Option<Message<T>> = Message.new(value).cast<T>();
@@ -47,13 +41,7 @@ flow decode(text: string) -> Settings {
         compact_ratio = field(values, "compact_ratio", base.compact_ratio), keep_messages = field(values, "keep_messages", base.keep_messages),
         command_timeout = field(values, "command_timeout", base.command_timeout), ignore = field(values, "ignore", base.ignore),
         instructions = field(values, "instructions", base.instructions), check = field(values, "check", base.check) };
-    if settings.max_output_tokens < 1 || settings.max_output_tokens > 131072 || settings.context_window <= settings.max_output_tokens {
-        abort("context_window must exceed max_output_tokens (1..131072)");
-    }
-    if settings.compact_ratio <= 0.0 || settings.compact_ratio >= 1.0 || settings.keep_messages < 0 {
-        abort("compact_ratio must be between zero and one; keep_messages must be nonnegative");
-    }
-    return settings;
+    return validate(settings);
 }
 
 flow fingerprint(text: string) -> bytes {
@@ -91,24 +79,6 @@ public flow load() -> Settings
     let settings = decode(converted.output.stdout);
     Data.Parsed.put(workspace, Cached { digest = digest, session = session, result_event = converted.result_event });
     return settings;
-}
-
-public flow effective_window(settings: Settings) -> i64 {
-    return if settings.context_window > 1048576 { 1048576 } else { settings.context_window };
-}
-
-public flow as_number(value: i64) -> f64 {
-    return match parse_f64(from_i64(value)) { Ok(value) => value, Err(_) => { abort("context number conversion failed"); } };
-}
-
-public flow estimated_tokens(bytes: usize) -> f64 {
-    return match parse_f64(from_usize((bytes + 2) / 3)) { Ok(value) => value, Err(_) => { abort("context estimate conversion failed"); } };
-}
-
-public flow recent_bytes(settings: Settings) -> usize {
-    let available = (effective_window(settings) - settings.max_output_tokens) * 3 / 2;
-    let budget = if available < 393216 { available } else { 393216 };
-    return match parse_usize(from_i64(budget)) { Ok(value) => value, Err(_) => { abort("recent history budget conversion failed"); } };
 }
 
 public type ConfigurationStatus = { requested: Settings, effective_context_window: i64, context_window_is_estimate: bool,

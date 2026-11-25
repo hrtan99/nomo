@@ -6,7 +6,8 @@ import std.effects.Fs;
 import nomo.native.workspace.ProjectRoot;
 import nomo.native.history.{SessionContext, record, tool_finished, observe_started, observe_finished};
 import nomo.native.mutations.{Change, apply_plan};
-import nomo.native.project.{ProjectInstruction, load_instructions};
+import nomo.domain.context.instructions.ProjectInstruction;
+import nomo.native.project.load_instructions;
 public import nomo.native.file_io.read_text;
 
 public type FileContent = { path: string, text: string, instructions: Array<ProjectInstruction> };

@@ -2,7 +2,8 @@ module nomo.native.context;
 
 import std.text.len as text_bytes;
 import nomo.core.json.encode;
-import nomo.native.history.{NativeHistory, ConversationStore, ChatMessage, message, reserve_generation};
+import nomo.domain.conversation.messages.ChatMessage;
+import nomo.native.history.{NativeHistory, ConversationStore, message, reserve_generation};
 import nomo.native.processes.jobs;
 import nomo.native.lifecycle.{attempts, begin, dispatching, returned, complete_attempt};
 import nomo.native.agent.Turn;
@@ -10,8 +11,8 @@ import nomo.native.project.load_instructions;
 import nomo.native.workspace.ProjectRoot;
 import std.effects.Fs;
 import std.fs.{ReadLimitError, IOError as FileError};
-import nomo.native.configuration.{Settings, effective_window, as_number, estimated_tokens, recent_bytes};
-import nomo.native.project.ProjectInstruction;
+import nomo.domain.configuration.settings.{Settings, effective_window, as_number, estimated_tokens, recent_bytes};
+import nomo.domain.context.instructions.ProjectInstruction;
 
 public spec ContextProjection {
     flow build(self, session: string, request: string, settings: Settings) -> Turn ![Memory, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Error<StorageError>, Error<FileError>, Error<ReadLimitError>];

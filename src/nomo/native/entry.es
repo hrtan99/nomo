@@ -17,7 +17,8 @@ import nomo.native.mutations.{journals, undo_changes, rollback_changes, reconcil
 import nomo.native.files.read_file;
 import nomo.native.navigation.{find_files, search_project};
 import nomo.native.lifecycle.{attempts, begin, dispatching, returned, complete_attempt, resolve};
-import nomo.native.configuration.{Settings, SettingsContext, load as load_configuration, status as configuration_status, effective_window, as_number, estimated_tokens};
+import nomo.domain.configuration.settings.{Settings, effective_window, as_number, estimated_tokens};
+import nomo.native.configuration.{SettingsContext, load as load_configuration, status as configuration_status};
 import nomo.native.terminal.check_project;
 import nomo.native.terminal.run_command;
 import nomo.native.processes.{start_job, read_job, write_job, close_job_input, stop_job, list_jobs, job_output};

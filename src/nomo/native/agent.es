@@ -4,17 +4,19 @@ import nomo.native.git.{git_status, git_diff, git_log, git_branches, git_init, g
 import nomo.native.files.{read_file, replace_file, edit_file};
 import nomo.native.navigation.{list_directory, stat_file, search_files, find_files, search_project};
 import nomo.native.terminal.{run_command, run_command_input, check_project};
-import nomo.native.configuration.{Settings, SettingsContext};
+import nomo.domain.configuration.settings.Settings;
+import nomo.native.configuration.SettingsContext;
 import nomo.native.mutations.{apply_changes, create_file, write_file, make_directory, delete_path, move_path, undo_changes, rollback_changes, list_changes, reconcile_changes};
 import nomo.native.workspace.ProjectRoot;
 import std.effects.Fs;
 import std.fs.{ReadLimitError, IOError as FileError};
 import std.io.IOError as ConsoleError;
 import nomo.native.history.SessionContext;
-import nomo.native.project.{ProjectInstruction, project_instructions};
+import nomo.domain.context.instructions.ProjectInstruction;
+import nomo.native.project.project_instructions;
 import nomo.native.lifecycle.Attempt;
 import nomo.native.processes.{Job, start_job, read_job, write_job, close_job_input, stop_job, list_jobs, job_output};
-public import nomo.native.history.ChatMessage;
+public import nomo.domain.conversation.messages.ChatMessage;
 
 public type Answer = { text: string };
 public type Turn = { session: string, workspace: string, initial_request: string, request: string, summary: string, pending: string, history: Array<ChatMessage>, instructions: Array<ProjectInstruction>, runs: Array<Attempt>, settings: Settings, jobs: Array<Job> };

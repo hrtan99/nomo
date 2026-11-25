@@ -10,7 +10,8 @@ import std.agent.message.Message;
 import std.crypto.{sha256, constant_time_eq};
 import nomo.core.json.encode;
 import nomo.native.workspace.ProjectRoot;
-import nomo.native.history.{NativeHistory, ConversationStore, Session, ChatMessage, CopyJob, copy_status, begin_copy, copy_source, copy_events, copy_job, ensure_copy_session, sealed_copy_source, message};
+import nomo.domain.conversation.messages.ChatMessage;
+import nomo.native.history.{NativeHistory, ConversationStore, Session, CopyJob, copy_status, begin_copy, copy_source, copy_events, copy_job, ensure_copy_session, sealed_copy_source, message};
 import nomo.native.lifecycle.{Attempt, attempts, begin, dispatching, returned, complete_attempt};
 
 type PortableInfo = { id: string, workspace: string, title: string, metadata: string };

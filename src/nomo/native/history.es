@@ -5,10 +5,10 @@ import std.text.{from_i64, from_usize, char_count, get_char_slice, split_once, s
 import nomo.core.json.encode;
 import std.codec.text.utf8_encode;
 import std.io.{println, IOError as ConsoleError};
+public import nomo.domain.conversation.messages.ChatMessage;
 
 public effect SessionContext { action current() -> string; }
 
-public type ChatMessage = { id: string, role: string, name: string, text: string };
 public type PendingRequest = { call: i64, name: string, complete: bool };
 public type CopyJob = { id: string, workspace: string, title: string, kind: string, source: string,
     digest: bytes, total: i64, cursor: i64, phase: string };

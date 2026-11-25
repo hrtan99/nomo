@@ -6,6 +6,8 @@
 
 The official 0.22.4 dev build, matching SDK installation, installation verification and official constructor-injection example passed. The candidate's normal source check failed with `checked effect tag has conflicting package identities`; its cause remains unestablished. A separate one-loop package proves that the documented prefix annotation is rejected by this exact graph: [etas-frontend#97](https://github.com/etas-project/etas-frontend/issues/97). See `../toolchain-0224-build-20261125.json` and `../../repros/scoped-loop-limits-0.22.4/` for actual evidence. The candidate is not accepted. All 108 product files were restored byte-for-byte to the accepted baseline, and default selection remains 0.13.5. Reapply this complete patch when the scoped-loop contract is available, then run the required normal source check and existing positive workflows.
 
+The subsequent domain-view preparation is accepted on the existing 0.13.5 path: three domain leaves and pure settings rules, full source check, and the unchanged configuration/summary/fresh-process cache scenario. `../domain-views-20261125.json` records that slice. `git apply --check` confirms this migration patch still applies after those changes; target-graph acceptance has not been repeated or claimed while #97 remains unresolved.
+
 ## Historical continuous capture proposal
 
 `native-output-capture-0133.patch` is based on Nomo commit `a4c54f7` and contains the unaccepted Etas implementation plus its positive acceptance scenario. It registers collectors through a Source effect handled inside the lexical scheduler callback, uses a separate Memory region for immutable output chunks/heads and UI-owned read cursors, seals captured prefixes into export metadata, and settles collectors when the UI closes.

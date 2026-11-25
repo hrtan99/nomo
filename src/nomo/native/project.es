@@ -7,7 +7,7 @@ import nomo.native.workspace.ProjectRoot;
 import nomo.native.file_io.read_text;
 import nomo.native.history.{SessionContext, observe_started, observe_finished};
 
-public type ProjectInstruction = { scope: string, path: string, text: string };
+public import nomo.domain.context.instructions.ProjectInstruction;
 
 flow location(name: string) -> WorkspacePath<ProjectRoot> {
     return match path<ProjectRoot>(name) { Ok(value) => value, Err(_) => { abort("invalid project instruction path"); } };
