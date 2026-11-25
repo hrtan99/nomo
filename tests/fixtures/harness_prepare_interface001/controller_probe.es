@@ -6,6 +6,13 @@ import nomo.core.conversation.{Event, State, add, fresh as empty_history};
 import nomo.model.model_tool_contract.{Session, LoopTurn};
 import nomo.cli.harness_edit_args.Input;
 import nomo.cli.harness_work_args.Work;
+import nomo.cli.harness_work_args.application as application_request;
+import nomo.application.harness.work.ports.WorkModelStages;
+import nomo.application.harness.work.stages.prepare_legacy;
+import nomo.harness.harness_tool_chat_contract.Previous;
+import nomo.harness.history_work_model.HistoryStages;
+import nomo.model.harness_progress.HarnessProgress;
+import nomo.model.diagnostic_output.DiagnosticOutput;
 import nomo.harness.harness_tool_contract.{Context as ReadContext, Ledger as ReadLedger};
 import nomo.harness.harness_edit_contract.{Context as EditContext, Ledger as EditLedger};
 import nomo.harness.harness_work_contract.{Context as WorkContext, Evidence, Ledger};
@@ -119,4 +126,43 @@ public flow observe(args: Array<string>) -> i32 {
 }
 public flow abort_probe(args: Array<string>) -> i32 {
     let value = run_case("abort", "abort", false); println("UNREACHABLE"); return 0;
+}
+
+flow prepare_stages<S ~ WorkModelStages>(stages: S) -> Result<Pending, Failure> {
+    return prepare_legacy(stages, application_request(input())) with {
+        EditOriginal.read(path) => {
+            if path != "dir/file.txt" { abort("injected original path changed"); }
+            resume Ok("old\n");
+        }
+        HarnessProgress.write(_) => { resume; }
+        DiagnosticOutput.write(_) => { resume; }
+    };
+}
+
+public flow production_stages(args: Array<string>) -> i32 {
+    let stages = HistoryStages { prior_request = "Earlier request", previous = Previous {
+        task = "", result = "", tool = "", outcome = "", answer = "Earlier answer"
+    }, conversation = [], wide = false, high_input = false, historical = true };
+    let result = prepare_stages(stages);
+    match result {
+        Ok(value) => {
+            if value.prepared != expected_pending().prepared || value.request != "Q" || value.task != "edit T" {
+                abort("production prepare result changed");
+            }
+            if value.evidence.files != ["a.txt"] || value.evidence.result != "Seen blue" || value.evidence.summary != "Answer" {
+                abort("production read evidence changed");
+            }
+            if value.state.read.calls != 4 || value.state.read.tokens != 8192 || value.state.read.tools != 1 || value.state.read.scan != 16384 || value.state.edit != expected_pending().state.edit {
+                abort("production historical ledger changed");
+            }
+        }
+        Err(failure) => { abort(failure.error); }
+    }
+    println("PASS production historical stages");
+    return 0;
+}
+
+public flow positive_prepare(args: Array<string>) -> i32 {
+    verify("legacy", "ok", false, "", read_ledger(), edit_ledger(0, 0, 0, 0, 0));
+    return 0;
 }

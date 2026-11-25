@@ -4,7 +4,7 @@ import nomo.application.work.ports.{WorkStages, Pending, Failure, Completed, Sum
 import nomo.application.work.request.WorkRequest;
 import nomo.application.harness.work.ports.WorkModelStages;
 import nomo.application.harness.work.stages.{prepare as prepare_history, summarize as summarize_history, prepare_legacy, summarize_legacy};
-import nomo.harness.read_model_tools.expanded_work_child_turn as work_child_turn;
+import nomo.harness.read_model_tools.{work_child_turn, expanded_work_child_turn};
 import nomo.core.conversation.{Event, State};
 import nomo.model.model_tool_contract.LoopTurn;
 
@@ -45,7 +45,7 @@ impl HistoryStages ~ WorkModelStages {
         let input = bounded_history(ReadInput { current = value, previous_request = self.prior_request, previous = self.previous, conversation = self.conversation, prior_work = history }, "read");
         return if value.phase == "plan" { infer_stage(Stage.ReadPlan, self.wide, self.high_input, readplan_system(), input) } else { infer_stage(Stage.ReadSummary, self.wide, self.high_input, readaggregate_system(), input) };
     }
-    flow read_child(self, task: string, files: Array<string>, selected: State) -> LoopTurn { return work_child_turn(task, files, selected, self.wide, self.high_input); }
+    flow read_child(self, task: string, files: Array<string>, selected: State) -> LoopTurn { return if self.historical { work_child_turn(task, files, selected) } else { expanded_work_child_turn(task, files, selected, self.wide, self.high_input) }; }
     flow plan(self, value: WorkContext) -> string ![] { return infer_stage(Stage.EditPlan, self.wide, self.high_input, editplan_system(), edit_input(value, self.prior_request, self.previous, self.conversation, self.prior_work)); }
     flow propose(self, value: WorkContext) -> string ![] { return infer_stage(Stage.EditChild, self.wide, self.high_input, edit_child_system(), edit_input(value, self.prior_request, self.previous, self.conversation, self.prior_work)); }
     flow summarize(self, value: WorkContext) -> string ![] { return infer_stage(Stage.EditSummary, self.wide, self.high_input, editaggregate_system(), edit_input(value, self.prior_request, self.previous, self.conversation, self.prior_work)); }

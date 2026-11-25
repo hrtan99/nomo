@@ -1,0 +1,68 @@
+{
+  "status": "prepared_not_integrated",
+  "source_base_commit": "888593cfe1987d661b1d9f9006f8a9930ef6f81c",
+  "base_qualification": "Base includes the accompanying accepted legacy-stage and pure-edit-contract changes; those changes are not part of this patch.",
+  "candidate_sha256": "6f01896f2c73f044e0a58549c5b66bac5340ce7130dd75ab8a99ab4c507177ef",
+  "files": [
+    {
+      "path": "src/nomo/application/harness/read/ports.es",
+      "base_sha256": null,
+      "proposed_sha256": "1a405162b4706b5937ac81cfa2d76b580332df49265a0fd94de850025ff48fac"
+    },
+    {
+      "path": "src/nomo/application/harness/read/policy.es",
+      "base_sha256": null,
+      "proposed_sha256": "cac1b34328f8ee990894f436efe2a68c7578a5e7a42dd1d62d7162ee2e8036d1"
+    },
+    {
+      "path": "src/nomo/application/harness/read/controller.es",
+      "base_sha256": null,
+      "proposed_sha256": "3df2e82775e268fa3c7daa7fd4cbf9a5ab84b70c793796cf810e4b9bfe2f3a76"
+    },
+    {
+      "path": "src/nomo/harness/read_model_tools.es",
+      "base_sha256": "1082aa7431b79a02ac25187823b3346ae7b43fa539b312c34104a589e1704c69",
+      "proposed_sha256": "194f622d470ef8e2753456f96bfee202b5ad286e122350b3b118122e48750378"
+    },
+    {
+      "path": "src/nomo/application/harness/work/controller.es",
+      "base_sha256": "8794956c65a97e27e4882fa309fa4ef6960dd25b5d577a582bf060b600560bfb",
+      "proposed_sha256": "5333e5c07711279487c61029634a8bcaf4d7ae7be5ef4a1041b1ce294901bcca"
+    }
+  ],
+  "normal_0135_check": {
+    "command": [
+      "docker",
+      "compose",
+      "--env-file",
+      "/dev/null",
+      "-f",
+      "compose.yaml",
+      "-f",
+      "config/etas-0135-official-compose.yaml",
+      "-f",
+      "config/etas-runtime-cache-compose.yaml",
+      "run",
+      "--rm",
+      "--no-deps",
+      "--tty=false",
+      "dev",
+      "/home/nomo/.cargo/bin/etas",
+      "--no-config",
+      "--cache",
+      "off",
+      "check",
+      "--all",
+      "/workspace"
+    ],
+    "exit": 1,
+    "elapsed_seconds": 125.147,
+    "stdout": "checked 260 files\n",
+    "stderr": "time=\"2026-11-26T00:20:11+08:00\" level=warning msg=\"volume \\\"nomo-cargo-0135-20261112-826bf13b\\\" already exists but was created for project \\\"nomo-native\\\" (expected \\\"nomo\\\"). Use `external: true` to use an existing volume\"\ntime=\"2026-11-26T00:20:11+08:00\" level=warning msg=\"Found orphan containers ([nomo-recoverable-chat-direct-20261106-final nomo-etas-check-20261106-phases nomo-etas-check-20261106-constructed-fast nomo-etas-check-20261106-chunk128 nomo-etas-check-20261106-readsafe nomo-etas-check-20261106-stringops nomo-etas-check-20261106-encodedfast nomo-etas-check-20261106-dynamicchunks nomo-etas-check-20261106-largefast nomo-etas-check-20261106-fastjson nomo-recoverable-chat-probe-20261106-4 nomo-recoverable-chat-probe-20261106-3 nomo-etas-check-20261106-budget2 nomo-etas-check-20261106-budget nomo-recoverable-chat-probe-20261106-2 nomo-recoverable-chat-probe-20261106 nomo-etas-check-20261106-2 nomo-etas-check-20261106]) for this project. If you removed or renamed this service in your compose file, you can run this command with the --remove-orphans flag to clean it up.\"\nerror[type::InvalidImplMemberKind]: bodyless impl of spec `ReadContextValidation` is missing required method `request_error`\n --> /workspace/src/nomo/application/harness/read/policy.es:27:23\n  | impl UnicodeContext ~ ReadContextValidation {\n  |                       ^ bodyless impl of spec `ReadContextValidation` is missing required method `request_error`\nerror[type::InvalidImplMemberKind]: bodyless impl of spec `ReadContextBudget` is missing required method `allowance`\n --> /workspace/src/nomo/application/harness/read/policy.es:36:23\n  | impl UnicodeContext ~ ReadContextBudget {\n  |                       ^ bodyless impl of spec `ReadContextBudget` is missing required method `allowance`\nerror[type::InvalidImplMemberKind]: bodyless impl of spec `ReadContextProgress` is missing required method `progress`\n --> /workspace/src/nomo/application/harness/read/policy.es:41:23\n  | impl UnicodeContext ~ ReadContextProgress {\n  |                       ^ bodyless impl of spec `ReadContextProgress` is missing required method `progress`\nerror[type::InvalidImplMemberKind]: bodyless impl of spec `ReadContextValidation` is missing required method `observe_child`\n --> /workspace/src/nomo/application/harness/read/policy.es:46:21\n  | impl AsciiContext ~ ReadContextValidation {\n  |                     ^ bodyless impl of spec `ReadContextValidation` is missing required method `observe_child`\nerror[type::InvalidImplMemberKind]: bodyless impl of spec `ReadContextBudget` is missing required method `reserve`\n --> /workspace/src/nomo/application/harness/read/policy.es:55:21\n  | impl AsciiContext ~ ReadContextBudget {\n  |                     ^ bodyless impl of spec `ReadContextBudget` is missing required method `reserve`\nerror[type::InvalidImplMemberKind]: bodyless impl of spec `ReadContextProgress` is missing required method `progress`\n --> /workspace/src/nomo/application/harness/read/policy.es:60:21\n  | impl AsciiContext ~ ReadContextProgress {\n  |                     ^ bodyless impl of spec `ReadContextProgress` is missing required method `progress`\nerror[effect::IncompleteEffectFacts]: call effect selector specialization failed: invalid callable environment: method evidence has no unique checked implementation\n --> /workspace/src/nomo/application/harness/work/controller.es:73:9\n  |         run_context_policy(UnicodeContext { require_tool = true, expanded = expanded, wide = wide, high_input = high_input }, input.request, input.allowed, state.read, \"read-\", true, false, false)\n  |         ^ call effect selector specialization failed: invalid callable environment: method evidence has no unique checked implementation\nerror[effect::IncompleteEffectFacts]: call effect selector specialization failed: invalid callable environment: method evidence has no unique checked implementation\n --> /workspace/src/nomo/application/harness/work/controller.es:75:9\n  |         run_context_policy(AsciiContext { compatible = chain_read }, input.request, input.allowed, state.read, \"read-\", true, inspect_plan, inspect_all)\n  |         ^ call effect selector specialization failed: invalid callable environment: method evidence has no unique checked implementation\nerror[effect::IncompleteEffectFacts]: call effect selector specialization failed: invalid callable environment: method evidence has no unique checked implementation\n --> /workspace/src/nomo/harness/harness_model_tools.es:61:12\n  |     return run_context_policy(AsciiContext { compatible = compatible_plan }, request, allowed, initial, prefix, require_tool, inspect_plan, inspect_all);\n  |            ^ call effect selector specialization failed: invalid callable environment: method evidence has no unique checked implementation\nerror[effect::IncompleteEffectFacts]: call effect selector specialization failed: invalid callable environment: method evidence has no unique checked implementation\n --> /workspace/src/nomo/harness/read_model_tools.es:67:12\n  |     return run_context_policy(UnicodeContext { require_tool = require_tool, expanded = false, wide = false, high_input = false }, request, allowed, initial, prefix, require_tool, inspect_plan, inspect_all);\n  |            ^ call effect selector specialization failed: invalid callable environment: method evidence has no unique checked implementation\nerror[effect::IncompleteEffectFacts]: call effect selector specialization failed: invalid callable environment: method evidence has no unique checked implementation\n --> /workspace/src/nomo/harness/read_model_tools.es:70:12\n  |     return run_context_policy(UnicodeContext { require_tool = true, expanded = true, wide = wide, high_input = high_input }, request, allowed, initial, \"read-\", true, false, false) with {\n  |            ^ call effect selector specialization failed: invalid callable environment: method evidence has no unique checked implementation\n\n"
+  },
+  "target_graph": "official 0.22.4, 8f48d3f graph; not executed for this candidate",
+  "target_prerequisite": "Resolve upstream scoped-loop annotation issue etas-frontend#97; apply the canonical agent/loop/SDK migration to the resulting full source tree.",
+  "runtime_acceptance": false,
+  "stored_identity_note": "Report and Failure are transient read-application results, not Memory values. Existing public imports are retained as aliases. Persistent record and Region declarations are untouched.",
+  "upstream_diagnostic_report": "https://github.com/etas-project/etas-frontend/issues/98"
+}

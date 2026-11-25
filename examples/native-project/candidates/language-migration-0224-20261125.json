@@ -1,6 +1,6 @@
 {
   "status": "prepared_not_target_compiler_accepted",
-  "source_baseline": "14f0635bb796df938327d5911574277ceb1f4de9",
+  "source_baseline": "888593cfe1987d661b1d9f9006f8a9930ef6f81c",
   "agent_declarations": 72,
   "instance_references": 77,
   "bounded_loops": 248,
@@ -224,8 +224,8 @@
       "candidate_sha256": "cc5863f74512ee1c2c85ff32691a9eb4fcc45067f7f4723aa362471f53076d14"
     },
     "src/nomo/harness/history_followup_model.es": {
-      "before_sha256": "304a6f76aed2335c6e79785d759c915ac4e73b75bda581734f69def3dc1d0d50",
-      "candidate_sha256": "755cea2f5fea9c678c67a01130a9a99cf48f1ff6d62ae5d3f2aaee4bc10f0e62"
+      "before_sha256": "54581e873dc703d224ab52c5ea9cddfb5a748fb6c0147ad5d9ff908fa51e0060",
+      "candidate_sha256": "01788917e7d38ea33af490714b40b4382a9041d5cac12bf060402ecde22b5b05"
     },
     "src/nomo/harness/history_native_stages.es": {
       "before_sha256": "362e6eddf8350144a9996e625abfca6979d16067dea88b99357c6879a70b2abe",

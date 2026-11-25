@@ -14,8 +14,7 @@ import nomo.harness.edit_context.{context, completed_context};
 import nomo.harness.model_plan_diagnostic.{response_error, response_text};
 import nomo.model.harness_progress.HarnessProgress;
 import nomo.model.diagnostic_output.DiagnosticOutput;
-import nomo.tools.edit_contract.Confirmed;
-import nomo.tools.edit_file.{prepare_original, prepare_original_legacy};
+import nomo.tools.edit_contract.{Confirmed, prepare_original, prepare_original_legacy};
 import nomo.tools.edit_encoding.json;
 import nomo.core.large_context.{file_bytes, scan_i32};
 

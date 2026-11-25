@@ -1,0 +1,93 @@
+{
+  "date": "2026-11-26",
+  "status": "legacy_child_and_pure_edit_contract_integrated_on_0135; read_application_extraction_candidate_pending",
+  "baseline_commit": "888593cfe1987d661b1d9f9006f8a9930ef6f81c",
+  "changes": [
+    "Legacy child Handler delegates through supplied WorkModelStages.read_child.",
+    "Production HistoryStages explicitly retains original historical or expanded child implementation.",
+    "Pure prepare_original_legacy is owned by edit_contract; edit_file retains its public compatibility alias.",
+    "Shared work controller imports pure edit preparation without the filesystem adapter."
+  ],
+  "source_sha256": {
+    "src/nomo/application/harness/work/controller.es": "8794956c65a97e27e4882fa309fa4ef6960dd25b5d577a582bf060b600560bfb",
+    "src/nomo/application/harness/work/stages.es": "7b05e3f4aec5575f4ad94dd153adeff4736bcd90f1c2372a6e3f0f7b5a3eb212",
+    "src/nomo/harness/history_work_model.es": "737500db06baf1af2ea14e373b6d0f3f6cedc8baaeaf8abdea36de610e4ad6fe",
+    "src/nomo/harness/history_followup_model.es": "54581e873dc703d224ab52c5ea9cddfb5a748fb6c0147ad5d9ff908fa51e0060",
+    "src/nomo/tools/edit_contract.es": "69b9901937f408af00251ec0471b18dc34d65a0c2aea97be27fb6ff667134139",
+    "src/nomo/tools/edit_file.es": "e6b189e5e845377344e893da7b579a572e8a17f4cd402c4959a2b386f6eb1a10",
+    "tests/fixtures/harness_prepare_interface001/controller_probe.es": "18fd55e6f27a5a67058d398fb7e2973a14199f06e2c5b068aec54526d41dee15"
+  },
+  "normal_source_check": {
+    "command": [
+      "docker",
+      "compose",
+      "--env-file",
+      "/dev/null",
+      "-f",
+      "compose.yaml",
+      "-f",
+      "config/etas-0135-official-compose.yaml",
+      "-f",
+      "config/etas-runtime-cache-compose.yaml",
+      "run",
+      "--rm",
+      "--no-deps",
+      "--tty=false",
+      "dev",
+      "/home/nomo/.cargo/bin/etas",
+      "--no-config",
+      "--cache",
+      "off",
+      "check",
+      "--all",
+      "/workspace"
+    ],
+    "exit": 0,
+    "checked_files": 257,
+    "seconds": 122.911
+  },
+  "positive_scenarios": {
+    "deterministic": {
+      "completed": true,
+      "paired_successful_host_requests": 40,
+      "actions": {
+        "Policy.evaluate": 20,
+        "Console.stdout_write": 20
+      }
+    },
+    "production": {
+      "completed": true,
+      "paired_successful_host_requests": 46,
+      "actions": {
+        "Policy.evaluate": 23,
+        "Console.stdout_write": 16,
+        "Agentic.infer": 6,
+        "Fs.read": 1
+      }
+    }
+  },
+  "local_model_http_calls": 6,
+  "model_destination": "Container loopback synthetic fixture only; no external model or credentials.",
+  "resources": {
+    "memory.max": "4294967296",
+    "memory.peak": "562675712",
+    "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+    "cpu.max": "400000 100000",
+    "pids.max": "256"
+  },
+  "scope_qualification": "Production HistoryStages and the existing deterministic Handler exercise read/edit preparation. Original-file reads are supplied by the test Handler. The production child reads one actual synthetic file. No edit approval, file mutation, summary persistence or native end-to-end acceptance is claimed. A new FixedStages implementation was rejected by the old compiler and was not integrated or counted as passed.",
+  "unintegrated_read_candidate": {
+    "patch": "examples/native-project/candidates/read-context-dip07-0224.patch",
+    "apply_preflight": true,
+    "retained_full_check_exit": 1,
+    "target_runtime_acceptance": false,
+    "upstream_report": "https://github.com/etas-project/etas-frontend/issues/98"
+  },
+  "migration_candidate_sha256": "43f1aa75d85735822b62701598c7088b60072510f6e5fba4b49db5c8424642e4",
+  "remaining": [
+    "DIP-07 full read controller separation and budget/model selection composition on the adopted target graph.",
+    "DIP-02 target syntax and complete required runtime acceptance; upstream scoped-loop issue #97 remains open.",
+    "DIP-03 through DIP-13 unfinished requirements remain in the authoritative task document."
+  ],
+  "executed_source_check": "Both executed projects contain byte-identical current product sources and the committed fixture; positive_prepare only selects the existing legacy/ok case."
+}

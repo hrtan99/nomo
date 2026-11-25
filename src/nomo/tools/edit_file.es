@@ -11,7 +11,7 @@ import nomo.harness.edit_original.{OriginalReadFunction, OriginalReader, EditApp
 import std.text.{from_usize, len as byte_len};
 import nomo.tools.edit_proposal.{validate, text_bytes};
 import nomo.core.large_context.{file_bytes, file_metadata_bytes};
-public import nomo.tools.edit_contract.{Prepared, prepare_original};
+public import nomo.tools.edit_contract.{Prepared, prepare_original, prepare_original_legacy};
 
 public type EditableRoot;
 impl EditableRoot ~ Region;
@@ -56,13 +56,6 @@ flow read_original_with(name: string, maximum: EditLimit) -> Result<string, stri
 
 public flow read_original(name: string) -> Result<string, string> ![Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Error<FileError>, Error<IndexError>] ~ OriginalReadFunction<EditableRoot> { let reader = LegacyEditFile {}; return reader.read_original(name); }
 public flow read_original_wide(name: string) -> Result<string, string> ![Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Error<FileError>, Error<IndexError>] ~ OriginalReadFunction<EditableRoot> { let reader = WideEditFile {}; return reader.read_original(name); }
-
-public flow prepare_original_legacy(name: string, original: string, target: string, replacement: string) -> Result<Prepared, string> {
-    if byte_len(original) > file_bytes() || byte_len(target) > file_bytes() || byte_len(replacement) > file_bytes() { return Err("edit text exceeds 1048576 UTF-8 bytes"); }
-    let prepared = match prepare_original(name, original, target, replacement) { Ok(value) => value, Err(error) => { return Err(error); } };
-    if byte_len(prepared.proposal.after) > file_bytes() { return Err("edit result exceeds 1048576 UTF-8 bytes"); }
-    return Ok(prepared);
-}
 
 public flow prepare(name: string, target: string, replacement: string) -> Result<Prepared, string> {
     let original = match read_original(name) { Ok(value) => value, Err(error) => { return Err(error); } };
