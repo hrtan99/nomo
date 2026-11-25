@@ -16,7 +16,7 @@ import shutil
 import subprocess
 import tempfile
 
-from etas_0224_migration import migrate, tokens
+from etas_0224_migration import closing, migrate, tokens
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -30,6 +30,7 @@ OVERLAYS = [
     "processes-dip10-0224",
     "configuration-instructions-dip11-0224",
     "transfer-project-terminal-dip12-0224",
+    "native-startup-0224-20261126",
 ]
 # Later architectural extractions replace these earlier implementations. Entry,
 # active agent effects and the composition root are merged explicitly below.
@@ -37,7 +38,7 @@ OWNERS = {
     "src/nomo/native/configuration.es": "configuration-instructions-dip11-0224",
     "src/nomo/native/mutations.es": "mutations-dip09-0224",
     "src/nomo/native/context.es": "conversation-composition-dip06-0224",
-    "src/nomo/native/entry.es": "conversation-composition-dip06-0224",
+    "src/nomo/native/entry.es": "native-startup-0224-20261126",
     "src/nomo/native/agent.es": "mutations-dip09-0224",
     "src/nomo/bootstrap/native.es": "mutations-dip09-0224",
     "src/nomo/main.es": "mutations-dip09-0224",
@@ -51,6 +52,28 @@ def digest(value: str) -> str:
 def replace(files: dict[str, str], path: str, old: str, new: str) -> None:
     assert old in files[path], (path, old)
     files[path] = files[path].replace(old, new)
+
+
+def replace_flow(files: dict[str, str], path: str, name: str, new: str) -> None:
+    text = files[path]
+    items = tokens(text)
+    start = next(i for i in range(len(items) - 1) if items[i].group() == "flow" and items[i + 1].group() == name)
+    body = next(i for i in range(start, len(items)) if items[i].group() == "{")
+    end = closing(items, body, "{", "}")
+    files[path] = text[:items[start].start()] + new + text[items[end].end():]
+
+
+def merge_variants(path, base, values):
+    merged = values[0][1]
+    for _, incoming in values[1:]:
+        with tempfile.TemporaryDirectory(prefix="nomo-dip-merge-") as folder:
+            paths = [Path(folder) / name for name in ("current", "base", "incoming")]
+            for dest, text in zip(paths, (merged, base, incoming)):
+                dest.write_text(text)
+            result = subprocess.run(["git", "merge-file", "-p", *map(str, paths)], capture_output=True, text=True)
+            assert result.returncode == 0, (path, result.stdout, result.stderr)
+            merged = result.stdout
+    return merged
 
 
 def compose() -> tuple[dict[str, str], dict[str, str], dict]:
@@ -82,8 +105,10 @@ def compose() -> tuple[dict[str, str], dict[str, str], dict]:
     for path, values in variants.items():
         if len(values) == 1:
             after[path] = values[0][1]
-        else:
+        elif path in OWNERS:
             after[path] = dict(values)[OWNERS[path]]
+        else:
+            after[path] = merge_variants(path, before[path], values)
 
     # The replacement leaf no longer contains the foreground command functions.
     replace(after, "src/nomo/adapters/workspace/mutation_files.es",
@@ -140,6 +165,17 @@ impl SavedJobContext ~ SavedJobsReader {
     after[conversation] = after[conversation][:start] + after[conversation][end:]
     replace(after, conversation, "turn, compact as compact_conversation, ready, supported",
             "turn, compact as compact_conversation")
+    replace(after, conversation, "import nomo.domain.configuration.settings.Settings;",
+            "import nomo.domain.configuration.settings.{Settings, with_check};")
+    replace(after, conversation, "public flow settings_for(session: string)",
+            "public flow settings_for(session: string, check: Option<Array<string>>)")
+    replace(after, conversation,
+            "    return handle { load_configuration() } with { SessionContext.current() => { resume session; } };",
+            "    let value = handle { load_configuration() } with { SessionContext.current() => { resume session; } };\n"
+            "    return with_check(value, check);")
+    replace(after, conversation, "public flow ask(session: string, request: string)",
+            "public flow ask(session: string, request: string, check: Option<Array<string>>)")
+    replace(after, conversation, "resume settings_for(selected);", "resume settings_for(selected, check);")
 
     # Both real model tools now call injected operation effects. Carry the same
     # row through the agent, port, adapter, conversation composition and entry.
@@ -170,9 +206,9 @@ impl SavedJobContext ~ SavedJobsReader {
 import nomo.domain.configuration.settings.Settings;
 
 public effect ConversationRequests {
-    action turn(session: string, request: string) -> bool;
+    action turn(session: string, request: string, check: Option<Array<string>>) -> bool;
     action compact(session: string, settings: Settings) -> unit;
-    action settings(session: string) -> Settings;
+    action settings(session: string, check: Option<Array<string>>) -> Settings;
 }
 '''
     ports = "src/nomo/application/native/conversation/ports.es"
@@ -183,13 +219,17 @@ public effect ConversationRequests {
             "    flow rename(self, id: string, title: string) -> unit { rename(id, title); }")
 
     entry = "src/nomo/native/entry.es"
+    replace(after, entry, "import nomo.native.agent.NativeCoding;\n", "")
+    replace(after, entry, "import nomo.adapters.terminal.conversation_picker.ConsoleConversationPicker;\n", "")
+    replace(after, entry, "import nomo.application.native.conversation.startup.{select as select_start};",
+            "import nomo.application.native.conversation.startup.{ConversationPicker, select as select_start};")
     replace(after, entry,
             "import nomo.adapters.etas.conversations.{NativeHistory, rename, read_message as message, fork, copy_status, copy_jobs, copy_job, resume_fork, discard_copy};",
             "import nomo.application.native.execution.ports.AttemptRepository;")
     replace(after, entry, "ConversationReader, ConversationWriter, ConversationCatalog, GenerationReservation",
             "ConversationReader, ConversationWriter, ConversationCatalog, ResultPublication")
     replace(after, entry,
-            "import nomo.bootstrap.conversation.{ask as run_turn, compact, ready_for_turn, generation_supported, settings_for as load_settings};",
+            "import nomo.native.context.{RollingContext, ContextProjection, build as build_context, compact};",
             "import nomo.application.native.conversation.requests.ConversationRequests;\n"
             "import nomo.application.native.conversation.model.ConversationOutput;\n"
             "import nomo.application.native.conversation.controller.{ready, supported};")
@@ -201,41 +241,37 @@ public effect ConversationRequests {
     replace(after, entry,
             "import nomo.bootstrap.execution.{attempts, begin, dispatching, returned, complete_attempt, resolve};",
             "import nomo.application.native.execution.service.resolve;")
-    replace(after, entry, "import nomo.domain.configuration.settings.{Settings, effective_window, as_number, estimated_tokens};",
+    replace(after, entry, "import nomo.domain.configuration.settings.{Settings, effective_window, as_number, estimated_tokens, with_check};",
             "import nomo.domain.configuration.settings.Settings;")
     replace(after, entry, "import nomo.native.configuration.{SettingsContext, load as load_configuration, status as configuration_status};",
             "import nomo.application.native.configuration.context.SettingsContext;\n"
             "import nomo.native.configuration.status as configuration_status;")
-    replace(after, entry, "flow ask(session: string, request: string) -> bool { return run_turn(session, request); }",
-            '''flow ask(session: string, request: string) -> bool { return perform ConversationRequests.turn(session, request); }
-
-flow load_settings(session: string) -> Settings { return perform ConversationRequests.settings(session); }
-
-flow ready_for_turn<A ~ AttemptRepository>(attempts: A, session: string) -> bool {
+    replace_flow(after, entry, "ask", '''flow ask(session: string, request: string, check: Option<Array<string>>) -> bool {
+    return perform ConversationRequests.turn(session, request, check);
+}''')
+    replace_flow(after, entry, "load_settings", '''flow load_settings(session: string, check: Option<Array<string>>) -> Settings {
+    return perform ConversationRequests.settings(session, check);
+}''')
+    replace_flow(after, entry, "ready_for_turn", '''flow ready_for_turn<A ~ AttemptRepository>(attempts: A, session: string) -> bool {
     return ready(attempts, session) with { ConversationOutput.write(line) => { println(line); resume; } };
-}
-
-flow generation_supported(settings: Settings) -> bool {
+}''')
+    replace_flow(after, entry, "generation_supported", '''flow generation_supported(settings: Settings) -> bool {
     return supported(settings) with { ConversationOutput.write(line) => { println(line); resume; } };
 }''')
     replace(after, entry, "flow show(value: Session)", "flow show<A ~ AttemptRepository>(attempts: A, value: Session)")
     replace(after, entry, "for attempt in attempts(value.id, true)", "for attempt in attempts.list(value.id, true)")
-    replace(after, entry, "flow show_history(session: string, query: string, first: i64, count: i64)",
-            "flow show_history<R ~ ConversationReader>(archive: R, session: string, query: string, first: i64, count: i64)")
-    replace(after, entry, "    let archive = NativeHistory {};\n    let selected = archive.load(session);", "    let selected = archive.load(session);")
-    replace(after, entry, "let item = message(session, index);", "let item = archive.message(session, index);")
-    replace(after, entry, "public flow run(args: Array<string>)", "public flow run<R ~ ConversationReader, W ~ ConversationWriter, C ~ ConversationCatalog, A ~ AttemptRepository, P ~ ResultPublication>(archive: R, writer: W, catalog: C, attempts: A, publication: P, args: Array<string>)")
+    replace(after, entry, "public flow run(args: Array<string>)", "public flow run<R ~ ConversationReader, W ~ ConversationWriter, C ~ ConversationCatalog, A ~ AttemptRepository, P ~ ResultPublication, K ~ ConversationPicker>(archive: R, writer: W, catalog: C, attempts: A, publication: P, picker: K, args: Array<string>)")
     replace(after, entry, "    let archive = NativeHistory {};\n", "")
-    for method in ["create", "selected", "select", "sessions"]:
+    replace(after, entry, "select_start(archive, archive, ConsoleConversationPicker {},", "select_start(archive, catalog, picker,")
+    for method in ["create", "select", "sessions", "all_sessions"]:
         replace(after, entry, "archive." + method + "(", "catalog." + method + "(")
     replace(after, entry, "show(selected)", "show(attempts, selected)")
     replace(after, entry, "show(item)", "show(attempts, item)")
-    replace(after, entry, "show_history(selected.id, query, first, count)", "show_history(archive, selected.id, query, first, count)")
     replace(after, entry, "rename(selected.id, title)", "catalog.rename(selected.id, title)")
     replace(after, entry, "attempts(selected.id, false)", "attempts.list(selected.id, false)")
     replace(after, entry, "resolve(selected.id, id, note)", "resolve(attempts, publication, archive, writer, selected.id, id, note)")
     replace(after, entry, "ready_for_turn(selected.id)", "ready_for_turn(attempts, selected.id)")
-    replace(after, entry, "compact(selected.id, settings)", "perform ConversationRequests.compact(selected.id, settings)")
+    replace(after, entry, "compact(archive, archive, selected.id, settings)", "perform ConversationRequests.compact(selected.id, settings)")
     after[entry] = after[entry].replace("\n\n", "\n\n" + operation_imports, 1)
     replace(after, entry, "![Agentic, Memory, Console,", "![Agentic, ConversationRequests, ChangeOperations, ProcessOperations, TransferOperations, ProjectOperations, Memory, Console,")
 
@@ -245,6 +281,7 @@ flow generation_supported(settings: Settings) -> bool {
     replace(after, native, "import nomo.native.entry;", "import nomo.native.entry;\n"
             "import nomo.adapters.etas.conversations.NativeHistory;\n"
             "import nomo.adapters.etas.attempts.NativeAttempts;\n"
+            "import nomo.adapters.terminal.conversation_picker.ConsoleConversationPicker;\n"
             "import nomo.application.native.conversation.requests.ConversationRequests;\n"
             "import nomo.bootstrap.conversation;\nimport nomo.bootstrap.processes;\n"
             "import nomo.bootstrap.transfer;\nimport nomo.bootstrap.projects;")
@@ -254,16 +291,18 @@ flow generation_supported(settings: Settings) -> bool {
         handle {
             handle {
                 handle {
-                    handle { entry.run(history_store, history_store, history_store, attempts, history_store, args) } with {
-                        ConversationRequests.turn(session, request) => { resume conversation.ask(session, request); }
+                    handle { entry.run(history_store, history_store, history_store, attempts, history_store, ConsoleConversationPicker {}, args) } with {
+                        ConversationRequests.turn(session, request, check) => { resume conversation.ask(session, request, check); }
                         ConversationRequests.compact(session, settings) => { conversation.compact(session, settings); resume; }
-                        ConversationRequests.settings(session) => { resume conversation.settings_for(session); }
+                        ConversationRequests.settings(session, check) => { resume conversation.settings_for(session, check); }
                     }
                 } with processes.bindings()
             } with transfer.operations()
         } with projects.operations()
     } with {''')
-    return before, after, {"inputs": inputs, "overlap_owners": OWNERS}
+    merged = {path: [name for name, _ in values] for path, values in variants.items()
+              if len(values) > 1 and path not in OWNERS}
+    return before, after, {"inputs": inputs, "overlap_owners": OWNERS, "non_conflicting_merges": merged}
 
 
 def audit(before: dict[str, str], after: dict[str, str]) -> dict:
@@ -380,13 +419,14 @@ def main() -> None:
         "snapshot_source_count": len(list((OUTPUT / "src").rglob("*.es"))),
         "files": {name: {"before_sha256": digest(before[name]) if name in before else None,
                          "candidate_sha256": digest(after[name])} for name in changed},
-        "entry_dependencies": ["ConversationReader", "ConversationWriter", "ConversationCatalog", "AttemptRepository", "ResultPublication", "ConversationRequests"],
+        "entry_dependencies": ["ConversationReader", "ConversationWriter", "ConversationCatalog", "AttemptRepository", "ResultPublication", "ConversationPicker", "ConversationRequests"],
         "cross_overlay_repairs": [
             "One composition root installs conversation, change, process, transfer and project operations.",
             "CodingModel, its implementation and the per-turn row carry change/process operations.",
             "Context reads JobRepository and injected ProjectGuidance; it does not execute process tools.",
             "Configuration converter and mutation filesystem adapter use the extracted command composition.",
             "Entry receives existing storage/recovery ports; bootstrap alone constructs their concrete backends.",
+            "Startup selector uses the injected conversation picker/catalog; check overrides travel explicitly with turn/settings requests.",
         ],
         "acceptance": "Apply preflight only. Language migration, normal target compilation and actual production scenarios remain required.",
         "production_selection_changed": False,
@@ -415,6 +455,7 @@ def main() -> None:
         "status": "prepared_not_target_compiler_accepted",
         "input_overlays": report["inputs"],
         "overlap_owners": report["overlap_owners"],
+        "non_conflicting_merges": report["non_conflicting_merges"],
         "structural_audit_before_syntax_migration": report["structural_audit"],
         "composition_patch_sha256": report["patch_sha256"],
         "patch_sha256": digest(migrated_patch),

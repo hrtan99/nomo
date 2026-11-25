@@ -3,9 +3,9 @@
 ## Combined dependency-inversion proposal, 2026-11-26
 
 `dip-composition-0224-20261126.patch` is the single combined proposal against
-`b57ba72`: it incorporates DIP-06 through DIP-12 and the agent/loop migration.
-It changes 170 files, including 72 agent declarations, 77 instance references
-and 252 bounded loops. The adjacent JSON pins every input overlay, changed
+`6158d8c`: it incorporates DIP-06 through DIP-12, the startup compatibility
+proposal below, and the agent/loop migration. It changes 176 files, including
+72 agent declarations, 77 instance references and 256 bounded loops. The adjacent JSON pins every input overlay, changed
 source hash and original loop-bound expression. The lower loop count follows
 removal of superseded orchestration; it is not a reduction of retained bounds.
 `dip-composition-20261126.patch` records the same architecture before the
@@ -19,6 +19,8 @@ The combined composition resolves the overlapping roots and entry edits:
 - Entry receives the existing conversation and recovery ports. Its application
   request effect selects turn, compaction and settings use cases at bootstrap;
   it no longer constructs NativeHistory or imports bootstrap implementations.
+  Startup selection receives an injected ConversationPicker; per-invocation
+  check argv travels explicitly with the settings and turn requests.
 - Context obtains instructions from ProjectGuidance and saved jobs from
   JobRepository. Saved metadata acquisition does not invoke process tools.
 - Configuration conversion and filesystem mutations use the extracted command
@@ -31,10 +33,12 @@ recorded overlaps, audits named imports and persistent declarations, preserves
 all string literals during syntax migration, and preflights both output patches.
 Source snapshots under `tmp/dip-composed-0224-20261126/` include unchanged local
 source prototypes; the emitted patches touch only this refactoring's owned
-sources and the existing foreground-command fixture. The source-only counts are
-17,017 SLOC selected, 17,095 composed and 17,311 after syntax migration, including
-those prototypes. These are not inclusive runtime size acceptance; the existing
-user-authorized temporary line-limit exception still applies.
+sources, the existing foreground-command fixture and the pending startup
+consumer. The source-only counts are 17,017 SLOC selected, 17,234 composed and
+17,450 after syntax migration, including those prototypes. Using the full v4
+runtime inventory, the corresponding inclusive totals are 21,535 / 21,794 /
+22,010 SLOC. Runtime business code has not been retired by the proposal; the
+existing user-authorized temporary line-limit exception still applies.
 
 This is **preparation only**: apply preflight and the structural audit do not
 prove type/effect correctness or runtime behavior. The known documented loop
@@ -51,6 +55,37 @@ do not constitute acceptance of this combined source. Full target checking and
 the original production consumers, continuous capture/live process gates and
 default-entry cutover remain required. No production selector or launcher was
 changed by this preparation; DIP-02 through DIP-13 remain unchecked.
+
+## Startup CLI proposal
+
+`native-startup-0224-20261126.patch` prepares typed startup selection, project and
+conversation listing, history/status, title/import/export and per-invocation
+check overrides. The generic startup use case consumes the existing reader and
+catalog roles plus an application-owned ConversationPicker. The all-session
+catalog query shares the original Memory paging implementation. Persisted
+records, schema and stable IDs are unchanged. The launcher prepares mounts and
+forwards argv; explicit inspection/export runs separately from a resident UI.
+
+The normal whole-project check on official **0.13.5** exits 1 (`checked 293
+files`): the complete ConsoleConversationPicker implementation is reported as
+bodyless/missing choose, followed by missing implementation evidence at its
+generic caller. The precise trigger remains unknown. It is a version-scoped
+[follow-up to frontend #98](https://github.com/etas-project/etas-frontend/issues/98#issuecomment-7173748938),
+not a claim of a latest-graph regression. All six changed production files were
+restored byte for byte; the three new Etas files and future positive consumer
+remain only in the patch and exact rejected snapshot. The source check blocked
+execution of `tests/native_startup_probe.py`; none of its proposed startup,
+resident-inspection, export or check-override runtime assertions are accepted.
+The adjacent manifest pins the checked Etas hashes separately from subsequent
+unexecuted corrections to shell forwarding, fixture data and recent-project
+bookkeeping order.
+
+The combined proposal injects the chooser at bootstrap and binds check argv as
+ordinary request data. It contains no alternate production handler or compiler
+workaround. It still does not establish full shipping CLI parity: native
+`--latest` uses the selected native binding, cross-project resume requires the
+correct mount, archive paths retain ProjectRoot rules, and legacy selectors/IDs
+still need their explicit migration route. The shipping launcher has not changed.
 
 ## Language migration for official 0.22.4
 

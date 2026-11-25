@@ -1,0 +1,649 @@
+diff --git a/scripts/nomo-native b/scripts/nomo-native
+--- a/scripts/nomo-native
++++ b/scripts/nomo-native
+@@ -5,7 +5,11 @@
+ task_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+ if [[ "${1:-}" == --help || "${1:-}" == -h ]]; then
+   cat <<'HELP'
+-Usage: nomo-native [PROJECT_DIRECTORY] [--open | --new | --resume ID] [--once PROMPT]
++Usage: nomo-native [PROJECT_DIRECTORY | --root DIRECTORY] [OPTIONS]
++
++--new, --id ID, --resume [ID], --latest, --title TITLE
++--projects, --open [FOLDER], --sessions [--all], --history, --events, --status
++--import FILE, --export FILE, --once PROMPT, --check PROGRAM [ARG ...]
+ 
+ Launch the opt-in Etas native migration. PROJECT_DIRECTORY defaults to cwd.
+ Set MINIMAX_API_KEY for the configured model endpoint. Native state defaults
+@@ -24,6 +28,36 @@
+   task_project="$1"
+   shift
+ fi
++task_arguments=()
++task_offline=false
++while [[ $# -gt 0 ]]; do
++  case "$1" in
++    --root|--workspace)
++      task_project="$2"
++      shift 2
++      ;;
++    --root=*|--workspace=*) task_project="${1#*=}"; shift ;;
++    --once|--id|--title|--import)
++      task_arguments+=("$1")
++      shift
++      if [[ $# -gt 0 ]]; then task_arguments+=("$1"); shift; fi
++      ;;
++    --export)
++      task_offline=true
++      task_arguments+=("$1")
++      shift
++      if [[ $# -gt 0 ]]; then task_arguments+=("$1"); shift; fi
++      ;;
++    --projects|--sessions|--history|--events|--status|--export=*)
++      task_offline=true
++      task_arguments+=("$1")
++      shift
++      ;;
++    --check|--check=*) task_arguments+=("$@"); break ;;
++    *) task_arguments+=("$1"); shift ;;
++  esac
++done
++set -- "${task_arguments[@]}"
+ umask 077
+ task_state="${NOMO_NATIVE_STATE:-${XDG_STATE_HOME:-$HOME/.local/state}/nomo/native}"
+ mkdir -p -- "$task_state"
+@@ -39,8 +73,7 @@
+   export NOMO_NATIVE_CONTROL_DIR="$NOMO_NATIVE_EVIDENCE/control"
+   mkdir -- "$NOMO_NATIVE_CONTROL_DIR"
+   set +e
+-  python3 "$task_root/scripts/native-worker-transport.py" \
+-    docker compose --project-name nomo-native --env-file /dev/null \
++  task_command=(docker compose --project-name nomo-native --env-file /dev/null \
+     --file "$task_root/compose.yaml" \
+     --file "$task_root/config/etas-0135-official-compose.yaml" \
+     --file "$task_root/config/local-tryout-compose.yaml" \
+@@ -51,7 +84,19 @@
+     --flow native_project --profile nomo-native --allow-effects \
+     --max-tool-rounds "${NOMO_NATIVE_MAX_TOOL_ROUNDS:-256}" \
+     --trace-out /native-evidence/trace.json \
+-    --args "$@" --workspace "$NOMO_NATIVE_WORKSPACE"
++    --args --workspace "$NOMO_NATIVE_WORKSPACE" "$@")
++  if [[ "$task_offline" == true ]]; then
++    # Startup inspection/export is a separate native invocation; it never
++    # injects input into a resident terminal or its pending approval prompt.
++    if [[ ! -t 0 || ! -t 1 ]]; then
++      for task_index in "${!task_command[@]}"; do
++        if [[ "${task_command[$task_index]}" == --tty=true ]]; then task_command[$task_index]=--tty=false; fi
++      done
++    fi
++    "${task_command[@]}"
++  else
++    python3 "$task_root/scripts/native-worker-transport.py" "${task_command[@]}"
++  fi
+   task_status=$?
+   set -e
+   if [[ "$task_status" -ne 0 ]]; then exit "$task_status"; fi
+diff --git a/src/nomo/adapters/etas/conversations.es b/src/nomo/adapters/etas/conversations.es
+--- a/src/nomo/adapters/etas/conversations.es
++++ b/src/nomo/adapters/etas/conversations.es
+@@ -110,17 +110,25 @@
+         return value;
+     }
+     flow sessions(self, workspace: string) -> Array<Session> {
+-        var result: Array<Session> = [];
+-        var cursor: Option<MemoryCursor> = None();
+-        while true limit Iterations(2147483647) {
+-            let page = Data.Sessions.page(cursor, 100);
+-            for item in page.entries limit Iterations(2147483647) {
+-                if item.value.workspace == workspace { result = result.push(item.value); }
++        return stored_sessions(Some(workspace));
++    }
++    flow all_sessions(self) -> Array<Session> { return stored_sessions(None()); }
++}
++
++flow stored_sessions(workspace: Option<string>) -> Array<Session> {
++    var result: Array<Session> = [];
++    var cursor: Option<MemoryCursor> = None();
++    while true limit Iterations(2147483647) {
++        let page = Data.Sessions.page(cursor, 100);
++        for item in page.entries limit Iterations(2147483647) {
++            let selected = match workspace { Some(path) => item.value.workspace == path, None() => true };
++            if selected {
++                result = result.push(item.value);
+             }
+-            match page.cursor { Some(value) => { cursor = Some(value); } None() => { break; } }
+-        }
+-        return result;
+-    }
++        }
++        match page.cursor { Some(value) => { cursor = Some(value); } None() => { break; } }
++    }
++    return result;
+ }
+ 
+ flow reserve_event(id: string, role: string, name: string, call: i64, live: bool) -> i64 {
+diff --git a/src/nomo/adapters/terminal/conversation_picker.es b/src/nomo/adapters/terminal/conversation_picker.es
+new file mode 100644
+--- /dev/null
++++ b/src/nomo/adapters/terminal/conversation_picker.es
+@@ -0,0 +1,31 @@
++module nomo.adapters.terminal.conversation_picker;
++
++import std.io.{println, print, read_line, IOError as ConsoleError};
++import std.text.{trim, from_usize, parse_usize};
++import nomo.native.history.Session;
++import nomo.application.native.conversation.startup.ConversationPicker;
++
++public type ConsoleConversationPicker = {};
++impl ConsoleConversationPicker ~ ConversationPicker {
++    flow choose(self, sessions: Array<Session>) -> Option<string> ![Console, Error<ConsoleError>] {
++        var number: usize = 1;
++        for item in sessions limit Iterations(2147483647) {
++            println("[SESSION] " + from_usize(number) + " · " + item.id + " · " + item.title);
++            number = number + 1;
++        }
++        print("Conversation number or ID (empty cancels): ");
++        let selected = trim(read_line());
++        if selected == "" { return None(); }
++        match parse_usize(selected) {
++            Ok(index) => {
++                number = 1;
++                for item in sessions limit Iterations(2147483647) {
++                    if number == index { return Some(item.id); }
++                    number = number + 1;
++                }
++                abort("conversation number is not in the displayed list");
++            }
++            Err(_) => { return Some(selected); }
++        }
++    }
++}
+diff --git a/src/nomo/application/native/conversation/ports.es b/src/nomo/application/native/conversation/ports.es
+--- a/src/nomo/application/native/conversation/ports.es
++++ b/src/nomo/application/native/conversation/ports.es
+@@ -18,6 +18,7 @@
+     flow selected(self, workspace: string) -> Option<string> ![Memory, Error<StorageError>];
+     flow select(self, workspace: string, id: string) -> Session ![Memory, Error<StorageError>];
+     flow sessions(self, workspace: string) -> Array<Session> ![Memory, Error<StorageError>];
++    flow all_sessions(self) -> Array<Session> ![Memory, Error<StorageError>];
+ }
+ 
+ public spec GenerationReservation {
+diff --git a/src/nomo/application/native/conversation/startup.es b/src/nomo/application/native/conversation/startup.es
+new file mode 100644
+--- /dev/null
++++ b/src/nomo/application/native/conversation/startup.es
+@@ -0,0 +1,36 @@
++module nomo.application.native.conversation.startup;
++
++import std.io.IOError as ConsoleError;
++import nomo.native.history.Session;
++import nomo.domain.conversation.start.SessionSelection;
++import nomo.application.native.conversation.ports.{ConversationReader, ConversationCatalog};
++
++public spec ConversationPicker {
++    flow choose(self, sessions: Array<Session>) -> Option<string> ![Console, Error<ConsoleError>];
++}
++
++flow existing<R ~ ConversationReader, C ~ ConversationCatalog>(reader: R, catalog: C, workspace: string, id: string, activate: bool) -> Session {
++    if activate { return catalog.select(workspace, id); }
++    let value = reader.load(id);
++    if value.workspace != workspace { abort("native session belongs to a different workspace"); }
++    return value;
++}
++
++public flow select<R ~ ConversationReader, C ~ ConversationCatalog, P ~ ConversationPicker>(reader: R, catalog: C, picker: P, workspace: string, selection: SessionSelection, activate: bool) -> Option<Session> {
++    return match selection {
++        SessionSelection.Fresh => Some(catalog.create(workspace, "New conversation")),
++        SessionSelection.Exact(id) => Some(existing(reader, catalog, workspace, id, activate)),
++        SessionSelection.Choose => match picker.choose(catalog.sessions(workspace)) {
++            Some(id) => Some(existing(reader, catalog, workspace, id, activate)),
++            None() => None()
++        },
++        SessionSelection.Current => match catalog.selected(workspace) {
++            Some(id) => Some(existing(reader, catalog, workspace, id, activate)),
++            None() => Some(catalog.create(workspace, "New conversation"))
++        },
++        SessionSelection.Existing => match catalog.selected(workspace) {
++            Some(id) => Some(existing(reader, catalog, workspace, id, activate)),
++            None() => { abort("no saved conversation is selected for this project"); }
++        }
++    };
++}
+diff --git a/src/nomo/domain/configuration/settings.es b/src/nomo/domain/configuration/settings.es
+--- a/src/nomo/domain/configuration/settings.es
++++ b/src/nomo/domain/configuration/settings.es
+@@ -8,6 +8,14 @@
+ public flow defaults() -> Settings {
+     return Settings { context_window = 1048576, max_output_tokens = 131072, compact_ratio = 0.75,
+         keep_messages = 12, command_timeout = 600, ignore = [], instructions = [], check = [] };
++}
++
++public flow with_check(settings: Settings, override: Option<Array<string>>) -> Settings {
++    let check = match override { Some(value) => value, None() => { return settings; } };
++    return Settings { context_window = settings.context_window, max_output_tokens = settings.max_output_tokens,
++        compact_ratio = settings.compact_ratio, keep_messages = settings.keep_messages,
++        command_timeout = settings.command_timeout, ignore = settings.ignore,
++        instructions = settings.instructions, check = check };
+ }
+ 
+ public flow validate(settings: Settings) -> Settings {
+diff --git a/src/nomo/domain/conversation/start.es b/src/nomo/domain/conversation/start.es
+new file mode 100644
+--- /dev/null
++++ b/src/nomo/domain/conversation/start.es
+@@ -0,0 +1,3 @@
++module nomo.domain.conversation.start;
++
++public enum SessionSelection { Current, Fresh, Existing, Exact(string), Choose }
+diff --git a/src/nomo/entry/native/options.es b/src/nomo/entry/native/options.es
+--- a/src/nomo/entry/native/options.es
++++ b/src/nomo/entry/native/options.es
+@@ -1,28 +1,73 @@
+ module nomo.entry.native.options;
+ 
+ import std.collections.len;
++import std.text.{split_once, strip_prefix};
++import nomo.domain.conversation.start.SessionSelection;
+ 
+-public type Options = { workspace: string, resume_id: string, fresh: bool, once: Option<string>, choose_project: bool };
++public type Options = { workspace: string, selection: SessionSelection, once: Option<string>,
++    open_project: Option<string>, projects: bool, sessions: bool, all_sessions: bool,
++    history: bool, status: bool, title: Option<string>, import_path: Option<string>,
++    export_path: Option<string>, check: Option<Array<string>> };
++
++public flow offline(options: Options) -> bool {
++    return options.projects || options.sessions || options.history || options.status ||
++        match options.export_path { Some(_) => true, None() => false };
++}
+ 
+ public flow parse(args: Array<string>) -> Options ![Error<IndexError>] {
+     var workspace = "";
+-    var resume_id = "";
+-    var fresh = false;
+-    var choose_project = false;
++    var selection = SessionSelection.Current;
+     var once: Option<string> = None();
++    var open_project: Option<string> = None();
++    var projects = false; var sessions = false; var all_sessions = false;
++    var history = false; var status = false;
++    var title: Option<string> = None();
++    var import_path: Option<string> = None(); var export_path: Option<string> = None();
++    var check: Option<Array<string>> = None();
+     var index: usize = 0;
+     while index < len(args) limit Iterations(2147483647) {
+-        let option = args[index];
+-        if option == "--new" { fresh = true; index = index + 1; continue; }
+-        if option == "--open" { choose_project = true; index = index + 1; continue; }
+-        if index + 1 >= len(args) { abort("native entry expects --workspace PATH, optional --resume ID, --new or --once REQUEST"); }
+-        let value = args[index + 1];
+-        if option == "--workspace" { workspace = value; }
+-        else if option == "--resume" { resume_id = value; }
++        let (option, inline) = match split_once(args[index], "=") { Some((name, value)) => (name, Some(value)), None() => (args[index], None()) };
++        index = index + 1;
++        if option == "--new" { selection = SessionSelection.Fresh; continue; }
++        if option == "--latest" { selection = SessionSelection.Existing; continue; }
++        if option == "--projects" { projects = true; continue; }
++        if option == "--sessions" { sessions = true; continue; }
++        if option == "--all" { all_sessions = true; continue; }
++        if option == "--history" || option == "--events" { history = true; continue; }
++        if option == "--status" { status = true; continue; }
++        if option == "--high-input" { continue; }
++        if option == "--check" {
++            var command: Array<string> = match inline { Some(value) => [value], None() => [] };
++            while index < len(args) limit Iterations(2147483647) { command = command.push(args[index]); index = index + 1; }
++            if len(command) == 0 { abort("--check requires a command"); }
++            check = Some(command); continue;
++        }
++        if option == "--resume" || option == "--open" {
++            var selected = match inline { Some(value) => value, None() => "" };
++            if selected == "" && index < len(args) {
++                let value_follows = match strip_prefix(args[index], "--") { Some(_) => false, None() => true };
++                if value_follows {
++                    selected = args[index]; index = index + 1;
++                }
++            }
++            if option == "--open" { open_project = Some(selected); }
++            else { selection = if selected == "" { SessionSelection.Choose } else { SessionSelection.Exact(selected) }; }
++            continue;
++        }
++        let value = match inline {
++            Some(value) => value,
++            None() => { if index >= len(args) { abort("native option requires a value: " + option); } let value = args[index]; index = index + 1; value }
++        };
++        if option == "--workspace" || option == "--root" { workspace = value; }
++        else if option == "--id" { selection = SessionSelection.Exact(value); }
+         else if option == "--once" { once = Some(value); }
++        else if option == "--title" { title = Some(value); }
++        else if option == "--import" { import_path = Some(value); }
++        else if option == "--export" { export_path = Some(value); }
+         else { abort("unknown native entry option: " + option); }
+-        index = index + 2;
+     }
+     if workspace == "" { abort("provide --workspace with the folder mounted as /project"); }
+-    return Options { workspace = workspace, resume_id = resume_id, fresh = fresh, once = once, choose_project = choose_project };
++    return Options { workspace = workspace, selection = selection, once = once, open_project = open_project,
++        projects = projects, sessions = sessions, all_sessions = all_sessions, history = history, status = status,
++        title = title, import_path = import_path, export_path = export_path, check = check };
+ }
+diff --git a/src/nomo/native/entry.es b/src/nomo/native/entry.es
+--- a/src/nomo/native/entry.es
++++ b/src/nomo/native/entry.es
+@@ -9,6 +9,9 @@
+ import std.fs.{ReadLimitError, IOError as FileError};
+ import nomo.core.json.encode;
+ import nomo.entry.native.options.parse;
++import nomo.entry.native.options.offline;
++import nomo.application.native.conversation.startup.{select as select_start};
++import nomo.adapters.terminal.conversation_picker.ConsoleConversationPicker;
+ import nomo.native.history.{SessionContext, Session};
+ import nomo.adapters.etas.conversations.{NativeHistory, rename, read_message as message, fork, copy_status, copy_jobs, copy_job, resume_fork, discard_copy};
+ import nomo.application.native.conversation.ports.{ConversationReader, ConversationWriter, ConversationCatalog, GenerationReservation};
+@@ -18,7 +21,7 @@
+ import nomo.native.files.read_file;
+ import nomo.native.navigation.{find_files, search_project};
+ import nomo.bootstrap.execution.{attempts, begin, dispatching, returned, complete_attempt, resolve};
+-import nomo.domain.configuration.settings.{Settings, effective_window, as_number, estimated_tokens};
++import nomo.domain.configuration.settings.{Settings, effective_window, as_number, estimated_tokens, with_check};
+ import nomo.native.configuration.{SettingsContext, load as load_configuration, status as configuration_status};
+ import nomo.native.terminal.check_project;
+ import nomo.native.terminal.run_command;
+@@ -52,8 +55,9 @@
+     } with { SessionContext.current() => { resume session; } };
+ }
+ 
+-flow load_settings(session: string) -> Settings {
+-    return handle { load_configuration() } with { SessionContext.current() => { resume session; } };
++flow load_settings(session: string, check: Option<Array<string>>) -> Settings {
++    let value = handle { load_configuration() } with { SessionContext.current() => { resume session; } };
++    return with_check(value, check);
+ }
+ 
+ flow generation_supported(settings: Settings) -> bool {
+@@ -74,8 +78,8 @@
+     return true;
+ }
+ 
+-flow navigation_command(session: string, operation: string, argument: string) -> unit {
+-    let settings = load_settings(session);
++flow navigation_command(session: string, operation: string, argument: string, check: Option<Array<string>>) -> unit {
++    let settings = load_settings(session, check);
+     let result = handle {
+         match operation {
+             "tree" => find_files(argument, "", 3),
+@@ -102,11 +106,11 @@
+     }
+ }
+ 
+-flow ask(session: string, request: string) -> bool {
++flow ask(session: string, request: string, check: Option<Array<string>>) -> bool {
+     if !ready_for_turn(session) { return false; }
+     let archive = NativeHistory {};
+     let request_event = archive.append(session, "user", "", request, -1);
+-    let settings = load_settings(session);
++    let settings = load_settings(session, check);
+     if !generation_supported(settings) { return false; }
+     let projection = RollingContext {};
+     var input = build_context(archive, session, request, settings);
+@@ -132,13 +136,12 @@
+     return true;
+ }
+ 
+-flow show_history(session: string, query: string, first: i64, count: i64) -> unit {
+-    let archive = NativeHistory {};
++flow show_history<R ~ ConversationReader>(archive: R, session: string, query: string, first: i64, count: i64) -> unit {
+     let selected = archive.load(session);
+     var index = first;
+     var shown: i64 = 0;
+     while index < selected.next_event && (count < 0 || shown < count) limit Iterations(2147483647) {
+-        let item = message(session, index);
++        let item = archive.message(session, index);
+         if query == "" || contains(item.text, query) || contains(item.name, query) {
+             println("[" + item.role + "/" + item.name + " #" + item.id + "] " + item.text);
+             shown = shown + 1;
+@@ -146,6 +149,12 @@
+         index = index + 1;
+     }
+     if index < selected.next_event { println("[HISTORY] More events remain; /page " + from_i64(index)); }
++}
++
++flow show_status(value: Session) -> unit {
++    let status = match encode(value, "status conversion failed", "status encoding failed") { Ok(value) => value, Err(error) => { abort(error); } };
++    println("[STATUS ] " + status);
++    println("[BUDGET ] generation_allowance is configured allowance; context_bytes is an estimate, not measured token usage.");
+ }
+ 
+ flow edit_command(session: string, operation: string, id: string) -> unit {
+@@ -172,26 +181,32 @@
+ public flow run(args: Array<string>) -> i32
+     ![Agentic, Memory, Console, Command.run<DefaultCommandSandbox>, Command.start<DefaultCommandSandbox>, Command.reconnect<DefaultCommandSandbox>, Command.read<DefaultCommandSandbox>, Command.write<DefaultCommandSandbox>, Command.stop<DefaultCommandSandbox>, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Fs.stat<ProjectRoot>, Fs.atomic_replace<ProjectRoot>, Fs.atomic_replace<LaunchRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>, Error<IOError>, Error<IndexError>] {
+     let options = parse(args);
+-    if options.choose_project { request_open("", options.workspace); return 0; }
++    if options.projects { show_projects(); return 0; }
++    match options.open_project { Some(pathname) => { request_open(pathname, options.workspace); return 0; } None() => {} }
++    let archive = NativeHistory {};
++    if options.sessions {
++        let items = if options.all_sessions { archive.all_sessions() } else { archive.sessions(options.workspace) };
++        for item in items limit Iterations(2147483647) { println("[PROJECT] " + item.workspace); show(item); }
++        return 0;
++    }
+     remember(options.workspace);
+-    let archive = NativeHistory {};
+-    var selected = match options.resume_id {
+-        "" => {
+-            if options.fresh { archive.create(options.workspace, "New conversation") }
+-            else { match archive.selected(options.workspace) {
+-                Some(id) => archive.select(options.workspace, id),
+-                None() => archive.create(options.workspace, "New conversation")
+-            } }
+-        }
+-        id => archive.select(options.workspace, id)
++    var selected = match options.import_path {
++        Some(pathname) => load_archive(options.workspace, pathname),
++        None() => match select_start(archive, archive, ConsoleConversationPicker {}, options.workspace, options.selection, !offline(options)) {
++            Some(value) => value, None() => { return 0; }
++        }
+     };
++    match options.title { Some(title) => { rename(selected.id, title); selected = archive.load(selected.id); } None() => {} }
++    if options.status { show_status(selected); return 0; }
++    if options.history { show_history(archive, selected.id, "", 0, -1); return 0; }
++    match options.export_path { Some(pathname) => { save_archive(selected.id, pathname); return 0; } None() => {} }
+     show(selected);
+     for job in copy_jobs(options.workspace) limit Iterations(2147483647) {
+         if job.phase == "staging" || job.phase == "copying" {
+             println("[COPY   ] Unfinished " + job.kind + " " + job.id + "; /resume-copy " + job.id + " or /discard-copy " + job.id);
+         }
+     }
+-    match options.once { Some(request) => { return if ask(selected.id, request) { 0 } else { 4 }; } None() => {} }
++    match options.once { Some(request) => { return if ask(selected.id, request, options.check) { 0 } else { 4 }; } None() => {} }
+     println("[NATIVE ] Nomo native chat · /help · /quit");
+     while true limit Iterations(2147483647) {
+         print("nomo> ");
+@@ -212,10 +227,10 @@
+             TerminalCommand.Open(value) => { request_open(value, options.workspace); }
+             TerminalCommand.Git(value) => { git_command(selected.id, value); }
+             TerminalCommand.Process(value) => { process_command(selected.id, value); }
+-            TerminalCommand.Tree(value) => { navigation_command(selected.id, "tree", value); }
+-            TerminalCommand.Glob(value) => { navigation_command(selected.id, "glob", value); }
+-            TerminalCommand.Search(value) => { navigation_command(selected.id, "search", value); }
+-            TerminalCommand.History(query, first, count) => { show_history(selected.id, query, first, count); }
++            TerminalCommand.Tree(value) => { navigation_command(selected.id, "tree", value, options.check); }
++            TerminalCommand.Glob(value) => { navigation_command(selected.id, "glob", value, options.check); }
++            TerminalCommand.Search(value) => { navigation_command(selected.id, "search", value, options.check); }
++            TerminalCommand.History(query, first, count) => { show_history(archive, selected.id, query, first, count); }
+             TerminalCommand.Fork(index) => {
+                 let through = match index { Some(value) => value, None() => archive.load(selected.id).next_event - 1 };
+                 selected = fork(selected.id, through); show(selected);
+@@ -255,18 +270,18 @@
+             }
+             TerminalCommand.Compact => {
+                 if ready_for_turn(selected.id) {
+-                    let settings = load_settings(selected.id);
++                    let settings = load_settings(selected.id, options.check);
+                     if generation_supported(settings) { compact(archive, archive, selected.id, settings); println("[CONTEXT] Summary saved; full original events retained."); }
+                 }
+             }
+             TerminalCommand.Config => {
+-                let value = configuration_status(load_settings(selected.id));
++                let value = configuration_status(load_settings(selected.id, options.check));
+                 let text = match encode(value, "configuration conversion failed", "configuration encoding failed") { Ok(value) => value, Err(error) => { abort(error); } };
+                 println("[CONFIG ] " + text);
+                 println("[CONFIG ] Context policy uses text estimates. Runtime token ceilings are static; command_timeout needs retained native jobs and is not active.");
+             }
+             TerminalCommand.Check => {
+-                let settings = load_settings(selected.id);
++                let settings = load_settings(selected.id, options.check);
+                 let session = selected.id;
+                 let value = handle { check_project() } with {
+                     SessionContext.current() => { resume session; }
+@@ -276,11 +291,9 @@
+                 println("[CHECK  ] " + text);
+             }
+             TerminalCommand.Status => {
+-                let status = match encode(archive.load(selected.id), "status conversion failed", "status encoding failed") { Ok(value) => value, Err(error) => { abort(error); } };
+-                println("[STATUS ] " + status);
+-                println("[BUDGET ] generation_allowance is configured allowance; context_bytes is an estimate, not measured token usage.");
+-            }
+-            TerminalCommand.Ask(value) => { ask(selected.id, value); }
++                show_status(archive.load(selected.id));
++            }
++            TerminalCommand.Ask(value) => { ask(selected.id, value, options.check); }
+         }
+     }
+     return 0;
+diff --git a/tests/native_startup_probe.py b/tests/native_startup_probe.py
+new file mode 100644
+--- /dev/null
++++ b/tests/native_startup_probe.py
+@@ -0,0 +1,132 @@
++"""Native startup requests, resident inspection and a scoped check override."""
++from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
++from pathlib import Path
++import json
++import os
++import subprocess
++import tempfile
++import threading
++
++from native_recovery_probe import audit, terminal
++from native_worker_probe import Client, execution_pid
++
++ROOT = Path(__file__).resolve().parents[1]
++CHECK = ["/usr/bin/python3", "-c", "import sys; from pathlib import Path; assert sys.argv[1] == '--status'; Path('check.txt').write_text('startup check'); print('override passed')", "--status"]
++
++
++class Model(BaseHTTPRequestHandler):
++    def log_message(self, *_):
++        pass
++
++    def do_POST(self):
++        request = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
++        index = len(self.server.requests)
++        self.server.requests.append(request)
++        turn = json.loads(next(item['content'] for item in request['messages'] if item['role'] == 'user'))
++        assert turn['settings']['check'] == CHECK, turn['settings']
++        assert turn['request'] == '--root', turn
++        if index == 0:
++            name, arguments = 'check_project', {}
++        else:
++            assert index == 1
++            result = json.loads(next(item['content'] for item in reversed(request['messages']) if item['role'] == 'tool'))
++            assert result['configured'] and result['output'][0]['exit_code'] == 0, result
++            assert result['output'][0]['stdout'] == 'override passed\n', result
++            name, arguments = 'etas_emit_output', {'text': 'Startup check override completed.'}
++        assert any(item['function']['name'] == name for item in request['tools'])
++        body = json.dumps({'choices': [{'message': {'role': 'assistant', 'content': None,
++            'tool_calls': [{'id': f'startup-{index}', 'type': 'function',
++                            'function': {'name': name, 'arguments': json.dumps(arguments)}}]},
++            'finish_reason': 'tool_calls'}], 'usage': {'prompt_tokens': 100, 'completion_tokens': 20, 'total_tokens': 120}}).encode()
++        self.send_response(200)
++        self.send_header('Content-Type', 'application/json')
++        self.send_header('Content-Length', str(len(body)))
++        self.end_headers()
++        self.wfile.write(body)
++
++
++def status(text):
++    return json.loads(next(line.split('[STATUS ] ', 1)[1] for line in text.splitlines() if '[STATUS ] {' in line))
++
++
++def main():
++    evidence = Path(tempfile.mkdtemp(prefix='nomo-native-startup-')).resolve()
++    project, other = evidence / 'project', evidence / 'other'
++    project.mkdir(mode=0o700); other.mkdir(mode=0o700)
++    packet = {'format': 'nomo-native-conversation-1',
++              'session': {'id': 'source', 'workspace': 'synthetic', 'title': 'Imported', 'metadata': '{}'},
++              'events': [{'id': '0', 'role': 'user', 'name': '', 'text': 'Keep the startup objective.'},
++                         {'id': '1', 'role': 'assistant', 'name': '', 'text': 'Earlier 鹈鹕 context.'}]}
++    (project / 'history.json').write_text(json.dumps(packet, ensure_ascii=False))
++    environment = dict(os.environ, MINIMAX_API_KEY='synthetic-unused', NOMO_NATIVE_STATE=str(evidence / 'state'),
++                       NOMO_NATIVE_TRACE_ROOT=str(evidence / 'traces'))
++    command = [str(ROOT / 'scripts/nomo-native'), '--root', str(project)]
++    print('EVIDENCE ' + str(evidence), flush=True)
++
++    def run(name, args, input=''):
++        result = subprocess.run(args, cwd=ROOT, env=environment, input=input, capture_output=True, text=True)
++        (evidence / (name + '-stdout.txt')).write_text(result.stdout)
++        (evidence / (name + '-stderr.txt')).write_text(result.stderr)
++        assert result.returncode == 0, result.stdout + result.stderr
++        return result.stdout
++
++    imported = status(run('import', command + ['--import', 'history.json', '--title', 'Startup α', '--status']))
++    assert imported['title'] == 'Startup α' and imported['next_event'] == 3, imported
++    second = status(run('other', [str(ROOT / 'scripts/nomo-native'), str(other), '--new', '--title', 'Other project', '--status']))
++    listing = run('sessions', command + ['--sessions', '--all'])
++    assert imported['id'] in listing and second['id'] in listing and str(other) in listing, listing
++    chosen = run('choose', command + ['--resume', '--history'], '1\n')
++    assert 'Keep the startup objective.' in chosen and 'Earlier 鹈鹕 context.' in chosen
++    assert 'Conversation number or ID' in chosen and 'nomo> ' not in chosen
++
++    resident = Client(command + ['--new', '--title', 'Resident'], environment, evidence, 'resident')
++    worker = next(line.split('[WORKER ] ', 1)[1] for line in resident.output.decode().splitlines() if '[WORKER ] ' in line)
++    before_pid, _ = execution_pid(worker)
++    resident_id = status(resident.send('/status'))['id']
++    inspected = status(run('inspect-resident', command + ['--id=' + imported['id'], '--status']))
++    assert inspected['id'] == imported['id']
++    assert status(run('latest', command + ['--latest', '--status']))['id'] == resident_id
++    assert status(resident.send('/status'))['id'] == resident_id
++    after_pid, _ = execution_pid(worker)
++    assert before_pid == after_pid
++    resident.leave()
++
++    exported = []
++    def approve_export(output):
++        value = json.loads(next(line.split('[EXPORT ] ', 1)[1] for line in reversed(output.decode().splitlines()) if '[EXPORT ] ' in line))
++        assert value['path'] == 'exported.json' and json.loads(value['content'])['session']['id'] == imported['id'], value
++        exported.append(value['content'])
++    code, output, approvals, _ = terminal(command + ['--id', imported['id'], '--export', 'exported.json'], environment, [], project, approve=approve_export)
++    (evidence / 'export-terminal.txt').write_text(output)
++    assert code == 0 and approvals == 1 and (project / 'exported.json').read_text() == exported[0], output
++    assert len(exported) == 1
++
++    server = ThreadingHTTPServer(('0.0.0.0', 0), Model)
++    server.requests = []
++    threading.Thread(target=server.serve_forever, daemon=True).start()
++    model_environment = dict(environment, NOMO_MODEL_BASE_URL=f'http://host.docker.internal:{server.server_port}/v1', NOMO_MODEL_ALLOW_PRIVATE='true')
++    def approve_check(output):
++        value = json.loads(next(line.split('[COMMAND] ', 1)[1] for line in reversed(output.decode().splitlines()) if '[COMMAND] ' in line))
++        assert value == {'program': CHECK[0], 'arguments': CHECK[1:]}, value
++    try:
++        code, output, approvals, _ = terminal(command + ['--id', imported['id'], '--high-input', '--once', '--root', '--check', *CHECK], model_environment, [], project, approve=approve_check)
++        (evidence / 'check-terminal.txt').write_text(output)
++        assert code == 0 and approvals == 1 and len(server.requests) == 2, output
++        assert (project / 'check.txt').read_text() == 'startup check'
++        assert 'Startup check override completed.' in output
++    finally:
++        server.shutdown(); server.server_close()
++    traces = [json.loads(path.read_text()) for path in (evidence / 'traces').glob('run-*/trace.json')]
++    assert all(trace['outcome']['kind'] == 'completed' for trace in traces)
++    assert all(not audit(trace['events']) for trace in traces)
++    model_requests = sum(event.get('request_kind') == 'model' and event['kind'] == 'host_request_started' for trace in traces for event in trace['events'])
++    commands = sum(event.get('qualified_action') == 'Command.run' and event['kind'] == 'host_request_started' for trace in traces for event in trace['events'])
++    assert model_requests == 2 and commands == 1
++    (evidence / 'result.json').write_text(json.dumps({'status': 'passed', 'model_requests': model_requests,
++        'native_commands': commands, 'native_approvals': 2, 'resident_pid_preserved': before_pid,
++        'imported': imported, 'other': second, 'resident': resident_id, 'traces': len(traces)}, indent=2))
++    print('PASS native startup selection, history, import/export, resident inspection and check override: ' + str(evidence))
++
++
++if __name__ == '__main__':
++    main()
