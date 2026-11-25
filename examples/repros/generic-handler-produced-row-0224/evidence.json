@@ -1,0 +1,39 @@
+{
+  "target": "official CLI 0.22.4 / matching installed SDK",
+  "seven_source_reduction": {
+    "exit": 1,
+    "stdout": "checked 7 files\n",
+    "diagnostic_counts": {
+      "effect::HandlerProducedEffectOutsideDeclaredRow": 1
+    },
+    "source_sha256": {
+      "src/app/main.es": "3cdef98fef491ff226167ce34327e16ab190435bfe57b06a24ed24b9d094c519",
+      "src/nomo/bootstrap/mutations.es": "3bc981286901d9bbdb7202b9606a818e7350c4ef1b6893f0de22b40399309baf",
+      "src/nomo/native/workspace.es": "971adfd1f2d303d6bfaad1de643056275af523b8c7c5667fe119a7f760387f99",
+      "src/nomo/native/history.es": "d57b6c7786318aa929d0fe46968a118d473c25713537b95915fb7eec4d84ed54",
+      "src/nomo/domain/mutations/models.es": "b4d1dfdcbed5d3083e6b95a2c19ea48b2353e88e03b60e1c2906d2875745b784",
+      "src/nomo/domain/conversation/messages.es": "7ed8b8d97c4406986f3d6005dce9fb7ee23403213a2fd0823671fe77ad5edee4",
+      "src/nomo/application/native/mutations/ports.es": "e6742ba4cb6266551e9400d6c75575339e1f63832a9262410ed29813d2727cc2"
+    },
+    "local_snapshot": "tmp/dip-mutations-20261126/handler-contract/package",
+    "stderr_sha256": "f420568db22b8302af805dd5fe1da60cbd1f69e5ba1dc54439c9dcface51445e"
+  },
+  "console_controls": [
+    {
+      "file": "examples/repros/generic-handler-produced-row-0224/console-concrete-control.es",
+      "exit": 0,
+      "stdout": "checked 1 file\n",
+      "sha256": "87dcdeb4b75b01e93ea734babbc2f663e991cd27af5664568b49418171b19803"
+    },
+    {
+      "file": "examples/repros/generic-handler-produced-row-0224/console-generic-control.es",
+      "exit": 0,
+      "stdout": "checked 1 file\n",
+      "sha256": "0821b817196106c219ac280632183ce4e05b5c82be16a1022445bb5f2cecb4cb"
+    }
+  ],
+  "inferred_bound_analysis": "A diagnostic-only copy without the produced bound reports missing checked Handler rows; no product fallback or acceptance is claimed.",
+  "cause": "unestablished; upstream issue requests actionable diagnostics and contract clarification",
+  "url": "https://github.com/etas-project/etas-frontend/issues/99",
+  "executed_product_or_host_actions": false
+}

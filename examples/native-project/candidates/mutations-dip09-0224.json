@@ -118,5 +118,11 @@
       "before_sha256": "a5dec79def51630eefecd6e02d3406f5e708b2577d7c458f5e9507d5aa567967",
       "candidate_sha256": "1f9c360ba704517cb9c92eda401d724e3ccefce11a6c01543c8ff577a8f0310a"
     }
+  },
+  "handler_diagnostic_followup": {
+    "url": "https://github.com/etas-project/etas-frontend/issues/99",
+    "evidence": "examples/repros/generic-handler-produced-row-0224/evidence.json",
+    "target_seven_source_check_exit": 1,
+    "scope": "The Handler diagnostic also occurs on the target in an abstract-port reduction without concrete implementations. A Console-only generic control passes. Cause remains unestablished."
   }
 }
