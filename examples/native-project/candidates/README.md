@@ -1,8 +1,60 @@
 # Native migration and output capture candidates
 
+## Combined dependency-inversion proposal, 2026-11-26
+
+`dip-composition-0224-20261126.patch` is the single combined proposal against
+`b57ba72`: it incorporates DIP-06 through DIP-12 and the agent/loop migration.
+It changes 170 files, including 72 agent declarations, 77 instance references
+and 252 bounded loops. The adjacent JSON pins every input overlay, changed
+source hash and original loop-bound expression. The lower loop count follows
+removal of superseded orchestration; it is not a reduction of retained bounds.
+`dip-composition-20261126.patch` records the same architecture before the
+language migration for review. Both patches start at the same source baseline.
+
+The combined composition resolves the overlapping roots and entry edits:
+
+- One bootstrap installs conversation, mutation, process, transfer and project
+  operations. CodingModel, its adapter and the per-turn effect row carry both
+  mutation and process operations.
+- Entry receives the existing conversation and recovery ports. Its application
+  request effect selects turn, compaction and settings use cases at bootstrap;
+  it no longer constructs NativeHistory or imports bootstrap implementations.
+- Context obtains instructions from ProjectGuidance and saved jobs from
+  JobRepository. Saved metadata acquisition does not invoke process tools.
+- Configuration conversion and filesystem mutations use the extracted command
+  composition. Cached, its schema and the cache resource remain at the original
+  native.configuration owner, alongside the other preserved contract leaves.
+
+Reproduce the preparation with `python3 scripts/prepare_dip_composition.py`.
+It applies each input overlay in its own temporary directory, resolves the
+recorded overlaps, audits named imports and persistent declarations, preserves
+all string literals during syntax migration, and preflights both output patches.
+Source snapshots under `tmp/dip-composed-0224-20261126/` include unchanged local
+source prototypes; the emitted patches touch only this refactoring's owned
+sources and the existing foreground-command fixture. The source-only counts are
+17,017 SLOC selected, 17,095 composed and 17,311 after syntax migration, including
+those prototypes. These are not inclusive runtime size acceptance; the existing
+user-authorized temporary line-limit exception still applies.
+
+This is **preparation only**: apply preflight and the structural audit do not
+prove type/effect correctness or runtime behavior. The known documented loop
+syntax blocker [frontend #97](https://github.com/etas-project/etas-frontend/issues/97)
+has not been fixed in the prepared official graph, so its failing check was not
+repeated. The returned-handler diagnostic
+[frontend #99](https://github.com/etas-project/etas-frontend/issues/99), exact Host
+adapter witness failure
+[frontend #100](https://github.com/etas-project/etas-frontend/issues/100), and
+version-scoped old-runtime project consumer failure
+[interpreter #118](https://github.com/etas-project/etas-interpreter/issues/118)
+retain their own immutable evidence. Historical checks of individual overlays
+do not constitute acceptance of this combined source. Full target checking and
+the original production consumers, continuous capture/live process gates and
+default-entry cutover remain required. No production selector or launcher was
+changed by this preparation; DIP-02 through DIP-13 remain unchecked.
+
 ## Language migration for official 0.22.4
 
-`language-migration-0224-20261125.patch` reflects the accepted execution-port source plus required SDK API changes: 72 tracked agent declarations, 77 instance references and 248 bounded loops in 96 files. It converts each agent to an empty active type with an explicit public `run(self, ...)` method, retains callable constraints on that method and constructs scoped instances at ordinary call sites. The loop migration uses the specification's prefix `@limits([Iterations(...)])` syntax. Removed command construction/process helper functions migrate to the matching SDK's `Command` and `CommandHandle` methods. Prompts, tool lists and bound expressions are retained. The combined patch changes 110 product files; untracked session prototypes are excluded. The adjacent JSON manifest records source/candidate hashes, exact bound expressions and successful apply preflight. It is prepared, not accepted by the target compiler.
+`language-migration-0224-20261125.patch` reflects the currently selected source plus required SDK API changes: 72 tracked agent declarations, 77 instance references and 268 bounded loops in 108 files. It converts each agent to an empty active type with an explicit public `run(self, ...)` method, retains callable constraints on that method and constructs scoped instances at ordinary call sites. The loop migration uses the specification's prefix `@limits([Iterations(...)])` syntax. Removed command construction/process helper functions migrate to the matching SDK's `Command` and `CommandHandle` methods. Prompts, tool lists and bound expressions are retained. This syntax-only patch changes 122 product files; untracked session prototypes are excluded. The adjacent JSON manifest records source/candidate hashes, exact bound expressions and successful apply preflight. It is prepared, not accepted by the target compiler.
 
 `language-migration-0224-20261125-baseline-a3450bc.patch` preserves the exact original executed candidate. Its normal source check failed with `checked effect tag has conflicting package identities`; that cause remains unestablished. A separate one-loop package proves that the documented prefix annotation is rejected by the official 0.22.4 graph: [etas-frontend#97](https://github.com/etas-project/etas-frontend/issues/97). The official compiler build, matching SDK installation and constructor-injection example passed independently. `../toolchain-0224-build-20261125.json` still points to the exact original candidate and diagnostic; `../../repros/scoped-loop-limits-0.22.4/` contains the executed minimal reproduction.
 
