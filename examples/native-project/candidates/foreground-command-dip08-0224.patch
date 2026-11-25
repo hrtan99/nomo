@@ -1,12 +1,11 @@
 diff --git a/src/nomo/native/configuration.es b/src/nomo/native/configuration.es
-index da5cf1a..3d13d05 100644
 --- a/src/nomo/native/configuration.es
 +++ b/src/nomo/native/configuration.es
-@@ -9,7 +9,9 @@ import std.codec.text.utf8_encode;
+@@ -6,7 +6,9 @@
  import std.io.IOError as ConsoleError;
  public import nomo.domain.configuration.settings.{Settings, defaults, effective_window, as_number, estimated_tokens, recent_bytes};
- import nomo.domain.configuration.settings.validate;
--import nomo.native.workspace.{ProjectRoot, CommandOutput, execute_readonly_input};
+ import nomo.adapters.codec.configuration.{decode, fingerprint, observation as output};
+-import nomo.native.workspace.{ProjectRoot, execute_readonly_input};
 +import nomo.native.workspace.ProjectRoot;
 +import nomo.domain.execution.command.{CommandOutput};
 +import nomo.bootstrap.command.{execute_readonly_input};

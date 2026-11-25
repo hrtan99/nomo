@@ -1,0 +1,101 @@
+{
+  "status": "prepared_not_integrated",
+  "source_baseline": "1b30e0d plus the accompanying codec, domain-scope and application effect/service preparation",
+  "candidate_sha256": "c43efc196c83406d8be14498314a92caea2ecd81ebc900f2323f11a034bf626b",
+  "files": [
+    {
+      "path": "src/nomo/adapters/configuration/file.es",
+      "base_sha256": null,
+      "proposed_sha256": "cc754935a7e6e37d303b05a763f8aa62b27d42d5e3146d4ef2c7faad3c5f2491"
+    },
+    {
+      "path": "src/nomo/adapters/configuration/codec.es",
+      "base_sha256": null,
+      "proposed_sha256": "f1a861b357afddf3912bf452c54a31b08e90c2e5b70bf6e4a3e8e6f2a096ad52"
+    },
+    {
+      "path": "src/nomo/adapters/configuration/converter.es",
+      "base_sha256": null,
+      "proposed_sha256": "1ab1c405692e8a54d3aa822123cef725b12796c464232ec3f596f83f3dfdcba5"
+    },
+    {
+      "path": "src/nomo/adapters/etas/configuration_cache.es",
+      "base_sha256": null,
+      "proposed_sha256": "9b04ca5a7b07fe3db94e183b2113216e9603e1fd820a989a0551a9916950bf5a"
+    },
+    {
+      "path": "src/nomo/adapters/workspace/instructions.es",
+      "base_sha256": null,
+      "proposed_sha256": "0c3c94053c09974494d4b89749a3866a12dd747796a22dd812308db7fe184077"
+    },
+    {
+      "path": "src/nomo/bootstrap/configuration.es",
+      "base_sha256": null,
+      "proposed_sha256": "27fc907c58de9fd599d1acce185152f944d71e7300af20e88d8bf838cdf16c26"
+    },
+    {
+      "path": "src/nomo/bootstrap/instructions.es",
+      "base_sha256": null,
+      "proposed_sha256": "8b483368c05ec7605aa0c329e953d312f2b29583aa05cad24a7c5ed37d18a8d6"
+    },
+    {
+      "path": "src/nomo/native/configuration.es",
+      "base_sha256": "5595aaad5d3603eaeea4027edefbb7d9300ad39d69e0ee3c8ac6769239b8ab05",
+      "proposed_sha256": "ff99043355912cbe63de3f6c160508ccdf8f5a8c33baee96147803a781175459"
+    },
+    {
+      "path": "src/nomo/native/project.es",
+      "base_sha256": "bd1d655a7172a0330cd540d269c9718606dda69ceba9b6126d5db9a0f226d35c",
+      "proposed_sha256": "776e2219a4ec8598ab3579cd1960053171845480ba459ca02150d911503cff3f"
+    },
+    {
+      "path": "src/nomo/native/entry.es",
+      "base_sha256": "3ab5ffd8e6ea0ae00dee7dd25bebe8bd1a6c7ec4cbee1a89a0c38988fa90579d",
+      "proposed_sha256": "47fb052c0bc348206cdf3ec686b8b84e89c1dd4a88701b39f31d676c3ecefb6a"
+    }
+  ],
+  "retained_full_check": {
+    "command": [
+      "docker",
+      "compose",
+      "--env-file",
+      "/dev/null",
+      "-f",
+      "compose.yaml",
+      "-f",
+      "config/etas-0135-official-compose.yaml",
+      "-f",
+      "config/etas-runtime-cache-compose.yaml",
+      "run",
+      "--rm",
+      "--no-deps",
+      "--tty=false",
+      "dev",
+      "/home/nomo/.cargo/bin/etas",
+      "--no-config",
+      "--cache",
+      "off",
+      "check",
+      "--all",
+      "/workspace"
+    ],
+    "exit": 1,
+    "checked_files": 279,
+    "seconds": 114.719,
+    "stdout": "checked 279 files\n",
+    "diagnostic": "error[type::InvalidImplMemberKind]: bodyless impl of spec `EntriesCodec` is missing required method `observation`\n --> /workspace/src/nomo/adapters/configuration/codec.es:9:31\n  | impl JsonConfigurationCodec ~ EntriesCodec {\n  |                               ^ bodyless impl of spec `EntriesCodec` is missing required method `observation`\nerror[type::InvalidImplMemberKind]: bodyless impl of spec `TomlConverter` is missing required method `toml`\n --> /workspace/src/nomo/adapters/configuration/converter.es:10:36\n  | impl TaploConfigurationConverter ~ TomlConverter {\n  |                                    ^ bodyless impl of spec `TomlConverter` is missing required method `toml`\nerror[type::InvalidImplMemberKind]: bodyless impl of spec `ConfigurationFile` is missing required method `read`\n --> /workspace/src/nomo/adapters/configuration/file.es:10:33\n  | impl ProjectConfigurationFile ~ ConfigurationFile {\n  |                                 ^ bodyless impl of spec `ConfigurationFile` is missing required method `read`\nerror[type::InvalidImplMemberKind]: bodyless impl of spec `ConfigurationCacheStore` is missing required method `lookup`\n --> /workspace/src/nomo/adapters/etas/configuration_cache.es:11:33\n  | impl NativeConfigurationCache ~ ConfigurationCacheStore {\n  |                                 ^ bodyless impl of spec `ConfigurationCacheStore` is missing required method `lookup`\nerror[type::InvalidImplMemberKind]: bodyless impl of spec `InstructionFileSource` is missing required method `text`\n --> /workspace/src/nomo/adapters/workspace/instructions.es:10:32\n  | impl ProjectInstructionFiles ~ InstructionFileSource {\n  |                                ^ bodyless impl of spec `InstructionFileSource` is missing required method `text`\nerror[type::TypeMismatch]: no accessible method `read` applies to receiver `nomo.adapters.configuration.file.ProjectConfigurationFile` and these arguments\n --> /workspace/src/nomo/bootstrap/configuration.es:23:48\n  |         ConfigurationSource.read() => { resume source.read(); }\n  |                                                ^ no accessible method `read` applies to receiver `nomo.adapters.configuration.file.ProjectConfigurationFile` and these arguments\nerror[type::TypeMismatch]: no accessible method `fingerprint` applies to receiver `nomo.adapters.configuration.codec.JsonConfigurationCodec` and these arguments\n --> /workspace/src/nomo/bootstrap/configuration.es:24:57\n  |         ConfigurationCodec.fingerprint(raw) => { resume codec.fingerprint(raw); }\n  |                                                         ^ no accessible method `fingerprint` applies to receiver `nomo.adapters.configuration.codec.JsonConfigurationCodec` and these arguments\nerror[type::TypeMismatch]: no accessible method `decode_json` applies to receiver `nomo.adapters.configuration.codec.JsonConfigurationCodec` and these arguments\n --> /workspace/src/nomo/bootstrap/configuration.es:25:58\n  |         ConfigurationCodec.decode_json(text) => { resume codec.decode_json(text); }\n  |                                                          ^ no accessible method `decode_json` applies to receiver `nomo.adapters.configuration.codec.JsonConfigurationCodec` and these arguments\nerror[type::TypeMismatch]: no accessible method `observation` applies to receiver `nomo.adapters.configuration.codec.JsonConfigurationCodec` and these arguments\n --> /workspace/src/nomo/bootstrap/configuration.es:26:58\n  |         ConfigurationCodec.observation(text) => { resume codec.observation(text); }\n  |                                                          ^ no accessible method `observation` applies to receiver `nomo.adapters.configuration.codec.JsonConfigurationCodec` and these arguments\nerror[type::TypeMismatch]: no accessible method `toml` applies to receiver `nomo.adapters.configuration.converter.TaploConfigurationConverter` and these arguments\n --> /workspace/src/nomo/bootstrap/configuration.es:27:55\n  |         ConfigurationConversion.toml(raw) => { resume conversion.toml(raw); }\n  |                                                       ^ no accessible method `toml` applies to receiver `nomo.adapters.configuration.converter.TaploConfigurationConverter` and these arguments\nerror[type::TypeMismatch]: no accessible method `entries` applies to receiver `nomo.adapters.configuration.converter.TaploConfigurationConverter` and these arguments\n --> /workspace/src/nomo/bootstrap/configuration.es:28:59\n  |         ConfigurationConversion.entries(json) => { resume conversion.entries(json); }\n  |                                                           ^ no accessible method `entries` applies to receiver `nomo.adapters.configuration.converter.TaploConfigurationConverter` and these arguments\nerror[type::TypeMismatch]: no accessible method `lookup` applies to receiver `nomo.adapters.etas.configuration_cache.NativeConfigurationCache` and these arguments\n --> /workspace/src/nomo/bootstrap/configuration.es:29:58\n  |         ConfigurationCache.lookup(workspace) => { resume cache.lookup(workspace); }\n  |                                                          ^ no accessible method `lookup` applies to receiver `nomo.adapters.etas.configuration_cache.NativeConfigurationCache` and these arguments\nerror[type::TypeMismatch]: no accessible method `remember` applies to receiver `nomo.adapters.etas.configuration_cache.NativeConfigurationCache` and these arguments\n --> /workspace/src/nomo/bootstrap/configuration.es:30:60\n  |         ConfigurationCache.remember(workspace, value) => { cache.remember(workspace, value); resume; }\n  |                                                            ^ no accessible method `remember` applies to receiver `nomo.adapters.etas.configuration_cache.NativeConfigurationCache` and these arguments\nerror[type::IncompleteTypeFacts]: discarded expression has no solved operand type\n --> /workspace/src/nomo/bootstrap/configuration.es:30:60\n  |         ConfigurationCache.remember(workspace, value) => { cache.remember(workspace, value); resume; }\n  |                                                            ^ discarded expression has no solved operand type\nerror[effect::IncompleteEffectFacts]: method call has no scheduled checked behavior target\n --> /workspace/src/nomo/bootstrap/configuration.es:23:48\n  |         ConfigurationSource.read() => { resume source.read(); }\n  |                                                ^ method call has no scheduled checked behavior target\nerror[effect::IncompleteEffectFacts]: method call has no scheduled checked behavior target\n --> /workspace/src/nomo/bootstrap/configuration.es:24:57\n  |         ConfigurationCodec.fingerprint(raw) => { resume codec.fingerprint(raw); }\n  |                                                         ^ method call has no scheduled checked behavior target\nerror[effect::IncompleteEffectFacts]: method call has no scheduled checked behavior target\n --> /workspace/src/nomo/bootstrap/configuration.es:25:58\n  |         ConfigurationCodec.decode_json(text) => { resume codec.decode_json(text); }\n  |                                                          ^ method call has no scheduled checked behavior target\nerror[effect::IncompleteEffectFacts]: method call has no scheduled checked behavior target\n --> /workspace/src/nomo/bootstrap/configuration.es:26:58\n  |         ConfigurationCodec.observation(text) => { resume codec.observation(text); }\n  |                                                          ^ method call has no scheduled checked behavior target\nerror[effect::IncompleteEffectFacts]: method call has no scheduled checked behavior target\n --> /workspace/src/nomo/bootstrap/configuration.es:27:55\n  |         ConfigurationConversion.toml(raw) => { resume conversion.toml(raw); }\n  |                                                       ^ method call has no scheduled checked behavior target\nerror[effect::IncompleteEffectFacts]: method call has no scheduled checked behavior target\n --> /workspace/src/nomo/bootstrap/configuration.es:28:59\n  |         ConfigurationConversion.entries(json) => { resume conversion.entries(json); }\n  |                                                           ^ method call has no scheduled checked behavior target\nerror[effect::IncompleteEffectFacts]: method call has no scheduled checked behavior target\n --> /workspace/src/nomo/bootstrap/configuration.es:29:58\n  |         ConfigurationCache.lookup(workspace) => { resume cache.lookup(workspace); }\n  |                                                          ^ method call has no scheduled checked behavior target\nerror[effect::IncompleteEffectFacts]: method call has no scheduled checked behavior target\n --> /workspace/src/nomo/bootstrap/configuration.es:30:60\n  |         ConfigurationCache.remember(workspace, value) => { cache.remember(workspace, value); resume; }\n  |                                                            ^ method call has no scheduled checked behavior target\nerror[type::TypeMismatch]: no accessible method `normalize` applies to receiver `nomo.adapters.workspace.instructions.ProjectInstructionFiles` and these arguments\n --> /workspace/src/nomo/bootstrap/instructions.es:16:58\n  |             InstructionFiles.normalize(name) => { resume self.files.normalize(name); }\n  |                                                          ^ no accessible method `normalize` applies to receiver `nomo.adapters.workspace.instructions.ProjectInstructionFiles` and these arguments\nerror[type::TypeMismatch]: no accessible method `entries` applies to receiver `nomo.adapters.workspace.instructions.ProjectInstructionFiles` and these arguments\n --> /workspace/src/nomo/bootstrap/instructions.es:17:57\n  |             InstructionFiles.entries(scope) => { resume self.files.entries(scope); }\n  |                                                         ^ no accessible method `entries` applies to receiver `nomo.adapters.workspace.instructions.ProjectInstructionFiles` and these arguments\nerror[type::TypeMismatch]: no accessible method `text` applies to receiver `nomo.adapters.workspace.instructions.ProjectInstructionFiles` and these arguments\n --> /workspace/src/nomo/bootstrap/instructions.es:18:53\n  |             InstructionFiles.text(name) => { resume self.files.text(name); }\n  |                                                     ^ no accessible method `text` applies to receiver `nomo.adapters.workspace.instructions.ProjectInstructionFiles` and these arguments\nerror[effect::IncompleteEffectFacts]: method call has no scheduled checked behavior target\n --> /workspace/src/nomo/bootstrap/instructions.es:16:58\n  |             InstructionFiles.normalize(name) => { resume self.files.normalize(name); }\n  |                                                          ^ method call has no scheduled checked behavior target\nerror[effect::IncompleteEffectFacts]: method call has no scheduled checked behavior target\n --> /workspace/src/nomo/bootstrap/instructions.es:17:57\n  |             InstructionFiles.entries(scope) => { resume self.files.entries(scope); }\n  |                                                         ^ method call has no scheduled checked behavior target\nerror[effect::IncompleteEffectFacts]: method call has no scheduled checked behavior target\n --> /workspace/src/nomo/bootstrap/instructions.es:18:53\n  |             InstructionFiles.text(name) => { resume self.files.text(name); }\n  |                                                     ^ method call has no scheduled checked behavior target\n\n"
+  },
+  "target_acceptance": false,
+  "diagnostic_family": "https://github.com/etas-project/etas-frontend/issues/98",
+  "target_prerequisite": "Official target scoped-loop support (#97); regenerate the agent/loop/SDK migration for the combined source.",
+  "persistent_compatibility": "Cached remains at nomo.native.configuration.Cached with identical digest/session/result_event fields; Parsed store name, workspace key and nomo-native-configuration-v1 stable ID are unchanged. Visibility becomes public so the storage adapter can name it. Actual cache migration still requires production validation.",
+  "cross_overlay_followups": [
+    "With DIP-06 composition: bootstrap.conversation must import bootstrap.configuration.load; use bootstrap.instructions.ProjectGuidance/reader for the high-level InstructionReader instead of the old NativeInstructions adapter wrapper.",
+    "With DIP-08 command composition: TaploConfigurationConverter must consume the shared command composition instead of the removed native.workspace.execute_readonly_input facade."
+  ],
+  "pending": [
+    "Normal target source check of combined composition.",
+    "Production configuration conversion/cache probe and old-source cache restore through the new adapters.",
+    "Actual root-to-leaf instruction observations through the new filesystem adapter."
+  ]
+}

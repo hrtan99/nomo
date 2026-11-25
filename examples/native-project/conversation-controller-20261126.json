@@ -113,7 +113,8 @@
     "bounded_loops": 251,
     "loop_files": 98,
     "changed_files": 112,
-    "count_change": "Three additional bounded loops: application ready/compaction while the retained entry remains selected, and the transient Job view mapping. No existing loop bound was removed."
+    "count_change": "Three additional bounded loops: application ready/compaction while the retained entry remains selected, and the transient Job view mapping. No existing loop bound was removed.",
+    "snapshot_url": "https://github.com/hrtan99/nomo/blob/1b30e0d753e7c7bbc2e1a319c5bf7cd6e7fe4c6c/examples/native-project/candidates/language-migration-0224-20261125.patch"
   },
   "remaining": [
     "Adopt the complete production role/bootstrap composition on a supported official graph.",

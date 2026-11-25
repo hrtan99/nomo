@@ -1,12 +1,16 @@
 {
   "status": "prepared_not_target_compiler_accepted",
-  "source_baseline": "3464ea7370f5a313de8e37c48ecc9ea6b321e053",
+  "source_baseline": "1b30e0d753e7c7bbc2e1a319c5bf7cd6e7fe4c6c",
   "agent_declarations": 72,
   "instance_references": 77,
-  "bounded_loops": 251,
-  "loop_files": 98,
-  "changed_files": 112,
+  "bounded_loops": 255,
+  "loop_files": 101,
+  "changed_files": 115,
   "source_files": {
+    "src/nomo/adapters/codec/configuration.es": {
+      "before_sha256": "db28e9575ed193d5c00a4c5dffc0ffbadfe63e294c752243f7e2c3229744c19d",
+      "candidate_sha256": "f1555637777ba30954c4984c88b4a5ca948f35f02f56d287e15d5b964f701d9c"
+    },
     "src/nomo/adapters/etas/attempts.es": {
       "before_sha256": "de5a5f078315437bb84f6b1781d3b7e0cb6ba72a7ed66f539e137b62e531e2d8",
       "candidate_sha256": "47afcf58a7a5bac436e87473173e5e4e19651620da584f0d4d3e9e123420a713"
@@ -46,6 +50,10 @@
     "src/nomo/application/native/execution/service.es": {
       "before_sha256": "2b79dd19c4d1841e96f353fb4c9a5cdbb705ac53ac37c15876ba1982e7c86efa",
       "candidate_sha256": "7a87d9629546a1328d87ce32a18aae8c53db3ebdc7ad76fcc275db84a428c1fa"
+    },
+    "src/nomo/application/native/instructions/service.es": {
+      "before_sha256": "f4d79ea87b6fad61d88332c530118038e82f34eba99d370dddeeb835c27cbec0",
+      "candidate_sha256": "6c2fab38d5c85cded723782eaabac3fc3039a8878f16eb50853167c01c66614e"
     },
     "src/nomo/bootstrap/legacy_status.es": {
       "before_sha256": "8e5bbf9fe16cee09e2a1a62851fba55345e028e6e00133a9dbf44b81429d9558",
@@ -110,6 +118,10 @@
     "src/nomo/core/text.es": {
       "before_sha256": "403279c3b6e2658feb7afcd256fbc719d4ce43e568ef37afb4ea2e3448bf637d",
       "candidate_sha256": "c9bd0cfdd1df99af29c908711a09e3098b8c75eb87dbff5535dcea5960077608"
+    },
+    "src/nomo/domain/context/instructions.es": {
+      "before_sha256": "a27c0ad2af1f7d7fafd0e99b13bccd2aba32ae593b4eb6c3e31305925ba3920d",
+      "candidate_sha256": "737640c260a4c7e0b970a2c4aebdf788c3b6c5fad9241c91eb8ea83313eb17db"
     },
     "src/nomo/domain/context/projection.es": {
       "before_sha256": "423ae0a55f1c775b57d216fd1723ac7e9bb68d1c763dcfbb522b5137400647b7",
@@ -296,8 +308,8 @@
       "candidate_sha256": "52c53d5e800f22f5bdec559ec2e68673206600b57fb611c67911170027ea920e"
     },
     "src/nomo/native/configuration.es": {
-      "before_sha256": "f4ba981bdf0b8075f00df1131fbc7ce67c735bcfef0c6d6cb4ed613d1eeffe60",
-      "candidate_sha256": "e348e1f862a746df5bcf7366fb2b47071068dba36e4a1a8c61748a5b947489f6"
+      "before_sha256": "5595aaad5d3603eaeea4027edefbb7d9300ad39d69e0ee3c8ac6769239b8ab05",
+      "candidate_sha256": "7908300ba6c0ed0b1f3575a201c052c7478269303c5eb3369c2d1156004c4a2d"
     },
     "src/nomo/native/context.es": {
       "before_sha256": "6ee261390a26a8b6f779a45fb2f71a047f2f71ecabe3d527e4ee0906c03e45a4",
@@ -328,8 +340,8 @@
       "candidate_sha256": "56050e114a1f9f82af3a19da8af0393110920af02aac598d649eebce5eee8756"
     },
     "src/nomo/native/project.es": {
-      "before_sha256": "b3b2d44fc9dbe0975d974e86d18cb0cde66ef9104c706c864f6f34c409f2eaa1",
-      "candidate_sha256": "ce675eb705e9ecb6ad09b7ea36c93a8da32e17dbfc3d8cb5e6c417ff421af8ab"
+      "before_sha256": "bd1d655a7172a0330cd540d269c9718606dda69ceba9b6126d5db9a0f226d35c",
+      "candidate_sha256": "d5bdbc6728907dc2a971763ae4d916ca8f7f5640da847c5b6402b535bc1c2cea"
     },
     "src/nomo/native/projects.es": {
       "before_sha256": "5a2b52ee1d0fa1fbdcd7fa357810763c01c5e70e9d410e3bf8833308bd4434a0",
@@ -457,6 +469,10 @@
     }
   },
   "loop_limit_expressions": {
+    "src/nomo/adapters/codec/configuration.es": [
+      "2147483647",
+      "2147483647"
+    ],
     "src/nomo/adapters/etas/attempts.es": [
       "2147483647",
       "2147483647"
@@ -491,6 +507,11 @@
       "2147483647"
     ],
     "src/nomo/application/native/execution/service.es": [
+      "2147483647"
+    ],
+    "src/nomo/application/native/instructions/service.es": [
+      "2147483647",
+      "2147483647",
       "2147483647"
     ],
     "src/nomo/bootstrap/legacy_status.es": [
@@ -554,6 +575,9 @@
     "src/nomo/core/text.es": [
       "33554434",
       "66"
+    ],
+    "src/nomo/domain/context/instructions.es": [
+      "2147483647"
     ],
     "src/nomo/domain/context/projection.es": [
       "2147483647",
@@ -688,8 +712,6 @@
       "32"
     ],
     "src/nomo/native/configuration.es": [
-      "2147483647",
-      "2147483647",
       "2147483647"
     ],
     "src/nomo/native/context.es": [
@@ -905,7 +927,7 @@
       "1048576"
     ]
   },
-  "patch_sha256": "e5b1662a9ad1d5e60bf3c4d2d75f3d1380c80d08e88f5bef06c542bea415aded",
+  "patch_sha256": "e3e2dd33a5602b988a4ecaad69d3074e2f33ac8767ea984cdcd4aa12de9484d9",
   "previous_executed_candidate": {
     "path": "examples/native-project/candidates/language-migration-0224-20261125-baseline-a3450bc.patch",
     "sha256": "4ed6e680bf54968d44237f95f825eab070fa01d69603125af9908df37f7b91d9"

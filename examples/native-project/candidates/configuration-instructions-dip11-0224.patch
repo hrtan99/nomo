@@ -1,0 +1,309 @@
+diff --git a/src/nomo/adapters/configuration/file.es b/src/nomo/adapters/configuration/file.es
+new file mode 100644
+--- /dev/null
++++ b/src/nomo/adapters/configuration/file.es
+@@ -0,0 +1,17 @@
++module nomo.adapters.configuration.file;
++
++import std.fs.{path, list, relative_name, ReadLimitError, IOError as FileError};
++import std.effects.Fs;
++import nomo.application.native.configuration.ports.ConfigurationFile;
++import nomo.native.workspace.ProjectRoot;
++import nomo.native.file_io.read_text;
++
++public type ProjectConfigurationFile = {};
++impl ProjectConfigurationFile ~ ConfigurationFile {
++    flow read(self) -> Option<string> ![Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Error<FileError>, Error<ReadLimitError>] {
++        let root = match path<ProjectRoot>(".") { Ok(value) => value, Err(_) => { abort("project root unavailable"); } };
++        var configured = false;
++        for item in list(root) limit Iterations(2147483647) { if relative_name(item) == ".nomo.toml" { configured = true; } }
++        return if configured { Some(read_text(".nomo.toml")) } else { None() };
++    }
++}
+diff --git a/src/nomo/adapters/configuration/codec.es b/src/nomo/adapters/configuration/codec.es
+new file mode 100644
+--- /dev/null
++++ b/src/nomo/adapters/configuration/codec.es
+@@ -0,0 +1,13 @@
++module nomo.adapters.configuration.codec;
++
++import nomo.application.native.configuration.ports.EntriesCodec;
++import nomo.domain.configuration.settings.Settings;
++import nomo.domain.configuration.conversion.ConfigurationOutput;
++import nomo.adapters.codec.configuration.{fingerprint, decode, observation};
++
++public type JsonConfigurationCodec = {};
++impl JsonConfigurationCodec ~ EntriesCodec {
++    flow fingerprint(self, raw: string) -> bytes ![] { return fingerprint(raw); }
++    flow decode_json(self, text: string) -> Settings ![] { return decode(text); }
++    flow observation(self, text: string) -> ConfigurationOutput ![] { return observation(text); }
++}
+diff --git a/src/nomo/adapters/configuration/converter.es b/src/nomo/adapters/configuration/converter.es
+new file mode 100644
+--- /dev/null
++++ b/src/nomo/adapters/configuration/converter.es
+@@ -0,0 +1,19 @@
++module nomo.adapters.configuration.converter;
++
++import std.io.IOError as ConsoleError;
++import nomo.application.native.configuration.ports.TomlConverter;
++import nomo.domain.configuration.conversion.{Converted, ConfigurationOutput};
++import nomo.native.history.SessionContext;
++import nomo.native.workspace.execute_readonly_input;
++
++public type TaploConfigurationConverter = {};
++impl TaploConfigurationConverter ~ TomlConverter {
++    flow toml(self, raw: string) -> Converted ![SessionContext, Memory, Console, Command.run<DefaultCommandSandbox>, Error<StorageError>, Error<MemoryConflict>, Error<ConsoleError>] {
++        let value = execute_readonly_input("project_configuration", "/home/nomo/.cargo/nomo-native-tools/taplo-0.10.0/bin/taplo", ["get", "-o", "json"], raw);
++        return Converted { result_event = value.result_event, output = ConfigurationOutput { exit_code = value.output.exit_code, stdout = value.output.stdout, stderr = value.output.stderr } };
++    }
++    flow entries(self, json: string) -> Converted ![SessionContext, Memory, Console, Command.run<DefaultCommandSandbox>, Error<StorageError>, Error<MemoryConflict>, Error<ConsoleError>] {
++        let value = execute_readonly_input("configuration_entries", "/usr/bin/jq", ["-c", "walk(if type == \"object\" then to_entries else . end)"], json);
++        return Converted { result_event = value.result_event, output = ConfigurationOutput { exit_code = value.output.exit_code, stdout = value.output.stdout, stderr = value.output.stderr } };
++    }
++}
+diff --git a/src/nomo/adapters/etas/configuration_cache.es b/src/nomo/adapters/etas/configuration_cache.es
+new file mode 100644
+--- /dev/null
++++ b/src/nomo/adapters/etas/configuration_cache.es
+@@ -0,0 +1,21 @@
++module nomo.adapters.etas.configuration_cache;
++
++import nomo.application.native.configuration.ports.ConfigurationCacheStore;
++import nomo.domain.configuration.conversion.CacheReference;
++import nomo.native.configuration.Cached;
++
++alias Schema = MemoryRegion<{ Parsed: Store<string, Cached> }>;
++let Data = std.memory.region<Schema>(stable_id = "nomo-native-configuration-v1", store = "native-configuration");
++
++public type NativeConfigurationCache = {};
++impl NativeConfigurationCache ~ ConfigurationCacheStore {
++    flow lookup(self, workspace: string) -> Option<CacheReference> ![Memory, Error<StorageError>] {
++        return match Data.Parsed.get(workspace) {
++            Some(value) => Some(CacheReference { digest = value.digest, session = value.session, result_event = value.result_event }),
++            None() => None()
++        };
++    }
++    flow remember(self, workspace: string, value: CacheReference) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>] {
++        Data.Parsed.put(workspace, Cached { digest = value.digest, session = value.session, result_event = value.result_event });
++    }
++}
+diff --git a/src/nomo/adapters/workspace/instructions.es b/src/nomo/adapters/workspace/instructions.es
+new file mode 100644
+--- /dev/null
++++ b/src/nomo/adapters/workspace/instructions.es
+@@ -0,0 +1,22 @@
++module nomo.adapters.workspace.instructions;
++
++import std.fs.{path, list, relative_name, ReadLimitError, IOError as FileError};
++import std.effects.Fs;
++import nomo.application.native.instructions.ports.InstructionFileSource;
++import nomo.native.workspace.ProjectRoot;
++import nomo.native.file_io.read_text;
++
++public type ProjectInstructionFiles = {};
++impl ProjectInstructionFiles ~ InstructionFileSource {
++    flow normalize(self, pathname: string) -> string ![] {
++        let selected = match path<ProjectRoot>(pathname) { Ok(value) => value, Err(_) => { abort("invalid project instruction path"); } };
++        return relative_name(selected);
++    }
++    flow entries(self, scope: string) -> Array<string> ![Fs.list<ProjectRoot>, Error<FileError>] {
++        let selected = match path<ProjectRoot>(scope) { Ok(value) => value, Err(_) => { abort("invalid project instruction path"); } };
++        var result: Array<string> = [];
++        for item in list(selected) limit Iterations(2147483647) { result = result.push(relative_name(item)); }
++        return result;
++    }
++    flow text(self, pathname: string) -> string ![Fs.read<ProjectRoot>, Error<FileError>, Error<ReadLimitError>] { return read_text(pathname); }
++}
+diff --git a/src/nomo/bootstrap/configuration.es b/src/nomo/bootstrap/configuration.es
+new file mode 100644
+--- /dev/null
++++ b/src/nomo/bootstrap/configuration.es
+@@ -0,0 +1,32 @@
++module nomo.bootstrap.configuration;
++
++import std.effects.Fs;
++import std.fs.{ReadLimitError, IOError as FileError};
++import std.io.IOError as ConsoleError;
++import nomo.native.workspace.ProjectRoot;
++import nomo.native.history.SessionContext;
++import nomo.domain.configuration.settings.Settings;
++import nomo.application.native.configuration.ports.{ConfigurationFile, EntriesCodec, TomlConverter, ConfigurationCacheStore, ConfigurationSource, ConfigurationCodec, ConfigurationConversion, ConfigurationCache};
++import nomo.application.native.configuration.service.load as load_configuration;
++import nomo.adapters.configuration.file.ProjectConfigurationFile;
++import nomo.adapters.configuration.codec.JsonConfigurationCodec;
++import nomo.adapters.configuration.converter.TaploConfigurationConverter;
++import nomo.adapters.etas.configuration_cache.NativeConfigurationCache;
++import nomo.adapters.etas.conversations.NativeHistory;
++
++public flow load() -> Settings ![SessionContext, Memory, Console, Command.run<DefaultCommandSandbox>, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<ConsoleError>, Error<FileError>, Error<ReadLimitError>] {
++    let source = ProjectConfigurationFile {};
++    let codec = JsonConfigurationCodec {};
++    let conversion = TaploConfigurationConverter {};
++    let cache = NativeConfigurationCache {};
++    return load_configuration(NativeHistory {}) with {
++        ConfigurationSource.read() => { resume source.read(); }
++        ConfigurationCodec.fingerprint(raw) => { resume codec.fingerprint(raw); }
++        ConfigurationCodec.decode_json(text) => { resume codec.decode_json(text); }
++        ConfigurationCodec.observation(text) => { resume codec.observation(text); }
++        ConfigurationConversion.toml(raw) => { resume conversion.toml(raw); }
++        ConfigurationConversion.entries(json) => { resume conversion.entries(json); }
++        ConfigurationCache.lookup(workspace) => { resume cache.lookup(workspace); }
++        ConfigurationCache.remember(workspace, value) => { cache.remember(workspace, value); resume; }
++    };
++}
+diff --git a/src/nomo/bootstrap/instructions.es b/src/nomo/bootstrap/instructions.es
+new file mode 100644
+--- /dev/null
++++ b/src/nomo/bootstrap/instructions.es
+@@ -0,0 +1,26 @@
++module nomo.bootstrap.instructions;
++
++import std.effects.Fs;
++import std.fs.{ReadLimitError, IOError as FileError};
++import nomo.native.workspace.ProjectRoot;
++import nomo.domain.context.instructions.ProjectInstruction;
++import nomo.application.native.context.ports.InstructionReader;
++import nomo.application.native.instructions.ports.{InstructionFileSource, InstructionFiles};
++import nomo.application.native.instructions.service.load as read_guidance;
++import nomo.adapters.workspace.instructions.ProjectInstructionFiles;
++
++public type ProjectGuidance = { files: ProjectInstructionFiles };
++impl ProjectGuidance ~ InstructionReader {
++    flow read(self, path: string) -> Array<ProjectInstruction> ![Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Error<FileError>, Error<ReadLimitError>] {
++        return read_guidance(path) with {
++            InstructionFiles.normalize(name) => { resume self.files.normalize(name); }
++            InstructionFiles.entries(scope) => { resume self.files.entries(scope); }
++            InstructionFiles.text(name) => { resume self.files.text(name); }
++        };
++    }
++}
++
++public flow reader() -> ProjectGuidance { return ProjectGuidance { files = ProjectInstructionFiles {} }; }
++public flow load(path: string) -> Array<ProjectInstruction> ![Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Error<FileError>, Error<ReadLimitError>] {
++    return reader().read(path);
++}
+diff --git a/src/nomo/native/configuration.es b/src/nomo/native/configuration.es
+--- a/src/nomo/native/configuration.es
++++ b/src/nomo/native/configuration.es
+@@ -1,49 +1,9 @@
+ module nomo.native.configuration;
+ 
+-import std.fs.{list, path, relative_name, IOError as FileError, ReadLimitError};
+-import std.effects.Fs;
+-import std.crypto.constant_time_eq;
+-import std.io.IOError as ConsoleError;
+ public import nomo.domain.configuration.settings.{Settings, defaults, effective_window, as_number, estimated_tokens, recent_bytes};
+-import nomo.adapters.codec.configuration.{decode, fingerprint, observation as output};
+-import nomo.native.workspace.{ProjectRoot, execute_readonly_input};
+-import nomo.native.history.{SessionContext};
+-import nomo.adapters.etas.conversations.{NativeHistory, read_message as message};
+-import nomo.application.native.conversation.ports.{ConversationReader};
+-import nomo.native.file_io.read_text;
++public import nomo.application.native.configuration.context.SettingsContext;
+ 
+-public import nomo.application.native.configuration.context.SettingsContext;
+-type Cached = { digest: bytes, session: string, result_event: i64 };
+-alias Schema = MemoryRegion<{ Parsed: Store<string, Cached> }>;
+-let Data = std.memory.region<Schema>(stable_id = "nomo-native-configuration-v1", store = "native-configuration");
+-
+-public flow load() -> Settings
+-    ![SessionContext, Memory, Console, Command.run<DefaultCommandSandbox>, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<ConsoleError>, Error<FileError>, Error<ReadLimitError>] {
+-    let root = match path<ProjectRoot>(".") { Ok(value) => value, Err(_) => { abort("project root unavailable"); } };
+-    var configured = false;
+-    for item in list(root) limit Iterations(2147483647) { if relative_name(item) == ".nomo.toml" { configured = true; } }
+-    if !configured { return defaults(); }
+-    let raw = read_text(".nomo.toml");
+-    let digest = fingerprint(raw);
+-    let session = perform SessionContext.current();
+-    let archive = NativeHistory {};
+-    let workspace = archive.load(session).workspace;
+-    match Data.Parsed.get(workspace) {
+-        Some(cached) => {
+-            if constant_time_eq(cached.digest, digest) { return decode(output(message(cached.session, cached.result_event).text).stdout); }
+-        }
+-        None() => {}
+-    }
+-    let observation = execute_readonly_input("project_configuration", "/home/nomo/.cargo/nomo-native-tools/taplo-0.10.0/bin/taplo",
+-        ["get", "-o", "json"], raw);
+-    if observation.output.exit_code != 0 { abort("project configuration TOML conversion failed: " + observation.output.stderr); }
+-    let converted = execute_readonly_input("configuration_entries", "/usr/bin/jq",
+-        ["-c", "walk(if type == \"object\" then to_entries else . end)"], observation.output.stdout);
+-    if converted.output.exit_code != 0 { abort("configuration entry conversion failed: " + converted.output.stderr); }
+-    let settings = decode(converted.output.stdout);
+-    Data.Parsed.put(workspace, Cached { digest = digest, session = session, result_event = converted.result_event });
+-    return settings;
+-}
++public type Cached = { digest: bytes, session: string, result_event: i64 };
+ 
+ public type ConfigurationStatus = { requested: Settings, effective_context_window: i64, context_window_is_estimate: bool,
+     inference_token_allowance: i64, summary_token_allowance: i64, runtime_output_tokens: i64, command_timeout_active: bool };
+diff --git a/src/nomo/native/project.es b/src/nomo/native/project.es
+--- a/src/nomo/native/project.es
++++ b/src/nomo/native/project.es
+@@ -1,47 +1,15 @@
+ module nomo.native.project;
+ 
+-import std.fs.{path, relative_name, list, WorkspacePath, ReadLimitError, IOError as FileError};
++import std.fs.{ReadLimitError, IOError as FileError};
+ import std.effects.Fs;
+-import nomo.domain.context.instructions.{guide_path, child_scopes};
+ import nomo.native.workspace.ProjectRoot;
+-import nomo.native.file_io.read_text;
+-import nomo.native.history.{SessionContext};
++import nomo.native.history.SessionContext;
+ import nomo.adapters.etas.conversations.{observe_started, observe_finished};
+-
++import nomo.bootstrap.instructions.load as read_guidance;
+ public import nomo.domain.context.instructions.ProjectInstruction;
+ 
+-flow location(name: string) -> WorkspacePath<ProjectRoot> {
+-    return match path<ProjectRoot>(name) { Ok(value) => value, Err(_) => { abort("invalid project instruction path"); } };
+-}
+-
+-flow guide(scope: string) -> Option<ProjectInstruction> {
+-    let name = guide_path(scope);
+-    for item in list(location(scope)) limit Iterations(2147483647) {
+-        if relative_name(item) == name {
+-            return Some(ProjectInstruction { scope = scope, path = name, text = read_text(name) });
+-        }
+-    }
+-    return None();
+-}
+-
+-/// Root-to-leaf AGENTS.md files applying to an existing or proposed file.
+-/// Missing future parent directories stop discovery after their existing ancestors.
+-public flow load_instructions(pathname: string) -> Array<ProjectInstruction>
+-    ![Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Error<FileError>, Error<ReadLimitError>] {
+-    let normalized = relative_name(location(pathname));
+-    var result: Array<ProjectInstruction> = [];
+-    var scope = ".";
+-    match guide(scope) { Some(value) => { result = result.push(value); } None() => {} }
+-    for next in child_scopes(normalized) limit Iterations(2147483647) {
+-        var present = false;
+-        for item in list(location(scope)) limit Iterations(2147483647) {
+-            if relative_name(item) == next { present = true; }
+-        }
+-        if !present { break; }
+-        scope = next;
+-        match guide(scope) { Some(value) => { result = result.push(value); } None() => {} }
+-    }
+-    return result;
++public flow load_instructions(pathname: string) -> Array<ProjectInstruction> ![Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Error<FileError>, Error<ReadLimitError>] {
++    return read_guidance(pathname);
+ }
+ 
+ /// Read applicable project guidance before creating or changing a file. More specific scopes refine ancestor guidance; these files do not grant permission to execute operations.
+diff --git a/src/nomo/native/entry.es b/src/nomo/native/entry.es
+--- a/src/nomo/native/entry.es
++++ b/src/nomo/native/entry.es
+@@ -20,7 +20,8 @@
+ import nomo.native.navigation.{find_files, search_project};
+ import nomo.bootstrap.execution.{attempts, begin, dispatching, returned, complete_attempt, resolve};
+ import nomo.domain.configuration.settings.{Settings, effective_window, as_number, estimated_tokens};
+-import nomo.native.configuration.{SettingsContext, load as load_configuration, status as configuration_status};
++import nomo.native.configuration.{SettingsContext, status as configuration_status};
++import nomo.bootstrap.configuration.load as load_configuration;
+ import nomo.native.terminal.check_project;
+ import nomo.native.terminal.run_command;
+ import nomo.native.processes.{start_job, read_job, write_job, close_job_input, stop_job, list_jobs, job_output};

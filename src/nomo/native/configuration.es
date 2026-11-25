@@ -1,59 +1,21 @@
 module nomo.native.configuration;
 
-import std.json.{JsonValue, parse};
-import std.agent.message.Message;
 import std.fs.{list, path, relative_name, IOError as FileError, ReadLimitError};
 import std.effects.Fs;
-import std.crypto.{sha256, constant_time_eq};
-import std.codec.text.utf8_encode;
+import std.crypto.constant_time_eq;
 import std.io.IOError as ConsoleError;
 public import nomo.domain.configuration.settings.{Settings, defaults, effective_window, as_number, estimated_tokens, recent_bytes};
-import nomo.domain.configuration.settings.validate;
-import nomo.native.workspace.{ProjectRoot, CommandOutput, execute_readonly_input};
+import nomo.adapters.codec.configuration.{decode, fingerprint, observation as output};
+import nomo.native.workspace.{ProjectRoot, execute_readonly_input};
 import nomo.native.history.{SessionContext};
 import nomo.adapters.etas.conversations.{NativeHistory, read_message as message};
 import nomo.application.native.conversation.ports.{ConversationReader};
 import nomo.native.file_io.read_text;
 
 public import nomo.application.native.configuration.context.SettingsContext;
-type Entry = { key: string, value: JsonValue };
 type Cached = { digest: bytes, session: string, result_event: i64 };
 alias Schema = MemoryRegion<{ Parsed: Store<string, Cached> }>;
 let Data = std.memory.region<Schema>(stable_id = "nomo-native-configuration-v1", store = "native-configuration");
-
-flow cast<T>(value: JsonValue, label: string) -> T {
-    let result: Option<Message<T>> = Message.new(value).cast<T>();
-    return match result { Some(value) => value.body, None() => { abort("project configuration has an invalid field type: " + label); } };
-}
-
-flow field<T>(values: Array<Entry>, name: string, fallback: T) -> T {
-    for entry in values limit Iterations(2147483647) { if entry.key == name { return cast<T>(entry.value, name); } }
-    return fallback;
-}
-
-flow decode(text: string) -> Settings {
-    let root = match parse(text) { Ok(value) => cast<Array<Entry>>(value, "root entries"), Err(_) => { abort("TOML decoder returned invalid JSON"); } };
-    var values = root;
-    for entry in root limit Iterations(2147483647) {
-        if entry.key == "project" { values = cast<Array<Entry>>(entry.value, "project entries"); break; }
-    }
-    let base = defaults();
-    let settings = Settings { context_window = field(values, "context_window", base.context_window),
-        max_output_tokens = field(values, "max_output_tokens", base.max_output_tokens),
-        compact_ratio = field(values, "compact_ratio", base.compact_ratio), keep_messages = field(values, "keep_messages", base.keep_messages),
-        command_timeout = field(values, "command_timeout", base.command_timeout), ignore = field(values, "ignore", base.ignore),
-        instructions = field(values, "instructions", base.instructions), check = field(values, "check", base.check) };
-    return validate(settings);
-}
-
-flow fingerprint(text: string) -> bytes {
-    let result: Option<Message<bytes>> = Message.new(sha256(utf8_encode(text))).cast<bytes>();
-    return match result { Some(value) => value.body, None() => { abort("SHA-256 representation unavailable"); } };
-}
-
-flow output(text: string) -> CommandOutput {
-    return match parse(text) { Ok(value) => cast<CommandOutput>(value, "cached observation"), Err(_) => { abort("configuration observation is not JSON"); } };
-}
 
 public flow load() -> Settings
     ![SessionContext, Memory, Console, Command.run<DefaultCommandSandbox>, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<ConsoleError>, Error<FileError>, Error<ReadLimitError>] {

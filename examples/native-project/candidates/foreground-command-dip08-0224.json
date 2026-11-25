@@ -1,7 +1,7 @@
 {
   "status": "prepared_not_integrated",
   "baseline_commit": "14f0635bb796df938327d5911574277ceb1f4de9",
-  "patch_sha256": "5ad5ef2334701a6de286aac2f266650ee5a91116b47b7d373e387fccf8afa186",
+  "patch_sha256": "a82c37acb6ec793093da49660651c3450593fafedbf6194f62c811d748d09f71",
   "tracked_files": [
     "src/nomo/native/configuration.es",
     "src/nomo/native/git.es",
@@ -22,7 +22,7 @@
     "src/nomo/bootstrap/command.es"
   ],
   "candidate_source_sha256": {
-    "src/nomo/native/configuration.es": "1c9ec33f38b0cfa252101a0842f075386db2aa6ae6744f677bcf7fee71478591",
+    "src/nomo/native/configuration.es": "87b96dfe43d7a2d20a33fa0588e7397c2218113da32f7db717b6050f5e303242",
     "src/nomo/native/git.es": "80f9682b48a3b8a9001a8dc6cffb58f326fcd4eb830833a68f3c31d3fc180626",
     "src/nomo/native/mutations.es": "92014daff268cd85f636e624d7f2f525344d8dc2362ced303d9be88ed7ea5ab1",
     "src/nomo/native/navigation.es": "e2c4b7e71af423f245e13f97ebeb81fa67b8fbcf6de851aff0f74c0d53266432",
@@ -83,5 +83,13 @@
     "canonical language/API migration",
     "etas-frontend#97 scoped-loop implementation",
     "normal full source check and original command/Git/stdin workflows"
-  ]
+  ],
+  "configuration_helper_rebase": {
+    "base_snapshot": "https://github.com/hrtan99/nomo/blob/1b30e0d753e7c7bbc2e1a319c5bf7cd6e7fe4c6c/examples/native-project/candidates/foreground-command-dip08-0224.patch",
+    "previous_patch_sha256": "5ad5ef2334701a6de286aac2f266650ee5a91116b47b7d373e387fccf8afa186",
+    "current_patch_sha256": "a82c37acb6ec793093da49660651c3450593fafedbf6194f62c811d748d09f71",
+    "base_configuration_sha256": "5595aaad5d3603eaeea4027edefbb7d9300ad39d69e0ee3c8ac6769239b8ab05",
+    "prepared_configuration_sha256": "87b96dfe43d7a2d20a33fa0588e7397c2218113da32f7db717b6050f5e303242",
+    "scope": "Only configuration imports/hunks rebased for the accepted pure codec extraction; the eight-file executed SDK snapshot and its evidence are unchanged. No new compiler/runtime acceptance is claimed."
+  }
 }

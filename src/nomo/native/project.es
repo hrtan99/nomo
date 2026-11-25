@@ -2,7 +2,7 @@ module nomo.native.project;
 
 import std.fs.{path, relative_name, list, WorkspacePath, ReadLimitError, IOError as FileError};
 import std.effects.Fs;
-import std.text.{split, rsplit_once};
+import nomo.domain.context.instructions.{guide_path, child_scopes};
 import nomo.native.workspace.ProjectRoot;
 import nomo.native.file_io.read_text;
 import nomo.native.history.{SessionContext};
@@ -15,7 +15,7 @@ flow location(name: string) -> WorkspacePath<ProjectRoot> {
 }
 
 flow guide(scope: string) -> Option<ProjectInstruction> {
-    let name = if scope == "." { "AGENTS.md" } else { scope + "/AGENTS.md" };
+    let name = guide_path(scope);
     for item in list(location(scope)) limit Iterations(2147483647) {
         if relative_name(item) == name {
             return Some(ProjectInstruction { scope = scope, path = name, text = read_text(name) });
@@ -29,13 +29,10 @@ flow guide(scope: string) -> Option<ProjectInstruction> {
 public flow load_instructions(pathname: string) -> Array<ProjectInstruction>
     ![Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Error<FileError>, Error<ReadLimitError>] {
     let normalized = relative_name(location(pathname));
-    let parent = match rsplit_once(normalized, "/") { Some((value, _)) => value, None() => "." };
     var result: Array<ProjectInstruction> = [];
     var scope = ".";
     match guide(scope) { Some(value) => { result = result.push(value); } None() => {} }
-    for component in split(parent, "/") limit Iterations(2147483647) {
-        if component == "." || component == "" { continue; }
-        let next = if scope == "." { component } else { scope + "/" + component };
+    for next in child_scopes(normalized) limit Iterations(2147483647) {
         var present = false;
         for item in list(location(scope)) limit Iterations(2147483647) {
             if relative_name(item) == next { present = true; }

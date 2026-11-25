@@ -1,3 +1,23 @@
+diff --git a/src/nomo/adapters/codec/configuration.es b/src/nomo/adapters/codec/configuration.es
+--- a/src/nomo/adapters/codec/configuration.es
++++ b/src/nomo/adapters/codec/configuration.es
+@@ -15,14 +15,14 @@
+ }
+ 
+ flow field<T>(values: Array<Entry>, name: string, fallback: T) -> T {
+-    for entry in values limit Iterations(2147483647) { if entry.key == name { return cast<T>(entry.value, name); } }
++    @limits([Iterations(2147483647)]) for entry in values  { if entry.key == name { return cast<T>(entry.value, name); } }
+     return fallback;
+ }
+ 
+ public flow decode(text: string) -> Settings {
+     let root = match parse(text) { Ok(value) => cast<Array<Entry>>(value, "root entries"), Err(_) => { abort("TOML decoder returned invalid JSON"); } };
+     var values = root;
+-    for entry in root limit Iterations(2147483647) {
++    @limits([Iterations(2147483647)]) for entry in root  {
+         if entry.key == "project" { values = cast<Array<Entry>>(entry.value, "project entries"); break; }
+     }
+     let base = defaults();
 diff --git a/src/nomo/adapters/etas/attempts.es b/src/nomo/adapters/etas/attempts.es
 --- a/src/nomo/adapters/etas/attempts.es
 +++ b/src/nomo/adapters/etas/attempts.es
@@ -429,6 +449,31 @@ diff --git a/src/nomo/application/native/execution/service.es b/src/nomo/applica
          if value.kind == "coding" || value.kind == "summary" {
              abort("inference has no recorded completion: " + value.id + "; inspect /runs, then /resolve-run ID NOTE before starting a new turn");
          }
+diff --git a/src/nomo/application/native/instructions/service.es b/src/nomo/application/native/instructions/service.es
+--- a/src/nomo/application/native/instructions/service.es
++++ b/src/nomo/application/native/instructions/service.es
+@@ -6,7 +6,7 @@
+ flow guide(scope: string) -> Option<ProjectInstruction> {
+     let name = guide_path(scope);
+     let entries = perform InstructionFiles.entries(scope);
+-    for item in entries limit Iterations(2147483647) {
++    @limits([Iterations(2147483647)]) for item in entries  {
+         if item == name { return Some(ProjectInstruction { scope = scope, path = name, text = perform InstructionFiles.text(name) }); }
+     }
+     return None();
+@@ -17,10 +17,10 @@
+     var result: Array<ProjectInstruction> = [];
+     var scope = ".";
+     match guide(scope) { Some(value) => { result = result.push(value); } None() => {} }
+-    for next in child_scopes(normalized) limit Iterations(2147483647) {
++    @limits([Iterations(2147483647)]) for next in child_scopes(normalized)  {
+         var present = false;
+         let entries = perform InstructionFiles.entries(scope);
+-        for item in entries limit Iterations(2147483647) { if item == next { present = true; } }
++        @limits([Iterations(2147483647)]) for item in entries  { if item == next { present = true; } }
+         if !present { break; }
+         scope = next;
+         match guide(scope) { Some(value) => { result = result.push(value); } None() => {} }
 diff --git a/src/nomo/bootstrap/legacy_status.es b/src/nomo/bootstrap/legacy_status.es
 --- a/src/nomo/bootstrap/legacy_status.es
 +++ b/src/nomo/bootstrap/legacy_status.es
@@ -706,6 +751,18 @@ diff --git a/src/nomo/core/text.es b/src/nomo/core/text.es
          if character != "" && !contains("0123456789abcdef", character) { return false; }
      }
      return true;
+diff --git a/src/nomo/domain/context/instructions.es b/src/nomo/domain/context/instructions.es
+--- a/src/nomo/domain/context/instructions.es
++++ b/src/nomo/domain/context/instructions.es
+@@ -13,7 +13,7 @@
+     let parent = match rsplit_once(normalized, "/") { Some((value, _)) => value, None() => "." };
+     var result: Array<string> = [];
+     var scope = ".";
+-    for component in split(parent, "/") limit Iterations(2147483647) {
++    @limits([Iterations(2147483647)]) for component in split(parent, "/")  {
+         if component == "." || component == "" { continue; }
+         scope = if scope == "." { component } else { scope + "/" + component };
+         result = result.push(scope);
 diff --git a/src/nomo/domain/context/projection.es b/src/nomo/domain/context/projection.es
 --- a/src/nomo/domain/context/projection.es
 +++ b/src/nomo/domain/context/projection.es
@@ -1969,24 +2026,7 @@ diff --git a/src/nomo/native/agent.es b/src/nomo/native/agent.es
 diff --git a/src/nomo/native/configuration.es b/src/nomo/native/configuration.es
 --- a/src/nomo/native/configuration.es
 +++ b/src/nomo/native/configuration.es
-@@ -27,14 +27,14 @@
- }
- 
- flow field<T>(values: Array<Entry>, name: string, fallback: T) -> T {
--    for entry in values limit Iterations(2147483647) { if entry.key == name { return cast<T>(entry.value, name); } }
-+    @limits([Iterations(2147483647)]) for entry in values  { if entry.key == name { return cast<T>(entry.value, name); } }
-     return fallback;
- }
- 
- flow decode(text: string) -> Settings {
-     let root = match parse(text) { Ok(value) => cast<Array<Entry>>(value, "root entries"), Err(_) => { abort("TOML decoder returned invalid JSON"); } };
-     var values = root;
--    for entry in root limit Iterations(2147483647) {
-+    @limits([Iterations(2147483647)]) for entry in root  {
-         if entry.key == "project" { values = cast<Array<Entry>>(entry.value, "project entries"); break; }
-     }
-     let base = defaults();
-@@ -59,7 +59,7 @@
+@@ -21,7 +21,7 @@
      ![SessionContext, Memory, Console, Command.run<DefaultCommandSandbox>, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<ConsoleError>, Error<FileError>, Error<ReadLimitError>] {
      let root = match path<ProjectRoot>(".") { Ok(value) => value, Err(_) => { abort("project root unavailable"); } };
      var configured = false;
@@ -2397,20 +2437,18 @@ diff --git a/src/nomo/native/project.es b/src/nomo/native/project.es
 @@ -16,7 +16,7 @@
  
  flow guide(scope: string) -> Option<ProjectInstruction> {
-     let name = if scope == "." { "AGENTS.md" } else { scope + "/AGENTS.md" };
+     let name = guide_path(scope);
 -    for item in list(location(scope)) limit Iterations(2147483647) {
 +    @limits([Iterations(2147483647)]) for item in list(location(scope))  {
          if relative_name(item) == name {
              return Some(ProjectInstruction { scope = scope, path = name, text = read_text(name) });
          }
-@@ -33,11 +33,11 @@
+@@ -32,9 +32,9 @@
      var result: Array<ProjectInstruction> = [];
      var scope = ".";
      match guide(scope) { Some(value) => { result = result.push(value); } None() => {} }
--    for component in split(parent, "/") limit Iterations(2147483647) {
-+    @limits([Iterations(2147483647)]) for component in split(parent, "/")  {
-         if component == "." || component == "" { continue; }
-         let next = if scope == "." { component } else { scope + "/" + component };
+-    for next in child_scopes(normalized) limit Iterations(2147483647) {
++    @limits([Iterations(2147483647)]) for next in child_scopes(normalized)  {
          var present = false;
 -        for item in list(location(scope)) limit Iterations(2147483647) {
 +        @limits([Iterations(2147483647)]) for item in list(location(scope))  {

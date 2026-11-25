@@ -1,0 +1,112 @@
+{
+  "date": "2026-11-26",
+  "status": "pure_codec_scope_policy_and_application_effects_accepted_on_0135; production_role_composition_pending",
+  "baseline_commit": "1b30e0d753e7c7bbc2e1a319c5bf7cd6e7fe4c6c",
+  "source_sha256": {
+    "src/nomo/native/configuration.es": "5595aaad5d3603eaeea4027edefbb7d9300ad39d69e0ee3c8ac6769239b8ab05",
+    "src/nomo/native/project.es": "bd1d655a7172a0330cd540d269c9718606dda69ceba9b6126d5db9a0f226d35c",
+    "src/nomo/domain/context/instructions.es": "a27c0ad2af1f7d7fafd0e99b13bccd2aba32ae593b4eb6c3e31305925ba3920d",
+    "src/nomo/domain/configuration/conversion.es": "8071c44f24338f38762428bdbeae699a6c6dc31df85905fa0963197156ddf645",
+    "src/nomo/adapters/codec/configuration.es": "db28e9575ed193d5c00a4c5dffc0ffbadfe63e294c752243f7e2c3229744c19d",
+    "src/nomo/application/native/configuration/ports.es": "897008ab4c5dc3631c4f6c45fbcda18b3db024285796e816600f4b7956767d54",
+    "src/nomo/application/native/configuration/service.es": "8341715ac453c1487a651762ef17907f7cc2096edac67bb770b0af18fc4bbf5f",
+    "src/nomo/application/native/instructions/ports.es": "d0d7cebdc93a5200516a58df9af6c96cc12f98453be3fe3bcbc5798a554cc206",
+    "src/nomo/application/native/instructions/service.es": "f4d79ea87b6fad61d88332c530118038e82f34eba99d370dddeeb835c27cbec0",
+    "tests/native_configuration_contract_probe.py": "f6cf4d7f0f0d5793be5051a32353b57d4fe6315c2ca54ca3551725501f479d92",
+    "tests/fixtures/native_configuration_contract/src/app/main.es": "231c0156138e7ab301d66d731e1132bf3992e67be5379ed9d6aa0cc1ad6fe5e2"
+  },
+  "changes": [
+    "Configuration JSON-entry decoding, typed cast diagnostics, SHA-256 fingerprint conversion and cached-observation decode are isolated in a pure codec module.",
+    "Candidate ancestor scopes and AGENTS.md names are pure domain rules; the retained filesystem loader still observes existence and stops at the first missing parent.",
+    "Application configuration orchestration owns source/default selection, fingerprint/cache decisions, ordered conversions, validation and saved-result linkage through effects.",
+    "Application instruction orchestration requests normalization, entries and text through effects.",
+    "Concrete source/codec/conversion/cache and instruction adapters plus bootstrap are prepared separately."
+  ],
+  "normal_source_check": {
+    "exit": 0,
+    "checked_files": 272,
+    "seconds": 111.282,
+    "command": [
+      "docker",
+      "compose",
+      "--env-file",
+      "/dev/null",
+      "-f",
+      "compose.yaml",
+      "-f",
+      "config/etas-0135-official-compose.yaml",
+      "-f",
+      "config/etas-runtime-cache-compose.yaml",
+      "run",
+      "--rm",
+      "--no-deps",
+      "--tty=false",
+      "dev",
+      "/home/nomo/.cargo/bin/etas",
+      "--no-config",
+      "--cache",
+      "off",
+      "check",
+      "--all",
+      "/workspace"
+    ],
+    "formatting_followup": "One trailing blank line removed from the codec after this check; the final focused 23-source scenario was refreshed. No behavioral source change followed the production scenario."
+  },
+  "cache_compatibility": "Current Cached declaration, schema, stable ID and resource constructor are byte-identical to the baseline. No actual stored cache migration has occurred.",
+  "application_contract_probe": {
+    "status": "passed",
+    "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-configuration-contract-acb2p6eq",
+    "source_count": 23,
+    "source_snapshot_matches_current_product": true,
+    "stdout": "PORT source\nPORT session\nPORT lookup\nPORT toml\nPORT entries\nPORT remember\nPORT source\nPORT session\nPORT lookup\nPORT scope .\nPORT guidance AGENTS.md\nPORT scope .\nPORT scope src\nPORT guidance src/AGENTS.md\nPORT scope src\nPASS configuration cache and instruction application effects\n",
+    "controlled_host_actions": {
+      "Memory.read": 10,
+      "Memory.write": 12,
+      "Console.stdout_write": 16
+    },
+    "physical_host_actions": {
+      "Fs.list": 4,
+      "Fs.read": 2,
+      "Console.stdout_write": 1
+    },
+    "resources": {
+      "memory.max": "4294967296",
+      "memory.peak": "70459392",
+      "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+      "cpu.max": "400000 100000",
+      "pids.max": "256"
+    },
+    "scope": "One controlled conversion followed by cache reuse through actual fixture SQLite/history, with controlled instruction effects. A separate retained production loader reads two synthetic AGENTS.md files with four directory observations. No native model or command action occurs; this does not accept the proposed production role/cache migration."
+  },
+  "existing_production_configuration_probe": {
+    "status": "passed",
+    "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-configuration-rgqnejd7",
+    "local_model_http_requests": 5,
+    "approval_audit_failures": [],
+    "summary_through": 7.0,
+    "scope": "Existing conversion commands, configured tools, summary, fresh-process cache reuse and changed configuration. This validates pure codec extraction, not the proposed storage/role move."
+  },
+  "composition_candidate": {
+    "path": "examples/native-project/candidates/configuration-instructions-dip11-0224.patch",
+    "apply_preflight": true,
+    "retained_full_check_files": 279,
+    "retained_full_check_exit": 1,
+    "diagnostic_family": "https://github.com/etas-project/etas-frontend/issues/98",
+    "target_acceptance": false
+  },
+  "migration_candidate": {
+    "sha256": "e3e2dd33a5602b988a4ecaad69d3074e2f33ac8767ea984cdcd4aa12de9484d9",
+    "agents": 72,
+    "references": 77,
+    "bounded_loops": 255,
+    "loop_files": 101,
+    "changed_files": 115,
+    "count_change": "Four added loops: pure candidate-scope enumeration and the prepared application instruction controller. Existing parser loops moved to the codec; existing bounds remain."
+  },
+  "remaining": [
+    "Target source/runtime acceptance of the complete production role composition.",
+    "Actual cache adapter migration, including old-source cache restore and result linkage through the new composition.",
+    "Cross-overlay integration with pending DIP-06 and DIP-08 compositions, documented in the candidate metadata.",
+    "All other explicit unfinished DIP-02 through DIP-13 requirements remain."
+  ]
+}
