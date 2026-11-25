@@ -1,0 +1,31 @@
+{
+  "inspected_at_utc": "2026-11-25 19:40:10 UTC",
+  "cli_version_seen": "0.22.5",
+  "cli_cargo_toml_blob_sha": "27c7da381380b4c142f67137cfc5563c7667f9ce",
+  "lock": {
+    "sha": "014d0b18bdb4229bfac2129f19e90ed10fc13292",
+    "found": [
+      [
+        "name = \"etas_interpreter\"",
+        "version = \"0.21.2\"",
+        "source = \"git+https://github.com/etas-project/etas-interpreter.git?rev=b9d1813114f5c3330608331e042c68ba5867f7ca#b9d1813114f5c3330608331e042c68ba5867f7ca\""
+      ],
+      [
+        "name = \"etas_std\"",
+        "version = \"0.6.1\"",
+        "source = \"git+https://github.com/etas-project/etas-core.git?rev=773986379afba8db15e1a73e164027ec593c8ce2#773986379afba8db15e1a73e164027ec593c8ce2\""
+      ],
+      [
+        "name = \"etas_syntax\"",
+        "version = \"0.6.0\"",
+        "source = \"git+https://github.com/etas-project/etas-frontend.git?rev=fb790c8dbec6cb5beb846dcfc06031c670285c4c#fb790c8dbec6cb5beb846dcfc06031c670285c4c\""
+      ]
+    ]
+  },
+  "frontend_revision": "fb790c8dbec6cb5beb846dcfc06031c670285c4c",
+  "stmt_blob_sha": "5127e49e65078cc87761dcb57d25a8275544898f",
+  "expr_blob_sha": "17f2f88af0cb78b29738cdcec3a71989f5e3155d",
+  "observation": "The locked stmt parser has no Punct::At dispatch; for/while parse iterable/condition then body. The expression parser has no Punct::At/limits/resource-scope matches. This source inspection does not establish an executed 0.22.5 result.",
+  "latest_build_or_execution_performed": false,
+  "toolchain_adoption_accepted": false
+}

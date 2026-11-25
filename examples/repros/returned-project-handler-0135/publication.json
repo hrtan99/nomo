@@ -1,0 +1,8 @@
+{
+  "url": "https://github.com/etas-project/etas-interpreter/issues/118",
+  "state": "open",
+  "title": "0.13.5: accepted project Handler fails resolving an immutable dependency in its runtime frame",
+  "created_at": "2026-11-25T19:37:35Z",
+  "remote_body_matches_prepared_summary": true,
+  "scope": "Version-scoped diagnostic and seven-line dependency excerpt; not a latest-graph failure claim."
+}

@@ -1,0 +1,204 @@
+diff --git a/src/nomo/adapters/etas/projects.es b/src/nomo/adapters/etas/projects.es
+new file mode 100644
+--- /dev/null
++++ b/src/nomo/adapters/etas/projects.es
+@@ -0,0 +1,10 @@
++module nomo.adapters.etas.projects;
++
++import nomo.native.projects.Data;
++import nomo.application.native.projects.ports.RecentProjects;
++
++public type NativeRecentProjects = {};
++impl NativeRecentProjects ~ RecentProjects {
++    flow load(self) -> Array<string> ![Memory, Error<StorageError>] { return match Data.Recent.get("folders") { Some(value) => value, None() => [] }; }
++    flow save(self, folders: Array<string>) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>] { Data.Recent.put("folders", folders); }
++}
+diff --git a/src/nomo/adapters/terminal/projects.es b/src/nomo/adapters/terminal/projects.es
+new file mode 100644
+--- /dev/null
++++ b/src/nomo/adapters/terminal/projects.es
+@@ -0,0 +1,16 @@
++module nomo.adapters.terminal.projects;
++
++import std.io.{println, print, read_line, IOError};
++import std.text.from_usize;
++import nomo.core.json.encode;
++import nomo.application.native.projects.ports.ProjectRenderer;
++
++public type TerminalProjects = {};
++impl TerminalProjects ~ ProjectRenderer {
++    flow item(self, index: usize, path: string) -> unit ![Console, Error<IOError>] { println("[PROJECT] " + from_usize(index) + " " + path); }
++    flow choose(self) -> string ![Console, Error<IOError>] { print("project> folder path or saved number (blank cancels): "); return read_line(); }
++    flow preview(self, path: string) -> unit ![Console, Error<IOError>] {
++        let value = match encode(path, "project path conversion failed", "project path encoding failed") { Ok(value) => value, Err(error) => { abort(error); } };
++        println("[OPEN   ] " + value);
++    }
++}
+diff --git a/src/nomo/adapters/workspace/launch_control.es b/src/nomo/adapters/workspace/launch_control.es
+new file mode 100644
+--- /dev/null
++++ b/src/nomo/adapters/workspace/launch_control.es
+@@ -0,0 +1,13 @@
++module nomo.adapters.workspace.launch_control;
++
++import std.fs.{path, atomic_replace, WorkspacePath, IOError as FileError};
++import std.effects.Fs;
++import std.codec.text.utf8_encode;
++import nomo.native.projects.LaunchRoot;
++import nomo.application.native.projects.ports.ProjectLaunchControl;
++
++public type NativeProjectLaunch = {};
++impl NativeProjectLaunch ~ ProjectLaunchControl {
++    flow target(self) -> WorkspacePath<LaunchRoot> ![] { return match path<LaunchRoot>("next-project") { Ok(value) => value, Err(_) => { abort("native launch control is unavailable"); } }; }
++    flow publish(self, target: WorkspacePath<LaunchRoot>, folder: string) -> unit ![Fs.atomic_replace<LaunchRoot>, Error<FileError>] { atomic_replace(target, utf8_encode(folder)); }
++}
+diff --git a/src/nomo/bootstrap/native.es b/src/nomo/bootstrap/native.es
+new file mode 100644
+--- /dev/null
++++ b/src/nomo/bootstrap/native.es
+@@ -0,0 +1,14 @@
++module nomo.bootstrap.native;
++
++import nomo.native.entry;
++import nomo.bootstrap.projects;
++import nomo.native.projects.LaunchRoot;
++import nomo.native.workspace.ProjectRoot;
++import std.effects.Fs;
++import std.fs.{ReadLimitError, IOError as FileError};
++import std.io.IOError;
++
++public flow run(args: Array<string>) -> i32
++    ![Agentic, Memory, Console, Command.run<DefaultCommandSandbox>, Command.start<DefaultCommandSandbox>, Command.reconnect<DefaultCommandSandbox>, Command.read<DefaultCommandSandbox>, Command.write<DefaultCommandSandbox>, Command.stop<DefaultCommandSandbox>, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Fs.stat<ProjectRoot>, Fs.atomic_replace<ProjectRoot>, Fs.atomic_replace<LaunchRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>, Error<IOError>, Error<IndexError>] {
++    return handle { entry.run(args) } with projects.operations();
++}
+diff --git a/src/nomo/bootstrap/projects.es b/src/nomo/bootstrap/projects.es
+new file mode 100644
+--- /dev/null
++++ b/src/nomo/bootstrap/projects.es
+@@ -0,0 +1,29 @@
++module nomo.bootstrap.projects;
++
++import std.effects.Fs;
++import std.fs.IOError as FileError;
++import std.io.IOError as ConsoleError;
++import nomo.native.projects.LaunchRoot;
++import nomo.application.native.projects.effects.{ProjectDisplay, ProjectOperations};
++import nomo.application.native.projects.ports.ProjectRenderer;
++import nomo.application.native.projects.service;
++import nomo.adapters.etas.projects.NativeRecentProjects;
++import nomo.adapters.workspace.launch_control.NativeProjectLaunch;
++import nomo.adapters.terminal.projects.TerminalProjects;
++
++flow display() -> ![ProjectDisplay => Console, Error<ConsoleError>] ![] {
++    let renderer = TerminalProjects {};
++    return handler {
++        ProjectDisplay.item(index, path) => { renderer.item(index, path); resume; }
++        ProjectDisplay.choose() => { resume renderer.choose(); }
++        ProjectDisplay.preview(path) => { renderer.preview(path); resume; }
++    };
++}
++public flow operations() -> ![ProjectOperations => Memory, Console, Fs.atomic_replace<LaunchRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ConsoleError>, Error<IndexError>] ![Memory] {
++    let recent = NativeRecentProjects {}; let launch = NativeProjectLaunch {};
++    return handler {
++        ProjectOperations.remember(workspace) => { service.remember(recent, workspace); resume; }
++        ProjectOperations.show() => { handle { service.show(recent) } with display(); resume; }
++        ProjectOperations.open(raw, workspace) => { let result = handle { service.open(recent, launch, raw, workspace) } with display(); resume result; }
++    };
++}
+diff --git a/src/nomo/main.es b/src/nomo/main.es
+--- a/src/nomo/main.es
++++ b/src/nomo/main.es
+@@ -54,7 +54,7 @@
+ import nomo.entry.work_chain_sessions.{run_sessions as chain_sessions_run, run_show as chain_show_run};
+ import nomo.entry.user_context_entry.run as user_context_new_run;
+ import nomo.project.entry.run as project_run;
+-import nomo.native.entry.run as native_project_run;
++import nomo.bootstrap.native.run as native_project_run;
+ 
+ // The runtime returns i32 as data; every command uses this same OS-failure boundary.
+ flow completed(status: i32, message: string) -> i32 {
+diff --git a/src/nomo/native/entry.es b/src/nomo/native/entry.es
+--- a/src/nomo/native/entry.es
++++ b/src/nomo/native/entry.es
+@@ -14,6 +14,7 @@
+ import nomo.application.native.conversation.ports.{ConversationReader, ConversationWriter, ConversationCatalog, GenerationReservation};
+ import nomo.native.context.{RollingContext, ContextProjection, build as build_context, compact};
+ import nomo.native.transfer.{save_archive, load_archive, resume_import};
++import nomo.application.native.projects.effects.ProjectOperations;
+ import nomo.native.mutations.{journals, undo_changes, rollback_changes, reconcile_changes};
+ import nomo.native.files.read_file;
+ import nomo.native.navigation.{find_files, search_project};
+@@ -170,7 +171,7 @@
+ }
+ 
+ public flow run(args: Array<string>) -> i32
+-    ![Agentic, Memory, Console, Command.run<DefaultCommandSandbox>, Command.start<DefaultCommandSandbox>, Command.reconnect<DefaultCommandSandbox>, Command.read<DefaultCommandSandbox>, Command.write<DefaultCommandSandbox>, Command.stop<DefaultCommandSandbox>, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Fs.stat<ProjectRoot>, Fs.atomic_replace<ProjectRoot>, Fs.atomic_replace<LaunchRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>, Error<IOError>, Error<IndexError>] {
++    ![Agentic, ProjectOperations, Memory, Console, Command.run<DefaultCommandSandbox>, Command.start<DefaultCommandSandbox>, Command.reconnect<DefaultCommandSandbox>, Command.read<DefaultCommandSandbox>, Command.write<DefaultCommandSandbox>, Command.stop<DefaultCommandSandbox>, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Fs.stat<ProjectRoot>, Fs.atomic_replace<ProjectRoot>, Fs.atomic_replace<LaunchRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>, Error<IOError>, Error<IndexError>] {
+     let options = parse(args);
+     if options.choose_project { request_open("", options.workspace); return 0; }
+     remember(options.workspace);
+diff --git a/src/nomo/native/projects.es b/src/nomo/native/projects.es
+--- a/src/nomo/native/projects.es
++++ b/src/nomo/native/projects.es
+@@ -1,55 +1,14 @@
+ module nomo.native.projects;
+ 
+-import std.fs.{Region, path, atomic_replace};
+-import std.fs.IOError as FileError;
+-import std.effects.Fs;
+-import std.codec.text.utf8_encode;
+-import std.io.{println, print, read_line};
+-import std.io.IOError as ConsoleError;
+-import std.text.{trim, from_usize};
+-import nomo.domain.projects.selection.{ProjectReference, remembered, reference, saved};
+-import nomo.core.json.encode;
++import std.fs.Region;
++import nomo.application.native.projects.effects.ProjectOperations;
+ 
+ public type LaunchRoot;
+ impl LaunchRoot ~ Region;
+ alias Schema = MemoryRegion<{ Recent: Store<string, Array<string>> }>;
+-let Data = std.memory.region<Schema>(stable_id = "nomo-native-projects-v1", store = "native-projects");
++public let Data = std.memory.region<Schema>(stable_id = "nomo-native-projects-v1", store = "native-projects");
+ 
+-flow recent() -> Array<string> {
+-    return match Data.Recent.get("folders") { Some(value) => value, None() => [] };
+-}
+ 
+-public flow remember(workspace: string) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>] {
+-    Data.Recent.put("folders", remembered(workspace, recent()));
+-}
+-
+-public flow show_projects() -> unit {
+-    var index: usize = 1;
+-    for value in recent() limit Iterations(2147483647) {
+-        println("[PROJECT] " + from_usize(index) + " " + value);
+-        index = index + 1;
+-    }
+-}
+-
+-// The source selects the next folder. The launcher only transports this
+-// mount request to that folder's execution endpoint; it does not select a
+-// conversation or own the current endpoint's task lifecycle.
+-public flow request_open(raw: string, workspace: string) -> bool
+-    ![Memory, Console, Fs.atomic_replace<LaunchRoot>, Error<StorageError>, Error<FileError>, Error<ConsoleError>, Error<IndexError>] {
+-    var selection = trim(raw);
+-    if selection == "" {
+-        show_projects();
+-        print("project> folder path or saved number (blank cancels): ");
+-        selection = trim(read_line());
+-        if selection == "" { return false; }
+-    }
+-    let selected = match reference(selection, workspace) {
+-        ProjectReference.Saved(index) => saved(recent(), index),
+-        ProjectReference.Folder(path) => path
+-    };
+-    let preview = match encode(selected, "project path conversion failed", "project path encoding failed") { Ok(value) => value, Err(error) => { abort(error); } };
+-    println("[OPEN   ] " + preview);
+-    let destination = match path<LaunchRoot>("next-project") { Ok(value) => value, Err(_) => { abort("native launch control is unavailable"); } };
+-    atomic_replace(destination, utf8_encode(selected));
+-    return true;
+-}
++public flow remember(workspace: string) -> unit ![ProjectOperations] { perform ProjectOperations.remember(workspace); }
++public flow show_projects() -> unit ![ProjectOperations] { perform ProjectOperations.show(); }
++public flow request_open(raw: string, workspace: string) -> bool ![ProjectOperations] { return perform ProjectOperations.open(raw, workspace); }

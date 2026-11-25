@@ -1,0 +1,82 @@
+{
+  "date": "2026-11-26",
+  "url": "https://github.com/etas-project/etas-interpreter/issues/118",
+  "version_scope": "official 0.13.5 only; not generalized to 0.22.4/0.22.5",
+  "normal_check": {
+    "exit": 0,
+    "stdout": "checked 295 files\n",
+    "seconds": 111.629
+  },
+  "full_consumer": "tests/native_projects_probe.py",
+  "consumer_status": "failed at startup; project switching was not exercised",
+  "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-5rpzdwrh",
+  "trace": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-5rpzdwrh/traces/run-3Mx4JWbr/trace.json",
+  "trace_sha256": "2fa7bc7c51483e3a4a4afb73dbe924dd2a1cd9359bce43f9096f7892ace0624d",
+  "outcome": {
+    "failure": {
+      "diagnostic": {
+        "code": "Analysis(InvalidArguments)",
+        "message": "path does not name a runtime value in the current frame",
+        "phase": "analysis",
+        "severity": "error"
+      },
+      "kind": "execution_fault"
+    },
+    "kind": "failed"
+  },
+  "termination": {
+    "local_work_settled": true,
+    "operations": [],
+    "scope": 0
+  },
+  "traced_host_requests": 0,
+  "traced_host_request_qualification": "This counts Etas Host actions, not compiler/source loading or launcher output.",
+  "owned_worker": "5e2f2f68e48a78a4b080c5d35ead4e76c45c79b0d5f1c93af4f006888cca4fd2",
+  "owned_worker_removed": true,
+  "selected_source_restored_exactly": true,
+  "selected_source_count": 290,
+  "overlay": "examples/repros/returned-project-handler-0135/attempt-overlay.patch",
+  "overlay_sha256": "988dafe11684d7e164d0d163833c48932371f0527d74461ac850069f1336ac2d",
+  "changed_sources": {
+    "src/nomo/adapters/etas/projects.es": {
+      "selected_sha256": null,
+      "attempted_sha256": "20305eb051a2943d66aad66a4a8bf276be59aad82f650296cad0551f14a83808"
+    },
+    "src/nomo/adapters/terminal/projects.es": {
+      "selected_sha256": null,
+      "attempted_sha256": "98f403732675e5132499be301f85b9712cee9bcc42545de9406947731724a849"
+    },
+    "src/nomo/adapters/workspace/launch_control.es": {
+      "selected_sha256": null,
+      "attempted_sha256": "3f17102ea6e646889c4de52059802b743b3d070644ed1365b85e7b8200f82878"
+    },
+    "src/nomo/bootstrap/native.es": {
+      "selected_sha256": null,
+      "attempted_sha256": "5e8752df06ee6d24693f75f2a516ce500d96b989d8cfbac2ab82c1b8be0ccba6"
+    },
+    "src/nomo/bootstrap/projects.es": {
+      "selected_sha256": null,
+      "attempted_sha256": "042ecf5cdf6b2bb02bb901569d5ab1a8daeb5a9f4dd28cd0205c221789da639d"
+    },
+    "src/nomo/main.es": {
+      "selected_sha256": "7b6dc6c6cedb57370700676a9c6ee4ba791b83f7baca4250deb86670411cd202",
+      "attempted_sha256": "3507e50f6baa1c098bb8a9ab6e66ec1765994822fdcf39dfceb8322facc26eb2"
+    },
+    "src/nomo/native/entry.es": {
+      "selected_sha256": "607fbfe2168a8928dd443c70f8514b92d72afd672fdaf7b1216406fc851ffd6d",
+      "attempted_sha256": "87bc7a60312bb1354b68472946232e4b50323a628b233a01acfbc7dd4e424d6a"
+    },
+    "src/nomo/native/projects.es": {
+      "selected_sha256": "c6dad9347756d76391f4d2a106c5c20c96996b59d02e8922ec24ac800ae75fb3",
+      "attempted_sha256": "d713573638c8bb632802637d6b331faa21b427e0791464438407369b94703f09"
+    }
+  },
+  "scope": "Overlay against the selected DIP-12 preparation in the same delivery. It is not a standalone minimal reproduction. No alternative production handler, gate bypass or source-order change was adopted.",
+  "new_assembly_files_removed": [
+    "src/nomo/adapters/etas/projects.es",
+    "src/nomo/adapters/terminal/projects.es",
+    "src/nomo/adapters/workspace/launch_control.es",
+    "src/nomo/bootstrap/native.es",
+    "src/nomo/bootstrap/projects.es"
+  ]
+}
