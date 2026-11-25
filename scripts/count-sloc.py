@@ -1,19 +1,37 @@
 #!/usr/bin/env python3
-"""nomo-physical-v3: include the reviewed supported-runtime inventory."""
+"""nomo-physical-v4: count every currently supported handwritten runtime path."""
 from pathlib import Path
 import sys
 
 ROOT = Path(__file__).resolve().parent.parent
 PRODUCT_ROOTS = ("src",)
 OTHER_ROOTS = ("tests", "examples", "scripts")
-RUNTIME_FILES = (
-    "scripts/nomo", "scripts/nomo-read.sh", "scripts/nomo-session-chat.py",
-    "scripts/nomo-session-id.py", "scripts/nomo-read-session.py",
-    "scripts/nomo-history-work.py", "scripts/nomo-edit.py",
-    "scripts/nomo-session-storage.py", "scripts/nomo-event-policy.py",
-    "scripts/nomo-bounded-check.py", "scripts/nomo-verified-etas.py",
-    "scripts/terminal-transport.py",
-)
+RUNTIME_GROUPS = {
+    "entry": ("scripts/nomo",),
+    "project": (
+        "scripts/nomo_project_chat.py", "scripts/nomo_project_model.py",
+        "scripts/nomo_project_tools.py", "scripts/nomo_project.py",
+        "scripts/nomo_history.py", "scripts/nomo_jobs.py", "scripts/nomo_git.py",
+    ),
+    "legacy": (
+        "scripts/nomo-read.sh", "scripts/nomo-session-chat.py",
+        "scripts/nomo-session-id.py", "scripts/nomo-read-session.py",
+        "scripts/nomo-history-work.py", "scripts/nomo-edit.py",
+        "scripts/nomo-session-storage.py", "scripts/nomo-event-policy.py",
+        "scripts/nomo-bounded-check.py",
+    ),
+    "shared": (
+        "scripts/nomo-verified-etas.py", "scripts/nomo_model_transport.py",
+        "scripts/nomo_terminal.py", "scripts/terminal-transport.py",
+    ),
+    "native": ("scripts/nomo-native", "scripts/native-worker-transport.py"),
+    "gateway": ("scripts/etas003_gateway.py",),
+    "tryout": (
+        "scripts/local-tryout.sh", "scripts/prepare-local-tryout.py",
+        "scripts/session-demo.sh",
+    ),
+}
+RUNTIME_FILES = tuple(name for names in RUNTIME_GROUPS.values() for name in names)
 SUFFIXES = {".es", ".rs", ".py", ".sh"}
 EXCLUDED = {"target", "node_modules", ".git", "__pycache__"}
 
@@ -61,10 +79,12 @@ def inventory(root):
         raise ValueError("authoritative inventory requires runtime files: " + ", ".join(missing_runtime))
     counts = {name: count(root / name) for name in PRODUCT_ROOTS + OTHER_ROOTS}
     counts["runtime"] = count_files(runtime)
+    counts.update(("runtime-" + name, count_files(tuple(root / path for path in paths)))
+                  for name, paths in RUNTIME_GROUPS.items())
     counts["product"] = total(*(counts[name] for name in PRODUCT_ROOTS), counts["runtime"])
     counted_runtime_scripts = count_files(tuple(path for path in runtime if path.suffix in SUFFIXES))
     counts["engineering-scripts"] = difference(counts["scripts"], counted_runtime_scripts)
-    counts["scripts"] = total(counts["scripts"], count_files((root / "scripts/nomo",)))
+    counts["scripts"] = total(counts["scripts"], count_files(tuple(path for path in runtime if path.suffix not in SUFFIXES)))
     return counts
 
 
@@ -79,9 +99,10 @@ def main():
     except ValueError as error:
         print(f"SLOC error: {error}", file=sys.stderr)
         return 2
-    print("counter: nomo-physical-v3; authoritative; blank and comment-only # / // lines excluded")
+    print("counter: nomo-physical-v4; authoritative; blank and comment-only # / // lines excluded")
     print("product roots: " + ", ".join(PRODUCT_ROOTS) + "; reviewed runtime inventory: " + ", ".join(RUNTIME_FILES))
-    for name in PRODUCT_ROOTS + ("runtime", "product") + OTHER_ROOTS + ("engineering-scripts",):
+    groups = tuple("runtime-" + name for name in RUNTIME_GROUPS)
+    for name in PRODUCT_ROOTS + ("runtime",) + groups + ("product",) + OTHER_ROOTS + ("engineering-scripts",):
         report(name, counts[name])
     return 0
 

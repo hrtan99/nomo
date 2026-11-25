@@ -1,0 +1,644 @@
+{
+  "status": "runtime_inventory_and_cutover_dependency_audit_only",
+  "baseline": "022d857",
+  "counter": "nomo-physical-v4",
+  "counts": {
+    "src": {
+      "sloc": 17017,
+      "raw_lines": 19343,
+      "files": 290
+    },
+    "runtime": {
+      "sloc": 4518,
+      "raw_lines": 5014,
+      "files": 27
+    },
+    "runtime-entry": {
+      "sloc": 114,
+      "raw_lines": 126,
+      "files": 1
+    },
+    "runtime-project": {
+      "sloc": 1256,
+      "raw_lines": 1409,
+      "files": 7
+    },
+    "runtime-legacy": {
+      "sloc": 2032,
+      "raw_lines": 2199,
+      "files": 9
+    },
+    "runtime-shared": {
+      "sloc": 498,
+      "raw_lines": 567,
+      "files": 4
+    },
+    "runtime-native": {
+      "sloc": 235,
+      "raw_lines": 266,
+      "files": 2
+    },
+    "runtime-gateway": {
+      "sloc": 165,
+      "raw_lines": 188,
+      "files": 1
+    },
+    "runtime-tryout": {
+      "sloc": 218,
+      "raw_lines": 259,
+      "files": 3
+    },
+    "product": {
+      "sloc": 21535,
+      "raw_lines": 24357,
+      "files": 317
+    }
+  },
+  "previous_counter": {
+    "version": "nomo-physical-v3",
+    "runtime_files": 12,
+    "runtime_sloc": 2410,
+    "product_sloc_with_same_current_sources": 19427
+  },
+  "newly_counted_runtime_files": [
+    "scripts/etas003_gateway.py",
+    "scripts/local-tryout.sh",
+    "scripts/native-worker-transport.py",
+    "scripts/nomo-native",
+    "scripts/nomo_git.py",
+    "scripts/nomo_history.py",
+    "scripts/nomo_jobs.py",
+    "scripts/nomo_model_transport.py",
+    "scripts/nomo_project.py",
+    "scripts/nomo_project_chat.py",
+    "scripts/nomo_project_model.py",
+    "scripts/nomo_project_tools.py",
+    "scripts/nomo_terminal.py",
+    "scripts/prepare-local-tryout.py",
+    "scripts/session-demo.sh"
+  ],
+  "added_runtime_sloc": 2108,
+  "runtime_groups": {
+    "entry": [
+      "scripts/nomo"
+    ],
+    "project": [
+      "scripts/nomo_project_chat.py",
+      "scripts/nomo_project_model.py",
+      "scripts/nomo_project_tools.py",
+      "scripts/nomo_project.py",
+      "scripts/nomo_history.py",
+      "scripts/nomo_jobs.py",
+      "scripts/nomo_git.py"
+    ],
+    "legacy": [
+      "scripts/nomo-read.sh",
+      "scripts/nomo-session-chat.py",
+      "scripts/nomo-session-id.py",
+      "scripts/nomo-read-session.py",
+      "scripts/nomo-history-work.py",
+      "scripts/nomo-edit.py",
+      "scripts/nomo-session-storage.py",
+      "scripts/nomo-event-policy.py",
+      "scripts/nomo-bounded-check.py"
+    ],
+    "shared": [
+      "scripts/nomo-verified-etas.py",
+      "scripts/nomo_model_transport.py",
+      "scripts/nomo_terminal.py",
+      "scripts/terminal-transport.py"
+    ],
+    "native": [
+      "scripts/nomo-native",
+      "scripts/native-worker-transport.py"
+    ],
+    "gateway": [
+      "scripts/etas003_gateway.py"
+    ],
+    "tryout": [
+      "scripts/local-tryout.sh",
+      "scripts/prepare-local-tryout.py",
+      "scripts/session-demo.sh"
+    ]
+  },
+  "runtime_hashes": {
+    "scripts/nomo": "268287b441d06cc1bd17352381b3c0e96273db9dc18e26eb9ba66190a5488f7d",
+    "scripts/nomo_project_chat.py": "ae3b2808f2f542462aa5377cb29fda856a9643b5c3b892e52608fcbbf955aabe",
+    "scripts/nomo_project_model.py": "5edc517694add5e25638bab124b24b459218c6dc2d9d8d776911697dff0b95f1",
+    "scripts/nomo_project_tools.py": "515c96597e2e373c2d3eea15cc14f94087ce00da6b2998923b88ad6f77aa616c",
+    "scripts/nomo_project.py": "ccefc22136214728631b82d4ccb18de28e5256c5e98f129552afb7f75c8eb1fb",
+    "scripts/nomo_history.py": "38b373d4a945e9d6aff204645b2f35549ba3ffbe787049dd69359ff08aee9378",
+    "scripts/nomo_jobs.py": "35d71ec9de7b538b4429e27258d112865c5a503eb3f2b104212c149f5f8bc2de",
+    "scripts/nomo_git.py": "56ce1def3a7aa9d824c8e282d153ee9b88aeec1936950fab6ba85a67394f8a3c",
+    "scripts/nomo-read.sh": "15adacf44ba2f3369c8405b7951dd77f53c436c3ed29f8dae18c4769f17a99d4",
+    "scripts/nomo-session-chat.py": "f8ad82f821f7c20efb7b87b3c1c48c8abb952b210e7f163a0fb5f627ab4bedb8",
+    "scripts/nomo-session-id.py": "58cf046d9fb7d399e74f29bc888c67b87424f15f0c469c4f3caa4365565b617c",
+    "scripts/nomo-read-session.py": "131b468946e719d8c997b916ec1c9d466bc446d53a887233e5a75181ec5b98b4",
+    "scripts/nomo-history-work.py": "c10d915a171d9b5ac0a35b79754d510eebbd1705a40ca047b09595edc38c7361",
+    "scripts/nomo-edit.py": "fb916f8875441b9961beead6fba7d11055a9d5755a390eecd029e3b681296e2d",
+    "scripts/nomo-session-storage.py": "9acd7485e8ee4c91212a97f2e3669e4d585dc3b8220ef93aedc86be7f129712b",
+    "scripts/nomo-event-policy.py": "100762cf5b6075a78e352fbef7d2f563a7247e35c21bcc62660d4624897a9562",
+    "scripts/nomo-bounded-check.py": "0e25eb064351c1b1112c0fff7c9affd963a5ec5c2d5a32a06a6302842d622810",
+    "scripts/nomo-verified-etas.py": "df09e85f8099061462dd0c7a99a5d7ff812ea539cb91453e8865a743a821f828",
+    "scripts/nomo_model_transport.py": "80df8bedd53ec095fc554cb41a4e890b1cc5a2ff9ae9b42cdab43d2aacde2280",
+    "scripts/nomo_terminal.py": "0a1b55be3fdd79974560ae59a2629c188b0f71ea4f28fb2888f2a296bf4a1147",
+    "scripts/terminal-transport.py": "286942a1127668fed19b779c3d6fddc97cf6299913a0635922bfc9c094af83ec",
+    "scripts/nomo-native": "13bd805016eed2eaf5efa6ce481d1280f30ce3c52db01f7dc90e62d0d23dc595",
+    "scripts/native-worker-transport.py": "e476d0c84fa376c58d1ced4cf22cfa096763628e1412bcb2ef7d4b987a31bd20",
+    "scripts/etas003_gateway.py": "593a230300ceadae4fc14fb9d73a62cd180acd413edf13c04e3ac768cc5fb74d",
+    "scripts/local-tryout.sh": "7d93be3ec1f175fc5a9f8e1794c4e410a7fd900dc3dfbe3f672607075261c40b",
+    "scripts/prepare-local-tryout.py": "e5d150296396bf2b259582bcd4ad1c80a978ecdd667a37537bf81c0ea8d3b116",
+    "scripts/session-demo.sh": "a108c4ad378449ea0c3e3005138851e7b838796967a3cfe1596b460a2339892d"
+  },
+  "import_and_helper_references": [
+    {
+      "from": "scripts/nomo",
+      "to": "scripts/nomo_project_chat.py",
+      "kind": "python_import"
+    },
+    {
+      "from": "scripts/nomo",
+      "to": "scripts/nomo_terminal.py",
+      "kind": "python_import"
+    },
+    {
+      "from": "scripts/nomo",
+      "to": "scripts/nomo-session-id.py",
+      "kind": "literal_helper_path"
+    },
+    {
+      "from": "scripts/nomo",
+      "to": "scripts/nomo-event-policy.py",
+      "kind": "literal_helper_path"
+    },
+    {
+      "from": "scripts/nomo",
+      "to": "scripts/nomo-read.sh",
+      "kind": "literal_helper_path"
+    },
+    {
+      "from": "scripts/nomo",
+      "to": "scripts/nomo-read.sh",
+      "kind": "literal_helper_path"
+    },
+    {
+      "from": "scripts/nomo_project_chat.py",
+      "to": "scripts/nomo_history.py",
+      "kind": "python_import"
+    },
+    {
+      "from": "scripts/nomo_project_chat.py",
+      "to": "scripts/nomo_project.py",
+      "kind": "python_import"
+    },
+    {
+      "from": "scripts/nomo_project_chat.py",
+      "to": "scripts/nomo_project_model.py",
+      "kind": "python_import"
+    },
+    {
+      "from": "scripts/nomo_project_chat.py",
+      "to": "scripts/nomo_project_tools.py",
+      "kind": "python_import"
+    },
+    {
+      "from": "scripts/nomo_project_model.py",
+      "to": "scripts/nomo-verified-etas.py",
+      "kind": "literal_helper_path"
+    },
+    {
+      "from": "scripts/nomo_project_tools.py",
+      "to": "scripts/nomo_jobs.py",
+      "kind": "python_import"
+    },
+    {
+      "from": "scripts/nomo_project_tools.py",
+      "to": "scripts/nomo_project.py",
+      "kind": "python_import"
+    },
+    {
+      "from": "scripts/nomo_project_tools.py",
+      "to": "scripts/nomo_git.py",
+      "kind": "python_import"
+    },
+    {
+      "from": "scripts/nomo_jobs.py",
+      "to": "scripts/nomo_project.py",
+      "kind": "python_import"
+    },
+    {
+      "from": "scripts/nomo-read.sh",
+      "to": "scripts/nomo-event-policy.py",
+      "kind": "shell_helper_path"
+    },
+    {
+      "from": "scripts/nomo-read.sh",
+      "to": "scripts/nomo-session-chat.py",
+      "kind": "shell_helper_path"
+    },
+    {
+      "from": "scripts/nomo-read.sh",
+      "to": "scripts/nomo-history-work.py",
+      "kind": "shell_helper_path"
+    },
+    {
+      "from": "scripts/nomo-read.sh",
+      "to": "scripts/nomo-session-id.py",
+      "kind": "shell_helper_path"
+    },
+    {
+      "from": "scripts/nomo-read.sh",
+      "to": "scripts/nomo-read-session.py",
+      "kind": "shell_helper_path"
+    },
+    {
+      "from": "scripts/nomo-read.sh",
+      "to": "scripts/nomo-history-work.py",
+      "kind": "shell_helper_path"
+    },
+    {
+      "from": "scripts/nomo-read.sh",
+      "to": "scripts/nomo-history-work.py",
+      "kind": "shell_helper_path"
+    },
+    {
+      "from": "scripts/nomo-read.sh",
+      "to": "scripts/nomo-edit.py",
+      "kind": "shell_helper_path"
+    },
+    {
+      "from": "scripts/nomo-read.sh",
+      "to": "scripts/nomo-edit.py",
+      "kind": "shell_helper_path"
+    },
+    {
+      "from": "scripts/nomo-read.sh",
+      "to": "scripts/nomo-edit.py",
+      "kind": "shell_helper_path"
+    },
+    {
+      "from": "scripts/nomo-read.sh",
+      "to": "scripts/nomo-edit.py",
+      "kind": "shell_helper_path"
+    },
+    {
+      "from": "scripts/nomo-read.sh",
+      "to": "scripts/terminal-transport.py",
+      "kind": "shell_helper_path"
+    },
+    {
+      "from": "scripts/nomo-read.sh",
+      "to": "scripts/nomo-verified-etas.py",
+      "kind": "shell_helper_path"
+    },
+    {
+      "from": "scripts/nomo-session-chat.py",
+      "to": "scripts/nomo_terminal.py",
+      "kind": "python_import"
+    },
+    {
+      "from": "scripts/nomo-session-chat.py",
+      "to": "scripts/nomo-edit.py",
+      "kind": "literal_helper_path"
+    },
+    {
+      "from": "scripts/nomo-session-chat.py",
+      "to": "scripts/nomo-session-id.py",
+      "kind": "literal_helper_path"
+    },
+    {
+      "from": "scripts/nomo-session-chat.py",
+      "to": "scripts/nomo-event-policy.py",
+      "kind": "literal_helper_path"
+    },
+    {
+      "from": "scripts/nomo-session-chat.py",
+      "to": "scripts/nomo-event-policy.py",
+      "kind": "literal_helper_path"
+    },
+    {
+      "from": "scripts/nomo-session-chat.py",
+      "to": "scripts/nomo-read.sh",
+      "kind": "literal_helper_path"
+    },
+    {
+      "from": "scripts/nomo-session-chat.py",
+      "to": "scripts/nomo-read.sh",
+      "kind": "literal_helper_path"
+    },
+    {
+      "from": "scripts/nomo-session-chat.py",
+      "to": "scripts/nomo-session-id.py",
+      "kind": "literal_helper_path"
+    },
+    {
+      "from": "scripts/nomo-session-chat.py",
+      "to": "scripts/nomo-history-work.py",
+      "kind": "literal_helper_path"
+    },
+    {
+      "from": "scripts/nomo-session-chat.py",
+      "to": "scripts/nomo-session-id.py",
+      "kind": "literal_helper_path"
+    },
+    {
+      "from": "scripts/nomo-session-chat.py",
+      "to": "scripts/terminal-transport.py",
+      "kind": "literal_helper_path"
+    },
+    {
+      "from": "scripts/nomo-session-chat.py",
+      "to": "scripts/nomo-session-id.py",
+      "kind": "literal_helper_path"
+    },
+    {
+      "from": "scripts/nomo-session-chat.py",
+      "to": "scripts/nomo-edit.py",
+      "kind": "literal_helper_path"
+    },
+    {
+      "from": "scripts/nomo-session-id.py",
+      "to": "scripts/nomo_terminal.py",
+      "kind": "python_import"
+    },
+    {
+      "from": "scripts/nomo-session-id.py",
+      "to": "scripts/nomo-edit.py",
+      "kind": "literal_helper_path"
+    },
+    {
+      "from": "scripts/nomo-session-id.py",
+      "to": "scripts/nomo-read-session.py",
+      "kind": "literal_helper_path"
+    },
+    {
+      "from": "scripts/nomo-session-id.py",
+      "to": "scripts/nomo-history-work.py",
+      "kind": "literal_helper_path"
+    },
+    {
+      "from": "scripts/nomo-session-id.py",
+      "to": "scripts/nomo-history-work.py",
+      "kind": "literal_helper_path"
+    },
+    {
+      "from": "scripts/nomo-session-id.py",
+      "to": "scripts/nomo-read-session.py",
+      "kind": "literal_helper_path"
+    },
+    {
+      "from": "scripts/nomo-read-session.py",
+      "to": "scripts/nomo_terminal.py",
+      "kind": "python_import"
+    },
+    {
+      "from": "scripts/nomo-read-session.py",
+      "to": "scripts/nomo-edit.py",
+      "kind": "literal_helper_path"
+    },
+    {
+      "from": "scripts/nomo-read-session.py",
+      "to": "scripts/nomo-session-storage.py",
+      "kind": "literal_helper_path"
+    },
+    {
+      "from": "scripts/nomo-read-session.py",
+      "to": "scripts/nomo-session-id.py",
+      "kind": "literal_helper_path"
+    },
+    {
+      "from": "scripts/nomo-read-session.py",
+      "to": "scripts/nomo-event-policy.py",
+      "kind": "literal_helper_path"
+    },
+    {
+      "from": "scripts/nomo-read-session.py",
+      "to": "scripts/nomo-event-policy.py",
+      "kind": "literal_helper_path"
+    },
+    {
+      "from": "scripts/nomo-read-session.py",
+      "to": "scripts/nomo-verified-etas.py",
+      "kind": "literal_helper_path"
+    },
+    {
+      "from": "scripts/nomo-read-session.py",
+      "to": "scripts/terminal-transport.py",
+      "kind": "literal_helper_path"
+    },
+    {
+      "from": "scripts/nomo-history-work.py",
+      "to": "scripts/nomo_terminal.py",
+      "kind": "python_import"
+    },
+    {
+      "from": "scripts/nomo-history-work.py",
+      "to": "scripts/nomo-edit.py",
+      "kind": "literal_helper_path"
+    },
+    {
+      "from": "scripts/nomo-history-work.py",
+      "to": "scripts/nomo-session-storage.py",
+      "kind": "literal_helper_path"
+    },
+    {
+      "from": "scripts/nomo-history-work.py",
+      "to": "scripts/nomo-event-policy.py",
+      "kind": "literal_helper_path"
+    },
+    {
+      "from": "scripts/nomo-history-work.py",
+      "to": "scripts/nomo-verified-etas.py",
+      "kind": "literal_helper_path"
+    },
+    {
+      "from": "scripts/nomo-history-work.py",
+      "to": "scripts/nomo-verified-etas.py",
+      "kind": "literal_helper_path"
+    },
+    {
+      "from": "scripts/nomo-history-work.py",
+      "to": "scripts/nomo-event-policy.py",
+      "kind": "literal_helper_path"
+    },
+    {
+      "from": "scripts/nomo-history-work.py",
+      "to": "scripts/nomo-verified-etas.py",
+      "kind": "literal_helper_path"
+    },
+    {
+      "from": "scripts/nomo-history-work.py",
+      "to": "scripts/nomo-event-policy.py",
+      "kind": "literal_helper_path"
+    },
+    {
+      "from": "scripts/nomo-history-work.py",
+      "to": "scripts/terminal-transport.py",
+      "kind": "literal_helper_path"
+    },
+    {
+      "from": "scripts/nomo-history-work.py",
+      "to": "scripts/terminal-transport.py",
+      "kind": "literal_helper_path"
+    },
+    {
+      "from": "scripts/nomo-history-work.py",
+      "to": "scripts/terminal-transport.py",
+      "kind": "literal_helper_path"
+    },
+    {
+      "from": "scripts/nomo-edit.py",
+      "to": "scripts/nomo_terminal.py",
+      "kind": "python_import"
+    },
+    {
+      "from": "scripts/nomo-edit.py",
+      "to": "scripts/nomo-verified-etas.py",
+      "kind": "literal_helper_path"
+    },
+    {
+      "from": "scripts/nomo-edit.py",
+      "to": "scripts/nomo-bounded-check.py",
+      "kind": "literal_helper_path"
+    },
+    {
+      "from": "scripts/nomo-edit.py",
+      "to": "scripts/nomo-verified-etas.py",
+      "kind": "literal_helper_path"
+    },
+    {
+      "from": "scripts/nomo-edit.py",
+      "to": "scripts/nomo-bounded-check.py",
+      "kind": "literal_helper_path"
+    },
+    {
+      "from": "scripts/nomo-edit.py",
+      "to": "scripts/terminal-transport.py",
+      "kind": "literal_helper_path"
+    },
+    {
+      "from": "scripts/nomo-edit.py",
+      "to": "scripts/terminal-transport.py",
+      "kind": "literal_helper_path"
+    },
+    {
+      "from": "scripts/nomo-edit.py",
+      "to": "scripts/terminal-transport.py",
+      "kind": "literal_helper_path"
+    },
+    {
+      "from": "scripts/nomo-edit.py",
+      "to": "scripts/terminal-transport.py",
+      "kind": "literal_helper_path"
+    },
+    {
+      "from": "scripts/nomo-event-policy.py",
+      "to": "scripts/nomo-verified-etas.py",
+      "kind": "literal_helper_path"
+    },
+    {
+      "from": "scripts/nomo-verified-etas.py",
+      "to": "scripts/nomo_model_transport.py",
+      "kind": "python_import"
+    },
+    {
+      "from": "scripts/nomo-native",
+      "to": "scripts/native-worker-transport.py",
+      "kind": "shell_helper_path"
+    },
+    {
+      "from": "scripts/local-tryout.sh",
+      "to": "scripts/prepare-local-tryout.py",
+      "kind": "shell_helper_path"
+    },
+    {
+      "from": "scripts/local-tryout.sh",
+      "to": "scripts/prepare-local-tryout.py",
+      "kind": "shell_helper_path"
+    },
+    {
+      "from": "scripts/local-tryout.sh",
+      "to": "scripts/terminal-transport.py",
+      "kind": "shell_helper_path"
+    }
+  ],
+  "manual_entry_roots": {
+    "shipping": "scripts/nomo -> nomo_project_chat; --legacy/--allow/--page route to nomo-read.sh",
+    "native": "scripts/nomo-native -> native-worker-transport.py -> official Etas native_project",
+    "gateway": "compose.yaml model-gateway -> Dockerfile.gateway -> etas003_gateway.py",
+    "tryout": "local-tryout.sh -> prepare-local-tryout.py/terminal-transport.py; session-demo.sh -> Etas session"
+  },
+  "cutover_dependencies": {
+    "project_business_modules": [
+      "scripts/nomo_project_chat.py",
+      "scripts/nomo_project_model.py",
+      "scripts/nomo_project_tools.py",
+      "scripts/nomo_project.py",
+      "scripts/nomo_history.py",
+      "scripts/nomo_jobs.py",
+      "scripts/nomo_git.py"
+    ],
+    "legacy_saved_sessions": "SqliteHistory.import_legacy executes scripts/nomo --legacy --status --events. Keep an explicit historical export/migration path before retiring that dispatch chain.",
+    "model_relay_policy": "nomo_model_transport.py rewrites project output allowance and selected-model reasoning settings, and retries explicit provider throttling. This is not solely byte transport; its policy must be removed or deliberately owned during cutover.",
+    "terminal": "native-worker-transport.py transports Docker attach bytes/endpoint identity and native-selected mount-control files; it does not own conversation/model policy.",
+    "startup_flags": {
+      "shipping_declared": [
+        "--all",
+        "--allow",
+        "--check",
+        "--events",
+        "--export",
+        "--high-input",
+        "--history",
+        "--id",
+        "--import",
+        "--latest",
+        "--once",
+        "--open",
+        "--page",
+        "--projects",
+        "--resume",
+        "--root",
+        "--sessions",
+        "--status",
+        "--title"
+      ],
+      "native_declared": [
+        "--workspace",
+        "--resume",
+        "--new",
+        "--open",
+        "--once"
+      ],
+      "remaining": "Native startup does not implement the full shipping offline/history/export/import/selector/check-override CLI. Interactive counterparts do not prove startup compatibility."
+    },
+    "persistent_processes": "The Python job service owns PTY processes. Retained native Host project switching passes, but original continuous capture/fresh-Host reconnect acceptance is still separate."
+  },
+  "validation": {
+    "existing_counter_tests": 11,
+    "result": "passed",
+    "command": "python3 -B tests/test_sloc_counter.py",
+    "new_negative_tests": 0,
+    "model_or_docker_requests": 0
+  },
+  "line_limit": "The user explicitly allowed temporarily exceeding the code limit. The total is reported without excluding live runtime paths or local source prototypes.",
+  "upstream_observation": {
+    "frontend_97": "open, 0 comments",
+    "interpreter_108": "closed; the historical original full-consumer failure retains its separate evidence",
+    "latest_cli_manifest_version": "0.22.5",
+    "latest_cli_manifest_blob": "27c7da381380b4c142f67137cfc5563c7667f9ce",
+    "new_graph_built_or_accepted": false
+  },
+  "source_files": {
+    "scripts/count-sloc.py": "cf42be690b2e3ce3ac4db02528a7fbcb9dbc86b4f1bad0dee55cc7d20921a72d",
+    "tests/test_sloc_counter.py": "14f60cd47bbe3ab01a41b4503f61ee1b53bd4526cc89c74533c6e7b673da39c6",
+    "src/nomo/entry/native/options.es": "3b011c8ec8f35a1f7968d7e9a36073ad3a5909d64e6a79777dbb80e12deadcaa",
+    "scripts/nomo_history.py": "38b373d4a945e9d6aff204645b2f35549ba3ffbe787049dd69359ff08aee9378",
+    "scripts/nomo_model_transport.py": "80df8bedd53ec095fc554cb41a4e890b1cc5a2ff9ae9b42cdab43d2aacde2280"
+  },
+  "not_claimed": [
+    "DIP-13 completion or default-entry cutover",
+    "Compiler/type/effect or new composition runtime acceptance",
+    "Latest-graph continuous capture or durable PTY acceptance"
+  ]
+}

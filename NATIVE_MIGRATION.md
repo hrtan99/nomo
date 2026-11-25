@@ -2,6 +2,47 @@
 
 The shipping `scripts/nomo` entry still uses the existing Python project controller. The opt-in `native_project` flow is the migration implementation, not a completed replacement.
 
+## Dependency-inversion and runtime inventory, 2026-11-26
+
+The combined proposal is
+[`dip-composition-0224-20261126.patch`](examples/native-project/candidates/dip-composition-0224-20261126.patch),
+with its scope and acceptance limits recorded in the
+[candidate notes](examples/native-project/candidates/README.md).
+It is not selected for production. The prepared official 0.22.4 graph still
+rejects documented scoped-loop limits; full target checking and production
+consumers remain required before default cutover.
+
+`python3 -B scripts/count-sloc.py` now uses `nomo-physical-v4`. It counts all
+currently supported runtime paths: the shipping project controller, legacy
+session/work commands, shared model/terminal code, opt-in native transport,
+optional gateway and tryout/demo launchers. The former v3 inventory omitted 15
+live files totaling 2,108 SLOC. This is a correction to the inventory; these
+runtime files have not changed in this slice.
+
+The current checkout contains 17,017 source SLOC and 4,518 handwritten runtime
+SLOC across 27 runtime files, totaling **21,535 SLOC**. This includes local source
+prototypes present in the checkout. The user's explicit temporary line-limit
+exception remains applicable. Exact file hashes, grouped counts, 82 observed
+local import/helper references and the passing existing counter test result are
+recorded in
+[`runtime-inventory-20261126.json`](examples/native-project/runtime-inventory-20261126.json).
+
+The seven Python project modules own 1,256 SLOC of application/model/context,
+history, workspace/tool and PTY job behavior. Retire them after the actual
+default-entry workflow and required process lifetimes pass through Etas. Native
+interactive commands alone do not cover the shipping startup flags for offline
+history/status, import/export, conversation/project selection and check
+overrides. `SqliteHistory.import_legacy` also still executes `nomo --legacy
+--status --events`; its historical export/migration route must remain explicit
+before that dispatch chain can be removed.
+
+The shared `nomo_model_transport.py` is not solely a byte relay: it adjusts a
+project output allowance, supplies selected-model reasoning settings and retries
+explicit provider throttling. These policies need an explicit application/Host
+owner or retirement during cutover. The native Docker attach transport owns
+endpoint identity, terminal bytes and native-selected mount requests; it does
+not own conversation selection or model/tool policy. DIP-13 remains incomplete.
+
 ## Current 0.13.5 acceptance
 
 The current official graph is ETAS 0.13.5 (`config/etas-latest-main.json`), with no source overrides. The frozen 0.13.4 installation verifies after this upgrade. The unchanged computed-key follow-up package now writes its two child log entries while the owner waits for input, with no scope serialization. The actual native read/edit/check/Git/chat/fresh-process workflow and separate default-entry compatibility scenario both pass on 0.13.5. Exact source/compiler/trace identities: `examples/native-project/compiler-0135-20261112.json` and `task-memory-log-0135-20261112.json`. Full product capture remains a separate acceptance scope.

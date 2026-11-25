@@ -1,4 +1,4 @@
-"""Counter v3 regression: product roots and runtime files cannot disappear."""
+"""Counter v4 regression: product roots and runtime files cannot disappear."""
 import contextlib
 import importlib.util
 import io
@@ -31,11 +31,14 @@ class SlocCounterTest(unittest.TestCase):
     def test_moved_storage_contributes_to_canonical_product(self):
         self.write("src/nomo/main.es", "// note\ncode;\n\n")
         self.write("src/nomo/store.es", "first;\nsecond;\n")
+        self.write("scripts/nomo_project_chat.py", "project()\n")
+        self.write("scripts/nomo_model_transport.py", "model_transport()\n")
+        self.write("scripts/native-worker-transport.py", "attach()\n")
         self.write("tests/fixture.py", "fixture()\n")
         counts = COUNTER.inventory(self.root)
         self.assertEqual(counts["src"], (3, 5, 2))
-        self.assertEqual(counts["runtime"], (0, 0, len(COUNTER.RUNTIME_FILES)))
-        self.assertEqual(counts["product"], (3, 5, 2 + len(COUNTER.RUNTIME_FILES)))
+        self.assertEqual(counts["runtime"], (3, 3, len(COUNTER.RUNTIME_FILES)))
+        self.assertEqual(counts["product"], (6, 8, 2 + len(COUNTER.RUNTIME_FILES)))
         self.assertEqual(counts["tests"], (1, 1, 1))
 
     def test_missing_product_root_refused(self):
@@ -93,10 +96,10 @@ class SlocCounterTest(unittest.TestCase):
         output = io.StringIO()
         with patch.object(COUNTER, "ROOT", self.root), contextlib.redirect_stdout(output):
             self.assertEqual(COUNTER.main(), 0)
-        self.assertIn("nomo-physical-v3; authoritative", output.getvalue())
+        self.assertIn("nomo-physical-v4; authoritative", output.getvalue())
         self.assertIn("product roots: src; reviewed runtime inventory:", output.getvalue())
         self.assertIn("src: 2 SLOC, 2 raw lines, 2 files", output.getvalue())
-        self.assertIn("product: 2 SLOC, 2 raw lines, 14 files", output.getvalue())
+        self.assertIn(f"product: 2 SLOC, 2 raw lines, {2 + len(COUNTER.RUNTIME_FILES)} files", output.getvalue())
 
     def test_cli_missing_root_has_no_authoritative_totals(self):
         (self.root / "src").rmdir()
