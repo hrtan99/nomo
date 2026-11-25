@@ -1,0 +1,166 @@
+{
+  "date": "2026-11-25",
+  "official_graph": "config/etas-0224-official.json",
+  "source_overrides": [],
+  "release_build": {
+    "status": "failed",
+    "cause": "Docker confirmed OOM while rustc compiled etas_frontend",
+    "cargo_exit_code": 101,
+    "oom_event_unix": 1795610045,
+    "log": "/private/tmp/nomo-etas-0224-build.log",
+    "log_sha256": "e34a0a0685e634305f56900a80a6fefea9762c2d46fb455237dba1d99c19e129",
+    "diagnostic_suffix": "serde=/home/nomo/.cargo/etas-0224/target/release/deps/libserde-ad311d6ae49b300e.rmeta --extern serde_json=/home/nomo/.cargo/etas-0224/target/release/deps/libserde_json-5aa36c19a7e160a4.rmeta --extern zstd=/home/nomo/.cargo/etas-0224/target/release/deps/libzstd-0bc8f36c0ba5daa5.rmeta --cap-lints allow -L native=/home/nomo/.cargo/etas-0224/target/release/build/blake3-5d51186a76a06c84/out -L native=/home/nomo/.cargo/etas-0224/target/release/build/libsqlite3-sys-71deccbcfc2f4bb2/out -L native=/home/nomo/.cargo/etas-0224/target/release/build/zstd-sys-96c1a61a9750e46b/out` (signal: 9, SIGKILL: kill)"
+  },
+  "resource_lane": {
+    "cargo_jobs": 1,
+    "memory_bytes": 4294967296,
+    "cpus": 4,
+    "pids": 256
+  },
+  "next_build": {
+    "profile": "dev",
+    "same_official_graph": true,
+    "network": "none",
+    "status": "failed",
+    "cause": "host disk exhausted; Docker storage became read-only",
+    "log": "/private/tmp/nomo-etas-0224-dev-build.log",
+    "log_sha256": "c5cc7892eb79c8781fa5d160a577b19b80307c64eedc42e8b09592371971c457",
+    "diagnostic": "rustc-LLVM ERROR: IO failure on output stream: Input/output error; write /dev/stderr: no space left on device",
+    "host_free_bytes_at_failure_inspection": 187187200,
+    "container_state": "dead",
+    "container_exit_code": 1
+  },
+  "installed_sdk_verified": true,
+  "nomo_compatibility_checked": true,
+  "agent_migration": {
+    "status": "candidate_retained_source_restored_pending_upstream",
+    "declarations": 72,
+    "instance_calls": 77,
+    "files": [
+      "src/nomo/agent/model_tool.es",
+      "src/nomo/agent/provider.es",
+      "src/nomo/agent/read_tool.es",
+      "src/nomo/harness/harness_model.es",
+      "src/nomo/harness/harness_model_edit.es",
+      "src/nomo/harness/harness_model_tools.es",
+      "src/nomo/harness/harness_tool_chat.es",
+      "src/nomo/harness/harness_work_model.es",
+      "src/nomo/harness/history_native_stages.es",
+      "src/nomo/harness/natural_work_chat.es",
+      "src/nomo/harness/read_model_tools.es",
+      "src/nomo/harness/read_tool_chat.es",
+      "src/nomo/harness/typed_edit_pilot.es",
+      "src/nomo/harness/work_chain_model.es",
+      "src/nomo/native/agent.es",
+      "src/nomo/native/context.es",
+      "src/nomo/project/planner.es",
+      "src/nomo/native/entry.es"
+    ],
+    "patch": "examples/native-project/candidates/language-migration-0224-20261125.patch",
+    "patch_sha256": "4ed6e680bf54968d44237f95f825eab070fa01d69603125af9908df37f7b91d9",
+    "agent_source_files_restored": true
+  },
+  "toolchain_helpers_status": "SDK registration and new selector startup passed; existing 0.13.5 default retained.",
+  "environment_recovery": {
+    "date": "2026-11-25",
+    "docker_engine_restored": true,
+    "host_free_bytes": 189605978112,
+    "docker_raw_actual_reclaimed_bytes": 53218107392,
+    "cleanup_report": "tmp/docker-cleanup-20261125/report.json",
+    "sdk_installation_complete": true,
+    "nomo_acceptance_pending": true
+  },
+  "dev_resume": {
+    "status": "passed",
+    "binary": "/home/nomo/.cargo/etas-0224/target/debug/etas",
+    "sha256": "1037eda142e287257485e38cd0a86f487042ea4a4aa6e9e1943f79eb2e38e3da",
+    "version": "etas 0.22.4",
+    "profile": "dev",
+    "build_seconds": 188.02,
+    "log": "/private/tmp/nomo-etas-0224-dev-resume1.log",
+    "log_sha256": "68e5cdc052ebbcfca7da321520d71b66f66bd8b12c977597eb50a8b9502c57ce"
+  },
+  "status": "toolchain_prepared_product_migration_not_accepted",
+  "installed_identity": {
+    "lock_sha256": "0527ff5b5e7a70a00116b652aca6c7edd96deb8115d3e9a6094ae62429b2d1bf",
+    "method": "adopted-independently-verified-0224-build",
+    "path": "/home/nomo/.cargo/bin/etas",
+    "sdk": {
+      "abi": {
+        "artifact_hash": "blake3:0850a42ce321bf281ba4869338e9e3ba5bb14724fe8702dbc94dc81be87a2d02",
+        "body_schema": 93,
+        "compiler_version": "0.19.3",
+        "effect_analysis_hash": "blake3:701bfcd1af5f26406c389a183d86bdec4ace3ec552ef8cc36c014e746c9191b7",
+        "interpreter_layout_hash": "blake3:90295102fc3e3656077d61413c37b3c773182ea37c6dc8420f70306b197528fd",
+        "metadata_schema": 76,
+        "native_binding_abi": "blake3:c2620b315312e5c96f43d67f9160dd81048b8a030de13347e29442d9e30231e3",
+        "schema": 3,
+        "std_contract": "phase1|etas.std.text.contract.v1|etas.std.text.primitive-abi.v1|etas.std.text.source.v1|unicode:17.0.0:7c74aebf116629b6:etas.std.text.unicode.v1|usize:64",
+        "target": "aarch64-unknown-linux-gnu",
+        "toolchain_id": "etas-0.7.0-aarch64-unknown-linux-gnu-c2620b315312"
+      },
+      "manifest_path": "/home/nomo/.cargo/lib/etas/etas-0.7.0-aarch64-unknown-linux-gnu-c2620b315312/std/manifest.json",
+      "manifest_sha256": "ed146d0f0aa8545138dc97c3e1a309e2f3c48d5aeb30584d7491a686f5d03f00",
+      "receipt": "etas-std-install-v2\n000000000000000018eb4c01dc920b6d-451-aarch64-unknown-linux-gnu\nblake3:8823a1e5df72bd3a92469f43712c7c5208d963135ce4e309b9645cbcacf896c8\n"
+    },
+    "sha256": "1037eda142e287257485e38cd0a86f487042ea4a4aa6e9e1943f79eb2e38e3da",
+    "version": "etas 0.22.4\n"
+  },
+  "sdk_installation": {
+    "status": "passed",
+    "provider": "artifact (default)",
+    "command": "etas std install --prefix /home/nomo/.cargo",
+    "register_log": "/private/tmp/nomo-etas-0224-register.log",
+    "register_log_sha256": "30e5059d8a604a72231f6a163afc03ac3c3ee3be3762de8e7da1f207f735ba8c"
+  },
+  "official_constructor_example": {
+    "status": "passed",
+    "source": "official examples/constructor_injection/records and its sibling library",
+    "source_revision": "8f48d3fd855b4f712e209458047ea09b4316a198",
+    "configuration": "local-static runtime profile; console=allow; approval=deny",
+    "trace": "examples/native-project/toolchain-0224-constructor-trace-20261125.json",
+    "trace_sha256": "26e42f8fffedaf9ead0588fbc7f2da0f77c4c26d1df6b475496da0289fbe7b2e",
+    "outcome": "completed",
+    "value": {
+      "type": "i32",
+      "value": "0"
+    },
+    "model_requests": 0
+  },
+  "selector_startup": {
+    "status": "passed",
+    "selector": "latest0224",
+    "command": "python3 -B /workspace/scripts/nomo-verified-etas.py --version",
+    "exit_code": 0,
+    "stdout": "etas 0.22.4\n"
+  },
+  "nomo_compatibility_passed": false,
+  "normal_source_check": {
+    "status": "failed",
+    "command": "docker compose --env-file /dev/null -f compose.yaml -f config/etas-0224-official-compose.yaml -f config/etas-runtime-cache-compose.yaml run --rm --no-deps --tty=false dev /home/nomo/.cargo/bin/etas --no-config --cache off check --all /workspace",
+    "exit_code": 4,
+    "source_candidate_sha256": "4ed6e680bf54968d44237f95f825eab070fa01d69603125af9908df37f7b91d9",
+    "diagnostic": "frontend session failed: Pipeline(\"checked definition projection failed: Invalid(\\\"checked effect tag has conflicting package identities\\\")\")",
+    "cause": "not established; documented loop annotations also fail independently in a minimal package",
+    "log": "/private/tmp/nomo-etas-0224-prefix-source-check.log",
+    "log_sha256": "c63c44ffeadb2725429f23733ec8dee7303e9ba8846d7f5bb74f1c19b9822c57",
+    "source_scope": "Product worktree with the saved tracked-source candidate applied. Existing untracked session prototypes were not modified or included in the patch; the normal directory check can discover them."
+  },
+  "loop_migration": {
+    "loops": 248,
+    "files": 95,
+    "limit_expressions_preserved": true,
+    "combined_source_files": 108,
+    "all_product_source_restored_to_baseline": "a3450bc",
+    "upstream_issue": "https://github.com/etas-project/etas-frontend/issues/97",
+    "minimal_reproduction": "examples/repros/scoped-loop-limits-0.22.4"
+  },
+  "retained_installation": {
+    "version": "0.13.5",
+    "default_selection_unchanged": true,
+    "verification_command": "bash scripts/etas-0135-official-container.sh verify",
+    "exit_code": 0,
+    "provenance": "shared-verified",
+    "binary_sha256": "9be1cb60d532d954538b72206507e27439a427402c67cf384249831bc304c2f2"
+  }
+}

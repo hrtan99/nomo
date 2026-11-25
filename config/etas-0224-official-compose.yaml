@@ -1,0 +1,16 @@
+services:
+  dev: &etas-service
+    environment:
+      NOMO_NORMAL_GRAPH: latest0224
+      CARGO_BUILD_JOBS: "1"
+      CARGO_TARGET_DIR: /home/nomo/.cargo/etas-0224/target
+      PYTHONDONTWRITEBYTECODE: "1"
+    volumes:
+      - type: bind
+        source: .
+        target: /workspace
+        read_only: true
+  dependency: *etas-service
+volumes:
+  cargo-cache:
+    name: nomo-cargo-0224-20261125-8f48d3f

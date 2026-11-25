@@ -25,7 +25,7 @@ def configure(label, wrapper):
                 '023': ('0.2.3', None),
                 '024': ('0.2.4', None),
                 '025': ('0.2.5', None), '026': ('0.2.6', None), '026-v68': ('0.2.6', None), '030': ('0.3.0', None),
-                '041': ('0.4.1', None), '0120': ('0.12.0', None), '0121': ('0.12.1', None), '0130': ('0.13.0', None), '0131': ('0.13.1', None), '0132': ('0.13.2', None), '0133': ('0.13.3', None), '0134': ('0.13.4', None), '0135': ('0.13.5', None)}
+                '041': ('0.4.1', None), '0120': ('0.12.0', None), '0121': ('0.12.1', None), '0130': ('0.13.0', None), '0131': ('0.13.1', None), '0132': ('0.13.2', None), '0133': ('0.13.3', None), '0134': ('0.13.4', None), '0135': ('0.13.5', None), '0224': ('0.22.4', None)}
     require(label in versions, 'unsupported official graph')
     LABEL = label
     VERSION, LEGACY_SHA = versions[label]
@@ -41,7 +41,7 @@ def configure(label, wrapper):
     PREVIOUS_CONFIG = '98ff380d7e04ca43bca7f28f4af30dcd72e0a5a80dbe6515df41925f6d032962' if label == '041' else None
     bridge_path = REPO / 'config/etas-official-legacy-bridge.json'
     bridge = json.loads(bridge_path.read_text())
-    entry = None if label in ('041', '0120', '0121', '0130', '0131', '0132', '0133', '0134', '0135') else bridge[label]
+    entry = None if label in ('041', '0120', '0121', '0130', '0131', '0132', '0133', '0134', '0135', '0224') else bridge[label]
     if entry is not None:
         require(bridge['format'] == 1 and entry['legacy_sha256'] == LEGACY_SHA, 'legacy bridge policy drift')
         require(entry['wrapper_sha256'] == digest(wrapper), 'bootstrap wrapper drift')
@@ -332,7 +332,8 @@ def guard(read_only=False):
         '0131': '386d93ab539078f835c2f76f4091aa149159c71cfd07372ec96911bcd3755782',
         '0132': '9962fae954450a8ff197a79166c45470c4b40c7c65d194337ed342679a18ae58',
         '0133': '3cb755bb0ad828fc49f177b6babbc2ae05840c5632b3284f458b082588264e31',
-        '0134': '8cc4e048d50b74413e0fc7e934edf582742e7d94726095ee92db4381e69bebcb'}
+        '0134': '8cc4e048d50b74413e0fc7e934edf582742e7d94726095ee92db4381e69bebcb',
+        '0135': '08ee4a57006ab509fc4e761cd63671c579351b459d9bfb4cccb056e18246b8f0'}
     if LABEL in previous_v2: accepted.append(previous_v2[LABEL])
     # The 0.4.1 storage-limit pin was prepared and built before its independently
     # reproduced binary hash replaced the prior graph hash in the reviewed spec.
@@ -355,18 +356,38 @@ def install(binary, method):
     require(not INSTALLED.exists() and not (ROOT / 'binary.json').exists(), 'refuse binary replacement')
     INSTALLED.parent.mkdir(exist_ok=True)
     shutil.copy2(binary, INSTALLED)
-    save('binary.json', {'path': str(INSTALLED), 'sha256': digest(binary), 'version': read([INSTALLED, '--version']), 'method': method, 'lock_sha256': digest(LOCK)})
+    identity = {'path': str(INSTALLED), 'sha256': digest(binary), 'version': read([INSTALLED, '--version']), 'method': method, 'lock_sha256': digest(LOCK)}
+    if SPEC.get('installed_sdk'):
+        run([INSTALLED, 'std', 'install', '--prefix', CACHE], cwd=SOURCE)
+        identity['sdk'] = sdk_identity()
+    save('binary.json', identity)
     return verify(read_only=True)
+
+
+def sdk_identity():
+    manifest_path, = CACHE.glob('lib/etas/*/std/manifest.json')
+    manifest = json.loads(manifest_path.read_text())
+    return {
+        'manifest_path': str(manifest_path),
+        'manifest_sha256': digest(manifest_path),
+        'receipt': os.getxattr(INSTALLED, 'user.etas-std-install').decode(),
+        'abi': {key: manifest[key] for key in ('schema', 'compiler_version', 'body_schema',
+                'metadata_schema', 'toolchain_id', 'native_binding_abi', 'std_contract', 'target',
+                'artifact_hash')} | {key: manifest.get(key) for key in
+                ('effect_analysis_hash', 'interpreter_layout_hash')},
+    }
 
 
 def build():
     guard()
     if (ROOT / 'binary.json').exists():
         return verify(read_only=True)
-    run(['cargo', 'build', '--offline', '--locked', '--release', '--package', 'etas_cli', '--bin', 'etas'], cwd=SOURCE)
+    profile = SPEC.get('build_profile', 'release')
+    run(['cargo', 'build', '--offline', '--locked', '--profile', profile, '--package', 'etas_cli', '--bin', 'etas'], cwd=SOURCE)
     guard()
-    require(digest(TARGET / 'release/etas') == SPEC['verified_seed_binary_sha256'], 'built binary differs from reviewed build; retain build evidence for review')
-    return install(TARGET / 'release/etas', 'built-official-locked-graph')
+    binary = TARGET / ('debug' if profile == 'dev' else profile) / 'etas'
+    require(digest(binary) == SPEC['verified_seed_binary_sha256'], 'built binary differs from reviewed build; retain build evidence for review')
+    return install(binary, 'built-official-locked-graph')
 
 
 def adopt(binary):
@@ -384,6 +405,8 @@ def verify(read_only=False):
     require(identity['method'] in ('built-official-locked-graph', ADOPTED), 'unknown binary provenance')
     require(identity['sha256'] == SPEC['verified_seed_binary_sha256'], 'binary is not the independently verified ' + LABEL + ' build')
     require(identity['lock_sha256'] == digest(LOCK) and read([INSTALLED, '--version']) == identity['version'] == ('etas ' + VERSION + '\n'), 'CLI version/lock drift')
+    if SPEC.get('installed_sdk'):
+        require(identity['sdk'] == sdk_identity(), 'installed SDK or receipt drift')
     print('PASS selected official ' + VERSION + ' CLI (' + provenance + '): ' + json.dumps(identity, sort_keys=True))
     return identity
 
