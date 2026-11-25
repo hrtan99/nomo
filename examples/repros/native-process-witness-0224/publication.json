@@ -1,0 +1,7 @@
+{
+  "url": "https://github.com/etas-project/etas-frontend/issues/100",
+  "title": "0.22.4: process adapter check exits 4 with missing native implementation witness",
+  "state": "open",
+  "created_at": "2026-11-25T18:38:17Z",
+  "scope": "Versioned compiler failure summary and a two-line synthetic SDK excerpt; no full application source or credential payload."
+}

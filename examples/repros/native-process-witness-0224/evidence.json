@@ -1,0 +1,24 @@
+{
+  "date": "2026-11-26",
+  "url": "https://github.com/etas-project/etas-frontend/issues/100",
+  "target": "official CLI 0.22.4 / matching artifact SDK",
+  "exit": 4,
+  "stdout": "",
+  "frontend_failure": "Pipeline(\"native invocation has no checked implementation witness\")",
+  "stderr_sha256": "ca2d9e4148ccd155ddd917aeb3bc8550167419b5112fe43247090741631dc8ce",
+  "source_count": 6,
+  "source_sha256": {
+    "src/app/main.es": "973196c6ba107c01577d3272fd858819131e1d35504cda9eb2f1c80eac38a0cd",
+    "src/nomo/native/workspace.es": "971adfd1f2d303d6bfaad1de643056275af523b8c7c5667fe119a7f760387f99",
+    "src/nomo/domain/process/jobs.es": "639b9dd0dc07013c2f414c6572f37c269961c330dea653253276a616a6995efd",
+    "src/nomo/domain/process/observations.es": "f2a00f6323d04ec19766789674122f99acba9bc2204c54014bb0b770a414a3f9",
+    "src/nomo/application/native/processes/ports.es": "7c559484e1327bf068eaa877b7dd1a98229bacf485bc2ff988a668e94b187d86",
+    "src/nomo/adapters/command/processes.es": "86552b37062c7bb0cf41baba98d29fb8ba16917bdb01f943a56962b992c77ec0"
+  },
+  "snapshot": "examples/native-project/candidates/processes-host-0224-check",
+  "source_check_only": true,
+  "native_process_executed": false,
+  "model_requests": 0,
+  "root_cause": "unestablished; the raw Pipeline failure does not identify the native invocation or missing contract",
+  "application_source_in_upstream_payload": false
+}
