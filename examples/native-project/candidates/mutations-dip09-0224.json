@@ -1,0 +1,122 @@
+{
+  "status": "prepared_old_graph_rejected; target_and_production_acceptance_pending",
+  "baseline_commit": "efaa8b1627cf3f3eb6e370d3607b82ab00467125",
+  "patch_sha256": "110cca298089e9207cf99cd8840e3bd13d481dd747a010bf8e7c46e8e5b62bcb",
+  "source_count": 282,
+  "apply_check_exit": 0,
+  "target_acceptance": false,
+  "retained_check": {
+    "exit": 1,
+    "seconds": 116.976,
+    "stdout": "checked 282 files\n",
+    "diagnostic_counts": {
+      "type::InvalidImplMemberKind": 4,
+      "effect::HandlerProducedEffectOutsideDeclaredRow": 1,
+      "effect::IncompleteEffectFacts": 7
+    },
+    "stderr_sha256": "3a982cee917b268d1acd4857b58d3bbeb6d9497c01451eb0c7ed6ed643ccbf03",
+    "first_diagnostic": "error[type::InvalidImplMemberKind]: bodyless impl of spec `ChangeJournalStore` is missing required method `save_step`\n --> /workspace/src/nomo/adapters/etas/change_journals.es:32:29\n  | impl NativeChangeJournals ~ ChangeJournalStore {\n  |                             ^ bodyless impl of spec `ChangeJournalStore` is missing required method `save_step`\nerror[type::InvalidImplMemberKind]: bodyless impl of spec `MutationHistoryStore` is missing required method `finish`\n --> /workspace/src/nomo/adapters/etas/mutation_history.es:11:30\n  | impl NativeMutationHistory ~ MutationHistoryStore {\n  |                              ^ bodyless impl of spec `MutationHistoryStore` is missing required method `finish`\nerror[type::InvalidImplMemberKind]: bodyless impl of spec `MutationOutputSink` is missing requi"
+  },
+  "current_base_sources": {
+    "src/nomo/application/native/mutations/ports.es": {
+      "sha256": "6fc76ae19d8fa90ac84cb36353a86341c43b929670a85bc727df2b77c4389e7f"
+    },
+    "src/nomo/application/native/mutations/service.es": {
+      "sha256": "5ea36e14762160d04b061654fe5b8c4ead57b88b3f19cc0d15168747d4e3fd5c"
+    },
+    "src/nomo/domain/mutations/models.es": {
+      "sha256": "7b597690fd5becc689be4d9f7f7ec107e9925d9edc13da903e589dc38ad78513"
+    },
+    "src/nomo/main.es": {
+      "sha256": "7b6dc6c6cedb57370700676a9c6ee4ba791b83f7baca4250deb86670411cd202"
+    },
+    "src/nomo/native/agent.es": {
+      "sha256": "f2cb182dac271f03405a98b5b7a62ef5bedfb93f77dbdc6dcbad862786d88cdf"
+    },
+    "src/nomo/native/entry.es": {
+      "sha256": "3ab5ffd8e6ea0ae00dee7dd25bebe8bd1a6c7ec4cbee1a89a0c38988fa90579d"
+    },
+    "src/nomo/native/files.es": {
+      "sha256": "4a4d62eaec437c9381a20e99dbaf8f47fa60c3fbb3e38690675274b512adeec5"
+    },
+    "src/nomo/native/mutations.es": {
+      "sha256": "a5dec79def51630eefecd6e02d3406f5e708b2577d7c458f5e9507d5aa567967"
+    }
+  },
+  "apply_base_description": "Apply to the selected preparation shipped with this proposal, using current_base_sources; baseline_commit names the prior commit and is not a claim of standalone applicability to that commit.",
+  "executed_source_tree_sha256": "fac6659a6f3ddc377f60c756c88595332cbe40e6682ffc2eabe912b4229ad705",
+  "executed_snapshot": "tmp/dip-mutations-20261126/composition/package",
+  "snapshot_difference": "Six unused convenience wrappers were removed from the selected application service after the candidate snapshot was copied. The patch still passes apply preflight on the final selected source. This old-graph rejection is not target or production acceptance.",
+  "diagnostic_family": "https://github.com/etas-project/etas-frontend/issues/98",
+  "target_prerequisite": "Adopt the official target with scoped-loop support (#97), regenerate the agent/loop/SDK migration for the combined composition, and run its normal check.",
+  "composition": "All mutation tools transport typed ChangeOperations; bootstrap constructs four concrete roles and supplies one shared first-class application Handler. The application owns apply/undo/rollback/reconcile and observed-original replacement. Identity-sensitive Memory declarations stay in native.mutations and are mapped field by field.",
+  "cross_overlay_followups": [
+    "With DIP-08: ProjectMutationFiles must import execute_step from nomo.bootstrap.command rather than the removed native.workspace helper.",
+    "With DIP-06: carry ChangeOperations through CodingModel.code, NativeCodingModel and the per-turn bootstrap code effect rows; install its handler in the outer bootstrap.native scope. Regenerate overlapping entry changes from the common base."
+  ],
+  "unresolved_diagnostic": "HandlerProducedEffectOutsideDeclaredRow is also present. Its cause has not been isolated; this report does not assert that every diagnostic is upstream or secondary.",
+  "pending": [
+    "Resolve or correctly attribute the remaining handler-produced-row diagnostic on the adopted target.",
+    "Normal target check of the combined composition.",
+    "Existing actual disk mutation/recovery scenarios through the selected new adapters.",
+    "Fresh-process restore of original stored journal/step identities through the new mappings."
+  ],
+  "executed_snapshot_files": {
+    "src/nomo/adapters/etas/change_journals.es": {
+      "before_sha256": null,
+      "candidate_sha256": "288dc9a9b7ac1fadb92030d8de29b028827bc35feca1fdbe557fa9962d4c3744"
+    },
+    "src/nomo/adapters/etas/mutation_history.es": {
+      "before_sha256": null,
+      "candidate_sha256": "9aef075922f35bb0e7d3aa1627dffd5e14183d32176807f067427a56715236ef"
+    },
+    "src/nomo/adapters/terminal/mutations.es": {
+      "before_sha256": null,
+      "candidate_sha256": "ea9a8951a92e45701f8089bb2124bf012739da35c619c682e861130ba73e7462"
+    },
+    "src/nomo/adapters/workspace/mutation_files.es": {
+      "before_sha256": null,
+      "candidate_sha256": "de1bb37cb3380194487d084c6b359e4793901d6f60f269490074faef2f209174"
+    },
+    "src/nomo/application/native/mutations/ports.es": {
+      "before_sha256": "6fc76ae19d8fa90ac84cb36353a86341c43b929670a85bc727df2b77c4389e7f",
+      "candidate_sha256": "e6742ba4cb6266551e9400d6c75575339e1f63832a9262410ed29813d2727cc2"
+    },
+    "src/nomo/application/native/mutations/service.es": {
+      "before_sha256": "e6417f9c3fa3ad7ad777ee8a11f3e7a4a01f694bb38db8b1422e3ffa0ecdd934",
+      "candidate_sha256": "2bf4d4310c606250becc3ab0839b0def34a26de906bfd1eb5489a780f9c4c0d9"
+    },
+    "src/nomo/bootstrap/mutations.es": {
+      "before_sha256": null,
+      "candidate_sha256": "df153f30235d8e12ae018cf426ea307051dbb5a1d29024c9ae05551a5d5bf56b"
+    },
+    "src/nomo/bootstrap/native.es": {
+      "before_sha256": null,
+      "candidate_sha256": "83badebf503dd2ea35c51a350a0292ffe84cf625eeb65e847fa8b0f4f5aa0b4e"
+    },
+    "src/nomo/domain/mutations/models.es": {
+      "before_sha256": "7b597690fd5becc689be4d9f7f7ec107e9925d9edc13da903e589dc38ad78513",
+      "candidate_sha256": "b4d1dfdcbed5d3083e6b95a2c19ea48b2353e88e03b60e1c2906d2875745b784"
+    },
+    "src/nomo/main.es": {
+      "before_sha256": "7b6dc6c6cedb57370700676a9c6ee4ba791b83f7baca4250deb86670411cd202",
+      "candidate_sha256": "3507e50f6baa1c098bb8a9ab6e66ec1765994822fdcf39dfceb8322facc26eb2"
+    },
+    "src/nomo/native/agent.es": {
+      "before_sha256": "f2cb182dac271f03405a98b5b7a62ef5bedfb93f77dbdc6dcbad862786d88cdf",
+      "candidate_sha256": "8c34e2685a5dfb5764aee0f8618d6f501fe600cde53b8a59ad970f1ddfad74c1"
+    },
+    "src/nomo/native/entry.es": {
+      "before_sha256": "3ab5ffd8e6ea0ae00dee7dd25bebe8bd1a6c7ec4cbee1a89a0c38988fa90579d",
+      "candidate_sha256": "1ffac3d4fbaa0c60fe1e54be75f05f5799fa15831b553f9dd949db2899e4d16f"
+    },
+    "src/nomo/native/files.es": {
+      "before_sha256": "4a4d62eaec437c9381a20e99dbaf8f47fa60c3fbb3e38690675274b512adeec5",
+      "candidate_sha256": "22e080def90a984a20ce4a22398d27827b6769fafabdb2a9e36f7ab8e3796b5f"
+    },
+    "src/nomo/native/mutations.es": {
+      "before_sha256": "a5dec79def51630eefecd6e02d3406f5e708b2577d7c458f5e9507d5aa567967",
+      "candidate_sha256": "1f9c360ba704517cb9c92eda401d724e3ccefce11a6c01543c8ff577a8f0310a"
+    }
+  }
+}

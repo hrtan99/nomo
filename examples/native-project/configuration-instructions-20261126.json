@@ -101,7 +101,8 @@
     "bounded_loops": 255,
     "loop_files": 101,
     "changed_files": 115,
-    "count_change": "Four added loops: pure candidate-scope enumeration and the prepared application instruction controller. Existing parser loops moved to the codec; existing bounds remain."
+    "count_change": "Four added loops: pure candidate-scope enumeration and the prepared application instruction controller. Existing parser loops moved to the codec; existing bounds remain.",
+    "immutable_snapshot": "efaa8b1627cf3f3eb6e370d3607b82ab00467125:examples/native-project/candidates/language-migration-0224-20261125.patch"
   },
   "remaining": [
     "Target source/runtime acceptance of the complete production role composition.",

@@ -1,0 +1,113 @@
+{
+  "date": "2026-11-26",
+  "status": "pure_rules_and_application_effect_controller_accepted_on_0135; production_composition_pending",
+  "baseline_commit": "efaa8b1627cf3f3eb6e370d3607b82ab00467125",
+  "source_sha256": {
+    "src/nomo/native/mutations.es": "a5dec79def51630eefecd6e02d3406f5e708b2577d7c458f5e9507d5aa567967",
+    "src/nomo/domain/mutations/models.es": "7b597690fd5becc689be4d9f7f7ec107e9925d9edc13da903e589dc38ad78513",
+    "src/nomo/domain/mutations/policy.es": "7f0c1723f6d694c47b04706706d61d586728a6872522a687e027ecafdf6866c3",
+    "src/nomo/application/native/mutations/ports.es": "6fc76ae19d8fa90ac84cb36353a86341c43b929670a85bc727df2b77c4389e7f",
+    "src/nomo/application/native/mutations/service.es": "5ea36e14762160d04b061654fe5b8c4ead57b88b3f19cc0d15168747d4e3fd5c",
+    "tests/native_mutation_controller_probe.py": "6f6cb4a91d89dcfd1c34f08517458c3ede3e530d90aae229524c75c42390d558",
+    "tests/fixtures/native_mutation_controller/src/app/main.es": "1f10870b7127c2d1ea24d2075bde0b5f96c5fa4f9fa84eb91b38f10c15ff0b62"
+  },
+  "retained_graph": {
+    "cli_version": "0.13.5",
+    "binary_sha256": "9be1cb60d532d954538b72206507e27439a427402c67cf384249831bc304c2f2",
+    "normal_check_exit": 0,
+    "normal_check_stdout": "checked 276 files\n",
+    "normal_check_seconds": 116.757
+  },
+  "persistent_compatibility": {
+    "verification": "Journal, SavedPath, Step, Schema and resource constructor remain byte-identical in the selected native.mutations source. New domain records are application views, not replacement stored declarations.",
+    "stable_id": "nomo-native-file-journals-v1",
+    "store": "native-file-journals",
+    "request_format": "nomo-native-file-plan-1"
+  },
+  "application_fixture": {
+    "status": "passed",
+    "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-mutation-controller-wsp3l6vo",
+    "source_count": 17,
+    "all_fixture_source_hashes_match_final_source": true,
+    "host_actions": {
+      "Memory.read": 96,
+      "Memory.write": 100,
+      "Console.stdout_write": 14
+    },
+    "resources": {
+      "memory.max": "4294967296",
+      "memory.peak": "108138496",
+      "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+      "cpu.max": "400000 100000",
+      "pids.max": "256"
+    },
+    "qualification": "Apply/undo and explicitly required recovery after a retained write. Real fixture SQLite journal/history with controlled file/command effects; no actual project mutation or native command. This does not certify on-disk rollback or production adapter acceptance.",
+    "ordered_markers": [
+      "PORT write after durable recovery metadata",
+      "PASS controlled apply and undo",
+      "PORT write after durable recovery metadata",
+      "PORT after-write snapshot failed",
+      "PORT partial write retained",
+      "PASS controlled explicit rollback after write"
+    ]
+  },
+  "retained_production_probe": {
+    "script": "tests/native_mutations_probe.py",
+    "status": "passed",
+    "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-mutations-554gkkl2",
+    "model_requests": 4,
+    "model_provider": "local synthetic responder; no real API/credential",
+    "host_actions": {
+      "Policy.evaluate": 940,
+      "Memory.read": 360,
+      "Memory.write": 430,
+      "Console.stdout_write": 60,
+      "Console.stdin_read_line": 5,
+      "Fs.list": 46,
+      "Agentic.infer": 4,
+      "Approval.request": 32,
+      "Command.run": 30,
+      "Fs.atomic_replace": 2,
+      "Fs.read": 1
+    },
+    "pending": "",
+    "ledger_tools": 2.0,
+    "approvals": 32,
+    "coverage": "Actual temporary-directory create/edit/mkdir/move/delete and reverse undo; text, binary, directory restoration and mode 0751. Approval trace audit passed.",
+    "qualification": "This executes retained production orchestration using extracted pure rules, not the unaccepted role/bootstrap composition."
+  },
+  "migration_candidate": {
+    "patch_sha256": "99f0a4db50d33890cb6967818d8ae82770e7a517ed391d285c100f0796892209",
+    "agent_declarations": 72,
+    "instance_references": 77,
+    "bounded_loops": 263,
+    "loop_files": 102,
+    "changed_files": 116
+  },
+  "not_claimed": [
+    "Production adapter/handler integration or normal target acceptance.",
+    "Actual disk retained-write rollback through the new adapters; the retained-write failure case uses controlled file effects.",
+    "New-process restore of original journal records through the new domain mappings.",
+    "DIP-09 or the complete refactor is done."
+  ],
+  "composition_candidate": {
+    "path": "examples/native-project/candidates/mutations-dip09-0224.patch",
+    "patch_sha256": "110cca298089e9207cf99cd8840e3bd13d481dd747a010bf8e7c46e8e5b62bcb",
+    "apply_preflight": true,
+    "retained_check_files": 282,
+    "retained_check_exit": 1,
+    "diagnostic_counts": {
+      "type::InvalidImplMemberKind": 4,
+      "effect::HandlerProducedEffectOutsideDeclaredRow": 1,
+      "effect::IncompleteEffectFacts": 7
+    },
+    "target_acceptance": false,
+    "diagnostic_family": "https://github.com/etas-project/etas-frontend/issues/98"
+  },
+  "size_impact": {
+    "selected_etas_sources": 276,
+    "new_application_and_domain_files": 4,
+    "new_application_and_domain_lines": 424,
+    "line_limit_exception": "The user explicitly allowed temporarily exceeding the code line limit; inclusive size is not claimed accepted."
+  }
+}

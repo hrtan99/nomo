@@ -3,7 +3,8 @@ module nomo.native.mutations;
 import std.fs.{path, relative_name, list, atomic_replace, WorkspacePath, ReadLimitError, IOError as FileError};
 import std.codec.text.utf8_encode;
 import std.io.{println, IOError as ConsoleError};
-import std.text.{split, rsplit_once, from_i64, from_usize, count, replace_n};
+import std.text.{split, from_i64, from_usize};
+import nomo.domain.mutations.policy.{parent, below_root, requires_existing, creates_parents, content_change, restoring_phase, completed_phase, file_request, literal_after};
 import std.memory.MemoryCursor;
 import std.effects.Fs;
 import std.json.parse;
@@ -15,15 +16,11 @@ import nomo.native.history.{SessionContext};
 import nomo.adapters.etas.conversations.{NativeHistory, record, tool_finished, observe_started, observe_finished, pending_request, read_message as message, result_published};
 import nomo.application.native.conversation.ports.{ConversationReader};
 
-/// create/write/edit/mkdir/delete/move. edit uses target as a unique literal;
-/// move uses target as the destination. Unused target/text fields are empty.
-public type Change = { operation: string, path: string, target: string, text: string };
-type PlanRequest = { format: string, changes: Array<Change> };
-public type ChangeOutcome = { edit: string, status: string, completed: i64, message: string };
+public import nomo.domain.mutations.models.{Change, ChangeOutcome};
+import nomo.domain.mutations.models.{PlanRequest, FilePreview};
 public type Journal = { id: string, session: string, name: string, call: i64, phase: string, steps: i64, message: string, owner_call: i64, owner_name: string };
 type SavedPath = { path: string, before_exists: bool, before: string, after_exists: bool, after: string };
 type Step = { phase: string, paths: Array<SavedPath> };
-type FilePreview = { path: string, before: string, after: string };
 
 alias Schema = MemoryRegion<{ Journals: Store<string, Journal>, Steps: Store<string, Step> }>;
 let Data = std.memory.region<Schema>(stable_id = "nomo-native-file-journals-v1", store = "native-file-journals");
@@ -38,17 +35,11 @@ flow checked(name: string) -> string {
     let target = match path<ProjectRoot>(name) {
         Ok(value) => value, Err(_) => { abort("invalid project path"); }
     };
-    let normalized = relative_name(target);
-    if normalized == "" || normalized == "." { abort("file changes require a path below the project root"); }
-    return normalized;
+    return below_root(relative_name(target));
 }
 
 flow location(name: string) -> WorkspacePath<ProjectRoot> {
     return match path<ProjectRoot>(name) { Ok(value) => value, Err(_) => { abort("invalid project path"); } };
-}
-
-flow parent(name: string) -> string {
-    return match rsplit_once(name, "/") { Some((directory, _)) => directory, None() => "." };
 }
 
 // Membership in an existing parent distinguishes absence from a failed stat.
@@ -93,7 +84,7 @@ flow apply_step(id: string, change: Change) -> bool {
     let value = journal(id);
     let name = checked(change.path);
     if change.operation == "create" && exists(name) { update(value, "failed", value.steps, "create target already exists"); return false; }
-    if (change.operation == "delete" || change.operation == "move" || change.operation == "edit") && !exists(name) {
+    if requires_existing(change.operation) && !exists(name) {
         update(value, "failed", value.steps, "change source does not exist"); return false;
     }
     let target = if change.operation == "move" { checked(change.target) } else { "" };
@@ -117,12 +108,13 @@ flow apply_step(id: string, change: Change) -> bool {
     record("edit_step", "prepared", change, value.call);
     println("[CHANGE ] " + text(change));
     var applied = false;
-    if change.operation == "write" || change.operation == "create" || change.operation == "edit" {
+    if content_change(change.operation) {
         let original = if before.before_exists { read_text(name) } else { "" };
         var after = change.text;
         if change.operation == "edit" {
-            if change.target == "" || count(original, change.target) != 1 { update(active, "failed", active.steps, "edit target must occur once"); return false; }
-            after = replace_n(original, change.target, change.text, 1);
+            after = match literal_after(original, change.target, change.text) {
+                Ok(value) => value, Err(error) => { update(active, "failed", active.steps, error); return false; }
+            };
         }
         let preview = FilePreview { path = name, before = original, after = after };
         record("edit_preview", "file", preview, value.call);
@@ -186,7 +178,7 @@ public flow apply_plan(name: string, changes: Array<Change>) -> ChangeOutcome
     }
     for change in changes limit Iterations(2147483647) {
         let normalized = checked(change.path);
-        if change.operation == "create" || change.operation == "write" || change.operation == "mkdir" {
+        if creates_parents(change.operation) {
             if !parents(id, normalized) { let result = outcome(journal(id), "recovery_required"); record("partial_result", name, result, call); return result; }
         }
         if change.operation == "move" && !parents(id, checked(change.target)) {
@@ -266,7 +258,7 @@ flow restore(value: Journal, call: i64, checking: bool) -> bool {
     while index >= 0 limit Iterations(2147483647) {
         let key = step_key(value.id, index);
         let step = match Data.Steps.get(key) { Some(value) => value, None() => { abort("native edit step missing"); } };
-        if step.phase == "applying" || step.phase == "applied" || step.phase == "restoring" {
+        if restoring_phase(step.phase) {
             for item in step.paths limit Iterations(2147483647) {
                 let present = exists(item.path);
                 if checking {
@@ -311,7 +303,7 @@ public tool undo_changes(edit: string) -> ChangeOutcome
 public tool rollback_changes(edit: string) -> ChangeOutcome
     ![SessionContext, Memory, Console, Command.run<DefaultCommandSandbox>, Fs.list<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ConsoleError>] {
     let source = journal(edit);
-    if source.phase == "applied" || source.phase == "undone" || source.phase == "rolled_back" { abort("journal has no interrupted change to roll back"); }
+    if completed_phase(source.phase) { abort("journal has no interrupted change to roll back"); }
     let history = NativeHistory {};
     let session = history.load(source.session);
     let call = source.owner_call;
@@ -350,9 +342,7 @@ public tool reconcile_changes(edit: string) -> ChangeOutcome
         Some(value) => value,
         None() => {
             let expected = session + "-" + from_i64(pending.call);
-            let file_request = pending.name == "apply_changes" || pending.name == "create_file" || pending.name == "write_file"
-                || pending.name == "make_directory" || pending.name == "delete_path" || pending.name == "move_path"
-                || pending.name == "replace_file" || pending.name == "edit_file";
+            let is_file_request = file_request(pending.name);
             if edit != expected { abort("edit ID does not match the pending request"); }
             if result_published(session, pending.call, pending.name) {
                 let result = ChangeOutcome { edit = edit, status = "recorded_result_retained", completed = 0, message = "The existing complete result was retained; no project operation was replayed." };
@@ -361,7 +351,7 @@ public tool reconcile_changes(edit: string) -> ChangeOutcome
                 return result;
             }
             var undispatched = !pending.complete;
-            if pending.complete && file_request {
+            if pending.complete && is_file_request {
                 let body = match parse(message(session, pending.call).text) { Ok(value) => value, Err(_) => { abort("pending request is not JSON"); } };
                 let converted: Option<Message<PlanRequest>> = Message.new(body).cast<PlanRequest>();
                 undispatched = match converted { Some(value) => value.body.format == "nomo-native-file-plan-1", None() => false };
@@ -386,7 +376,7 @@ public tool reconcile_changes(edit: string) -> ChangeOutcome
         return result;
     }
     if source.owner_call != pending.call || source.owner_name != pending.name { abort("journal does not own the pending request"); }
-    if source.phase != "applied" && source.phase != "undone" && source.phase != "rolled_back" {
+    if !completed_phase(source.phase) {
         return ChangeOutcome { edit = edit, status = "recovery_required", completed = outcome(source, source.phase).completed,
             message = "The journal is unfinished. Inspect the actual state, then explicitly roll back; no forward operation was replayed." };
     }

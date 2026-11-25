@@ -1,11 +1,11 @@
 {
   "status": "prepared_not_target_compiler_accepted",
-  "source_baseline": "1b30e0d753e7c7bbc2e1a319c5bf7cd6e7fe4c6c",
+  "source_baseline": "efaa8b1627cf3f3eb6e370d3607b82ab00467125",
   "agent_declarations": 72,
   "instance_references": 77,
-  "bounded_loops": 255,
-  "loop_files": 101,
-  "changed_files": 115,
+  "bounded_loops": 263,
+  "loop_files": 102,
+  "changed_files": 116,
   "source_files": {
     "src/nomo/adapters/codec/configuration.es": {
       "before_sha256": "db28e9575ed193d5c00a4c5dffc0ffbadfe63e294c752243f7e2c3229744c19d",
@@ -54,6 +54,10 @@
     "src/nomo/application/native/instructions/service.es": {
       "before_sha256": "f4d79ea87b6fad61d88332c530118038e82f34eba99d370dddeeb835c27cbec0",
       "candidate_sha256": "6c2fab38d5c85cded723782eaabac3fc3039a8878f16eb50853167c01c66614e"
+    },
+    "src/nomo/application/native/mutations/service.es": {
+      "before_sha256": "5ea36e14762160d04b061654fe5b8c4ead57b88b3f19cc0d15168747d4e3fd5c",
+      "candidate_sha256": "d3f21e96937e98aed3a29b71ed1e97492d7c32bc641a0fc04e97cc65207a180f"
     },
     "src/nomo/bootstrap/legacy_status.es": {
       "before_sha256": "8e5bbf9fe16cee09e2a1a62851fba55345e028e6e00133a9dbf44b81429d9558",
@@ -324,8 +328,8 @@
       "candidate_sha256": "d9b4ad9f529152d81747ce29ac80be371e3bd8a018846caa59dec8e8e7b31be6"
     },
     "src/nomo/native/mutations.es": {
-      "before_sha256": "e6fe52d8d8ee3d9600977799fa86a2fd7f926376dfadf5aaeb3ed3609993e30a",
-      "candidate_sha256": "b2ca94fa61d6347086990ced946b2c42b83d899c3395f8daa84c27642d1c8ae1"
+      "before_sha256": "a5dec79def51630eefecd6e02d3406f5e708b2577d7c458f5e9507d5aa567967",
+      "candidate_sha256": "109aa5498aea5a48729069a604e82c138b784ebf1dd832261228e33cfa6a9186"
     },
     "src/nomo/native/navigation.es": {
       "before_sha256": "417d0788af7f60ac8755477ea3919b213a11e1d7b98d5adca48a49d0046a4a23",
@@ -510,6 +514,16 @@
       "2147483647"
     ],
     "src/nomo/application/native/instructions/service.es": [
+      "2147483647",
+      "2147483647",
+      "2147483647"
+    ],
+    "src/nomo/application/native/mutations/service.es": [
+      "2147483647",
+      "2147483647",
+      "2147483647",
+      "2147483647",
+      "2147483647",
       "2147483647",
       "2147483647",
       "2147483647"
@@ -927,7 +941,7 @@
       "1048576"
     ]
   },
-  "patch_sha256": "e3e2dd33a5602b988a4ecaad69d3074e2f33ac8767ea984cdcd4aa12de9484d9",
+  "patch_sha256": "99f0a4db50d33890cb6967818d8ae82770e7a517ed391d285c100f0796892209",
   "previous_executed_candidate": {
     "path": "examples/native-project/candidates/language-migration-0224-20261125-baseline-a3450bc.patch",
     "sha256": "4ed6e680bf54968d44237f95f825eab070fa01d69603125af9908df37f7b91d9"

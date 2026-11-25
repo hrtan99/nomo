@@ -474,6 +474,77 @@ diff --git a/src/nomo/application/native/instructions/service.es b/src/nomo/appl
          if !present { break; }
          scope = next;
          match guide(scope) { Some(value) => { result = result.push(value); } None() => {} }
+diff --git a/src/nomo/application/native/mutations/service.es b/src/nomo/application/native/mutations/service.es
+--- a/src/nomo/application/native/mutations/service.es
++++ b/src/nomo/application/native/mutations/service.es
+@@ -111,7 +111,7 @@
+     if !applied { update(active, "failed", active.steps, "native project operation failed; inspect or roll back this journal"); return false; }
+     if change.operation == "move" && exists(name) { update(active, "failed", active.steps, "move did not remove the source; inspect retained state"); return false; }
+     var published: Array<SavedPath> = [];
+-    for item in paths limit Iterations(2147483647) {
++    @limits([Iterations(2147483647)]) for item in paths  {
+         let present = exists(item.path);
+         if present && !command("/bin/cp", ["-a", "--", item.path, item.after], value.call) {
+             update(active, "failed", active.steps, "after snapshot failed; project mutation may already be complete"); return false;
+@@ -126,7 +126,7 @@
+ 
+ flow parents(id: string, name: string) -> bool {
+     var prefix = "";
+-    for component in split(parent(name), "/") limit Iterations(2147483647) {
++    @limits([Iterations(2147483647)]) for component in split(parent(name), "/")  {
+         if component != "." && component != "" {
+             prefix = if prefix == "" { component } else { prefix + "/" + component };
+             if !exists(prefix) && !apply_step(id, Change { operation = "mkdir", path = prefix, target = "", text = "" }) { return false; }
+@@ -138,7 +138,7 @@
+ flow outcome(value: Journal, status: string) -> ChangeOutcome {
+     var completed: i64 = 0;
+     var index: i64 = 0;
+-    while index < value.steps limit Iterations(2147483647) {
++    @limits([Iterations(2147483647)]) while index < value.steps  {
+         match perform ChangeJournal.step(step_key(value.id, index)) { Some(step) => { if step.phase == "applied" { completed = completed + 1; } } None() => {} }
+         index = index + 1;
+     }
+@@ -156,7 +156,7 @@
+         let failed = update(value, "failed", 0, "backup directory creation failed; project mutations not dispatched");
+         let result = outcome(failed, "recovery_required"); record("partial_result", name, result, call); return result;
+     }
+-    for change in changes limit Iterations(2147483647) {
++    @limits([Iterations(2147483647)]) for change in changes  {
+         let normalized = checked(change.path);
+         if creates_parents(change.operation) {
+             if !parents(id, normalized) { let result = outcome(journal(id), "recovery_required"); record("partial_result", name, result, call); return result; }
+@@ -181,7 +181,7 @@
+ flow selected_edit(id: string) -> Journal {
+     if id != "" { return journal(id); }
+     var selected: Option<Journal> = None();
+-    for item in journals() limit Iterations(2147483647) {
++    @limits([Iterations(2147483647)]) for item in journals()  {
+         if item.phase == "applied" { match selected {
+             Some(previous) => { if item.call > previous.call { selected = Some(item); } }
+             None() => { selected = Some(item); }
+@@ -192,11 +192,11 @@
+ 
+ flow restore(value: Journal, call: i64, checking: bool) -> bool {
+     var index = value.steps - 1;
+-    while index >= 0 limit Iterations(2147483647) {
++    @limits([Iterations(2147483647)]) while index >= 0  {
+         let key = step_key(value.id, index);
+         let step = match perform ChangeJournal.step(key) { Some(value) => value, None() => { abort("native edit step missing"); } };
+         if restoring_phase(step.phase) {
+-            for item in step.paths limit Iterations(2147483647) {
++            @limits([Iterations(2147483647)]) for item in step.paths  {
+                 let present = exists(item.path);
+                 if checking {
+                     if present != item.after_exists { return false; }
+@@ -204,7 +204,7 @@
+                 }
+             }
+             perform ChangeJournal.save_step(key, Step { phase = "restoring", paths = step.paths });
+-            for item in step.paths limit Iterations(2147483647) {
++            @limits([Iterations(2147483647)]) for item in step.paths  {
+                 println("[RESTORE] " + text(item));
+                 if exists(item.path) && !command("/bin/rm", ["-rf", "--", item.path], call) { return false; }
+                 if item.before_exists && !command("/bin/cp", ["-a", "--", item.before, item.path], call) { return false; }
 diff --git a/src/nomo/bootstrap/legacy_status.es b/src/nomo/bootstrap/legacy_status.es
 --- a/src/nomo/bootstrap/legacy_status.es
 +++ b/src/nomo/bootstrap/legacy_status.es
@@ -2218,7 +2289,7 @@ diff --git a/src/nomo/native/git.es b/src/nomo/native/git.es
 diff --git a/src/nomo/native/mutations.es b/src/nomo/native/mutations.es
 --- a/src/nomo/native/mutations.es
 +++ b/src/nomo/native/mutations.es
-@@ -54,7 +54,7 @@
+@@ -45,7 +45,7 @@
  // Membership in an existing parent distinguishes absence from a failed stat.
  // Filesystem errors propagate; they are not interpreted as a missing file.
  flow exists(name: string) -> bool {
@@ -2227,7 +2298,7 @@ diff --git a/src/nomo/native/mutations.es b/src/nomo/native/mutations.es
          if relative_name(item) == name { return true; }
      }
      return false;
-@@ -138,7 +138,7 @@
+@@ -130,7 +130,7 @@
      if !applied { update(active, "failed", active.steps, "native project operation failed; inspect or roll back this journal"); return false; }
      if change.operation == "move" && exists(name) { update(active, "failed", active.steps, "move did not remove the source; inspect retained state"); return false; }
      var published: Array<SavedPath> = [];
@@ -2236,7 +2307,7 @@ diff --git a/src/nomo/native/mutations.es b/src/nomo/native/mutations.es
          let present = exists(item.path);
          if present && !command("/bin/cp", ["-a", "--", item.path, item.after], value.call) {
              update(active, "failed", active.steps, "after snapshot failed; project mutation may already be complete"); return false;
-@@ -153,7 +153,7 @@
+@@ -145,7 +145,7 @@
  
  flow parents(id: string, name: string) -> bool {
      var prefix = "";
@@ -2245,7 +2316,7 @@ diff --git a/src/nomo/native/mutations.es b/src/nomo/native/mutations.es
          if component != "." && component != "" {
              prefix = if prefix == "" { component } else { prefix + "/" + component };
              if !exists(prefix) && !apply_step(id, Change { operation = "mkdir", path = prefix, target = "", text = "" }) { return false; }
-@@ -165,7 +165,7 @@
+@@ -157,7 +157,7 @@
  flow outcome(value: Journal, status: string) -> ChangeOutcome {
      var completed: i64 = 0;
      var index: i64 = 0;
@@ -2254,16 +2325,16 @@ diff --git a/src/nomo/native/mutations.es b/src/nomo/native/mutations.es
          match Data.Steps.get(step_key(value.id, index)) { Some(step) => { if step.phase == "applied" { completed = completed + 1; } } None() => {} }
          index = index + 1;
      }
-@@ -184,7 +184,7 @@
+@@ -176,7 +176,7 @@
          let failed = update(value, "failed", 0, "backup directory creation failed; project mutations not dispatched");
          let result = outcome(failed, "recovery_required"); record("partial_result", name, result, call); return result;
      }
 -    for change in changes limit Iterations(2147483647) {
 +    @limits([Iterations(2147483647)]) for change in changes  {
          let normalized = checked(change.path);
-         if change.operation == "create" || change.operation == "write" || change.operation == "mkdir" {
+         if creates_parents(change.operation) {
              if !parents(id, normalized) { let result = outcome(journal(id), "recovery_required"); record("partial_result", name, result, call); return result; }
-@@ -241,9 +241,9 @@
+@@ -233,9 +233,9 @@
      let session = perform SessionContext.current();
      var result: Array<Journal> = [];
      var cursor: Option<MemoryCursor> = None();
@@ -2275,7 +2346,7 @@ diff --git a/src/nomo/native/mutations.es b/src/nomo/native/mutations.es
          match page.cursor { Some(next) => { cursor = Some(next); } None() => { break; } }
      }
      return result;
-@@ -252,7 +252,7 @@
+@@ -244,7 +244,7 @@
  flow selected_edit(id: string) -> Journal {
      if id != "" { return journal(id); }
      var selected: Option<Journal> = None();
@@ -2284,7 +2355,7 @@ diff --git a/src/nomo/native/mutations.es b/src/nomo/native/mutations.es
          if item.phase == "applied" { match selected {
              Some(previous) => { if item.call > previous.call { selected = Some(item); } }
              None() => { selected = Some(item); }
-@@ -263,11 +263,11 @@
+@@ -255,11 +255,11 @@
  
  flow restore(value: Journal, call: i64, checking: bool) -> bool {
      var index = value.steps - 1;
@@ -2292,13 +2363,13 @@ diff --git a/src/nomo/native/mutations.es b/src/nomo/native/mutations.es
 +    @limits([Iterations(2147483647)]) while index >= 0  {
          let key = step_key(value.id, index);
          let step = match Data.Steps.get(key) { Some(value) => value, None() => { abort("native edit step missing"); } };
-         if step.phase == "applying" || step.phase == "applied" || step.phase == "restoring" {
+         if restoring_phase(step.phase) {
 -            for item in step.paths limit Iterations(2147483647) {
 +            @limits([Iterations(2147483647)]) for item in step.paths  {
                  let present = exists(item.path);
                  if checking {
                      if present != item.after_exists { return false; }
-@@ -275,7 +275,7 @@
+@@ -267,7 +267,7 @@
                  }
              }
              Data.Steps.put(key, Step { phase = "restoring", paths = step.paths });
