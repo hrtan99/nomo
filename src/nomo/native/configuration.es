@@ -15,7 +15,7 @@ import nomo.adapters.etas.conversations.{NativeHistory, read_message as message}
 import nomo.application.native.conversation.ports.{ConversationReader};
 import nomo.native.file_io.read_text;
 
-public effect SettingsContext { action current() -> Settings; }
+public import nomo.application.native.configuration.context.SettingsContext;
 type Entry = { key: string, value: JsonValue };
 type Cached = { digest: bytes, session: string, result_event: i64 };
 alias Schema = MemoryRegion<{ Parsed: Store<string, Cached> }>;

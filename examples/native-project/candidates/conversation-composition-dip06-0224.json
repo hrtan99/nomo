@@ -1,0 +1,76 @@
+{
+  "status": "prepared_not_integrated",
+  "source_baseline": "3464ea7 plus the accompanying application controller, effects and pure context/domain preparation",
+  "candidate_sha256": "ce676b618b30862d7f176d8d5fe84eb5c851f2b9a19a2300e08a67d1825e5fed",
+  "files": [
+    {
+      "path": "src/nomo/adapters/etas/context_inputs.es",
+      "base_sha256": null,
+      "candidate_sha256": "6ef56e2bb69275e97fad119a2e22e44dc67ae32e0d2c15a9d655223a0b061327"
+    },
+    {
+      "path": "src/nomo/adapters/model/native.es",
+      "base_sha256": null,
+      "candidate_sha256": "1df7144fe7df5af0df13e35852bb12a2ce243b2e4c5602d3163813364e45c82e"
+    },
+    {
+      "path": "src/nomo/bootstrap/conversation.es",
+      "base_sha256": null,
+      "candidate_sha256": "b1c0f7177035b0c3bf5bef55c36efbf1594200603574a47c996a794373c83367"
+    },
+    {
+      "path": "src/nomo/native/context.es",
+      "base_sha256": "6ee261390a26a8b6f779a45fb2f71a047f2f71ecabe3d527e4ee0906c03e45a4",
+      "candidate_sha256": "24644e65725a69c84dc69815083fb6bb48f22cf8a11113ed0539a0d1321533e9"
+    },
+    {
+      "path": "src/nomo/native/entry.es",
+      "base_sha256": "3ab5ffd8e6ea0ae00dee7dd25bebe8bd1a6c7ec4cbee1a89a0c38988fa90579d",
+      "candidate_sha256": "2bc155c2fa61329330501d74a16d0b12ba00b38fe23ef15b573aca4aa9c3d034"
+    }
+  ],
+  "exact_checked_candidate_scope": "All final composition source hashes are retained in local tmp/dip-conversation-20261126/final-composition-source-sha256.json. Public high-impact flow acknowledgements were fixed before this final check.",
+  "retained_graph_full_check": {
+    "command": [
+      "docker",
+      "compose",
+      "--env-file",
+      "/dev/null",
+      "-f",
+      "compose.yaml",
+      "-f",
+      "config/etas-0135-official-compose.yaml",
+      "-f",
+      "config/etas-runtime-cache-compose.yaml",
+      "run",
+      "--rm",
+      "--no-deps",
+      "--tty=false",
+      "dev",
+      "/home/nomo/.cargo/bin/etas",
+      "--no-config",
+      "--cache",
+      "off",
+      "check",
+      "--all",
+      "/workspace"
+    ],
+    "exit": 1,
+    "checked_files": 269,
+    "seconds": 111.231,
+    "stdout": "checked 269 files\n",
+    "diagnostic": "error[type::InvalidImplMemberKind]: bodyless impl of spec `InstructionReader` is missing required method `read`\n --> /workspace/src/nomo/adapters/etas/context_inputs.es:13:27\n  | impl NativeInstructions ~ InstructionReader {\n  |                           ^ bodyless impl of spec `InstructionReader` is missing required method `read`\nerror[type::InvalidImplMemberKind]: bodyless impl of spec `SavedJobsReader` is missing required method `read`\n --> /workspace/src/nomo/adapters/etas/context_inputs.es:20:19\n  | impl NativeJobs ~ SavedJobsReader {\n  |                   ^ bodyless impl of spec `SavedJobsReader` is missing required method `read`\nerror[type::InvalidImplMemberKind]: bodyless impl of spec `CodingModel` is missing required method `code`\n --> /workspace/src/nomo/adapters/model/native.es:15:26\n  | impl NativeCodingModel ~ CodingModel {\n  |                          ^ bodyless impl of spec `CodingModel` is missing required method `code`\nerror[type::InvalidImplMemberKind]: bodyless impl of spec `SummaryModel` is missing required method `summarize`\n --> /workspace/src/nomo/adapters/model/native.es:22:27\n  | impl NativeSummaryModel ~ SummaryModel {\n  |                           ^ bodyless impl of spec `SummaryModel` is missing required method `summarize`\nerror[type::TypeMismatch]: no accessible method `code` applies to receiver `nomo.adapters.model.native.NativeCodingModel` and these arguments\n --> /workspace/src/nomo/bootstrap/conversation.es:54:35\n  |             let answer = handle { dependencies.coding.code(input) } with {\n  |                                   ^ no accessible method `code` applies to receiver `nomo.adapters.model.native.NativeCodingModel` and these arguments\nerror[type::TypeMismatch]: no accessible method `summarize` applies to receiver `nomo.adapters.model.native.NativeSummaryModel` and these arguments\n --> /workspace/src/nomo/bootstrap/conversation.es:60:56\n  |         ConversationModel.summarize(input) => { resume dependencies.summary.summarize(input); }\n  |                                                        ^ no accessible method `summarize` applies to receiver `nomo.adapters.model.native.NativeSummaryModel` and these arguments\nerror[type::TypeMismatch]: no accessible method `summarize` applies to receiver `nomo.adapters.model.native.NativeSummaryModel` and these arguments\n --> /workspace/src/nomo/bootstrap/conversation.es:72:56\n  |         ConversationModel.summarize(input) => { resume dependencies.summary.summarize(input); }\n  |                                                        ^ no accessible method `summarize` applies to receiver `nomo.adapters.model.native.NativeSummaryModel` and these arguments\nerror[effect::IncompleteEffectFacts]: call effect selector specialization failed: invalid callable environment: method evidence has no unique checked implementation\n --> /workspace/src/nomo/bootstrap/conversation.es:51:20\n  |             resume build(dependencies.history, dependencies.instructions, dependencies.attempts, dependencies.jobs, selected, task, settings);\n  |                    ^ call effect selector specialization failed: invalid callable environment: method evidence has no unique checked implementation\nerror[effect::IncompleteEffectFacts]: method call has no scheduled checked behavior target\n --> /workspace/src/nomo/bootstrap/conversation.es:54:35\n  |             let answer = handle { dependencies.coding.code(input) } with {\n  |                                   ^ method call has no scheduled checked behavior target\nerror[effect::IncompleteEffectFacts]: method call has no scheduled checked behavior target\n --> /workspace/src/nomo/bootstrap/conversation.es:60:56\n  |         ConversationModel.summarize(input) => { resume dependencies.summary.summarize(input); }\n  |                                                        ^ method call has no scheduled checked behavior target\nerror[effect::IncompleteEffectFacts]: call effect selector specialization failed: invalid callable environment: method evidence has no unique checked implementation\n --> /workspace/src/nomo/bootstrap/conversation.es:70:20\n  |             resume build(dependencies.history, dependencies.instructions, dependencies.attempts, dependencies.jobs, selected, task, configuration);\n  |                    ^ call effect selector specialization failed: invalid callable environment: method evidence has no unique checked implementation\nerror[effect::IncompleteEffectFacts]: method call has no scheduled checked behavior target\n --> /workspace/src/nomo/bootstrap/conversation.es:72:56\n  |         ConversationModel.summarize(input) => { resume dependencies.summary.summarize(input); }\n  |                                                        ^ method call has no scheduled checked behavior target\n\n"
+  },
+  "diagnostic_family": "https://github.com/etas-project/etas-frontend/issues/98",
+  "target_prerequisite": "Official 0.22.4 scoped-loop support (#97); regenerate the canonical agent/loop/SDK migration for the combined source after applying this overlay.",
+  "target_check_or_runtime_accepted": false,
+  "preserved_agent_contracts": {
+    "NativeCoding": "Original identity, tools, limits and prompt body are byte-identical.",
+    "CompactHistory": "Original identity, limits and prompt body retained; public visibility enables the model adapter."
+  },
+  "pending_validation": [
+    "Normal full target graph check of the complete composition.",
+    "Production native configuration/summary/history scenario through the new model/context role adapters."
+  ],
+  "no_production_workaround": "The retained entry and legacy acquisition/compaction remain selected until target acceptance. No compiler patch, module-order change or substitute production handler is introduced."
+}

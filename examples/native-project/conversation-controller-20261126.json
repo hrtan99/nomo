@@ -1,0 +1,123 @@
+{
+  "date": "2026-11-26",
+  "status": "application_controller_and_pure_context_preparation_accepted_on_0135; production_composition_pending",
+  "baseline_commit": "3464ea7370f5a313de8e37c48ecc9ea6b321e053",
+  "source_sha256": {
+    "src/nomo/native/agent.es": "f2cb182dac271f03405a98b5b7a62ef5bedfb93f77dbdc6dcbad862786d88cdf",
+    "src/nomo/native/context.es": "6ee261390a26a8b6f779a45fb2f71a047f2f71ecabe3d527e4ee0906c03e45a4",
+    "src/nomo/native/configuration.es": "f4ba981bdf0b8075f00df1131fbc7ce67c735bcfef0c6d6cb4ed613d1eeffe60",
+    "src/nomo/domain/process/jobs.es": "189f8ec1ee1510807f6fccb03c7d3e8e457cb40f72a67e4336e561254b24df59",
+    "src/nomo/domain/conversation/turn.es": "342cb5d760c3808745d9ddad2f7c4a230aa5b403218905db5b42fe107d73140f",
+    "src/nomo/domain/context/projection.es": "423ae0a55f1c775b57d216fd1723ac7e9bb68d1c763dcfbb522b5137400647b7",
+    "src/nomo/application/native/configuration/context.es": "c88b7e640490556e0ac65513d78805f921ded1e03f0ce3dcd23244506d18c0c7",
+    "src/nomo/application/native/context/ports.es": "135f26012272d877653dcf656f4d98a5df591fa8ed940aec46a6623544ecf4cf",
+    "src/nomo/application/native/context/effects.es": "0242a3c9dc2699985da326cda107414123ccfc42696afbb4bd12bd44e11fbc2f",
+    "src/nomo/application/native/context/acquire.es": "68b2cafdd934ba01430fc222fb7c5cb6d59a5603af57f5d78472e8952963bb1b",
+    "src/nomo/application/native/conversation/model.es": "82970cb30173f90d1f1a953d317a65287f06b0a55e2f9e0294c4f204941d9208",
+    "src/nomo/application/native/conversation/controller.es": "108769559acf873dd8645aa5cfc14a43ead9caaa5c5207c996ea9929fbb8c1da",
+    "tests/native_conversation_probe.py": "e962b6d413537366bb173f37f33b10f92be7095509ba61c8a782d3de68d5f4bb",
+    "tests/fixtures/native_conversation/src/app/main.es": "05861682b1c918cffce7d151988e32a5b733d92a017316b7c213189fe37de972"
+  },
+  "integrated_components": [
+    "Typed conversation controller owns admission, append, reservation, compaction decision, model/summary requests, publication and completion through application contracts.",
+    "Application-owned ConversationModel, ConversationContext and ConversationOutput effects support controlled handlers.",
+    "Context acquisition consumes separate history, instruction, attempt and saved-job roles.",
+    "Domain Turn/Answer/Summary and saved Job view remove concrete model/process dependencies from projection.",
+    "Pure projection owns filtering, configured instruction composition, byte measurement and threshold rules.",
+    "SettingsContext is application-owned with the native compatibility alias retained."
+  ],
+  "production_selection": "The retained native entry is byte-identical to the baseline. Its original acquisition/compaction still run, now using the domain views and pure projection. The complete role adapter/bootstrap overlay is not selected.",
+  "stored_identity_note": "Native history, attempt, configuration-cache and process-job stored declarations and stable IDs remain unchanged. Domain Job is a transient lossless view. Turn/Answer/Summary are not stored Memory values.",
+  "agent_contract_proof": {
+    "coding_tools_limits_and_prompt_unchanged": true,
+    "summary_limits_prompt_and_identity_unchanged": true,
+    "pure_projection_measurement_and_threshold_implementation_unchanged": true
+  },
+  "normal_source_check": {
+    "exit": 0,
+    "checked_files": 266,
+    "seconds": 112.178,
+    "command": [
+      "docker",
+      "compose",
+      "--env-file",
+      "/dev/null",
+      "-f",
+      "compose.yaml",
+      "-f",
+      "config/etas-0135-official-compose.yaml",
+      "-f",
+      "config/etas-runtime-cache-compose.yaml",
+      "run",
+      "--rm",
+      "--no-deps",
+      "--tty=false",
+      "dev",
+      "/home/nomo/.cargo/bin/etas",
+      "--no-config",
+      "--cache",
+      "off",
+      "check",
+      "--all",
+      "/workspace"
+    ],
+    "formatting_followup": "Removed one trailing blank line from the projection file after this check. The focused 22-source controller scenario was refreshed against byte-identical final source snapshots; no behavioral source change followed the production scenario."
+  },
+  "deterministic_controller": {
+    "status": "passed",
+    "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-conversation-w_aa3clx",
+    "source_count": 22,
+    "source_snapshot_matches_current_product": true,
+    "stdout": "PORT settings\nPORT context 1\nOUTPUT [CONTEXT] Summarizing; complete original history stays saved.\nPORT context 1\nPORT summary dispatching\nPORT context 2\nPORT coding dispatching\nOUTPUT Completed deterministic turn\nPASS deterministic conversation with compaction\n",
+    "host_actions": {
+      "Memory.read": 68,
+      "Memory.write": 30,
+      "Console.stdout_write": 9
+    },
+    "resources": {
+      "memory.max": "4294967296",
+      "memory.peak": "137330688",
+      "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+      "cpu.max": "400000 100000",
+      "pids.max": "256"
+    },
+    "assertions": [
+      "User append precedes settings acquisition.",
+      "Summary dispatch sees a real persisted dispatching attempt and 32768 reserved generation.",
+      "Summary publication/selection precedes rebuilt coding input.",
+      "Coding dispatch sees 163840 total reserved generation and the selected summary.",
+      "All three original/summary/answer events and two completed attempts remain in SQLite."
+    ],
+    "scope": "Controlled Model/Context handlers with real repositories; no native model or project tool action. This does not accept the production role adapters."
+  },
+  "existing_configuration_scenario": {
+    "status": "passed",
+    "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-configuration-3ja8xieo",
+    "local_model_http_requests": 5,
+    "native_approval_audit": [],
+    "summary_through": 7.0,
+    "compactions": 1.0,
+    "scope": "Existing production entry, configured tools, summary, fresh-process cache restore and edited configuration. It validates the integrated domain/projection changes; it does not run the unintegrated bootstrap."
+  },
+  "composition_candidate": {
+    "path": "examples/native-project/candidates/conversation-composition-dip06-0224.patch",
+    "apply_preflight": true,
+    "final_retained_full_check_exit": 1,
+    "diagnostic_family": "https://github.com/etas-project/etas-frontend/issues/98",
+    "target_acceptance": false
+  },
+  "migration_candidate": {
+    "sha256": "e5b1662a9ad1d5e60bf3c4d2d75f3d1380c80d08e88f5bef06c542bea415aded",
+    "agent_declarations": 72,
+    "instance_references": 77,
+    "bounded_loops": 251,
+    "loop_files": 98,
+    "changed_files": 112,
+    "count_change": "Three additional bounded loops: application ready/compaction while the retained entry remains selected, and the transient Job view mapping. No existing loop bound was removed."
+  },
+  "remaining": [
+    "Adopt the complete production role/bootstrap composition on a supported official graph.",
+    "Pass the normal full target check and required native scenario through that composition.",
+    "Finish the other explicit DIP-02 through DIP-13 requirements; no additional checklist item is marked complete."
+  ]
+}

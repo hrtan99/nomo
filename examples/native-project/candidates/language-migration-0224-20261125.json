@@ -1,11 +1,11 @@
 {
   "status": "prepared_not_target_compiler_accepted",
-  "source_baseline": "888593cfe1987d661b1d9f9006f8a9930ef6f81c",
+  "source_baseline": "3464ea7370f5a313de8e37c48ecc9ea6b321e053",
   "agent_declarations": 72,
   "instance_references": 77,
-  "bounded_loops": 248,
-  "loop_files": 96,
-  "changed_files": 110,
+  "bounded_loops": 251,
+  "loop_files": 98,
+  "changed_files": 112,
   "source_files": {
     "src/nomo/adapters/etas/attempts.es": {
       "before_sha256": "de5a5f078315437bb84f6b1781d3b7e0cb6ba72a7ed66f539e137b62e531e2d8",
@@ -38,6 +38,10 @@
     "src/nomo/agent/stub_loop_controller.es": {
       "before_sha256": "d497eeee434782c478fb2e82c2537459d3e641922f1e066daeafb73ea1a22171",
       "candidate_sha256": "43861e9adb692fa4cf22f4120864130024a05ded00d84e4a04c45d6e9581539d"
+    },
+    "src/nomo/application/native/conversation/controller.es": {
+      "before_sha256": "108769559acf873dd8645aa5cfc14a43ead9caaa5c5207c996ea9929fbb8c1da",
+      "candidate_sha256": "e87d37acf4687d54e68603caea3ca1673dc735680098d58e0d612e60b937c337"
     },
     "src/nomo/application/native/execution/service.es": {
       "before_sha256": "2b79dd19c4d1841e96f353fb4c9a5cdbb705ac53ac37c15876ba1982e7c86efa",
@@ -106,6 +110,10 @@
     "src/nomo/core/text.es": {
       "before_sha256": "403279c3b6e2658feb7afcd256fbc719d4ce43e568ef37afb4ea2e3448bf637d",
       "candidate_sha256": "c9bd0cfdd1df99af29c908711a09e3098b8c75eb87dbff5535dcea5960077608"
+    },
+    "src/nomo/domain/context/projection.es": {
+      "before_sha256": "423ae0a55f1c775b57d216fd1723ac7e9bb68d1c763dcfbb522b5137400647b7",
+      "candidate_sha256": "deb5c8534fe4d4288ada6d4e1ce4d8b80cca805e141b270d3712d76766b72ba8"
     },
     "src/nomo/entry/harness_chat.es": {
       "before_sha256": "48a82244f61c5470fe31cf32c0f55eb4dd101af9f14f847317aaeffa1d3e5647",
@@ -284,16 +292,16 @@
       "candidate_sha256": "dbd4907fcfd78eb5e259da292af8e7eeb27769801a531ad782b4185f43e28101"
     },
     "src/nomo/native/agent.es": {
-      "before_sha256": "6e35038e69d1fa16d539937c03cb662f9767b0dd8d9be477c8625b93657f157c",
-      "candidate_sha256": "05e2538a4bf91a95e4bd452e56aa4f1d53d9b92af0f0ecc8be504f5ff03de492"
+      "before_sha256": "f2cb182dac271f03405a98b5b7a62ef5bedfb93f77dbdc6dcbad862786d88cdf",
+      "candidate_sha256": "52c53d5e800f22f5bdec559ec2e68673206600b57fb611c67911170027ea920e"
     },
     "src/nomo/native/configuration.es": {
-      "before_sha256": "67c17bd67393dcfc0a1c1675280c6a5d5c08b0410487b641df5c32c0d29b3ef6",
-      "candidate_sha256": "ee5c3447b94b3c73dad1ed2b21ae061f03c398cc0bbf39e727921909e735ead3"
+      "before_sha256": "f4ba981bdf0b8075f00df1131fbc7ce67c735bcfef0c6d6cb4ed613d1eeffe60",
+      "candidate_sha256": "e348e1f862a746df5bcf7366fb2b47071068dba36e4a1a8c61748a5b947489f6"
     },
     "src/nomo/native/context.es": {
-      "before_sha256": "4de680d2e9ade1f93719bfc75078dacdca946606f84f5f6c1a2d29d4dc92daa7",
-      "candidate_sha256": "776275a42d1ed01a9677eb2da9eb39594dab00c5344ee6ff05478cf53dfc4fde"
+      "before_sha256": "6ee261390a26a8b6f779a45fb2f71a047f2f71ecabe3d527e4ee0906c03e45a4",
+      "candidate_sha256": "4ff101993a76c5daecc3ee7a28a37ef5bc3c559c9ec599f866cfd7bee23da5f7"
     },
     "src/nomo/native/entry.es": {
       "before_sha256": "3ab5ffd8e6ea0ae00dee7dd25bebe8bd1a6c7ec4cbee1a89a0c38988fa90579d",
@@ -478,6 +486,10 @@
     "src/nomo/agent/stub_loop_controller.es": [
       "16"
     ],
+    "src/nomo/application/native/conversation/controller.es": [
+      "2147483647",
+      "2147483647"
+    ],
     "src/nomo/application/native/execution/service.es": [
       "2147483647"
     ],
@@ -542,6 +554,10 @@
     "src/nomo/core/text.es": [
       "33554434",
       "66"
+    ],
+    "src/nomo/domain/context/projection.es": [
+      "2147483647",
+      "2147483647"
     ],
     "src/nomo/entry/harness_chat.es": [
       "3",
@@ -677,7 +693,6 @@
       "2147483647"
     ],
     "src/nomo/native/context.es": [
-      "2147483647",
       "2147483647",
       "2147483647"
     ],
@@ -890,7 +905,7 @@
       "1048576"
     ]
   },
-  "patch_sha256": "43f1aa75d85735822b62701598c7088b60072510f6e5fba4b49db5c8424642e4",
+  "patch_sha256": "e5b1662a9ad1d5e60bf3c4d2d75f3d1380c80d08e88f5bef06c542bea415aded",
   "previous_executed_candidate": {
     "path": "examples/native-project/candidates/language-migration-0224-20261125-baseline-a3450bc.patch",
     "sha256": "4ed6e680bf54968d44237f95f825eab070fa01d69603125af9908df37f7b91d9"

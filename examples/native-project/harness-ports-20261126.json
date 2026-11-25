@@ -89,5 +89,6 @@
     "DIP-02 target syntax and complete required runtime acceptance; upstream scoped-loop issue #97 remains open.",
     "DIP-03 through DIP-13 unfinished requirements remain in the authoritative task document."
   ],
-  "executed_source_check": "Both executed projects contain byte-identical current product sources and the committed fixture; positive_prepare only selects the existing legacy/ok case."
+  "executed_source_check": "Both executed projects contain byte-identical current product sources and the committed fixture; positive_prepare only selects the existing legacy/ok case.",
+  "migration_candidate_snapshot": "https://github.com/hrtan99/nomo/blob/3464ea7370f5a313de8e37c48ecc9ea6b321e053/examples/native-project/candidates/language-migration-0224-20261125.patch"
 }
