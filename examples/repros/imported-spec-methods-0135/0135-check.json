@@ -1,0 +1,30 @@
+[
+  {
+    "command": [
+      "/home/nomo/.cargo/bin/etas",
+      "--no-config",
+      "--cache",
+      "off",
+      "pkg",
+      "lock",
+      "/repro"
+    ],
+    "exit": 0,
+    "stdout": "wrote /repro/etas.lock with 0 locked packages\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "/home/nomo/.cargo/bin/etas",
+      "--no-config",
+      "--cache",
+      "off",
+      "check",
+      "--all",
+      "/repro"
+    ],
+    "exit": 0,
+    "stdout": "checked 4 files\n",
+    "stderr": ""
+  }
+]

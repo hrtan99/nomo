@@ -1,0 +1,6 @@
+{
+  "exit_code": 1,
+  "checked_files": 8,
+  "source_stage": "same isolated adapter family with explicit effect rows and retained SDK APIs",
+  "log": "checked 8 files\nerror[effect::IncompleteEffectFacts]: call effect selector specialization failed: invalid callable environment: method evidence has no unique checked implementation\n --> /repro/src/app/main.es:11:12\n  |     return invoke(HostCommandRunner {}, ConsoleCommandPreview {}, CommandRequest { program = \"/usr/bin/true\", arguments = [], stdin = None() }).exit_code;\n  |            ^ call effect selector specialization failed: invalid callable environment: method evidence has no unique checked implementation\nerror[type::InvalidImplMemberKind]: bodyless impl of spec `CommandRunner` is missing required method `run`\n --> /repro/src/nomo/adapters/command/foreground.es:20:26\n  | impl HostCommandRunner ~ CommandRunner {\n  |                          ^ bodyless impl of spec `CommandRunner` is missing required method `run`\nerror[type::InvalidImplMemberKind]: bodyless impl of spec `CommandPreviewSink` is missing required method `show`\n --> /repro/src/nomo/adapters/terminal/command_preview.es:10:30\n  | impl ConsoleCommandPreview ~ CommandPreviewSink {\n  |                              ^ bodyless impl of spec `CommandPreviewSink` is missing required method `show`\n"
+}

@@ -1,0 +1,23 @@
+{
+  "project": "examples/native-project/candidates/foreground-command-0224-check",
+  "exit_code": 0,
+  "checked_files": 8,
+  "command": "etas --no-config --cache off check --all .",
+  "source_sdk": "config/etas-0224-official.json",
+  "log": "checked 8 files\n",
+  "source_sha256": {
+    "etas.toml": "99e227bd87b6a8023eaacd48b1b7b866b64e313c600a4cad2129a6c1673aa915",
+    "etas.lock": "7c26cf886542d8a6d9d1eddde51fb3e770848a4c802b8cfc6dfcead7a2697624",
+    "src/app/main.es": "1d3fa90ffad31499ff0170a5273630eb55d7eafaf4f4c7e5461eb68fccd25309",
+    "src/nomo/core/json.es": "0360bf248732574120b32706559496f5c20c456ce467533b806128f1c6bd2fe5",
+    "src/nomo/native/workspace.es": "0802b33a4e3cf824814e5de5d1f14c004cb95474a675735a61b1e8bdefb19e1d",
+    "src/nomo/domain/execution/command.es": "da4a471bbf590190d304dfa06c758a316cc3dce79e3a4852ca3fe9b104bfc0ce",
+    "src/nomo/application/native/command/ports.es": "b21a54873a76db7bcf4955dcc410e4dfcedef62690de25389d08a41011cb9c91",
+    "src/nomo/application/native/command/encoding.es": "ddda72374fcce13bba4be4a58adfd454d0e78d93ffb38752750b4af0b6e9605e",
+    "src/nomo/adapters/terminal/command_preview.es": "bd34179b06108f38e8f3b748be1f9f85d0ac86bd2fc5f277fc68370e8b96cf61",
+    "src/nomo/adapters/command/foreground.es": "4cebbe1e681eb2dd1f1d8c4dc5ef2d2dd8b5e20add8149c23713b0765a705bed"
+  },
+  "binary_sha256": "1037eda142e287257485e38cd0a86f487042ea4a4aa6e9e1943f79eb2e38e3da",
+  "sdk_manifest_sha256": "ed146d0f0aa8545138dc97c3e1a309e2f3c48d5aeb30584d7491a686f5d03f00",
+  "execution_attempted": false
+}
