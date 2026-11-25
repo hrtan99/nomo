@@ -1,7 +1,9 @@
 {
   "agent_declarations": 72,
   "instance_references": 77,
-  "bounded_loops": 256,
+  "bounded_loops": 264,
+  "product_bounded_loops": 256,
+  "fixture_bounded_loops": 8,
   "agents": {
     "src/nomo/agent/model_tool.es": [
       "ToolModel",
@@ -664,6 +666,24 @@
       "1048576",
       "1048576"
     ],
+    "tests/fixtures/native_conversation/src/app/main.es": [
+      "32",
+      "2"
+    ],
+    "tests/fixtures/native_mutation_controller/src/app/main.es": [
+      "100"
+    ],
+    "tests/fixtures/native_process_controller/src/app/main.es": [
+      "100"
+    ],
+    "tests/fixtures/native_receipt/src/app/main.es": [
+      "3",
+      "3"
+    ],
+    "tests/fixtures/native_typed_model001/contract_probe.es": [
+      "32",
+      "32"
+    ],
     "src/nomo/application/harness/read/controller.es": [
       "2",
       "2",
@@ -722,10 +742,11 @@
   },
   "structural_audit_before_syntax_migration": {
     "kind": "static_import_and_persistent_declaration_audit_only",
-    "modules": 329,
-    "named_imports": 3066,
-    "module_import_edges": 1564,
+    "modules": 332,
+    "named_imports": 3097,
+    "module_import_edges": 1597,
     "application_and_domain_import_direction": "passed",
+    "tools_and_adapters_import_bootstrap": false,
     "entry_constructs_concrete_storage": false,
     "persistent_declarations_preserved": {
       "src/nomo/native/configuration.es": [
@@ -756,16 +777,18 @@
       ],
       "src/nomo/adapters/etas/conversations.es": [
         "Schema",
-        "Data"
+        "Data",
+        "CopySchema",
+        "Copies"
       ]
     },
     "history_and_attempt_contract_leaves_byte_identical": true,
     "root_region_nominal_owners_preserved": true
   },
-  "composition_patch_sha256": "cac7b11b075ad6b34b3f81effc3f3dcffb0f9aa2c88414d57f0ac1048321ae76",
-  "patch_sha256": "d457929e32aa95f2ebfe9f201bb2ab9cc082a6962a05cb997441356c053413d0",
-  "changed_files": 176,
-  "source_baseline": "6158d8c7fe50e7efa3ef1b057fa21c5fd9d3a1df",
+  "composition_patch_sha256": "31cccca2081045922224ea468a6dc90138895fa8cc212b7ca7d022687ca73c00",
+  "patch_sha256": "6c905d580ea0b79e7ce6012e2748e0170de5437639c3cc675bdfcbc30e74d5e9",
+  "changed_files": 186,
+  "source_baseline": "6fb9427fb87b944f5cd5726dc48e3ed31e166c78",
   "files": {
     "scripts/nomo-native": {
       "before_sha256": "13bd805016eed2eaf5efa6ce481d1280f30ce3c52db01f7dc90e62d0d23dc595",
@@ -797,7 +820,7 @@
     },
     "src/nomo/adapters/configuration/converter.es": {
       "before_sha256": null,
-      "candidate_sha256": "3d45aa59b38ea4f52a6d36d6021909f2fd46eb461cc3f9e3df992f1b33f03513"
+      "candidate_sha256": "fcc03203d328b6295be3e126bba592ee76adbdf06fb9b6d254812323f8d3cc3a"
     },
     "src/nomo/adapters/configuration/file.es": {
       "before_sha256": null,
@@ -841,7 +864,7 @@
     },
     "src/nomo/adapters/model/native.es": {
       "before_sha256": null,
-      "candidate_sha256": "c2fdf0ec00fb253a1328c31cfbcb65ea390fe0d3c1e10b322a4800f2c5a2a569"
+      "candidate_sha256": "692651116e51faaa04e536e6eb9abe74575e2fe5bf43d33a9f57294a48fa3724"
     },
     "src/nomo/adapters/terminal/command_preview.es": {
       "before_sha256": null,
@@ -871,6 +894,10 @@
       "before_sha256": null,
       "candidate_sha256": "de4b0af74647ed53c2397b021652aa44c3109bb35982f3f217d3cf34851685b4"
     },
+    "src/nomo/adapters/workspace/guidance.es": {
+      "before_sha256": null,
+      "candidate_sha256": "2382f59f85dc0ccfa67ee923c7815d89edcb7d4e45ccc563a5a25f03eddd5c16"
+    },
     "src/nomo/adapters/workspace/instructions.es": {
       "before_sha256": null,
       "candidate_sha256": "05c08f05546a3eee2224a37db2c75725259781dbd9a91438b7db8820b986a56b"
@@ -881,7 +908,7 @@
     },
     "src/nomo/adapters/workspace/mutation_files.es": {
       "before_sha256": null,
-      "candidate_sha256": "8b7201ea4a7a248e4f99776d3ae58ec0b67b7d9f95326774f0ad3b9a47a5ea95"
+      "candidate_sha256": "5365ea06b9ee4103ee4e9a776ca1762a77189da239fdd3f665c923e203759f85"
     },
     "src/nomo/agent/model_context.es": {
       "before_sha256": "27b4b8316eb207066107222e993a3f63e14595af285b9c34f1a9101f856f9ef7",
@@ -923,6 +950,10 @@
       "before_sha256": "8794956c65a97e27e4882fa309fa4ef6960dd25b5d577a582bf060b600560bfb",
       "candidate_sha256": "5333e5c07711279487c61029634a8bcaf4d7ae7be5ef4a1041b1ce294901bcca"
     },
+    "src/nomo/application/native/command/effects.es": {
+      "before_sha256": null,
+      "candidate_sha256": "d3e3c0da5f4813bf3398f3ff867d2da1c0917bc2f583188ecb46fb42afb1d6b0"
+    },
     "src/nomo/application/native/command/encoding.es": {
       "before_sha256": null,
       "candidate_sha256": "ddda72374fcce13bba4be4a58adfd454d0e78d93ffb38752750b4af0b6e9605e"
@@ -931,9 +962,17 @@
       "before_sha256": null,
       "candidate_sha256": "b21a54873a76db7bcf4955dcc410e4dfcedef62690de25389d08a41011cb9c91"
     },
+    "src/nomo/application/native/command/requests.es": {
+      "before_sha256": null,
+      "candidate_sha256": "affc3001127d97f6c021ff6dc05e997b67e0e69015cf3703068ee06cf7b09c4d"
+    },
     "src/nomo/application/native/command/service.es": {
       "before_sha256": null,
       "candidate_sha256": "0d7ff5ca8af845ad98fe77a0dd5770abdc68a7ca2d869d8acb224a8678c54cac"
+    },
+    "src/nomo/application/native/configuration/ports.es": {
+      "before_sha256": "897008ab4c5dc3631c4f6c45fbcda18b3db024285796e816600f4b7956767d54",
+      "candidate_sha256": "a9f5cb77ca322111c20f8f014c34e1742e2b6120199e564e918033c7f8322053"
     },
     "src/nomo/application/native/conversation/controller.es": {
       "before_sha256": "108769559acf873dd8645aa5cfc14a43ead9caaa5c5207c996ea9929fbb8c1da",
@@ -941,7 +980,7 @@
     },
     "src/nomo/application/native/conversation/model.es": {
       "before_sha256": "82970cb30173f90d1f1a953d317a65287f06b0a55e2f9e0294c4f204941d9208",
-      "candidate_sha256": "5ba2c978d84e737aff3a9fb427e45a42dc75aa1b2913037c953b1f012d6efc05"
+      "candidate_sha256": "372fbf17dbfc74f98f4dcc47bfb93e871560a3c7c28d78063cebd0536a1f0955"
     },
     "src/nomo/application/native/conversation/ports.es": {
       "before_sha256": "90039a09dc19afb4c9d633a02324fbfffd433b4b2d4f4a47e145ea08f5d8b2bf",
@@ -959,13 +998,17 @@
       "before_sha256": "2b79dd19c4d1841e96f353fb4c9a5cdbb705ac53ac37c15876ba1982e7c86efa",
       "candidate_sha256": "7a87d9629546a1328d87ce32a18aae8c53db3ebdc7ad76fcc275db84a428c1fa"
     },
+    "src/nomo/application/native/instructions/ports.es": {
+      "before_sha256": "d0d7cebdc93a5200516a58df9af6c96cc12f98453be3fe3bcbc5798a554cc206",
+      "candidate_sha256": "14c4707902099722e606fbd91d3d04104f1a37ba56985a87fbdb5a4a761733b4"
+    },
     "src/nomo/application/native/instructions/service.es": {
       "before_sha256": "f4d79ea87b6fad61d88332c530118038e82f34eba99d370dddeeb835c27cbec0",
       "candidate_sha256": "6c2fab38d5c85cded723782eaabac3fc3039a8878f16eb50853167c01c66614e"
     },
     "src/nomo/application/native/mutations/ports.es": {
       "before_sha256": "6fc76ae19d8fa90ac84cb36353a86341c43b929670a85bc727df2b77c4389e7f",
-      "candidate_sha256": "e6742ba4cb6266551e9400d6c75575339e1f63832a9262410ed29813d2727cc2"
+      "candidate_sha256": "cf2c743a8561c19e7f01d86efddcca9dcf01bafa83c4614700e05dbc0ff6078e"
     },
     "src/nomo/application/native/mutations/service.es": {
       "before_sha256": "5ea36e14762160d04b061654fe5b8c4ead57b88b3f19cc0d15168747d4e3fd5c",
@@ -985,19 +1028,19 @@
     },
     "src/nomo/bootstrap/command.es": {
       "before_sha256": null,
-      "candidate_sha256": "a468fce57be8068af5b641c11aac4bf3c438155cfff89fb986c2729369604cfb"
+      "candidate_sha256": "987842a227d9971f489d692e6e00f864a2073d680011bcf0153fe968d4753b6c"
     },
     "src/nomo/bootstrap/configuration.es": {
       "before_sha256": null,
-      "candidate_sha256": "27fc907c58de9fd599d1acce185152f944d71e7300af20e88d8bf838cdf16c26"
+      "candidate_sha256": "5b36910a8c43e1c8c9be00c193a92720992e02b822fbbccfaf977313ebbe041e"
     },
     "src/nomo/bootstrap/conversation.es": {
       "before_sha256": null,
-      "candidate_sha256": "067c2cb851ef22f2b59e592cc0e975eaa1117f82bc62848a7f1e46f7762658dc"
+      "candidate_sha256": "72d287d372a8135bbd8863e5a786088411da7b18b2cec56347549a578dac30f7"
     },
     "src/nomo/bootstrap/instructions.es": {
       "before_sha256": null,
-      "candidate_sha256": "8b483368c05ec7605aa0c329e953d312f2b29583aa05cad24a7c5ed37d18a8d6"
+      "candidate_sha256": "43af44c3f5c7293abe5c3474c925dc29a18c2a6d86215fb18f28931ac0cb3bc6"
     },
     "src/nomo/bootstrap/legacy_status.es": {
       "before_sha256": "8e5bbf9fe16cee09e2a1a62851fba55345e028e6e00133a9dbf44b81429d9558",
@@ -1005,11 +1048,11 @@
     },
     "src/nomo/bootstrap/mutations.es": {
       "before_sha256": null,
-      "candidate_sha256": "df153f30235d8e12ae018cf426ea307051dbb5a1d29024c9ae05551a5d5bf56b"
+      "candidate_sha256": "d646d4ea3fc1198bed1051363338c115d0cd89f21a1d7a01d773bbcdd7b4a5e6"
     },
     "src/nomo/bootstrap/native.es": {
       "before_sha256": null,
-      "candidate_sha256": "0ba867b2b7763d453e7f2ba78e15f6a2328895da816b99989b3a1fe233676e62"
+      "candidate_sha256": "742745e7aa920bf832b9973aab77898214b5e4757a6e618b8f11865264a2a565"
     },
     "src/nomo/bootstrap/processes.es": {
       "before_sha256": null,
@@ -1297,7 +1340,7 @@
     },
     "src/nomo/native/agent.es": {
       "before_sha256": "f2cb182dac271f03405a98b5b7a62ef5bedfb93f77dbdc6dcbad862786d88cdf",
-      "candidate_sha256": "c3e3e0d68576df7af7b0238b2f0d457c4a8e486fe16060944559e35efcca2d9a"
+      "candidate_sha256": "499b52e111a556f113deeee203c318a542cae646bac9830783c75253c2d71616"
     },
     "src/nomo/native/configuration.es": {
       "before_sha256": "5595aaad5d3603eaeea4027edefbb7d9300ad39d69e0ee3c8ac6769239b8ab05",
@@ -1309,15 +1352,15 @@
     },
     "src/nomo/native/entry.es": {
       "before_sha256": "607fbfe2168a8928dd443c70f8514b92d72afd672fdaf7b1216406fc851ffd6d",
-      "candidate_sha256": "1f6a7be9361255b1259d0e8eb0e2778e039a5d85644fae9bc990f6a83686896b"
+      "candidate_sha256": "73838a9d4ca2c029d35f7e28d503bc8c31bba7701f396e126c24932cbb20692b"
     },
     "src/nomo/native/files.es": {
       "before_sha256": "4a4d62eaec437c9381a20e99dbaf8f47fa60c3fbb3e38690675274b512adeec5",
-      "candidate_sha256": "22e080def90a984a20ce4a22398d27827b6769fafabdb2a9e36f7ab8e3796b5f"
+      "candidate_sha256": "55e04724137dc353a36b4e4a69663e3dff0e0f89275b6205f9d8624fee121193"
     },
     "src/nomo/native/git.es": {
       "before_sha256": "4aeff4cbc15695050a38aa430620c4fa9a0e48ce2b93531ce6ab37b7233358f7",
-      "candidate_sha256": "d52b55e061ce286e7a7131bed86543ab875d72638ded049d1c1db7138290d047"
+      "candidate_sha256": "f6a4c4bf65ef8e6afd2585f5ce724ad5cf607527796571bae35c764d681e0b9a"
     },
     "src/nomo/native/mutations.es": {
       "before_sha256": "a5dec79def51630eefecd6e02d3406f5e708b2577d7c458f5e9507d5aa567967",
@@ -1325,7 +1368,7 @@
     },
     "src/nomo/native/navigation.es": {
       "before_sha256": "417d0788af7f60ac8755477ea3919b213a11e1d7b98d5adca48a49d0046a4a23",
-      "candidate_sha256": "3cb9591177c47fc87413f01b99f8a6358a40c6128d4a5566800c4ad2d072ce3a"
+      "candidate_sha256": "e049e95084a226e4be2743a8a3b9ddd9ece6dda1602dd1779fd94987eec31439"
     },
     "src/nomo/native/processes.es": {
       "before_sha256": "ebf5f70f8b1b0c52feb85a0c760afd69c15be6d32722ae4c78fb3b3312210382",
@@ -1333,7 +1376,7 @@
     },
     "src/nomo/native/project.es": {
       "before_sha256": "bd1d655a7172a0330cd540d269c9718606dda69ceba9b6126d5db9a0f226d35c",
-      "candidate_sha256": "776e2219a4ec8598ab3579cd1960053171845480ba459ca02150d911503cff3f"
+      "candidate_sha256": "8e3c2c2719679f4a7a55a82ebcabf69f0b7a811dfa13d84ed6996bf4f110989e"
     },
     "src/nomo/native/projects.es": {
       "before_sha256": "c6dad9347756d76391f4d2a106c5c20c96996b59d02e8922ec24ac800ae75fb3",
@@ -1341,7 +1384,7 @@
     },
     "src/nomo/native/terminal.es": {
       "before_sha256": "0f51f7579313cfe762216fcf397d08365794ef7de19e0afe48b238fa289a6ed5",
-      "candidate_sha256": "a989f70c8e57fe83acad48a45f77f96f0d5d87a44f1169073dd654bc51771c02"
+      "candidate_sha256": "e67bf786988cc2c505813a614a1c503bdab5a4b4d596e167f5f7507eee40a5bd"
     },
     "src/nomo/native/transfer.es": {
       "before_sha256": "3a5fcf6f8978ed5739222e709290f59f6f0fb35c2ba71cd550bc610274523b48",
@@ -1459,9 +1502,29 @@
       "before_sha256": "8801a41f707db3611e1c915a56e0fc30f5e6e1f62486d7bcadce26ae66ba23cf",
       "candidate_sha256": "33be191e36633e53109e6cb2f4e44356a6abbc9d70a52cd3980cb46e420be95f"
     },
+    "tests/fixtures/native_configuration_contract/src/app/main.es": {
+      "before_sha256": "231c0156138e7ab301d66d731e1132bf3992e67be5379ed9d6aa0cc1ad6fe5e2",
+      "candidate_sha256": "69170be437430a7e1aac1727b1d63401c083b325fc7799ef9b799fdbb177867a"
+    },
+    "tests/fixtures/native_conversation/src/app/main.es": {
+      "before_sha256": "05861682b1c918cffce7d151988e32a5b733d92a017316b7c213189fe37de972",
+      "candidate_sha256": "c368c3440f4a3cef24004f9b9b34b597fa1490c201d7d3ae8c0562c872b27987"
+    },
+    "tests/fixtures/native_mutation_controller/src/app/main.es": {
+      "before_sha256": "1f10870b7127c2d1ea24d2075bde0b5f96c5fa4f9fa84eb91b38f10c15ff0b62",
+      "candidate_sha256": "0fbc8b77a26d0bbed8efd645ae3e3837afe363c26b49e9b9e6ad909ea6f7a7aa"
+    },
+    "tests/fixtures/native_process_controller/src/app/main.es": {
+      "before_sha256": "0710e3c29138b32f5d2091e1857da05e490a830c045127f4f39a28348f1f549a",
+      "candidate_sha256": "0f911298f38e935d917ef75e12a5b8c30c5e90d785a13cae33e7f92443f963fd"
+    },
     "tests/fixtures/native_receipt/src/app/main.es": {
       "before_sha256": "b72390701ca35904fde808bff33ee38f0be6fd20ec1ebfa885d29df49e903c49",
-      "candidate_sha256": "8731e96aca72c5d176fbc9067bc79126121ad9755724f4d15b7f514771a73678"
+      "candidate_sha256": "44c930b1bd4c3d849b8ef71cb28acb619b5e88d31826ebb439b8cf3ee60dfb1f"
+    },
+    "tests/fixtures/native_typed_model001/contract_probe.es": {
+      "before_sha256": "89ce39933cb8796e35f1f442836b5676f0c322fae312face51db6e3f6e3fa249",
+      "candidate_sha256": "6ef4e42293b241f5285f0b6fa9ae4fa2b7d6dc88e9c5987e657c7a201f9923bf"
     },
     "tests/native_receipt_probe.py": {
       "before_sha256": "ccaac650fdcc7a8260ee7e5c645b1324ac82984ff9310ec2963af06a27fd3833",

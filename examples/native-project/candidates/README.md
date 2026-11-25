@@ -3,9 +3,10 @@
 ## Combined dependency-inversion proposal, 2026-11-26
 
 `dip-composition-0224-20261126.patch` is the single combined proposal against
-`6158d8c`: it incorporates DIP-06 through DIP-12, the startup compatibility
-proposal below, and the agent/loop migration. It changes 176 files, including
-72 agent declarations, 77 instance references and 256 bounded loops. The adjacent JSON pins every input overlay, changed
+`6fb9427`: it incorporates DIP-06 through DIP-12, the startup compatibility
+proposal below, and the agent/loop migration. It changes 186 files, including
+72 agent declarations, 77 instance references, 256 product loop bounds and eight
+loop bounds in the existing native fixtures. The adjacent JSON pins every input overlay, changed
 source hash and original loop-bound expression. The lower loop count follows
 removal of superseded orchestration; it is not a reduction of retained bounds.
 `dip-composition-20261126.patch` records the same architecture before the
@@ -23,8 +24,12 @@ The combined composition resolves the overlapping roots and entry edits:
   check argv travels explicitly with the settings and turn requests.
 - Context obtains instructions from ProjectGuidance and saved jobs from
   JobRepository. Saved metadata acquisition does not invoke process tools.
-- Configuration conversion and filesystem mutations use the extracted command
-  composition. Cached, its schema and the cache resource remain at the original
+- Git/check/navigation, configuration conversion and filesystem mutation steps
+  request application-owned CommandOperations. The outer bootstrap Handler calls
+  the shared command service with the Host runner, preview and repositories.
+  Project instruction tools request ProjectInstructions; the workspace
+  ProjectGuidance adapter implements the existing InstructionReader role.
+  No native tool or adapter imports bootstrap. Cached, its schema and the cache resource remain at the original
   native.configuration owner, alongside the other preserved contract leaves.
 
 Reproduce the preparation with `python3 scripts/prepare_dip_composition.py`.
@@ -34,10 +39,10 @@ all string literals during syntax migration, and preflights both output patches.
 Source snapshots under `tmp/dip-composed-0224-20261126/` include unchanged local
 source prototypes; the emitted patches touch only this refactoring's owned
 sources, the existing foreground-command fixture and the pending startup
-consumer. The source-only counts are 17,017 SLOC selected, 17,234 composed and
-17,450 after syntax migration, including those prototypes. Using the full v4
-runtime inventory, the corresponding inclusive totals are 21,535 / 21,794 /
-22,010 SLOC. Runtime business code has not been retired by the proposal; the
+consumer. The source-only counts are 17,017 SLOC selected, 17,293 composed and
+17,509 after syntax migration, including those prototypes. Using the full v4
+runtime inventory, the corresponding inclusive totals are 21,535 / 21,853 /
+22,069 SLOC. Runtime business code has not been retired by the proposal; the
 existing user-authorized temporary line-limit exception still applies.
 
 This is **preparation only**: apply preflight and the structural audit do not
@@ -55,6 +60,16 @@ do not constitute acceptance of this combined source. Full target checking and
 the original production consumers, continuous capture/live process gates and
 default-entry cutover remain required. No production selector or launcher was
 changed by this preparation; DIP-02 through DIP-13 remain unchecked.
+
+The latest dependency audit checks 3,097 named imports across 332 owned modules
+and preserves conversation/copy, attempt, mutation, job and cache declarations
+and resource identities. Command/instruction handlers surround the other
+operation handlers so those handlers' arms can also request the operations.
+The existing physical-guidance consumer installs that operation at its fixture
+root while retaining its assertions. The seven current native fixture sources
+are included in syntax preparation, preserving all eight of their loop bounds;
+historical version-specific fixture families remain unchanged. These are
+structural and source-transformation checks, not executed consumer acceptance.
 
 ## Startup CLI proposal
 

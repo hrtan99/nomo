@@ -50,7 +50,7 @@ def migrate(before):
     references = {}
     loop_limits = {}
     for name, text in before.items():
-        if not name.startswith("src/") or not name.endswith(".es"):
+        if not name.endswith(".es"):
             continue
         items = tokens(text)
         replacements = []
@@ -73,7 +73,7 @@ def migrate(before):
 
     agent_names = {agent for names in agents.values() for agent in names}
     for name, text in after.items():
-        if not name.startswith("src/") or not name.endswith(".es"):
+        if not name.endswith(".es"):
             continue
         items = tokens(text)
         replacements = []
@@ -90,7 +90,7 @@ def migrate(before):
         after[name] = edits(text, replacements)
 
     for name, text in after.items():
-        if not name.startswith("src/") or not name.endswith(".es"):
+        if not name.endswith(".es"):
             continue
         items = tokens(text)
         replacements = []
@@ -122,13 +122,15 @@ def migrate(before):
     # Applying the old workspace/process free-function substitutions would now
     # target the identity-only leaves instead of the executable implementations.
     for name, text in before.items():
-        if name.startswith("src/") and name.endswith(".es"):
+        if name.endswith(".es"):
             strings = lambda source: [m.group() for m in tokens(source) if m.group().startswith(('"', "'"))]
             assert strings(text) == strings(after[name]), (name, "migration changed a literal")
     return after, {
         "agent_declarations": sum(map(len, agents.values())),
         "instance_references": sum(map(len, references.values())),
         "bounded_loops": sum(map(len, loop_limits.values())),
+        "product_bounded_loops": sum(len(values) for name, values in loop_limits.items() if name.startswith("src/")),
+        "fixture_bounded_loops": sum(len(values) for name, values in loop_limits.items() if name.startswith("tests/")),
         "agents": agents,
         "references": references,
         "loop_limit_expressions": loop_limits,

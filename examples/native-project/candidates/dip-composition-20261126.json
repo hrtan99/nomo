@@ -26,10 +26,11 @@
   },
   "structural_audit": {
     "kind": "static_import_and_persistent_declaration_audit_only",
-    "modules": 329,
-    "named_imports": 3066,
-    "module_import_edges": 1564,
+    "modules": 332,
+    "named_imports": 3097,
+    "module_import_edges": 1597,
     "application_and_domain_import_direction": "passed",
+    "tools_and_adapters_import_bootstrap": false,
     "entry_constructs_concrete_storage": false,
     "persistent_declarations_preserved": {
       "src/nomo/native/configuration.es": [
@@ -60,17 +61,19 @@
       ],
       "src/nomo/adapters/etas/conversations.es": [
         "Schema",
-        "Data"
+        "Data",
+        "CopySchema",
+        "Copies"
       ]
     },
     "history_and_attempt_contract_leaves_byte_identical": true,
     "root_region_nominal_owners_preserved": true
   },
   "status": "prepared_not_compiler_or_runtime_accepted",
-  "baseline": "6158d8c7fe50e7efa3ef1b057fa21c5fd9d3a1df",
-  "patch_sha256": "cac7b11b075ad6b34b3f81effc3f3dcffb0f9aa2c88414d57f0ac1048321ae76",
-  "changed_files": 72,
-  "snapshot_source_count": 333,
+  "baseline": "6fb9427fb87b944f5cd5726dc48e3ed31e166c78",
+  "patch_sha256": "31cccca2081045922224ea468a6dc90138895fa8cc212b7ca7d022687ca73c00",
+  "changed_files": 78,
+  "snapshot_source_count": 336,
   "files": {
     "scripts/nomo-native": {
       "before_sha256": "13bd805016eed2eaf5efa6ce481d1280f30ce3c52db01f7dc90e62d0d23dc595",
@@ -94,7 +97,7 @@
     },
     "src/nomo/adapters/configuration/converter.es": {
       "before_sha256": null,
-      "candidate_sha256": "3d45aa59b38ea4f52a6d36d6021909f2fd46eb461cc3f9e3df992f1b33f03513"
+      "candidate_sha256": "fcc03203d328b6295be3e126bba592ee76adbdf06fb9b6d254812323f8d3cc3a"
     },
     "src/nomo/adapters/configuration/file.es": {
       "before_sha256": null,
@@ -134,7 +137,7 @@
     },
     "src/nomo/adapters/model/native.es": {
       "before_sha256": null,
-      "candidate_sha256": "f215acef025a1e179f77c5112cb1aedcda3c4ef1b29b0c727d0dde7636a9d219"
+      "candidate_sha256": "4fd2903fc200f2ee49a2482a9b55f4fa49653a938ec60aa4660061a00b089c78"
     },
     "src/nomo/adapters/terminal/command_preview.es": {
       "before_sha256": null,
@@ -164,6 +167,10 @@
       "before_sha256": null,
       "candidate_sha256": "de4b0af74647ed53c2397b021652aa44c3109bb35982f3f217d3cf34851685b4"
     },
+    "src/nomo/adapters/workspace/guidance.es": {
+      "before_sha256": null,
+      "candidate_sha256": "2382f59f85dc0ccfa67ee923c7815d89edcb7d4e45ccc563a5a25f03eddd5c16"
+    },
     "src/nomo/adapters/workspace/instructions.es": {
       "before_sha256": null,
       "candidate_sha256": "0c3c94053c09974494d4b89749a3866a12dd747796a22dd812308db7fe184077"
@@ -174,7 +181,7 @@
     },
     "src/nomo/adapters/workspace/mutation_files.es": {
       "before_sha256": null,
-      "candidate_sha256": "db1db021e251b79985ea3cf27001b39846b16e2338680440467ffadaffb912d4"
+      "candidate_sha256": "b52453bfdfbc4c89c514c1d55cf28b5acdd78519082fae3eb345da37b05ec7e2"
     },
     "src/nomo/application/harness/read/controller.es": {
       "before_sha256": null,
@@ -192,6 +199,10 @@
       "before_sha256": "8794956c65a97e27e4882fa309fa4ef6960dd25b5d577a582bf060b600560bfb",
       "candidate_sha256": "5333e5c07711279487c61029634a8bcaf4d7ae7be5ef4a1041b1ce294901bcca"
     },
+    "src/nomo/application/native/command/effects.es": {
+      "before_sha256": null,
+      "candidate_sha256": "d3e3c0da5f4813bf3398f3ff867d2da1c0917bc2f583188ecb46fb42afb1d6b0"
+    },
     "src/nomo/application/native/command/encoding.es": {
       "before_sha256": null,
       "candidate_sha256": "ddda72374fcce13bba4be4a58adfd454d0e78d93ffb38752750b4af0b6e9605e"
@@ -200,13 +211,21 @@
       "before_sha256": null,
       "candidate_sha256": "b21a54873a76db7bcf4955dcc410e4dfcedef62690de25389d08a41011cb9c91"
     },
+    "src/nomo/application/native/command/requests.es": {
+      "before_sha256": null,
+      "candidate_sha256": "affc3001127d97f6c021ff6dc05e997b67e0e69015cf3703068ee06cf7b09c4d"
+    },
     "src/nomo/application/native/command/service.es": {
       "before_sha256": null,
       "candidate_sha256": "0d7ff5ca8af845ad98fe77a0dd5770abdc68a7ca2d869d8acb224a8678c54cac"
     },
+    "src/nomo/application/native/configuration/ports.es": {
+      "before_sha256": "897008ab4c5dc3631c4f6c45fbcda18b3db024285796e816600f4b7956767d54",
+      "candidate_sha256": "a9f5cb77ca322111c20f8f014c34e1742e2b6120199e564e918033c7f8322053"
+    },
     "src/nomo/application/native/conversation/model.es": {
       "before_sha256": "82970cb30173f90d1f1a953d317a65287f06b0a55e2f9e0294c4f204941d9208",
-      "candidate_sha256": "5ba2c978d84e737aff3a9fb427e45a42dc75aa1b2913037c953b1f012d6efc05"
+      "candidate_sha256": "372fbf17dbfc74f98f4dcc47bfb93e871560a3c7c28d78063cebd0536a1f0955"
     },
     "src/nomo/application/native/conversation/ports.es": {
       "before_sha256": "90039a09dc19afb4c9d633a02324fbfffd433b4b2d4f4a47e145ea08f5d8b2bf",
@@ -220,9 +239,13 @@
       "before_sha256": null,
       "candidate_sha256": "7bdc75ac9f369d237a05d075d07802a202e20ede7b9a1af57edf2cd35344bfff"
     },
+    "src/nomo/application/native/instructions/ports.es": {
+      "before_sha256": "d0d7cebdc93a5200516a58df9af6c96cc12f98453be3fe3bcbc5798a554cc206",
+      "candidate_sha256": "14c4707902099722e606fbd91d3d04104f1a37ba56985a87fbdb5a4a761733b4"
+    },
     "src/nomo/application/native/mutations/ports.es": {
       "before_sha256": "6fc76ae19d8fa90ac84cb36353a86341c43b929670a85bc727df2b77c4389e7f",
-      "candidate_sha256": "e6742ba4cb6266551e9400d6c75575339e1f63832a9262410ed29813d2727cc2"
+      "candidate_sha256": "cf2c743a8561c19e7f01d86efddcca9dcf01bafa83c4614700e05dbc0ff6078e"
     },
     "src/nomo/application/native/mutations/service.es": {
       "before_sha256": "5ea36e14762160d04b061654fe5b8c4ead57b88b3f19cc0d15168747d4e3fd5c",
@@ -230,27 +253,27 @@
     },
     "src/nomo/bootstrap/command.es": {
       "before_sha256": null,
-      "candidate_sha256": "a468fce57be8068af5b641c11aac4bf3c438155cfff89fb986c2729369604cfb"
+      "candidate_sha256": "987842a227d9971f489d692e6e00f864a2073d680011bcf0153fe968d4753b6c"
     },
     "src/nomo/bootstrap/configuration.es": {
       "before_sha256": null,
-      "candidate_sha256": "27fc907c58de9fd599d1acce185152f944d71e7300af20e88d8bf838cdf16c26"
+      "candidate_sha256": "5b36910a8c43e1c8c9be00c193a92720992e02b822fbbccfaf977313ebbe041e"
     },
     "src/nomo/bootstrap/conversation.es": {
       "before_sha256": null,
-      "candidate_sha256": "067c2cb851ef22f2b59e592cc0e975eaa1117f82bc62848a7f1e46f7762658dc"
+      "candidate_sha256": "72d287d372a8135bbd8863e5a786088411da7b18b2cec56347549a578dac30f7"
     },
     "src/nomo/bootstrap/instructions.es": {
       "before_sha256": null,
-      "candidate_sha256": "8b483368c05ec7605aa0c329e953d312f2b29583aa05cad24a7c5ed37d18a8d6"
+      "candidate_sha256": "43af44c3f5c7293abe5c3474c925dc29a18c2a6d86215fb18f28931ac0cb3bc6"
     },
     "src/nomo/bootstrap/mutations.es": {
       "before_sha256": null,
-      "candidate_sha256": "df153f30235d8e12ae018cf426ea307051dbb5a1d29024c9ae05551a5d5bf56b"
+      "candidate_sha256": "d646d4ea3fc1198bed1051363338c115d0cd89f21a1d7a01d773bbcdd7b4a5e6"
     },
     "src/nomo/bootstrap/native.es": {
       "before_sha256": null,
-      "candidate_sha256": "0ba867b2b7763d453e7f2ba78e15f6a2328895da816b99989b3a1fe233676e62"
+      "candidate_sha256": "742745e7aa920bf832b9973aab77898214b5e4757a6e618b8f11865264a2a565"
     },
     "src/nomo/bootstrap/processes.es": {
       "before_sha256": null,
@@ -294,7 +317,7 @@
     },
     "src/nomo/native/agent.es": {
       "before_sha256": "f2cb182dac271f03405a98b5b7a62ef5bedfb93f77dbdc6dcbad862786d88cdf",
-      "candidate_sha256": "2193720799f91a86a04cd42b40bdcefd32409a47adf819bf685ba730ab01ed10"
+      "candidate_sha256": "f124b0e79d2f12e2c31da3c21b999a2c2a8d244c27c224671948cba9cad238e8"
     },
     "src/nomo/native/configuration.es": {
       "before_sha256": "5595aaad5d3603eaeea4027edefbb7d9300ad39d69e0ee3c8ac6769239b8ab05",
@@ -306,15 +329,15 @@
     },
     "src/nomo/native/entry.es": {
       "before_sha256": "607fbfe2168a8928dd443c70f8514b92d72afd672fdaf7b1216406fc851ffd6d",
-      "candidate_sha256": "ec39410bbef7c5b16d89cdb78bfe1b6d6789756fa0227af989c50828243d21db"
+      "candidate_sha256": "27502a0cfeef2d05a95a1345a9ac122f18d9542f89e471ebc30c786df5709810"
     },
     "src/nomo/native/files.es": {
       "before_sha256": "4a4d62eaec437c9381a20e99dbaf8f47fa60c3fbb3e38690675274b512adeec5",
-      "candidate_sha256": "22e080def90a984a20ce4a22398d27827b6769fafabdb2a9e36f7ab8e3796b5f"
+      "candidate_sha256": "55e04724137dc353a36b4e4a69663e3dff0e0f89275b6205f9d8624fee121193"
     },
     "src/nomo/native/git.es": {
       "before_sha256": "4aeff4cbc15695050a38aa430620c4fa9a0e48ce2b93531ce6ab37b7233358f7",
-      "candidate_sha256": "80f9682b48a3b8a9001a8dc6cffb58f326fcd4eb830833a68f3c31d3fc180626"
+      "candidate_sha256": "8f1ff42e3a619cdf43f8b49d330f152ae20680439fb651634cee5f982b7355e6"
     },
     "src/nomo/native/mutations.es": {
       "before_sha256": "a5dec79def51630eefecd6e02d3406f5e708b2577d7c458f5e9507d5aa567967",
@@ -322,7 +345,7 @@
     },
     "src/nomo/native/navigation.es": {
       "before_sha256": "417d0788af7f60ac8755477ea3919b213a11e1d7b98d5adca48a49d0046a4a23",
-      "candidate_sha256": "e2c4b7e71af423f245e13f97ebeb81fa67b8fbcf6de851aff0f74c0d53266432"
+      "candidate_sha256": "424d241a3bef7570ce52fa62e9745652b61bcd8efe4be648bd3ffffe07b1948e"
     },
     "src/nomo/native/processes.es": {
       "before_sha256": "ebf5f70f8b1b0c52feb85a0c760afd69c15be6d32722ae4c78fb3b3312210382",
@@ -330,7 +353,7 @@
     },
     "src/nomo/native/project.es": {
       "before_sha256": "bd1d655a7172a0330cd540d269c9718606dda69ceba9b6126d5db9a0f226d35c",
-      "candidate_sha256": "776e2219a4ec8598ab3579cd1960053171845480ba459ca02150d911503cff3f"
+      "candidate_sha256": "8e3c2c2719679f4a7a55a82ebcabf69f0b7a811dfa13d84ed6996bf4f110989e"
     },
     "src/nomo/native/projects.es": {
       "before_sha256": "c6dad9347756d76391f4d2a106c5c20c96996b59d02e8922ec24ac800ae75fb3",
@@ -338,7 +361,7 @@
     },
     "src/nomo/native/terminal.es": {
       "before_sha256": "0f51f7579313cfe762216fcf397d08365794ef7de19e0afe48b238fa289a6ed5",
-      "candidate_sha256": "8ed422a8a0c6e90a052eb7746834f42ea0e797b27ba634edbb8c0ccac8983626"
+      "candidate_sha256": "ee3c2fdf52e480f0d170351e9513f89eaa29580fe36cf085c4ba7eb935d5c181"
     },
     "src/nomo/native/transfer.es": {
       "before_sha256": "3a5fcf6f8978ed5739222e709290f59f6f0fb35c2ba71cd550bc610274523b48",
@@ -347,6 +370,10 @@
     "src/nomo/native/workspace.es": {
       "before_sha256": "a04235f19a42f8f3c1247011a23fe00bbb36aad154a0cc816a66eadbc50c1694",
       "candidate_sha256": "0802b33a4e3cf824814e5de5d1f14c004cb95474a675735a61b1e8bdefb19e1d"
+    },
+    "tests/fixtures/native_configuration_contract/src/app/main.es": {
+      "before_sha256": "231c0156138e7ab301d66d731e1132bf3992e67be5379ed9d6aa0cc1ad6fe5e2",
+      "candidate_sha256": "69170be437430a7e1aac1727b1d63401c083b325fc7799ef9b799fdbb177867a"
     },
     "tests/fixtures/native_receipt/src/app/main.es": {
       "before_sha256": "b72390701ca35904fde808bff33ee38f0be6fd20ec1ebfa885d29df49e903c49",
@@ -368,15 +395,22 @@
     "AttemptRepository",
     "ResultPublication",
     "ConversationPicker",
-    "ConversationRequests"
+    "ConversationRequests",
+    "CommandOperations",
+    "ProjectInstructions",
+    "ChangeOperations",
+    "ProcessOperations",
+    "TransferOperations",
+    "ProjectOperations"
   ],
   "cross_overlay_repairs": [
     "One composition root installs conversation, change, process, transfer and project operations.",
     "CodingModel, its implementation and the per-turn row carry change/process operations.",
     "Context reads JobRepository and injected ProjectGuidance; it does not execute process tools.",
-    "Configuration converter and mutation filesystem adapter use the extracted command composition.",
+    "Tools, configuration converter and mutation filesystem adapter emit application CommandOperations, interpreted by one outer bootstrap Handler.",
     "Entry receives existing storage/recovery ports; bootstrap alone constructs their concrete backends.",
-    "Startup selector uses the injected conversation picker/catalog; check overrides travel explicitly with turn/settings requests."
+    "Startup selector uses the injected conversation picker/catalog; check overrides travel explicitly with turn/settings requests.",
+    "Project instruction tools emit ProjectInstructions; ProjectGuidance implements InstructionReader in the workspace adapter."
   ],
   "acceptance": "Apply preflight only. Language migration, normal target compilation and actual production scenarios remain required.",
   "production_selection_changed": false

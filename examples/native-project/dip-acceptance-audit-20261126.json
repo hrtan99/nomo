@@ -1,0 +1,522 @@
+{
+  "status": "incomplete_official_toolchain_adoption_blocked",
+  "source_baseline": "6fb9427fb87b944f5cd5726dc48e3ed31e166c78",
+  "authoritative_plan": "/Users/hrtan/Projects/nomo/docs/agent/ETAS_DIP_REFACTOR_20261125.md",
+  "plan_sha256": "db2864ba1e3b8cb38db44e6190ce6c32709fbb2d5d2805231407eccc87f9cf39",
+  "requirements": [
+    {
+      "id": "DIP-01",
+      "title": "Prepare the official toolchain",
+      "plan_requirements": [
+        "[x] **Priority P0. Dependencies: DIP-00. Scope:** toolchain manifest, existing container build/selection helpers and build identity.",
+        "Build the unmodified official CLI graph above with its own lockfile and matching installed SDK. Keep one graph record; do not combine independently newer dependency heads.",
+        "Retain the accepted installation while preparing the new one. Record version, revisions, SDK receipt and ABI pairing; use the existing serial 4 GiB / 4 CPU / 256 PID lane.",
+        "Verify the installed compiler/runtime with one focused supported example, then check Nomo to enumerate compatibility changes for DIP-02. A compatibility failure must retain its diagnostic and source scope.",
+        "**Done when:** the new graph/SDK installation is usable and identified. Full Nomo acceptance follows DIP-02; changing a version string alone does not close this item."
+      ],
+      "plan_checkbox_complete": true,
+      "completion_proven": true,
+      "status": "toolchain_preparation_proven",
+      "evidence": [
+        {
+          "path": "examples/native-project/toolchain-0224-build-20261125.json",
+          "sha256": "fc752217bb1e76cb6e784446b7247baa30680cd60f38fe0da5a9ded04c4045fe",
+          "recorded_status": "toolchain_prepared_product_migration_not_accepted"
+        },
+        {
+          "path": "examples/native-project/toolchain-0224-constructor-trace-20261125.json",
+          "sha256": "26e42f8fffedaf9ead0588fbc7f2da0f77c4c26d1df6b475496da0289fbe7b2e",
+          "recorded_status": "individual evidence; see scope in record"
+        }
+      ],
+      "missing_or_unaccepted": []
+    },
+    {
+      "id": "DIP-02",
+      "title": "Migrate syntax and runtime contracts",
+      "plan_requirements": [
+        "[ ] **Priority P0. Dependencies: DIP-01. Scope:** affected tracked agent declarations, their actual callers, package/runtime configuration and necessary fixtures.",
+        "Migrate function-shaped agent declarations to active types and explicit methods. Transfer callable constraints to the correct method; update instance construction and bound calls.",
+        "Preserve each agent's tool set, prompt trust channels, model selection, token reservations and lifetime. Reuse one scoped instance only where the intended lifecycle supports it.",
+        "Resolve actual SDK API, module and manifest incompatibilities reported by the new compiler. Keep this migration separate from application behavior changes.",
+        "**Done when:** the tracked product passes the new graph's normal source check and the existing native read/edit/check/Git/chat/fresh-process scenario plus shipping-entry compatibility scenario pass. Reuse the relevant existing probes. Do not mark the previously failing continuous collector as passed by these checks."
+      ],
+      "plan_checkbox_complete": false,
+      "completion_proven": false,
+      "status": "incomplete",
+      "evidence": [
+        {
+          "path": "examples/repros/scoped-loop-limits-0.22.4/latest-source-inspection-20261126.json",
+          "sha256": "aed0dd95a07a921856b3487a1ddc15cb3358bd7852b47b132ebe99e05fc978f5",
+          "recorded_status": "individual evidence; see scope in record"
+        },
+        {
+          "path": "examples/native-project/candidates/language-migration-0224-20261125.json",
+          "sha256": "28993ae75bc4a43a27b57d041cfaef6d0be1828d973247fcd0509651688e9018",
+          "recorded_status": "prepared_not_target_compiler_accepted"
+        }
+      ],
+      "missing_or_unaccepted": [
+        "Normal full source check on an adopted official graph with all original iteration bounds.",
+        "Original native read/edit/check/Git/multi-turn/new-process and shipping compatibility consumers on that graph."
+      ]
+    },
+    {
+      "id": "DIP-03",
+      "title": "Establish application owned contracts",
+      "plan_requirements": [
+        "[ ] **Priority P0. Dependencies: DIP-02. Scope:** records imported through `native/agent`, `history`, `configuration`, `lifecycle`, `processes` and `project`; new domain/application contract leaves.",
+        "Start with the conversation slice: give `Turn`/`Answer`, settings, message views and context inputs a dependency direction independent of concrete agents and repositories.",
+        "Define the minimal `ConversationReader`, `ConversationWriter`, `GenerationReservation`, `ResultPublication`, `AttemptRepository`, `InstructionReader` and `JobReader` roles required by actual callers. Split selection/copy duties when those consumers move.",
+        "Specify actual effect/error contracts. Put resource markers needed by a contract in a stable contract leaf or retain their existing nominal identity with explicit compatibility ownership.",
+        "**Done when:** contract leaves import no concrete native agent, repository, entry or terminal implementation; the extracted data preserves existing fields and storage compatibility."
+      ],
+      "plan_checkbox_complete": false,
+      "completion_proven": false,
+      "status": "incomplete",
+      "evidence": [
+        {
+          "path": "examples/native-project/domain-views-20261125.json",
+          "sha256": "12441c63f7750ace5a7f0b8cf1b3c2dcc435e5f01f1173ae1c1ff11489bdb41d",
+          "recorded_status": "accepted_on_existing_0135_product; target_graph_and_remaining_ports_pending"
+        },
+        {
+          "path": "examples/native-project/conversation-controller-20261126.json",
+          "sha256": "78f27dc17a27ba2c71b62dfb4a34b309629c2ef3c7bfd35ebc923defa1d9cd47",
+          "recorded_status": "application_controller_and_pure_context_preparation_accepted_on_0135; production_composition_pending"
+        }
+      ],
+      "missing_or_unaccepted": [
+        "Target acceptance of contract/module extraction; later tasks retain original nominal storage/resource owners."
+      ]
+    },
+    {
+      "id": "DIP-04",
+      "title": "Put conversation storage behind its ports",
+      "plan_requirements": [
+        "[ ] **Priority P1. Dependencies: DIP-03. Scope:** `native/history.es` and direct history users in context, configuration, lifecycle, transfer and entry.",
+        "Implement the narrow contracts on the existing Memory backend. Keep low-level CAS/version tokens and encoding inside that adapter.",
+        "Replace `NativeHistory {}` construction and concrete helper imports in application policy with injected dependencies. Move generation reservation and result publication behind explicit operations, not a universal `save`.",
+        "Preserve stable IDs, event order, chunk completeness, pending requests, summary fences and copy progress. A failed/unknown publication must retain its original outcome.",
+        "**Done when:** a deterministic alternative can drive the conversation consumer through the same contracts; an existing fresh-process history/recovery probe confirms the real adapter preserves records and ordering. No fake backend result proves durability."
+      ],
+      "plan_checkbox_complete": false,
+      "completion_proven": false,
+      "status": "incomplete",
+      "evidence": [
+        {
+          "path": "examples/native-project/conversation-ports-20261125.json",
+          "sha256": "9da78de88940eed6dcf1c2dddaaa44e8d65d5eafdfbfb4174ef41fe4a8e4dcda",
+          "recorded_status": "accepted_on_existing_0135_product; remaining_ports_and_target_graph_pending"
+        }
+      ],
+      "missing_or_unaccepted": [
+        "Full new production composition through the injected history roles, including real fresh-process ordering/recovery on the adopted graph."
+      ]
+    },
+    {
+      "id": "DIP-05",
+      "title": "Extract durable execution sequencing",
+      "plan_requirements": [
+        "[ ] **Priority P1. Dependencies: DIP-04. Scope:** `native/lifecycle.es` and its command/model consumers.",
+        "Split attempt transition rules, application sequencing and concrete attempt storage. Inject both the attempt repository and conversation publication operations.",
+        "Keep the sequence prepared \u2192 dispatching \u2192 returned \u2192 completed, with durable intent before the external action and the actual result saved before completion. Preserve `closed_unknown` as unknown.",
+        "Keep user recovery separate from model tools. Reconciliation inspects retained outcomes; it never automatically repeats an ambiguous command or refunds an uncertain model attempt.",
+        "**Done when:** the existing attempt-recovery scenario covers the changed sequencing, including a retained incomplete result. The application service imports neither `NativeHistory` nor a concrete Memory region."
+      ],
+      "plan_checkbox_complete": false,
+      "completion_proven": false,
+      "status": "incomplete",
+      "evidence": [
+        {
+          "path": "examples/native-project/execution-ports-20261125.json",
+          "sha256": "a59f657f119af67a26ccf040e67cc9770ede17807ff4426d55c167e6c11bf96b",
+          "recorded_status": "implemented_and_checked_on_existing_0135; target_graph_and_remaining_composition_pending"
+        }
+      ],
+      "missing_or_unaccepted": [
+        "Full adopted production consumers through the new execution service; retained incomplete results and unknown outcomes must keep their meaning."
+      ]
+    },
+    {
+      "id": "DIP-06",
+      "title": "Invert model and context composition",
+      "plan_requirements": [
+        "[ ] **Priority P1. Dependencies: DIP-05. Scope:** `native/entry.es:ask`, `native/context.es`, `native/agent.es` and a native bootstrap.",
+        "Extract a typed conversation controller. It owns admission, history append, generation reservation, context checks, compaction decision and completion.",
+        "Let the controller request coding/summary operations through application effects. Production Handlers delegate to injected model roles implemented by concrete agents; deterministic Handlers return controlled responses for the same controller.",
+        "Make context acquisition consume reader ports. Keep projection, byte measurement and threshold rules pure once inputs have been loaded. Inject history, instructions, unresolved attempts and saved jobs instead of loading them inside the projection implementation.",
+        "Construct dependencies in bootstrap using explicit fields or `@inject`. Resolve session/settings in the per-turn scope; do not store one turn's ambient context in a long-lived singleton.",
+        "**Done when:** changing the model implementation or history reader requires only composition changes. One focused conversation check demonstrates the same history, reservation and summary ordering; the real model adapter retains its checked tool/effect surface.",
+        "**Later capability slice:** after DIP-06 parity, schedule the standard step/tool protocol separately to expose per-round context control. Handle an actual inference context, append complete assistant calls and correlated tool results, and persist required provider continuation data. Keep each generation and tool admission under existing budgets. Round compaction is not implicitly enabled by moving to an agent type."
+      ],
+      "plan_checkbox_complete": false,
+      "completion_proven": false,
+      "status": "incomplete",
+      "evidence": [
+        {
+          "path": "examples/native-project/conversation-controller-20261126.json",
+          "sha256": "78f27dc17a27ba2c71b62dfb4a34b309629c2ef3c7bfd35ebc923defa1d9cd47",
+          "recorded_status": "application_controller_and_pure_context_preparation_accepted_on_0135; production_composition_pending"
+        }
+      ],
+      "missing_or_unaccepted": [
+        "Real coding/summary adapters and complete composed conversation on the adopted graph, preserving the checked tool/effect surface."
+      ]
+    },
+    {
+      "id": "DIP-07",
+      "title": "Complete the existing Harness inversion",
+      "plan_requirements": [
+        "[ ] **Priority P1. Dependencies: DIP-02; reuse DIP-03 contracts only where applicable. Scope:** `application/harness/work/{controller,ports,stages}.es`, `harness/chat_stages.es` and their concrete bootstrap implementations.",
+        "Preserve the existing `WorkModelStages`/stage effect design. Route the legacy child arm through the supplied stage contract; put `work_child_turn` selection in its production implementation.",
+        "Classify the shared controller's concrete read/edit imports. Move genuine adapters behind existing effects or narrow stage roles; retain genuinely pure protocol helpers in a neutral contract module.",
+        "Replace scattered model-selection booleans with existing budget/policy objects where they express one choice. Preserve historical, wide, high-input and recovery modes as distinct behavior where their contracts differ.",
+        "Keep precharge, delegated child limits, original file observation, approval, state/semantic validation and final ledger in the controller. Deterministic Handler responses must pass the same validation.",
+        "**Done when:** the same controller runs with production and deterministic stages without selecting a concrete model internally. Use the existing Handler/interface probe and the one changed work/chat flow; do not repeat every historical matrix."
+      ],
+      "plan_checkbox_complete": false,
+      "completion_proven": false,
+      "status": "incomplete",
+      "evidence": [
+        {
+          "path": "examples/native-project/harness-ports-20261126.json",
+          "sha256": "60ca99f86c6556dc4a11d2a0bcace48df99f71bff402dccf6953020be759d397",
+          "recorded_status": "legacy_child_and_pure_edit_contract_integrated_on_0135; read_application_extraction_candidate_pending"
+        }
+      ],
+      "missing_or_unaccepted": [
+        "Complete application read/work controller and original production/deterministic consumers through their stage roles on the adopted graph."
+      ]
+    },
+    {
+      "id": "DIP-08",
+      "title": "Share command sequencing through a command port",
+      "plan_requirements": [
+        "[ ] **Priority P1. Dependencies: DIP-05. Scope:** `native/workspace.es`, `terminal.es`, `git.es`, command-backed navigation and their model tools.",
+        "Introduce a narrow foreground-command contract using typed argv/stdin requests and actual exit/stdout/stderr results. Keep Host dispatch/byte decoding in its adapter.",
+        "Reuse application execution sequencing for mutating commands and observations while preserving their distinct pending-request semantics. File-journal subordinate steps retain their parent operation.",
+        "Make Git/check/navigation construct typed requests and consume that port. Model tools delegate to those same use cases; move preview rendering to an output sink.",
+        "**Done when:** duplicate preview/dispatch/journal scaffolding is removed without changing command arguments, native per-operation approval or result publication. Reuse the affected Git/command/stdin probe; a fake runner records requests without shell execution."
+      ],
+      "plan_checkbox_complete": false,
+      "completion_proven": false,
+      "status": "incomplete",
+      "evidence": [
+        {
+          "path": "examples/native-project/candidates/foreground-command-dip08-0224.json",
+          "sha256": "ebeea81745bb0d05bc9b33f73a96f1d15bcabafafe134ebe464cd097158a0a69",
+          "recorded_status": "prepared_not_integrated"
+        }
+      ],
+      "missing_or_unaccepted": [
+        "Full command/observation/substep consumers through CommandOperations and actual Host approval after target integration."
+      ]
+    },
+    {
+      "id": "DIP-09",
+      "title": "Separate mutation policy from filesystem and journal adapters",
+      "plan_requirements": [
+        "[ ] **Priority P1. Dependencies: DIP-04, DIP-05, DIP-08. Scope:** `native/mutations.es`, `files.es`, `file_io.es`.",
+        "Extract plan validation and apply/undo/rollback/reconcile orchestration. Inject narrow workspace read/mutation and change-journal roles.",
+        "Keep filesystem operations, atomic replacement, command-backed directory changes and storage encodings in concrete adapters. Use the shared command-step boundary for subordinate operations.",
+        "Preserve exact before/after observations, path ownership, partial application, failure after a real write, and `recovery_required`. Rollback failure must remain visible.",
+        "**Done when:** all file tools share one application plan/recovery implementation; existing mutation/recovery fixtures show actual outcomes remain consistent. In-memory alternatives exercise policy but cannot certify rollback on disk."
+      ],
+      "plan_checkbox_complete": false,
+      "completion_proven": false,
+      "status": "incomplete",
+      "evidence": [
+        {
+          "path": "examples/native-project/mutations-20261126.json",
+          "sha256": "29630e8ab982af3185ce16eb549f1231c0ca4677ac56ad8e69074d49cad5f328",
+          "recorded_status": "pure_rules_and_application_effect_controller_accepted_on_0135; production_composition_pending"
+        }
+      ],
+      "missing_or_unaccepted": [
+        "Full filesystem/journal adapters through the mutation and outer command Handlers, with original physical mutation/recovery consumers."
+      ]
+    },
+    {
+      "id": "DIP-10",
+      "title": "Separate live process operations and saved job state",
+      "plan_requirements": [
+        "[ ] **Priority P1 for separation; P2 for continuous capture. Dependencies: DIP-05, DIP-08. Scope:** `native/processes.es`, job/output repositories and preserved capture candidate.",
+        "Split process Host operations, job/output persistence, observation sequencing and model tools. Define `ProcessControl`, `JobRepository` and `OutputArchive` roles with only the operations their consumers need.",
+        "Preserve raw output bytes, display decoding, per-stream read bounds, exact stdin/EOF and each native approval. Persisted metadata is not a live handle or evidence of liveness.",
+        "If asynchronous ownership needs shared mutable state, use a scoped active process role or explicit checked resources. Do not use captured UI `var` bindings or passive suspending `var self` as a shared manager.",
+        "Re-run the original full capture consumer on the adopted graph before using it as the collector baseline. The 0.13.5 product case recorded zero saved output while waiting for input; newer upstream source alone does not establish resolution.",
+        "**Done when:** existing detach/reconnect/project-switch operations retain their accepted semantics. Continuous capture closes separately only after actual UI-wait output, exact bytes, cancellation and interrupted-read restoration pass; do not weaken the original scenario or add a compiler workaround."
+      ],
+      "plan_checkbox_complete": false,
+      "completion_proven": false,
+      "status": "incomplete",
+      "evidence": [
+        {
+          "path": "examples/native-project/processes-20261126.json",
+          "sha256": "098ffddab01bf8ab9a16c9d03f1e5c23effd374b3ec431b2254d6fcdb3948a42",
+          "recorded_status": "pure_observations_and_application_sources_checked_on_0135; controller_execution_and_production_composition_unaccepted"
+        },
+        {
+          "path": "examples/native-project/capture-consumer-0135-20261112.json",
+          "sha256": "37be1e9afb653fcbee7bbafdc3350a835f829144fa7730f0fc303b9b52ffd22e",
+          "recorded_status": "individual evidence; see scope in record"
+        },
+        {
+          "path": "examples/native-project/process-reconnect-0130-20261111.json",
+          "sha256": "4d123d9001171d1cc04e63fc20c94c7782c2bdfef12ead52a7c0ece719b3030b",
+          "recorded_status": "individual evidence; see scope in record"
+        }
+      ],
+      "missing_or_unaccepted": [
+        "Complete process role/Host composition and exact original detach/reconnect/project consumer.",
+        "Original full continuous collector: UI-wait progress, exact bytes, cancellation and interrupted-read restore.",
+        "Do not generalize the separate old 0.13.0 reconnect result or small fixed #108 case to the target."
+      ]
+    },
+    {
+      "id": "DIP-11",
+      "title": "Isolate configuration and instruction acquisition",
+      "plan_requirements": [
+        "[ ] **Priority P2. Dependencies: DIP-03, DIP-04, DIP-08. Scope:** `native/configuration.es`, `project.es`, instruction consumers.",
+        "Keep Settings defaults/validation and context calculations independent of file access, session history and command conversion.",
+        "Provide configuration-source, codec/cache and instruction-reader implementations through small contracts. Retain current TOML tooling inside a codec adapter unless a verified standard API supplies the required semantics; the downloaded spec does not establish a TOML replacement.",
+        "Preserve cache fingerprint/result linkage, root-to-leaf instructions, configured check argv, trust distinctions and fresh-process reuse.",
+        "**Done when:** context/controller tests can supply settings/instructions without running taplo/jq or reading disk; the existing configuration probe still verifies production conversion/cache behavior. Activating currently inactive timeout configuration is a separate behavior change."
+      ],
+      "plan_checkbox_complete": false,
+      "completion_proven": false,
+      "status": "incomplete",
+      "evidence": [
+        {
+          "path": "examples/native-project/configuration-instructions-20261126.json",
+          "sha256": "2c413ab8e1767d67bc59c220d4f2d1952c8ad6bf6e8573e887ad1daafa03444a",
+          "recorded_status": "pure_codec_scope_policy_and_application_effects_accepted_on_0135; production_role_composition_pending"
+        }
+      ],
+      "missing_or_unaccepted": [
+        "Configuration conversion/cache and instruction consumers through final operation/role bindings on the adopted graph."
+      ]
+    },
+    {
+      "id": "DIP-12",
+      "title": "Extract transfer project selection and terminal adapters",
+      "plan_requirements": [
+        "[ ] **Priority P2. Dependencies: DIP-04, DIP-05, DIP-06. Scope:** `native/transfer.es`, `projects.es`, `entry.es`, `options.es`.",
+        "Put import/export/fork sequencing behind conversation reader/copy-job/archive IO contracts. Keep validation and restart progress in the application; filesystem and encoding remain adapters.",
+        "Separate recent-project storage, selection policy, terminal prompts and launch-control output. Preserve retained per-project Host identity; a project switch must not silently restart jobs.",
+        "Make entry parsing produce typed application requests. Console rendering consumes typed outcomes/output effects; bootstrap is the place that imports concrete implementations.",
+        "**Done when:** transfer/copy recovery, project switching and representative CLI commands retain their existing behavior through the new composition. Preserve existing flags, user text and launch-control protocol unless a separate product change requires them."
+      ],
+      "plan_checkbox_complete": false,
+      "completion_proven": false,
+      "status": "incomplete",
+      "evidence": [
+        {
+          "path": "examples/native-project/transfer-terminal-20261126.json",
+          "sha256": "00693c356444aeb88353b9afc6da60f191a68e943d8484d1156ea23db41ce104",
+          "recorded_status": "pure_codec_policies_typed_parser_and_application_transfer_checked; production_role_composition_unaccepted"
+        },
+        {
+          "path": "examples/native-project/candidates/native-startup-0224-20261126.json",
+          "sha256": "754d8035e36141f0e57bedcee05bb0926171b852e5a52ba631519892cce3806f",
+          "recorded_status": "prepared_not_integrated"
+        }
+      ],
+      "missing_or_unaccepted": [
+        "Transfer/copy recovery, retained-Host projects and typed CLI through the final production composition.",
+        "The startup consumer remains unexecuted; native selected binding, cross-project mounting and legacy ID/selector compatibility remain explicit limitations."
+      ]
+    },
+    {
+      "id": "DIP-13",
+      "title": "Complete native cutover and remove superseded implementations",
+      "plan_requirements": [
+        "[ ] **Priority P2. Dependencies: accepted native behavior from DIP-02 through DIP-12, including applicable process/capture requirements. Scope:** default launcher and Python project workflow, plus compatibility facades.",
+        "Use the accepted Etas application controller for the default user path. Remove superseded Python model/context/history/tool business decisions; retain only justified startup/container/terminal transport.",
+        "Audit required handwritten runtime dependencies wherever located. Remove obsolete wrappers only after updating actual consumers; keep required saved-session migration explicit.",
+        "**Done when:** the normal user entry demonstrates read, approved edit, check, multi-turn continuation, fresh-process recovery and the required process/project lifetimes. Count inclusive Core against the standing 15,000-SLOC limit and record any existing authorized exception precisely. Opt-in native success alone does not close default cutover."
+      ],
+      "plan_checkbox_complete": false,
+      "completion_proven": false,
+      "status": "incomplete",
+      "evidence": [
+        {
+          "path": "examples/native-project/runtime-inventory-20261126.json",
+          "sha256": "8a1679e31917e0754afb55db8c42b11ecbb0602d2e2d83d7de2f4d75bfa74a3a",
+          "recorded_status": "runtime_inventory_and_cutover_dependency_audit_only"
+        },
+        {
+          "path": "NATIVE_MIGRATION.md",
+          "sha256": "256eee5051e33071bbbfcfbd8b03b75547d35effbcdde012d9a8b52c3e42064b"
+        },
+        {
+          "path": "scripts/nomo",
+          "sha256": "268287b441d06cc1bd17352381b3c0e96273db9dc18e26eb9ba66190a5488f7d"
+        }
+      ],
+      "missing_or_unaccepted": [
+        "Accepted native behavior from DIP-02 through DIP-12 is an explicit prerequisite.",
+        "Full shipping startup semantics and required legacy saved-session migration.",
+        "Switch the default launcher, retire superseded Python model/context/history/tool policy and re-audit retained transport.",
+        "Normal default user workflow, new-process recovery and required process/project lifetimes."
+      ]
+    }
+  ],
+  "current_selection": {
+    "official_cli": "0.13.5",
+    "default_entry": "Python project controller in scripts/nomo",
+    "native_entry": "opt-in; existing accepted path retained",
+    "production_files_changed_this_slice": false
+  },
+  "current_proposal": {
+    "composition_sha256": "31cccca2081045922224ea468a6dc90138895fa8cc212b7ca7d022687ca73c00",
+    "migration_sha256": "6c905d580ea0b79e7ce6012e2748e0170de5437639c3cc675bdfcbc30e74d5e9",
+    "changed_files": 186,
+    "product_agent_declarations": 72,
+    "instance_references": 77,
+    "product_bounded_loops": 256,
+    "fixture_bounded_loops": 8,
+    "audit": {
+      "kind": "static_import_and_persistent_declaration_audit_only",
+      "modules": 332,
+      "named_imports": 3097,
+      "module_import_edges": 1597,
+      "application_and_domain_import_direction": "passed",
+      "tools_and_adapters_import_bootstrap": false,
+      "entry_constructs_concrete_storage": false,
+      "persistent_declarations_preserved": {
+        "src/nomo/native/configuration.es": [
+          "Cached",
+          "Schema",
+          "Data"
+        ],
+        "src/nomo/native/mutations.es": [
+          "Journal",
+          "SavedPath",
+          "Step",
+          "Schema",
+          "Data"
+        ],
+        "src/nomo/native/processes.es": [
+          "Job",
+          "JobEvent",
+          "Schema",
+          "Data"
+        ],
+        "src/nomo/native/projects.es": [
+          "LaunchRoot",
+          "Schema",
+          "Data"
+        ],
+        "src/nomo/native/workspace.es": [
+          "ProjectRoot"
+        ],
+        "src/nomo/adapters/etas/conversations.es": [
+          "Schema",
+          "Data",
+          "CopySchema",
+          "Copies"
+        ]
+      },
+      "history_and_attempt_contract_leaves_byte_identical": true,
+      "root_region_nominal_owners_preserved": true
+    },
+    "compiler_or_runtime_accepted": false
+  },
+  "upstream_observation": {
+    "observed_at_utc": "2026-11-25 20:49:29 UTC",
+    "cli_manifest_blob": "27c7da381380b4c142f67137cfc5563c7667f9ce",
+    "cli_version": "0.22.5",
+    "lock_blob": "014d0b18bdb4229bfac2129f19e90ed10fc13292",
+    "frontend_revision": "fb790c8dbec6cb5beb846dcfc06031c670285c4c",
+    "core_revision": "773986379afba8db15e1a73e164027ec593c8ce2",
+    "interpreter_revision": "b9d1813114f5c3330608331e042c68ba5867f7ca",
+    "issues": [
+      {
+        "number": 97,
+        "url": "https://github.com/etas-project/etas-frontend/issues/97",
+        "state": "open",
+        "comments": 0,
+        "updated_at": "2026-11-25T14:10:27Z"
+      },
+      {
+        "number": 99,
+        "url": "https://github.com/etas-project/etas-frontend/issues/99",
+        "state": "open",
+        "comments": 0,
+        "updated_at": "2026-11-25T18:32:19Z"
+      },
+      {
+        "number": 100,
+        "url": "https://github.com/etas-project/etas-frontend/issues/100",
+        "state": "open",
+        "comments": 0,
+        "updated_at": "2026-11-25T18:38:17Z"
+      },
+      {
+        "number": 118,
+        "url": "https://github.com/etas-project/etas-interpreter/issues/118",
+        "state": "open",
+        "comments": 0,
+        "updated_at": "2026-11-25T19:37:35Z"
+      }
+    ],
+    "latest_build_or_execution_performed": false
+  },
+  "unchanged_from_prior_source_inspection": true,
+  "preserved_failures": {
+    "loop_syntax": "Executed on 0.22.4: documented @limits loop annotation rejected. #97 remains open. Latest 0.22.5 source inspection is not a new executed failure.",
+    "returned_handler": "#99 is a target diagnostic/contract question with an abstract-port reduction; latest complete composition is not accepted.",
+    "native_process_witness": "#100 is the exact six-source 0.22.4 Host adapter check exit 4, not a process execution.",
+    "old_imported_impls": "#98 covers retained 0.13.5 checks including the new Console picker; not a latest regression claim.",
+    "old_project_frame": "#118 is the accepted-check/full-consumer runtime failure on 0.13.5 only.",
+    "capture": "The original full 0.13.5 collector consumer failed; newer source or reduced successes do not close the original gate.",
+    "initial_full_target_check": "The original immutable migration full check exited 4 with checked effect tag has conflicting package identities; cause remains unresolved. It does not establish acceptance of later proposals or a valid-source isolated regression."
+  },
+  "blocked_audit": {
+    "condition": "No adopted unmodified official graph accepts the complete refactor with preserved loop/Handler/native operation contracts.",
+    "consecutive_goal_turns_with_same_gate": [
+      "022d857 consolidation preparation",
+      "6158d8c inventory audit",
+      "6fb9427 startup check and restoration",
+      "current operation-binding/acceptance audit"
+    ],
+    "live_validation_job_waited_on": false,
+    "required_external_change": "An upstream supported/fixed loop and implementation/Handler/native-witness path on a coherent official graph, followed by full normal source and original consumer acceptance.",
+    "unimplemented_work_is_not_waived": true,
+    "why_not_cut_over": "DIP-13 explicitly depends on accepted DIP-02 through DIP-12; selecting the rejected candidate or retiring required migration/runtime paths now would violate that prerequisite.",
+    "not_used": [
+      "Compiler patch or source/dependency override",
+      "Removed iteration bounds or authority guards",
+      "Module/file-order workaround",
+      "Reduced/replacement production consumer presented as acceptance"
+    ]
+  },
+  "size": {
+    "counter": "nomo-physical-v4",
+    "selected_inclusive_sloc": 21535,
+    "proposed_composed_inclusive_sloc": 21853,
+    "proposed_migrated_inclusive_sloc": 22069,
+    "temporary_line_limit_exception": "Explicitly authorized by the user; no 15000-SLOC compliance is claimed."
+  },
+  "this_slice_validation": {
+    "kind": "static dependency/persistent-identity audit and patch/fixture syntax transformation only",
+    "new_model_or_docker_requests": 0,
+    "new_negative_tests": 0,
+    "new_runtime_acceptance": false
+  },
+  "resume_sequence": [
+    "Inspect and select the coherent official fix and matching SDK without mixing dependency heads.",
+    "Run normal full source check with unchanged original limits and effect/authority contracts.",
+    "Run original production/fixture consumers at their required scopes, including full capture/lifetimes.",
+    "Finish remaining startup/migration compatibility, then default cutover and Python policy retirement.",
+    "Repeat the full 13-task completion audit; no partial preparation closes the goal."
+  ],
+  "final_revalidation": {
+    "official_cargo_lock_blob": "014d0b18bdb4229bfac2129f19e90ed10fc13292",
+    "unchanged": true,
+    "frontend_97_state": "open",
+    "frontend_97_comments": 0
+  }
+}
