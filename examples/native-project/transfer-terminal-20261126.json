@@ -1,0 +1,350 @@
+{
+  "project_runtime_integration_attempt": {
+    "issue": "https://github.com/etas-project/etas-interpreter/issues/118",
+    "evidence": "examples/repros/returned-project-handler-0135/evidence.json",
+    "normal_check_exit": 0,
+    "normal_check_files": 295,
+    "full_consumer": "tests/native_projects_probe.py",
+    "runtime_outcome": "execution_fault: path does not name a runtime value in the current frame",
+    "traced_host_requests": 0,
+    "selected_source_restored": true,
+    "version_scope": "0.13.5 only"
+  },
+  "date": "2026-11-26",
+  "status": "pure_codec_policies_typed_parser_and_application_transfer_checked; production_role_composition_unaccepted",
+  "baseline_commit": "1a5890c",
+  "source_sha256": {
+    "src/nomo/native/transfer.es": "3a5fcf6f8978ed5739222e709290f59f6f0fb35c2ba71cd550bc610274523b48",
+    "src/nomo/native/projects.es": "c6dad9347756d76391f4d2a106c5c20c96996b59d02e8922ec24ac800ae75fb3",
+    "src/nomo/native/options.es": "7d5cbe7f9ec7c8046811a2b8bb9b0032b5c5b4bd433fa778db76b624162738f0",
+    "src/nomo/native/entry.es": "607fbfe2168a8928dd443c70f8514b92d72afd672fdaf7b1216406fc851ffd6d",
+    "src/nomo/adapters/etas/conversations.es": "f2d881a2f25af8f07afc2a7265ec4f517392a2625b3a8ba04dbf1299d2a9a18f",
+    "src/nomo/domain/transfer/archive.es": "1a5f66a59f0a8d72d8171d927e0366d387fd8ca5a93c199a5cfb72d81faa5e4c",
+    "src/nomo/adapters/codec/archive.es": "696d71b70690d54a8945a62e20aaa15d223357a8bd24043728f0445da7fc8be8",
+    "src/nomo/domain/projects/selection.es": "fdace85d94373628f0341379d08c8ae0cc41095eed7a4b890b0460cd0ba39a98",
+    "src/nomo/entry/native/options.es": "3b011c8ec8f35a1f7968d7e9a36073ad3a5909d64e6a79777dbb80e12deadcaa",
+    "src/nomo/entry/native/commands.es": "2a156a19dd3ad5cd8206b4f0b66b3776c7231ffb50812e967f2c5e5dc1105ed1",
+    "src/nomo/application/native/transfer/effects.es": "ac49ac7a9ecf9e09c52ca9004d873cab86d6ce2715ca2f0365824e94e4aa48cd",
+    "src/nomo/application/native/transfer/ports.es": "f64ffa4c1f56c52f43954e4f13f415e62baf1b52241133ab9bef6e2a90887f94",
+    "src/nomo/application/native/transfer/service.es": "b31e176dae1fc1941ac18f17498b22ef4bd680ad3d8f74ff3ba39608c6e1955c",
+    "src/nomo/application/native/projects/effects.es": "14d248bc2e8e81ea224526b9216edfe61f48f907d5e3ebf85b851a70f055edbd",
+    "src/nomo/application/native/projects/ports.es": "7dd98802a0705e6f36500a5cde0869c483ba60db590125ff0dfd2a95d856181d",
+    "src/nomo/application/native/projects/service.es": "49bb4981675ee530966c3c2bcd818138d6ca49fd54e7aa32fcd5f9990eb8ee82",
+    "tests/fixtures/native_transfer_controller/src/app/main.es": "5c55f259382ad0176c8180b70c2d56dd1e98e7a2859701b9f701bf57ddf4dc19",
+    "tests/native_transfer_controller_probe.py": "55b84a2ed31e079eab60aff27d435a1ae10773a996b3e58b85fc30f7b0448e8d"
+  },
+  "retained_graph": {
+    "version": "0.13.5",
+    "binary_sha256": "9be1cb60d532d954538b72206507e27439a427402c67cf384249831bc304c2f2",
+    "normal_check_exit": 0,
+    "normal_check_stdout": "checked 290 files\n",
+    "normal_check_seconds": 112.319
+  },
+  "persistent_compatibility": {
+    "src/nomo/adapters/etas/conversations.es": {
+      "complete_schema_and_resource_declarations_identical": true,
+      "declaration_sha256": [
+        "a98126759ef2b7cf7fe87af45e3602f912d444a31e363be3e24aca376c9809fb",
+        "8fd10bd96cf8692dfd4a495eb78e8b4110ad6f4620374edf73845572dd9410ca",
+        "7505b40a3e48a05e378d0645754d30a337d86e051c7f879afa719f81d49d12a9",
+        "1bc3401983e5ef7414a6424f9fcd1df44902b92b49b89abd7ff612bfcf3e57eb"
+      ]
+    },
+    "src/nomo/native/projects.es": {
+      "complete_schema_and_resource_declarations_identical": true,
+      "declaration_sha256": [
+        "b0bdf3e161a2178572d268e814f06f3456bd0a7142e5984b410c90c60f835928",
+        "3fc9988cb7793c225d549b3dc539528cd6f64b25aecd829d333d4781b6b9a8fd"
+      ]
+    }
+  },
+  "entry_literal_check": {
+    "all_user_visible_message_literals_retained": true,
+    "removed_literals_are_replaced_internal_operation_tags": [
+      "\"close-input\"",
+      "\"exec\"",
+      "\"jobs\"",
+      "\"poll\"",
+      "\"send\"",
+      "\"spawn\"",
+      "\"stop\""
+    ],
+    "new_user_visible_literals": []
+  },
+  "application_transfer_fixture": {
+    "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-transfer-controller-sro3x6cp",
+    "source_count": 17,
+    "final_source_hashes_match": true,
+    "status": "passed",
+    "ordered_markers": [
+      "PORT copy progress after durable cursor",
+      "PORT copy progress after durable cursor",
+      "PASS application fork preserves events and summary",
+      "PORT copy progress after durable cursor",
+      "PASS application resume uses sealed source and durable cursor"
+    ],
+    "host_actions": {
+      "Memory.read": 94,
+      "Memory.write": 65,
+      "Console.stdout_write": 5
+    },
+    "resources": {
+      "memory.max": "4294967296",
+      "memory.peak": "81252352",
+      "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+      "cpu.max": "400000 100000",
+      "pids.max": "256"
+    },
+    "qualification": "Application fork and import resumption use the original actual SQLite conversation/copy primitives. Progress follows durable writes; the sealed source is reused and the completed prefix is not rewritten. Codec handlers call the actual pure codec. This does not certify the unselected spec/bootstrap composition or actual archive filesystem operations."
+  },
+  "existing_production_cases": {
+    "copy_recovery": {
+      "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-copy-recovery-is4z0686",
+      "result": {
+        "status": "passed",
+        "interrupted_exit": 130,
+        "interrupted_copy": {
+          "cursor": 1.0,
+          "digest": [
+            127.0,
+            42.0,
+            123.0,
+            51.0,
+            175.0,
+            119.0,
+            119.0,
+            99.0,
+            123.0,
+            35.0,
+            201.0,
+            51.0,
+            68.0,
+            37.0,
+            177.0,
+            86.0,
+            233.0,
+            221.0,
+            63.0,
+            113.0,
+            231.0,
+            109.0,
+            242.0,
+            20.0,
+            13.0,
+            25.0,
+            147.0,
+            101.0,
+            26.0,
+            240.0,
+            36.0,
+            216.0
+          ],
+          "id": "native-1",
+          "kind": "import",
+          "phase": "copying",
+          "source": "history.json",
+          "title": "Sealed original",
+          "total": 300.0,
+          "workspace": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-copy-recovery-is4z0686/project"
+        },
+        "statuses": [
+          {
+            "first_user": -1.0,
+            "id": "native-0",
+            "ledger": {
+              "compactions": 0.0,
+              "context_bytes": 0.0,
+              "generation_allowance": 0.0,
+              "tools": 0.0,
+              "turns": 0.0
+            },
+            "next_event": 0.0,
+            "pending": "",
+            "summary_event": -1.0,
+            "summary_through": -1.0,
+            "title": "New conversation",
+            "workspace": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-copy-recovery-is4z0686/project"
+          },
+          {
+            "first_user": 1.0,
+            "id": "native-1",
+            "ledger": {
+              "compactions": 0.0,
+              "context_bytes": 0.0,
+              "generation_allowance": 0.0,
+              "tools": 0.0,
+              "turns": 0.0
+            },
+            "next_event": 301.0,
+            "pending": "",
+            "summary_event": -1.0,
+            "summary_through": -1.0,
+            "title": "Sealed original",
+            "workspace": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-copy-recovery-is4z0686/project"
+          },
+          {
+            "first_user": 2.0,
+            "id": "native-2",
+            "ledger": {
+              "compactions": 0.0,
+              "context_bytes": 0.0,
+              "generation_allowance": 0.0,
+              "tools": 0.0,
+              "turns": 0.0
+            },
+            "next_event": 5.0,
+            "pending": "",
+            "summary_event": -1.0,
+            "summary_through": -1.0,
+            "title": "Sealed original (fork)",
+            "workspace": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-copy-recovery-is4z0686/project"
+          }
+        ],
+        "trace_outcomes": {
+          "interrupted": "cancelled",
+          "resumed": "completed",
+          "restored": "completed"
+        },
+        "original_sha256": "7f2a7b33af7777637b23c9334425b156e9dd3f71e76df2140d1993651af024d8",
+        "model_requests": 0
+      },
+      "qualification": "Actual selected entry uses the extracted pure codec/policies/parser and identity-preserving storage helpers; the proposed role/bootstrap assembly was not selected."
+    },
+    "projects": {
+      "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-y2nsjxk7",
+      "result": {
+        "functional_status": "passed",
+        "model_http_requests": 0,
+        "native_command_dispatches": 11,
+        "native_control_write_approvals": 3,
+        "native_approvals": 14,
+        "actual_host_invocations": 3,
+        "project_attachments": 5,
+        "first_worker": "534c5890c572bd429e0d4152fbcdc43b78c7c632f6296e2225094239d5030425",
+        "second_worker": "bfc2ee907ec7d976e9b4b2a7fb5bc619c3fbdc74f4a317c1917091dc1c863106",
+        "first_etas_pid": 1365,
+        "second_etas_pid": 1435,
+        "selected_paths": [
+          "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-y2nsjxk7/second 鹈鹕",
+          "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-y2nsjxk7/first project",
+          "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-y2nsjxk7/second 鹈鹕"
+        ],
+        "restored_status": {
+          "first_user": -1.0,
+          "id": "native-1",
+          "ledger": {
+            "compactions": 0.0,
+            "context_bytes": 0.0,
+            "generation_allowance": 0.0,
+            "tools": 1.0,
+            "turns": 0.0
+          },
+          "next_event": 2.0,
+          "pending": "",
+          "summary_event": -1.0,
+          "summary_through": -1.0,
+          "title": "Second project",
+          "workspace": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-y2nsjxk7/second 鹈鹕"
+        },
+        "traces": [
+          "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-y2nsjxk7/traces/run-MFPPxL3V/trace.json",
+          "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-y2nsjxk7/traces/run-hNEb0wkT/trace.json",
+          "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-y2nsjxk7/traces/run-TvuT1sMi/trace.json"
+        ],
+        "scope": "Etas-owned project selection, same-Host project return and original live job Unicode I/O/EOF, separate histories, startup chooser reattaching another retained Host"
+      },
+      "qualification": "Actual selected entry uses the extracted pure codec/policies/parser and identity-preserving storage helpers; the proposed role/bootstrap assembly was not selected."
+    },
+    "export_recovery": {
+      "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-export-recovery-hhm6j9g_",
+      "result": {
+        "status": "passed",
+        "scope": "real export approval interruption, fresh-Host unknown-outcome resolution without replay, explicitly approved new export, and imported metadata remaining historical",
+        "interrupted_exit_code": 130,
+        "unresolved_attempt": {
+          "id": "native-0-run-0",
+          "input_event": -1.0,
+          "kind": "export",
+          "label": "cancelled.json",
+          "phase": "dispatching",
+          "recovery_event": -1.0,
+          "result_event": -1.0,
+          "session": "native-0",
+          "through": 1.0
+        },
+        "final_attempts": [
+          {
+            "id": "native-0-run-0",
+            "input_event": -1.0,
+            "kind": "export",
+            "label": "cancelled.json",
+            "phase": "closed_unknown",
+            "recovery_event": 4.0,
+            "result_event": -1.0,
+            "session": "native-0",
+            "through": 1.0
+          },
+          {
+            "id": "native-0-run-1",
+            "input_event": -1.0,
+            "kind": "export",
+            "label": "accepted.json",
+            "phase": "completed",
+            "recovery_event": -1.0,
+            "result_event": 5.0,
+            "session": "native-0",
+            "through": 4.0
+          }
+        ],
+        "native_write_approvals": 1,
+        "model_http_requests": 0,
+        "command_dispatches": 0,
+        "exported_path": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-export-recovery-hhm6j9g_/project/accepted.json",
+        "traces": [
+          "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-export-recovery-hhm6j9g_/traces/run-eeUQ0HGJ/trace.json",
+          "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-export-recovery-hhm6j9g_/traces/run-bhABMAV8/trace.json"
+        ],
+        "outcomes": [
+          "cancelled",
+          "completed"
+        ],
+        "limitations": [
+          "This covers interruption before write approval, not every post-write finalization window."
+        ]
+      },
+      "qualification": "Actual selected entry uses the extracted pure codec/policies/parser and identity-preserving storage helpers; the proposed role/bootstrap assembly was not selected."
+    }
+  },
+  "composition_candidate": {
+    "path": "examples/native-project/candidates/transfer-project-terminal-dip12-0224.patch",
+    "patch_sha256": "c6cf39f72cb63a19496714dc407121feaa6a531f0929f690ed3b08386c8a7322",
+    "source_count": 300,
+    "retained_full_check_exit": 1,
+    "diagnostic_counts": {
+      "type::InvalidImplMemberKind": 4,
+      "type::TypeMismatch": 18,
+      "type::IncompleteTypeFacts": 7,
+      "effect::IncompleteEffectFacts": 18
+    },
+    "apply_preflight": true,
+    "target_acceptance": false
+  },
+  "migration_candidate": {
+    "patch_sha256": "e67e8860edb6321b1cca3cf9a79ddba9d4f231627f87986088fdf56a2b23956b",
+    "agent_declarations": 72,
+    "instance_references": 77,
+    "bounded_loops": 268,
+    "loop_files": 108,
+    "changed_files": 122
+  },
+  "not_claimed": [
+    "New spec/bootstrap production assembly or target compatibility.",
+    "Default native cutover, removal of Python workflow, or complete DIP-12/refactor delivery.",
+    "Additional legacy-archive or negative boundary matrices; decoder branches were moved unchanged."
+  ],
+  "size_impact": {
+    "new_etas_files": 11,
+    "new_etas_lines": 506,
+    "line_limit_exception": "The user explicitly allowed temporarily exceeding the code line limit; inclusive size acceptance is not claimed."
+  }
+}

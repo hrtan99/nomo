@@ -104,7 +104,8 @@
     "apply_preflight": true,
     "final_retained_full_check_exit": 1,
     "diagnostic_family": "https://github.com/etas-project/etas-frontend/issues/98",
-    "target_acceptance": false
+    "target_acceptance": false,
+    "immutable_snapshot": "1a5890c:examples/native-project/candidates/conversation-composition-dip06-0224.patch"
   },
   "migration_candidate": {
     "sha256": "e5b1662a9ad1d5e60bf3c4d2d75f3d1380c80d08e88f5bef06c542bea415aded",

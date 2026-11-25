@@ -1,3 +1,24 @@
+diff --git a/src/nomo/adapters/codec/archive.es b/src/nomo/adapters/codec/archive.es
+--- a/src/nomo/adapters/codec/archive.es
++++ b/src/nomo/adapters/codec/archive.es
+@@ -22,7 +22,7 @@
+             let source = converted.body;
+             if source.format != "nomo-native-conversation-1" { abort("unsupported native conversation format"); }
+             var summary = "";
+-            for item in source.events limit Iterations(2147483647) { if item.role == "summary" { summary = item.text; } }
++            @limits([Iterations(2147483647)]) for item in source.events  { if item.role == "summary" { summary = item.text; } }
+             return Imported { title = source.session.title, events = source.events, summary = summary };
+         }
+         None() => {}
+@@ -31,7 +31,7 @@
+     let source = match legacy { Some(value) => value.body, None() => { abort("unsupported conversation archive shape"); } };
+     if source.format != "nomo-conversation-1" { abort("unsupported conversation format"); }
+     var events: Array<ChatMessage> = [];
+-    for item in source.events limit Iterations(2147483647) {
++    @limits([Iterations(2147483647)]) for item in source.events  {
+         events = events.push(ChatMessage { id = "", role = item.role, name = item.name, text = item.content });
+     }
+     return Imported { title = source.session.title, events = events, summary = source.session.summary };
 diff --git a/src/nomo/adapters/codec/configuration.es b/src/nomo/adapters/codec/configuration.es
 --- a/src/nomo/adapters/codec/configuration.es
 +++ b/src/nomo/adapters/codec/configuration.es
@@ -96,7 +117,7 @@ diff --git a/src/nomo/adapters/etas/conversations.es b/src/nomo/adapters/etas/co
              if item.value.workspace == workspace { jobs = jobs.push(item.value); }
          }
          match page.cursor { Some(value) => { cursor = Some(value); } None() => { break; } }
-@@ -397,7 +397,7 @@
+@@ -413,7 +413,7 @@
      if job.phase == "ready" { return archive.select(job.workspace, id); }
      if job.phase != "copying" { abort("conversation copy source is not sealed"); }
      var index: i64 = 0;
@@ -105,15 +126,15 @@ diff --git a/src/nomo/adapters/etas/conversations.es b/src/nomo/adapters/etas/co
          if index >= job.cursor {
              copy_event(id, index + 1, item.role, item.name, item.text);
              advance_copy(id, index + 1, "copying");
-@@ -440,7 +440,7 @@
+@@ -454,7 +454,7 @@
      var events: Array<ChatMessage> = [];
      var index: i64 = 0;
      var summary = "";
 -    while index < job.total limit Iterations(2147483647) {
 +    @limits([Iterations(2147483647)]) while index < job.total  {
-         let source = match Data.Events.get(key(job.source, index)) { Some(value) => value, None() => { abort("fork source record is incomplete"); } };
-         if !source.complete { abort("fork source record is incomplete"); }
+         if !copy_record_complete(job.source, index) { abort("fork source record is incomplete"); }
          let item = read_message(job.source, index);
+         events = events.push(item);
 diff --git a/src/nomo/agent/model_context.es b/src/nomo/agent/model_context.es
 --- a/src/nomo/agent/model_context.es
 +++ b/src/nomo/agent/model_context.es
@@ -557,6 +578,48 @@ diff --git a/src/nomo/application/native/processes/service.es b/src/nomo/applica
          if item.role != "tool_call" || item.name != "command" { continue; }
          match archive.find(selected.session, item.id) {
              Some(value) => { if value.job == job { result = result.push(value); } }
+diff --git a/src/nomo/application/native/projects/service.es b/src/nomo/application/native/projects/service.es
+--- a/src/nomo/application/native/projects/service.es
++++ b/src/nomo/application/native/projects/service.es
+@@ -13,7 +13,7 @@
+ }
+ public flow show<R ~ RecentProjects>(recent: R) -> unit ![ProjectDisplay, Memory, Error<StorageError>] {
+     var index: usize = 1;
+-    for value in recent.load() limit Iterations(2147483647) {
++    @limits([Iterations(2147483647)]) for value in recent.load()  {
+         perform ProjectDisplay.item(index, value);
+         index = index + 1;
+     }
+diff --git a/src/nomo/application/native/transfer/service.es b/src/nomo/application/native/transfer/service.es
+--- a/src/nomo/application/native/transfer/service.es
++++ b/src/nomo/application/native/transfer/service.es
+@@ -32,7 +32,7 @@
+     if value.phase == "ready" { return catalog.select(value.workspace, id); }
+     if value.phase != "copying" { abort("conversation copy source is not sealed"); }
+     var index: i64 = 0;
+-    for item in events limit Iterations(2147483647) {
++    @limits([Iterations(2147483647)]) for item in events  {
+         if index >= value.cursor {
+             perform CopyStorage.event(id, index + 1, item.role, item.name, item.text);
+             perform CopyStorage.advance(id, index + 1, "copying");
+@@ -70,7 +70,7 @@
+     var events: Array<ChatMessage> = [];
+     var index: i64 = 0;
+     var summary = "";
+-    while index < value.total limit Iterations(2147483647) {
++    @limits([Iterations(2147483647)]) while index < value.total  {
+         if !perform CopyStorage.complete(value.source, index) { abort("fork source record is incomplete"); }
+         let item = history.message(value.source, index);
+         events = events.push(item);
+@@ -91,7 +91,7 @@
+     let raw = perform ArchiveFiles.read(path);
+     let source = perform ArchiveCodec.decode(raw);
+     var total: i64 = 0;
+-    for _ in source.events limit Iterations(2147483647) { total = total + 1; }
++    @limits([Iterations(2147483647)]) for _ in source.events  { total = total + 1; }
+     let value = prepare(workspace, source.title, "import", path, perform ArchiveCodec.fingerprint(raw), total);
+     seal(value.id, "archive", "imported_source", raw);
+     return copy_events(catalog, value.id, source.events, source.summary);
 diff --git a/src/nomo/bootstrap/legacy_status.es b/src/nomo/bootstrap/legacy_status.es
 --- a/src/nomo/bootstrap/legacy_status.es
 +++ b/src/nomo/bootstrap/legacy_status.es
@@ -863,6 +926,18 @@ diff --git a/src/nomo/domain/context/projection.es b/src/nomo/domain/context/pro
          instructions = instructions.push(ProjectInstruction { scope = ".", path = ".nomo.toml", text = text });
      }
      return Turn { session = input.session, workspace = input.workspace, initial_request = input.initial_request,
+diff --git a/src/nomo/domain/projects/selection.es b/src/nomo/domain/projects/selection.es
+--- a/src/nomo/domain/projects/selection.es
++++ b/src/nomo/domain/projects/selection.es
+@@ -7,7 +7,7 @@
+ 
+ public flow remembered(workspace: string, recent: Array<string>) -> Array<string> {
+     var folders = [workspace];
+-    for value in recent limit Iterations(2147483647) { if value != workspace { folders = folders.push(value); } }
++    @limits([Iterations(2147483647)]) for value in recent  { if value != workspace { folders = folders.push(value); } }
+     return folders;
+ }
+ 
 diff --git a/src/nomo/entry/harness_chat.es b/src/nomo/entry/harness_chat.es
 --- a/src/nomo/entry/harness_chat.es
 +++ b/src/nomo/entry/harness_chat.es
@@ -944,6 +1019,30 @@ diff --git a/src/nomo/entry/model_tools_chat_loop.es b/src/nomo/entry/model_tool
          lines = lines + 1; let raw = read_line();
          if raw == "" { stop("EOF", lines, state, unicode); return 0; }
          let framing = line_error(raw, unicode);
+diff --git a/src/nomo/entry/native/commands.es b/src/nomo/entry/native/commands.es
+--- a/src/nomo/entry/native/commands.es
++++ b/src/nomo/entry/native/commands.es
+@@ -21,7 +21,7 @@
+     var program = "";
+     var first = true;
+     var arguments: Array<string> = [];
+-    for value in values limit Iterations(2147483647) {
++    @limits([Iterations(2147483647)]) for value in values  {
+         if first { program = value; first = false; } else { arguments = arguments.push(value); }
+     }
+     if program == "" { abort("provide a command program"); }
+diff --git a/src/nomo/entry/native/options.es b/src/nomo/entry/native/options.es
+--- a/src/nomo/entry/native/options.es
++++ b/src/nomo/entry/native/options.es
+@@ -11,7 +11,7 @@
+     var choose_project = false;
+     var once: Option<string> = None();
+     var index: usize = 0;
+-    while index < len(args) limit Iterations(2147483647) {
++    @limits([Iterations(2147483647)]) while index < len(args)  {
+         let option = args[index];
+         if option == "--new" { fresh = true; index = index + 1; continue; }
+         if option == "--open" { choose_project = true; index = index + 1; continue; }
 diff --git a/src/nomo/entry/read_session.es b/src/nomo/entry/read_session.es
 --- a/src/nomo/entry/read_session.es
 +++ b/src/nomo/entry/read_session.es
@@ -2170,25 +2269,16 @@ diff --git a/src/nomo/native/context.es b/src/nomo/native/context.es
 diff --git a/src/nomo/native/entry.es b/src/nomo/native/entry.es
 --- a/src/nomo/native/entry.es
 +++ b/src/nomo/native/entry.es
-@@ -35,7 +35,7 @@
-     var program = "";
-     var first = true;
-     var arguments: Array<string> = [];
--    for value in values limit Iterations(2147483647) {
-+    @limits([Iterations(2147483647)]) for value in values  {
-         if first { program = value; first = false; } else { arguments = arguments.push(value); }
-     }
-     if program == "" { abort("provide a command program"); }
-@@ -54,7 +54,7 @@
- flow process_command(session: string, operation: string, argument: string) -> unit {
+@@ -40,7 +40,7 @@
+ flow process_command(session: string, request: ProcessRequest) -> unit {
      handle {
-         if operation == "jobs" {
--            for value in list_jobs() limit Iterations(2147483647) {
-+            @limits([Iterations(2147483647)]) for value in list_jobs()  {
-                 println("[JOB    ] " + process_json(value));
-             }
-         }
-@@ -98,7 +98,7 @@
+         match request {
+-            ProcessRequest.Jobs => { for value in list_jobs() limit Iterations(2147483647) { print_job(value); } }
++            ProcessRequest.Jobs => { @limits([Iterations(2147483647)]) for value in list_jobs()  { print_job(value); } }
+             ProcessRequest.Exec(argv) => { print_job(run_command(argv.program, argv.arguments)); }
+             ProcessRequest.Spawn(argv) => { print_job(start_job(argv.program, argv.arguments)); }
+             ProcessRequest.Poll(job, bytes) => { print_job(read_job(job, bytes)); }
+@@ -65,7 +65,7 @@
  }
  
  flow ready_for_turn(session: string) -> bool {
@@ -2197,7 +2287,7 @@ diff --git a/src/nomo/native/entry.es b/src/nomo/native/entry.es
          if value.kind == "coding" || value.kind == "summary" {
              println("[RUN    ] " + value.id + " has no recorded completion. Inspect /runs; /resolve-run ID NOTE records your recovery decision. This prompt was not submitted.");
              return false;
-@@ -130,7 +130,7 @@
+@@ -97,7 +97,7 @@
      if value.pending != "" {
          println("[PENDING] " + value.pending + " has no recorded completion. Inspect actual state; it is not automatically replayed.");
      }
@@ -2206,7 +2296,7 @@ diff --git a/src/nomo/native/entry.es b/src/nomo/native/entry.es
          println("[RUN    ] " + attempt.id + " " + attempt.kind + " " + attempt.phase + "; no completion recorded. Inspect actual state, then /resolve-run ID [NOTE].");
      }
  }
-@@ -155,7 +155,7 @@
+@@ -122,7 +122,7 @@
      archive.reserve(session, false, projection.bytes(input));
      let attempt = begin(session, "coding", "NativeCoding", request_event, archive.load(session).next_event - 1);
      dispatching(attempt.id);
@@ -2215,7 +2305,7 @@ diff --git a/src/nomo/native/entry.es b/src/nomo/native/entry.es
          SessionContext.current() => { resume session; }
          SettingsContext.current() => { resume settings; }
      };
-@@ -170,7 +170,7 @@
+@@ -137,7 +137,7 @@
      let selected = archive.load(session);
      var index = first;
      var shown: i64 = 0;
@@ -2224,7 +2314,7 @@ diff --git a/src/nomo/native/entry.es b/src/nomo/native/entry.es
          let item = message(session, index);
          if query == "" || contains(item.text, query) || contains(item.name, query) {
              println("[" + item.role + "/" + item.name + " #" + item.id + "] " + item.text);
-@@ -189,7 +189,7 @@
+@@ -156,7 +156,7 @@
              println("[FILE   ] " + json);
          }
          else if operation == "list" {
@@ -2233,7 +2323,7 @@ diff --git a/src/nomo/native/entry.es b/src/nomo/native/entry.es
                  let json = match encode(item, "edit conversion failed", "edit encoding failed") { Ok(value) => value, Err(error) => { abort(error); } };
                  println("[EDIT   ] " + json);
              }
-@@ -226,14 +226,14 @@
+@@ -186,14 +186,14 @@
          id => archive.select(options.workspace, id)
      };
      show(selected);
@@ -2250,33 +2340,32 @@ diff --git a/src/nomo/native/entry.es b/src/nomo/native/entry.es
          print("nomo> ");
          let raw = read_line();
          if raw == "" { return 0; }
-@@ -281,7 +281,7 @@
-         match strip_prefix(request, "/undo ") { Some(id) => { edit_command(selected.id, "undo", trim(id)); continue; } None() => {} }
-         match strip_prefix(request, "/rollback ") { Some(id) => { edit_command(selected.id, "rollback", trim(id)); continue; } None() => {} }
-         if request == "/sessions" {
--            for item in archive.sessions(options.workspace) limit Iterations(2147483647) { show(item); }
-+            @limits([Iterations(2147483647)]) for item in archive.sessions(options.workspace)  { show(item); }
-             continue;
-         }
-         if request == "/new" { selected = archive.create(options.workspace, "New conversation"); show(selected); continue; }
-@@ -301,7 +301,7 @@
-             Some(pathname) => { selected = load_archive(options.workspace, trim(pathname)); show(selected); continue; } None() => {}
-         }
-         if request == "/copies" {
--            for job in copy_jobs(options.workspace) limit Iterations(2147483647) {
-+            @limits([Iterations(2147483647)]) for job in copy_jobs(options.workspace)  {
-                 let json = match encode(job, "copy conversion failed", "copy encoding failed") { Ok(value) => value, Err(error) => { abort(error); } };
-                 println("[COPY   ] " + json);
+@@ -225,14 +225,14 @@
+             TerminalCommand.Undo(value) => { edit_command(selected.id, "undo", value); }
+             TerminalCommand.Rollback(value) => { edit_command(selected.id, "rollback", value); }
+             TerminalCommand.Recover(value) => { edit_command(selected.id, "reconcile", value); }
+-            TerminalCommand.Sessions => { for item in archive.sessions(options.workspace) limit Iterations(2147483647) { show(item); } }
++            TerminalCommand.Sessions => { @limits([Iterations(2147483647)]) for item in archive.sessions(options.workspace)  { show(item); } }
+             TerminalCommand.New(title) => { selected = archive.create(options.workspace, title); show(selected); }
+             TerminalCommand.Resume(id) => { selected = archive.select(options.workspace, id); show(selected); }
+             TerminalCommand.Rename(title) => { rename(selected.id, title); selected = archive.load(selected.id); show(selected); }
+             TerminalCommand.Export(pathname) => { save_archive(selected.id, pathname); }
+             TerminalCommand.Import(pathname) => { selected = load_archive(options.workspace, pathname); show(selected); }
+             TerminalCommand.Copies => {
+-                for job in copy_jobs(options.workspace) limit Iterations(2147483647) {
++                @limits([Iterations(2147483647)]) for job in copy_jobs(options.workspace)  {
+                     let json = match encode(job, "copy conversion failed", "copy encoding failed") { Ok(value) => value, Err(error) => { abort(error); } };
+                     println("[COPY   ] " + json);
+                 }
+@@ -244,7 +244,7 @@
              }
-@@ -320,7 +320,7 @@
-             None() => {}
-         }
-         if request == "/runs" {
--            for attempt in attempts(selected.id, false) limit Iterations(2147483647) {
-+            @limits([Iterations(2147483647)]) for attempt in attempts(selected.id, false)  {
-                 let json = match encode(attempt, "run conversion failed", "run encoding failed") { Ok(value) => value, Err(error) => { abort(error); } };
-                 println("[RUN    ] " + json);
-             }
+             TerminalCommand.DiscardCopy(id) => { discard_copy(options.workspace, id); println("[COPY   ] Unfinished copy discarded; original and retained copied records are preserved."); }
+             TerminalCommand.Runs => {
+-                for attempt in attempts(selected.id, false) limit Iterations(2147483647) {
++                @limits([Iterations(2147483647)]) for attempt in attempts(selected.id, false)  {
+                     let json = match encode(attempt, "run conversion failed", "run encoding failed") { Ok(value) => value, Err(error) => { abort(error); } };
+                     println("[RUN    ] " + json);
+                 }
 diff --git a/src/nomo/native/git.es b/src/nomo/native/git.es
 --- a/src/nomo/native/git.es
 +++ b/src/nomo/native/git.es
@@ -2423,18 +2512,6 @@ diff --git a/src/nomo/native/navigation.es b/src/nomo/native/navigation.es
      return selected.push("--glob").push("!**/.git/**").push("--glob").push("!**/.nomo/**");
  }
  
-diff --git a/src/nomo/native/options.es b/src/nomo/native/options.es
---- a/src/nomo/native/options.es
-+++ b/src/nomo/native/options.es
-@@ -11,7 +11,7 @@
-     var choose_project = false;
-     var once: Option<string> = None();
-     var index: usize = 0;
--    while index < len(args) limit Iterations(2147483647) {
-+    @limits([Iterations(2147483647)]) while index < len(args)  {
-         let option = args[index];
-         if option == "--new" { fresh = true; index = index + 1; continue; }
-         if option == "--open" { choose_project = true; index = index + 1; continue; }
 diff --git a/src/nomo/native/processes.es b/src/nomo/native/processes.es
 --- a/src/nomo/native/processes.es
 +++ b/src/nomo/native/processes.es
@@ -2541,14 +2618,7 @@ diff --git a/src/nomo/native/project.es b/src/nomo/native/project.es
 diff --git a/src/nomo/native/projects.es b/src/nomo/native/projects.es
 --- a/src/nomo/native/projects.es
 +++ b/src/nomo/native/projects.es
-@@ -21,13 +21,13 @@
- 
- public flow remember(workspace: string) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>] {
-     var folders = [workspace];
--    for value in recent() limit Iterations(2147483647) { if value != workspace { folders = folders.push(value); } }
-+    @limits([Iterations(2147483647)]) for value in recent()  { if value != workspace { folders = folders.push(value); } }
-     Data.Recent.put("folders", folders);
- }
+@@ -25,7 +25,7 @@
  
  public flow show_projects() -> unit {
      var index: usize = 1;
@@ -2572,25 +2642,7 @@ diff --git a/src/nomo/native/terminal.es b/src/nomo/native/terminal.es
 diff --git a/src/nomo/native/transfer.es b/src/nomo/native/transfer.es
 --- a/src/nomo/native/transfer.es
 +++ b/src/nomo/native/transfer.es
-@@ -66,7 +66,7 @@
-             let source = converted.body;
-             if source.format != "nomo-native-conversation-1" { abort("unsupported native conversation format"); }
-             var summary = "";
--            for item in source.events limit Iterations(2147483647) { if item.role == "summary" { summary = item.text; } }
-+            @limits([Iterations(2147483647)]) for item in source.events  { if item.role == "summary" { summary = item.text; } }
-             return Imported { title = source.session.title, events = source.events, summary = summary };
-         }
-         None() => {}
-@@ -75,7 +75,7 @@
-     let source = match legacy { Some(value) => value.body, None() => { abort("unsupported conversation archive shape"); } };
-     if source.format != "nomo-conversation-1" { abort("unsupported conversation format"); }
-     var events: Array<ChatMessage> = [];
--    for item in source.events limit Iterations(2147483647) {
-+    @limits([Iterations(2147483647)]) for item in source.events  {
-         events = events.push(ChatMessage { id = "", role = item.role, name = item.name, text = item.content });
-     }
-     return Imported { title = source.session.title, events = events, summary = source.session.summary };
-@@ -98,7 +98,7 @@
+@@ -51,7 +51,7 @@
      let raw = read_archive(pathname);
      let source = decode(raw);
      var total: i64 = 0;

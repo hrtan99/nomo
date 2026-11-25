@@ -1,15 +1,14 @@
 module nomo.native.entry;
 
 import std.io.{println, print, read_line};
-import std.text.{trim, strip_prefix, split_once, contains, parse_i64, parse_usize, from_i64, from_i32};
-import std.json.parse as parse_json;
-import std.agent.message.Message;
+import std.text.{trim, contains, from_i64, from_i32};
+import nomo.entry.native.commands.{Command as TerminalCommand, ProcessRequest, command};
 import nomo.native.agent.NativeCoding;
 import nomo.native.workspace.ProjectRoot;
 import std.effects.Fs;
 import std.fs.{ReadLimitError, IOError as FileError};
 import nomo.core.json.encode;
-import nomo.native.options.parse;
+import nomo.entry.native.options.parse;
 import nomo.native.history.{SessionContext, Session};
 import nomo.adapters.etas.conversations.{NativeHistory, rename, read_message as message, fork, copy_status, copy_jobs, copy_job, resume_fork, discard_copy};
 import nomo.application.native.conversation.ports.{ConversationReader, ConversationWriter, ConversationCatalog, GenerationReservation};
@@ -27,21 +26,6 @@ import nomo.native.processes.{start_job, read_job, write_job, close_job_input, s
 import nomo.native.projects.{LaunchRoot, remember, show_projects, request_open};
 import nomo.native.git.shortcut as git_shortcut;
 
-type Argv = { program: string, arguments: Array<string> };
-flow command_argv(raw: string) -> Argv {
-    let parsed = match parse_json(raw) { Ok(value) => value, Err(_) => { abort("use a JSON argv array, for example [\"/usr/bin/git\",\"status\"]"); } };
-    let decoded: Option<Message<Array<string>>> = Message.new(parsed).cast<Array<string>>();
-    let values = match decoded { Some(value) => value.body, None() => { abort("command argv must be a JSON array of strings"); } };
-    var program = "";
-    var first = true;
-    var arguments: Array<string> = [];
-    for value in values limit Iterations(2147483647) {
-        if first { program = value; first = false; } else { arguments = arguments.push(value); }
-    }
-    if program == "" { abort("provide a command program"); }
-    return Argv { program = program, arguments = arguments };
-}
-
 flow process_json<T>(value: T) -> string {
     return match encode(value, "process conversion failed", "process encoding failed") { Ok(text) => text, Err(error) => { abort(error); } };
 }
@@ -51,36 +35,19 @@ flow git_command(session: string, argument: string) -> unit {
     println("[GIT    ] " + process_json(output));
 }
 
-flow process_command(session: string, operation: string, argument: string) -> unit {
+flow print_job<T>(value: T) -> unit { println("[JOB    ] " + process_json(value)); }
+
+flow process_command(session: string, request: ProcessRequest) -> unit {
     handle {
-        if operation == "jobs" {
-            for value in list_jobs() limit Iterations(2147483647) {
-                println("[JOB    ] " + process_json(value));
-            }
-        }
-        else {
-            var result = "";
-            if operation == "exec" || operation == "spawn" {
-                let argv = command_argv(argument);
-                if operation == "exec" { result = process_json(run_command(argv.program, argv.arguments)); }
-                else { result = process_json(start_job(argv.program, argv.arguments)); }
-            }
-            else if operation == "poll" {
-                let (job, bytes) = match split_once(argument, " ") { Some(parts) => parts, None() => (argument, "65536") };
-                let count = match parse_usize(trim(bytes)) { Ok(value) => value, Err(_) => { abort("expected a read byte count"); } };
-                result = process_json(read_job(job, count));
-            }
-            else if operation == "send" {
-                let (job, input) = match split_once(argument, " ") { Some(parts) => parts, None() => { abort("use /send JOB JSON_STRING"); } };
-                let parsed = match parse_json(input) { Ok(value) => value, Err(_) => { abort("input must be a JSON string; use \\n for a newline"); } };
-                let converted: Option<Message<string>> = Message.new(parsed).cast<string>();
-                let text = match converted { Some(value) => value.body, None() => { abort("input must be a JSON string"); } };
-                result = process_json(write_job(job, text));
-            }
-            else if operation == "close-input" { result = process_json(close_job_input(argument)); }
-            else if operation == "stop" { result = process_json(stop_job(argument)); }
-            else { result = process_json(job_output(argument)); }
-            println("[JOB    ] " + result);
+        match request {
+            ProcessRequest.Jobs => { for value in list_jobs() limit Iterations(2147483647) { print_job(value); } }
+            ProcessRequest.Exec(argv) => { print_job(run_command(argv.program, argv.arguments)); }
+            ProcessRequest.Spawn(argv) => { print_job(start_job(argv.program, argv.arguments)); }
+            ProcessRequest.Poll(job, bytes) => { print_job(read_job(job, bytes)); }
+            ProcessRequest.Send(job, input) => { print_job(write_job(job, input)); }
+            ProcessRequest.CloseInput(job) => { print_job(close_job_input(job)); }
+            ProcessRequest.Stop(job) => { print_job(stop_job(job)); }
+            ProcessRequest.Output(job) => { print_job(job_output(job)); }
         }
     } with { SessionContext.current() => { resume session; } };
 }
@@ -202,13 +169,6 @@ flow edit_command(session: string, operation: string, id: string) -> unit {
     } with { SessionContext.current() => { resume session; } };
 }
 
-flow event_index(raw: string) -> i64 {
-    return match parse_i64(trim(raw)) {
-        Ok(value) => { if value < 0 { abort("event index must be nonnegative"); } value },
-        Err(_) => { abort("expected an event index"); }
-    };
-}
-
 public flow run(args: Array<string>) -> i32
     ![Agentic, Memory, Console, Command.run<DefaultCommandSandbox>, Command.start<DefaultCommandSandbox>, Command.reconnect<DefaultCommandSandbox>, Command.read<DefaultCommandSandbox>, Command.write<DefaultCommandSandbox>, Command.stop<DefaultCommandSandbox>, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Fs.stat<ProjectRoot>, Fs.atomic_replace<ProjectRoot>, Fs.atomic_replace<LaunchRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>, Error<IOError>, Error<IndexError>] {
     let options = parse(args);
@@ -237,138 +197,91 @@ public flow run(args: Array<string>) -> i32
         print("nomo> ");
         let raw = read_line();
         if raw == "" { return 0; }
-        let request = trim(raw);
-        if request == "/quit" || request == "/exit" { return 0; }
-        if request == "" { continue; }
-        if request == "/help" {
-            println("Projects: /projects, /open [FOLDER_OR_NUMBER]. Project selection is native; the launcher attaches that folder's execution endpoint and keeps the current endpoint running.");
-            println("Git: /git status, diff [--staged] [JSON_PATHS], log [COUNT], branches, init, branch NAME, switch NAME, commit JSON. Commit JSON contains message and paths.");
-            println("Ask about the project; native tools provide recursive/glob discovery, literal/regex search, file reads, approved editing and Git operations.");
-            println("Terminal: /exec JSON_ARGV, /spawn JSON_ARGV, /jobs, /poll JOB [MAX_BYTES], /send JOB JSON_STRING, /close-input JOB, /stop JOB, /job-output JOB. /poll waits for output or termination. Saved job phases are historical observations; current Host handles are not durable across process restart.");
-            println("/new [TITLE], /sessions, /resume ID, /rename TITLE, /history [TEXT], /page EVENT, /fork [EVENT], /export FILE, /import FILE, /copies, /resume-copy ID, /discard-copy ID, /runs, /resolve-run ID [NOTE], /config, /check, /compact, /status, /tree [PATH], /glob PATTERN, /search REGEX, /read FILE, /edits, /undo [EDIT], /rollback EDIT, /recover EDIT, /quit");
-            continue;
-        }
-        if request == "/projects" { show_projects(); continue; }
-        if request == "/git" { git_command(selected.id, "status"); continue; }
-        match strip_prefix(request, "/git ") { Some(value) => { git_command(selected.id, value); continue; } None() => {} }
-        if request == "/open" { request_open("", options.workspace); continue; }
-        match strip_prefix(request, "/open ") { Some(value) => { request_open(value, options.workspace); continue; } None() => {} }
-        let (operation, argument) = match split_once(request, " ") { Some(parts) => parts, None() => (request, "") };
-        if operation == "/exec" || operation == "/spawn" || operation == "/jobs" || operation == "/poll" || operation == "/send" || operation == "/close-input" || operation == "/stop" || operation == "/job-output" {
-            let name = match strip_prefix(operation, "/") { Some(value) => value, None() => operation };
-            process_command(selected.id, name, trim(argument));
-            continue;
-        }
-        if request == "/tree" { navigation_command(selected.id, "tree", "."); continue; }
-        match strip_prefix(request, "/tree ") { Some(pathname) => { navigation_command(selected.id, "tree", trim(pathname)); continue; } None() => {} }
-        match strip_prefix(request, "/glob ") { Some(pattern) => { navigation_command(selected.id, "glob", trim(pattern)); continue; } None() => {} }
-        match strip_prefix(request, "/search ") { Some(pattern) => { navigation_command(selected.id, "search", trim(pattern)); continue; } None() => {} }
-        if request == "/history" || request == "/events" { show_history(selected.id, "", 0, -1); continue; }
-        match strip_prefix(request, "/history ") {
-            Some(query) => { show_history(selected.id, trim(query), 0, -1); continue; } None() => {}
-        }
-        match strip_prefix(request, "/page ") {
-            Some(start) => { show_history(selected.id, "", event_index(start), 50); continue; } None() => {}
-        }
-        if request == "/fork" { selected = fork(selected.id, archive.load(selected.id).next_event - 1); show(selected); continue; }
-        match strip_prefix(request, "/fork ") {
-            Some(index) => { selected = fork(selected.id, event_index(index)); show(selected); continue; } None() => {}
-        }
-        match strip_prefix(request, "/read ") { Some(pathname) => { edit_command(selected.id, "read", trim(pathname)); continue; } None() => {} }
-        match strip_prefix(request, "/recover ") { Some(id) => { edit_command(selected.id, "reconcile", trim(id)); continue; } None() => {} }
-        if request == "/edits" { edit_command(selected.id, "list", ""); continue; }
-        if request == "/undo" { edit_command(selected.id, "undo", ""); continue; }
-        match strip_prefix(request, "/undo ") { Some(id) => { edit_command(selected.id, "undo", trim(id)); continue; } None() => {} }
-        match strip_prefix(request, "/rollback ") { Some(id) => { edit_command(selected.id, "rollback", trim(id)); continue; } None() => {} }
-        if request == "/sessions" {
-            for item in archive.sessions(options.workspace) limit Iterations(2147483647) { show(item); }
-            continue;
-        }
-        if request == "/new" { selected = archive.create(options.workspace, "New conversation"); show(selected); continue; }
-        match strip_prefix(request, "/new ") {
-            Some(title) => { selected = archive.create(options.workspace, trim(title)); show(selected); continue; } None() => {}
-        }
-        match strip_prefix(request, "/resume ") {
-            Some(id) => { selected = archive.select(options.workspace, trim(id)); show(selected); continue; } None() => {}
-        }
-        match strip_prefix(request, "/rename ") {
-            Some(title) => { rename(selected.id, trim(title)); selected = archive.load(selected.id); show(selected); continue; } None() => {}
-        }
-        match strip_prefix(request, "/export ") {
-            Some(pathname) => { save_archive(selected.id, trim(pathname)); continue; } None() => {}
-        }
-        match strip_prefix(request, "/import ") {
-            Some(pathname) => { selected = load_archive(options.workspace, trim(pathname)); show(selected); continue; } None() => {}
-        }
-        if request == "/copies" {
-            for job in copy_jobs(options.workspace) limit Iterations(2147483647) {
-                let json = match encode(job, "copy conversion failed", "copy encoding failed") { Ok(value) => value, Err(error) => { abort(error); } };
-                println("[COPY   ] " + json);
+        let request = command(trim(raw));
+        match request {
+            TerminalCommand.Empty => {}
+            TerminalCommand.Quit => { return 0; }
+            TerminalCommand.Help => {
+                println("Projects: /projects, /open [FOLDER_OR_NUMBER]. Project selection is native; the launcher attaches that folder's execution endpoint and keeps the current endpoint running.");
+                println("Git: /git status, diff [--staged] [JSON_PATHS], log [COUNT], branches, init, branch NAME, switch NAME, commit JSON. Commit JSON contains message and paths.");
+                println("Ask about the project; native tools provide recursive/glob discovery, literal/regex search, file reads, approved editing and Git operations.");
+                println("Terminal: /exec JSON_ARGV, /spawn JSON_ARGV, /jobs, /poll JOB [MAX_BYTES], /send JOB JSON_STRING, /close-input JOB, /stop JOB, /job-output JOB. /poll waits for output or termination. Saved job phases are historical observations; current Host handles are not durable across process restart.");
+                println("/new [TITLE], /sessions, /resume ID, /rename TITLE, /history [TEXT], /page EVENT, /fork [EVENT], /export FILE, /import FILE, /copies, /resume-copy ID, /discard-copy ID, /runs, /resolve-run ID [NOTE], /config, /check, /compact, /status, /tree [PATH], /glob PATTERN, /search REGEX, /read FILE, /edits, /undo [EDIT], /rollback EDIT, /recover EDIT, /quit");
             }
-            continue;
-        }
-        match strip_prefix(request, "/resume-copy ") {
-            Some(id) => {
-                let job = copy_job(trim(id));
+            TerminalCommand.Projects => { show_projects(); }
+            TerminalCommand.Open(value) => { request_open(value, options.workspace); }
+            TerminalCommand.Git(value) => { git_command(selected.id, value); }
+            TerminalCommand.Process(value) => { process_command(selected.id, value); }
+            TerminalCommand.Tree(value) => { navigation_command(selected.id, "tree", value); }
+            TerminalCommand.Glob(value) => { navigation_command(selected.id, "glob", value); }
+            TerminalCommand.Search(value) => { navigation_command(selected.id, "search", value); }
+            TerminalCommand.History(query, first, count) => { show_history(selected.id, query, first, count); }
+            TerminalCommand.Fork(index) => {
+                let through = match index { Some(value) => value, None() => archive.load(selected.id).next_event - 1 };
+                selected = fork(selected.id, through); show(selected);
+            }
+            TerminalCommand.Read(value) => { edit_command(selected.id, "read", value); }
+            TerminalCommand.Edits => { edit_command(selected.id, "list", ""); }
+            TerminalCommand.Undo(value) => { edit_command(selected.id, "undo", value); }
+            TerminalCommand.Rollback(value) => { edit_command(selected.id, "rollback", value); }
+            TerminalCommand.Recover(value) => { edit_command(selected.id, "reconcile", value); }
+            TerminalCommand.Sessions => { for item in archive.sessions(options.workspace) limit Iterations(2147483647) { show(item); } }
+            TerminalCommand.New(title) => { selected = archive.create(options.workspace, title); show(selected); }
+            TerminalCommand.Resume(id) => { selected = archive.select(options.workspace, id); show(selected); }
+            TerminalCommand.Rename(title) => { rename(selected.id, title); selected = archive.load(selected.id); show(selected); }
+            TerminalCommand.Export(pathname) => { save_archive(selected.id, pathname); }
+            TerminalCommand.Import(pathname) => { selected = load_archive(options.workspace, pathname); show(selected); }
+            TerminalCommand.Copies => {
+                for job in copy_jobs(options.workspace) limit Iterations(2147483647) {
+                    let json = match encode(job, "copy conversion failed", "copy encoding failed") { Ok(value) => value, Err(error) => { abort(error); } };
+                    println("[COPY   ] " + json);
+                }
+            }
+            TerminalCommand.ResumeCopy(id) => {
+                let job = copy_job(id);
                 selected = if job.kind == "fork" { resume_fork(options.workspace, job.id) } else { resume_import(options.workspace, job.id) };
-                show(selected); continue;
+                show(selected);
             }
-            None() => {}
-        }
-        match strip_prefix(request, "/discard-copy ") {
-            Some(id) => { discard_copy(options.workspace, trim(id)); println("[COPY   ] Unfinished copy discarded; original and retained copied records are preserved."); continue; }
-            None() => {}
-        }
-        if request == "/runs" {
-            for attempt in attempts(selected.id, false) limit Iterations(2147483647) {
-                let json = match encode(attempt, "run conversion failed", "run encoding failed") { Ok(value) => value, Err(error) => { abort(error); } };
-                println("[RUN    ] " + json);
+            TerminalCommand.DiscardCopy(id) => { discard_copy(options.workspace, id); println("[COPY   ] Unfinished copy discarded; original and retained copied records are preserved."); }
+            TerminalCommand.Runs => {
+                for attempt in attempts(selected.id, false) limit Iterations(2147483647) {
+                    let json = match encode(attempt, "run conversion failed", "run encoding failed") { Ok(value) => value, Err(error) => { abort(error); } };
+                    println("[RUN    ] " + json);
+                }
             }
-            continue;
-        }
-        match strip_prefix(request, "/resolve-run ") {
-            Some(value) => {
-                let (id, note) = match split_once(trim(value), " ") { Some(parts) => parts, None() => (trim(value), "") };
-                let result = resolve(selected.id, id, trim(note));
+            TerminalCommand.ResolveRun(id, note) => {
+                let result = resolve(selected.id, id, note);
                 println("[RUN    ] " + result.id + " " + result.phase + "; prior operations were not replayed.");
-                continue;
             }
-            None() => {}
-        }
-        if request == "/compact" {
-            if ready_for_turn(selected.id) {
+            TerminalCommand.Compact => {
+                if ready_for_turn(selected.id) {
+                    let settings = load_settings(selected.id);
+                    if generation_supported(settings) { compact(archive, archive, selected.id, settings); println("[CONTEXT] Summary saved; full original events retained."); }
+                }
+            }
+            TerminalCommand.Config => {
+                let value = configuration_status(load_settings(selected.id));
+                let text = match encode(value, "configuration conversion failed", "configuration encoding failed") { Ok(value) => value, Err(error) => { abort(error); } };
+                println("[CONFIG ] " + text);
+                println("[CONFIG ] Context policy uses text estimates. Runtime token ceilings are static; command_timeout needs retained native jobs and is not active.");
+            }
+            TerminalCommand.Check => {
                 let settings = load_settings(selected.id);
-                if generation_supported(settings) { compact(archive, archive, selected.id, settings); println("[CONTEXT] Summary saved; full original events retained."); }
+                let session = selected.id;
+                let value = handle { check_project() } with {
+                    SessionContext.current() => { resume session; }
+                    SettingsContext.current() => { resume settings; }
+                };
+                let text = match encode(value, "check conversion failed", "check encoding failed") { Ok(value) => value, Err(error) => { abort(error); } };
+                println("[CHECK  ] " + text);
             }
-            continue;
+            TerminalCommand.Status => {
+                let status = match encode(archive.load(selected.id), "status conversion failed", "status encoding failed") { Ok(value) => value, Err(error) => { abort(error); } };
+                println("[STATUS ] " + status);
+                println("[BUDGET ] generation_allowance is configured allowance; context_bytes is an estimate, not measured token usage.");
+            }
+            TerminalCommand.Ask(value) => { ask(selected.id, value); }
         }
-        if request == "/config" {
-            let value = configuration_status(load_settings(selected.id));
-            let text = match encode(value, "configuration conversion failed", "configuration encoding failed") { Ok(value) => value, Err(error) => { abort(error); } };
-            println("[CONFIG ] " + text);
-            println("[CONFIG ] Context policy uses text estimates. Runtime token ceilings are static; command_timeout needs retained native jobs and is not active.");
-            continue;
-        }
-        if request == "/check" {
-            let settings = load_settings(selected.id);
-            let session = selected.id;
-            let value = handle { check_project() } with {
-                SessionContext.current() => { resume session; }
-                SettingsContext.current() => { resume settings; }
-            };
-            let text = match encode(value, "check conversion failed", "check encoding failed") { Ok(value) => value, Err(error) => { abort(error); } };
-            println("[CHECK  ] " + text);
-            continue;
-        }
-        if request == "/status" {
-            let status = match encode(archive.load(selected.id), "status conversion failed", "status encoding failed") {
-                Ok(value) => value, Err(error) => { abort(error); }
-            };
-            println("[STATUS ] " + status);
-            println("[BUDGET ] generation_allowance is configured allowance; context_bytes is an estimate, not measured token usage.");
-            continue;
-        }
-        ask(selected.id, request);
     }
     return 0;
 }

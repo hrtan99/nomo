@@ -332,7 +332,7 @@ public flow copy_jobs(workspace: string) -> Array<CopyJob> ![Memory, Error<Stora
     return jobs;
 }
 
-flow advance_copy(id: string, cursor: i64, phase: string) -> CopyJob {
+public flow advance_copy(id: string, cursor: i64, phase: string) -> CopyJob ![Memory, Error<StorageError>, Error<MemoryConflict>] {
     let before = match get_entry(Copies.Jobs, id) { Some(value) => value, None() => { abort("conversation copy missing"); } };
     let old = before.value;
     let job = CopyJob { id = old.id, workspace = old.workspace, title = old.title, kind = old.kind,
@@ -350,17 +350,23 @@ public flow ensure_copy_session(id: string) -> unit ![Memory, Error<StorageError
     }
 }
 
-public flow begin_copy(workspace: string, title: string, kind: string, source: string, digest: bytes, total: i64) -> CopyJob
+public flow prepare_copy(workspace: string, title: string, kind: string, source: string, digest: bytes, total: i64) -> CopyJob
     ![Memory, Error<StorageError>, Error<MemoryConflict>] {
     let job = CopyJob { id = allocate(), workspace = workspace, title = title, kind = kind,
         source = source, digest = digest, total = total, cursor = 0, phase = "staging" };
     // The durable job precedes its session. Neither creation selects the copy.
     Copies.Jobs.insert(job.id, job);
+    return job;
+}
+
+public flow begin_copy(workspace: string, title: string, kind: string, source: string, digest: bytes, total: i64) -> CopyJob
+    ![Memory, Error<StorageError>, Error<MemoryConflict>] {
+    let job = prepare_copy(workspace, title, kind, source, digest, total);
     ensure_copy_session(job.id);
     return job;
 }
 
-flow copy_event(id: string, index: i64, role: string, name: string, text: string) -> unit {
+public flow copy_event(id: string, index: i64, role: string, name: string, text: string) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>] {
     let current = entry(id).value;
     if index == current.next_event { reserve_event(id, role, name, -1, false); }
     else if index > current.next_event { abort("conversation copy has a noncontiguous target index"); }
@@ -390,6 +396,16 @@ public flow sealed_copy_source(id: string) -> Option<string> ![Memory, Error<Sto
     return None();
 }
 
+public flow copy_summary(id: string, slot: i64) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>] {
+    let before = entry(id); let value = before.value;
+    Data.Sessions.put_versioned(id, copy(value, value.next_event, value.first_user, slot,
+        -1, value.pending, value.ledger, value.title), before.version);
+}
+
+public flow copy_record_complete(id: string, index: i64) -> bool ![Memory, Error<StorageError>] {
+    return match Data.Events.get(key(id, index)) { Some(value) => value.complete, None() => { abort("fork source record is incomplete"); } };
+}
+
 public flow copy_events(id: string, events: Array<ChatMessage>, summary: string) -> Session
     ![Memory, Console, Error<StorageError>, Error<MemoryConflict>, Error<ConsoleError>] {
     let job = copy_job(id);
@@ -411,9 +427,7 @@ public flow copy_events(id: string, events: Array<ChatMessage>, summary: string)
     if summary != "" {
         let slot = job.total + 1;
         copy_event(id, slot, "summary", "context_summary", summary);
-        let before = entry(id); let value = before.value;
-        Data.Sessions.put_versioned(id, copy(value, value.next_event, value.first_user, slot,
-            -1, value.pending, value.ledger, value.title), before.version);
+        copy_summary(id, slot);
     }
     advance_copy(id, job.total, "ready");
     return archive.select(job.workspace, id);
@@ -441,8 +455,7 @@ public flow resume_fork(workspace: string, id: string) -> Session
     var index: i64 = 0;
     var summary = "";
     while index < job.total limit Iterations(2147483647) {
-        let source = match Data.Events.get(key(job.source, index)) { Some(value) => value, None() => { abort("fork source record is incomplete"); } };
-        if !source.complete { abort("fork source record is incomplete"); }
+        if !copy_record_complete(job.source, index) { abort("fork source record is incomplete"); }
         let item = read_message(job.source, index);
         events = events.push(item);
         if item.role == "summary" { summary = item.text; }

@@ -215,15 +215,15 @@ diff --git a/src/nomo/native/context.es b/src/nomo/native/context.es
 diff --git a/src/nomo/native/entry.es b/src/nomo/native/entry.es
 --- a/src/nomo/native/entry.es
 +++ b/src/nomo/native/entry.es
-@@ -4,7 +4,6 @@
- import std.text.{trim, strip_prefix, split_once, contains, parse_i64, parse_usize, from_i64, from_i32};
- import std.json.parse as parse_json;
- import std.agent.message.Message;
+@@ -3,7 +3,6 @@
+ import std.io.{println, print, read_line};
+ import std.text.{trim, contains, from_i64, from_i32};
+ import nomo.entry.native.commands.{Command as TerminalCommand, ProcessRequest, command};
 -import nomo.native.agent.NativeCoding;
  import nomo.native.workspace.ProjectRoot;
  import std.effects.Fs;
  import std.fs.{ReadLimitError, IOError as FileError};
-@@ -13,7 +12,7 @@
+@@ -12,7 +11,7 @@
  import nomo.native.history.{SessionContext, Session};
  import nomo.adapters.etas.conversations.{NativeHistory, rename, read_message as message, fork, copy_status, copy_jobs, copy_job, resume_fork, discard_copy};
  import nomo.application.native.conversation.ports.{ConversationReader, ConversationWriter, ConversationCatalog, GenerationReservation};
@@ -232,7 +232,7 @@ diff --git a/src/nomo/native/entry.es b/src/nomo/native/entry.es
  import nomo.native.transfer.{save_archive, load_archive, resume_import};
  import nomo.native.mutations.{journals, undo_changes, rollback_changes, reconcile_changes};
  import nomo.native.files.read_file;
-@@ -85,28 +84,6 @@
+@@ -52,28 +51,6 @@
      } with { SessionContext.current() => { resume session; } };
  }
  
@@ -261,7 +261,7 @@ diff --git a/src/nomo/native/entry.es b/src/nomo/native/entry.es
  flow navigation_command(session: string, operation: string, argument: string) -> unit {
      let settings = load_settings(session);
      let result = handle {
-@@ -135,35 +112,7 @@
+@@ -102,35 +79,7 @@
      }
  }
  
@@ -298,12 +298,12 @@ diff --git a/src/nomo/native/entry.es b/src/nomo/native/entry.es
  
  flow show_history(session: string, query: string, first: i64, count: i64) -> unit {
      let archive = NativeHistory {};
-@@ -338,7 +287,7 @@
-         if request == "/compact" {
-             if ready_for_turn(selected.id) {
-                 let settings = load_settings(selected.id);
--                if generation_supported(settings) { compact(archive, archive, selected.id, settings); println("[CONTEXT] Summary saved; full original events retained."); }
-+                if generation_supported(settings) { compact(selected.id, settings); println("[CONTEXT] Summary saved; full original events retained."); }
+@@ -256,7 +205,7 @@
+             TerminalCommand.Compact => {
+                 if ready_for_turn(selected.id) {
+                     let settings = load_settings(selected.id);
+-                    if generation_supported(settings) { compact(archive, archive, selected.id, settings); println("[CONTEXT] Summary saved; full original events retained."); }
++                    if generation_supported(settings) { compact(selected.id, settings); println("[CONTEXT] Summary saved; full original events retained."); }
+                 }
              }
-             continue;
-         }
+             TerminalCommand.Config => {

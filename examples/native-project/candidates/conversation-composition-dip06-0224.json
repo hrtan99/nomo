@@ -1,7 +1,7 @@
 {
   "status": "prepared_not_integrated",
   "source_baseline": "3464ea7 plus the accompanying application controller, effects and pure context/domain preparation",
-  "candidate_sha256": "ce676b618b30862d7f176d8d5fe84eb5c851f2b9a19a2300e08a67d1825e5fed",
+  "candidate_sha256": "e4fde9555db69646ba24e7ac0cfc0834306af66e54c08aa89f238b3482d3fb8d",
   "files": [
     {
       "path": "src/nomo/adapters/etas/context_inputs.es",
@@ -72,5 +72,15 @@
     "Normal full target graph check of the complete composition.",
     "Production native configuration/summary/history scenario through the new model/context role adapters."
   ],
-  "no_production_workaround": "The retained entry and legacy acquisition/compaction remain selected until target acceptance. No compiler patch, module-order change or substitute production handler is introduced."
+  "no_production_workaround": "The retained entry and legacy acquisition/compaction remain selected until target acceptance. No compiler patch, module-order change or substitute production handler is introduced.",
+  "terminal_parser_rebase": {
+    "date": "2026-11-26",
+    "previous_snapshot": "1a5890c:examples/native-project/candidates/conversation-composition-dip06-0224.patch",
+    "previous_patch_sha256": "ce676b618b30862d7f176d8d5fe84eb5c851f2b9a19a2300e08a67d1825e5fed",
+    "path": "src/nomo/native/entry.es",
+    "current_before_sha256": "607fbfe2168a8928dd443c70f8514b92d72afd672fdaf7b1216406fc851ffd6d",
+    "current_candidate_sha256": "1998c25e8f5092fd92fc75f511f921790e01df7a751b9c69119c948898ef864c",
+    "current_prepared_source_count": 293,
+    "scope": "Mechanical rebase of the changed terminal parser/dispatch only; original model, mutation or process extraction is retained. Historical check results belong to the previous immutable snapshot; no new compiler/runtime acceptance is claimed."
+  }
 }

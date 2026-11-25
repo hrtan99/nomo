@@ -1,0 +1,556 @@
+diff --git a/src/nomo/adapters/codec/archive_role.es b/src/nomo/adapters/codec/archive_role.es
+new file mode 100644
+--- /dev/null
++++ b/src/nomo/adapters/codec/archive_role.es
+@@ -0,0 +1,14 @@
++module nomo.adapters.codec.archive_role;
++
++import nomo.domain.transfer.archive.{ArchiveDocument, Imported};
++import nomo.application.native.transfer.ports.ArchiveEncoding;
++import nomo.adapters.codec.archive.{json, decode as decode_archive, fingerprint as hash_archive};
++
++public type JsonArchiveEncoding = {};
++impl JsonArchiveEncoding ~ ArchiveEncoding {
++    flow encode(self, document: ArchiveDocument) -> string ![] {
++        return match document { ArchiveDocument.Metadata(value) => json(value), ArchiveDocument.Conversation(value) => json(value), ArchiveDocument.Outcome(value) => json(value) };
++    }
++    flow decode(self, raw: string) -> Imported ![] { return decode_archive(raw); }
++    flow fingerprint(self, raw: string) -> bytes ![] { return hash_archive(raw); }
++}
+diff --git a/src/nomo/adapters/etas/conversations.es b/src/nomo/adapters/etas/conversations.es
+--- a/src/nomo/adapters/etas/conversations.es
++++ b/src/nomo/adapters/etas/conversations.es
+@@ -4,7 +4,6 @@
+ import std.text.{from_i64, from_usize, char_count, get_char_slice, split_once, strip_prefix, parse_i64};
+ import nomo.core.json.encode;
+ import std.codec.text.utf8_encode;
+-import std.io.{println, IOError as ConsoleError};
+ import nomo.domain.conversation.messages.ChatMessage;
+ 
+ import nomo.native.history.{SessionContext, PendingRequest, CopyJob, Ledger, Session, Event};
+@@ -359,13 +358,6 @@
+     return job;
+ }
+ 
+-public flow begin_copy(workspace: string, title: string, kind: string, source: string, digest: bytes, total: i64) -> CopyJob
+-    ![Memory, Error<StorageError>, Error<MemoryConflict>] {
+-    let job = prepare_copy(workspace, title, kind, source, digest, total);
+-    ensure_copy_session(job.id);
+-    return job;
+-}
+-
+ public flow copy_event(id: string, index: i64, role: string, name: string, text: string) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>] {
+     let current = entry(id).value;
+     if index == current.next_event { reserve_event(id, role, name, -1, false); }
+@@ -379,15 +371,6 @@
+     write_event(id, index, role, name, text, -1);
+ }
+ 
+-public flow copy_source(id: string, role: string, name: string, text: string) -> unit
+-    ![Memory, Error<StorageError>, Error<MemoryConflict>] {
+-    let job = copy_job(id);
+-    if job.phase != "staging" { abort("conversation copy source is already sealed"); }
+-    ensure_copy_session(id);
+-    copy_event(id, 0, role, name, text);
+-    advance_copy(id, 0, "copying");
+-}
+-
+ public flow sealed_copy_source(id: string) -> Option<string> ![Memory, Error<StorageError>] {
+     match Data.Events.get(key(id, 0)) {
+         Some(event) => { if event.complete { return Some(read_message(id, 0).text); } }
+@@ -406,69 +389,3 @@
+     return match Data.Events.get(key(id, index)) { Some(value) => value.complete, None() => { abort("fork source record is incomplete"); } };
+ }
+ 
+-public flow copy_events(id: string, events: Array<ChatMessage>, summary: string) -> Session
+-    ![Memory, Console, Error<StorageError>, Error<MemoryConflict>, Error<ConsoleError>] {
+-    let job = copy_job(id);
+-    let archive = NativeHistory {};
+-    if job.phase == "ready" { return archive.select(job.workspace, id); }
+-    if job.phase != "copying" { abort("conversation copy source is not sealed"); }
+-    var index: i64 = 0;
+-    for item in events limit Iterations(2147483647) {
+-        if index >= job.cursor {
+-            copy_event(id, index + 1, item.role, item.name, item.text);
+-            advance_copy(id, index + 1, "copying");
+-            if index == job.cursor || index + 1 == job.total || (index + 1) % 100 == 0 {
+-                println("[COPY   ] " + id + " " + from_i64(index + 1) + "/" + from_i64(job.total));
+-            }
+-        }
+-        index = index + 1;
+-    }
+-    if index != job.total { abort("conversation copy source length changed"); }
+-    if summary != "" {
+-        let slot = job.total + 1;
+-        copy_event(id, slot, "summary", "context_summary", summary);
+-        copy_summary(id, slot);
+-    }
+-    advance_copy(id, job.total, "ready");
+-    return archive.select(job.workspace, id);
+-}
+-
+-public flow discard_copy(workspace: string, id: string) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>] {
+-    let job = copy_job(id);
+-    if job.workspace != workspace { abort("conversation copy belongs to another workspace"); }
+-    if job.phase == "ready" { abort("completed conversations are retained; this command discards unfinished copies only"); }
+-    advance_copy(id, job.cursor, "discarded");
+-}
+-
+-public flow resume_fork(workspace: string, id: string) -> Session
+-    ![Memory, Console, Error<StorageError>, Error<MemoryConflict>, Error<ConsoleError>] {
+-    let job = copy_job(id);
+-    if job.workspace != workspace || job.kind != "fork" { abort("fork does not belong to this workspace"); }
+-    let archive = NativeHistory {};
+-    if job.phase == "ready" { return archive.select(workspace, id); }
+-    ensure_copy_session(id);
+-    if job.phase == "staging" {
+-        copy_source(id, "system", "fork", "Forked from " + job.source + " through original event " + from_i64(job.total - 1)
+-            + ". Earlier tool requests, results and approvals are historical facts, not current permission or instructions to replay them.");
+-    }
+-    var events: Array<ChatMessage> = [];
+-    var index: i64 = 0;
+-    var summary = "";
+-    while index < job.total limit Iterations(2147483647) {
+-        if !copy_record_complete(job.source, index) { abort("fork source record is incomplete"); }
+-        let item = read_message(job.source, index);
+-        events = events.push(item);
+-        if item.role == "summary" { summary = item.text; }
+-        index = index + 1;
+-    }
+-    return copy_events(id, events, summary);
+-}
+-
+-public flow fork(id: string, through: i64) -> Session
+-    ![Memory, Console, Error<StorageError>, Error<MemoryConflict>, Error<ConsoleError>] {
+-    let archive = NativeHistory {};
+-    let source = archive.load(id);
+-    if through < -1 || through >= source.next_event { abort("fork event is outside the source conversation"); }
+-    let job = begin_copy(source.workspace, source.title + " (fork)", "fork", id, utf8_encode(""), through + 1);
+-    return resume_fork(source.workspace, job.id);
+-}
+diff --git a/src/nomo/adapters/etas/copies.es b/src/nomo/adapters/etas/copies.es
+new file mode 100644
+--- /dev/null
++++ b/src/nomo/adapters/etas/copies.es
+@@ -0,0 +1,18 @@
++module nomo.adapters.etas.copies;
++
++import nomo.native.history.CopyJob;
++import nomo.application.native.transfer.ports.CopyRepository;
++import nomo.adapters.etas.conversations.{copy_status, copy_jobs, prepare_copy, ensure_copy_session, advance_copy, copy_event, sealed_copy_source, copy_summary, copy_record_complete};
++
++public type NativeCopies = {};
++impl NativeCopies ~ CopyRepository {
++    flow lookup(self, id: string) -> Option<CopyJob> ![Memory, Error<StorageError>] { return copy_status(id); }
++    flow list(self, workspace: string) -> Array<CopyJob> ![Memory, Error<StorageError>] { return copy_jobs(workspace); }
++    flow prepare(self, workspace: string, title: string, kind: string, source: string, digest: bytes, total: i64) -> CopyJob ![Memory, Error<StorageError>, Error<MemoryConflict>] { return prepare_copy(workspace, title, kind, source, digest, total); }
++    flow ensure_session(self, id: string) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>] { ensure_copy_session(id); }
++    flow advance(self, id: string, cursor: i64, phase: string) -> CopyJob ![Memory, Error<StorageError>, Error<MemoryConflict>] { return advance_copy(id, cursor, phase); }
++    flow event(self, id: string, index: i64, role: string, name: string, text: string) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>] { copy_event(id, index, role, name, text); }
++    flow sealed(self, id: string) -> Option<string> ![Memory, Error<StorageError>] { return sealed_copy_source(id); }
++    flow summary(self, id: string, slot: i64) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>] { copy_summary(id, slot); }
++    flow complete(self, id: string, index: i64) -> bool ![Memory, Error<StorageError>] { return copy_record_complete(id, index); }
++}
+diff --git a/src/nomo/adapters/etas/projects.es b/src/nomo/adapters/etas/projects.es
+new file mode 100644
+--- /dev/null
++++ b/src/nomo/adapters/etas/projects.es
+@@ -0,0 +1,10 @@
++module nomo.adapters.etas.projects;
++
++import nomo.native.projects.Data;
++import nomo.application.native.projects.ports.RecentProjects;
++
++public type NativeRecentProjects = {};
++impl NativeRecentProjects ~ RecentProjects {
++    flow load(self) -> Array<string> ![Memory, Error<StorageError>] { return match Data.Recent.get("folders") { Some(value) => value, None() => [] }; }
++    flow save(self, folders: Array<string>) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>] { Data.Recent.put("folders", folders); }
++}
+diff --git a/src/nomo/adapters/terminal/projects.es b/src/nomo/adapters/terminal/projects.es
+new file mode 100644
+--- /dev/null
++++ b/src/nomo/adapters/terminal/projects.es
+@@ -0,0 +1,16 @@
++module nomo.adapters.terminal.projects;
++
++import std.io.{println, print, read_line, IOError};
++import std.text.from_usize;
++import nomo.core.json.encode;
++import nomo.application.native.projects.ports.ProjectRenderer;
++
++public type TerminalProjects = {};
++impl TerminalProjects ~ ProjectRenderer {
++    flow item(self, index: usize, path: string) -> unit ![Console, Error<IOError>] { println("[PROJECT] " + from_usize(index) + " " + path); }
++    flow choose(self) -> string ![Console, Error<IOError>] { print("project> folder path or saved number (blank cancels): "); return read_line(); }
++    flow preview(self, path: string) -> unit ![Console, Error<IOError>] {
++        let value = match encode(path, "project path conversion failed", "project path encoding failed") { Ok(value) => value, Err(error) => { abort(error); } };
++        println("[OPEN   ] " + value);
++    }
++}
+diff --git a/src/nomo/adapters/terminal/transfer.es b/src/nomo/adapters/terminal/transfer.es
+new file mode 100644
+--- /dev/null
++++ b/src/nomo/adapters/terminal/transfer.es
+@@ -0,0 +1,14 @@
++module nomo.adapters.terminal.transfer;
++
++import std.io.{println, IOError};
++import std.text.from_i64;
++import nomo.domain.transfer.archive.ExportPreview;
++import nomo.adapters.codec.archive.json;
++import nomo.application.native.transfer.ports.TransferRenderer;
++
++public type TerminalTransfer = {};
++impl TerminalTransfer ~ TransferRenderer {
++    flow progress(self, id: string, copied: i64, total: i64) -> unit ![Console, Error<IOError>] { println("[COPY   ] " + id + " " + from_i64(copied) + "/" + from_i64(total)); }
++    flow preview(self, value: ExportPreview) -> unit ![Console, Error<IOError>] { println("[EXPORT ] " + json(value)); }
++    flow exported(self, path: string) -> unit ![Console, Error<IOError>] { println("[EXPORTED] " + path); }
++}
+diff --git a/src/nomo/adapters/workspace/archives.es b/src/nomo/adapters/workspace/archives.es
+new file mode 100644
+--- /dev/null
++++ b/src/nomo/adapters/workspace/archives.es
+@@ -0,0 +1,19 @@
++module nomo.adapters.workspace.archives;
++
++import std.fs.{path, read_bytes_limited, atomic_replace, WorkspacePath, ReadLimitError, IOError as FileError};
++import std.codec.text.{utf8_decode, utf8_encode, Strict};
++import std.effects.Fs;
++import nomo.native.workspace.ProjectRoot;
++import nomo.application.native.transfer.ports.ArchiveWorkspace;
++
++public type ProjectArchives = {};
++impl ProjectArchives ~ ArchiveWorkspace {
++    flow target(self, pathname: string) -> WorkspacePath<ProjectRoot> ![] {
++        return match path<ProjectRoot>(pathname) { Ok(value) => value, Err(_) => { abort("invalid conversation export path"); } };
++    }
++    flow read(self, pathname: string) -> string ![Fs.read<ProjectRoot>, Error<FileError>, Error<ReadLimitError>] {
++        let location = match path<ProjectRoot>(pathname) { Ok(value) => value, Err(_) => { abort("invalid conversation import path"); } };
++        return match utf8_decode(read_bytes_limited(location, 536870912), Strict) { Ok(value) => value, Err(_) => { abort("conversation archive must be UTF-8"); } };
++    }
++    flow replace(self, target: WorkspacePath<ProjectRoot>, text: string) -> unit ![Fs.atomic_replace<ProjectRoot>, Error<FileError>] { atomic_replace(target, utf8_encode(text)); }
++}
+diff --git a/src/nomo/adapters/workspace/launch_control.es b/src/nomo/adapters/workspace/launch_control.es
+new file mode 100644
+--- /dev/null
++++ b/src/nomo/adapters/workspace/launch_control.es
+@@ -0,0 +1,13 @@
++module nomo.adapters.workspace.launch_control;
++
++import std.fs.{path, atomic_replace, WorkspacePath, IOError as FileError};
++import std.effects.Fs;
++import std.codec.text.utf8_encode;
++import nomo.native.projects.LaunchRoot;
++import nomo.application.native.projects.ports.ProjectLaunchControl;
++
++public type NativeProjectLaunch = {};
++impl NativeProjectLaunch ~ ProjectLaunchControl {
++    flow target(self) -> WorkspacePath<LaunchRoot> ![] { return match path<LaunchRoot>("next-project") { Ok(value) => value, Err(_) => { abort("native launch control is unavailable"); } }; }
++    flow publish(self, target: WorkspacePath<LaunchRoot>, folder: string) -> unit ![Fs.atomic_replace<LaunchRoot>, Error<FileError>] { atomic_replace(target, utf8_encode(folder)); }
++}
+diff --git a/src/nomo/bootstrap/native.es b/src/nomo/bootstrap/native.es
+new file mode 100644
+--- /dev/null
++++ b/src/nomo/bootstrap/native.es
+@@ -0,0 +1,15 @@
++module nomo.bootstrap.native;
++
++import nomo.native.entry;
++import nomo.bootstrap.transfer;
++import nomo.bootstrap.projects;
++import nomo.native.projects.LaunchRoot;
++import nomo.native.workspace.ProjectRoot;
++import std.effects.Fs;
++import std.fs.{ReadLimitError, IOError as FileError};
++import std.io.IOError;
++
++public flow run(args: Array<string>) -> i32
++    ![Agentic, Memory, Console, Command.run<DefaultCommandSandbox>, Command.start<DefaultCommandSandbox>, Command.reconnect<DefaultCommandSandbox>, Command.read<DefaultCommandSandbox>, Command.write<DefaultCommandSandbox>, Command.stop<DefaultCommandSandbox>, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Fs.stat<ProjectRoot>, Fs.atomic_replace<ProjectRoot>, Fs.atomic_replace<LaunchRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>, Error<IOError>, Error<IndexError>] {
++    return handle { handle { entry.run(args) } with transfer.operations() } with projects.operations();
++}
+diff --git a/src/nomo/bootstrap/projects.es b/src/nomo/bootstrap/projects.es
+new file mode 100644
+--- /dev/null
++++ b/src/nomo/bootstrap/projects.es
+@@ -0,0 +1,29 @@
++module nomo.bootstrap.projects;
++
++import std.effects.Fs;
++import std.fs.IOError as FileError;
++import std.io.IOError as ConsoleError;
++import nomo.native.projects.LaunchRoot;
++import nomo.application.native.projects.effects.{ProjectDisplay, ProjectOperations};
++import nomo.application.native.projects.ports.ProjectRenderer;
++import nomo.application.native.projects.service;
++import nomo.adapters.etas.projects.NativeRecentProjects;
++import nomo.adapters.workspace.launch_control.NativeProjectLaunch;
++import nomo.adapters.terminal.projects.TerminalProjects;
++
++flow display() -> ![ProjectDisplay => Console, Error<ConsoleError>] ![] {
++    let renderer = TerminalProjects {};
++    return handler {
++        ProjectDisplay.item(index, path) => { renderer.item(index, path); resume; }
++        ProjectDisplay.choose() => { resume renderer.choose(); }
++        ProjectDisplay.preview(path) => { renderer.preview(path); resume; }
++    };
++}
++public flow operations() -> ![ProjectOperations => Memory, Console, Fs.atomic_replace<LaunchRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ConsoleError>, Error<IndexError>] ![Memory] {
++    let recent = NativeRecentProjects {}; let launch = NativeProjectLaunch {};
++    return handler {
++        ProjectOperations.remember(workspace) => { service.remember(recent, workspace); resume; }
++        ProjectOperations.show() => { handle { service.show(recent) } with display(); resume; }
++        ProjectOperations.open(raw, workspace) => { let result = handle { service.open(recent, launch, raw, workspace) } with display(); resume result; }
++    };
++}
+diff --git a/src/nomo/bootstrap/transfer.es b/src/nomo/bootstrap/transfer.es
+new file mode 100644
+--- /dev/null
++++ b/src/nomo/bootstrap/transfer.es
+@@ -0,0 +1,53 @@
++module nomo.bootstrap.transfer;
++
++import std.effects.Fs;
++import std.fs.{ReadLimitError, IOError as FileError};
++import std.io.IOError as ConsoleError;
++import nomo.native.workspace.ProjectRoot;
++import nomo.application.native.transfer.effects.{CopyStorage, ArchiveFiles, ArchiveCodec, TransferDisplay, TransferOperations};
++import nomo.application.native.transfer.ports.{CopyRepository, ArchiveWorkspace, ArchiveEncoding, TransferRenderer};
++import nomo.application.native.transfer.service;
++import nomo.adapters.etas.copies.NativeCopies;
++import nomo.adapters.codec.archive_role.JsonArchiveEncoding;
++import nomo.adapters.workspace.archives.ProjectArchives;
++import nomo.adapters.terminal.transfer.TerminalTransfer;
++import nomo.adapters.etas.conversations.NativeHistory;
++import nomo.adapters.etas.attempts.NativeAttempts;
++
++flow bindings() -> ![CopyStorage, ArchiveFiles, ArchiveCodec, TransferDisplay => Memory, Console, Fs.read<ProjectRoot>, Fs.atomic_replace<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>, Error<ConsoleError>] ![] {
++    let copies = NativeCopies {}; let files = ProjectArchives {}; let codec = JsonArchiveEncoding {}; let display = TerminalTransfer {};
++    return handler {
++        CopyStorage.lookup(id) => { resume copies.lookup(id); }
++        CopyStorage.list(workspace) => { resume copies.list(workspace); }
++        CopyStorage.prepare(workspace, title, kind, source, digest, total) => { resume copies.prepare(workspace, title, kind, source, digest, total); }
++        CopyStorage.ensure_session(id) => { copies.ensure_session(id); resume; }
++        CopyStorage.advance(id, cursor, phase) => { resume copies.advance(id, cursor, phase); }
++        CopyStorage.event(id, index, role, name, text) => { copies.event(id, index, role, name, text); resume; }
++        CopyStorage.sealed(id) => { resume copies.sealed(id); }
++        CopyStorage.summary(id, slot) => { copies.summary(id, slot); resume; }
++        CopyStorage.complete(id, index) => { resume copies.complete(id, index); }
++        ArchiveFiles.target(path) => { resume files.target(path); }
++        ArchiveFiles.read(path) => { resume files.read(path); }
++        ArchiveFiles.replace(target, text) => { files.replace(target, text); resume; }
++        ArchiveCodec.encode(value) => { resume codec.encode(value); }
++        ArchiveCodec.decode(raw) => { resume codec.decode(raw); }
++        ArchiveCodec.fingerprint(raw) => { resume codec.fingerprint(raw); }
++        TransferDisplay.progress(id, copied, total) => { display.progress(id, copied, total); resume; }
++        TransferDisplay.preview(value) => { display.preview(value); resume; }
++        TransferDisplay.exported(path) => { display.exported(path); resume; }
++    };
++}
++public flow operations() -> ![TransferOperations => Memory, Console, Fs.read<ProjectRoot>, Fs.atomic_replace<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>, Error<ConsoleError>] ![Memory] {
++    let history = NativeHistory {}; let attempts = NativeAttempts {};
++    return handler {
++        TransferOperations.save(session, path) => { handle { service.save(history, attempts, history, session, path) } with bindings(); resume; }
++        TransferOperations.load(workspace, path) => { let result = handle { service.load(history, workspace, path) } with bindings(); resume result; }
++        TransferOperations.resume_import(workspace, id) => { let result = handle { service.resume_import(history, history, workspace, id) } with bindings(); resume result; }
++        TransferOperations.fork(id, through) => { let result = handle { service.fork(history, history, id, through) } with bindings(); resume result; }
++        TransferOperations.resume_fork(workspace, id) => { let result = handle { service.resume_fork(history, history, workspace, id) } with bindings(); resume result; }
++        TransferOperations.discard(workspace, id) => { handle { service.discard(workspace, id) } with bindings(); resume; }
++        TransferOperations.status(id) => { let result = handle { perform CopyStorage.lookup(id) } with bindings(); resume result; }
++        TransferOperations.copies(workspace) => { let result = handle { perform CopyStorage.list(workspace) } with bindings(); resume result; }
++        TransferOperations.job(id) => { let result = handle { service.job(id) } with bindings(); resume result; }
++    };
++}
+diff --git a/src/nomo/main.es b/src/nomo/main.es
+--- a/src/nomo/main.es
++++ b/src/nomo/main.es
+@@ -54,7 +54,7 @@
+ import nomo.entry.work_chain_sessions.{run_sessions as chain_sessions_run, run_show as chain_show_run};
+ import nomo.entry.user_context_entry.run as user_context_new_run;
+ import nomo.project.entry.run as project_run;
+-import nomo.native.entry.run as native_project_run;
++import nomo.bootstrap.native.run as native_project_run;
+ 
+ // The runtime returns i32 as data; every command uses this same OS-failure boundary.
+ flow completed(status: i32, message: string) -> i32 {
+diff --git a/src/nomo/native/entry.es b/src/nomo/native/entry.es
+--- a/src/nomo/native/entry.es
++++ b/src/nomo/native/entry.es
+@@ -10,10 +10,12 @@
+ import nomo.core.json.encode;
+ import nomo.entry.native.options.parse;
+ import nomo.native.history.{SessionContext, Session};
+-import nomo.adapters.etas.conversations.{NativeHistory, rename, read_message as message, fork, copy_status, copy_jobs, copy_job, resume_fork, discard_copy};
++import nomo.adapters.etas.conversations.{NativeHistory, rename, read_message as message};
+ import nomo.application.native.conversation.ports.{ConversationReader, ConversationWriter, ConversationCatalog, GenerationReservation};
+ import nomo.native.context.{RollingContext, ContextProjection, build as build_context, compact};
+-import nomo.native.transfer.{save_archive, load_archive, resume_import};
++import nomo.native.transfer.{save_archive, load_archive, resume_import, fork, copy_status, copy_jobs, copy_job, resume_fork, discard_copy};
++import nomo.application.native.transfer.effects.TransferOperations;
++import nomo.application.native.projects.effects.ProjectOperations;
+ import nomo.native.mutations.{journals, undo_changes, rollback_changes, reconcile_changes};
+ import nomo.native.files.read_file;
+ import nomo.native.navigation.{find_files, search_project};
+@@ -170,7 +172,7 @@
+ }
+ 
+ public flow run(args: Array<string>) -> i32
+-    ![Agentic, Memory, Console, Command.run<DefaultCommandSandbox>, Command.start<DefaultCommandSandbox>, Command.reconnect<DefaultCommandSandbox>, Command.read<DefaultCommandSandbox>, Command.write<DefaultCommandSandbox>, Command.stop<DefaultCommandSandbox>, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Fs.stat<ProjectRoot>, Fs.atomic_replace<ProjectRoot>, Fs.atomic_replace<LaunchRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>, Error<IOError>, Error<IndexError>] {
++    ![Agentic, TransferOperations, ProjectOperations, Memory, Console, Command.run<DefaultCommandSandbox>, Command.start<DefaultCommandSandbox>, Command.reconnect<DefaultCommandSandbox>, Command.read<DefaultCommandSandbox>, Command.write<DefaultCommandSandbox>, Command.stop<DefaultCommandSandbox>, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Fs.stat<ProjectRoot>, Fs.atomic_replace<ProjectRoot>, Fs.atomic_replace<LaunchRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>, Error<IOError>, Error<IndexError>] {
+     let options = parse(args);
+     if options.choose_project { request_open("", options.workspace); return 0; }
+     remember(options.workspace);
+diff --git a/src/nomo/native/projects.es b/src/nomo/native/projects.es
+--- a/src/nomo/native/projects.es
++++ b/src/nomo/native/projects.es
+@@ -1,55 +1,14 @@
+ module nomo.native.projects;
+ 
+-import std.fs.{Region, path, atomic_replace};
+-import std.fs.IOError as FileError;
+-import std.effects.Fs;
+-import std.codec.text.utf8_encode;
+-import std.io.{println, print, read_line};
+-import std.io.IOError as ConsoleError;
+-import std.text.{trim, from_usize};
+-import nomo.domain.projects.selection.{ProjectReference, remembered, reference, saved};
+-import nomo.core.json.encode;
++import std.fs.Region;
++import nomo.application.native.projects.effects.ProjectOperations;
+ 
+ public type LaunchRoot;
+ impl LaunchRoot ~ Region;
+ alias Schema = MemoryRegion<{ Recent: Store<string, Array<string>> }>;
+-let Data = std.memory.region<Schema>(stable_id = "nomo-native-projects-v1", store = "native-projects");
++public let Data = std.memory.region<Schema>(stable_id = "nomo-native-projects-v1", store = "native-projects");
+ 
+-flow recent() -> Array<string> {
+-    return match Data.Recent.get("folders") { Some(value) => value, None() => [] };
+-}
+ 
+-public flow remember(workspace: string) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>] {
+-    Data.Recent.put("folders", remembered(workspace, recent()));
+-}
+-
+-public flow show_projects() -> unit {
+-    var index: usize = 1;
+-    for value in recent() limit Iterations(2147483647) {
+-        println("[PROJECT] " + from_usize(index) + " " + value);
+-        index = index + 1;
+-    }
+-}
+-
+-// The source selects the next folder. The launcher only transports this
+-// mount request to that folder's execution endpoint; it does not select a
+-// conversation or own the current endpoint's task lifecycle.
+-public flow request_open(raw: string, workspace: string) -> bool
+-    ![Memory, Console, Fs.atomic_replace<LaunchRoot>, Error<StorageError>, Error<FileError>, Error<ConsoleError>, Error<IndexError>] {
+-    var selection = trim(raw);
+-    if selection == "" {
+-        show_projects();
+-        print("project> folder path or saved number (blank cancels): ");
+-        selection = trim(read_line());
+-        if selection == "" { return false; }
+-    }
+-    let selected = match reference(selection, workspace) {
+-        ProjectReference.Saved(index) => saved(recent(), index),
+-        ProjectReference.Folder(path) => path
+-    };
+-    let preview = match encode(selected, "project path conversion failed", "project path encoding failed") { Ok(value) => value, Err(error) => { abort(error); } };
+-    println("[OPEN   ] " + preview);
+-    let destination = match path<LaunchRoot>("next-project") { Ok(value) => value, Err(_) => { abort("native launch control is unavailable"); } };
+-    atomic_replace(destination, utf8_encode(selected));
+-    return true;
+-}
++public flow remember(workspace: string) -> unit ![ProjectOperations] { perform ProjectOperations.remember(workspace); }
++public flow show_projects() -> unit ![ProjectOperations] { perform ProjectOperations.show(); }
++public flow request_open(raw: string, workspace: string) -> bool ![ProjectOperations] { return perform ProjectOperations.open(raw, workspace); }
+diff --git a/src/nomo/native/transfer.es b/src/nomo/native/transfer.es
+--- a/src/nomo/native/transfer.es
++++ b/src/nomo/native/transfer.es
+@@ -1,76 +1,14 @@
+ module nomo.native.transfer;
+ 
+-import std.fs.{path, read_bytes_limited, atomic_replace, ReadLimitError};
+-import std.fs.IOError as FileError;
+-import std.io.{println, IOError as ConsoleError};
+-import std.effects.Fs;
+-import std.codec.text.{utf8_decode, utf8_encode, Strict};
+-import std.crypto.constant_time_eq;
+-import nomo.adapters.codec.archive.{json, decode, fingerprint};
+-import nomo.domain.transfer.archive.{PortableInfo, PortableArchive, ExportMetadata, ExportPreview, ExportOutcome};
+-import nomo.native.workspace.ProjectRoot;
+-import nomo.domain.conversation.messages.ChatMessage;
+ import nomo.native.history.{Session, CopyJob};
+-import nomo.adapters.etas.conversations.{NativeHistory, copy_status, begin_copy, copy_source, copy_events, copy_job, ensure_copy_session, sealed_copy_source, read_message as message};
+-import nomo.application.native.conversation.ports.{ConversationReader, ConversationCatalog};
+-import nomo.native.lifecycle.Attempt;
+-import nomo.bootstrap.execution.{attempts, begin, dispatching, returned, complete_attempt};
++import nomo.application.native.transfer.effects.TransferOperations;
+ 
+-
+-public flow save_archive(session: string, pathname: string) -> unit
+-    ![Memory, Console, Fs.atomic_replace<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ConsoleError>] {
+-    let history = NativeHistory {};
+-    let selected = history.load(session);
+-    var copies: Array<CopyJob> = [];
+-    match copy_status(session) { Some(value) => { copies = copies.push(value); } None() => {} }
+-    let metadata = ExportMetadata { format = "nomo-native-metadata-1", conversation = selected,
+-        attempts = attempts(session, false), copies = copies };
+-    let info = PortableInfo { id = selected.id, workspace = selected.workspace, title = selected.title, metadata = json(metadata) };
+-    let content = json(PortableArchive { format = "nomo-native-conversation-1", session = info, events = history.messages(session, 0) });
+-    let location = match path<ProjectRoot>(pathname) {
+-        Ok(value) => value, Err(_) => { abort("invalid conversation export path"); }
+-    };
+-    println("[EXPORT ] " + json(ExportPreview { path = pathname, content = content }));
+-    let attempt = begin(session, "export", pathname, -1, selected.next_event - 1);
+-    dispatching(attempt.id);
+-    atomic_replace(location, utf8_encode(content));
+-    returned(attempt.id, "operation_result", "export", json(ExportOutcome { path = pathname, status = "applied" }), -1);
+-    complete_attempt(attempt.id);
+-    println("[EXPORTED] " + pathname);
+-}
+-
+-flow read_archive(pathname: string) -> string {
+-    let location = match path<ProjectRoot>(pathname) { Ok(value) => value, Err(_) => { abort("invalid conversation import path"); } };
+-    return match utf8_decode(read_bytes_limited(location, 536870912), Strict) {
+-        Ok(value) => value, Err(_) => { abort("conversation archive must be UTF-8"); }
+-    };
+-}
+-
+-public flow load_archive(workspace: string, pathname: string) -> Session
+-    ![Memory, Console, Fs.read<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>, Error<ConsoleError>] {
+-    let raw = read_archive(pathname);
+-    let source = decode(raw);
+-    var total: i64 = 0;
+-    for _ in source.events limit Iterations(2147483647) { total = total + 1; }
+-    let job = begin_copy(workspace, source.title, "import", pathname, fingerprint(raw), total);
+-    copy_source(job.id, "archive", "imported_source", raw);
+-    return copy_events(job.id, source.events, source.summary);
+-}
+-
+-public flow resume_import(workspace: string, id: string) -> Session
+-    ![Memory, Console, Fs.read<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>, Error<ConsoleError>] {
+-    let job = copy_job(id);
+-    if job.workspace != workspace || job.kind != "import" { abort("import does not belong to this workspace"); }
+-    let history = NativeHistory {};
+-    if job.phase == "ready" { return history.select(workspace, id); }
+-    ensure_copy_session(id);
+-    var raw = "";
+-    if job.phase == "staging" {
+-        raw = match sealed_copy_source(id) { Some(value) => value, None() => read_archive(job.source) };
+-        if !constant_time_eq(fingerprint(raw), job.digest) { abort("import source changed before its original package was sealed; discard this copy or restore the original file"); }
+-        copy_source(id, "archive", "imported_source", raw);
+-    }
+-    else { raw = message(id, 0).text; }
+-    let source = decode(raw);
+-    return copy_events(id, source.events, source.summary);
+-}
++public flow save_archive(session: string, pathname: string) -> unit ![TransferOperations] { perform TransferOperations.save(session, pathname); }
++public flow load_archive(workspace: string, pathname: string) -> Session ![TransferOperations] { return perform TransferOperations.load(workspace, pathname); }
++public flow resume_import(workspace: string, id: string) -> Session ![TransferOperations] { return perform TransferOperations.resume_import(workspace, id); }
++public flow fork(id: string, through: i64) -> Session ![TransferOperations] { return perform TransferOperations.fork(id, through); }
++public flow resume_fork(workspace: string, id: string) -> Session ![TransferOperations] { return perform TransferOperations.resume_fork(workspace, id); }
++public flow discard_copy(workspace: string, id: string) -> unit ![TransferOperations] { perform TransferOperations.discard(workspace, id); }
++public flow copy_status(id: string) -> Option<CopyJob> ![TransferOperations] { return perform TransferOperations.status(id); }
++public flow copy_jobs(workspace: string) -> Array<CopyJob> ![TransferOperations] { return perform TransferOperations.copies(workspace); }
++public flow copy_job(id: string) -> CopyJob ![TransferOperations] { return perform TransferOperations.job(id); }

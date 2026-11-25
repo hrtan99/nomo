@@ -2,7 +2,7 @@
   "status": "prepared_not_compiler_or_production_accepted",
   "baseline_commit": "a1a7592b3ce022a93f7ede083d7a88d8c04735da",
   "source_count": 284,
-  "patch_sha256": "6e158bf221be1c8c080fc422ead8059b05b9990a597c6c3be1f0f90a4acb8e4a",
+  "patch_sha256": "0682d9b39d3e556263e585f190cc00183784b6781fcf78b4455f20eab5e9181e",
   "source_files": {
     "src/nomo/adapters/command/processes.es": {
       "before_sha256": null,
@@ -37,8 +37,8 @@
       "candidate_sha256": "9ee23c61fa0f08c47f9c2211359cb15bb44a417b4b6b6989d12abdd7bc1aee21"
     },
     "src/nomo/native/entry.es": {
-      "before_sha256": "3ab5ffd8e6ea0ae00dee7dd25bebe8bd1a6c7ec4cbee1a89a0c38988fa90579d",
-      "candidate_sha256": "973ac5e5c41f042cdb7d946a7224ff461460dcff3da33750f828c981c64f3692"
+      "before_sha256": "607fbfe2168a8928dd443c70f8514b92d72afd672fdaf7b1216406fc851ffd6d",
+      "candidate_sha256": "ab4d646e5ac0b077d47640f45fb015882a4c2d983f7023395f0b8bce3c60256a"
     },
     "src/nomo/native/processes.es": {
       "before_sha256": "ebf5f70f8b1b0c52feb85a0c760afd69c15be6d32722ae4c78fb3b3312210382",
@@ -78,5 +78,15 @@
     "Normal combined source check and full controlled application fixture.",
     "Actual native process, approvals, saved-output restoration and live reconnect through the new adapters.",
     "Original UI-wait continuous capture, exact bytes, cancellation and interrupted-read restoration acceptance."
-  ]
+  ],
+  "terminal_parser_rebase": {
+    "date": "2026-11-26",
+    "previous_snapshot": "1a5890c:examples/native-project/candidates/processes-dip10-0224.patch",
+    "previous_patch_sha256": "6e158bf221be1c8c080fc422ead8059b05b9990a597c6c3be1f0f90a4acb8e4a",
+    "path": "src/nomo/native/entry.es",
+    "current_before_sha256": "607fbfe2168a8928dd443c70f8514b92d72afd672fdaf7b1216406fc851ffd6d",
+    "current_candidate_sha256": "ab4d646e5ac0b077d47640f45fb015882a4c2d983f7023395f0b8bce3c60256a",
+    "current_prepared_source_count": 295,
+    "scope": "Mechanical rebase of the changed terminal parser/dispatch only; original model, mutation or process extraction is retained. Historical check results belong to the previous immutable snapshot; no new compiler/runtime acceptance is claimed."
+  }
 }

@@ -103,7 +103,8 @@
       "effect::IncompleteEffectFacts": 7
     },
     "target_acceptance": false,
-    "diagnostic_family": "https://github.com/etas-project/etas-frontend/issues/98"
+    "diagnostic_family": "https://github.com/etas-project/etas-frontend/issues/98",
+    "immutable_snapshot": "1a5890c:examples/native-project/candidates/mutations-dip09-0224.patch"
   },
   "size_impact": {
     "selected_etas_sources": 276,

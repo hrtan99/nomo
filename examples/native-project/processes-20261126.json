@@ -73,7 +73,8 @@
     "patch_sha256": "6e158bf221be1c8c080fc422ead8059b05b9990a597c6c3be1f0f90a4acb8e4a",
     "source_count": 284,
     "apply_preflight": true,
-    "target_acceptance": false
+    "target_acceptance": false,
+    "immutable_snapshot": "1a5890c:examples/native-project/candidates/processes-dip10-0224.patch"
   },
   "target_host_adapter": {
     "snapshot": "examples/native-project/candidates/processes-host-0224-check",
@@ -89,7 +90,8 @@
     "instance_references": 77,
     "bounded_loops": 264,
     "loop_files": 103,
-    "changed_files": 117
+    "changed_files": 117,
+    "immutable_snapshot": "1a5890c:examples/native-project/candidates/language-migration-0224-20261125.patch"
   },
   "historical_failures_retained": [
     "examples/native-project/capture-consumer-0135-20261112.json (original full capture case; no success while UI waits is claimed)",

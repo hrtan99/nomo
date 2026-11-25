@@ -1,7 +1,7 @@
 {
   "status": "prepared_old_graph_rejected; target_and_production_acceptance_pending",
   "baseline_commit": "efaa8b1627cf3f3eb6e370d3607b82ab00467125",
-  "patch_sha256": "110cca298089e9207cf99cd8840e3bd13d481dd747a010bf8e7c46e8e5b62bcb",
+  "patch_sha256": "7764b35a467eecf7dfd4bfa350cb55230b6521b4b6f3db98d73718929d2d2fc9",
   "source_count": 282,
   "apply_check_exit": 0,
   "target_acceptance": false,
@@ -34,7 +34,7 @@
       "sha256": "f2cb182dac271f03405a98b5b7a62ef5bedfb93f77dbdc6dcbad862786d88cdf"
     },
     "src/nomo/native/entry.es": {
-      "sha256": "3ab5ffd8e6ea0ae00dee7dd25bebe8bd1a6c7ec4cbee1a89a0c38988fa90579d"
+      "sha256": "607fbfe2168a8928dd443c70f8514b92d72afd672fdaf7b1216406fc851ffd6d"
     },
     "src/nomo/native/files.es": {
       "sha256": "4a4d62eaec437c9381a20e99dbaf8f47fa60c3fbb3e38690675274b512adeec5"
@@ -124,5 +124,15 @@
     "evidence": "examples/repros/generic-handler-produced-row-0224/evidence.json",
     "target_seven_source_check_exit": 1,
     "scope": "The Handler diagnostic also occurs on the target in an abstract-port reduction without concrete implementations. A Console-only generic control passes. Cause remains unestablished."
+  },
+  "terminal_parser_rebase": {
+    "date": "2026-11-26",
+    "previous_snapshot": "1a5890c:examples/native-project/candidates/mutations-dip09-0224.patch",
+    "previous_patch_sha256": "110cca298089e9207cf99cd8840e3bd13d481dd747a010bf8e7c46e8e5b62bcb",
+    "path": "src/nomo/native/entry.es",
+    "current_before_sha256": "607fbfe2168a8928dd443c70f8514b92d72afd672fdaf7b1216406fc851ffd6d",
+    "current_candidate_sha256": "74ab843e355acc1a045833217e045d1eeef74db2c1d47d7833ce65432e9f0592",
+    "current_prepared_source_count": 296,
+    "scope": "Mechanical rebase of the changed terminal parser/dispatch only; original model, mutation or process extraction is retained. Historical check results belong to the previous immutable snapshot; no new compiler/runtime acceptance is claimed."
   }
 }

@@ -5,10 +5,9 @@ import std.fs.IOError as FileError;
 import std.io.{println, IOError as ConsoleError};
 import std.effects.Fs;
 import std.codec.text.{utf8_decode, utf8_encode, Strict};
-import std.json.{JsonValue, parse};
-import std.agent.message.Message;
-import std.crypto.{sha256, constant_time_eq};
-import nomo.core.json.encode;
+import std.crypto.constant_time_eq;
+import nomo.adapters.codec.archive.{json, decode, fingerprint};
+import nomo.domain.transfer.archive.{PortableInfo, PortableArchive, ExportMetadata, ExportPreview, ExportOutcome};
 import nomo.native.workspace.ProjectRoot;
 import nomo.domain.conversation.messages.ChatMessage;
 import nomo.native.history.{Session, CopyJob};
@@ -17,22 +16,6 @@ import nomo.application.native.conversation.ports.{ConversationReader, Conversat
 import nomo.native.lifecycle.Attempt;
 import nomo.bootstrap.execution.{attempts, begin, dispatching, returned, complete_attempt};
 
-type PortableInfo = { id: string, workspace: string, title: string, metadata: string };
-type PortableArchive = { format: string, session: PortableInfo, events: Array<ChatMessage> };
-type LegacyInfo = { id: string, root: string, title: string, created: f64, updated: f64,
-    parent: JsonValue, compacted_through: i64, summary: string, usage: string };
-type LegacyEvent = { id: i64, session: string, role: string, kind: string, name: string,
-    content: string, data: JsonValue, created: f64 };
-type LegacyArchive = { format: string, session: LegacyInfo, events: Array<LegacyEvent> };
-type ExportPreview = { path: string, content: string };
-type ExportOutcome = { path: string, status: string };
-type ExportMetadata = { format: string, conversation: Session, attempts: Array<Attempt>, copies: Array<CopyJob> };
-
-flow json<T>(value: T) -> string {
-    return match encode(value, "archive conversion failed", "archive encoding failed") {
-        Ok(text) => text, Err(error) => { abort(error); }
-    };
-}
 
 public flow save_archive(session: string, pathname: string) -> unit
     ![Memory, Console, Fs.atomic_replace<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ConsoleError>] {
@@ -54,36 +37,6 @@ public flow save_archive(session: string, pathname: string) -> unit
     returned(attempt.id, "operation_result", "export", json(ExportOutcome { path = pathname, status = "applied" }), -1);
     complete_attempt(attempt.id);
     println("[EXPORTED] " + pathname);
-}
-
-type Imported = { title: string, events: Array<ChatMessage>, summary: string };
-
-flow decode(raw: string) -> Imported {
-    let parsed = match parse(raw) { Ok(value) => value, Err(_) => { abort("conversation archive must be JSON"); } };
-    let native: Option<Message<PortableArchive>> = Message.new(parsed).cast<PortableArchive>();
-    match native {
-        Some(converted) => {
-            let source = converted.body;
-            if source.format != "nomo-native-conversation-1" { abort("unsupported native conversation format"); }
-            var summary = "";
-            for item in source.events limit Iterations(2147483647) { if item.role == "summary" { summary = item.text; } }
-            return Imported { title = source.session.title, events = source.events, summary = summary };
-        }
-        None() => {}
-    }
-    let legacy: Option<Message<LegacyArchive>> = Message.new(parsed).cast<LegacyArchive>();
-    let source = match legacy { Some(value) => value.body, None() => { abort("unsupported conversation archive shape"); } };
-    if source.format != "nomo-conversation-1" { abort("unsupported conversation format"); }
-    var events: Array<ChatMessage> = [];
-    for item in source.events limit Iterations(2147483647) {
-        events = events.push(ChatMessage { id = "", role = item.role, name = item.name, text = item.content });
-    }
-    return Imported { title = source.session.title, events = events, summary = source.session.summary };
-}
-
-flow fingerprint(raw: string) -> bytes {
-    let converted: Option<Message<bytes>> = Message.new(sha256(utf8_encode(raw))).cast<bytes>();
-    return match converted { Some(value) => value.body, None() => { abort("native SHA-256 representation unavailable"); } };
 }
 
 flow read_archive(pathname: string) -> string {

@@ -6,8 +6,8 @@ import std.effects.Fs;
 import std.codec.text.utf8_encode;
 import std.io.{println, print, read_line};
 import std.io.IOError as ConsoleError;
-import std.text.{trim, parse_usize, from_usize, strip_prefix};
-import std.collections.len;
+import std.text.{trim, from_usize};
+import nomo.domain.projects.selection.{ProjectReference, remembered, reference, saved};
 import nomo.core.json.encode;
 
 public type LaunchRoot;
@@ -20,9 +20,7 @@ flow recent() -> Array<string> {
 }
 
 public flow remember(workspace: string) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>] {
-    var folders = [workspace];
-    for value in recent() limit Iterations(2147483647) { if value != workspace { folders = folders.push(value); } }
-    Data.Recent.put("folders", folders);
+    Data.Recent.put("folders", remembered(workspace, recent()));
 }
 
 public flow show_projects() -> unit {
@@ -45,20 +43,10 @@ public flow request_open(raw: string, workspace: string) -> bool
         selection = trim(read_line());
         if selection == "" { return false; }
     }
-    var selected = "";
-    match parse_usize(selection) {
-        Ok(index) => {
-            let folders = recent();
-            if index == 0 || index > len(folders) { abort("project number is outside the saved list"); }
-            selected = folders[index - 1];
-        }
-        Err(_) => {
-            selected = match strip_prefix(selection, "/") {
-                Some(_) => selection,
-                None() => { match strip_prefix(selection, "~/") { Some(_) => selection, None() => workspace + "/" + selection } }
-            };
-        }
-    }
+    let selected = match reference(selection, workspace) {
+        ProjectReference.Saved(index) => saved(recent(), index),
+        ProjectReference.Folder(path) => path
+    };
     let preview = match encode(selected, "project path conversion failed", "project path encoding failed") { Ok(value) => value, Err(error) => { abort(error); } };
     println("[OPEN   ] " + preview);
     let destination = match path<LaunchRoot>("next-project") { Ok(value) => value, Err(_) => { abort("native launch control is unavailable"); } };
