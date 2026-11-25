@@ -1,0 +1,87 @@
+{
+  "status": "prepared_not_integrated",
+  "baseline_commit": "14f0635bb796df938327d5911574277ceb1f4de9",
+  "patch_sha256": "5ad5ef2334701a6de286aac2f266650ee5a91116b47b7d373e387fccf8afa186",
+  "tracked_files": [
+    "src/nomo/native/configuration.es",
+    "src/nomo/native/git.es",
+    "src/nomo/native/mutations.es",
+    "src/nomo/native/navigation.es",
+    "src/nomo/native/terminal.es",
+    "src/nomo/native/workspace.es",
+    "tests/fixtures/native_receipt/src/app/main.es",
+    "tests/native_receipt_probe.py"
+  ],
+  "new_files": [
+    "src/nomo/domain/execution/command.es",
+    "src/nomo/application/native/command/ports.es",
+    "src/nomo/application/native/command/encoding.es",
+    "src/nomo/application/native/command/service.es",
+    "src/nomo/adapters/command/foreground.es",
+    "src/nomo/adapters/terminal/command_preview.es",
+    "src/nomo/bootstrap/command.es"
+  ],
+  "candidate_source_sha256": {
+    "src/nomo/native/configuration.es": "1c9ec33f38b0cfa252101a0842f075386db2aa6ae6744f677bcf7fee71478591",
+    "src/nomo/native/git.es": "80f9682b48a3b8a9001a8dc6cffb58f326fcd4eb830833a68f3c31d3fc180626",
+    "src/nomo/native/mutations.es": "92014daff268cd85f636e624d7f2f525344d8dc2362ced303d9be88ed7ea5ab1",
+    "src/nomo/native/navigation.es": "e2c4b7e71af423f245e13f97ebeb81fa67b8fbcf6de851aff0f74c0d53266432",
+    "src/nomo/native/terminal.es": "8ed422a8a0c6e90a052eb7746834f42ea0e797b27ba634edbb8c0ccac8983626",
+    "src/nomo/native/workspace.es": "0802b33a4e3cf824814e5de5d1f14c004cb95474a675735a61b1e8bdefb19e1d",
+    "tests/fixtures/native_receipt/src/app/main.es": "8731e96aca72c5d176fbc9067bc79126121ad9755724f4d15b7f514771a73678",
+    "tests/native_receipt_probe.py": "ac1a9cccfc0b53aad43bd9d6f749e96a5de43ec56d78b8c3337c4dd09dd4f30d",
+    "src/nomo/domain/execution/command.es": "da4a471bbf590190d304dfa06c758a316cc3dce79e3a4852ca3fe9b104bfc0ce",
+    "src/nomo/application/native/command/ports.es": "b21a54873a76db7bcf4955dcc410e4dfcedef62690de25389d08a41011cb9c91",
+    "src/nomo/application/native/command/encoding.es": "ddda72374fcce13bba4be4a58adfd454d0e78d93ffb38752750b4af0b6e9605e",
+    "src/nomo/application/native/command/service.es": "0d7ff5ca8af845ad98fe77a0dd5770abdc68a7ca2d869d8acb224a8678c54cac",
+    "src/nomo/adapters/command/foreground.es": "4cebbe1e681eb2dd1f1d8c4dc5ef2d2dd8b5e20add8149c23713b0765a705bed",
+    "src/nomo/adapters/terminal/command_preview.es": "bd34179b06108f38e8f3b748be1f9f85d0ac86bd2fc5f277fc68370e8b96cf61",
+    "src/nomo/bootstrap/command.es": "a468fce57be8068af5b641c11aac4bf3c438155cfff89fb986c2729369604cfb"
+  },
+  "accepted_on_0135": false,
+  "full_target_acceptance": false,
+  "isolated_new_sdk_check": {
+    "project": "examples/native-project/candidates/foreground-command-0224-check",
+    "exit_code": 0,
+    "checked_files": 8,
+    "command": "etas --no-config --cache off check --all .",
+    "source_sdk": "config/etas-0224-official.json",
+    "log": "checked 8 files\n",
+    "source_sha256": {
+      "etas.toml": "99e227bd87b6a8023eaacd48b1b7b866b64e313c600a4cad2129a6c1673aa915",
+      "etas.lock": "7c26cf886542d8a6d9d1eddde51fb3e770848a4c802b8cfc6dfcead7a2697624",
+      "src/app/main.es": "1d3fa90ffad31499ff0170a5273630eb55d7eafaf4f4c7e5461eb68fccd25309",
+      "src/nomo/core/json.es": "0360bf248732574120b32706559496f5c20c456ce467533b806128f1c6bd2fe5",
+      "src/nomo/native/workspace.es": "0802b33a4e3cf824814e5de5d1f14c004cb95474a675735a61b1e8bdefb19e1d",
+      "src/nomo/domain/execution/command.es": "da4a471bbf590190d304dfa06c758a316cc3dce79e3a4852ca3fe9b104bfc0ce",
+      "src/nomo/application/native/command/ports.es": "b21a54873a76db7bcf4955dcc410e4dfcedef62690de25389d08a41011cb9c91",
+      "src/nomo/application/native/command/encoding.es": "ddda72374fcce13bba4be4a58adfd454d0e78d93ffb38752750b4af0b6e9605e",
+      "src/nomo/adapters/terminal/command_preview.es": "bd34179b06108f38e8f3b748be1f9f85d0ac86bd2fc5f277fc68370e8b96cf61",
+      "src/nomo/adapters/command/foreground.es": "4cebbe1e681eb2dd1f1d8c4dc5ef2d2dd8b5e20add8149c23713b0765a705bed"
+    },
+    "binary_sha256": "1037eda142e287257485e38cd0a86f487042ea4a4aa6e9e1943f79eb2e38e3da",
+    "sdk_manifest_sha256": "ed146d0f0aa8545138dc97c3e1a309e2f3c48d5aeb30584d7491a686f5d03f00",
+    "execution_attempted": false
+  },
+  "retained_graph_check": {
+    "exit_code": 1,
+    "diagnostic": "bodyless impl of spec CommandRunner / CommandPreviewSink is missing required method; method evidence has no unique checked implementation",
+    "log_sha256": "9c237202b41b6e8a6349ab45b50e65e835bffcae0894a65996e44db07da2d740",
+    "source_stage": "initial extraction using retained free-function SDK APIs; method evidence was missing"
+  },
+  "date": "2026-11-26",
+  "product_and_fixture_source_restored": true,
+  "runtime_verification": "not run; retained whole-product check failed and target integration remains blocked by scoped-loop syntax",
+  "retained_explicit_effects_check": {
+    "exit_code": 1,
+    "checked_files": 8,
+    "source_stage": "same isolated adapter family with explicit effect rows and retained SDK APIs",
+    "log": "checked 8 files\nerror[effect::IncompleteEffectFacts]: call effect selector specialization failed: invalid callable environment: method evidence has no unique checked implementation\n --> /repro/src/app/main.es:11:12\n  |     return invoke(HostCommandRunner {}, ConsoleCommandPreview {}, CommandRequest { program = \"/usr/bin/true\", arguments = [], stdin = None() }).exit_code;\n  |            ^ call effect selector specialization failed: invalid callable environment: method evidence has no unique checked implementation\nerror[type::InvalidImplMemberKind]: bodyless impl of spec `CommandRunner` is missing required method `run`\n --> /repro/src/nomo/adapters/command/foreground.es:20:26\n  | impl HostCommandRunner ~ CommandRunner {\n  |                          ^ bodyless impl of spec `CommandRunner` is missing required method `run`\nerror[type::InvalidImplMemberKind]: bodyless impl of spec `CommandPreviewSink` is missing required method `show`\n --> /repro/src/nomo/adapters/terminal/command_preview.es:10:30\n  | impl ConsoleCommandPreview ~ CommandPreviewSink {\n  |                              ^ bodyless impl of spec `CommandPreviewSink` is missing required method `show`\n"
+  },
+  "target_dependencies": [
+    "official 0.22.4 matching SDK",
+    "canonical language/API migration",
+    "etas-frontend#97 scoped-loop implementation",
+    "normal full source check and original command/Git/stdin workflows"
+  ]
+}

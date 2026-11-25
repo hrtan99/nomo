@@ -2282,6 +2282,61 @@ diff --git a/src/nomo/native/options.es b/src/nomo/native/options.es
 diff --git a/src/nomo/native/processes.es b/src/nomo/native/processes.es
 --- a/src/nomo/native/processes.es
 +++ b/src/nomo/native/processes.es
+@@ -1,6 +1,6 @@
+ module nomo.native.processes;
+ 
+-import std.host.command.{CommandHandle, CommandEvent, command, with_cwd, start, reconnect, id as handle_id, read, write, close_stdin, stop};
++import std.host.command.{Command as HostCommand, CommandHandle, CommandEvent, start, reconnect};
+ import std.fs.path;
+ import std.codec.text.{utf8_encode, utf8_decode, Replace};
+ import std.io.{println, IOError};
+@@ -80,8 +80,8 @@
+     Data.Jobs.insert(job.id, job);
+     let root = match path<ProjectRoot>(".") { Ok(value) => value, Err(_) => { abort("project root is unavailable"); } };
+     preview(request);
+-    let process = start(with_cwd(command(program, arguments), root), DefaultCommandSandbox);
+-    let result = Job { id = job.id, session = job.session, program = program, arguments = arguments, handle = handle_id(process), phase = "started" };
++    let process = start(HostCommand.new(program, arguments).with_cwd(root), DefaultCommandSandbox);
++    let result = Job { id = job.id, session = job.session, program = program, arguments = arguments, handle = process.id(), phase = "started" };
+     Data.Jobs.put(result.id, result);
+     complete(attempt, result);
+     return result;
+@@ -95,7 +95,7 @@
+     let attempt = prepare("read_job", request);
+     let process = attach(selected);
+     preview(request);
+-    let result = event(selected, attempt.input_event, read(process, max_bytes));
++    let result = event(selected, attempt.input_event, process.read(max_bytes));
+     complete(attempt, result);
+     return result;
+ }
+@@ -108,7 +108,7 @@
+     let attempt = prepare("write_job", request);
+     let process = attach(selected);
+     preview(request);
+-    write(process, utf8_encode(input));
++    process.write(utf8_encode(input));
+     let result = InputResult { job = job, operation = "write", status = "completed" };
+     complete(attempt, result);
+     return result;
+@@ -122,7 +122,7 @@
+     let attempt = prepare("close_job_input", request);
+     let process = attach(selected);
+     preview(request);
+-    close_stdin(process);
++    process.close_stdin();
+     let result = InputResult { job = job, operation = "close_stdin", status = "completed" };
+     complete(attempt, result);
+     return result;
+@@ -136,7 +136,7 @@
+     let attempt = prepare("stop_job", request);
+     let process = attach(selected);
+     preview(request);
+-    let result = event(selected, attempt.input_event, stop(process));
++    let result = event(selected, attempt.input_event, process.stop());
+     complete(attempt, result);
+     return result;
+ }
 @@ -145,9 +145,9 @@
  public flow jobs(session: string) -> Array<Job> ![Memory, Error<StorageError>] {
      var result: Array<Job> = [];
@@ -2390,6 +2445,29 @@ diff --git a/src/nomo/native/transfer.es b/src/nomo/native/transfer.es
      let job = begin_copy(workspace, source.title, "import", pathname, fingerprint(raw), total);
      copy_source(job.id, "archive", "imported_source", raw);
      return copy_events(job.id, source.events, source.summary);
+diff --git a/src/nomo/native/workspace.es b/src/nomo/native/workspace.es
+--- a/src/nomo/native/workspace.es
++++ b/src/nomo/native/workspace.es
+@@ -1,7 +1,7 @@
+ module nomo.native.workspace;
+ 
+ import std.fs.{Region, path};
+-import std.host.command.{command, with_cwd, with_stdin, run};
++import std.host.command.{Command as HostCommand, run};
+ import std.codec.text.{utf8_decode, utf8_encode, Replace};
+ import std.io.{println, IOError};
+ import nomo.core.json.encode;
+@@ -34,8 +34,8 @@
+         None() => encode(CommandPreview { program = program, arguments = arguments }, "command preview conversion failed", "command preview encoding failed")
+     };
+     println("[COMMAND] " + match preview { Ok(value) => value, Err(error) => { abort(error); } });
+-    var selected = with_cwd(command(program, arguments), root);
+-    match input { Some(value) => { selected = with_stdin(selected, utf8_encode(value)); } None() => {} }
++    var selected = HostCommand.new(program, arguments).with_cwd(root);
++    match input { Some(value) => { selected = selected.with_stdin(utf8_encode(value)); } None() => {} }
+     let result = run(selected, DefaultCommandSandbox);
+     let output = CommandOutput { exit_code = result.exit_code, stdout = text(result.stdout), stderr = text(result.stderr) };
+     return output;
 diff --git a/src/nomo/project/contracts.es b/src/nomo/project/contracts.es
 --- a/src/nomo/project/contracts.es
 +++ b/src/nomo/project/contracts.es

@@ -609,7 +609,9 @@
     "loop_files": 96,
     "changed_files": 109,
     "apply_check_exit_code": 0,
-    "compiler_acceptance": false
+    "compiler_acceptance": false,
+    "source_git_revision": "14f0635bb796df938327d5911574277ceb1f4de9",
+    "snapshot_url": "https://github.com/hrtan99/nomo/blob/14f0635bb796df938327d5911574277ceb1f4de9/examples/native-project/candidates/language-migration-0224-20261125.patch"
   },
   "remaining": [
     "DIP-02 target compiler compatibility and required end-to-end acceptance",

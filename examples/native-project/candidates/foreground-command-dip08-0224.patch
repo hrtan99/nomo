@@ -1,0 +1,512 @@
+diff --git a/src/nomo/native/configuration.es b/src/nomo/native/configuration.es
+index da5cf1a..3d13d05 100644
+--- a/src/nomo/native/configuration.es
++++ b/src/nomo/native/configuration.es
+@@ -9,7 +9,9 @@ import std.codec.text.utf8_encode;
+ import std.io.IOError as ConsoleError;
+ public import nomo.domain.configuration.settings.{Settings, defaults, effective_window, as_number, estimated_tokens, recent_bytes};
+ import nomo.domain.configuration.settings.validate;
+-import nomo.native.workspace.{ProjectRoot, CommandOutput, execute_readonly_input};
++import nomo.native.workspace.ProjectRoot;
++import nomo.domain.execution.command.{CommandOutput};
++import nomo.bootstrap.command.{execute_readonly_input};
+ import nomo.native.history.{SessionContext};
+ import nomo.adapters.etas.conversations.{NativeHistory, read_message as message};
+ import nomo.application.native.conversation.ports.{ConversationReader};
+diff --git a/src/nomo/native/git.es b/src/nomo/native/git.es
+index 3fe41fa..b3875b4 100644
+--- a/src/nomo/native/git.es
++++ b/src/nomo/native/git.es
+@@ -1,6 +1,7 @@
+ module nomo.native.git;
+ 
+-import nomo.native.workspace.{CommandOutput, execute, execute_readonly};
++import nomo.domain.execution.command.{CommandOutput};
++import nomo.bootstrap.command.{execute, execute_readonly};
+ import std.text.{from_i32, trim, split_once, strip_prefix, parse_i32};
+ import std.json.parse;
+ import std.agent.message.Message;
+diff --git a/src/nomo/native/mutations.es b/src/nomo/native/mutations.es
+index 1478e78..740688a 100644
+--- a/src/nomo/native/mutations.es
++++ b/src/nomo/native/mutations.es
+@@ -9,7 +9,8 @@ import std.effects.Fs;
+ import std.json.parse;
+ import std.agent.message.Message;
+ import nomo.core.json.encode;
+-import nomo.native.workspace.{ProjectRoot, execute_step};
++import nomo.native.workspace.ProjectRoot;
++import nomo.bootstrap.command.{execute_step};
+ import nomo.native.file_io.read_text;
+ import nomo.native.history.{SessionContext};
+ import nomo.adapters.etas.conversations.{NativeHistory, record, tool_finished, observe_started, observe_finished, pending_request, read_message as message, result_published};
+diff --git a/src/nomo/native/navigation.es b/src/nomo/native/navigation.es
+index ef4bbdd..356404a 100644
+--- a/src/nomo/native/navigation.es
++++ b/src/nomo/native/navigation.es
+@@ -5,7 +5,9 @@ import std.agent.message.Message;
+ import std.effects.Fs;
+ import std.text.{lines, contains, from_i32};
+ import std.io.IOError as ConsoleError;
+-import nomo.native.workspace.{ProjectRoot, CommandOutput, execute_readonly};
++import nomo.native.workspace.ProjectRoot;
++import nomo.domain.execution.command.{CommandOutput};
++import nomo.bootstrap.command.{execute_readonly};
+ import nomo.native.files.read_text;
+ import nomo.native.history.{SessionContext};
+ import nomo.adapters.etas.conversations.{observe_started, observe_finished};
+diff --git a/src/nomo/native/terminal.es b/src/nomo/native/terminal.es
+index f79dd4c..b15aea6 100644
+--- a/src/nomo/native/terminal.es
++++ b/src/nomo/native/terminal.es
+@@ -1,6 +1,7 @@
+ module nomo.native.terminal;
+ 
+-import nomo.native.workspace.{CommandOutput, execute, execute_input};
++import nomo.domain.execution.command.{CommandOutput};
++import nomo.bootstrap.command.{execute, execute_input};
+ import nomo.native.history.SessionContext;
+ import std.io.IOError;
+ import nomo.native.configuration.SettingsContext;
+diff --git a/src/nomo/native/workspace.es b/src/nomo/native/workspace.es
+index 5217347..e0525a2 100644
+--- a/src/nomo/native/workspace.es
++++ b/src/nomo/native/workspace.es
+@@ -1,109 +1,7 @@
+ module nomo.native.workspace;
+ 
+-import std.fs.{Region, path};
+-import std.host.command.{command, with_cwd, with_stdin, run};
+-import std.codec.text.{utf8_decode, utf8_encode, Replace};
+-import std.io.{println, IOError};
+-import nomo.core.json.encode;
+-import nomo.native.history.{SessionContext};
+-import nomo.adapters.etas.conversations.{record, observe_started};
+-import nomo.bootstrap.execution.{begin, dispatching, returned, complete_attempt};
++import std.fs.Region;
++public import nomo.domain.execution.command.{CommandOutput, CommandObservation};
+ 
+ public type ProjectRoot;
+ impl ProjectRoot ~ Region;
+-
+-public type CommandOutput = { exit_code: i32, stdout: string, stderr: string };
+-type CommandPreview = { program: string, arguments: Array<string> };
+-type CommandInput = { program: string, arguments: Array<string>, stdin: string };
+-public type CommandObservation = { result_event: i64, output: CommandOutput };
+-
+-flow text(value: bytes) -> string {
+-    return match utf8_decode(value, Replace) {
+-        Ok(decoded) => decoded,
+-        Err(_) => { abort("command output decoding failed"); }
+-    };
+-}
+-
+-flow dispatch(program: string, arguments: Array<string>, input: Option<string>) -> CommandOutput {
+-    let root = match path<ProjectRoot>(".") {
+-        Ok(value) => value,
+-        Err(_) => { abort("project root is unavailable"); }
+-    };
+-    let preview = match input {
+-        Some(value) => encode(CommandInput { program = program, arguments = arguments, stdin = value }, "command input conversion failed", "command input encoding failed"),
+-        None() => encode(CommandPreview { program = program, arguments = arguments }, "command preview conversion failed", "command preview encoding failed")
+-    };
+-    println("[COMMAND] " + match preview { Ok(value) => value, Err(error) => { abort(error); } });
+-    var selected = with_cwd(command(program, arguments), root);
+-    match input { Some(value) => { selected = with_stdin(selected, utf8_encode(value)); } None() => {} }
+-    let result = run(selected, DefaultCommandSandbox);
+-    let output = CommandOutput { exit_code = result.exit_code, stdout = text(result.stdout), stderr = text(result.stderr) };
+-    return output;
+-}
+-
+-flow result_text(output: CommandOutput) -> string {
+-    return match encode(output, "command result conversion failed", "command result encoding failed") {
+-        Ok(value) => value, Err(error) => { abort(error); }
+-    };
+-}
+-
+-public flow execute(program: string, arguments: Array<string>) -> CommandOutput
+-    ![SessionContext, Memory, Command.run<DefaultCommandSandbox>, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>] {
+-    let call = record("tool_call", "command", CommandPreview { program = program, arguments = arguments }, -1);
+-    let session = perform SessionContext.current();
+-    let attempt = begin(session, "command", program, call, call);
+-    dispatching(attempt.id);
+-    let output = dispatch(program, arguments, None());
+-    returned(attempt.id, "tool", "command", result_text(output), call);
+-    complete_attempt(attempt.id);
+-    return output;
+-}
+-
+-// Observations can inspect an interrupted operation without replacing its ticket.
+-// This does not change the Command Host's per-operation approval policy.
+-public flow execute_readonly(name: string, program: string, arguments: Array<string>) -> CommandOutput
+-    ![SessionContext, Memory, Command.run<DefaultCommandSandbox>, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>] {
+-    let call = observe_started(name, CommandPreview { program = program, arguments = arguments });
+-    let session = perform SessionContext.current();
+-    let attempt = begin(session, "observation", name, call, call);
+-    dispatching(attempt.id);
+-    let output = dispatch(program, arguments, None());
+-    returned(attempt.id, "tool", name, result_text(output), call);
+-    complete_attempt(attempt.id);
+-    return output;
+-}
+-
+-public flow execute_input(program: string, arguments: Array<string>, input: string) -> CommandOutput
+-    ![SessionContext, Memory, Command.run<DefaultCommandSandbox>, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>] {
+-    let call = record("tool_call", "command", CommandInput { program = program, arguments = arguments, stdin = input }, -1);
+-    let session = perform SessionContext.current();
+-    let attempt = begin(session, "command", program, call, call);
+-    dispatching(attempt.id);
+-    let output = dispatch(program, arguments, Some(input));
+-    returned(attempt.id, "tool", "command", result_text(output), call);
+-    complete_attempt(attempt.id);
+-    return output;
+-}
+-
+-public flow execute_readonly_input(name: string, program: string, arguments: Array<string>, input: string) -> CommandObservation
+-    ![SessionContext, Memory, Command.run<DefaultCommandSandbox>, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>] {
+-    let call = observe_started(name, CommandInput { program = program, arguments = arguments, stdin = input });
+-    let session = perform SessionContext.current();
+-    let attempt = begin(session, "observation", name, call, call);
+-    dispatching(attempt.id);
+-    let output = dispatch(program, arguments, Some(input));
+-    let index = returned(attempt.id, "tool", name, result_text(output), call);
+-    complete_attempt(attempt.id);
+-    return CommandObservation { result_event = index, output = output };
+-}
+-
+-// A journalled file transaction owns this operation. Keep its outer pending
+-// request intact instead of creating and completing another top-level tool.
+-public flow execute_step(program: string, arguments: Array<string>, parent: i64) -> CommandOutput
+-    ![SessionContext, Memory, Command.run<DefaultCommandSandbox>, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>] {
+-    let request = CommandPreview { program = program, arguments = arguments };
+-    record("operation", "command", request, parent);
+-    let output = dispatch(program, arguments, None());
+-    record("operation_result", "command", output, parent);
+-    return output;
+-}
+diff --git a/tests/fixtures/native_receipt/src/app/main.es b/tests/fixtures/native_receipt/src/app/main.es
+index 466a5d4..cc40825 100644
+--- a/tests/fixtures/native_receipt/src/app/main.es
++++ b/tests/fixtures/native_receipt/src/app/main.es
+@@ -1,6 +1,12 @@
+ module app.main;
+ 
+ import std.io.println;
++import std.json.parse;
++import std.agent.message.Message;
++import nomo.core.json.encode;
++import nomo.domain.execution.command.{CommandRequest, CommandOutput, CommandMode};
++import nomo.application.native.command.ports.{CommandRunner, CommandPreviewSink};
++import nomo.application.native.command.service.{run as command_run, step as command_step};
+ import nomo.native.history.SessionContext;
+ import nomo.adapters.etas.conversations.{NativeHistory, pending_request, tool_finished};
+ import nomo.adapters.etas.attempts.NativeAttempts;
+@@ -10,6 +16,19 @@ import nomo.bootstrap.execution.{attempts, begin, dispatching, returned, resolve
+ 
+ type Result = { status: string };
+ type InterruptedPublication = {};
++type RecordedCommand = {};
++type QuietPreview = {};
++
++impl RecordedCommand ~ CommandRunner {
++    flow run(self, request: CommandRequest) -> CommandOutput {
++        let text = match encode(request, "request capture failed", "request capture encoding failed") {
++            Ok(value) => value, Err(error) => { abort(error); }
++        };
++        return CommandOutput { exit_code = 0, stdout = text, stderr = "" };
++    }
++}
++
++impl QuietPreview ~ CommandPreviewSink { flow show(self, request: CommandRequest) -> unit {} }
+ 
+ impl InterruptedPublication ~ ResultPublication {
+     flow prepare_result(self, id: string, role: string, name: string, call: i64) -> i64 { return (NativeHistory {}).prepare_result(id, role, name, call); }
+@@ -20,8 +39,34 @@ impl InterruptedPublication ~ ResultPublication {
+     flow acknowledge(self, id: string, call: i64, note: string) -> i64 { return (NativeHistory {}).acknowledge(id, call, note); }
+ }
+ 
+-flow main(args: Array<string>) -> i32 ![Memory, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>, Error<IndexError>] {
++flow main(args: Array<string>) -> i32 ![Memory, Console, Command.run<DefaultCommandSandbox>, Error<StorageError>, Error<MemoryConflict>, Error<IOError>, Error<IndexError>] {
+     let archive = NativeHistory {};
++    if args[0] == "command-port" {
++        let saved = archive.create("command-port", "Synthetic command port; no shell execution");
++        let request = CommandRequest { program = "synthetic-no-shell", arguments = ["literal a", "café"], stdin = Some("stdin café\n") };
++        let observed = command_run(RecordedCommand {}, QuietPreview {}, NativeAttempts {}, archive, archive, archive,
++            saved.id, CommandMode.Mutating, request);
++        let json = match parse(observed.output.stdout) { Ok(value) => value, Err(_) => { abort("recorded command is not JSON"); } };
++        let value: Option<Message<CommandRequest>> = Message.new(json).cast<CommandRequest>();
++        let recorded = match value { Some(value) => value.body, None() => { abort("recorded command shape changed"); } };
++        if recorded.program != "synthetic-no-shell" || recorded.arguments.len() != 2 || recorded.arguments[0] != "literal a" || recorded.arguments[1] != "café" {
++            abort("command port changed program or argv");
++        }
++        match recorded.stdin { Some(value) => { if value != "stdin café\n" { abort("command port changed stdin"); } } None() => { abort("command stdin lost"); } }
++        if archive.load(saved.id).pending != "" || attempts(saved.id, false).len() != 1 { abort("command sequencing did not complete"); }
++        let parent = archive.append(saved.id, "tool_call", "fixture_journal", "{}", -1);
++        let pending = archive.load(saved.id).pending;
++        command_step(RecordedCommand {}, QuietPreview {}, archive, saved.id,
++            CommandRequest { program = "synthetic-step", arguments = [], stdin = None() }, parent);
++        if archive.load(saved.id).pending != pending || attempts(saved.id, false).len() != 1 { abort("subordinate step replaced its parent"); }
++        command_run(RecordedCommand {}, QuietPreview {}, NativeAttempts {}, archive, archive, archive, saved.id,
++            CommandMode.Observation("fixture_readonly"), CommandRequest { program = "synthetic-observation", arguments = [], stdin = None() });
++        if archive.load(saved.id).pending != pending || attempts(saved.id, false).len() != 2 { abort("observation replaced its parent"); }
++        handle { tool_finished("fixture_journal", parent, Result { status = "synthetic complete" }); }
++            with { SessionContext.current() => { resume saved.id; } };
++        println("COMMAND PORT recorded exact argv/stdin; parent retained; no shell execution");
++        return 0;
++    }
+     if args[0] == "seed-incomplete" {
+         let saved = archive.create("receipt-incomplete", "Incomplete result archive");
+         let attempt = begin(saved.id, "coding", "synthetic incomplete result; no Host execution", -1, -1);
+diff --git a/tests/native_receipt_probe.py b/tests/native_receipt_probe.py
+index c016452..089f4c0 100644
+--- a/tests/native_receipt_probe.py
++++ b/tests/native_receipt_probe.py
+@@ -18,7 +18,9 @@ def main():
+                  'src/nomo/domain/conversation/messages.es', 'src/nomo/domain/execution/transitions.es',
+                  'src/nomo/application/native/conversation/ports.es', 'src/nomo/application/native/execution/ports.es',
+                  'src/nomo/application/native/execution/service.es', 'src/nomo/adapters/etas/conversations.es',
+-                 'src/nomo/adapters/etas/attempts.es', 'src/nomo/bootstrap/execution.es'):
++                 'src/nomo/adapters/etas/attempts.es', 'src/nomo/bootstrap/execution.es',
++                 'src/nomo/domain/execution/command.es', 'src/nomo/application/native/command/ports.es',
++                 'src/nomo/application/native/command/encoding.es', 'src/nomo/application/native/command/service.es'):
+         target = package / name
+         target.parent.mkdir(parents=True, exist_ok=True)
+         target.write_bytes((ROOT / name).read_bytes())
+@@ -54,11 +56,11 @@ flow = "main"
+                  'config/etas-runtime-cache-compose.yaml', str(overlay)):
+         command += ['--file', str(ROOT / name)]
+     command += ['run', '--rm', '--no-deps', '--pull', 'never', '--tty=false', 'dev',
+-                '/home/nomo/.cargo/bin/etas', 'run', '/workspace', '--allow-effects', '--args']
++                '/home/nomo/.cargo/bin/etas', 'run', '/workspace', '--allow-effects']
+     print('EVIDENCE ' + str(evidence), flush=True)
+     outputs = {}
+-    for mode in ('seed', 'settle', 'seed-incomplete', 'settle-incomplete'):
+-        result = subprocess.run(command + [mode], cwd=ROOT, capture_output=True, text=True)
++    for mode in ('seed', 'settle', 'seed-incomplete', 'settle-incomplete', 'command-port'):
++        result = subprocess.run(command + ['--trace-out', '/state/' + mode + '-trace.json', '--args', mode], cwd=ROOT, capture_output=True, text=True)
+         (evidence / (mode + '-stdout.txt')).write_text(result.stdout)
+         (evidence / (mode + '-stderr.txt')).write_text(result.stderr)
+         outputs[mode] = result.stdout
+@@ -68,6 +70,10 @@ flow = "main"
+             assert result.returncode == 0, result.stdout + result.stderr
+     assert 'SETTLED original result retained' in outputs['settle']
+     assert 'INCOMPLETE reserved result retained as unknown' in outputs['settle-incomplete']
++    assert 'COMMAND PORT recorded exact argv/stdin' in outputs['command-port']
++    trace = json.loads((state / 'command-port-trace.json').read_text())
++    assert trace['outcome']['kind'] == 'completed'
++    assert not any(event.get('qualified_action') == 'Command.run' for event in trace['events'])
+     print('PASS native result publication + new-process pending cleanup: ' + str(evidence))
+ 
+ 
+diff --git a/src/nomo/domain/execution/command.es b/src/nomo/domain/execution/command.es
+new file mode 100644
+--- /dev/null
++++ b/src/nomo/domain/execution/command.es
+@@ -0,0 +1,17 @@
++module nomo.domain.execution.command;
++
++public type CommandRequest = { program: string, arguments: Array<string>, stdin: Option<string> };
++public type CommandOutput = { exit_code: i32, stdout: string, stderr: string };
++public type CommandObservation = { result_event: i64, output: CommandOutput };
++public type CommandPreview = { program: string, arguments: Array<string> };
++public type CommandInput = { program: string, arguments: Array<string>, stdin: string };
++
++public enum CommandMode { Mutating, Observation(string) }
++public type CommandJournal = { kind: string, role: string, name: string, label: string };
++
++public flow journal(mode: CommandMode, program: string) -> CommandJournal {
++    return match mode {
++        CommandMode.Mutating => CommandJournal { kind = "command", role = "tool_call", name = "command", label = program },
++        CommandMode.Observation(name) => CommandJournal { kind = "observation", role = "observation_call", name = name, label = name }
++    };
++}
+diff --git a/src/nomo/application/native/command/ports.es b/src/nomo/application/native/command/ports.es
+new file mode 100644
+--- /dev/null
++++ b/src/nomo/application/native/command/ports.es
+@@ -0,0 +1,12 @@
++module nomo.application.native.command.ports;
++
++import std.io.IOError;
++import nomo.domain.execution.command.{CommandRequest, CommandOutput};
++
++public spec CommandRunner {
++    flow run(self, request: CommandRequest) -> CommandOutput ![Command.run<DefaultCommandSandbox>, Error<IOError>];
++}
++
++public spec CommandPreviewSink {
++    flow show(self, request: CommandRequest) -> unit ![Console, Error<IOError>];
++}
+diff --git a/src/nomo/application/native/command/encoding.es b/src/nomo/application/native/command/encoding.es
+new file mode 100644
+--- /dev/null
++++ b/src/nomo/application/native/command/encoding.es
+@@ -0,0 +1,32 @@
++module nomo.application.native.command.encoding;
++
++import nomo.core.json.encode;
++import nomo.domain.execution.command.{CommandRequest, CommandPreview, CommandInput, CommandOutput};
++
++public flow request_text(request: CommandRequest) -> string {
++    let result = match request.stdin {
++        Some(value) => encode(CommandInput { program = request.program, arguments = request.arguments, stdin = value }, "history conversion failed", "history encoding failed"),
++        None() => encode(CommandPreview { program = request.program, arguments = request.arguments }, "history conversion failed", "history encoding failed")
++    };
++    return match result { Ok(value) => value, Err(error) => { abort(error); } };
++}
++
++public flow preview_text(request: CommandRequest) -> string {
++    let result = match request.stdin {
++        Some(value) => encode(CommandInput { program = request.program, arguments = request.arguments, stdin = value }, "command input conversion failed", "command input encoding failed"),
++        None() => encode(CommandPreview { program = request.program, arguments = request.arguments }, "command preview conversion failed", "command preview encoding failed")
++    };
++    return match result { Ok(value) => value, Err(error) => { abort(error); } };
++}
++
++public flow result_text(output: CommandOutput) -> string {
++    return match encode(output, "command result conversion failed", "command result encoding failed") {
++        Ok(value) => value, Err(error) => { abort(error); }
++    };
++}
++
++public flow step_result(output: CommandOutput) -> string {
++    return match encode(output, "history conversion failed", "history encoding failed") {
++        Ok(value) => value, Err(error) => { abort(error); }
++    };
++}
+diff --git a/src/nomo/application/native/command/service.es b/src/nomo/application/native/command/service.es
+new file mode 100644
+--- /dev/null
++++ b/src/nomo/application/native/command/service.es
+@@ -0,0 +1,31 @@
++module nomo.application.native.command.service;
++
++import std.io.IOError;
++import nomo.domain.execution.command.{CommandRequest, CommandOutput, CommandObservation, CommandMode, journal};
++import nomo.application.native.command.ports.{CommandRunner, CommandPreviewSink};
++import nomo.application.native.command.encoding.{request_text, result_text, step_result};
++import nomo.application.native.conversation.ports.{ConversationReader, ConversationWriter, ResultPublication};
++import nomo.application.native.execution.ports.AttemptRepository;
++import nomo.application.native.execution.service.{begin, dispatching, returned, complete_attempt};
++
++public flow run<R ~ CommandRunner, V ~ CommandPreviewSink, A ~ AttemptRepository, P ~ ResultPublication, C ~ ConversationReader, W ~ ConversationWriter>(runner: R, preview: V, repository: A, publication: P, history: C, writer: W, session: string, mode: CommandMode, request: CommandRequest) -> CommandObservation
++    ![Memory, Command.run<DefaultCommandSandbox>, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>] {
++    let entry = journal(mode, request.program);
++    let call = writer.append(session, entry.role, entry.name, request_text(request), -1);
++    let attempt = begin(repository, session, entry.kind, entry.label, call, call);
++    dispatching(repository, attempt.id);
++    preview.show(request);
++    let output = runner.run(request);
++    let index = returned(repository, publication, attempt.id, "tool", entry.name, result_text(output), call);
++    complete_attempt(repository, publication, history, attempt.id);
++    return CommandObservation { result_event = index, output = output };
++}
++
++public flow step<R ~ CommandRunner, V ~ CommandPreviewSink, W ~ ConversationWriter>(runner: R, preview: V, writer: W, session: string, request: CommandRequest, parent: i64) -> CommandOutput
++    ![Memory, Command.run<DefaultCommandSandbox>, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>] {
++    writer.append(session, "operation", "command", request_text(request), parent);
++    preview.show(request);
++    let output = runner.run(request);
++    writer.append(session, "operation_result", "command", step_result(output), parent);
++    return output;
++}
+diff --git a/src/nomo/adapters/command/foreground.es b/src/nomo/adapters/command/foreground.es
+new file mode 100644
+--- /dev/null
++++ b/src/nomo/adapters/command/foreground.es
+@@ -0,0 +1,31 @@
++module nomo.adapters.command.foreground;
++
++import std.fs.path;
++import std.host.command.{Command as HostCommand, run as run_native};
++import std.codec.text.{utf8_decode, utf8_encode, Replace};
++import std.io.IOError;
++import nomo.native.workspace.ProjectRoot;
++import nomo.domain.execution.command.{CommandRequest, CommandOutput};
++import nomo.application.native.command.ports.CommandRunner;
++
++public type HostCommandRunner = {};
++
++flow text(value: bytes) -> string {
++    return match utf8_decode(value, Replace) {
++        Ok(decoded) => decoded,
++        Err(_) => { abort("command output decoding failed"); }
++    };
++}
++
++impl HostCommandRunner ~ CommandRunner {
++    flow run(self, request: CommandRequest) -> CommandOutput ![Command.run<DefaultCommandSandbox>, Error<IOError>] {
++        let root = match path<ProjectRoot>(".") {
++            Ok(value) => value,
++            Err(_) => { abort("project root is unavailable"); }
++        };
++        var selected = HostCommand.new(request.program, request.arguments).with_cwd(root);
++        match request.stdin { Some(value) => { selected = selected.with_stdin(utf8_encode(value)); } None() => {} }
++        let result = run_native(selected, DefaultCommandSandbox);
++        return CommandOutput { exit_code = result.exit_code, stdout = text(result.stdout), stderr = text(result.stderr) };
++    }
++}
+diff --git a/src/nomo/adapters/terminal/command_preview.es b/src/nomo/adapters/terminal/command_preview.es
+new file mode 100644
+--- /dev/null
++++ b/src/nomo/adapters/terminal/command_preview.es
+@@ -0,0 +1,12 @@
++module nomo.adapters.terminal.command_preview;
++
++import std.io.{println, IOError};
++import nomo.domain.execution.command.CommandRequest;
++import nomo.application.native.command.ports.CommandPreviewSink;
++import nomo.application.native.command.encoding.preview_text;
++
++public type ConsoleCommandPreview = {};
++
++impl ConsoleCommandPreview ~ CommandPreviewSink {
++    flow show(self, request: CommandRequest) -> unit ![Console, Error<IOError>] { println("[COMMAND] " + preview_text(request)); }
++}
+diff --git a/src/nomo/bootstrap/command.es b/src/nomo/bootstrap/command.es
+new file mode 100644
+--- /dev/null
++++ b/src/nomo/bootstrap/command.es
+@@ -0,0 +1,42 @@
++module nomo.bootstrap.command;
++
++import std.io.IOError;
++import nomo.native.history.SessionContext;
++import nomo.domain.execution.command.{CommandRequest, CommandOutput, CommandObservation, CommandMode};
++import nomo.adapters.command.foreground.HostCommandRunner;
++import nomo.adapters.terminal.command_preview.ConsoleCommandPreview;
++import nomo.adapters.etas.attempts.NativeAttempts;
++import nomo.adapters.etas.conversations.NativeHistory;
++import nomo.application.native.command.service.{run as run_command, step as run_step};
++
++flow execute_request(mode: CommandMode, request: CommandRequest) -> CommandObservation
++    ![SessionContext, Memory, Command.run<DefaultCommandSandbox>, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>] {
++    return run_command(HostCommandRunner {}, ConsoleCommandPreview {}, NativeAttempts {}, NativeHistory {}, NativeHistory {}, NativeHistory {},
++        perform SessionContext.current(), mode, request);
++}
++
++public flow execute(program: string, arguments: Array<string>) -> CommandOutput
++    ![SessionContext, Memory, Command.run<DefaultCommandSandbox>, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>] {
++    return execute_request(CommandMode.Mutating, CommandRequest { program = program, arguments = arguments, stdin = None() }).output;
++}
++
++public flow execute_input(program: string, arguments: Array<string>, input: string) -> CommandOutput
++    ![SessionContext, Memory, Command.run<DefaultCommandSandbox>, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>] {
++    return execute_request(CommandMode.Mutating, CommandRequest { program = program, arguments = arguments, stdin = Some(input) }).output;
++}
++
++public flow execute_readonly(name: string, program: string, arguments: Array<string>) -> CommandOutput
++    ![SessionContext, Memory, Command.run<DefaultCommandSandbox>, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>] {
++    return execute_request(CommandMode.Observation(name), CommandRequest { program = program, arguments = arguments, stdin = None() }).output;
++}
++
++public flow execute_readonly_input(name: string, program: string, arguments: Array<string>, input: string) -> CommandObservation
++    ![SessionContext, Memory, Command.run<DefaultCommandSandbox>, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>] {
++    return execute_request(CommandMode.Observation(name), CommandRequest { program = program, arguments = arguments, stdin = Some(input) });
++}
++
++public flow execute_step(program: string, arguments: Array<string>, parent: i64) -> CommandOutput
++    ![SessionContext, Memory, Command.run<DefaultCommandSandbox>, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>] {
++    return run_step(HostCommandRunner {}, ConsoleCommandPreview {}, NativeHistory {}, perform SessionContext.current(),
++        CommandRequest { program = program, arguments = arguments, stdin = None() }, parent);
++}

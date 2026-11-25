@@ -1,11 +1,11 @@
 {
   "status": "prepared_not_target_compiler_accepted",
-  "source_baseline": "8adbb84 plus the execution-port extraction identified by source hashes",
+  "source_baseline": "14f0635bb796df938327d5911574277ceb1f4de9",
   "agent_declarations": 72,
   "instance_references": 77,
   "bounded_loops": 248,
   "loop_files": 96,
-  "changed_files": 109,
+  "changed_files": 110,
   "source_files": {
     "src/nomo/adapters/etas/attempts.es": {
       "before_sha256": "de5a5f078315437bb84f6b1781d3b7e0cb6ba72a7ed66f539e137b62e531e2d8",
@@ -317,7 +317,7 @@
     },
     "src/nomo/native/processes.es": {
       "before_sha256": "f28f59aedd44fdb9221a88b56bccd3f948428e62e6696354c39c9138bb8bcc59",
-      "candidate_sha256": "58fed2816f6d8dc48effbb834b1ec2e78742e3830ea0386bf0e6a58387067c76"
+      "candidate_sha256": "56050e114a1f9f82af3a19da8af0393110920af02aac598d649eebce5eee8756"
     },
     "src/nomo/native/project.es": {
       "before_sha256": "b3b2d44fc9dbe0975d974e86d18cb0cde66ef9104c706c864f6f34c409f2eaa1",
@@ -334,6 +334,10 @@
     "src/nomo/native/transfer.es": {
       "before_sha256": "ab86d34495d23e6841617c04f9f62ca6b49e968d4b81a18ebe89b6ad73a64748",
       "candidate_sha256": "d5e1353aa7647b7cc6efaf07dac3377d10b9ac278e7757b2011aa9ee24e2cc4f"
+    },
+    "src/nomo/native/workspace.es": {
+      "before_sha256": "a04235f19a42f8f3c1247011a23fe00bbb36aad154a0cc816a66eadbc50c1694",
+      "candidate_sha256": "e52c027bfef6d6a12579cc05f4c6b54dae1a12ae0dcd09612e27ed154a3e3c56"
     },
     "src/nomo/project/contracts.es": {
       "before_sha256": "3b690aece0e49678b8f30620a5cca99ef8b88ae91c01d6d123adc4c3f66e4fea",
@@ -886,11 +890,15 @@
       "1048576"
     ]
   },
-  "patch_sha256": "d8644204aa0c6ef5b870490d8bc3b7bdd8069e81ca0663bf405f6e0200e68acd",
+  "patch_sha256": "43f1aa75d85735822b62701598c7088b60072510f6e5fba4b49db5c8424642e4",
   "previous_executed_candidate": {
     "path": "examples/native-project/candidates/language-migration-0224-20261125-baseline-a3450bc.patch",
     "sha256": "4ed6e680bf54968d44237f95f825eab070fa01d69603125af9908df37f7b91d9"
   },
   "apply_check_exit_code": 0,
+  "sdk_api_migrations": [
+    "Command.new / with_cwd / with_stdin instance methods",
+    "CommandHandle.id / read / write / close_stdin / stop instance methods"
+  ],
   "target_acceptance": "pending upstream etas-frontend#97 and the required product scenarios"
 }
