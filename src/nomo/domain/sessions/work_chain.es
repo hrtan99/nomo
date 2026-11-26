@@ -3,7 +3,6 @@ module nomo.domain.sessions.work_chain;
 import nomo.domain.context.large_context.context_bytes;
 import nomo.domain.serialization.json.encode as encode_json;
 import std.text.{char_count as len, len as byte_len, split, parse_i32, from_i32, from_usize};
-import std.collections.len as count;
 import nomo.domain.sessions.edit_operation.selector_error;
 import nomo.domain.harness.model_tool_contract.question_error;
 import nomo.domain.harness.tool_context.allowed_error;
@@ -67,7 +66,7 @@ public flow reserve(saved: Caps, policy: Caps) -> Result<Reservation, string> {
 
 public flow parse_policy(raw: string) -> Result<Caps, string> {
     if len(raw) == 0 || len(raw) > 128 { return Err("expected ten canonical work-chain policy counters"); }
-    let fields = split(raw, ","); if count(fields) != 10 { return Err("expected ten canonical work-chain policy counters"); }
+    let fields = split(raw, ","); if fields.len() != 10 { return Err("expected ten canonical work-chain policy counters"); }
     var numbers: Array<i32> = [];
     @limits([Iterations(10)]) for field in fields {
         if len(field) == 0 || len(field) > 6 { return Err("invalid canonical work-chain counter"); }
@@ -97,7 +96,7 @@ public flow validate(row: Record) -> string {
     let chain = selector_error(row.chain, row.workspace, row.path); if chain != "" { return chain; }
     if row.region != "nomo.tools.edit_file.EditableRoot" { return "work-chain region binding mismatch"; }
     let request = question_error(row.request); if request != "" { return request; }
-    if count(row.allowed) > 2 { return "legacy work-chain supports at most two allowed files"; }
+    if row.allowed.len() > 2 { return "legacy work-chain supports at most two allowed files"; }
     let allowed = allowed_error(row.allowed); if allowed != "" { return allowed; }
     if row.maximum != lifetime() { return "work-chain lifetime allowance changed"; }
     let saved = if row.turn == 1 { lifetime() } else { turn_caps() };
@@ -144,7 +143,7 @@ public flow validate(row: Record) -> string {
             }
             decoded = decoded + 12288;
         }
-        None() => {}
+        None() => (),
     }
     if decoded > context_bytes() { return "work-chain decoded metadata plus work exceeds 33554432 bytes"; }
     return match serialized(row) { Ok(_) => "", Err(error) => error };
@@ -205,7 +204,7 @@ public flow linked(parent: Record, parent_version: string, child: Record) -> str
             let current = match validate_work(value) { Ok(item) => item, Err(error) => { return error; } };
             if current.before != prior.after { return "work-chain original differs from captured parent result"; }
         }
-        None() => {}
+        None() => (),
     }
     return "";
 }

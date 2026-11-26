@@ -146,7 +146,7 @@ impl FullChatPlan {
 
 public flow infer_plan(mode: MainMode, prompt: Prompt) -> string {
     let plan = match mode { MainMode.Standard => (StandardChatPlan {}).run(prompt), MainMode.Wide => (WideChatPlan {}).run(prompt), MainMode.HighInput => (HighInputChatPlan {}).run(prompt), MainMode.Large => (LargeChatPlan {}).run(prompt), MainMode.Full => (FullChatPlan {}).run(prompt) };
-    return match encode(["delegate", plan.task], "delegation conversion failed", "delegation encoding failed") { Ok(value) => value, Err(error) => { abort(error); } };
+    return match encode(["delegate", plan.task], "delegation conversion failed", "delegation encoding failed") { Ok(value) => value, Err(error) => abort(error), };
 }
 
 type PublicStages = { mode: MainMode };

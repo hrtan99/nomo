@@ -1,6 +1,5 @@
 module nomo.domain.sessions.work_chain_selection;
 
-import std.collections.len as count;
 import nomo.session.work_chain.Record;
 import nomo.domain.sessions.work_chain.{validate as row_error, linked};
 import nomo.domain.sessions.work_chain_journal_contract.{CapturedJournal as Journal, invalid as journal_invalid};
@@ -23,11 +22,11 @@ public flow journal_error(row: Record, journal: Option<Journal>) -> string {
             if value.chain != row.chain || value.turn != row.turn || value.binding.id != row.id ||
                 value.binding.workspace != row.workspace || value.binding.path != row.path { return "v2 discovery journal binding mismatch"; }
             match row.work {
-                Some(work) => { if value.phase != "completed" || !same_binding(value.binding, work.binding) { return "v2 work and completed edit journal differ"; } }
-                None() => {}
+                Some(work) => if value.phase != "completed" || !same_binding(value.binding, work.binding) { return "v2 work and completed edit journal differ"; },
+                None() => (),
             }
         }
-        None() => { if row.work != None() { return "v2 work has no confirmed edit journal"; } }
+        None() => if row.work != None() { return "v2 work has no confirmed edit journal"; },
     }
     return "";
 }
@@ -35,7 +34,7 @@ public flow journal_error(row: Record, journal: Option<Journal>) -> string {
 flow journal_row(row: Record, observed: Option<ObservedJournal>) -> string {
     let key = if row.turn == 1 { "turn:1" } else { "turn:2" };
     let selected = match observed {
-        Some(value) => { if value.key != key { return "v2 discovery journal slot mismatch"; } Some(value.value) }
+        Some(value) => if value.key != key { return "v2 discovery journal slot mismatch"; } Some(value.value),
         None() => None(),
     };
     return journal_error(row, selected);
@@ -61,7 +60,7 @@ public flow validate(view: Snapshot, workspace: string, path: string) -> string 
             let invalid = linked(root.value, root.version, child.value); if invalid != "" { return invalid; }
             let edit = journal_row(child.value, view.child_journal); if edit != "" { return edit; }
         }
-        None() => { if view.child_journal != None() { return "v2 discovery orphan second journal; slot cannot be reused"; } }
+        None() => if view.child_journal != None() { return "v2 discovery orphan second journal; slot cannot be reused"; },
     }
     return "";
 }
@@ -77,14 +76,14 @@ public flow eligible(view: Snapshot, workspace: string, path: string) -> bool {
 public flow select(view: Snapshot, workspace: string, path: string, selector: Selector) -> Result<Array<Record>, string> {
     let invalid = validate(view, workspace, path); if invalid != "" { return Err(invalid); }
     var rows: Array<Record> = [];
-    match view.root { Some(value) => { rows = rows.push(value.value); } None() => {} }
-    match view.child { Some(value) => { rows = rows.push(value.value); } None() => {} }
+    match view.root { Some(value) => { rows = rows.push(value.value); } None() => (), }
+    match view.child { Some(value) => { rows = rows.push(value.value); } None() => (), }
     return match selector {
         Selector.All => Ok(rows),
-        Selector.Latest => if count(rows) == 0 { Ok([]) } else { Ok([rows[count(rows) - 1]]) },
+        Selector.Latest => if rows.len() == 0 { Ok([]) } else { Ok([rows[rows.len() - 1]]) },
         Selector.Exact(id) => {
             let error = selector_error(id, workspace, path); if error != "" { return Err(error); }
-            if count(rows) == 0 { return Ok([]); }
+            if rows.len() == 0 { return Ok([]); }
             @limits([Iterations(2)]) for row in rows { if row.id == id { return Ok([row]); } }
             Err("v2 discovery selected ID missing")
         }

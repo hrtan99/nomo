@@ -3,7 +3,6 @@ module app.read_tools_probe;
 import std.io.println;
 import std.fs.Region;
 import std.text.split;
-import std.collections.len as count;
 import nomo.core.conversation.{Event, State};
 import nomo.domain.harness.model_tool_contract.{Session, Limits, LoopTurn, fresh_loop};
 import nomo.domain.harness.tool_context.{Context};
@@ -30,7 +29,7 @@ public flow fixture_read_b(name: string) -> Outcome ![Error<IndexError>] ~ NomoR
     let texts = ["blue\n", "blue\n", "fixture refusal", __LARGE__];
     let sizes: Array<usize> = [5, 5, 0, 257];
     var index: usize = 0;
-    while index < count(names) limit Iterations(4) {
+    while index < names.len() limit Iterations(4) {
         if names[index] == name { return outcome(statuses[index], texts[index], sizes[index]); }
         index = index + 1;
     }
@@ -69,19 +68,19 @@ flow exercise(label: string, alternate: bool, allowed: Array<string>, command: s
             let required = if value.final_only { completed } else { initial };
             if value != required { abort("complete source Model Context changed"); }
             let reply = if value.final_only { "[\"final\",\"Seen blue\"]" } else { command };
-            resume reply;
+            reply
         }
         ReadTools.read(name) => {
             println("PORT " + label + " Read");
             if reads == 0 || name != allowed[0] { abort("unexpected source read interpretation"); }
             let result = if alternate { fixture_read_b(name) } else { fixture_read_a(name) };
-            resume result;
+            result
         }
         ReadTools.search(names, literal) => {
             println("PORT " + label + " Search");
             if searches == 0 || names != allowed || literal != "blue" { abort("unexpected source search interpretation"); }
             let result = if alternate { fixture_search_b(names, literal) } else { fixture_search_a(names, literal) };
-            resume result;
+            result
         }
     };
     return actual == expected;
@@ -97,13 +96,13 @@ public flow backend_abort(args: Array<string>) -> i32 {
     let result = run_loop_controller("Task", ["fail.txt"], limits, fresh_loop(), false, false) with {
         LegacyChildModel.infer(_) => {
             println("PORT backend_abort Model");
-            resume "[\"read\",\"fail.txt\"]";
+            "[\"read\",\"fail.txt\"]"
         }
         ReadTools.read(name) => {
             println("PORT backend_abort Read");
-            resume fixture_read_a(name);
+            fixture_read_a(name)
         }
-        ReadTools.search(_, _) => { abort("unexpected search before backend abort"); }
+        ReadTools.search(_, _) => abort("unexpected search before backend abort");
     };
     return result.status;
 }

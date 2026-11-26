@@ -163,8 +163,8 @@ flow terminal_refused(args: Array<string>) -> bool { return match startup(args) 
 flow latest_bound(args: Array<string>, parent: string, expected: TurnRequest) -> bool {
     let input = match startup(args) { Ok(value) => value, Err(_) => { return false; } };
     if !input.latest || input.root_id != "" || input.parent != "" { return false; }
-    match work_request(input, 2, "replace selected literal") { Ok(_) => { return false; } Err(_) => {} }
-    match show_selector(input, 1) { Ok(_) => { return false; } Err(_) => {} }
+    match work_request(input, 2, "replace selected literal") { Ok(_) => { return false; } Err(_) => (), }
+    match show_selector(input, 1) { Ok(_) => { return false; } Err(_) => (), }
     let selected = match bind_parent(input, parent) { Ok(value) => value, Err(_) => { return false; } };
     return !selected.latest && selected.parent == parent && selected.root_id == parent &&
         match work_request(selected, 2, "replace selected literal") { Ok(value) => value == expected, Err(_) => false };

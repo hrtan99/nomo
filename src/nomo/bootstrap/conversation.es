@@ -38,7 +38,7 @@ flow runtime() -> Runtime {
 
 public flow settings_for(session: string, check: Option<Array<string>>) -> Settings
     ![CommandOperations, Memory, Console, Command.run<DefaultCommandSandbox>, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<ConsoleError>, Error<FileError>, Error<ReadLimitError>] {
-    let value = handle { load_configuration() } with { SessionContext.current() => { resume session; } };
+    let value = handle load_configuration() with { SessionContext.current() => session; };
     return with_check(value, check);
 }
 
@@ -46,19 +46,14 @@ public flow ask(session: string, request: string, check: Option<Array<string>>) 
     ![Agentic, CommandOperations, ProjectInstructions, ChangeOperations, ProcessOperations, Memory, Console, Command.run<DefaultCommandSandbox>, Command.start<DefaultCommandSandbox>, Command.reconnect<DefaultCommandSandbox>, Command.read<DefaultCommandSandbox>, Command.write<DefaultCommandSandbox>, Command.stop<DefaultCommandSandbox>, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Fs.stat<ProjectRoot>, Fs.atomic_replace<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>, Error<ConsoleError>] {
     let dependencies = runtime();
     return turn(dependencies.history, dependencies.history, dependencies.history, dependencies.attempts, dependencies.history, dependencies.projection, session, request) with {
-        ConversationContext.settings(selected) => { resume settings_for(selected, check); }
-        ConversationContext.acquire(selected, task, settings) => {
-            resume build(dependencies.history, dependencies.instructions, dependencies.attempts, dependencies.jobs, selected, task, settings);
-        }
-        ConversationModel.code(input) => {
-            let answer = handle { dependencies.coding.code(input) } with {
-                SessionContext.current() => { resume input.session; }
-                SettingsContext.current() => { resume input.settings; }
-            };
-            resume answer;
-        }
-        ConversationModel.summarize(input) => { resume dependencies.summary.summarize(input); }
-        ConversationOutput.write(line) => { println(line); resume; }
+        ConversationContext.settings(selected) => settings_for(selected, check);
+        ConversationContext.acquire(selected, task, settings) => build(dependencies.history, dependencies.instructions, dependencies.attempts, dependencies.jobs, selected, task, settings);
+        ConversationModel.code(input) => handle dependencies.coding.code(input) with {
+            SessionContext.current() => input.session;
+            SettingsContext.current() => input.settings;
+        };
+        ConversationModel.summarize(input) => dependencies.summary.summarize(input);
+        ConversationOutput.write(line) => println(line);
     };
 }
 
@@ -66,9 +61,7 @@ public flow compact(session: string, settings: Settings) -> unit
     ![Agentic, Memory, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>] {
     let dependencies = runtime();
     compact_conversation(dependencies.history, dependencies.history, dependencies.attempts, dependencies.history, dependencies.projection, session, settings) with {
-        ConversationContext.acquire(selected, task, configuration) => {
-            resume build(dependencies.history, dependencies.instructions, dependencies.attempts, dependencies.jobs, selected, task, configuration);
-        }
-        ConversationModel.summarize(input) => { resume dependencies.summary.summarize(input); }
+        ConversationContext.acquire(selected, task, configuration) => build(dependencies.history, dependencies.instructions, dependencies.attempts, dependencies.jobs, selected, task, configuration);
+        ConversationModel.summarize(input) => dependencies.summary.summarize(input);
     };
 }

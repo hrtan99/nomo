@@ -33,6 +33,6 @@ public flow observe(args: Array<string>) -> i32 {
     let contribution = infer_signature(context);
     let proposal = match project_context(context, contribution) { Ok(value) => value, Err(error) => { println("REFUSED semantic contribution"); abort(error); } };
     if proposal.after != "blue\n" { println("REFUSED requested synthetic result differs"); abort("semantic qualification refused"); }
-    let output = match json([contribution.target, contribution.replacement, proposal.after]) { Ok(value) => value, Err(error) => { abort(error); } };
+    let output = match json([contribution.target, contribution.replacement, proposal.after]) { Ok(value) => value, Err(error) => abort(error), };
     println("QUALIFIED " + output); return 0;
 }

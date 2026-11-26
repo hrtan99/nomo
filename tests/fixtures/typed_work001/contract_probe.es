@@ -64,8 +64,8 @@ flow facts() -> Array<ParentFacts> {
 }
 flow work(phase: string, before: string, after: string, changed_request: bool, completed: bool) -> Context {
     let request = "Change chosen using observed context";
-    let previous = match digest(before) { Ok(value) => value, Err(error) => { abort(error); } };
-    let next = match digest(after) { Ok(value) => value, Err(error) => { abort(error); } };
+    let previous = match digest(before) { Ok(value) => value, Err(error) => abort(error), };
+    let next = match digest(after) { Ok(value) => value, Err(error) => abort(error), };
     let edit = EditContext { phase = phase, request = if changed_request { "Different request" } else { request },
         task = if phase == "plan" { "" } else { "Replace chosen with updated" }, id = "typed-work", workspace = "owned", path = "notes/report.txt",
         before = before, after = if phase == "aggregate" { after } else { "" },

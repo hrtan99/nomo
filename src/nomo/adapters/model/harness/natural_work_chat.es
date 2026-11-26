@@ -55,7 +55,7 @@ flow decide(mode: MainMode, prompt: Prompt) -> string {
     if value.action == "ANSWER" { return value.answer; }
     if value.action == "NEXT_PAGE" { return "NEXT_PAGE"; }
     if value.action == "CHECK" {
-        let raw = match encode(value.command, "check command conversion failed", "check command encoding failed") { Ok(value) => value, Err(error) => { abort(error); } };
+        let raw = match encode(value.command, "check command conversion failed", "check command encoding failed") { Ok(value) => value, Err(error) => abort(error), };
         return "CHECK_JSON " + raw;
     }
     if value.action == "EDIT" || value.action == "EDIT_CHECK" { return "EDIT_CHECK " + value.path; }
@@ -86,13 +86,13 @@ public flow run(request: string, allowed: Array<string>, invocation: Invocation,
 public flow target(answer: string, allowed: Array<string>) -> Option<string> {
     let selected = match strip_prefix(answer, "EDIT ") {
         Some(value) => value,
-        None() => { match strip_prefix(answer, "EDIT_CHECK ") {
-            Some(value) => value,
-            None() => { match strip_prefix(answer, "EDIT_MORE ") {
-                Some(value) => value,
-                None() => { match strip_prefix(answer, "EDIT_MORE_CHECK ") { Some(value) => value, None() => { return None(); } } },
-            } },
-        } },
+        None() => match strip_prefix(answer, "EDIT_CHECK ") {
+        Some(value) => value,
+        None() => match strip_prefix(answer, "EDIT_MORE ") {
+        Some(value) => value,
+        None() => match strip_prefix(answer, "EDIT_MORE_CHECK ") { Some(value) => value, None() => { return None(); } },
+        },
+        },
     };
     @limits([Iterations(256)]) for path in allowed { if selected == path { return Some(path); } }
     return None();
@@ -107,6 +107,6 @@ public flow route(answer: string, allowed: Array<string>, followup: bool, more: 
     if starts_with(answer, "CHECK_JSON ") { return "NATURAL " + answer; }
     if starts_with(answer, "CHECK ") { return "NATURAL " + answer; }
     if answer == "NEXT_PAGE" && more_pages { return if more && page < 7 { "NATURAL PAGE" } else { "NATURAL PAGE LIMIT" }; }
-    match target(answer, allowed) { Some(path) => { return (if starts_with(answer, "EDIT_MORE_CHECK ") { "NATURAL WORK_MORE_CHECK " } else { if starts_with(answer, "EDIT_MORE ") { "NATURAL WORK_MORE " } else { if starts_with(answer, "EDIT_CHECK ") { "NATURAL WORK_CHECK " } else { "NATURAL WORK " } } }) + (if followup { "followup" } else { "work" }) + " " + path; } None() => {} }
+    match target(answer, allowed) { Some(path) => { return (if starts_with(answer, "EDIT_MORE_CHECK ") { "NATURAL WORK_MORE_CHECK " } else { if starts_with(answer, "EDIT_MORE ") { "NATURAL WORK_MORE " } else { if starts_with(answer, "EDIT_CHECK ") { "NATURAL WORK_CHECK " } else { "NATURAL WORK " } } }) + (if followup { "followup" } else { "work" }) + " " + path; } None() => (), }
     return delegated(answer, more);
 }

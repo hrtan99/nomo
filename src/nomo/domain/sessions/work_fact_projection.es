@@ -67,12 +67,10 @@ public flow check_values(stdout: string, stderr: string, out_truncated: bool, er
 
 public flow completed_fact(work: Record, events: EventFrame, check: Option<CheckFacts>, policy: Policy, label: string) -> Result<WorkFacts, string> {
     var outcome = "not requested"; var exit = ""; var output: Option<CheckOutput> = None();
-    match check { Some(value) => {
-        if value.phase == "abandoned" { outcome = "abandoned; outcome unknown"; } else {
-        if value.phase != "complete" { return Err(label + " check unresolved"); }
-        outcome = value.outcome; exit = value.exit_code;
-        output = value.output; }
-    } None() => {} }
+    match check { Some(value) => if value.phase == "abandoned" { outcome = "abandoned; outcome unknown"; } else {
+    if value.phase != "complete" { return Err(label + " check unresolved"); }
+    outcome = value.outcome; exit = value.exit_code;
+    output = value.output; }, None() => (), }
     let origin = match summary_source(events, work.summary, policy) { Ok(value) => value, Err(error) => { return Err(error); } };
     let chosen = match selection(events.events, policy) { Ok(value) => value, Err(error) => { return Err(error); } };
     let observed = match evidence(events.events, policy) { Ok(value) => value, Err(error) => { return Err(error); } };

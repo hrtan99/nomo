@@ -25,7 +25,7 @@ impl NativeAttempts ~ AttemptRepository {
         return result;
     }
     flow load(self, id: string) -> Attempt {
-        return match Data.Attempts.get(id) { Some(value) => value, None() => { abort("native attempt not found"); } };
+        return match Data.Attempts.get(id) { Some(value) => value, None() => abort("native attempt not found"), };
     }
     flow prepare(self, session: string, kind: string, label: string, input_event: i64, through: i64) -> Attempt
         ![Memory, Error<StorageError>, Error<MemoryConflict>] {
@@ -41,7 +41,7 @@ impl NativeAttempts ~ AttemptRepository {
         return value;
     }
     flow update(self, id: string, phase: string, result_event: i64, recovery_event: i64) -> Attempt {
-        let before = match Data.Attempts.get_entry(id) { Some(value) => value, None() => { abort("native attempt not found"); } };
+        let before = match Data.Attempts.get_entry(id) { Some(value) => value, None() => abort("native attempt not found"), };
         let old = before.value;
         let value = old { id, phase, result_event, recovery_event };
         Data.Attempts.put_versioned(id, value, before.version);

@@ -3,7 +3,6 @@ module nomo.adapters.storage.legacy.chat_history;
 import nomo.domain.sessions.cas_rows.Target;
 import nomo.adapters.storage.legacy.cas_rows.commit_receipt;
 import std.memory.{MemoryVersion, MemoryEntry, Missing, Match};
-import std.collections.len as count;
 import nomo.core.conversation.Event;
 import nomo.session.chat_session_contract.Session;
 import nomo.domain.sessions.chat_session_contract.{invalid, fresh, begin, complete};
@@ -25,7 +24,7 @@ flow safe_name(value: string) -> bool { return value == "" || value == "child-1"
 flow frame_error(frame: Frame) -> string {
     if frame.format != 3 || (frame.chat.format != 3 && frame.chat.format != 6 && frame.chat.format != 8 && frame.chat.format != 10 && frame.chat.format != 12) { return "invalid chat frame format"; }
     let error = invalid(frame.chat); if error != "" { return error; }
-    let n = count(frame.events); let turns = frame.chat.invocation.admitted;
+    let n = frame.events.len(); let turns = frame.chat.invocation.admitted;
     if n > 48 || (turns == 0 && (n != 0 || frame.first_count != 0)) ||
         (turns == 1 && (n == 0 || frame.first_count != n)) ||
         (turns == 2 && (frame.first_count == 0 || frame.first_count >= n)) { return "invalid chat event boundaries"; }
@@ -54,22 +53,22 @@ public flow load() -> Result<Option<Entry>, string> {
                     }
                     events = value.value.events; first_count = value.value.first_count;
                 }
-                None() => { if item.value.format == 2 && item.value.invocation.admitted > 0 { return Err("legacy event history missing"); } }
+                None() => if item.value.format == 2 && item.value.invocation.admitted > 0 { return Err("legacy event history missing"); },
             }
             return Ok(Some(Entry { key = item.key, value = item.value, version = item.version, first_count, events, schema = item.value.format, pending }));
         }
-        None() => {}
+        None() => (),
     }
     match new {
         Some(item) => {
             if item.key != "latest" { return Err("chat history key mismatch"); }
-            match load_events() { Ok(None()) => {} Ok(Some(_)) => { return Err("unexpected separate event history"); } Err(error) => { return Err(error); } }
+            match load_events() { Ok(None()) => (), Ok(Some(_)) => { return Err("unexpected separate event history"); } Err(error) => { return Err(error); } }
             let error = frame_error(item.value); if error != "" { return Err(error); }
             return Ok(Some(Entry { key = item.key, value = item.value.chat, version = item.version,
                 first_count = item.value.first_count, events = item.value.events, schema = 3, pending = false }));
         }
         None() => {
-            match load_events() { Ok(None()) => {} Ok(Some(_)) => { return Err("orphan event history"); } Err(error) => { return Err(error); } }
+            match load_events() { Ok(None()) => (), Ok(Some(_)) => { return Err("orphan event history"); } Err(error) => { return Err(error); } }
             return Ok(None());
         }
     }
@@ -96,7 +95,7 @@ flow transition(before: Option<Entry>, next: Session) -> string {
 }
 
 flow project(input: Array<Event>) -> Result<Array<Event>, string> {
-    if count(input) == 0 || count(input) > 24 { return Err("invalid completed event batch"); }
+    if input.len() == 0 || input.len() > 24 { return Err("invalid completed event batch"); }
     var output: Array<Event> = [];
     @limits([Iterations(24)]) for item in input {
         let role = if safe_role(item.role) { item.role } else { "other" };
@@ -118,27 +117,27 @@ flow save_inner(value: Session, expected: Option<Entry>, records: Array<Event>) 
         if value.format != schema { return Err("legacy history format changed"); }
         let previous_turns = match before { Some(item) => item.value.invocation.admitted, None() => 0 };
         if schema == 2 && value.invocation.admitted == previous_turns + 1 {
-            match append_metadata(value.invocation.admitted, records) { Ok(_) => {} Err(problem) => { return Err(problem); } }
+            match append_metadata(value.invocation.admitted, records) { Ok(_) => (), Err(problem) => { return Err(problem); } }
         }
         let version = match commit_receipt(Legacy.Rows, Target { store = ["Rows"], region = "nomo-chat-history-v1", key = "latest", label = "chat history" }, value, condition) { Ok(item) => item, Err(error) => { return Err(error); } };
         let after = match load() { Ok(Some(item)) => item, _ => { return Err("history readback missing"); } };
         if after.value != value || after.version.opaque != version.opaque || after.schema != schema || after.pending { return Err("legacy readback mismatch"); }
-        match before { Some(old) => { if old.version.opaque == version.opaque { return Err("history version did not change"); } } None() => {} }
+        match before { Some(old) => if old.version.opaque == version.opaque { return Err("history version did not change"); }, None() => (), }
         return Ok(version);
     }
     var events: Array<Event> = []; var first_count: usize = 0; var previous_turns: i32 = 0;
-    match before { Some(item) => { events = item.events; first_count = item.first_count; previous_turns = item.value.invocation.admitted; } None() => {} }
+    match before { Some(item) => { events = item.events; first_count = item.first_count; previous_turns = item.value.invocation.admitted; } None() => (), }
     if value.invocation.admitted == previous_turns + 1 {
         let batch = match project(records) { Ok(item) => item, Err(problem) => { return Err(problem); } };
-        if previous_turns == 0 { first_count = count(batch); }
+        if previous_turns == 0 { first_count = batch.len(); }
         @limits([Iterations(24)]) for item in batch { events = events.push(item); }
-    } else if count(records) != 0 { return Err("unexpected completed event batch"); }
+    } else if records.len() != 0 { return Err("unexpected completed event batch"); }
     let frame = Frame { format = 3, chat = value, first_count, events };
     let problem = frame_error(frame); if problem != "" { return Err(problem); }
     let version = match commit_receipt(Frames.Rows, Target { store = ["Rows"], region = "nomo-chat-history-v3", key = "latest", label = "chat frame" }, frame, condition) { Ok(item) => item, Err(error) => { return Err(error); } };
     let after = match load() { Ok(Some(item)) => item, _ => { return Err("chat frame readback missing"); } };
     if after.value != value || after.events != events || after.first_count != first_count || after.version.opaque != version.opaque || after.schema != 3 { return Err("chat frame readback mismatch"); }
-    match before { Some(old) => { if old.version.opaque == version.opaque { return Err("chat frame version did not change"); } } None() => {} }
+    match before { Some(old) => if old.version.opaque == version.opaque { return Err("chat frame version did not change"); }, None() => (), }
     return Ok(version);
 }
 

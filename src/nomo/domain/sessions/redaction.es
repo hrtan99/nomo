@@ -2,7 +2,6 @@ module nomo.domain.sessions.redaction;
 
 import nomo.domain.text.read_text.{data_safe, safe};
 import std.text.{contains, count as match_count, replace, len as byte_len};
-import std.collections.len as count;
 import nomo.core.conversation.Event;
 import nomo.harness.harness_tool_chat_contract.Previous;
 import nomo.domain.harness.read_tool_chat_contract.prior_error;
@@ -20,7 +19,7 @@ public type PreviousData = { request: string, previous: Previous, replacements: 
 public type Events = { events: Array<Event>, replacements: usize };
 
 public flow policy_error(policy: Policy) -> string {
-    if policy.format != 1 || count(policy.literals) == 0 || count(policy.literals) > 8 { return "invalid redaction policy"; }
+    if policy.format != 1 || policy.literals.len() == 0 || policy.literals.len() > 8 { return "invalid redaction policy"; }
     var i: usize = 0;
     @limits([Iterations(8)]) for literal in policy.literals {
         let bytes = byte_len(literal);
@@ -65,7 +64,7 @@ public flow previous(request: string, prior: Previous, policy: Policy) -> Result
 
 public flow events(value: Array<Event>, policy: Policy) -> Result<Events, string> {
     let problem = policy_error(policy); if problem != "" { return Err(problem); }
-    if count(value) > 24 { return Err("too many historical events"); }
+    if value.len() > 24 { return Err("too many historical events"); }
     var output: Array<Event> = []; var replacements: usize = 0;
     @limits([Iterations(24)]) for event in value {
         if !safe(event.role, 128) || !safe(event.kind, 128) || !safe(event.name, 128) { return Err("invalid historical event metadata"); }

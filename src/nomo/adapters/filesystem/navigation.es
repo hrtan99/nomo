@@ -21,14 +21,14 @@ type SearchRequest = { paths: Array<string>, literal: string };
 
 flow location(pathname: string) -> WorkspacePath<ProjectRoot> {
     return match path<ProjectRoot>(pathname) {
-        Ok(value) => value, Err(_) => { abort("invalid project path"); }
+        Ok(value) => value, Err(_) => abort("invalid project path"),
     };
 }
 
 flow info(pathname: WorkspacePath<ProjectRoot>) -> PathInfo {
     let converted: Option<Message<Metadata>> = Message.new(stat(pathname)).cast<Metadata>();
     let metadata = match converted {
-        Some(value) => value.body, None() => { abort("filesystem metadata projection failed"); }
+        Some(value) => value.body, None() => abort("filesystem metadata projection failed"),
     };
     return PathInfo { path = relative_name(pathname), is_file = metadata.is_file,
         is_dir = metadata.is_dir, bytes = metadata.len };

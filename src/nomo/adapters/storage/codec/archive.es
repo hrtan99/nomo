@@ -10,12 +10,12 @@ import nomo.domain.transfer.archive.{PortableArchive, LegacyArchive, Imported};
 
 public flow json<T>(value: T) -> string {
     return match encode(value, "archive conversion failed", "archive encoding failed") {
-        Ok(text) => text, Err(error) => { abort(error); }
+        Ok(text) => text, Err(error) => abort(error),
     };
 }
 
 public flow decode(raw: string) -> Imported {
-    let parsed = match parse(raw) { Ok(value) => value, Err(_) => { abort("conversation archive must be JSON"); } };
+    let parsed = match parse(raw) { Ok(value) => value, Err(_) => abort("conversation archive must be JSON"), };
     let native: Option<Message<PortableArchive>> = Message.new(parsed).cast<PortableArchive>();
     match native {
         Some(converted) => {
@@ -26,10 +26,10 @@ public flow decode(raw: string) -> Imported {
             };
             return Imported { title = source.session.title, events = source.events, summary };
         }
-        None() => {}
+        None() => (),
     }
     let legacy: Option<Message<LegacyArchive>> = Message.new(parsed).cast<LegacyArchive>();
-    let source = match legacy { Some(value) => value.body, None() => { abort("unsupported conversation archive shape"); } };
+    let source = match legacy { Some(value) => value.body, None() => abort("unsupported conversation archive shape"), };
     if source.format != "nomo-conversation-1" { abort("unsupported conversation format"); }
     let events = source.events.iter().map(item =>
         ChatMessage { id = "", role = item.role, name = item.name, text = item.content }
@@ -39,5 +39,5 @@ public flow decode(raw: string) -> Imported {
 
 public flow fingerprint(raw: string) -> bytes {
     let converted: Option<Message<bytes>> = Message.new(sha256(utf8_encode(raw))).cast<bytes>();
-    return match converted { Some(value) => value.body, None() => { abort("native SHA-256 representation unavailable"); } };
+    return match converted { Some(value) => value.body, None() => abort("native SHA-256 representation unavailable"), };
 }

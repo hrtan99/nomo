@@ -16,7 +16,7 @@ flow observed(value: CommandEvent) -> ProcessEvent {
 public type HostProcessControl = {};
 impl HostProcessControl ~ ProcessControl<CommandHandle> {
     flow root(self) -> WorkspacePath<ProjectRoot> ![] {
-        return match path<ProjectRoot>(".") { Ok(value) => value, Err(_) => { abort("project root is unavailable"); } };
+        return match path<ProjectRoot>(".") { Ok(value) => value, Err(_) => abort("project root is unavailable"), };
     }
     flow start(self, root: WorkspacePath<ProjectRoot>, program: string, arguments: Array<string>) -> string ![Command.start<DefaultCommandSandbox>] {
         let process = start(HostCommand.new(program, arguments).with_cwd(root), DefaultCommandSandbox);

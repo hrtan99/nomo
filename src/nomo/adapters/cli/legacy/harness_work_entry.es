@@ -51,27 +51,27 @@ flow help() -> unit {
 
 public flow prepare_with<effect E>(input: Work, original_error: (string) -> string ![], stage_log: (string, Ledger) -> unit ![E], chain_read: bool, inspect_plan: bool, inspect_all: bool) -> Result<Pending, Failure> ![Console, EditOriginal, LegacyStringStages, LegacyEditStages, Error<ConsoleError>, Error<IndexError>, E] {
     return application_prepare_with(application_request(input), original_error, chain_read, inspect_plan, inspect_all) with {
-        HarnessWorkStage.write(name, state) => { stage_log(name, state); resume; }
-        HarnessProgress.write(line) => { println(line); resume; }
-        DiagnosticOutput.write(line) => { println(line); resume; }
+        HarnessWorkStage.write(name, state) => stage_log(name, state);
+        HarnessProgress.write(line) => println(line);
+        DiagnosticOutput.write(line) => println(line);
     };
 }
 
 public flow prepare_unicode<effect E>(input: Work, original_error: (string) -> string ![], stage_log: (string, Ledger) -> unit ![E]) -> Result<Pending, Failure> ![Console, LegacyStringStages, LegacyEditStages, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Error<FileError>, Error<ConsoleError>, Error<IndexError>, E] {
     return application_prepare_unicode(application_request(input), original_error) with {
-        HarnessWorkStage.write(name, state) => { stage_log(name, state); resume; }
-        EditOriginal.read(path) => { resume read_original(path); }
-        HarnessProgress.write(line) => { println(line); resume; }
-        DiagnosticOutput.write(line) => { println(line); resume; }
+        HarnessWorkStage.write(name, state) => stage_log(name, state);
+        EditOriginal.read(path) => read_original(path);
+        HarnessProgress.write(line) => println(line);
+        DiagnosticOutput.write(line) => println(line);
     };
 }
 
 public flow prepare_expanded_unicode<effect E>(input: Work, original_error: (string) -> string ![], stage_log: (string, Ledger) -> unit ![E], wide: bool) -> Result<Pending, Failure> ![Console, LegacyStringStages, LegacyEditStages, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Error<FileError>, Error<ConsoleError>, Error<IndexError>, E] {
     return application_prepare_expanded_unicode(application_request(input), original_error, wide, false) with {
-        HarnessWorkStage.write(name, state) => { stage_log(name, state); resume; }
-        EditOriginal.read(path) => { resume read_original_wide(path); }
-        HarnessProgress.write(line) => { println(line); resume; }
-        DiagnosticOutput.write(line) => { println(line); resume; }
+        HarnessWorkStage.write(name, state) => stage_log(name, state);
+        EditOriginal.read(path) => read_original_wide(path);
+        HarnessProgress.write(line) => println(line);
+        DiagnosticOutput.write(line) => println(line);
     };
 }
 
@@ -82,7 +82,7 @@ public flow expanded_ledger_mode(state: Ledger, wide: bool, high_input: bool) ->
 
 public flow prepare<effect E>(input: Work, original_error: (string) -> string ![], stage_log: (string, Ledger) -> unit ![E], chain_read: bool, inspect_plan: bool, inspect_all: bool) -> Result<Pending, Failure> ![Console, LegacyStringStages, LegacyEditStages, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Error<FileError>, Error<ConsoleError>, Error<IndexError>, E] {
     return prepare_with<![E]>(input, original_error, stage_log, chain_read, inspect_plan, inspect_all) with {
-        EditOriginal.read(path) => { resume read_original(path); }
+        EditOriginal.read(path) => read_original(path);
     };
 }
 
@@ -90,11 +90,11 @@ public flow prepare_work(input: Work) -> Result<Pending, Failure> {
     let original: (string) -> string ![] = (value: string) => "";
     let log: (string, Ledger) -> unit ![Error<ConsoleError>] = (name: string, state: Ledger) => stage(name, state);
     return prepare<![Error<ConsoleError>]>(input, original, log, false, false, false) with {
-        LegacyStringStages.main(value) => { resume read_main(value); }
-        LegacyStringStages.child(task, files, selected) => { resume work_child_turn(task, files, selected); }
-        LegacyEditStages.plan(value) => { resume edit_plan(value); }
-        LegacyEditStages.child(value) => { resume edit_child(value); }
-        LegacyEditStages.aggregate(value) => { resume aggregate(value); }
+        LegacyStringStages.main(value) => read_main(value);
+        LegacyStringStages.child(task, files, selected) => work_child_turn(task, files, selected);
+        LegacyEditStages.plan(value) => edit_plan(value);
+        LegacyEditStages.child(value) => edit_child(value);
+        LegacyEditStages.aggregate(value) => aggregate(value);
     };
 }
 
@@ -102,11 +102,11 @@ flow prepare_chain_mode(input: Work, parent: Array<ParentFacts>, expected: Optio
     let original: (string) -> string ![] = (value: string) => match expected { Some(before) => if value == before { "" } else { "current original differs from confirmed parent result" }, None() => "" };
     let log: (string, Ledger) -> unit ![Error<ConsoleError>] = (name: string, state: Ledger) => chain_stage(name, state, user_context);
     return prepare<![Error<ConsoleError>]>(input, original, log, true, inspect_plan, inspect_all) with {
-        LegacyStringStages.main(value) => { resume read_main(value); }
-        LegacyStringStages.child(task, files, selected) => { resume chain_child_turn(task, files, selected, inspect_all); }
-        LegacyEditStages.plan(value) => { resume chain_plan(value, parent); }
-        LegacyEditStages.child(value) => { resume chain_child(value, parent); }
-        LegacyEditStages.aggregate(value) => { resume chain_aggregate(value, parent); }
+        LegacyStringStages.main(value) => read_main(value);
+        LegacyStringStages.child(task, files, selected) => chain_child_turn(task, files, selected, inspect_all);
+        LegacyEditStages.plan(value) => chain_plan(value, parent);
+        LegacyEditStages.child(value) => chain_child(value, parent);
+        LegacyEditStages.aggregate(value) => chain_aggregate(value, parent);
     };
 }
 
@@ -126,33 +126,33 @@ public flow finish_edit(pending: Pending, outcome: Confirmed) -> Result<Complete
 
 public flow finish_summary<effect E>(completed: Completed, stage_log: (string, Ledger) -> unit ![E], work: bool, inspect_all: bool) -> Result<Summary, Failure> ![Console, LegacyEditStages, Error<ConsoleError>, Error<IndexError>, E] {
     return application_finish_summary(completed, work, inspect_all) with {
-        HarnessWorkStage.write(name, state) => { stage_log(name, state); resume; }
-        HarnessProgress.write(line) => { println(line); resume; }
-        DiagnosticOutput.write(line) => { println(line); resume; }
+        HarnessWorkStage.write(name, state) => stage_log(name, state);
+        HarnessProgress.write(line) => println(line);
+        DiagnosticOutput.write(line) => println(line);
     };
 }
 public flow finish_history_summary<effect E>(completed: Completed, stage_log: (string, Ledger) -> unit ![E]) -> Result<Summary, Failure> ![Console, LegacyEditStages, Error<ConsoleError>, Error<IndexError>, E] {
     return application_finish_history_summary(completed) with {
-        HarnessWorkStage.write(name, state) => { stage_log(name, state); resume; }
-        HarnessProgress.write(line) => { println(line); resume; }
-        DiagnosticOutput.write(line) => { println(line); resume; }
+        HarnessWorkStage.write(name, state) => stage_log(name, state);
+        HarnessProgress.write(line) => println(line);
+        DiagnosticOutput.write(line) => println(line);
     };
 }
 
 public flow summarize(completed: Completed) -> Result<Summary, Failure> {
     let log: (string, Ledger) -> unit ![Error<ConsoleError>] = (name: string, state: Ledger) => stage(name, state);
     return finish_summary<![Error<ConsoleError>]>(completed, log, false, false) with {
-        LegacyEditStages.plan(value) => { resume edit_plan(value); }
-        LegacyEditStages.child(value) => { resume edit_child(value); }
-        LegacyEditStages.aggregate(value) => { resume aggregate(value); }
+        LegacyEditStages.plan(value) => edit_plan(value);
+        LegacyEditStages.child(value) => edit_child(value);
+        LegacyEditStages.aggregate(value) => aggregate(value);
     };
 }
 flow summarize_chain_mode(completed: Completed, parent: Array<ParentFacts>, inspect_all: bool, user_context: bool) -> Result<Summary, Failure> {
     let log: (string, Ledger) -> unit ![Error<ConsoleError>] = (name: string, state: Ledger) => chain_stage(name, state, user_context);
     return finish_summary<![Error<ConsoleError>]>(completed, log, true, inspect_all) with {
-        LegacyEditStages.plan(value) => { resume chain_plan(value, parent); }
-        LegacyEditStages.child(value) => { resume chain_child(value, parent); }
-        LegacyEditStages.aggregate(value) => { resume chain_aggregate(value, parent); }
+        LegacyEditStages.plan(value) => chain_plan(value, parent);
+        LegacyEditStages.child(value) => chain_child(value, parent);
+        LegacyEditStages.aggregate(value) => chain_aggregate(value, parent);
     };
 }
 public flow summarize_chain(completed: Completed, parent: Array<ParentFacts>, inspect_all: bool) -> Result<Summary, Failure> {
@@ -165,7 +165,7 @@ public flow summarize_user_context(completed: Completed, parent: Array<ParentFac
 public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read<ReadOnlyRoot>, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {
     let input = match parse(args) { Ok(value) => value, Err(error) => { return refused(fresh(), error); } };
     if input.edit.help { help(); return 0; }
-    match available() { Ok(_) => {} Err(error) => { return refused(fresh(), error); } }
+    match available() { Ok(_) => (), Err(error) => { return refused(fresh(), error); } }
     let pending = match prepare_work(input) { Ok(value) => value, Err(failure) => { return refused(failure.state, failure.error); } };
     let outcome = match execute(pending.selected, pending.prepared) { Ok(value) => value, Err(error) => { return refused(pending.state, error); } };
     let completed = match finish_edit(pending, outcome) { Ok(value) => value, Err(failure) => { return refused(failure.state, failure.error); } };

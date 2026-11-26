@@ -12,11 +12,7 @@ public flow bindings() -> ![CommandOperations => Memory, Console, Command.run<De
     let runner = HostCommandRunner {}; let preview = ConsoleCommandPreview {};
     let attempts = NativeAttempts {}; let history = NativeHistory {};
     return handler {
-        CommandOperations.execute(session, mode, request) => {
-            resume service.run(runner, preview, attempts, history, history, history, session, mode, request);
-        }
-        CommandOperations.step(session, request, parent) => {
-            resume service.step(runner, preview, history, session, request, parent);
-        }
+        CommandOperations.execute(session, mode, request) => service.run(runner, preview, attempts, history, history, history, session, mode, request);
+        CommandOperations.step(session, request, parent) => service.step(runner, preview, history, session, request, parent);
     };
 }

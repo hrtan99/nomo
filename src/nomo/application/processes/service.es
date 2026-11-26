@@ -13,15 +13,15 @@ import nomo.application.execution.service.{begin, dispatching, returned, complet
 import nomo.application.conversation.ports.{ConversationReader, ConversationWriter, ResultPublication};
 
 flow json<T>(value: T) -> string {
-    return match encode(value, "process conversion failed", "process encoding failed") { Ok(text) => text, Err(error) => { abort(error); } };
+    return match encode(value, "process conversion failed", "process encoding failed") { Ok(text) => text, Err(error) => abort(error), };
 }
 flow history_text<T>(value: T) -> string {
-    return match encode(value, "history conversion failed", "history encoding failed") { Ok(text) => text, Err(error) => { abort(error); } };
+    return match encode(value, "history conversion failed", "history encoding failed") { Ok(text) => text, Err(error) => abort(error), };
 }
 flow preview<V ~ ProcessPreviewSink, T>(sink: V, value: T) -> unit { sink.write("[PROCESS] " + json(value)); }
 
 flow owned<J ~ JobRepository>(repository: J, session: string, id: string) -> Job {
-    let value = match repository.load(id) { Some(value) => value, None() => { abort("native job not found"); } };
+    let value = match repository.load(id) { Some(value) => value, None() => abort("native job not found"), };
     if value.session != session { abort("job belongs to another conversation"); }
     return value;
 }
@@ -123,8 +123,8 @@ public flow output<J ~ JobRepository, O ~ OutputArchive, W ~ ConversationWriter,
     for item in history.messages(selected.session, 0) {
         if item.role != "tool_call" || item.name != "command" { continue; }
         match archive.find(selected.session, item.id) {
-            Some(value) => { if value.job == job { result = result.push(value); } }
-            None() => {}
+            Some(value) => if value.job == job { result = result.push(value); },
+            None() => (),
         }
     }
     writer.append(session, "tool", "job_output", history_text(result), call);

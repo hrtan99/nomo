@@ -1,6 +1,5 @@
 module nomo.domain.sessions.store_record;
 
-import std.collections.len as count;
 import std.text.char_count as len;
 import nomo.domain.text.text.printable;
 import nomo.core.conversation.Event;
@@ -47,8 +46,8 @@ public flow restore(row: Record, body: Bundle) -> Result<Snapshot, string> {
     if row.session_key != session_key(row.snapshot.session_id, row.save_id) || body.format != 1 ||
         body.session_id != row.snapshot.session_id || body.save_id != row.save_id { return Err("bundle identity mismatch"); }
     let saved = row.snapshot;
-    if count(body.bodies) > 32 || count(saved.history.events) != count(body.bodies) ||
-        count(saved.references) != count(body.bodies) || count(saved.operations) > 32 { return Err("bundle descriptor count mismatch"); }
+    if body.bodies.len() > 32 || saved.history.events.len() != body.bodies.len() ||
+        saved.references.len() != body.bodies.len() || saved.operations.len() > 32 { return Err("bundle descriptor count mismatch"); }
     var events: Array<Event> = [];
     var index: usize = 0;
     @limits([Iterations(32)]) for descriptor in saved.history.events {

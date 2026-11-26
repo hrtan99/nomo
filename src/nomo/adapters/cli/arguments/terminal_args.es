@@ -1,7 +1,6 @@
 module nomo.adapters.cli.arguments.terminal_args;
 
 import nomo.domain.context.large_context.request_bytes;
-import std.collections.len as count;
 import std.text.{char_count as len, split, trim, starts_with, strip_suffix};
 import nomo.domain.text.text.printable;
 import nomo.domain.sessions.edit_operation.selector_error;
@@ -28,21 +27,21 @@ flow configuration_error(value: Config, allow_latest: bool) -> string {
         if value.parent != "" && value.parent != value.root_id { return "terminal parent must equal the explicit root ID"; }
     }
     let allowed = allowed_error(value.allowed); if allowed != "" { return allowed; }
-    if value.cap_raw != "" { match policy(value.cap_raw) { Ok(_) => {} Err(error) => { return error; } } }
+    if value.cap_raw != "" { match policy(value.cap_raw) { Ok(_) => (), Err(error) => { return error; } } }
     if value.once_supplied { return question_error(value.once); }
     return "";
 }
 
 public flow parse(args: Array<string>) -> Result<Config, string> {
-    if count(args) == 1 && (args[0] == "help" || args[0] == "--help") {
+    if args.len() == 1 && (args[0] == "help" || args[0] == "--help") {
         return Ok(Config { help = true, root_id = "", child_id = "", parent = "", workspace = "", path = "",
             allowed = [], cap_raw = "", once_supplied = false, once = "", latest = false });
     }
-    if count(args) < 10 || count(args) > 16 { return Err("expected bounded terminal new or continue arguments"); }
+    if args.len() < 10 || args.len() > 16 { return Err("expected bounded terminal new or continue arguments"); }
     let mode = args[0]; if mode != "new" && mode != "continue" { return Err("expected terminal new, continue or standalone help"); }
     var id = ""; var child = ""; var parent = ""; var workspace = ""; var path = ""; var allow = ""; var cap = "";
     var once = ""; var supplied_once = false; var latest = false; var supplied_parent = false; var seen: Array<string> = []; var index: usize = 1;
-    @limits([Iterations(8)]) while index < count(args) {
+    @limits([Iterations(8)]) while index < args.len() {
         let flag = args[index]; index = index + 1;
         @limits([Iterations(8)]) for previous in seen { if previous == flag { return Err("duplicate terminal option"); } }
         seen = seen.push(flag);
@@ -50,7 +49,7 @@ public flow parse(args: Array<string>) -> Result<Config, string> {
             if mode != "continue" { return Err("latest parent selection requires terminal continue"); }
             latest = true;
         } else {
-            if index >= count(args) { return Err("terminal option value missing"); }
+            if index >= args.len() { return Err("terminal option value missing"); }
             let value = args[index]; index = index + 1;
             match flag {
                 "--id" => { id = value; }
@@ -59,7 +58,7 @@ public flow parse(args: Array<string>) -> Result<Config, string> {
                 "--workspace" => { workspace = value; }
                 "--path" => { path = value; }
                 "--allow" => { allow = value; }
-                "--cap" => { match policy(value) { Ok(_) => {} Err(error) => { return Err(error); } } cap = value; }
+                "--cap" => { match policy(value) { Ok(_) => (), Err(error) => { return Err(error); } } cap = value; }
                 "--once" => { once = value; supplied_once = true; }
                 _ => { return Err("unknown terminal option"); }
             }
@@ -105,7 +104,7 @@ public flow line(raw: string) -> Result<LineCommand, string> {
         "/help" => { return Ok(LineCommand.Help); }
         "/show" => { return Ok(LineCommand.Show); }
         "/exit" => { return Ok(LineCommand.Exit); }
-        _ => {}
+        _ => (),
     }
     if starts_with(text, "/") { return Err("unknown terminal command; use /help, /show or /exit"); }
     let invalid = question_error(text); if invalid != "" { return Err(invalid); }

@@ -46,19 +46,19 @@ public flow old_infer(context: Context) -> string { return (ToolModel {}).run(co
 
 public flow run_loop(raw: string, allowed: Array<string>, limits: Limits, previous: Session) -> LoopTurn {
     return run_loop_with(raw, allowed, limits, previous, false, false) with {
-        LegacyChildModel.infer(context) => { resume old_infer(context); }
+        LegacyChildModel.infer(context) => old_infer(context);
     };
 }
 
 public flow run_work_loop(raw: string, allowed: Array<string>, limits: Limits, previous: Session) -> LoopTurn {
     return run_loop_with(raw, allowed, limits, previous, false, false) with {
-        LegacyChildModel.infer(context) => { resume work_infer(context); }
+        LegacyChildModel.infer(context) => work_infer(context);
     };
 }
 
 public flow run_chain_work_loop(raw: string, allowed: Array<string>, limits: Limits, previous: Session, inspect_all: bool) -> LoopTurn {
     return run_loop_with(raw, allowed, limits, previous, true, inspect_all) with {
-        LegacyChildModel.infer(context) => { resume work_infer(context); }
+        LegacyChildModel.infer(context) => work_infer(context);
     };
 }
 
@@ -66,7 +66,7 @@ public flow run_chain_work_loop(raw: string, allowed: Array<string>, limits: Lim
 // The reusable controller receives both operations without native bindings.
 public flow run_loop_with(raw: string, allowed: Array<string>, limits: Limits, previous: Session, work: bool, inspect_all: bool) -> LoopTurn {
     return run_loop_controller(raw, allowed, limits, previous, work, inspect_all) with {
-        ReadTools.read(name) => { resume read_file(name); }
-        ReadTools.search(names, literal) => { resume search_files(names, literal); }
+        ReadTools.read(name) => read_file(name);
+        ReadTools.search(names, literal) => search_files(names, literal);
     };
 }

@@ -36,7 +36,7 @@ public flow load(policy: Policy, binding: string) -> Result<Option<MemoryEntry<s
 }
 
 public flow plan(ticket: Ticket, digest: string, policy: Policy, binding: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
-    match claim(ticket, policy, binding) { Ok(_) => {} Err(error) => { return Err(error); } }
+    match claim(ticket, policy, binding) { Ok(_) => (), Err(error) => { return Err(error); } }
     let rows = FirstCheckAdapter { redaction = policy, binding };
     return plan_rows(rows, ticket.frame.work, digest, policy, binding);
 }

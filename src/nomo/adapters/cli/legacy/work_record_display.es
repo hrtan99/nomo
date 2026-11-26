@@ -1,6 +1,5 @@
 module nomo.adapters.cli.legacy.work_record_display;
 
-import std.collections.len as count;
 import std.text.{char_count as len, from_i32, from_usize};
 import nomo.session.work_record.Record;
 import nomo.domain.sessions.work_record.validate;
@@ -9,8 +8,8 @@ import nomo.domain.mutations.edit_encoding.object;
 public flow render(row: Record) -> Result<Array<string>, string> {
     let value = match validate(row) { Ok(item) => item, Err(error) => { return Err(error); } };
     let binding = value.binding; let read = value.evidence; let state = value.ledger;
-    var allowed2 = ""; if count(read.allowed) == 2 { allowed2 = read.allowed[1]; }
-    var selected2 = ""; if count(read.files) == 2 { selected2 = read.files[1]; }
+    var allowed2 = ""; if read.allowed.len() == 2 { allowed2 = read.allowed[1]; }
+    var selected2 = ""; if read.files.len() == 2 { selected2 = read.files[1]; }
     let remaining = if row.phase == "summary-confirmed" { ["0", "0", "0", "0"] } else { ["1", "1", "2048", "65536"] };
     let labels = ["WORK ", "READ ", "EDIT ", "READ_LEDGER ", "EDIT_LEDGER ", "MAXIMA ", "RESERVATION "];
     let keys = [["format", "phase", "id", "workspace", "region", "path", "request_digest", "before_digest", "after_digest", "before_bytes", "after_bytes"],

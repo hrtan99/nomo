@@ -80,30 +80,30 @@ flow run_case(label: string, mode: string, chain: bool) -> Result<Pending, Failu
             if value != expected { abort("read main context changed"); }
             println("PORT " + label + " read-main " + value.phase);
             let answer = if value.phase == "plan" { if mode == "bad_plan" { "broken" } else { "[\"delegate\",\"T\"]" } } else { "Answer" };
-            resume answer;
+            answer
         }
         LegacyStringStages.child(task, allowed, selected) => {
             let expected = add(empty_history(), event("user", "context", "original", "Q"));
             if task != "T" || allowed != ["a.txt"] || selected != expected { abort("read child inputs changed"); }
             println("PORT " + label + " read-child");
-            resume child(if mode == "bad_child" { "WRONG" } else { "Q" });
+            child(if mode == "bad_child" { "WRONG" } else { "Q" })
         }
         EditOriginal.read(path) => {
             if path != "dir/file.txt" { abort("original path changed"); }
             println("PORT " + label + " read-original " + path);
             if mode == "abort" { abort("D9_EXPECTED_READ_ABORT"); }
             let answer: Result<string, string> = if mode == "read_error" { Err("synthetic read refused") } else { Ok("old\n") };
-            resume answer;
+            answer
         }
         LegacyEditStages.plan(value) => {
             if value != edit_context("plan", "") { abort("edit plan context changed"); }
-            println("PORT " + label + " edit-plan"); resume "[\"delegate\",\"edit T\"]";
+            println("PORT " + label + " edit-plan"); "[\"delegate\",\"edit T\"]"
         }
         LegacyEditStages.child(value) => {
             if value != edit_context("child", "edit T") { abort("edit child context changed"); }
-            println("PORT " + label + " edit-child"); resume "[\"edit\",\"old\",\"blue\"]";
+            println("PORT " + label + " edit-child"); "[\"edit\",\"old\",\"blue\"]"
         }
-        LegacyEditStages.aggregate(_) => { abort("unexpected edit aggregate"); }
+        LegacyEditStages.aggregate(_) => abort("unexpected edit aggregate");
     };
 }
 flow verify(label: string, mode: string, chain: bool, expected: string, read: ReadLedger, edit: EditLedger) -> unit {
@@ -116,7 +116,7 @@ flow verify(label: string, mode: string, chain: bool, expected: string, read: Re
     println("PASS " + label);
 }
 public flow controller_unhandled() -> Result<Pending, Failure> {
-    let original = (value: string) => ""; let log = (name: string, state: Ledger) => {};
+    let original = (value: string) => ""; let log = (name: string, state: Ledger) => ();
     return prepare_with(input(), original, log, false, false, false);
 }
 public flow observe(args: Array<string>) -> i32 {
@@ -140,8 +140,8 @@ flow prepare_stages<S ~ WorkModelStages>(stages: S) -> Result<Pending, Failure> 
             if path != "dir/file.txt" { abort("injected original path changed"); }
             resume Ok("old\n");
         }
-        HarnessProgress.write(_) => { resume; }
-        DiagnosticOutput.write(_) => { resume; }
+        HarnessProgress.write(_) => ();
+        DiagnosticOutput.write(_) => ();
     };
 }
 
@@ -151,18 +151,16 @@ public flow production_stages(args: Array<string>) -> i32 {
     }, conversation = [], wide = false, high_input = false, historical = true };
     let result = prepare_stages(stages);
     match result {
-        Ok(value) => {
-            if value.prepared != expected_pending().prepared || value.request != "Q" || value.task != "edit T" {
-                abort("production prepare result changed");
-            }
-            if value.evidence.files != ["a.txt"] || value.evidence.result != "Seen blue" || value.evidence.summary != "Answer" {
-                abort("production read evidence changed");
-            }
-            if value.state.read.calls != 4 || value.state.read.tokens != 8192 || value.state.read.tools != 1 || value.state.read.scan != 16384 || value.state.edit != expected_pending().state.edit {
-                abort("production historical ledger changed");
-            }
+        Ok(value) => if value.prepared != expected_pending().prepared || value.request != "Q" || value.task != "edit T" {
+            abort("production prepare result changed");
         }
-        Err(failure) => { abort(failure.error); }
+        if value.evidence.files != ["a.txt"] || value.evidence.result != "Seen blue" || value.evidence.summary != "Answer" {
+            abort("production read evidence changed");
+        }
+        if value.state.read.calls != 4 || value.state.read.tokens != 8192 || value.state.read.tools != 1 || value.state.read.scan != 16384 || value.state.edit != expected_pending().state.edit {
+            abort("production historical ledger changed");
+        },
+        Err(failure) => abort(failure.error),
     }
     println("PASS production historical stages");
     return 0;

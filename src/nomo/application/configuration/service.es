@@ -13,13 +13,11 @@ public flow load<R ~ ConversationReader>(history: R) -> Settings {
     let session = perform SessionContext.current();
     let workspace = history.load(session).workspace;
     match perform ConfigurationCache.lookup(workspace) {
-        Some(cached) => {
-            if constant_time_eq(cached.digest, digest) {
-                let observation = perform ConfigurationCodec.observation(history.message(cached.session, cached.result_event).text);
-                return perform ConfigurationCodec.decode_json(observation.stdout);
-            }
-        }
-        None() => {}
+        Some(cached) => if constant_time_eq(cached.digest, digest) {
+            let observation = perform ConfigurationCodec.observation(history.message(cached.session, cached.result_event).text);
+            return perform ConfigurationCodec.decode_json(observation.stdout);
+        },
+        None() => (),
     }
     let observation = perform ConfigurationConversion.toml(raw);
     if observation.output.exit_code != 0 { abort("project configuration TOML conversion failed: " + observation.output.stderr); }

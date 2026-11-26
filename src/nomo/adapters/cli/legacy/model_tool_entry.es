@@ -1,6 +1,5 @@
 module nomo.adapters.cli.legacy.model_tool_entry;
 
-import std.collections.len;
 import std.text.{split, char_count as text_len};
 import std.io.println;
 import nomo.adapters.cli.arguments.config.load_for;
@@ -8,21 +7,21 @@ import nomo.domain.harness.model_tool_contract.{Limits, fresh_loop};
 import nomo.adapters.model.legacy.model_tool.run_loop;
 
 public flow run_model_tools(args: Array<string>) -> i32 {
-    if len(args) > 10 { println("error: too many arguments"); abort("model-tool configuration rejected"); }
+    if args.len() > 10 { println("error: too many arguments"); abort("model-tool configuration rejected"); }
     var forwarded: Array<string> = [];
     var allowed: Array<string> = [];
     var seen = false;
     var index: usize = 0;
-    @limits([Iterations(10)]) while index < len(args) {
+    @limits([Iterations(10)]) while index < args.len() {
         if args[index] == "--allow" {
-            if seen || index + 1 >= len(args) { println("error: invalid or duplicate --allow"); abort("model-tool configuration rejected"); }
+            if seen || index + 1 >= args.len() { println("error: invalid or duplicate --allow"); abort("model-tool configuration rejected"); }
             if text_len(args[index + 1]) > 97 { println("error: allowed names exceed 97 characters"); abort("model-tool configuration rejected"); }
             seen = true;
             allowed = split(args[index + 1], ",");
             index = index + 2;
         } else {
             forwarded = forwarded.push(args[index]);
-            if args[index] != "--help" && index + 1 < len(args) {
+            if args[index] != "--help" && index + 1 < args.len() {
                 forwarded = forwarded.push(args[index + 1]);
                 index = index + 1;
             }

@@ -73,11 +73,11 @@ flow application_request(input: ChainInput, continuing: bool) -> TurnRequest {
 
 flow execute(ticket: Ticket, pending: Pending) -> Result<Confirmed, string> {
     let selected = match confirm_current(pending.selected, pending.prepared) { Ok(value) => value, Err(error) => { return Err(error); } };
-    match claim(ticket) { Ok(_) => {} Err(error) => { return Err(error); } }
+    match claim(ticket) { Ok(_) => (), Err(error) => { return Err(error); } }
     let intent = match begin(ticket.row.chain, ticket.row.turn, selected) { Ok(value) => value, Err(error) => { return Err(error); } };
     println("INTENT durable " + selected.id);
-    match apply(pending.prepared) { Ok(_) => {} Err(error) => { return Err(error); } }
-    match complete_edit(intent) { Ok(_) => {} Err(error) => { return Err(error); } }
+    match apply(pending.prepared) { Ok(_) => (), Err(error) => { return Err(error); } }
+    match complete_edit(intent) { Ok(_) => (), Err(error) => { return Err(error); } }
     println("APPLIED " + selected.id);
     return Ok(Confirmed { binding = selected, after = pending.prepared.proposal.after });
 }
@@ -119,12 +119,12 @@ flow execute_work(request: TurnRequest, inspect_plan: bool, inspect_all: bool, u
     let selected = pending.selected;
     let binding = match bind(selected.id, selected.workspace, selected.path, pending.prepared) { Ok(value) => value, Err(error) => { return stopped(pending.state, error); } };
     let candidate = match partial(binding, pending.evidence, pending.task, pending.prepared) { Ok(value) => value, Err(error) => { return stopped(pending.state, error); } };
-    match admit(candidate) { Ok(_) => {} Err(error) => { return stopped(pending.state, error); } }
+    match admit(candidate) { Ok(_) => (), Err(error) => { return stopped(pending.state, error); } }
     let projection = match projected(ticket.row, candidate) { Ok(value) => value, Err(error) => { return stopped(pending.state, error); } };
-    match ticket.parent { Some(parent) => { let error = linked(parent.value, parent.version.opaque, projection); if error != "" { return stopped(pending.state, error); } } None() => {} }
+    match ticket.parent { Some(parent) => { let error = linked(parent.value, parent.version.opaque, projection); if error != "" { return stopped(pending.state, error); } } None() => (), }
     let outcome = match execute(ticket, pending) { Ok(value) => value, Err(error) => { return stopped(pending.state, error); } };
     println("EDIT completed " + edit.id + "; v2 journal is authoritative; no replay or rollback.");
-    match json(["chain_show", "--id", edit.id, "--workspace", edit.workspace, "--path", edit.path]) { Ok(value) => { println("NEXT " + value); } Err(_) => {} }
+    match json(["chain_show", "--id", edit.id, "--workspace", edit.workspace, "--path", edit.path]) { Ok(value) => println("NEXT " + value), Err(_) => (), }
     show_hint(edit.id, edit.workspace, edit.path);
     let completed = match completed_context_work(pending, outcome) { Ok(value) => value, Err(failure) => { return stopped(failure.state, failure.error); } };
     if outcome.binding != candidate.binding || outcome.after != pending.prepared.proposal.after { return stopped(completed.state, "edit completed; v2 snapshot binding mismatch"); }
@@ -134,7 +134,7 @@ flow execute_work(request: TurnRequest, inspect_plan: bool, inspect_all: bool, u
     println("WORK durable summary-unconfirmed; final reservation may have been attempted; cannot resume an uncertain turn.");
     let aggregation = if user_context { summarize_user_context(completed, prior, inspect_all) } else { summarize_chain(completed, prior, inspect_all) };
     let summary = match aggregation { Ok(value) => value, Err(failure) => { return stopped(failure.state, failure.error); } };
-    match complete(saved, summary.answer) { Ok(_) => {} Err(error) => { return stopped(summary.state, "edit completed; " + error); } }
+    match complete(saved, summary.answer) { Ok(_) => (), Err(error) => { return stopped(summary.state, "edit completed; " + error); } }
     if user_context { println("SAVED user-context summary-confirmed; reservation retained; no continuation."); }
     else { println("SAVED v2 summary-confirmed; cumulative lifetime reservation retained."); }
     display("FINAL ", summary.answer); if user_context { user_context_ledger(summary.state); } else { ledger(summary.state); }

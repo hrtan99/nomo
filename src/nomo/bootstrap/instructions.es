@@ -11,5 +11,5 @@ public flow reader() -> ProjectGuidance { return ProjectGuidance { files = Proje
 
 public flow bindings() -> ![ProjectInstructions => Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Error<FileError>, Error<ReadLimitError>] ![] {
     let guidance = reader();
-    return handler { ProjectInstructions.read(path) => { resume guidance.read(path); } };
+    return handler { ProjectInstructions.read(path) => guidance.read(path); };
 }

@@ -48,7 +48,7 @@ flow request(config: Config, state: State, text: string) -> Result<State, string
     let outcome = dispatch(operation);
     let completed = match outcome { WorkOutcome.Completed => true, WorkOutcome.Stopped(_) => false };
     let next = match after_turn(state, completed, config.once_supplied) { Ok(value) => value, Err(error) => { return Err(error); } };
-    match display(config, next) { Ok(_) => {} Err(error) => { return Err(error); } }
+    match display(config, next) { Ok(_) => (), Err(error) => { return Err(error); } }
     if !completed { return Err("work stopped; inspect captured work and journal state before any further action"); }
     return Ok(next);
 }
@@ -67,7 +67,7 @@ public flow run_with_operations(args: Array<string>) -> i32 ![Console, TerminalW
     if parsed.help { return help([]); }
     let config = match selected_config(parsed) { Ok(value) => value, Err(error) => { return refused(error); } };
     var state = fresh(config.parent != "");
-    match display(config, state) { Ok(_) => {} Err(error) => { return refused(error); } }
+    match display(config, state) { Ok(_) => (), Err(error) => { return refused(error); } }
     if config.once_supplied {
         match request(config, state, config.once) { Ok(_) => { return 0; } Err(error) => { return refused(error); } }
     }
@@ -78,18 +78,16 @@ public flow run_with_operations(args: Array<string>) -> i32 ![Console, TerminalW
         // Only malformed input recovers; admitted work errors still stop.
         match line(raw) {
             Err(error) => { let refused_status = refused(error); }
-            Ok(command) => {
-                match command {
-                    LineCommand.Eof => { println("STOP EOF; captured state is preserved"); return 0; }
-                    LineCommand.Exit => { println("STOP exit; captured state is preserved"); return 0; }
-                    LineCommand.Help => { if help([]) != 0 { return 1; } }
-                    LineCommand.Show => { if show(config, state) != 0 { return 1; } }
-                    LineCommand.Request(text) => {
-                        state = match request(config, state, text) { Ok(value) => value, Err(error) => { return refused(error); } };
-                        if work_error(state) != "" { println("STOP selected work complete; no further request in this process"); return 0; }
-                    }
+            Ok(command) => match command {
+                LineCommand.Eof => { println("STOP EOF; captured state is preserved"); return 0; }
+                LineCommand.Exit => { println("STOP exit; captured state is preserved"); return 0; }
+                LineCommand.Help => if help([]) != 0 { return 1; },
+                LineCommand.Show => if show(config, state) != 0 { return 1; },
+                LineCommand.Request(text) => {
+                    state = match request(config, state, text) { Ok(value) => value, Err(error) => { return refused(error); } };
+                    if work_error(state) != "" { println("STOP selected work complete; no further request in this process"); return 0; }
                 }
-            }
+            },
         }
     }
     return refused("terminal input limit reached; inspect captured state; no further request in this process");
@@ -101,7 +99,7 @@ public flow run_once_with_operations(args: Array<string>) -> i32 ![Console, Term
     if parsed.help { return help([]); }
     let config = match selected_config(parsed) { Ok(value) => value, Err(error) => { return refused(error); } };
     let state = fresh(config.parent != "");
-    match display(config, state) { Ok(_) => {} Err(error) => { return refused(error); } }
+    match display(config, state) { Ok(_) => (), Err(error) => { return refused(error); } }
     return match request(config, state, config.once) { Ok(_) => 0, Err(error) => refused(error) };
 }
 
@@ -110,10 +108,10 @@ flow latest_application(workspace: string, path: string) -> Result<string, strin
     return latest_parent(workspace, path);
 }
 flow production(args: Array<string>, once: bool) -> i32 {
-    return handle { if once { run_once_with_operations(args) } else { run_with_operations(args) } } with {
-        TerminalWork.execute(request) => { let detailed = execute_application_detailed(request); let status = present_detailed_outcome(detailed); resume project_outcome(detailed); }
-        TerminalRead.show(selected) => { resume inspect_application(selected); }
-        TerminalRead.latest(workspace, path) => { resume latest_application(workspace, path); }
+    return handle if once { run_once_with_operations(args) } else { run_with_operations(args) } with {
+        TerminalWork.execute(request) => { let detailed = execute_application_detailed(request); let status = present_detailed_outcome(detailed); project_outcome(detailed) }
+        TerminalRead.show(selected) => inspect_application(selected);
+        TerminalRead.latest(workspace, path) => latest_application(workspace, path);
     };
 }
 public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read<ReadOnlyRoot>, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] { return production(args, false); }

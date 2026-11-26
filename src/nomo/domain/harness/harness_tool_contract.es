@@ -3,7 +3,6 @@ module nomo.domain.harness.harness_tool_contract;
 import nomo.domain.text.read_text.{data_safe, bounded as utf8_bounded};
 import nomo.domain.context.large_context.{context_bytes, message_bytes, history_bytes, scan_bytes, scan_i32, legacy_scan_i32, compatible_scan_bytes, compatible_scan_i32, outcome_bytes, child_answer_bytes};
 import std.text.{char_count as len, starts_with, from_i32};
-import std.collections.len as count;
 import std.json.JsonValue;
 import std.agent.message.Message;
 import nomo.domain.text.text.{printable, context_json_error};
@@ -141,7 +140,7 @@ public flow inspect_shared(child: Session, status: i32, request: string, task: s
     let invalid = child_ledger_error(child, work); if invalid != "" { return Err(invalid); }
     if !(if unicode { utf8_bounded(request, message_bytes()) } else { bounded(request, message_bytes()) }) || !(if unicode { utf8_bounded(task, message_bytes()) } else { bounded(task, message_bytes()) }) || (if unicode { candidate_error(allowed) } else { allowed_error(allowed) }) != "" { return Err("invalid selected child context"); }
     let events = child.history.events;
-    let size = count(events);
+    let size = events.len();
     if size < 4 || size > 7 || child.history.stopped || child.history.characters > history_bytes() { return Err("invalid child history"); }
     var characters: usize = 0;
     @limits([Iterations(7)]) for event in events {
@@ -159,7 +158,7 @@ public flow inspect_shared(child: Session, status: i32, request: string, task: s
         if size != 4 || child.calls != 1 || (status != 0 && status != 3) { return Err("invalid direct child shape"); }
     } else {
         if size < 5 || events[3].role != "model" || events[3].kind != "request" { return Err("missing selected child tool request"); }
-        let action = match if unicode { decode_child(events[3].text, allowed, false) } else { decode_reply(events[3].text, allowed, false) } { Ok(value) => value, Err(error) => { return Err(error); } };
+        let action = match if unicode { decode_child(events[3].text, allowed, false) } else { decode_reply(events[3].text, allowed, false) } { Ok(value) => value, Err(error) => Err(error) };
         if (action.operation != "read" && action.operation != "search") || events[3].name != action.operation ||
             events[4].role != "tool" || events[4].name != action.operation { return Err("child tool identity changed"); }
         if size == 5 {

@@ -52,7 +52,7 @@ public type TerminalConsent = {};
 public flow build_preview(selector: Selector, prepared: Prepared) -> Result<Preview, string> {
     let invalid = selector_error(selector.id, selector.workspace, selector.path); if invalid != "" { return Err(invalid); }
     if selector.path != prepared.request.path || selector.path != prepared.proposal.path { return Err("edit selector differs from prepared request"); }
-    match validate(prepared.request, prepared.proposal) { Ok(_) => {} Err(error) => { return Err(error); } }
+    match validate(prepared.request, prepared.proposal) { Ok(_) => (), Err(error) => { return Err(error); } }
     let selected = match bind(selector.id, selector.workspace, selector.path, prepared) { Ok(value) => value, Err(error) => { return Err(error); } };
     let shown = match preview(prepared, selected) { Ok(value) => value, Err(error) => { return Err(error); } };
     let readable = match render_edit(prepared.proposal.before, prepared.request.target, prepared.request.replacement, prepared.proposal.after) { Ok(value) => value, Err(error) => { return Err(error); } };
@@ -92,8 +92,8 @@ public flow execute(selector: Selector, prepared: Prepared) -> Result<Confirmed,
     let selected = match confirm_current(selector, prepared) { Ok(value) => value, Err(error) => { return Err(error); } };
     let ticket = match begin(selected) { Ok(value) => value, Err(error) => { return Err(error); } };
     println("INTENT durable " + selector.id);
-    match apply(prepared) { Ok(_) => {} Err(error) => { return Err(error); } }
-    match complete(ticket) { Ok(_) => {} Err(error) => { return Err(error); } }
+    match apply(prepared) { Ok(_) => (), Err(error) => { return Err(error); } }
+    match complete(ticket) { Ok(_) => (), Err(error) => { return Err(error); } }
     println("APPLIED " + selector.id);
     return Ok(Confirmed { binding = selected, after = prepared.proposal.after });
 }

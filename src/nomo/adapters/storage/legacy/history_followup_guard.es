@@ -29,7 +29,7 @@ public flow parent() -> Result<Parent, string> {
     let edit = match inspect_edit(work.id, work.workspace, work.path) { Ok(Some(value)) => value, _ => { return Err("completed first edit required"); } };
     if edit.phase != "completed" { return Err("first edit is unresolved"); }
     let check = match inspect_check() { Ok(value) => value, Err(error) => { return Err(error); } };
-    match check { Some(value) => { if value.phase != "complete" || value.id != work.id { return Err("first check is unresolved"); } } None() => {} }
+    match check { Some(value) => if value.phase != "complete" || value.id != work.id { return Err("first check is unresolved"); }, None() => (), }
     return Ok(Parent { work, edit, check });
 }
 
@@ -83,7 +83,7 @@ public flow claim(ticket: Ticket) -> Result<bool, string> {
 }
 
 public flow finish(ticket: Ticket, summary: string, spent: Ledger) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
-    match claim(ticket) { Ok(_) => {} Err(error) => { return Err(error); } }
+    match claim(ticket) { Ok(_) => (), Err(error) => { return Err(error); } }
     let old = ticket.record;
     let row = old { format = 1, phase = "complete", reserved = zero(), settled = Some(spent), summary };
     let version = match write(row, Match(ticket.version)) { Ok(value) => value, Err(error) => { return Err(error); } };

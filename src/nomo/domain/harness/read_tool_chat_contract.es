@@ -2,7 +2,6 @@ module nomo.domain.harness.read_tool_chat_contract;
 
 import nomo.domain.context.large_context.{message_bytes, outcome_bytes, child_answer_bytes};
 import std.text.{char_count as len, starts_with};
-import std.collections.len as count;
 import std.json.JsonValue;
 import std.agent.message.Message;
 import nomo.core.conversation.Event;
@@ -127,8 +126,8 @@ public flow inspect_multi_turn(child: Session, status: i32, request: string, tas
         (child.calls == child.tools && child.tokens != child.tools * action_tokens) || (child.calls != child.tools && child_final != final_tokens && !(final_tokens == 131072 && child_final == 4096)) || child.scan != child.tools * 4194560 { return Err("invalid multi-step child ledger"); }
     let steps: i32 = if child.tools == 3 { 7 } else { if child.tools == 2 { 5 } else { if child.tools == 1 { 3 } else { 1 } } };
     if child.history.spent != steps - if tool_failure { 1 } else { 0 } { return Err("invalid multi-step child steps"); }
-    let expected = seed(request, prior); let start = count(expected.events); let events = child.history.events;
-    if count(events) != start + 1 + child.tools * 3 + if tool_failure { 0 } else { 2 } { return Err("invalid multi-step event count"); }
+    let expected = seed(request, prior); let start = expected.events.len(); let events = child.history.events;
+    if events.len() != start + 1 + child.tools * 3 + if tool_failure { 0 } else { 2 } { return Err("invalid multi-step event count"); }
     var index: usize = 0; var characters: usize = 0;
     @limits([Iterations(18)]) for event in events {
         if len(event.name) > 8 || len(event.text) > outcome_bytes() || !printable(event.name) || !data_safe(event.text, outcome_bytes()) { return Err("invalid multi-step event"); }

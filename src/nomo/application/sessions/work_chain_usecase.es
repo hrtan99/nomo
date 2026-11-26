@@ -28,7 +28,7 @@ public flow request_error(request: TurnRequest) -> string {
             let parent = selector_error(next.parent, value.selected.workspace, value.selected.path); if parent != "" { return parent; }
             if next.parent == value.selected.id { return "continuation requires a distinct child ID"; }
         }
-        TurnRequest.New(_) => {}
+        TurnRequest.New(_) => (),
     }
     return "";
 }

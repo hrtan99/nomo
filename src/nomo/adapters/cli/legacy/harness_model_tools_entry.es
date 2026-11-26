@@ -2,7 +2,6 @@ module nomo.adapters.cli.legacy.harness_model_tools_entry;
 
 import std.io.println;
 import nomo.domain.text.read_text.within;
-import std.collections.len as count;
 import std.text.{char_count as len, split};
 import nomo.adapters.cli.arguments.cli_request.parse_args;
 import nomo.domain.harness.harness_tool_contract.fresh;
@@ -17,15 +16,15 @@ flow help() -> unit {
 
 public type AllowArgs = { remaining: Array<string>, supplied: bool, allowed: string };
 public flow extract_allow(args: Array<string>, unicode: bool) -> Result<AllowArgs, string> {
-    if count(args) == 0 || count(args) > 7 { return Err("expected bounded model/tool arguments"); }
+    if args.len() == 0 || args.len() > 7 { return Err("expected bounded model/tool arguments"); }
     var remaining: Array<string> = [args[0]];
     var supplied = false;
     var allowed = "";
     var index: usize = 1;
-    @limits([Iterations(7)]) while index < count(args) {
+    @limits([Iterations(7)]) while index < args.len() {
         let flag = args[index];
         if flag == "--allow" {
-            if supplied || index + 1 >= count(args) { return Err(if unicode { "expected exactly one --allow FILE[,FILE...]" } else { "expected exactly one --allow FILE[,FILE]" }); }
+            if supplied || index + 1 >= args.len() { return Err(if unicode { "expected exactly one --allow FILE[,FILE...]" } else { "expected exactly one --allow FILE[,FILE]" }); }
             allowed = args[index + 1];
             if unicode && !within(allowed, 195) { return Err("raw allowlist exceeds 195 UTF-8 bytes"); }
             if !unicode && len(allowed) > 97 { return Err("raw allowlist exceeds 97 characters"); }
@@ -34,7 +33,7 @@ public flow extract_allow(args: Array<string>, unicode: bool) -> Result<AllowArg
         } else {
             remaining = remaining.push(flag);
             index = index + 1;
-            if (flag == "--once" || flag == "--id") && index < count(args) {
+            if (flag == "--once" || flag == "--id") && index < args.len() {
                 remaining = remaining.push(args[index]); index = index + 1;
             }
         }
@@ -43,7 +42,7 @@ public flow extract_allow(args: Array<string>, unicode: bool) -> Result<AllowArg
 }
 
 public flow run(args: Array<string>) -> i32 {
-    if count(args) == 0 || count(args) > 7 { return refused(fresh(), "expected bounded new --once TEXT --allow FILE[,FILE]"); }
+    if args.len() == 0 || args.len() > 7 { return refused(fresh(), "expected bounded new --once TEXT --allow FILE[,FILE]"); }
     let extracted = match extract_allow(args, false) { Ok(value) => value, Err(error) => { return refused(fresh(), error); } };
     let request = match parse_args(extracted.remaining) { Ok(value) => value, Err(error) => { return refused(fresh(), error); } };
     if request.kind == "help" { if extracted.supplied { return refused(fresh(), "help must be used alone"); } help(); return 0; }

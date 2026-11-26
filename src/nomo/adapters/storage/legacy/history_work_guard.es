@@ -86,7 +86,7 @@ public flow claim(ticket: Ticket) -> Result<bool, string> {
 }
 
 public flow finish(ticket: Ticket, summary: string, spent: Ledger) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
-    match claim(ticket) { Ok(_) => {} Err(error) => { return Err(error); } }
+    match claim(ticket) { Ok(_) => (), Err(error) => { return Err(error); } }
     let old = ticket.record;
     let row = old { format = 1, phase = "complete", reserved = zero(), settled = Some(spent), summary };
     let version = match write(row, Match(ticket.version)) { Ok(value) => value, Err(error) => { return Err(error); } };

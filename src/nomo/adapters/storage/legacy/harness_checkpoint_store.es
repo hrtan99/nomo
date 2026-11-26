@@ -32,8 +32,8 @@ flow owner(identity: Identity, phase: string) -> Result<MemoryEntry<string, Reco
 // ownership is never adopted, overwritten, repaired or silently reinitialized.
 public flow initialize(identity: Identity) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
     let invalid = identity_error(identity); if invalid != "" { return Err(invalid); }
-    match read("owner") { Some(_) => { return Err("checkpoint store already claimed"); } None() => {} }
-    match read(key(identity)) { Some(_) => { return Err("checkpoint row already exists"); } None() => {} }
+    match read("owner") { Some(_) => { return Err("checkpoint store already claimed"); } None() => (), }
+    match read(key(identity)) { Some(_) => { return Err("checkpoint row already exists"); } None() => (), }
     let row = Record { format = 1, phase = "ready", identity, body = "" };
     return match write("owner", row, Missing) { Ok(_) => Ok(true), Err(error) => Err(error) };
 }
@@ -42,17 +42,17 @@ public flow initialize(identity: Identity) -> Result<bool, string> ![Memory, Err
 // obtain a fresh allocation by calling save again in this namespace.
 public flow begin(identity: Identity) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
     let before = match owner(identity, "ready") { Ok(value) => value, Err(error) => { return Err(error); } };
-    match read(key(identity)) { Some(_) => { return Err("checkpoint row already exists"); } None() => {} }
+    match read(key(identity)) { Some(_) => { return Err("checkpoint row already exists"); } None() => (), }
     let row = Record { format = 1, phase = "claimed", identity, body = "" };
     return match write("owner", row, Match(before.version)) { Ok(_) => Ok(true), Err(error) => Err(error) };
 }
 
 public flow publish(saved: Checkpoint) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
-    match validate(saved, saved.identity) { Ok(_) => {} Err(error) => { return Err(error); } }
+    match validate(saved, saved.identity) { Ok(_) => (), Err(error) => { return Err(error); } }
     let body = match encode_record(CheckpointEncoder {}, saved) { Ok(value) => value, Err(error) => { return Err(error); } };
-    match owner(saved.identity, "claimed") { Ok(_) => {} Err(error) => { return Err(error); } }
+    match owner(saved.identity, "claimed") { Ok(_) => (), Err(error) => { return Err(error); } }
     let name = key(saved.identity);
-    match read(name) { Some(_) => { return Err("checkpoint row already exists"); } None() => {} }
+    match read(name) { Some(_) => { return Err("checkpoint row already exists"); } None() => (), }
     let pending = Record { format = 1, phase = "pending", identity = saved.identity, body };
     let version = match write(name, pending, Missing) { Ok(value) => value, Err(error) => { return Err(error); } };
     let complete = Record { format = 1, phase = "published", identity = saved.identity, body };
@@ -63,7 +63,7 @@ public flow publish(saved: Checkpoint) -> Result<bool, string> ![Memory, Error<S
 
 // Data only: this callgraph contains no model, File or Memory mutation action.
 public flow binding(identity: Identity) -> Result<Binding, string> {
-    match owner(identity, "claimed") { Ok(_) => {} Err(error) => { return Err(error); } }
+    match owner(identity, "claimed") { Ok(_) => (), Err(error) => { return Err(error); } }
     let name = key(identity);
     let before = match read(name) { Some(value) => value, None() => { return Err("checkpoint missing; no completed save"); } };
     let row = before.value;

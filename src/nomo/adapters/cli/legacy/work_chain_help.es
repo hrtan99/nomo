@@ -2,7 +2,6 @@ module nomo.adapters.cli.legacy.work_chain_help;
 
 import std.io.println;
 import std.text.{char_count as len, replace};
-import std.collections.len as count;
 import nomo.domain.text.text.printable;
 import nomo.domain.sessions.edit_operation.selector_error;
 import nomo.domain.harness.tool_context.allowed_error;
@@ -34,14 +33,14 @@ public flow continue_hint(parent: string, workspace: string, path: string, allow
     if invalid != "" || files_error != "" { help_hint(); return; }
     let selected = match bindings("NEW_CHILD_ID", workspace, path) { Ok(value) => value, Err(_) => { help_hint(); return; } };
     let identity = match argument(parent) { Ok(value) => value, Err(_) => { help_hint(); return; } };
-    var names = allowed[0]; if count(allowed) == 2 { names = names + "," + allowed[1]; }
+    var names = allowed[0]; if allowed.len() == 2 { names = names + "," + allowed[1]; }
     let files = match argument(names) { Ok(value) => value, Err(_) => { help_hint(); return; } };
     println("TEMPLATE only: replace NEW_CHILD_ID with a distinct new ID and NEW_REQUEST with your new request.");
     println("The saved parent's remaining allocation is a snapshot; it does not establish current second-slot availability. Native admission and fresh confirmation still apply.");
     println("./scripts/local-tryout.sh continue \"$NOMO_TRYOUT_DIR\" --parent " + identity + " " + selected + " --once 'NEW_REQUEST' --allow " + files);
 }
 public flow help(args: Array<string>) -> i32 {
-    if count(args) > 1 || (count(args) == 1 && args[0] != "help" && args[0] != "--help") {
+    if args.len() > 1 || (args.len() == 1 && args[0] != "help" && args[0] != "--help") {
         println("REFUSED chain_help accepts no arguments or one --help."); help_hint(); return 1;
     }
     println("Nomo fixed local tryout: one newly prepared private fixture/store, one v2 lifetime, at most two currently confirmed edits.");

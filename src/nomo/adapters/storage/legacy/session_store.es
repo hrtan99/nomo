@@ -14,8 +14,8 @@ import nomo.domain.sessions.bundle_codec.encode;
 public flow publish_snapshot(saved: Snapshot, save_id: string, expected: Record, version: MemoryVersion, continuation: bool) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
     let next = published(pending(saved, save_id));
     let body = bundle(saved, save_id);
-    match encode(body) { Err(error) => { return Err(error); } Ok(_) => {} }
-    match append(next.session_key, body) { Err(error) => { return Err(error); } Ok(_) => {} }
+    match encode(body) { Err(error) => { return Err(error); } Ok(_) => (), }
+    match append(next.session_key, body) { Err(error) => { return Err(error); } Ok(_) => (), }
     let observed = match load(next.session_key) { Ok(value) => value, Err(error) => { return Err(error); } };
     let restored = match restore(next, observed) { Ok(value) => value, Err(error) => { return Err(error); } };
     if observed != body { return Err(if continuation { "successor bundle differs from intent" } else { "appended bundle differs from intent" }); }
@@ -30,13 +30,13 @@ public flow save(saved: Snapshot, requested: Request, save_id: string) -> Result
     if !valid_id(save_id) { return Err("invalid save identity"); }
     let projection = match validate(saved, requested) { Ok(value) => value, Err(error) => { return Err(error); } };
     let body = bundle(saved, save_id);
-    match encode(body) { Err(error) => { return Err(error); } Ok(_) => {} }
-    match read(saved.session_id) { Some(_) => { return Err("session metadata already exists"); } None() => {} }
+    match encode(body) { Err(error) => { return Err(error); } Ok(_) => (), }
+    match read(saved.session_id) { Some(_) => { return Err("session metadata already exists"); } None() => (), }
     let row = pending(saved, save_id);
     if !empty(row.session_key) { return Err("session history is not empty"); }
     let version = match write(row, Missing) { Ok(value) => value, Err(error) => { return Err(error); } };
     // Only this confirmed intent permits the sole append. Unknown stops above.
-    match publish_snapshot(saved, save_id, row, version, false) { Ok(_) => {} Err(error) => { return Err(error); } }
+    match publish_snapshot(saved, save_id, row, version, false) { Ok(_) => (), Err(error) => { return Err(error); } }
     return Ok(projection);
 }
 

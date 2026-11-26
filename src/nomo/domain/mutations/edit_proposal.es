@@ -30,7 +30,7 @@ public flow propose(request: Request) -> Result<Proposal, string> {
     let first_index = match find(request.original, request.target) { Some(value) => value, None() => { return Err("literal target not found"); } };
     let first = match char_get(request.target, 0) { Some(value) => from_char(value), None() => { return Err("literal match framing invalid"); } };
     let later: Result<Option<usize>, TextError> = find_from(request.original, request.target, first_index + len(first))?;
-    match later { Ok(Some(_)) => { return Err("literal target is ambiguous"); }, Ok(None()) => {} Err(_) => { return Err("literal match framing invalid"); } }
+    match later { Ok(Some(_)) => { return Err("literal target is ambiguous"); }, Ok(None()) => (), Err(_) => { return Err("literal match framing invalid"); } }
     if request.target == request.replacement { return Err("replacement leaves original unchanged"); }
     // The exact match proves target_bytes <= original_bytes. Reject expansion
     // before constructing any output, then replace the proven byte interval.

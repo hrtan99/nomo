@@ -11,7 +11,7 @@ public type RollingContext = {};
 impl RollingContext ~ ContextProjection {
     flow bytes(self, input: Turn) -> usize {
         let json = match encode(input, "context conversion failed", "context encoding failed") {
-            Ok(value) => value, Err(error) => { abort(error); }
+            Ok(value) => value, Err(error) => abort(error),
         };
         return text_bytes(json);
     }

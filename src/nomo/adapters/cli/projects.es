@@ -10,7 +10,7 @@ impl TerminalProjects ~ ProjectRenderer {
     flow item(self, index: usize, path: string) -> unit ![Console, Error<IOError>] { println("[PROJECT] " + from_usize(index) + " " + path); }
     flow choose(self) -> string ![Console, Error<IOError>] { print("project> folder path or saved number (blank cancels): "); return read_line(); }
     flow preview(self, path: string) -> unit ![Console, Error<IOError>] {
-        let value = match encode(path, "project path conversion failed", "project path encoding failed") { Ok(value) => value, Err(error) => { abort(error); } };
+        let value = match encode(path, "project path conversion failed", "project path encoding failed") { Ok(value) => value, Err(error) => abort(error), };
         println("[OPEN   ] " + value);
     }
 }

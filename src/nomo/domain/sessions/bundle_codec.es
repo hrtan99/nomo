@@ -2,7 +2,6 @@ module nomo.domain.sessions.bundle_codec;
 
 import nomo.domain.context.large_context.history_bytes;
 import nomo.domain.serialization.json.{encode as encode_json, string_fields};
-import std.collections.len as count;
 import std.text.char_count as len;
 import nomo.domain.text.text.{printable, flat_string_frame};
 
@@ -18,7 +17,7 @@ flow bundle_error(bundle: Bundle) -> string {
     if len(bundle.session_id) == 0 || len(bundle.session_id) > 128 ||
         len(bundle.save_id) == 0 || len(bundle.save_id) > 128 { return "invalid bundle identity"; }
     if !printable(bundle.session_id) || !printable(bundle.save_id) { return "invalid bundle identity"; }
-    if count(bundle.bodies) > 32 { return "bundle body count exceeds limit"; }
+    if bundle.bodies.len() > 32 { return "bundle body count exceeds limit"; }
     var characters: usize = 0;
     @limits([Iterations(32)]) for body in bundle.bodies {
         if len(body) > history_bytes() { return "bundle aggregate text exceeds limit"; }
@@ -43,11 +42,11 @@ public flow encode(bundle: Bundle) -> Result<string, string> {
 public flow decode(json: string) -> Result<Bundle, string> {
     if !framed(json) { return Err("bundle encoded shape or bounds invalid"); }
     let fields = match string_fields(json, "bundle JSON invalid", "bundle must contain only strings") { Ok(value) => value, Err(error) => { return Err(error); } };
-    if count(fields) < 3 || count(fields) > 35 { return Err("bundle field count invalid"); }
+    if fields.len() < 3 || fields.len() > 35 { return Err("bundle field count invalid"); }
     if fields[0] != "nomo-session-bundle-v1" { return Err("unsupported bundle format"); }
     var bodies: Array<string> = [];
     var index: usize = 3;
-    @limits([Iterations(32)]) while index < count(fields) {
+    @limits([Iterations(32)]) while index < fields.len() {
         bodies = bodies.push(fields[index]);
         index = index + 1;
     }

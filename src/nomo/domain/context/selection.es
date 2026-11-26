@@ -1,7 +1,6 @@
 module nomo.domain.context.selection;
 
 import nomo.domain.context.large_context.context_bytes;
-import std.collections.len as count;
 import nomo.core.conversation.Event;
 import nomo.domain.harness.tool_context.{Context, bounded_context_error};
 import nomo.domain.context.preflight.{Measurement, Refusal, measure_context};
@@ -68,8 +67,8 @@ flow failure(error: Refusal) -> SelectionRefusal {
 // order; a large omission does not prevent a later smaller event from fitting.
 public flow select(context: Context, policies: Array<EventPolicy>, maximum_bytes: usize) -> Result<Selection, SelectionRefusal> {
     if maximum_bytes > context_bytes() { return Err(SelectionRefusal.InvalidLimit); }
-    if count(context.history) == 0 || count(context.history) > 32 ||
-        count(policies) != count(context.history) { return Err(SelectionRefusal.InvalidPolicy); }
+    if context.history.len() == 0 || context.history.len() > 32 ||
+        policies.len() != context.history.len() { return Err(SelectionRefusal.InvalidPolicy); }
     if bounded_context_error(context) != "" { return Err(SelectionRefusal.InvalidContext); }
     var indices: Array<usize> = [];
     var task = false;
@@ -94,7 +93,7 @@ public flow select(context: Context, policies: Array<EventPolicy>, maximum_bytes
             match measure_context(project(context, trial), maximum_bytes) {
                 Ok(value) => { indices = trial; measurement = value; },
                 Err(error) => match error {
-                    Refusal.TooLarge => {},
+                    Refusal.TooLarge => (),
                     Refusal.InvalidLimit => { return Err(SelectionRefusal.InvalidLimit); },
                     Refusal.InvalidContext => { return Err(SelectionRefusal.InvalidContext); },
                     Refusal.InvalidText => { return Err(SelectionRefusal.InvalidContext); },
@@ -113,5 +112,5 @@ public flow select(context: Context, policies: Array<EventPolicy>, maximum_bytes
         index = index + 1;
     }
     return Ok(Selection { context = project(context, selected), measurement,
-        selected, omitted, omitted_count = count(omitted) });
+        selected, omitted, omitted_count = omitted.len() });
 }

@@ -1,7 +1,6 @@
 module nomo.adapters.cli.arguments.read_cli;
 
 import nomo.domain.context.large_context.request_bytes;
-import std.collections.len as count;
 import std.text.{trim, starts_with, strip_suffix};
 import std.codec.text.utf8_encode;
 import std.bytes.len as bytes_len;
@@ -18,10 +17,10 @@ flow prompt_error(value: string) -> string {
 }
 
 public flow parse_args(args: Array<string>) -> Result<Request, string> {
-    if count(args) == 1 && (args[0] == "help" || args[0] == "--help") {
+    if args.len() == 1 && (args[0] == "help" || args[0] == "--help") {
         return Ok(Request { kind = "help", session_id = "", once_supplied = false, once = "" });
     }
-    if count(args) != 3 || args[0] != "new" || args[1] != "--once" { return Err("expected new --once TEXT"); }
+    if args.len() != 3 || args[0] != "new" || args[1] != "--once" { return Err("expected new --once TEXT"); }
     let invalid = prompt_error(args[2]); if invalid != "" { return Err(invalid); }
     return Ok(Request { kind = "new", session_id = "", once_supplied = true, once = args[2] });
 }

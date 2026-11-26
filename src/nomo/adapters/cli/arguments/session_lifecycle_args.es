@@ -1,6 +1,5 @@
 module nomo.adapters.cli.arguments.session_lifecycle_args;
 
-import std.collections.len as count;
 import nomo.session.harness_checkpoint.Identity;
 import nomo.adapters.cli.arguments.harness_checkpoint_args.parse as checkpoint;
 import nomo.adapters.cli.arguments.harness_successor_args.parse as successor;
@@ -57,19 +56,19 @@ flow following(args: Array<string>, continuing: bool) -> Result<Request, string>
 // Command selection belongs to separate native entries. Only show selects a
 // first/successor data format; literal argument values never select a command.
 public flow parse(action: string, args: Array<string>) -> Result<Request, string> {
-    match action { "init" => {}, "new" => {}, "resume" => {}, "show" => {}, "help" => {},
+    match action { "init" => (), "new" => (), "resume" => (), "show" => (), "help" => (),
         _ => { return Err("unsupported session action; use init, new, resume, show or help"); } }
-    let help = count(args) == 1 && (args[0] == "help" || args[0] == "--help");
-    if help || (action == "help" && count(args) == 0) {
+    let help = args.len() == 1 && (args[0] == "help" || args[0] == "--help");
+    if help || (action == "help" && args.len() == 0) {
         return Ok(helping(""));
     }
     return match action {
         "init" => first(args, false),
         "new" => first(args, true),
         "resume" => following(args, true),
-        "show" => { if count(args) == 8 { return following(args, false); } return first(args, false); },
+        "show" => { if args.len() == 8 { return following(args, false); } return first(args, false); },
         "help" => {
-            if count(args) != 1 { return Err("session help accepts no selectors"); }
+            if args.len() != 1 { return Err("session help accepts no selectors"); }
             let topic = args[0];
             return match topic { "init" => Ok(helping(topic)), "new" => Ok(helping(topic)),
                 "resume" => Ok(helping(topic)), "show" => Ok(helping(topic)),

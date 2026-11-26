@@ -2,7 +2,6 @@ module nomo.domain.harness.work_chain_context;
 
 import nomo.domain.context.large_context.context_bytes;
 import nomo.domain.serialization.json.encode as encode_json;
-import std.collections.len as count;
 import std.text.len as byte_len;
 import std.json.{JsonValue, stringify};
 import std.agent.message.Message;
@@ -32,11 +31,11 @@ public flow parent_facts(parent: Record) -> Result<Array<ParentFacts>, string> {
 
 public flow combined(current: Context, parent: Array<ParentFacts>) -> Input {
     let error = context_error(current); if error != "" { abort(error); }
-    if count(parent) > 1 { abort("at most one confirmed parent context"); }
+    if parent.len() > 1 { abort("at most one confirmed parent context"); }
     let value = Input { current, parent };
     let message = Message.new(value); let converted: Option<Message<JsonValue>> = message.cast<JsonValue>();
-    let data = match converted { Some(item) => item.body, None() => { abort("chain context conversion refused"); } };
-    let encoded = match stringify(data) { Ok(item) => item, Err(_) => { abort("chain context encoding refused"); } };
+    let data = match converted { Some(item) => item.body, None() => abort("chain context conversion refused"), };
+    let encoded = match stringify(data) { Ok(item) => item, Err(_) => abort("chain context encoding refused"), };
     if byte_len(encoded) > context_bytes() { abort("chain edit context exceeds 33554432 UTF-8 bytes"); }
     return value;
 }

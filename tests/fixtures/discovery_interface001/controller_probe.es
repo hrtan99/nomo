@@ -237,12 +237,12 @@ flow discover_case(label: string, kind: string, requested: string, authority: st
             println("PORT " + label + " capture " + from_i32(captures) + " " + phase);
             let selected = if captures == drift_at { changed(view, difference) } else { view };
             let answer: Result<Snapshot, string> = if captures == fail_at { Err("capture refused") } else { Ok(selected) };
-            resume answer;
+            answer
         }
         DiscoveryAuthority.inspect(id, workspace, path) => {
             println("PORT " + label + " inspect " + id);
             if workspace != "owned" || path != "target.txt" { abort("incorrect authority binding"); }
-            let rows = match choose(view, workspace, path, Selector.Exact(id)) { Ok(value) => value, Err(_) => { abort("unexpected inspect"); } };
+            let rows = match choose(view, workspace, path, Selector.Exact(id)) { Ok(value) => value, Err(_) => abort("unexpected inspect"), };
             var answer: Result<Option<Record>, string> = Ok(Some(rows[0]));
             if authority == "error" || (authority == "second_error" && id == "child-op") { answer = Err("inspect refused"); }
             else if authority == "missing" { answer = Ok(None()); }
@@ -252,12 +252,12 @@ flow discover_case(label: string, kind: string, requested: string, authority: st
         DiscoveryAuthority.confirmed_parent(id, workspace, path) => {
             println("PORT " + label + " parent " + id);
             if id != "root-op" || workspace != "owned" || path != "target.txt" { abort("incorrect parent binding"); }
-            let root = match view.root { Some(value) => value, None() => { abort("unexpected parent"); } };
+            let root = match view.root { Some(value) => value, None() => abort("unexpected parent"), };
             let altered = ObservedRow { key = if authority == "key" { "wrong" } else { root.key },
                 version = if authority == "version" { "wrong" } else { root.version },
                 value = if authority == "row" { patched(root.value, "parent_id") } else { root.value } };
             let answer: Result<ObservedRow, string> = if authority == "error" { Err("parent refused") } else { Ok(altered) };
-            resume answer;
+            answer
         }
  };
     return match result { Ok(value) => expected_error == "" && value == view, Err(error) => error == expected_error };
@@ -272,12 +272,12 @@ flow parent_case(label: string, kind: string, authority: string, fail_at: i32, d
             println("PORT " + label + " capture " + from_i32(captures) + " " + phase);
             let selected = if captures == drift_at { changed(view, difference) } else { view };
             let answer: Result<Snapshot, string> = if captures == fail_at { Err("capture refused") } else { Ok(selected) };
-            resume answer;
+            answer
         }
         DiscoveryAuthority.inspect(id, workspace, path) => {
             println("PORT " + label + " inspect " + id);
             if workspace != "owned" || path != "target.txt" { abort("incorrect authority binding"); }
-            let rows = match choose(view, workspace, path, Selector.Exact(id)) { Ok(value) => value, Err(_) => { abort("unexpected inspect"); } };
+            let rows = match choose(view, workspace, path, Selector.Exact(id)) { Ok(value) => value, Err(_) => abort("unexpected inspect"), };
             var answer: Result<Option<Record>, string> = Ok(Some(rows[0]));
             if authority == "error" || (authority == "second_error" && id == "child-op") { answer = Err("inspect refused"); }
             else if authority == "missing" { answer = Ok(None()); }
@@ -287,12 +287,12 @@ flow parent_case(label: string, kind: string, authority: string, fail_at: i32, d
         DiscoveryAuthority.confirmed_parent(id, workspace, path) => {
             println("PORT " + label + " parent " + id);
             if id != "root-op" || workspace != "owned" || path != "target.txt" { abort("incorrect parent binding"); }
-            let root = match view.root { Some(value) => value, None() => { abort("unexpected parent"); } };
+            let root = match view.root { Some(value) => value, None() => abort("unexpected parent"), };
             let altered = ObservedRow { key = if authority == "key" { "wrong" } else { root.key },
                 version = if authority == "version" { "wrong" } else { root.version },
                 value = if authority == "row" { patched(root.value, "parent_id") } else { root.value } };
             let answer: Result<ObservedRow, string> = if authority == "error" { Err("parent refused") } else { Ok(altered) };
-            resume answer;
+            answer
         }
  };
     return match result { Ok(value) => expected_error == "" && value == "root-op", Err(error) => error == expected_error };

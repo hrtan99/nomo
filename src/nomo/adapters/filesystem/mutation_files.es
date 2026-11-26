@@ -13,7 +13,7 @@ import nomo.domain.mutations.policy.parent;
 import nomo.application.mutations.ports.MutationFileAccess;
 
 flow location(name: string) -> WorkspacePath<ProjectRoot> {
-    return match path<ProjectRoot>(name) { Ok(value) => value, Err(_) => { abort("invalid project path"); } };
+    return match path<ProjectRoot>(name) { Ok(value) => value, Err(_) => abort("invalid project path"), };
 }
 public type ProjectMutationFiles = {};
 impl ProjectMutationFiles ~ MutationFileAccess {

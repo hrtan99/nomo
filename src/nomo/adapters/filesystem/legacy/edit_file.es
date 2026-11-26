@@ -48,7 +48,7 @@ flow read_existing(name: string, maximum: EditLimit) -> Result<bytes, string> {
 flow read_original_with(name: string, maximum: EditLimit) -> Result<string, string> {
     let bytes = match read_existing(name, maximum) { Ok(value) => value, Err(error) => { return Err(error); } };
     let original = match utf8_decode(bytes, Strict) { Ok(value) => value, Err(_) => { return Err("edit file is not UTF-8"); } };
-    match text_bytes(original, "original") { Ok(_) => {} Err(error) => { return Err(error); } }
+    match text_bytes(original, "original") { Ok(_) => (), Err(error) => { return Err(error); } }
     return Ok(original);
 }
 

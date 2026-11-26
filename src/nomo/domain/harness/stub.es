@@ -1,6 +1,5 @@
 module nomo.domain.harness.stub;
 
-import std.collections.len;
 import std.text.{split, starts_with};
 import nomo.core.conversation.Event;
 
@@ -19,7 +18,7 @@ public flow next(request: string, history: Array<Event>, has_result: bool, resul
     if request == "stub:fail" { return Reply { kind = "error", tool = "", text = "stub failure" }; }
     if starts_with(request, "tool:") {
         let parts = split(request, ":");
-        if len(parts) != 3 || parts[1] == "" || parts[2] == "" {
+        if parts.len() != 3 || parts[1] == "" || parts[2] == "" {
             return Reply { kind = "error", tool = "", text = "expected tool:NAME:TEXT (no extra colons)" };
         }
         return Reply { kind = "tool", tool = parts[1], text = parts[2] };

@@ -31,7 +31,7 @@ impl RecordRows ~ CasRows<Record> {
 }
 
 flow write(row: Record, condition: WriteCondition) -> Result<MemoryVersion, string> ![Memory, Error<StorageError>, Error<IndexError>] {
-    match validate(row) { Ok(_) => {} Err(error) => { return Err(error); } }
+    match validate(row) { Ok(_) => (), Err(error) => { return Err(error); } }
     let selected = key(row.binding.id);
     return commit_once<Record, RecordRows>(RecordRows { name = selected }, row, condition, None());
 }

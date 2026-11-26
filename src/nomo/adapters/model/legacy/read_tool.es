@@ -201,14 +201,14 @@ flow selected(mode: LoopMode, raw: string, allowed: Array<string>, previous: Ses
 
 flow run_tools<F ~ FileReader<ReadOnlyRoot>, S ~ LiteralSearcher<ReadOnlyRoot>>(reader: F, searcher: S, mode: LoopMode, raw: string, allowed: Array<string>, previous: Session) -> LoopTurn {
     return selected(mode, raw, allowed, previous) with {
-        ReadTools.read(name) => { resume reader.read(name); }
-        ReadTools.search(names, literal) => { resume searcher.search(names, literal); }
+        ReadTools.read(name) => reader.read(name);
+        ReadTools.search(names, literal) => searcher.search(names, literal);
     };
 }
 
 flow run_native<M ~ ChildModel, F ~ FileReader<ReadOnlyRoot>, S ~ LiteralSearcher<ReadOnlyRoot>>(model: M, reader: F, searcher: S, mode: LoopMode, raw: string, allowed: Array<string>, previous: Session) -> LoopTurn {
     return run_tools(reader, searcher, mode, raw, allowed, previous) with {
-        LegacyChildModel.infer(context) => { resume model.infer(context); }
+        LegacyChildModel.infer(context) => model.infer(context);
     };
 }
 

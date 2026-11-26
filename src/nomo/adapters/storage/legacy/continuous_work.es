@@ -3,7 +3,6 @@ module nomo.adapters.storage.legacy.continuous_work;
 import nomo.domain.sessions.cas_rows.Target;
 import nomo.adapters.storage.legacy.cas_rows.commit_native;
 import std.memory.{Missing, Match};
-import std.collections.len as count;
 import nomo.core.conversation.Event;
 import nomo.session.edit_operation.Binding;
 import nomo.domain.sessions.redaction.{Policy, text as redact};
@@ -17,7 +16,7 @@ import nomo.domain.sessions.continuous_work.Stored;
 
 public flow load(binding: string) -> Result<Option<Stored>, string> {
     let row = Books.Rows.get_entry("latest");
-    match row { Some(item) => { if item.key != "latest" || item.value.binding != binding { return Err("continuous work policy binding mismatch"); } } None() => {} }
+    match row { Some(item) => if item.key != "latest" || item.value.binding != binding { return Err("continuous work policy binding mismatch"); }, None() => (), }
     return match row { Some(item) => Ok(Some(Stored { key = item.key, value = item.value, version = item.version })), None() => Ok(None()) };
 }
 
@@ -25,7 +24,7 @@ flow write(book: Book, previous: Option<Stored>) -> Result<Stored, string> ![Mem
     let condition: WriteCondition = match previous { Some(item) => Match(item.version), None() => Missing };
     let target = Target { store = ["Rows"], region = "nomo-continuous-work-v1", key = "latest", label = "continuous work" };
     let version = match commit_native(Books.Rows, target, book, condition) { Ok(value) => value, Err(error) => { return Err(error); } };
-    match previous { Some(item) => { if item.version.opaque == version.opaque { return Err("continuous work version did not change"); } } None() => {} }
+    match previous { Some(item) => if item.version.opaque == version.opaque { return Err("continuous work version did not change"); }, None() => (), }
     return Ok(Stored { key = "latest", value = book, version });
 }
 
@@ -41,8 +40,8 @@ public flow admit(binding: string, id: string, workspace: string, path: string, 
         if last.result.phase == "abandoned" { if last.check.phase != "none" && last.check.phase != "planned" { return Err("abandoned check unresolved"); } }
         else if last.result.phase != "complete" || (last.check.phase != "none" && last.check.phase != "complete" && last.check.phase != "abandoned") { return Err("previous work or check is unfinished"); }
         history = item.value.history.push(last);
-    } None() => {} }
-    if count(history) >= 48 { return Err("continuous session history limit reached"); }
+    } None() => (), }
+    if history.len() >= 48 { return Err("continuous session history limit reached"); }
     @limits([Iterations(48)]) for item in history { if item.core.id == id { return Err("work ID already used"); } }
     @limits([Iterations(3)]) for field in [id, workspace, path] {
         let value = match redact(field, policy) { Ok(item) => item, Err(error) => { return Err(error); } };

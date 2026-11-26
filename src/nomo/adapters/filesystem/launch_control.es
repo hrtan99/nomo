@@ -8,6 +8,6 @@ import nomo.application.projects.ports.ProjectLaunchControl;
 
 public type NativeProjectLaunch = {};
 impl NativeProjectLaunch ~ ProjectLaunchControl {
-    flow target(self) -> WorkspacePath<LaunchRoot> ![] { return match path<LaunchRoot>("next-project") { Ok(value) => value, Err(_) => { abort("native launch control is unavailable"); } }; }
+    flow target(self) -> WorkspacePath<LaunchRoot> ![] { return match path<LaunchRoot>("next-project") { Ok(value) => value, Err(_) => abort("native launch control is unavailable"), }; }
     flow publish(self, target: WorkspacePath<LaunchRoot>, folder: string) -> unit ![Fs.atomic_replace<LaunchRoot>, Error<FileError>] { atomic_replace(target, utf8_encode(folder)); }
 }

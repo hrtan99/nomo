@@ -1,7 +1,6 @@
 module nomo.domain.harness.harness_contract;
 
 import nomo.domain.context.large_context.{message_bytes, context_bytes};
-import std.collections.len as count;
 import std.text.{char_count as len, trim};
 import nomo.domain.text.text.{printable, input_error};
 
@@ -25,7 +24,7 @@ public flow task_error(task: string, context: Array<string>) -> string {
         return "invalid bounded child task";
     }
     if input_error(task) != "" { return "invalid bounded child task"; }
-    if count(context) > 4 { return "invalid selected context"; }
+    if context.len() > 4 { return "invalid selected context"; }
     var characters: usize = 0;
     @limits([Iterations(4)]) for item in context {
         if len(item) == 0 || len(item) > message_bytes() || !printable(item) { return "invalid selected context"; }

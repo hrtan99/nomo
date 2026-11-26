@@ -22,7 +22,7 @@ type QuietPreview = {};
 impl RecordedCommand ~ CommandRunner {
     flow run(self, request: CommandRequest) -> CommandOutput {
         let text = match encode(request, "request capture failed", "request capture encoding failed") {
-            Ok(value) => value, Err(error) => { abort(error); }
+            Ok(value) => value, Err(error) => abort(error),
         };
         return CommandOutput { exit_code = 0, stdout = text, stderr = "" };
     }
@@ -46,13 +46,13 @@ flow main(args: Array<string>) -> i32 ![Memory, Console, Command.run<DefaultComm
         let request = CommandRequest { program = "synthetic-no-shell", arguments = ["literal a", "café"], stdin = Some("stdin café\n") };
         let observed = command_run(RecordedCommand {}, QuietPreview {}, NativeAttempts {}, archive, archive, archive,
             saved.id, CommandMode.Mutating, request);
-        let json = match parse(observed.output.stdout) { Ok(value) => value, Err(_) => { abort("recorded command is not JSON"); } };
+        let json = match parse(observed.output.stdout) { Ok(value) => value, Err(_) => abort("recorded command is not JSON"), };
         let value: Option<Message<CommandRequest>> = Message.new(json).cast<CommandRequest>();
-        let recorded = match value { Some(value) => value.body, None() => { abort("recorded command shape changed"); } };
+        let recorded = match value { Some(value) => value.body, None() => abort("recorded command shape changed"), };
         if recorded.program != "synthetic-no-shell" || recorded.arguments.len() != 2 || recorded.arguments[0] != "literal a" || recorded.arguments[1] != "café" {
             abort("command port changed program or argv");
         }
-        match recorded.stdin { Some(value) => { if value != "stdin café\n" { abort("command port changed stdin"); } } None() => { abort("command stdin lost"); } }
+        match recorded.stdin { Some(value) => if value != "stdin café\n" { abort("command port changed stdin"); }, None() => abort("command stdin lost"), }
         if archive.load(saved.id).pending != "" || attempts(saved.id, false).len() != 1 { abort("command sequencing did not complete"); }
         let parent = archive.append(saved.id, "tool_call", "fixture_journal", "{}", -1);
         let pending = archive.load(saved.id).pending;
@@ -63,7 +63,7 @@ flow main(args: Array<string>) -> i32 ![Memory, Console, Command.run<DefaultComm
             CommandMode.Observation("fixture_readonly"), CommandRequest { program = "synthetic-observation", arguments = [], stdin = None() });
         if archive.load(saved.id).pending != pending || attempts(saved.id, false).len() != 2 { abort("observation replaced its parent"); }
         handle { tool_finished("fixture_journal", parent, Result { status = "synthetic complete" }); }
-            with { SessionContext.current() => { resume saved.id; } };
+            with { SessionContext.current() => saved.id; };
         println("COMMAND PORT recorded exact argv/stdin; parent retained; no shell execution");
         return 0;
     }
@@ -75,7 +75,7 @@ flow main(args: Array<string>) -> i32 ![Memory, Console, Command.run<DefaultComm
         abort("interrupted publication unexpectedly returned");
     }
     if args[0] == "settle-incomplete" {
-        let id = match archive.selected("receipt-incomplete") { Some(value) => value, None() => { abort("incomplete receipt missing"); } };
+        let id = match archive.selected("receipt-incomplete") { Some(value) => value, None() => abort("incomplete receipt missing"), };
         let outstanding = attempts(id, true);
         if outstanding.len() != 1 || outstanding[0].phase != "returned" || outstanding[0].result_event < 0 {
             abort("interrupted result lost its returned phase or reserved slot");
@@ -115,17 +115,17 @@ flow main(args: Array<string>) -> i32 ![Memory, Console, Command.run<DefaultComm
         println("SEED result persisted before pending cleanup");
         return 0;
     }
-    let id = match archive.selected("synthetic") { Some(value) => value, None() => { abort("receipt session missing"); } };
+    let id = match archive.selected("synthetic") { Some(value) => value, None() => abort("receipt session missing"), };
     let before = archive.load(id);
-    let pending = match pending_request(id) { Some(value) => value, None() => { abort("pending receipt missing"); } };
+    let pending = match pending_request(id) { Some(value) => value, None() => abort("pending receipt missing"), };
     handle { tool_finished(pending.name, pending.call, Result { status = "complete" }); }
-        with { SessionContext.current() => { resume id; } };
+        with { SessionContext.current() => id; };
     let after = archive.load(id);
     if after.pending != "" || after.next_event != before.next_event || after.next_event != 2 { abort("receipt was duplicated or not settled"); }
     let rows = archive.messages(id, 0);
     if rows[1].text != "{\"status\":\"complete\"}" { abort("original result changed"); }
     @limits([Iterations(3)]) for kind in ["coding", "summary", "command"]   {
-        let saved = match archive.selected("receipt-" + kind) { Some(value) => value, None() => { abort("lifecycle receipt missing"); } };
+        let saved = match archive.selected("receipt-" + kind) { Some(value) => value, None() => abort("lifecycle receipt missing"), };
         let before = archive.load(saved);
         let outstanding = attempts(saved, true);
         if outstanding.len() != 1 { abort("expected one returned receipt"); }

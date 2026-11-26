@@ -17,15 +17,15 @@ public flow outcome(turns: i32, request: string, answer: string) -> TurnResult {
 }
 public flow chat_session_contract_probe() -> i32 ![Console, Error<IOError>, Error<IndexError>] {
     let initial = fresh(); if invalid(initial) != "" { abort("fresh session invalid"); }
-    let first = match begin(initial, "first question") { Ok(value) => value, Err(_) => { abort("first reservation refused"); } };
-    match begin(first, "repeat") { Ok(_) => { abort("running reservation repeated"); } Err(_) => {} }
-    match complete(first, outcome(1, "other question", "blue")) { Ok(_) => { abort("wrong question accepted"); } Err(_) => {} }
-    let previous = match complete(first, outcome(1, "first question", "blue")) { Ok(value) => value, Err(_) => { abort("first result refused"); } };
+    let first = match begin(initial, "first question") { Ok(value) => value, Err(_) => abort("first reservation refused"), };
+    match begin(first, "repeat") { Ok(_) => abort("running reservation repeated"), Err(_) => (), }
+    match complete(first, outcome(1, "other question", "blue")) { Ok(_) => abort("wrong question accepted"), Err(_) => (), }
+    let previous = match complete(first, outcome(1, "first question", "blue")) { Ok(value) => value, Err(_) => abort("first result refused"), };
     if previous.phase != "ready" || previous.invocation.prior.answer != "blue" { abort("first result changed"); }
-    let second = match begin(previous, "second question") { Ok(value) => value, Err(_) => { abort("second reservation refused"); } };
-    match complete(second, outcome(1, "second question", "green")) { Ok(_) => { abort("budget reset accepted"); } Err(_) => {} }
-    let last = match complete(second, outcome(2, "second question", "green")) { Ok(value) => value, Err(_) => { abort("second result refused"); } };
+    let second = match begin(previous, "second question") { Ok(value) => value, Err(_) => abort("second reservation refused"), };
+    match complete(second, outcome(1, "second question", "green")) { Ok(_) => abort("budget reset accepted"), Err(_) => (), }
+    let last = match complete(second, outcome(2, "second question", "green")) { Ok(value) => value, Err(_) => abort("second result refused"), };
     if last.phase != "complete" || last.invocation.prior.answer != "green" { abort("completed session changed"); }
-    match begin(last, "third") { Ok(_) => { abort("third turn accepted"); } Err(_) => {} }
+    match begin(last, "third") { Ok(_) => abort("third turn accepted"), Err(_) => (), }
     println("PASS preserved budget and unresolved reservation"); return 0;
 }

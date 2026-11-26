@@ -2,13 +2,12 @@ module nomo.domain.context.path_policy;
 
 import std.text.{split, contains, starts_with, ends_with, is_ascii};
 import nomo.domain.text.read_text.safe;
-import std.collections.len as count;
 
 // Canonical relative-name policy only; Host region enforcement is separate.
 public flow valid_path(name: string) -> bool {
     if name == "" || !safe(name, 128) || starts_with(name, "/") { return false; }
     let parts = split(name, "/");
-    if count(parts) > 8 { return false; }
+    if parts.len() > 8 { return false; }
     @limits([Iterations(8)]) for part in parts {
         if part == "" || part == "." || part == ".." || starts_with(part, " ") || ends_with(part, " ") { return false; }
         @limits([Iterations(130)]) for codepoint in std.text.chars(part) { let character = std.text.from_char(codepoint);

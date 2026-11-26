@@ -29,7 +29,7 @@ flow failed(state: Ledger, error: string) -> Result<Pending, Failure> {
 flow progress(line: string) -> unit { perform HarnessProgress.write(line); }
 flow diagnostic(line: string) -> unit { perform DiagnosticOutput.write(line); }
 flow display(prefix: string, text: string) -> unit {
-    match json([text]) { Ok(value) => { progress(prefix + value); } Err(error) => { abort(error); } }
+    match json([text]) { Ok(value) => progress(prefix + value), Err(error) => abort(error), }
 }
 
 public flow historical_ledger_text(state: Ledger) -> string {

@@ -16,12 +16,12 @@ public flow load(pathname: string) -> Array<ProjectInstruction> {
     let normalized = perform InstructionFiles.normalize(pathname);
     var result: Array<ProjectInstruction> = [];
     var scope = ".";
-    match guide(scope) { Some(value) => { result = result.push(value); } None() => {} }
+    match guide(scope) { Some(value) => { result = result.push(value); } None() => (), }
     for next in child_scopes(normalized) {
         let entries = perform InstructionFiles.entries(scope);
         if !entries.iter().any(item => item == next) { break; }
         scope = next;
-        match guide(scope) { Some(value) => { result = result.push(value); } None() => {} }
+        match guide(scope) { Some(value) => { result = result.push(value); } None() => (), }
     }
     return result;
 }

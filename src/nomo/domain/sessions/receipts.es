@@ -12,7 +12,7 @@ public flow committed_version(target: Target, attempt: Submission) -> Result<Mem
         WriteOutcome.Committed(item) => item,
     };
     if receipt.operation.key != operation.key || receipt.operation.fingerprint != operation.fingerprint || receipt.target.key != target.key || receipt.target.region != target.region || receipt.target.store != target.store { return Err(target.label + " receipt mismatch; no retry"); }
-    match receipt.durability { StorageDurability.SqliteWalFull() => {} _ => { return Err("durable SQLite " + target.label + " receipt required"); } }
+    match receipt.durability { StorageDurability.SqliteWalFull() => (), _ => { return Err("durable SQLite " + target.label + " receipt required"); } }
     let version = match receipt.change { MemoryWriteChange.Written(item) => item, _ => { return Err(target.label + " version missing"); } };
     return Ok(version);
 }

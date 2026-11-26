@@ -72,7 +72,7 @@ public flow run_context_with(request: string, allowed: Array<string>, initial: L
 
 public flow run_expanded_context(request: string, allowed: Array<string>, initial: Ledger, wide: bool, high_input: bool) -> Result<Report, Failure> {
     return run_context_policy(UnicodeContext { require_tool = true, expanded = true, wide, high_input }, request, allowed, initial, "read-", true, false, false) with {
-        HarnessProgress.write(line) => { resume write_progress(line); }
+        HarnessProgress.write(line) => write_progress(line);
     };
 }
 
@@ -80,14 +80,14 @@ public flow run_expanded_context(request: string, allowed: Array<string>, initia
 public flow run_context(request: string, allowed: Array<string>, initial: Ledger,
     prefix: string, require_tool: bool, compatible_plan: bool, inspect_plan: bool, inspect_all: bool) -> Result<Report, Failure> {
     return run_context_with(request, allowed, initial, prefix, require_tool, compatible_plan, inspect_plan, inspect_all) with {
-        HarnessProgress.write(line) => { resume write_progress(line); }
+        HarnessProgress.write(line) => write_progress(line);
     };
 }
 
 public flow run(request: string, allowed: Array<string>) -> i32 {
     let result = run_context(request, allowed, fresh(), "", false, false, false, false) with {
-        LegacyStringStages.main(context) => { resume (MainModel {}).run(context); }
-        LegacyStringStages.child(task, files, selected) => { resume child_turn(task, files, selected); }
+        LegacyStringStages.main(context) => (MainModel {}).run(context);
+        LegacyStringStages.child(task, files, selected) => child_turn(task, files, selected);
     };
     let report = match result {
         Ok(value) => value,

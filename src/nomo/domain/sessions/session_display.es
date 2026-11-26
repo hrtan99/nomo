@@ -51,7 +51,7 @@ public flow display(projection: Projection) -> Result<string, string> {
     let requested = Request { session_id = projection.session_id, mode = projection.mode,
         binding = projection.binding, caps = projection.caps };
     match validate(saved, requested) {
-        Ok(checked) => { if checked != projection { return Err("inconsistent display projection"); } },
+        Ok(checked) => if checked != projection { return Err("inconsistent display projection"); },
         Err(_) => { return Err("invalid display projection"); }
     }
     let json = match encode_json(projection, "display conversion failed", "display JSON failed") { Ok(value) => value, Err(error) => { return Err(error); } };

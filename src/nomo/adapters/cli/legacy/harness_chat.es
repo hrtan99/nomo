@@ -56,25 +56,23 @@ public flow run(args: Array<string>) -> i32 {
         if raw == "" { stop("EOF", turns, spent); return 0; }
         lines = lines + 1;
         match parse_line(raw) {
-            Err(error) => { println("REFUSED " + error); },
-            Ok(command) => {
-                if command.kind == "exit" { stop("exit", turns, spent); return 0; }
-                if command.kind == "help" { help(); }
-                else {
-                    let job = Job { task = command.text, context, maximum = 16, spent };
-                    match coordinate(job) {
-                        Err(error) => { println("REFUSED " + error); },
-                        Ok(outcome) => {
-                            turns = turns + 1;
-                            spent = outcome.ledger.spent;
-                            emit(outcome, turns);
-                            if outcome.status != "completed" { stop("child refused", turns, spent); return 1; }
-                            if turns == 3 { stop("turn limit", turns, spent); return 0; }
-                            context = context.push(command.text);
-                        }
-                    };
-                }
-            }
+            Err(error) => println("REFUSED " + error),
+            Ok(command) => if command.kind == "exit" { stop("exit", turns, spent); return 0; }
+            if command.kind == "help" { help(); }
+            else {
+                let job = Job { task = command.text, context, maximum = 16, spent };
+                match coordinate(job) {
+                    Err(error) => println("REFUSED " + error),
+                    Ok(outcome) => {
+                        turns = turns + 1;
+                        spent = outcome.ledger.spent;
+                        emit(outcome, turns);
+                        if outcome.status != "completed" { stop("child refused", turns, spent); return 1; }
+                        if turns == 3 { stop("turn limit", turns, spent); return 0; }
+                        context = context.push(command.text);
+                    }
+                };
+            },
         };
     }
     println("REFUSED line limit reached; start a new in-memory invocation");

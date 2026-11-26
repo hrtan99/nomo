@@ -1,7 +1,6 @@
 module nomo.adapters.cli.arguments.harness_work_args;
 
 import nomo.domain.text.read_text.within;
-import std.collections.len as count;
 import std.text.split;
 import nomo.adapters.cli.arguments.harness_edit_args.{Input, parse as edit_args};
 import nomo.domain.harness.model_tool_contract.question_error;
@@ -13,13 +12,13 @@ import nomo.domain.mutations.edit_contract.Selector;
 public type Work = { edit: Input, allowed: Array<string> };
 
 flow parse_with(args: Array<string>, unicode: bool) -> Result<Work, string> {
-    if count(args) == 1 && (args[0] == "help" || args[0] == "--help") {
+    if args.len() == 1 && (args[0] == "help" || args[0] == "--help") {
         let edit = match edit_args(args) { Ok(value) => value, Err(error) => { return Err(error); } };
         return Ok(Work { edit, allowed = [] });
     }
-    if count(args) != 10 { return Err("expected --id ID --workspace BIND --path FILE --once TASK --allow FILE[,FILE]"); }
+    if args.len() != 10 { return Err("expected --id ID --workspace BIND --path FILE --once TASK --allow FILE[,FILE]"); }
     var selected: Array<string> = []; var supplied = false; var raw = ""; var index: usize = 0;
-    @limits([Iterations(5)]) while index < count(args) {
+    @limits([Iterations(5)]) while index < args.len() {
         let flag = args[index]; let value = args[index + 1];
         if flag == "--allow" {
             if supplied { return Err("duplicate --allow option"); }
@@ -32,7 +31,7 @@ flow parse_with(args: Array<string>, unicode: bool) -> Result<Work, string> {
     let edit = match edit_args(selected) { Ok(value) => value, Err(error) => { return Err(error); } };
     let request = if unicode { unicode_question_error(edit.request) } else { question_error(edit.request) }; if request != "" { return Err(request); }
     let allowed = split(raw, ",");
-    if !unicode && count(allowed) > 2 { return Err("legacy work supports at most two allowed files"); }
+    if !unicode && allowed.len() > 2 { return Err("legacy work supports at most two allowed files"); }
     let invalid = allowed_error(allowed); if invalid != "" { return Err(invalid); }
     return Ok(Work { edit, allowed });
 }
@@ -50,8 +49,8 @@ public flow application(value: Work) -> WorkRequest {
 // Share bounded work/check argument decoding while retaining caller-specific admission rules.
 public type RecordedWork = { input: Work, has_check: bool, digest: string };
 public flow parse_recorded(args: Array<string>, trailer: usize, reject_empty: bool) -> Result<RecordedWork, string> {
-    if count(args) < trailer { return Err("invalid work argument trailer"); }
-    let end = count(args) - trailer;
+    if args.len() < trailer { return Err("invalid work argument trailer"); }
+    let end = args.len() - trailer;
     let has_check = end >= 2 && args[end - 2] == "--check-ref";
     let digest = if has_check { args[end - 1] } else { "" };
     if has_check && reject_empty && digest == "" { return Err("invalid check reference"); }

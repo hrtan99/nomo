@@ -1,7 +1,6 @@
 module nomo.domain.mutations.edit_encoding;
 
 import std.text.{char_get, concat, from_char, is_ascii, join, len as byte_len};
-import std.collections.len as count;
 import std.bytes.len as byte_count;
 import std.codec.text.utf8_encode;
 import std.crypto.sha256;
@@ -77,11 +76,11 @@ flow quoted(value: string) -> Result<string, string> {
 }
 
 public flow json(values: Array<string>) -> Result<string, string> {
-    if count(values) > 16 { return Err("edit JSON field count exceeds bound"); }
+    if values.len() > 16 { return Err("edit JSON field count exceeds bound"); }
     var fields: Array<string> = []; var size: usize = 2;
     @limits([Iterations(16)]) for value in values {
         let encoded = match quoted(value) { Ok(item) => item, Err(error) => { return Err(error); } };
-        size = size + byte_len(encoded) + if count(fields) == 0 { 0 } else { 1 };
+        size = size + byte_len(encoded) + if fields.len() == 0 { 0 } else { 1 };
         if size > edit_json_bytes() { return Err("edit JSON output exceeds bound"); }
         fields = fields.push(encoded);
     }
@@ -89,15 +88,15 @@ public flow json(values: Array<string>) -> Result<string, string> {
 }
 
 public flow object(keys: Array<string>, values: Array<string>) -> Result<string, string> {
-    if count(keys) != count(values) || count(keys) > 16 { return Err("edit JSON key/value count invalid"); }
+    if keys.len() != values.len() || keys.len() > 16 { return Err("edit JSON key/value count invalid"); }
     var fields: Array<string> = []; var size: usize = 2; var index: usize = 0; var seen: Array<string> = [];
-    @limits([Iterations(16)]) while index < count(keys) {
+    @limits([Iterations(16)]) while index < keys.len() {
         @limits([Iterations(16)]) for prior in seen { if prior == keys[index] { return Err("duplicate edit JSON key"); } }
         seen = seen.push(keys[index]);
         let key = match quoted(keys[index]) { Ok(item) => item, Err(error) => { return Err(error); } };
         let value = match quoted(values[index]) { Ok(item) => item, Err(error) => { return Err(error); } };
         let field = key + ":" + value;
-        size = size + byte_len(field) + if count(fields) == 0 { 0 } else { 1 };
+        size = size + byte_len(field) + if fields.len() == 0 { 0 } else { 1 };
         if size > edit_json_bytes() { return Err("edit JSON output exceeds bound"); }
         fields = fields.push(field);
         index = index + 1;

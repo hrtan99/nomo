@@ -42,7 +42,7 @@ public flow pure_probe() -> bool {
     for item in checks() limit Iterations(32) { if !evaluate(item) { return false; } }
     let control = match std.char.from_u32(127) { Some(value) => std.text.from_char(value), None() => { return false; } };
     match ascii_json_with("\"" + control + "\"", 16, 16, "encoded", "display") {
-        Ok(value) => { if value != "\"" + slash() + "u007f\"" { return false; } },
+        Ok(value) => if value != "\"" + slash() + "u007f\"" { return false; },
         Err(_) => { return false; }
     }
     return true;
@@ -60,18 +60,18 @@ public flow observe(args: Array<string>) -> i32 {
 // controller proves this denial returns before its journal/File branches.
 public flow denied(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {
     let prepared = match prepare_original("docs/说明.txt", "head\n前😀 old\nend\n", "old", "新😀") {
-        Ok(value) => value, Err(error) => { abort(error); }
+        Ok(value) => value, Err(error) => abort(error),
     };
     let selector = Selector { id = "preview-denied", workspace = "preview-fixture", path = "docs/说明.txt" };
     let answer = execute(selector, prepared) with {
         Approval.request(reason) => {
             println("SOURCE_APPROVAL_DENIED " + reason);
-            resume false;
+            false
         }
     };
     match answer {
-        Err(error) => { if error != "native approval denied; no intent or File write" { abort(error); } }
-        Ok(_) => { abort("source denial unexpectedly completed edit"); }
+        Err(error) => if error != "native approval denied; no intent or File write" { abort(error); },
+        Ok(_) => abort("source denial unexpectedly completed edit"),
     }
     println("PASS source denial preserves preview and stops before journal");
     return 0;

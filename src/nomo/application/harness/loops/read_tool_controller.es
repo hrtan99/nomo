@@ -94,8 +94,8 @@ flow run_policy<P ~ ChildLoopPolicy, D ~ ToolActionDecoder>(policy: P, decoder: 
 
 public flow run_output<P ~ ChildLoopPolicy, D ~ ToolActionDecoder, S ~ ConversationSink, O ~ ProgressSink, G ~ DiagnosticSink>(policy: P, decoder: D, sink: S, progress: O, diagnostics: G, raw: string, allowed: Array<string>, previous: Session, inspect_all: bool) -> LoopTurn {
     return run_policy(policy, decoder, raw, allowed, previous, inspect_all) with {
-        ConversationOutput.publish(event) => { resume sink.publish(event); }
-        HarnessProgress.write(line) => { resume progress.write(line); }
-        DiagnosticOutput.write(line) => { resume diagnostics.write(line); }
+        ConversationOutput.publish(event) => sink.publish(event);
+        HarnessProgress.write(line) => progress.write(line);
+        DiagnosticOutput.write(line) => diagnostics.write(line);
     };
 }

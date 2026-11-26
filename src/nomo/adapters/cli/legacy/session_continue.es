@@ -2,7 +2,6 @@ module nomo.adapters.cli.legacy.session_continue;
 
 import std.io.println;
 import std.text.from_i32;
-import std.collections.len as count;
 import std.agent.session.Conversation;
 import nomo.adapters.cli.arguments.continuation_args.ContinueOptions;
 import nomo.domain.sessions.continuation_state.{plan, continuing};
@@ -53,7 +52,7 @@ public flow run_continue(options: ContinueOptions) -> i32 ![Console, Memory, Err
     let history = Conversation.load(SessionConfig.continue_or_new(admission.session_key));
     let terminal = match history.cursor { None() => true, _ => false };
     let no_summary = match history.summary { None() => true, _ => false };
-    if count(history.messages) != 0 || !terminal || !no_summary || !empty(admission.session_key) {
+    if history.messages.len() != 0 || !terminal || !no_summary || !empty(admission.session_key) {
         println("REFUSED successor namespace is not empty; admission retained"); return 3;
     }
     let completed = turn(input.input, admitted.prior.caps.turn_steps, admitted.prior.caps.steps, admitted.prior.history);
@@ -61,7 +60,7 @@ public flow run_continue(options: ContinueOptions) -> i32 ![Console, Memory, Err
         Ok(value) => value, Err(error) => { println("REFUSED " + error); return 3; }
     };
     match publish_snapshot(successor, options.next_save, admission, version, true) {
-        Ok(_) => {} Err(error) => { println("REFUSED " + error); return 3; }
+        Ok(_) => (), Err(error) => { println("REFUSED " + error); return 3; }
     }
     let projection = match validate(successor, requested) {
         Ok(value) => value, Err(error) => { println("STORED_DISPLAY_FAILED; do not retry: " + error); return 3; }

@@ -1,6 +1,5 @@
 module nomo.adapters.cli.arguments.work_chain_args;
 
-import std.collections.len as count;
 import nomo.adapters.cli.arguments.harness_work_args.{Work, parse as work_args};
 import nomo.domain.sessions.edit_operation.selector_error;
 import nomo.session.work_chain.Caps;
@@ -8,14 +7,14 @@ import nomo.domain.sessions.work_chain.{turn_caps, policy};
 
 public type Input = { work: Work, parent: string, cap: Caps };
 public flow parse(args: Array<string>, continuing: bool) -> Result<Input, string> {
-    if count(args) == 1 && (args[0] == "--help" || args[0] == "help") {
+    if args.len() == 1 && (args[0] == "--help" || args[0] == "help") {
         let work = match work_args(args) { Ok(value) => value, Err(error) => { return Err(error); } };
         return Ok(Input { work, parent = "", cap = turn_caps() });
     }
-    if count(args) < 10 || count(args) > 14 || count(args) % 2 != 0 { return Err("expected bounded work selectors, optional --cap and continuation --parent"); }
+    if args.len() < 10 || args.len() > 14 || args.len() % 2 != 0 { return Err("expected bounded work selectors, optional --cap and continuation --parent"); }
     var selected: Array<string> = []; var parent = ""; var supplied_parent = false; var supplied_cap = false;
     var cap = turn_caps(); var index: usize = 0;
-    @limits([Iterations(7)]) while index < count(args) {
+    @limits([Iterations(7)]) while index < args.len() {
         let flag = args[index]; let value = args[index + 1];
         if flag == "--parent" {
             if !continuing || supplied_parent { return Err("unexpected or duplicate --parent"); }

@@ -3,7 +3,6 @@ module nomo.domain.sessions.work_record;
 import nomo.domain.context.large_context.{message_frame_bytes, context_bytes, history_bytes};
 import nomo.domain.serialization.json.{encode as encode_json, string_fields};
 import std.text.{char_count as len, len as byte_len, from_char, from_i32, from_usize};
-import std.collections.len as count;
 import std.bytes.len as byte_count;
 import std.codec.text.utf8_encode;
 import std.json.parse;
@@ -34,7 +33,7 @@ flow stage(confirmed: bool, read: ReadLedger) -> Ledger {
 flow framed(raw: string) -> bool { return flat_string_frame(raw, 52, true); }
 
 flow fields_error(fields: Array<string>) -> string {
-    if count(fields) != 52 { return "work record requires exactly 52 string fields"; }
+    if fields.len() != 52 { return "work record requires exactly 52 string fields"; }
     var total: usize = 0;
     @limits([Iterations(52)]) for field in fields {
         if len(field) > message_frame_bytes() { return "work record field exceeds 8388608 decoded UTF-8 bytes"; }
@@ -59,8 +58,8 @@ flow outer_error(row: Record) -> string {
 
 flow fields(value: Captured, phase: string) -> Array<string> {
     let binding = value.binding; let read = value.ledger.read; let edit = value.ledger.edit;
-    var allowed_second = ""; if count(value.evidence.allowed) == 2 { allowed_second = value.evidence.allowed[1]; }
-    var selected_second = ""; if count(value.evidence.files) == 2 { selected_second = value.evidence.files[1]; }
+    var allowed_second = ""; if value.evidence.allowed.len() == 2 { allowed_second = value.evidence.allowed[1]; }
+    var selected_second = ""; if value.evidence.files.len() == 2 { selected_second = value.evidence.files[1]; }
     let confirmed = phase == "summary-confirmed";
     return ["nomo-work-record-v1", phase, binding.id, binding.workspace, binding.region, binding.path,
         binding.request_digest, binding.before_digest, binding.after_digest,
@@ -78,7 +77,7 @@ flow fields(value: Captured, phase: string) -> Array<string> {
 }
 
 flow encode(value: Captured, phase: string) -> Result<Record, string> {
-    if count(value.evidence.allowed) > 2 || count(value.evidence.files) > 2 { return Err("legacy work record supports at most two files"); }
+    if value.evidence.allowed.len() > 2 || value.evidence.files.len() > 2 { return Err("legacy work record supports at most two files"); }
     let projection = fields(value, phase);
     let invalid = fields_error(projection); if invalid != "" { return Err(invalid); }
     let body = match encode_json(projection, "work body conversion refused", "work body encoding refused") { Ok(value) => value, Err(error) => { return Err(error); } };
@@ -139,7 +138,7 @@ public flow partial(binding: Binding, evidence: Evidence, task: string, prepared
         replacement = prepared.request.replacement, before = prepared.proposal.before, after = prepared.proposal.after,
         summary = "", ledger = stage(false, evidence.ledger) };
     let row = match encode(captured, "summary-unconfirmed") { Ok(value) => value, Err(error) => { return Err(error); } };
-    match validate(row) { Ok(_) => {} Err(error) => { return Err(error); } }
+    match validate(row) { Ok(_) => (), Err(error) => { return Err(error); } }
     return Ok(row);
 }
 
@@ -149,7 +148,7 @@ public flow confirm(row: Record, summary: string) -> Result<Record, string> {
     let invalid = text_error(summary, "saved final summary"); if invalid != "" { return Err(invalid); }
     let complete = captured { summary, ledger = stage(true, captured.evidence.ledger) };
     let result = match encode(complete, "summary-confirmed") { Ok(value) => value, Err(error) => { return Err(error); } };
-    match validate(result) { Ok(_) => {} Err(error) => { return Err(error); } }
+    match validate(result) { Ok(_) => (), Err(error) => { return Err(error); } }
     return Ok(result);
 }
 

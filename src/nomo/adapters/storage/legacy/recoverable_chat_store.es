@@ -12,7 +12,6 @@ import nomo.domain.sessions.recoverable_events.{empty as empty_events, invalid a
 import nomo.domain.sessions.event_text_codec.{encode, decode, encode_prefix};
 import nomo.adapters.storage.legacy.history_check_store.invalid_values;
 import nomo.core.conversation.Event;
-import std.collections.len as count;
 import nomo.domain.text.text.hex_digest;
 import nomo.domain.context.large_context.timeline_inline_bytes;
 import std.text.{from_i32, len as byte_len};
@@ -57,7 +56,7 @@ flow compact_context_duplicates(value: Frame, policy: Policy, binding: string) -
             let decoded = match decode(item.text, policy) { Ok(text) => text, Err(error) => { return Err(error); } };
             match load_evidence(chat_turn - 1, policy, binding) {
                 Ok(Some(evidence)) => { compact = evidence == decoded; }
-                Ok(None()) => {}
+                Ok(None()) => (),
                 Err(error) => { return Err(error); }
             }
         }
@@ -141,7 +140,7 @@ flow archive_evidence(turn: i32, outcome: string, policy: Policy, binding: strin
             }
             return Ok(false);
         }
-        None() => {}
+        None() => (),
     }
     let target = Target { store = ["Rows"], region = "nomo-recoverable-chat-evidence-v1", key, label = "recoverable chat evidence" };
     return match commit_native(EvidenceFrames.Rows, target, value, Missing) { Ok(_) => Ok(true), Err(error) => Err(error) };
@@ -153,7 +152,7 @@ flow frame_error(value: Frame, policy: Policy, binding: string) -> string {
     let chat_error = invalid_chat(value.chat); if chat_error != "" { return chat_error; }
     let event_error = invalid_events(value.events, policy); if event_error != "" { return event_error; }
     @limits([Iterations(4096)]) for item in value.events.events {
-        match decode(item.text, policy) { Ok(_) => {} Err(error) => { return error; } }
+        match decode(item.text, policy) { Ok(_) => (), Err(error) => { return error; } }
     }
     if value.chat.invocation.admitted != value.events.turns { return "chat and event turns differ"; }
     let prior = value.chat.invocation.prior;
@@ -206,7 +205,7 @@ flow write(value: Frame, expected: Option<MemoryEntry<string, Frame>>, policy: P
     let version = match commit_native(Frames.Rows, target, desired, condition) { Ok(item) => item, Err(problem) => { return Err(problem); } };
     // commit_native already performs exact raw stored-value and version
     // readback. Do not immediately reload and parse the same MiB-scale frame.
-    match expected { Some(item) => { if item.version.opaque == version.opaque { return Err("recoverable chat version did not change"); } } None() => {} }
+    match expected { Some(item) => if item.version.opaque == version.opaque { return Err("recoverable chat version did not change"); }, None() => (), }
     return Ok(MemoryEntry { key = "latest", value = desired, version });
 }
 
@@ -225,7 +224,7 @@ public flow reserve(expected: MemoryEntry<string, Frame>, request: string, polic
     let error = frame_error(expected.value, policy, binding); if error != "" { return Err(error); }
     let saved = expected.value.chat;
     if saved.invocation.prior.tool != "" {
-        match archive_evidence(saved.invocation.admitted, saved.invocation.prior.outcome, policy, binding) { Ok(_) => {} Err(problem) => { return Err(problem); } }
+        match archive_evidence(saved.invocation.admitted, saved.invocation.prior.outcome, policy, binding) { Ok(_) => (), Err(problem) => { return Err(problem); } }
     }
     let current = if saved.format == 3 && saved.phase == "complete" { match extend(saved) { Ok(item) => item, Err(problem) => { return Err(problem); } } } else { saved };
     let pending = match begin(current, request) { Ok(item) => item, Err(problem) => { return Err(problem); } };
@@ -242,7 +241,7 @@ public flow finish(expected: MemoryEntry<string, Frame>, result: TurnResult, pol
     let error = frame_error(expected.value, policy, binding); if error != "" { return Err(error); }
     let completed = match result.completed { Some(item) => item, None() => { return Err("completed event batch missing"); } };
     let chat = match complete(expected.value.chat, result) { Ok(item) => item, Err(problem) => { return Err(problem); } };
-    if count(completed.records) == 0 || count(completed.records) > 24 { return Err("invalid completed event batch"); }
+    if completed.records.len() == 0 || completed.records.len() > 24 { return Err("invalid completed event batch"); }
     var encoded: Array<Event> = [];
     @limits([Iterations(24)]) for item in completed.records {
         // Only text exactly equal to the selected outcome is duplicated by

@@ -3,7 +3,6 @@ module nomo.domain.harness.harness_work_contract;
 import nomo.domain.context.large_context.{context_bytes, message_bytes, compatible_scan_i32, outcome_bytes, child_answer_bytes};
 import nomo.domain.serialization.json.encode as encode_json;
 import std.text.{starts_with, len as byte_len};
-import std.collections.len as count;
 import nomo.domain.harness.model_tool_contract.Session;
 import nomo.domain.harness.tool_context.allowed_error;
 import nomo.domain.harness.read_protocol.decode_child as decode_reply;
@@ -126,15 +125,15 @@ flow selected_error(value: Evidence, complete: bool) -> string {
     let allowed = allowed_error(value.allowed); if allowed != "" { return allowed; }
     let files = allowed_error(value.files); if files != "" { return files; }
     var fields: Array<string> = [];
-    if value.operation == "read" && count(value.files) == 1 && value.literal == "" { fields = ["read", value.files[0]]; }
+    if value.operation == "read" && value.files.len() == 1 && value.literal == "" { fields = ["read", value.files[0]]; }
     else if value.operation == "search" {
         fields = ["search", value.literal, value.files[0]];
-        if count(value.files) >= 2 { fields = fields.push(value.files[1]); }
-        if count(value.files) >= 3 { fields = fields.push(value.files[2]); }
-        if count(value.files) >= 4 { fields = fields.push(value.files[3]); }
+        if value.files.len() >= 2 { fields = fields.push(value.files[1]); }
+        if value.files.len() >= 3 { fields = fields.push(value.files[2]); }
+        if value.files.len() >= 4 { fields = fields.push(value.files[3]); }
     } else { return "read evidence requires a read or search"; }
     let raw = match json(fields) { Ok(item) => item, Err(error) => { return error; } };
-    match decode_reply(raw, value.allowed, false) { Ok(_) => {} Err(error) => { return error; } }
+    match decode_reply(raw, value.allowed, false) { Ok(_) => (), Err(error) => { return error; } }
     let invalid = read_error(value.ledger); if invalid != "" {
         let high_input = high_input_read_error(value.ledger); if high_input != "" { return invalid; }
     }
@@ -154,7 +153,7 @@ public flow collect(child: Session, status: i32, request: string, task: string, 
     if status != 0 || (observed.tool != "read" && observed.tool != "search") { return Err("work requires a successful read or search child"); }
     let selected = match decode_reply(child.history.events[3].text, allowed, false) { Ok(value) => value, Err(error) => { return Err(error); } };
     let reserved = ReadLedger { steps = 2, calls = 1, tokens = if high_input { 131072 } else { if wide { 4096 } else { 2048 } }, tools = 0, scan = 0 };
-    let ledger = match if high_input { high_input_settle(reserved, child) } else { settle(reserved, child) } { Ok(value) => value, Err(error) => { return Err(error); } };
+    let ledger = match if high_input { high_input_settle(reserved, child) } else { settle(reserved, child) } { Ok(value) => value, Err(error) => Err(error) };
     let evidence = Evidence { request, task, operation = selected.operation, files = selected.files,
         literal = selected.literal, outcome = observed.outcome, result = observed.result, summary = "", allowed, ledger };
     let invalid = selected_error(evidence, false); if invalid != "" { return Err(invalid); }
@@ -167,8 +166,8 @@ public flow finish_evidence(value: Evidence, summary: string) -> Result<Evidence
     let invalid = selected_error(value, false); if invalid != "" { return Err(invalid); }
     let high_input = value.ledger.tokens == 393216;
     let wide = value.ledger.tokens == 12288 || value.ledger.tokens == 16384 || value.ledger.tokens == 139264;
-    let consumed = match if high_input { high_input_bump(value.ledger, false) } else { if wide { wide_bump(value.ledger, false) } else { read_bump(value.ledger, false) } } { Ok(item) => item, Err(error) => { return Err(error); } };
-    let ledger = match if high_input { high_input_bump(consumed, true) } else { if wide { wide_bump(consumed, true) } else { read_bump(consumed, true) } } { Ok(item) => item, Err(error) => { return Err(error); } };
+    let consumed = match if high_input { high_input_bump(value.ledger, false) } else { if wide { wide_bump(value.ledger, false) } else { read_bump(value.ledger, false) } } { Ok(item) => item, Err(error) => Err(error) };
+    let ledger = match if high_input { high_input_bump(consumed, true) } else { if wide { wide_bump(consumed, true) } else { read_bump(consumed, true) } } { Ok(item) => item, Err(error) => Err(error) };
     let result = value { summary, ledger };
     let error = evidence_error(result); if error != "" { return Err(error); }
     return Ok(result);

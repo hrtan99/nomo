@@ -30,15 +30,15 @@ public flow effective_window(settings: Settings) -> i64 {
 }
 
 public flow as_number(value: i64) -> f64 {
-    return match parse_f64(from_i64(value)) { Ok(value) => value, Err(_) => { abort("context number conversion failed"); } };
+    return match parse_f64(from_i64(value)) { Ok(value) => value, Err(_) => abort("context number conversion failed"), };
 }
 
 public flow estimated_tokens(bytes: usize) -> f64 {
-    return match parse_f64(from_usize((bytes + 2) / 3)) { Ok(value) => value, Err(_) => { abort("context estimate conversion failed"); } };
+    return match parse_f64(from_usize((bytes + 2) / 3)) { Ok(value) => value, Err(_) => abort("context estimate conversion failed"), };
 }
 
 public flow recent_bytes(settings: Settings) -> usize {
     let available = (effective_window(settings) - settings.max_output_tokens) * 3 / 2;
     let budget = if available < 393216 { available } else { 393216 };
-    return match parse_usize(from_i64(budget)) { Ok(value) => value, Err(_) => { abort("recent history budget conversion failed"); } };
+    return match parse_usize(from_i64(budget)) { Ok(value) => value, Err(_) => abort("recent history budget conversion failed"), };
 }

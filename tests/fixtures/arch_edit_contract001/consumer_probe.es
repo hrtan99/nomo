@@ -2,7 +2,6 @@ module app.contract_probe;
 
 import std.io.println;
 import std.text.{split, char_count as len};
-import std.collections.len as count;
 import std.bytes.len as byte_count;
 import std.codec.text.utf8_encode;
 import std.json.{JsonValue, parse, stringify};
@@ -47,10 +46,10 @@ flow roundtrip(binding: Binding, evidence: Evidence, task: string, before: strin
     if actual_binding != binding { return false; }
     let pending = match partial(binding, evidence, task, prepared) { Ok(value) => value, Err(_) => { return false; } };
     if pending.format != 1 || pending.phase != "summary-unconfirmed" || pending.binding != binding || !same_record(pending, pending) ||
-        !same_fields(pending.body, partial_fields) || count(partial_fields) != 52 { return false; }
+        !same_fields(pending.body, partial_fields) || partial_fields.len() != 52 { return false; }
     let first = match validate(pending) { Ok(value) => value, Err(_) => { return false; } };
     if !captured(first, binding, evidence, task, before, after, target, replacement, "", false) { return false; }
-    match admit(pending) { Ok(value) => { if !value { return false; } } Err(_) => { return false; } }
+    match admit(pending) { Ok(value) => if !value { return false; }, Err(_) => { return false; } }
     let complete = match confirm(pending, summary) { Ok(value) => value, Err(_) => { return false; } };
     if complete.format != 1 || complete.phase != "summary-confirmed" || complete.binding != binding || same_record(pending, complete) ||
         !same_fields(complete.body, complete_fields) || byte_count(utf8_encode(complete.body)) > 65536 { return false; }

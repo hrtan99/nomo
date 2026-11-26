@@ -19,7 +19,7 @@ public flow show(slot: string, selected: Option<Selection>) -> Result<bool, stri
     if check.phase != "complete" { println("CHECK OUTPUT " + slot + " unavailable: check unresolved"); return Ok(true); }
     let saved = match load(slot, check.id, check.digest) { Ok(value) => value, Err(error) => { return Err(error); } };
     match saved {
-        None() => { println("CHECK OUTPUT " + slot + " unavailable: no recorded output"); }
+        None() => println("CHECK OUTPUT " + slot + " unavailable: no recorded output"),
         Some(value) => {
             let json = match render(value) { Ok(text) => text, Err(error) => { return Err(error); } };
             println("CHECK OUTPUT " + json);

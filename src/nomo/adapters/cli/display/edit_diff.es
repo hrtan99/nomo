@@ -2,7 +2,6 @@ module nomo.adapters.cli.display.edit_diff;
 
 import nomo.domain.context.large_context.message_bytes;
 import std.text.{char_count as len, len as byte_len, concat, ends_with, find, split, strip_prefix, strip_suffix, from_usize};
-import std.collections.len as count;
 import nomo.domain.mutations.edit_proposal.text_bytes;
 import nomo.domain.mutations.edit_encoding.json;
 
@@ -13,8 +12,8 @@ type Line = { text: string, terminated: bool };
 flow lines(value: string) -> Array<Line> {
     let parts = split(value, "\n");
     var output: Array<Line> = []; var index: usize = 0;
-    @limits([Iterations(1048577)]) while index < count(parts) {
-        if index + 1 < count(parts) {
+    @limits([Iterations(1048577)]) while index < parts.len() {
+        if index + 1 < parts.len() {
             output = output.push(Line { text = parts[index], terminated = true });
         } else if parts[index] != "" {
             output = output.push(Line { text = parts[index], terminated = false });
@@ -49,8 +48,8 @@ flow line_text(raw: string) -> Result<string, string> {
 }
 
 flow heading(label: string, values: Array<Line>) -> string {
-    if count(values) == 0 { return label + " [empty file]\n"; }
-    if !values[count(values) - 1].terminated { return label + " [no final newline]\n"; }
+    if values.len() == 0 { return label + " [empty file]\n"; }
+    if !values[values.len() - 1].terminated { return label + " [no final newline]\n"; }
     return label + "\n";
 }
 
@@ -86,11 +85,11 @@ flow changed(values: Array<Line>, start: usize, end: usize, mark: string, kind: 
 // Two context lines per edge, twelve changed lines per side and 160 encoded
 // columns per line bound the display independently of the canonical PREVIEW.
 public flow render(before: string, after: string) -> Result<string, string> {
-    match text_bytes(before, "preview before") { Ok(_) => {} Err(error) => { return Err(error); } }
-    match text_bytes(after, "preview after") { Ok(_) => {} Err(error) => { return Err(error); } }
+    match text_bytes(before, "preview before") { Ok(_) => (), Err(error) => { return Err(error); } }
+    match text_bytes(after, "preview after") { Ok(_) => (), Err(error) => { return Err(error); } }
     if before == after { return Err("edit preview requires a change"); }
     let original = lines(before); let replacement = lines(after);
-    let old_size = count(original); let new_size = count(replacement);
+    let old_size = original.len(); let new_size = replacement.len();
     var prefix: usize = 0;
     @limits([Iterations(1048576)]) while prefix < old_size && prefix < new_size {
         if !same(original[prefix], replacement[prefix]) { break; }
@@ -124,8 +123,8 @@ public flow render(before: string, after: string) -> Result<string, string> {
 // The complete before/after values remain in the canonical PREVIEW record.
 public flow render_edit(before: string, target: string, replacement: string, after: string) -> Result<string, string> {
     if byte_len(before) <= 262144 && byte_len(after) <= 262144 { return render(before, after); }
-    match text_bytes(before, "preview before") { Ok(_) => {} Err(error) => { return Err(error); } }
-    match text_bytes(after, "preview after") { Ok(_) => {} Err(error) => { return Err(error); } }
+    match text_bytes(before, "preview before") { Ok(_) => (), Err(error) => { return Err(error); } }
+    match text_bytes(after, "preview after") { Ok(_) => (), Err(error) => { return Err(error); } }
     if before == after || target == "" { return Err("large edit preview requires a changed literal"); }
     let start = match find(before, target) { Some(value) => value, None() => { return Err("large edit preview target missing"); } };
     let tail = byte_len(before) - start - byte_len(target);
@@ -133,8 +132,8 @@ public flow render_edit(before: string, target: string, replacement: string, aft
         if after == "" { "+++ after [empty file]\n" } else { if ends_with(after, "\n") { "+++ after\n" } else { "+++ after [no final newline]\n" } }];
     if start > 0 { output = output.push("... " + from_usize(start) + " unchanged prefix bytes omitted ...\n"); }
     let removed = lines(target); let added = lines(replacement);
-    let old = match changed(removed, 0, count(removed), "- ", "removed") { Ok(value) => value, Err(error) => { return Err(error); } };
-    let new = match changed(added, 0, count(added), "+ ", "added") { Ok(value) => value, Err(error) => { return Err(error); } };
+    let old = match changed(removed, 0, removed.len(), "- ", "removed") { Ok(value) => value, Err(error) => { return Err(error); } };
+    let new = match changed(added, 0, added.len(), "+ ", "added") { Ok(value) => value, Err(error) => { return Err(error); } };
     output = output.push(old).push(new);
     if tail > 0 { output = output.push("... " + from_usize(tail) + " unchanged suffix bytes omitted ...\n"); }
     let rendered = concat(output); if byte_len(rendered) > message_bytes() { return Err("edit preview output exceeds 1048576 bytes"); }

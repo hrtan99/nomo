@@ -29,7 +29,7 @@ flow refused(error: string) -> i32 { println("REFUSED " + error); return 1; }
 type FirstPersistence = { ticket: WorkTicket, journal: FirstEditJournal };
 impl FirstPersistence ~ WorkPersistence<EditTicket, bool> {
     flow begin(self, selected: Binding) -> Result<EditTicket, string> ![Memory, Error<StorageError>, Error<IndexError>] {
-        match claim(self.ticket) { Ok(_) => {} Err(error) => { return Err(error); } }
+        match claim(self.ticket) { Ok(_) => (), Err(error) => { return Err(error); } }
         return self.journal.begin(selected);
     }
     flow complete(self, ticket: EditTicket) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
@@ -48,13 +48,13 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
     if cli.edit.help { return refused("select a current read root, owned edit root, target and task"); }
     let input = application(cli);
     let journal = FirstEditJournal {};
-    match journal.available() { Ok(_) => {} Err(error) => { return refused(error); } }
+    match journal.available() { Ok(_) => (), Err(error) => { return refused(error); } }
     let history = match load_chat() { Ok(Some(value)) => value, _ => { return refused("a saved prior chat turn is required"); } };
     let ticket = match admit(input.selected.id, input.selected.workspace, input.selected.path, input.request, history) {
         Ok(value) => value, Err(error) => { return refused(error); }
     };
-    match claim(ticket) { Ok(_) => {} Err(error) => { return refused(error); } }
-    if parsed.has_check { match plan_check(ticket, parsed.digest) { Ok(_) => {} Err(error) => { return refused(error); } } }
+    match claim(ticket) { Ok(_) => (), Err(error) => { return refused(error); } }
+    if parsed.has_check { match plan_check(ticket, parsed.digest) { Ok(_) => (), Err(error) => { return refused(error); } } }
     println("RESERVED history-work; failure or interruption cannot be retried automatically.");
     let stages = HistoryStages { prior_request = history.value.last_request, previous = history.value.invocation.prior, conversation = [], wide = false, high_input = false, historical = true };
     let persistence = FirstPersistence { ticket, journal };

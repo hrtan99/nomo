@@ -13,9 +13,9 @@ public type ProjectGuidance = { files: ProjectInstructionFiles };
 impl ProjectGuidance ~ InstructionReader {
     flow read(self, path: string) -> Array<ProjectInstruction> ![Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Error<FileError>, Error<ReadLimitError>] {
         return read_guidance(path) with {
-            InstructionFiles.normalize(name) => { resume self.files.normalize(name); }
-            InstructionFiles.entries(scope) => { resume self.files.entries(scope); }
-            InstructionFiles.text(name) => { resume self.files.text(name); }
+            InstructionFiles.normalize(name) => self.files.normalize(name);
+            InstructionFiles.entries(scope) => self.files.entries(scope);
+            InstructionFiles.text(name) => self.files.text(name);
         };
     }
 }

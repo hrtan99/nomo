@@ -87,8 +87,8 @@ flow admit_first(id: string, workspace: string, path: string, request: string, a
     let proposed = if user_context { initial_user_context(id, workspace, path, request, allowed, policy) } else { initial(id, workspace, path, request, allowed, policy) };
     let row = match proposed { Ok(value) => value, Err(error) => { return Err(error); } };
     if read(1) != None() || read(2) != None() { return Err("v2 root/turn slot already consumed; no changed-ID retry"); }
-    match journal_available(1) { Ok(_) => {} Err(error) => { return Err(error); } }
-    match journal_available(2) { Ok(_) => {} Err(error) => { return Err(error); } }
+    match journal_available(1) { Ok(_) => (), Err(error) => { return Err(error); } }
+    match journal_available(2) { Ok(_) => (), Err(error) => { return Err(error); } }
     let version = match write(row, Missing) { Ok(value) => value, Err(error) => { return Err(error); } };
     return Ok(Ticket { row, version, parent = None() });
 }
@@ -107,19 +107,19 @@ public flow admit_continue(parent_id: string, id: string, workspace: string, pat
     expected_parent: MemoryEntry<string, Record>) -> Result<Ticket, string> ![Memory, Error<StorageError>, Error<IndexError>] {
     let error = selector_error(id, workspace, path); if error != "" { return Err(error); }
     if read(2) != None() { return Err("v2 successor already admitted; no same/changed-ID retry or third turn"); }
-    match journal_available(2) { Ok(_) => {} Err(error) => { return Err(error); } }
+    match journal_available(2) { Ok(_) => (), Err(error) => { return Err(error); } }
     let parent = match read_parent(parent_id, workspace, path) { Ok(value) => value, Err(error) => { return Err(error); } };
     if parent != expected_parent { return Err("v2 parent differs from the capacity-preflight snapshot; no admission"); }
     let row = match successor(parent.value, parent.version.opaque, id, request, allowed, policy) { Ok(value) => value, Err(error) => { return Err(error); } };
     let version = match write(row, Missing) { Ok(value) => value, Err(error) => { return Err(error); } };
     let ticket = Ticket { row, version, parent = Some(parent) };
-    match claim(ticket) { Ok(_) => {} Err(error) => { return Err(error); } }
+    match claim(ticket) { Ok(_) => (), Err(error) => { return Err(error); } }
     return Ok(ticket);
 }
 
 public flow publish_partial(ticket: Ticket, work: WorkRecord) -> Result<Ticket, string> ![Memory, Error<StorageError>, Error<IndexError>] {
     let row = match partial_row(ticket.row, work) { Ok(value) => value, Err(error) => { return Err(error); } };
-    match claim(ticket) { Ok(_) => {} Err(error) => { return Err(error); } }
+    match claim(ticket) { Ok(_) => (), Err(error) => { return Err(error); } }
     let parent = parent_error(ticket, row); if parent != "" { return Err(parent); }
     let journal = journal_error(row); if journal != "" { return Err(journal); }
     let version = match write(row, Match(ticket.version)) { Ok(value) => value, Err(error) => { return Err(error); } };
@@ -129,7 +129,7 @@ public flow publish_partial(ticket: Ticket, work: WorkRecord) -> Result<Ticket, 
 
 public flow complete(ticket: Ticket, summary: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
     let row = match confirmed_row(ticket.row, summary) { Ok(value) => value, Err(error) => { return Err(error); } };
-    match claim(ticket) { Ok(_) => {} Err(error) => { return Err(error); } }
+    match claim(ticket) { Ok(_) => (), Err(error) => { return Err(error); } }
     let parent = parent_error(ticket, row); if parent != "" { return Err(parent); }
     let journal = journal_error(row); if journal != "" { return Err(journal); }
     let version = match write(row, Match(ticket.version)) { Ok(value) => value, Err(error) => { return Err(error); } };
@@ -148,7 +148,7 @@ public flow inspect(id: string, workspace: string, path: string) -> Result<Optio
     let invalid = validate(first.value); if invalid != "" { return Err(invalid); }
     if first.value.format == 3 {
         if child != None() { return Err("user-context work cannot have a successor"); }
-        match journal_available(2) { Ok(_) => {} Err(_) => { return Err("user-context work cannot have a second journal"); } }
+        match journal_available(2) { Ok(_) => (), Err(_) => { return Err("user-context work cannot have a second journal"); } }
     }
     if first.key != key(1) || first.value.turn != 1 { return Err("v2 root slot mismatch"); }
     let first_journal = journal_error(first.value); if first_journal != "" { return Err(first_journal); }
@@ -160,11 +160,11 @@ public flow inspect(id: string, workspace: string, path: string) -> Result<Optio
             let journal = journal_error(value.value); if journal != "" { return Err(journal); }
             if value.value.id == id { selected = value.value; found = true; }
         }
-        None() => {}
+        None() => (),
     }
     if !found || selected.workspace != workspace || selected.path != path { return Err("v2 chain selected identity or workspace mismatch"); }
     if read(1) != root || read(2) != child { return Err("v2 chain changed during show"); }
-    if first.value.format == 3 { match journal_available(2) { Ok(_) => {} Err(_) => { return Err("user-context second journal changed during show"); } } }
+    if first.value.format == 3 { match journal_available(2) { Ok(_) => (), Err(_) => { return Err("user-context second journal changed during show"); } } }
     return Ok(Some(selected));
 }
 
@@ -180,8 +180,8 @@ flow observed_snapshot() -> Result<Snapshot, string> {
 }
 
 public flow snapshot(workspace: string, path: string) -> Result<Snapshot, string> {
-    return handle { observe_sessions(workspace, path) } with {
-        SessionObservation.capture(pass) => { resume observed_snapshot(); }
+    return handle observe_sessions(workspace, path) with {
+        SessionObservation.capture(pass) => observed_snapshot();
     };
 }
 
@@ -202,16 +202,16 @@ flow confirmed_parent_adapter(id: string, workspace: string, path: string) -> Re
 
 public flow discover(workspace: string, path: string, selector: Selector) -> Result<Snapshot, string> {
     return discover_controller(workspace, path, selector) with {
-        SessionObservation.capture(pass) => { resume capture_adapter(pass); }
-        DiscoveryAuthority.inspect(id, selected_workspace, selected_path) => { resume inspect_adapter(id, selected_workspace, selected_path); }
-        DiscoveryAuthority.confirmed_parent(id, selected_workspace, selected_path) => { resume confirmed_parent_adapter(id, selected_workspace, selected_path); }
+        SessionObservation.capture(pass) => capture_adapter(pass);
+        DiscoveryAuthority.inspect(id, selected_workspace, selected_path) => inspect_adapter(id, selected_workspace, selected_path);
+        DiscoveryAuthority.confirmed_parent(id, selected_workspace, selected_path) => confirmed_parent_adapter(id, selected_workspace, selected_path);
     };
 }
 
 public flow latest_parent(workspace: string, path: string) -> Result<string, string> {
     return latest_parent_controller(workspace, path) with {
-        SessionObservation.capture(pass) => { resume capture_adapter(pass); }
-        DiscoveryAuthority.inspect(id, selected_workspace, selected_path) => { resume inspect_adapter(id, selected_workspace, selected_path); }
-        DiscoveryAuthority.confirmed_parent(id, selected_workspace, selected_path) => { resume confirmed_parent_adapter(id, selected_workspace, selected_path); }
+        SessionObservation.capture(pass) => capture_adapter(pass);
+        DiscoveryAuthority.inspect(id, selected_workspace, selected_path) => inspect_adapter(id, selected_workspace, selected_path);
+        DiscoveryAuthority.confirmed_parent(id, selected_workspace, selected_path) => confirmed_parent_adapter(id, selected_workspace, selected_path);
     };
 }

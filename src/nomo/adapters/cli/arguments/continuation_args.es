@@ -1,6 +1,5 @@
 module nomo.adapters.cli.arguments.continuation_args;
 
-import std.collections.len as count;
 import nomo.adapters.cli.arguments.session_cli_args.{Options, parse};
 import nomo.domain.sessions.store_record.valid_id;
 
@@ -8,15 +7,15 @@ public type ContinueOptions = { turn: Options, generation: i32, next_save: strin
 
 // Consume pairs atomically, including inputs that look like flags.
 public flow parse_continue(args: Array<string>) -> Result<ContinueOptions, string> {
-    if count(args) < 1 || count(args) > 17 || args[0] != "continue" { return Err("expected bounded continue arguments"); }
+    if args.len() < 1 || args.len() > 17 || args[0] != "continue" { return Err("expected bounded continue arguments"); }
     var normalized: Array<string> = ["save"];
     var next_save = "";
     var generation: i32 = -1;
     var seen_generation = false;
     var seen_next = false;
     var index: usize = 1;
-    @limits([Iterations(8)]) while index < count(args) {
-        if index + 1 >= count(args) { return Err("missing option value"); }
+    @limits([Iterations(8)]) while index < args.len() {
+        if index + 1 >= args.len() { return Err("missing option value"); }
         let flag = args[index];
         let value = args[index + 1];
         if flag == "--generation" {

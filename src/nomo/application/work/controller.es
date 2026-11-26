@@ -20,16 +20,16 @@ import nomo.tools.workspace.ReadOnlyRoot;
 // capture, timeline storage and terminal presentation are supplied as ports.
 public flow execute<S ~ WorkStages, Intent, Edited, P ~ WorkPersistence<Intent, Edited>, E ~ WorkEditor, T ~ WorkTimeline, O ~ WorkOutputSink>(stages: S, persistence: P, editor: E, timeline: T, output: O, input: WorkRequest, run: Run) -> i32 ![Console, Memory, Approval, Fs.read<ReadOnlyRoot>, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {
     let prepared = stages.prepare(input) with {
-        EditOriginal.read(path) => { resume editor.read_original(path); }
-        HarnessProgress.write(line) => { output.progress(line); resume; }
-        DiagnosticOutput.write(line) => { output.diagnostic(line); resume; }
+        EditOriginal.read(path) => editor.read_original(path);
+        HarnessProgress.write(line) => output.progress(line);
+        DiagnosticOutput.write(line) => output.diagnostic(line);
     };
     let pending = match prepared { Ok(value) => value, Err(failure) => { output.ledger(failure.state, run.wide, run.high_input); return output.refused(failure.error); } };
     let selected = match editor.confirm(pending.selected, pending.prepared) { Ok(value) => value, Err(error) => { return output.refused(error); } };
     let begun: Result<Intent, string> = persistence.begin(selected);
     let intent = match begun { Ok(value) => value, Err(error) => { return output.refused(error); } };
     output.progress("INTENT durable " + selected.id);
-    match editor.apply(pending.prepared) { Ok(_) => {} Err(error) => { return output.refused(error); } }
+    match editor.apply(pending.prepared) { Ok(_) => (), Err(error) => { return output.refused(error); } }
     let finished: Result<Edited, string> = persistence.complete(intent);
     let edited = match finished { Ok(value) => value, Err(error) => { return output.refused("edit may have completed; " + error); } };
     output.progress("APPLIED " + selected.id);
@@ -39,8 +39,8 @@ public flow execute<S ~ WorkStages, Intent, Edited, P ~ WorkPersistence<Intent, 
     let completed = match complete(pending, confirmed) { Ok(value) => value, Err(failure) => { return output.refused(failure.error); } };
     output.progress("POST_EDIT aggregate");
     let summarized = stages.summarize(completed) with {
-        HarnessProgress.write(line) => { output.progress(line); resume; }
-        DiagnosticOutput.write(line) => { output.diagnostic(line); resume; }
+        HarnessProgress.write(line) => output.progress(line);
+        DiagnosticOutput.write(line) => output.diagnostic(line);
     };
     let summary = match summarized { Ok(value) => value, Err(failure) => { return output.refused(failure.error); } };
     var records: Array<Event> = [];
@@ -49,9 +49,9 @@ public flow execute<S ~ WorkStages, Intent, Edited, P ~ WorkPersistence<Intent, 
         records = match timeline.capture(pending, confirmed, summary) { Ok(value) => value, Err(error) => { return output.refused("edit completed; " + error); } };
     }
     output.progress("POST_EDIT persist");
-    match persistence.finish(edited, summary, records) { Ok(_) => {} Err(error) => { return output.refused("edit completed; " + error); } }
+    match persistence.finish(edited, summary, records) { Ok(_) => (), Err(error) => { return output.refused("edit completed; " + error); } }
     if timeline.enabled() {
-        match timeline.save(selected.id, records, run.redaction, run.binding) { Ok(_) => {} Err(error) => { return output.refused("work saved; timeline incomplete: " + error); } }
+        match timeline.save(selected.id, records, run.redaction, run.binding) { Ok(_) => (), Err(error) => { return output.refused("work saved; timeline incomplete: " + error); } }
     }
     return output.completed(summary.answer, run.saved, summary.state, run.wide, run.high_input);
 }

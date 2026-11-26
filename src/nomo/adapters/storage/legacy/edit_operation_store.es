@@ -51,7 +51,7 @@ flow available_rows<S ~ CasRows<Record>>(rows: S) -> Result<bool, string> {
 
 flow begin_rows<S ~ CasRows<Record>>(rows: S, binding: Binding) -> Result<Ticket, string> {
     let invalid = binding_error(binding); if invalid != "" { return Err(invalid); }
-    match available_rows(rows) { Ok(_) => {} Err(error) => { return Err(error); } }
+    match available_rows(rows) { Ok(_) => (), Err(error) => { return Err(error); } }
     let row = Record { format = 1, phase = "intent", binding };
     let version = match commit_once<Record, S>(rows, row, Missing, None()) { Ok(value) => value, Err(error) => { return Err(error); } };
     return Ok(Ticket { binding, version });

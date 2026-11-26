@@ -35,4 +35,6 @@ python3 -B scripts/check-architecture.py
 
 This checks module paths, named public imports, layer direction and cycles, passive domain code, bootstrap implementation placement, and compatibility declaration/Region preservation. `.github/workflows/architecture.yml` runs the same check on pushes and pull requests. It complements the Etas compiler; it does not establish type/effect correctness or runtime acceptance.
 
-The currently selected compiler is official Etas 0.23.0 with its own locked core/frontend/interpreter graph and matching installed SDK. The source refactor remains pending compiler/runtime acceptance; see `NATIVE_MIGRATION.md` for the observed blockers.
+The currently selected compiler is official Etas 0.23.1 with its own locked core/frontend/interpreter graph and matching installed SDK. The source refactor remains pending compiler/runtime acceptance; see `NATIVE_MIGRATION.md` for the observed blockers.
+
+Handler action results use implicit tail resumption. Write `Action(value) => implementation(value);` for one expression and keep a block for statement sequences. Match/lambda expression bodies follow the same minimal form. Keep braces where they preserve a discarded non-unit result, early return, bindings or control flow; keep `finish` when it terminates the handled computation.

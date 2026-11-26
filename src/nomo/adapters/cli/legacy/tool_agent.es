@@ -1,7 +1,6 @@
 module nomo.adapters.cli.legacy.tool_agent;
 
 import std.text.{split, char_count as len};
-import std.collections.len as count;
 import std.io.println;
 import nomo.adapters.cli.arguments.config.load_for;
 import nomo.core.conversation.State;
@@ -32,15 +31,15 @@ public flow tool_turn(raw: string, maximum: i32, budget: i32, previous: Session)
 }
 
 flow completed_reply(state: State) -> string {
-    let event = state.events[count(state.events) - 1];
+    let event = state.events[state.events.len() - 1];
     if event.role != "tool" || event.kind != "complete" { abort("scripted Provider requires a completed result"); }
     return "read-only result: " + event.text;
 }
 
 // Explicit scripted Provider protocol only. TextModel output never enters here.
 public flow dispatch(request: Request) -> Outcome {
-    if request.operation == "read" && count(request.files) == 1 && request.literal == "" { return display(read_file(request.files[0])); }
-    if request.operation == "list" && count(request.files) == 1 && request.literal == "" { return display(list_directory(request.files[0])); }
+    if request.operation == "read" && request.files.len() == 1 && request.literal == "" { return display(read_file(request.files[0])); }
+    if request.operation == "list" && request.files.len() == 1 && request.literal == "" { return display(list_directory(request.files[0])); }
     if request.operation == "search" { return display(search_files(request.files, request.literal)); }
     return outcome("refused", "unsupported operation or arguments", 0);
 }
@@ -52,12 +51,12 @@ flow perform_turn(raw: string, maximum: i32, budget: i32, previous: State) -> Tu
     // The shared validator trims for stub/model input; this protocol uses raw.
     if !printable(raw) { return reject(previous, "expected printable ASCII single-line input"); }
     let parts = split(raw, ":");
-    if count(parts) < 2 || count(parts) > 3 { return reject(previous, "expected read:FILE, list:DIR or search:FILE[,FILE]:LITERAL"); }
+    if parts.len() < 2 || parts.len() > 3 { return reject(previous, "expected read:FILE, list:DIR or search:FILE[,FILE]:LITERAL"); }
     let operation = parts[0];
     let files = split(parts[1], ",");
     var literal = "";
-    if count(parts) == 3 { literal = parts[2]; }
-    if (operation != "read" && operation != "list" && operation != "search") || (operation != "search" && count(parts) != 2) || (operation == "search" && count(parts) != 3) {
+    if parts.len() == 3 { literal = parts[2]; }
+    if (operation != "read" && operation != "list" && operation != "search") || (operation != "search" && parts.len() != 2) || (operation == "search" && parts.len() != 3) {
         return reject(previous, "unsupported operation or arguments");
     }
     let full = capacity_error(previous, 4, 2 * len(raw) + 2304);

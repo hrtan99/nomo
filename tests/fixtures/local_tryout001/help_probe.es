@@ -2,7 +2,6 @@ module app.help_probe;
 
 import std.io.println;
 import std.text.split;
-import std.collections.len as count;
 import nomo.adapters.cli.legacy.work_chain_help.{argument, help, show_hint, continue_hint};
 
 type Check = { label: string, input: string, accepted: bool, expected: string };
@@ -20,7 +19,7 @@ public flow observe(args: Array<string>) -> i32 {
         if !evaluate(item) { println("FAIL " + item.label); abort("chain hint argument contract failed"); }
         println("PASS " + item.label);
         if item.accepted {
-            let value = match argument(item.input) { Ok(value) => value, Err(error) => { abort(error); } };
+            let value = match argument(item.input) { Ok(value) => value, Err(error) => abort(error), };
             println("QUOTED " + item.label + " " + value);
         }
     }
@@ -30,7 +29,7 @@ public flow emit_help(args: Array<string>) -> i32 {
     let result = help(args); if result != 0 { abort("fixture observed native help refusal"); } return 0;
 }
 public flow emit_hints(args: Array<string>) -> i32 {
-    if count(args) != 3 { abort("help fixture requires three selector arguments"); }
+    if args.len() != 3 { abort("help fixture requires three selector arguments"); }
     show_hint(args[0], args[1], args[2]);
     continue_hint(args[0], args[1], args[2], ["a/b.txt", "c/d.txt"]);
     show_hint("invalid\nidentity", args[1], args[2]);

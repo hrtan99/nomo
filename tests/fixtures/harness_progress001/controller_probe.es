@@ -55,14 +55,14 @@ flow collect(line: string) -> unit { println("COLLECT " + line); }
 flow execute(item: Case, console: bool) -> Result<Report, Failure> {
     if console {
         return run_context(item.request, item.allowed, fresh(), "fixture-", false, false, item.inspect_plan, item.inspect_all) with {
-            LegacyStringStages.main(value) => { resume main_reply(value, item); }
-            LegacyStringStages.child(task, allowed, selected) => { resume child_reply(task, allowed, selected, item); }
+            LegacyStringStages.main(value) => main_reply(value, item);
+            LegacyStringStages.child(task, allowed, selected) => child_reply(task, allowed, selected, item);
         };
     }
     return run_context_with(item.request, item.allowed, fresh(), "fixture-", false, false, item.inspect_plan, item.inspect_all) with {
-        LegacyStringStages.main(value) => { resume main_reply(value, item); }
-        LegacyStringStages.child(task, allowed, selected) => { resume child_reply(task, allowed, selected, item); }
-        HarnessProgress.write(line) => { resume collect(line); }
+        LegacyStringStages.main(value) => main_reply(value, item);
+        LegacyStringStages.child(task, allowed, selected) => child_reply(task, allowed, selected, item);
+        HarnessProgress.write(line) => collect(line);
     };
 }
 flow verify(item: Case, console: bool) -> unit {
@@ -80,8 +80,8 @@ public flow observe(args: Array<string>) -> i32 {
 }
 public flow output_abort(args: Array<string>) -> i32 {
     let result = run_context_with("Q", ["a.txt"], fresh(), "fixture-", false, false, false, false) with {
-        LegacyStringStages.main(_) => { abort("UNEXPECTED model after progress abort"); }
-        LegacyStringStages.child(_, _, _) => { abort("UNEXPECTED child after progress abort"); }
+        LegacyStringStages.main(_) => abort("UNEXPECTED model after progress abort");
+        LegacyStringStages.child(_, _, _) => abort("UNEXPECTED child after progress abort");
         HarnessProgress.write(_) => { println("PORT progress abort"); abort("D12_EXPECTED_PROGRESS_ABORT"); }
     };
     println("UNREACHABLE progress abort"); return 0;

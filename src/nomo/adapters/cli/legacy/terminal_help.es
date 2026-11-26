@@ -1,11 +1,10 @@
 module nomo.adapters.cli.legacy.terminal_help;
 
 import std.io.println;
-import std.collections.len as count;
 
 // Console-only: this module imports no work, inference, approval or storage path.
 public flow help(args: Array<string>) -> i32 {
-    if count(args) > 1 || (count(args) == 1 && args[0] != "help" && args[0] != "--help") {
+    if args.len() > 1 || (args.len() == 1 && args[0] != "help" && args[0] != "--help") {
         println("REFUSED terminal_help accepts no arguments or one --help."); return 1;
     }
     println("Nomo terminal: line-oriented wrapper around the existing two-turn work chain.");

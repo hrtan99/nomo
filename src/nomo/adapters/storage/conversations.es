@@ -37,15 +37,15 @@ impl NativeHistory ~ ResultPublication {
     flow result_complete(self, id: string, index: i64) -> bool { return complete_event(id, index); }
     flow select_summary(self, id: string, index: i64, through: i64) -> unit { adopt_summary(id, index, through); }
     flow finish_command(self, id: string, call: i64) -> unit {
-        handle { tool_finished("command", call, "recorded result retained"); }
-            with { SessionContext.current() => { resume id; } };
+        handle tool_finished("command", call, "recorded result retained")
+            with { SessionContext.current() => id; };
     }
     flow acknowledge(self, id: string, call: i64, note: string) -> i64 { return acknowledge_command(id, call, note); }
 }
 
 flow entry(id: string) -> MemoryEntry<string, Session> {
     return match Data.Sessions.get_entry(id) {
-        Some(value) => value, None() => { abort("native session not found: " + id); }
+        Some(value) => value, None() => abort("native session not found: " + id),
     };
 }
 flow key(id: string, index: i64) -> string { return id + ":" + from_i64(index); }
@@ -99,8 +99,8 @@ impl NativeHistory ~ ConversationCatalog {
         let value = self.load(id);
         if value.workspace != workspace { abort("native session belongs to a different workspace"); }
         match copy_status(id) {
-            Some(job) => { if job.phase != "ready" { abort("conversation copy is " + job.phase + "; use /resume-copy or /discard-copy"); } }
-            None() => {}
+            Some(job) => if job.phase != "ready" { abort("conversation copy is " + job.phase + "; use /resume-copy or /discard-copy"); },
+            None() => (),
         }
         Data.Selected.put(workspace, id);
         return value;
@@ -149,7 +149,7 @@ flow write_event(id: string, index: i64, role: string, name: string, text: strin
     @limits([Iterations(2147483647)]) while offset < total {
         let end = if total - offset > 65536 { offset + 65536 } else { total };
         let part = match get_char_slice(text, Range.closed(offset, end - 1)) {
-            Some(value) => value, None() => { abort("native archive chunk range is invalid"); }
+            Some(value) => value, None() => abort("native archive chunk range is invalid"),
         };
         Data.Chunks.put(event_key + ":" + from_usize(parts), part);
         offset = end;
@@ -184,7 +184,7 @@ public flow read_message(id: string, index: i64) -> ChatMessage ![Memory, Error<
     var part: usize = 0;
     @limits([Iterations(2147483647)]) while part < event.chunks {
         text = text + match Data.Chunks.get(event_key + ":" + from_usize(part)) {
-            Some(value) => value, None() => { abort("native archive content chunk is missing"); }
+            Some(value) => value, None() => abort("native archive content chunk is missing"),
         };
         part = part + 1;
     }
@@ -200,7 +200,7 @@ public flow reserve_result(id: string, role: string, name: string, call: i64) ->
 
 public flow complete_result(id: string, index: i64, text: string) -> unit
     ![Memory, Error<StorageError>, Error<MemoryConflict>] {
-    let event = match Data.Events.get(key(id, index)) { Some(value) => value, None() => { abort("reserved result not found"); } };
+    let event = match Data.Events.get(key(id, index)) { Some(value) => value, None() => abort("reserved result not found"), };
     if !event.complete { write_event(id, index, event.role, event.name, text, event.call); }
 }
 
@@ -222,7 +222,7 @@ public flow record<T>(role: string, name: string, value: T, call: i64) -> i64
     ![SessionContext, Memory, Error<StorageError>, Error<MemoryConflict>] {
     let id = perform SessionContext.current();
     let text = match encode(value, "history conversion failed", "history encoding failed") {
-        Ok(value) => value, Err(error) => { abort(error); }
+        Ok(value) => value, Err(error) => abort(error),
     };
     let archive = NativeHistory {};
     return archive.append(id, role, name, text, call);
@@ -245,8 +245,8 @@ public flow result_published(id: string, call: i64, name: string) -> bool ![Memo
     var published = false;
     @limits([Iterations(2147483647)]) while index < current.next_event {
         match Data.Events.get(key(id, index)) {
-            Some(event) => { if event.complete && event.role == "tool" && event.name == name && event.call == call { published = true; break; } }
-            None() => {}
+            Some(event) => if event.complete && event.role == "tool" && event.name == name && event.call == call { published = true; break; },
+            None() => (),
         }
         index = index + 1;
     }
@@ -257,12 +257,12 @@ public flow pending_request(id: string) -> Option<PendingRequest> ![Memory, Erro
     let value = entry(id).value;
     if value.pending == "" { return None(); }
     let (reference, name) = match split_once(value.pending, " ") {
-        Some(parts) => parts, None() => { abort("invalid native pending reference"); }
+        Some(parts) => parts, None() => abort("invalid native pending reference"),
     };
     let raw = match strip_prefix(reference, id + ":") {
-        Some(value) => value, None() => { abort("pending reference belongs to another conversation"); }
+        Some(value) => value, None() => abort("pending reference belongs to another conversation"),
     };
-    let call = match parse_i64(raw) { Ok(value) => value, Err(_) => { abort("invalid pending event index"); } };
+    let call = match parse_i64(raw) { Ok(value) => value, Err(_) => abort("invalid pending event index"), };
     let complete = match Data.Events.get(key(id, call)) { Some(event) => event.complete, None() => false };
     return Some(PendingRequest { call, name, complete });
 }
@@ -303,7 +303,7 @@ public flow publish_summary(id: string, text: string, through: i64) -> unit
 
 public flow adopt_summary(id: string, index: i64, through: i64) -> unit
     ![Memory, Error<StorageError>, Error<MemoryConflict>] {
-    let event = match Data.Events.get(key(id, index)) { Some(value) => value, None() => { abort("summary record missing"); } };
+    let event = match Data.Events.get(key(id, index)) { Some(value) => value, None() => abort("summary record missing"), };
     if !event.complete || event.role != "summary" { abort("summary record is incomplete"); }
     let before = entry(id); let value = before.value;
     Data.Sessions.put_versioned(id, value { summary_event = index, summary_through = through }, before.version);
@@ -314,7 +314,7 @@ public flow copy_status(id: string) -> Option<CopyJob> ![Memory, Error<StorageEr
 }
 
 public flow copy_job(id: string) -> CopyJob ![Memory, Error<StorageError>] {
-    return match copy_status(id) { Some(value) => value, None() => { abort("conversation copy not found"); } };
+    return match copy_status(id) { Some(value) => value, None() => abort("conversation copy not found"), };
 }
 
 public flow copy_jobs(workspace: string) -> Array<CopyJob> ![Memory, Error<StorageError>] {
@@ -331,7 +331,7 @@ public flow copy_jobs(workspace: string) -> Array<CopyJob> ![Memory, Error<Stora
 }
 
 public flow advance_copy(id: string, cursor: i64, phase: string) -> CopyJob ![Memory, Error<StorageError>, Error<MemoryConflict>] {
-    let before = match Copies.Jobs.get_entry(id) { Some(value) => value, None() => { abort("conversation copy missing"); } };
+    let before = match Copies.Jobs.get_entry(id) { Some(value) => value, None() => abort("conversation copy missing"), };
     let old = before.value;
     let job = old { cursor, phase };
     Copies.Jobs.put_versioned(id, job, before.version);
@@ -342,7 +342,7 @@ public flow ensure_copy_session(id: string) -> unit ![Memory, Error<StorageError
     let job = copy_job(id);
     if job.phase == "discarded" { abort("conversation copy was discarded; retained content is historical only"); }
     match Data.Sessions.get(id) {
-        Some(_) => {}
+        Some(_) => (),
         None() => { Data.Sessions.insert(id, empty_session(id, job.workspace, job.title)); }
     }
 }
@@ -361,8 +361,8 @@ public flow copy_event(id: string, index: i64, role: string, name: string, text:
     if index == current.next_event { reserve_event(id, role, name, -1, false); }
     else if index > current.next_event { abort("conversation copy has a noncontiguous target index"); }
     match Data.Events.get(key(id, index)) {
-        Some(event) => { if event.complete { return; } }
-        None() => {}
+        Some(event) => if event.complete { return; },
+        None() => (),
     }
     // Only an unfinished copy uses deterministic slot repair. Ordinary live
     // events keep their reserved gaps; they are never replayed by this path.
@@ -371,8 +371,8 @@ public flow copy_event(id: string, index: i64, role: string, name: string, text:
 
 public flow sealed_copy_source(id: string) -> Option<string> ![Memory, Error<StorageError>] {
     match Data.Events.get(key(id, 0)) {
-        Some(event) => { if event.complete { return Some(read_message(id, 0).text); } }
-        None() => {}
+        Some(event) => if event.complete { return Some(read_message(id, 0).text); },
+        None() => (),
     }
     return None();
 }
@@ -383,5 +383,5 @@ public flow copy_summary(id: string, slot: i64) -> unit ![Memory, Error<StorageE
 }
 
 public flow copy_record_complete(id: string, index: i64) -> bool ![Memory, Error<StorageError>] {
-    return match Data.Events.get(key(id, index)) { Some(value) => value.complete, None() => { abort("fork source record is incomplete"); } };
+    return match Data.Events.get(key(id, index)) { Some(value) => value.complete, None() => abort("fork source record is incomplete"), };
 }

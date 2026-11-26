@@ -1,6 +1,5 @@
 module nomo.adapters.cli.native.options;
 
-import std.collections.len;
 import std.text.{split_once, strip_prefix};
 import nomo.domain.conversation.start.SessionSelection;
 
@@ -25,7 +24,7 @@ public flow parse(args: Array<string>) -> Options ![Error<IndexError>] {
     var import_path: Option<string> = None(); var export_path: Option<string> = None();
     var check: Option<Array<string>> = None();
     var index: usize = 0;
-    @limits([Iterations(2147483647)]) while index < len(args) {
+    @limits([Iterations(2147483647)]) while index < args.len() {
         let (option, inline) = match split_once(args[index], "=") { Some((name, value)) => (name, Some(value)), None() => (args[index], None()) };
         index = index + 1;
         if option == "--new" { selection = SessionSelection.Fresh; continue; }
@@ -38,13 +37,13 @@ public flow parse(args: Array<string>) -> Options ![Error<IndexError>] {
         if option == "--high-input" { continue; }
         if option == "--check" {
             var command: Array<string> = match inline { Some(value) => [value], None() => [] };
-            @limits([Iterations(2147483647)]) while index < len(args) { command = command.push(args[index]); index = index + 1; }
-            if len(command) == 0 { abort("--check requires a command"); }
+            @limits([Iterations(2147483647)]) while index < args.len() { command = command.push(args[index]); index = index + 1; }
+            if command.len() == 0 { abort("--check requires a command"); }
             check = Some(command); continue;
         }
         if option == "--resume" || option == "--open" {
             var selected = match inline { Some(value) => value, None() => "" };
-            if selected == "" && index < len(args) {
+            if selected == "" && index < args.len() {
                 let value_follows = match strip_prefix(args[index], "--") { Some(_) => false, None() => true };
                 if value_follows {
                     selected = args[index]; index = index + 1;
@@ -56,7 +55,7 @@ public flow parse(args: Array<string>) -> Options ![Error<IndexError>] {
         }
         let value = match inline {
             Some(value) => value,
-            None() => { if index >= len(args) { abort("native option requires a value: " + option); } let value = args[index]; index = index + 1; value }
+            None() => { if index >= args.len() { abort("native option requires a value: " + option); } let value = args[index]; index = index + 1; value }
         };
         if option == "--workspace" || option == "--root" { workspace = value; }
         else if option == "--id" { selection = SessionSelection.Exact(value); }

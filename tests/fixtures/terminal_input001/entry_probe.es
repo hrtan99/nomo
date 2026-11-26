@@ -2,7 +2,6 @@ module app.terminal_input_probe;
 
 import std.io.println;
 import std.text.from_i32;
-import std.collections.len as count;
 import std.io.IOError as ConsoleError;
 import std.fs.IOError as FileError;
 import std.effects.Fs;
@@ -40,7 +39,7 @@ public flow once(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.rea
 
 // Deterministic source handlers; fake Completed does not establish durability.
 flow encoded(fields: Array<string>) -> string {
-    return match json(fields) { Ok(value) => value, Err(error) => { abort(error); } };
+    return match json(fields) { Ok(value) => value, Err(error) => abort(error), };
 }
 flow stopped_value() -> WorkOutcome {
     let state = Ledger { read = ReadLedger { steps = 2, calls = 1, tokens = 2048, tools = 0, scan = 0 }, edit = edit_fresh() };
@@ -64,7 +63,7 @@ flow fake_show(mode: string, selected: Selector) -> Result<Option<CapturedShow>,
     println("READ_PORT " + encoded([selected.id, selected.workspace, selected.path]));
     if mode == "read-fail" { return Err("bounded read refused"); }
     if mode == "captured" {
-        let row = match initial(selected.id, selected.workspace, selected.path, "captured only", ["context.txt", "other.txt"], turn_caps()) { Ok(value) => value, Err(error) => { abort(error); } };
+        let row = match initial(selected.id, selected.workspace, selected.path, "captured only", ["context.txt", "other.txt"], turn_caps()) { Ok(value) => value, Err(error) => abort(error), };
         return Ok(Some(CapturedShow { row = row, journal = None() }));
     }
     return Ok(None());
@@ -76,11 +75,11 @@ flow fake_latest(mode: string, workspace: string, path: string) -> Result<string
 }
 public flow typed(args: Array<string>) -> i32 ![Console, Error<IndexError>, Error<ConsoleError>] {
     let mode = args[0]; var selected: Array<string> = []; var index: usize = 1;
-    while index < count(args) limit Iterations(20) { selected = selected.push(args[index]); index = index + 1; }
-    let result = handle { if mode == "once" || mode == "once-stop" || mode == "once-missing" { run_once_with_operations(selected) } else { run_with_operations(selected) } } with {
-        TerminalWork.execute(request) => { resume fake_work(if mode == "once-stop" { "stop" } else { mode }, request); }
-        TerminalRead.show(selector) => { resume fake_show(mode, selector); }
-        TerminalRead.latest(workspace, path) => { resume fake_latest(mode, workspace, path); }
+    while index < args.len() limit Iterations(20) { selected = selected.push(args[index]); index = index + 1; }
+    let result = handle if mode == "once" || mode == "once-stop" || mode == "once-missing" { run_once_with_operations(selected) } else { run_with_operations(selected) } with {
+        TerminalWork.execute(request) => fake_work(if mode == "once-stop" { "stop" } else { mode }, request);
+        TerminalRead.show(selector) => fake_show(mode, selector);
+        TerminalRead.latest(workspace, path) => fake_latest(mode, workspace, path);
     };
     return returned(result);
 }

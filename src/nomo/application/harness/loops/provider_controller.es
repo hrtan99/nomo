@@ -2,7 +2,6 @@ module nomo.application.harness.loops.provider_controller;
 
 import nomo.domain.context.large_context.{message_bytes, context_bytes};
 import std.text.{char_count as len, trim};
-import std.collections.len as event_count;
 import nomo.core.conversation.State;
 import nomo.domain.conversation.state.{capacity_error, charge, stop};
 import nomo.domain.harness.conversation_events.Turn;
@@ -20,7 +19,7 @@ public flow model_turn_controller(raw: string, maximum: i32, budget: i32, previo
     let full = capacity_error(previous, 3, len(request) + message_bytes() + 4);
     if full != "" { return failure(stop(previous), full, 4); }
     // ASCII JSON escaping is at most 2x, plus bounded event metadata/envelope.
-    if 2 * (previous.characters + len(request)) + 128 * event_count(previous.events) + 256 > context_bytes() {
+    if 2 * (previous.characters + len(request)) + 128 * previous.events.len() + 256 > context_bytes() {
         return reject(previous, "model context capacity exhausted");
     }
     var state = emit(previous, "user", "input", "", request);

@@ -4,7 +4,6 @@ import nomo.domain.context.large_context.{message_bytes, message_frame_bytes, ed
 import nomo.domain.serialization.json.{encode as encode_json, FieldError, decode_fields as json_fields};
 import nomo.domain.mutations.edit_text.EditText as Child;
 import std.text.{char_count as len, len as byte_len, trim};
-import std.collections.len as count;
 import std.json.{JsonValue, stringify};
 import std.agent.message.Message;
 import nomo.domain.mutations.edit_proposal.text_bytes;
@@ -16,8 +15,8 @@ import nomo.harness.harness_edit_contract.Ledger;
 
 // Shared serialization bound for historical model inputs.
 public flow history_bound(converted: Option<Message<JsonValue>>, maximum: usize, kind: string) -> unit {
-    let data = match converted { Some(item) => item.body, None() => { abort("history " + kind + " context conversion refused"); } };
-    let raw = match stringify(data) { Ok(item) => item, Err(_) => { abort("history " + kind + " context encoding refused"); } };
+    let data = match converted { Some(item) => item.body, None() => abort("history " + kind + " context conversion refused"), };
+    let raw = match stringify(data) { Ok(item) => item, Err(_) => abort("history " + kind + " context encoding refused"), };
     if byte_len(raw) > maximum { abort(if kind == "read" { "history read context exceeds 33554432 bytes" } else { "history edit context exceeds 33554432 bytes" }); }
 }
 
@@ -100,7 +99,7 @@ flow decoded(raw: string, maximum: usize, expected: usize, diagnostic: bool) -> 
         Err(FieldError.Shape) => { return Err(if diagnostic { response_error(raw, phase, "shape", maximum) } else { legacy + " fields must be strings" }); }
     };
     let verb = if expected == 2 { "delegate" } else { "edit" };
-    if count(fields) != expected { return Err(if diagnostic { response_error(raw, phase, "arity", maximum) } else { "unsupported " + legacy + " verb or arity" }); }
+    if fields.len() != expected { return Err(if diagnostic { response_error(raw, phase, "arity", maximum) } else { "unsupported " + legacy + " verb or arity" }); }
     if fields[0] != verb { return Err(if diagnostic { response_error(raw, phase, "verb", maximum) } else { "unsupported " + legacy + " verb or arity" }); }
     return Ok(fields);
 }
@@ -115,7 +114,7 @@ flow plan(raw: string, diagnostic: bool) -> Result<string, string> {
 flow edit(raw: string, diagnostic: bool, empty: bool) -> Result<Child, string> {
     let fields = match decoded(raw, edit_response_bytes(), 3, diagnostic) { Ok(value) => value, Err(error) => { return Err(error); } };
     let size = match text_bytes(fields[1], "target") { Ok(value) => value, Err(error) => { return Err(if diagnostic { response_error(raw, "edit-child", "target", edit_response_bytes()) } else { error }); } };
-    match text_bytes(fields[2], "replacement") { Ok(_) => {} Err(error) => { return Err(if diagnostic { response_error(raw, "edit-child", "replacement", edit_response_bytes()) } else { error }); } }
+    match text_bytes(fields[2], "replacement") { Ok(_) => (), Err(error) => { return Err(if diagnostic { response_error(raw, "edit-child", "replacement", edit_response_bytes()) } else { error }); } }
     if size == 0 && !empty { return Err(if diagnostic { response_error(raw, "edit-child", "target", edit_response_bytes()) } else { "target must not be empty" }); }
     return Ok(Child { target = fields[1], replacement = fields[2] });
 }

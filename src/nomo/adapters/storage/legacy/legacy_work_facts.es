@@ -22,7 +22,7 @@ flow read_snapshot() -> Result<Facts, string> {
     let past_work = match inspect_work() { Ok(value) => value, Err(error) => { return Err(error); } };
     var work_facts: Option<WorkFacts> = None();
     match past_work {
-        None() => { match chat_available() { Ok(_) => {} Err(error) => { return Err(error); } } }
+        None() => match chat_available() { Ok(_) => (), Err(error) => { return Err(error); } },
         Some(work) => {
             if work.phase != "complete" { return Err("work is not complete; inspect before continuing"); }
             let edit = match inspect_edit(work.id, work.workspace, work.path) { Ok(Some(value)) => value, _ => { return Err("completed edit record required"); } };
@@ -32,9 +32,9 @@ flow read_snapshot() -> Result<Facts, string> {
             match check {
                 Some(value) => { if value.id != work.id { return Err("check work identity differs"); } if value.phase != "complete" { return Err("check outcome unresolved"); } outcome = value.outcome; exit = value.exit_code;
                     let saved = match load_check_output("first", value.id, value.digest) { Ok(item) => item, Err(error) => { return Err(error); } };
-                    match saved { Some(item) => { output = Some(CheckOutput { stdout = item.stdout, stderr = item.stderr, stdout_truncated = item.stdout_truncated, stderr_truncated = item.stderr_truncated }); } None() => {} }
+                    match saved { Some(item) => { output = Some(CheckOutput { stdout = item.stdout, stderr = item.stderr, stdout_truncated = item.stdout_truncated, stderr_truncated = item.stderr_truncated }); } None() => (), }
                 }
-                None() => {}
+                None() => (),
             }
             work_facts = Some(stored_fact(work.id, work.summary, "unknown", outcome, exit, output));
             let spent = match work.settled { Some(value) => value, None() => { return Err("first work ledger missing"); } };
@@ -45,22 +45,20 @@ flow read_snapshot() -> Result<Facts, string> {
     let following_check = match inspect_followup_check() { Ok(value) => value, Err(error) => { return Err(error); } };
     var followup_facts: Option<WorkFacts> = None();
     match following {
-        None() => {
-            match followup_edit_available() { Ok(_) => {} Err(error) => { return Err("orphan followup edit: " + error); } }
-            match following_check { Some(_) => { return Err("orphan followup check"); } None() => {} }
-        }
+        None() => match followup_edit_available() { Ok(_) => (), Err(error) => { return Err("orphan followup edit: " + error); } }
+        match following_check { Some(_) => { return Err("orphan followup check"); } None() => (), },
         Some(item) => {
             if item.phase != "complete" { return Err("followup work is unresolved"); }
-            match work_facts { None() => { return Err("first work facts missing"); } Some(_) => {} }
+            match work_facts { None() => { return Err("first work facts missing"); } Some(_) => (), }
             let edit = match inspect_followup_edit(item.id, item.workspace, item.path) { Ok(Some(value)) => value, _ => { return Err("completed followup edit required"); } };
             if edit.phase != "completed" { return Err("followup edit outcome unresolved"); }
             var outcome = "not requested"; var exit = ""; var output: Option<CheckOutput> = None();
             match following_check {
                 Some(value) => { if value.id != item.id || value.phase != "complete" { return Err("followup check outcome unresolved"); } outcome = value.outcome; exit = value.exit_code;
                     let saved = match load_check_output("followup", value.id, value.digest) { Ok(found) => found, Err(error) => { return Err(error); } };
-                    match saved { Some(found) => { output = Some(CheckOutput { stdout = found.stdout, stderr = found.stderr, stdout_truncated = found.stdout_truncated, stderr_truncated = found.stderr_truncated }); } None() => {} }
+                    match saved { Some(found) => { output = Some(CheckOutput { stdout = found.stdout, stderr = found.stderr, stdout_truncated = found.stdout_truncated, stderr_truncated = found.stderr_truncated }); } None() => (), }
                 }
-                None() => {}
+                None() => (),
             }
             let first = match item.parent.work.settled { Some(value) => value, None() => { return Err("first work ledger missing"); } };
             let second = match item.settled { Some(value) => value, None() => { return Err("followup ledger missing"); } };

@@ -6,7 +6,7 @@ import nomo.domain.process.jobs.JobEvent;
 public enum ProcessEvent { Output(bytes, bytes), Exited(i32, bytes, bytes), Stopped(bytes, bytes) }
 
 flow display(value: bytes) -> string {
-    return match utf8_decode(value, Replace) { Ok(text) => text, Err(_) => { abort("process output conversion failed"); } };
+    return match utf8_decode(value, Replace) { Ok(text) => text, Err(_) => abort("process output conversion failed"), };
 }
 
 public flow observed(job: string, call: i64, value: ProcessEvent) -> JobEvent {

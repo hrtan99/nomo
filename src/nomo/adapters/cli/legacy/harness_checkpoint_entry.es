@@ -22,7 +22,7 @@ flow refused(error: string) -> i32 { println("REFUSED " + error); return 1; }
 public flow run_init(args: Array<string>) -> i32 ![Console, Memory, Error<StorageError>, Error<IndexError>, Error<ConsoleError>] {
     let options = match parse(args, false) { Ok(value) => value, Err(error) => { return refused(error); } };
     if options.help { help(); return 0; }
-    match initialize(options.identity) { Ok(_) => {} Err(error) => { return refused(error); } }
+    match initialize(options.identity) { Ok(_) => (), Err(error) => { return refused(error); } }
     println("INITIALIZED Harness checkpoint owner " + options.identity.id);
     return 0;
 }
@@ -30,12 +30,12 @@ public flow run_init(args: Array<string>) -> i32 ![Console, Memory, Error<Storag
 public flow run_save(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {
     let options = match parse(args, true) { Ok(value) => value, Err(error) => { return refused(error); } };
     if options.help { help(); return 0; }
-    match begin(options.identity) { Ok(_) => {} Err(error) => { return refused(error); } }
+    match begin(options.identity) { Ok(_) => (), Err(error) => { return refused(error); } }
     println("TURN 1 USER " + options.request);
     let turn = run_turn(options.request, options.identity.allowed, fresh_invocation());
     if turn.status != 0 || !turn.resolved { return refused("Harness turn did not complete; checkpoint not published"); }
     let saved = match from_turn(options.identity, turn) { Ok(value) => value, Err(error) => { return refused(error); } };
-    match publish(saved) { Ok(_) => {} Err(error) => { return refused(error); } }
+    match publish(saved) { Ok(_) => (), Err(error) => { return refused(error); } }
     println("SAVED Harness checkpoint " + options.identity.id);
     return 0;
 }

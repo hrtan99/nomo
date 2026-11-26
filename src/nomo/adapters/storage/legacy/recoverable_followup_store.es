@@ -23,7 +23,7 @@ flow frame_error(value: Frame, policy: Policy, binding: string) -> string {
 public flow load(policy: Policy, binding: string) -> Result<Option<MemoryEntry<string, Frame>>, string> ![Memory, Error<StorageError>, Error<IndexError>] {
     // Validate the policy/binding against the actual chat frame first; a stale
     // or mismatched policy cannot make an existing work slot look absent.
-    match load_chat(policy, binding) { Ok(Some(_)) => {} Ok(None()) => { return Err("recoverable chat missing"); } Err(error) => { return Err(error); } }
+    match load_chat(policy, binding) { Ok(Some(_)) => (), Ok(None()) => { return Err("recoverable chat missing"); } Err(error) => { return Err(error); } }
     let row = Runs.Rows.get_entry("followup");
     return match row {
         Some(item) => {
@@ -37,7 +37,7 @@ public flow load(policy: Policy, binding: string) -> Result<Option<MemoryEntry<s
             if parent_edit.phase != "completed" { return Err("first edit unresolved"); }
             }
             let parent_check = match load_parent_check(policy, binding) { Ok(value) => value, Err(error) => { return Err(error); } };
-            let check_version = match parent_check { Some(value) => { if value.value.check.phase != "complete" && value.value.check.phase != "abandoned" && !(parent_work.value.work.phase == "abandoned" && value.value.check.phase == "planned") { return Err("first check unresolved"); } value.version.opaque }, None() => "" };
+            let check_version = match parent_check { Some(value) => if value.value.check.phase != "complete" && value.value.check.phase != "abandoned" && !(parent_work.value.work.phase == "abandoned" && value.value.check.phase == "planned") { return Err("first check unresolved"); } value.version.opaque, None() => "" };
             if check_version != value.parent_check_version { return Err("first check changed"); }
             Ok(Some(item))
         }
@@ -53,14 +53,14 @@ flow write(value: Frame, expected: Option<MemoryEntry<string, Frame>>, policy: P
     let condition: WriteCondition = match expected { Some(item) => Match(item.version), None() => Missing };
     let target = Target { store = ["Rows"], region = "nomo-recoverable-followup-v1", key = "followup", label = "recoverable followup" };
     let version = match commit_native(Runs.Rows, target, desired, condition) { Ok(item) => item, Err(problem) => { return Err(problem); } };
-    match expected { Some(item) => { if item.version.opaque == version.opaque { return Err("recoverable followup version did not change"); } } None() => {} }
+    match expected { Some(item) => if item.version.opaque == version.opaque { return Err("recoverable followup version did not change"); }, None() => (), }
     return Ok(version);
 }
 
 public flow admit(id: string, workspace: string, path: string, request: string, chat: MemoryEntry<string, ChatFrame>, policy: Policy, binding: string) -> Result<Ticket, string> ![Memory, Error<StorageError>, Error<IndexError>] {
     let current = match load_chat(policy, binding) { Ok(Some(item)) => item, _ => { return Err("recoverable chat missing or invalid"); } };
     let chat_error = admission_chat_error(current, chat); if chat_error != "" { return Err(chat_error); }
-    match load(policy, binding) { Ok(None()) => {} Ok(Some(_)) => { return Err("recoverable followup already admitted; no retry"); } Err(error) => { return Err(error); } }
+    match load(policy, binding) { Ok(None()) => (), Ok(Some(_)) => { return Err("recoverable followup already admitted; no retry"); } Err(error) => { return Err(error); } }
     let wide = chat.value.chat.format >= 13;
     let row = running_record_mode(id, workspace, path, request, chat.version.opaque, wide, chat.value.chat.format == 18 || chat.value.chat.format == 19);
     let parent_work = match load_parent_work(policy, binding) { Ok(Some(item)) => item, _ => { return Err("completed first work required"); } };
@@ -70,7 +70,7 @@ public flow admit(id: string, workspace: string, path: string, request: string, 
     if first_edit.phase != "completed" { return Err("completed first edit required"); }
     }
     let parent_check = match load_parent_check(policy, binding) { Ok(item) => item, Err(error) => { return Err(error); } };
-    let check_version = match parent_check { Some(item) => { if item.value.check.phase != "complete" && item.value.check.phase != "abandoned" && !(parent_work.value.work.phase == "abandoned" && item.value.check.phase == "planned") { return Err("first check unresolved"); } item.version.opaque }, None() => "" };
+    let check_version = match parent_check { Some(item) => if item.value.check.phase != "complete" && item.value.check.phase != "abandoned" && !(parent_work.value.work.phase == "abandoned" && item.value.check.phase == "planned") { return Err("first check unresolved"); } item.version.opaque, None() => "" };
     let frame = Frame { format = 1, policy_binding = binding, parent_work_version = parent_work.version.opaque, parent_check_version = check_version, work = row, events = empty_events() };
     let version = match write(frame, None(), policy, binding) { Ok(item) => item, Err(error) => { return Err(error); } };
     return Ok(Ticket { frame, version, chat });
@@ -85,7 +85,7 @@ public flow claim(ticket: Ticket, policy: Policy, binding: string) -> Result<boo
 }
 
 public flow finish(ticket: Ticket, summary: string, spent: Ledger, records: Array<Event>, policy: Policy, binding: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
-    match claim(ticket, policy, binding) { Ok(_) => {} Err(error) => { return Err(error); } }
+    match claim(ticket, policy, binding) { Ok(_) => (), Err(error) => { return Err(error); } }
     let events = match work_batch(records, policy) { Ok(item) => item, Err(error) => { return Err(error); } };
     let row = completed_record(ticket.frame.work, summary, spent);
     let frame = ticket.frame { format = 1, policy_binding = binding, work = row, events };

@@ -20,7 +20,7 @@ let Data = std.memory.region<Schema>(stable_id = "nomo-process-controller-fixtur
 type Token = { reference: string };
 type ControlledProcess = {};
 impl ControlledProcess ~ ProcessControl<Token> {
-    flow root(self) -> WorkspacePath<ProjectRoot> ![] { return match path<ProjectRoot>(".") { Ok(value) => value, Err(_) => { abort("fixture path failed"); } }; }
+    flow root(self) -> WorkspacePath<ProjectRoot> ![] { return match path<ProjectRoot>(".") { Ok(value) => value, Err(_) => abort("fixture path failed"), }; }
     flow start(self, root: WorkspacePath<ProjectRoot>, program: string, arguments: Array<string>) -> string ![Command.start<DefaultCommandSandbox>] {
         if program != "controlled" || arguments != ["utf8"] { abort("start arguments changed"); }
         return "fixture-handle";
@@ -77,7 +77,7 @@ public flow main(args: Array<string>) -> i32 ![Memory, Console, Command.start<De
     if job.phase != "started" || job.handle != "fixture-handle" { abort("start observation changed"); }
     let output = service.read(control, jobs, archive, preview, attempts, history, history, history, session.id, job.id, 4096);
     if output.phase != "output" || output.stdout != "鹈鹕 café\n" || output.stdout_bytes != utf8_encode(output.stdout) || output.stderr_bytes != utf8_encode("stderr\n") { abort("observed bytes changed"); }
-    let still_started = match jobs.load(job.id) { Some(value) => value, None() => { abort("saved job missing"); } };
+    let still_started = match jobs.load(job.id) { Some(value) => value, None() => abort("saved job missing"), };
     if still_started.phase != "started" { abort("output invented a terminal phase"); }
     let written = service.write(control, jobs, preview, attempts, history, history, history, session.id, job.id, "鹈鹕 café\n");
     let closed = service.close_input(control, jobs, preview, attempts, history, history, history, session.id, job.id);

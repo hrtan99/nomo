@@ -20,7 +20,7 @@ flow collect(event: Event) -> unit {
 }
 flow collected(raw: string, maximum: i32, budget: i32, previous: State) -> Turn {
     return turn_controller(raw, maximum, budget, previous) with {
-        ConversationOutput.publish(event) => { resume collect(event); }
+        ConversationOutput.publish(event) => collect(event);
     };
 }
 public flow semantic_emit(args: Array<string>) -> State {
@@ -45,13 +45,13 @@ public flow production_observe(args: Array<string>) -> i32 {
 }
 public flow semantic_observe(args: Array<string>) -> i32 {
     println("CASE unicode_append");
-    let emitted = semantic_emit(args) with { ConversationOutput.publish(event) => { resume collect(event); } };
+    let emitted = semantic_emit(args) with { ConversationOutput.publish(event) => collect(event); };
     let expected_emit = __SEMANTIC_EXPECTED__;
     if emitted != expected_emit { abort("whole semantic State differs"); }
     println("PASS unicode_append");
     println("CASE failure_status");
     let previous = __SEMANTIC_PREVIOUS__;
-    let failed = failure(previous, "exact failure", 37) with { ConversationOutput.publish(event) => { resume collect(event); } };
+    let failed = failure(previous, "exact failure", 37) with { ConversationOutput.publish(event) => collect(event); };
     let expected_failure = __FAILURE_EXPECTED__;
     if failed != expected_failure { abort("whole failure Turn differs"); }
     println("PASS failure_status");

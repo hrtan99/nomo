@@ -8,7 +8,7 @@ public alias Reservation<Ticket> = { prior: Ticket, reserved: Ticket };
 public flow open<Ticket, R ~ ChatRepository<Ticket>>(repository: R, create: bool) -> Result<Ticket, string> {
     let existing = match repository.load() { Ok(value) => value, Err(error) => { return Err(error); } };
     let selected: Ticket = if create {
-        match existing { Some(_) => { return Err(repository.exists_error()); } None() => {} }
+        match existing { Some(_) => { return Err(repository.exists_error()); } None() => (), }
         match repository.create() { Ok(value) => value, Err(error) => { return Err(error); } }
     } else {
         match existing { Some(value) => value, None() => { return Err(repository.missing_error()); } }

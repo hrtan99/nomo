@@ -65,8 +65,8 @@ public flow admit(predecessor: Identity, successor: Identity, request: string) -
     let plan = Context { phase = "plan", request, task = "", result = "", tool = "", outcome = "",
         allowed = predecessor.allowed, prior = restored.prior };
     let invalid_context = context_error(plan); if invalid_context != "" { return Err(invalid_context); }
-    match read(admission(predecessor)) { Some(_) => { return Err("predecessor continuation already admitted; no retry"); } None() => {} }
-    match read(key(successor)) { Some(_) => { return Err("successor row already exists; no retry"); } None() => {} }
+    match read(admission(predecessor)) { Some(_) => { return Err("predecessor continuation already admitted; no retry"); } None() => (), }
+    match read(key(successor)) { Some(_) => { return Err("successor row already exists; no retry"); } None() => (), }
     let initial = Ticket { predecessor = before, successor, request, version = before.version };
     let version = match write(admission(predecessor), row(initial, "admitted", "", before.checkpoint.usage, false), Missing) {
         Ok(value) => value, Err(error) => { return Err(error); }
@@ -88,22 +88,22 @@ public flow failed(ticket: Ticket, turn: TurnResult) -> Result<bool, string> ![M
     let invalid = ledger_error(local); if invalid != "" { return Err(invalid); }
     let total = match combine(prior, local, turn.state.maximum) { Ok(value) => value, Err(error) => { return Err(error); } };
     if total != used { return Err("failed continuation cumulative settlement mismatch"); }
-    match claim(ticket) { Ok(_) => {} Err(error) => { return Err(error); } }
+    match claim(ticket) { Ok(_) => (), Err(error) => { return Err(error); } }
     return match write(admission(ticket.predecessor.checkpoint.identity), row(ticket, "failed", "", used, true), Match(ticket.version)) {
         Ok(_) => Ok(true), Err(error) => Err(error)
     };
 }
 
 public flow publish(ticket: Ticket, saved: Successor) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
-    match validate(saved, ticket.successor, ticket.predecessor.checkpoint.identity) { Ok(_) => {} Err(error) => { return Err(error); } }
+    match validate(saved, ticket.successor, ticket.predecessor.checkpoint.identity) { Ok(_) => (), Err(error) => { return Err(error); } }
     if saved.predecessor != ticket.predecessor.checkpoint || saved.predecessor_version != ticket.predecessor.version.opaque ||
         saved.request != ticket.request { return Err("successor differs from admitted predecessor or request"); }
     let body = match encode_record(SuccessorEncoder {}, saved) { Ok(value) => value, Err(error) => { return Err(error); } };
-    match claim(ticket) { Ok(_) => {} Err(error) => { return Err(error); } }
+    match claim(ticket) { Ok(_) => (), Err(error) => { return Err(error); } }
     let changed = unchanged(ticket.predecessor); if changed != "" { return Err(changed); }
-    match read(key(ticket.successor)) { Some(_) => { return Err("successor already exists; no retry"); } None() => {} }
+    match read(key(ticket.successor)) { Some(_) => { return Err("successor already exists; no retry"); } None() => (), }
     match write(admission(ticket.predecessor.checkpoint.identity), row(ticket, "settled", body, saved.usage, true), Match(ticket.version)) {
-        Ok(_) => {} Err(error) => { return Err(error); }
+        Ok(_) => (), Err(error) => { return Err(error); }
     }
     let version = match write(key(ticket.successor), row(ticket, "pending", body, saved.usage, true), Missing) {
         Ok(value) => value, Err(error) => { return Err(error); }
@@ -124,7 +124,7 @@ public flow reload(predecessor: Identity, successor: Identity) -> Result<Success
     let published = match read(key(successor)) { Some(value) => value,
         None() => { return Err("successor missing; no completed continuation"); } };
     let saved = match decode_record(SuccessorCodec {}, published.value.body) { Ok(value) => value, Err(error) => { return Err(error); } };
-    match validate(saved, successor, predecessor) { Ok(_) => {} Err(error) => { return Err(error); } }
+    match validate(saved, successor, predecessor) { Ok(_) => (), Err(error) => { return Err(error); } }
     let ticket = Ticket { predecessor = before, successor, request = saved.request, version = admitted.version };
     if saved.predecessor != before.checkpoint || saved.predecessor_version != before.version.opaque ||
         admitted.value != row(ticket, "settled", published.value.body, saved.usage, true) ||

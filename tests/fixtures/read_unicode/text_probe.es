@@ -43,9 +43,9 @@ flow integration() -> bool {
                     if name != "sample.txt" { abort("unexpected read"); }
                     resume outcome("complete", "蓝色" + decoded("u000a"), 7);
                 }
-                ReadTools.search(_, _) => { abort("unexpected search"); }
+                ReadTools.search(_, _) => abort("unexpected search");
             };
-            resume child;
+            child
         }
     };
     return match result {
@@ -56,9 +56,9 @@ flow integration() -> bool {
 
 flow decoded(code: string) -> string {
     let raw = "\"" + std.text.from_char('\\') + code + "\"";
-    let data = match parse(raw) { Ok(value) => value, Err(_) => { abort("bad synthetic JSON"); } };
+    let data = match parse(raw) { Ok(value) => value, Err(_) => abort("bad synthetic JSON"), };
     let converted: Option<Message<string>> = Message.new(data).cast<string>();
-    return match converted { Some(value) => value.body, None() => { abort("bad synthetic string"); } };
+    return match converted { Some(value) => value.body, None() => abort("bad synthetic string"), };
 }
 
 public flow read_unicode_text_probe(args: Array<string>) -> i32 {
@@ -66,10 +66,10 @@ public flow read_unicode_text_probe(args: Array<string>) -> i32 {
     while index < 170 limit Iterations(171) { long_task = long_task + "港"; index = index + 1; }
     long_task = long_task + "ab";
     let exact = "[\"delegate\",\"" + long_task + "\"]";
-    match decode_work_plan(exact) { Ok(value) => { if value != long_task { abort("work delegation changed"); } } Err(_) => { abort("512-byte work delegation refused"); } }
-    match decode_work_plan("[\"delegate\",\"" + long_task + "x\"]") { Ok(_) => { abort("513-byte work delegation accepted"); } Err(_) => {} }
-    match decode_plan(exact) { Ok(_) => { abort("ordinary chat delegation limit changed"); } Err(_) => {} }
-    match decode_work_plan("[\"delegate\",\" \"]") { Ok(_) => { abort("blank work delegation accepted"); } Err(_) => {} }
+    match decode_work_plan(exact) { Ok(value) => if value != long_task { abort("work delegation changed"); }, Err(_) => abort("512-byte work delegation refused"), }
+    match decode_work_plan("[\"delegate\",\"" + long_task + "x\"]") { Ok(_) => abort("513-byte work delegation accepted"), Err(_) => (), }
+    match decode_plan(exact) { Ok(_) => abort("ordinary chat delegation limit changed"), Err(_) => (), }
+    match decode_work_plan("[\"delegate\",\" \"]") { Ok(_) => abort("blank work delegation accepted"), Err(_) => (), }
     if !bounded("读取中文", 12) || bounded("读取中文", 11) || !bounded("A🙂", 5) || bounded("A🙂", 4) { abort("UTF-8 byte limit failed"); }
     if !bounded("hello world", 11) || bounded("   ", 3) { abort("basic text validation failed"); }
     let esc = decoded("u001b");
@@ -81,25 +81,25 @@ public flow read_unicode_text_probe(args: Array<string>) -> i32 {
     if safe(decoded("u2028"), 8) { abort("separator accepted"); }
     if safe(decoded("ufeff"), 8) { abort("BOM accepted"); }
     match parse_args(["new", "--once", "请总结这份文件"]) {
-        Ok(value) => { if value.once != "请总结这份文件" { abort("argument changed"); } }
-        Err(_) => { abort("Unicode argument refused"); }
+        Ok(value) => if value.once != "请总结这份文件" { abort("argument changed"); },
+        Err(_) => abort("Unicode argument refused"),
     }
     match parse_line("请总结这份文件" + decoded("u000d") + decoded("u000a")) {
-        Ok(value) => { if value.kind != "prompt" || value.text != "请总结这份文件" { abort("line changed"); } }
-        Err(_) => { abort("Unicode line refused"); }
+        Ok(value) => if value.kind != "prompt" || value.text != "请总结这份文件" { abort("line changed"); },
+        Err(_) => abort("Unicode line refused"),
     }
-    match parse_line("abc" + decoded("u000a") + "extra") { Ok(_) => { abort("embedded line break accepted"); } Err(_) => {} }
+    match parse_line("abc" + decoded("u000a") + "extra") { Ok(_) => abort("embedded line break accepted"), Err(_) => (), }
     match decode_plan("[\"delegate\",\"请读取文件\"]") {
-        Ok(value) => { if value != "请读取文件" { abort("delegation changed"); } }
-        Err(_) => { abort("Unicode delegation refused"); }
+        Ok(value) => if value != "请读取文件" { abort("delegation changed"); },
+        Err(_) => abort("Unicode delegation refused"),
     }
     match decode_child("[\"read\",\"sample.txt\"]", ["sample.txt"], false) {
-        Ok(value) => { if value.operation != "read" { abort("read selection changed"); } }
-        Err(_) => { abort("allowed read refused"); }
+        Ok(value) => if value.operation != "read" { abort("read selection changed"); },
+        Err(_) => abort("allowed read refused"),
     }
     match decode_child("[\n \"read\",\n \"sample.txt\"\n]", ["sample.txt"], false) {
-        Ok(value) => { if value.operation != "read" { abort("formatted read changed"); } }
-        Err(_) => { abort("formatted read refused"); }
+        Ok(value) => if value.operation != "read" { abort("formatted read changed"); },
+        Err(_) => abort("formatted read refused"),
     }
     if compact_frame("[\n \"search\", \"a b\", \"sample.txt\"\n]") != "[\"search\",\"a b\",\"sample.txt\"]" {
         abort("compacted action lost string content");
@@ -110,69 +110,69 @@ public flow read_unicode_text_probe(args: Array<string>) -> i32 {
         abort("compacted action lost escaped quote");
     }
     match decode_child("[\"read\",\"sample" + std.text.from_char('\\') + "n.txt\"]", ["sample.txt"], false) {
-        Ok(_) => { abort("escaped newline in path accepted"); } Err(_) => {}
+        Ok(_) => abort("escaped newline in path accepted"), Err(_) => (),
     }
     match decode_child("[\"final\",\"内容是蓝色\"]", ["sample.txt"], true) {
-        Ok(value) => { if value.text != "内容是蓝色" { abort("child answer changed"); } }
-        Err(_) => { abort("Unicode child answer refused"); }
+        Ok(value) => if value.text != "内容是蓝色" { abort("child answer changed"); },
+        Err(_) => abort("Unicode child answer refused"),
     }
     match decode_child("[\n \"final\",\n \"内容是蓝色\"\n]", ["sample.txt"], true) {
-        Ok(value) => { if value.text != "内容是蓝色" { abort("formatted child answer changed"); } }
-        Err(_) => { abort("formatted child answer refused"); }
+        Ok(value) => if value.text != "内容是蓝色" { abort("formatted child answer changed"); },
+        Err(_) => abort("formatted child answer refused"),
     }
     match decode_child("[\"final\",\"x\",\"extra\"]", ["sample.txt"], true) {
-        Err(error) => { if error != "child final must contain exactly two fields" { abort("wrong final field diagnostic"); } }
-        Ok(_) => { abort("extra final field accepted"); }
+        Err(error) => if error != "child final must contain exactly two fields" { abort("wrong final field diagnostic"); },
+        Ok(_) => abort("extra final field accepted"),
     }
     match decode_child("[\"final\",\"   \"]", ["sample.txt"], true) {
-        Err(error) => { if error != "child final contains unsupported control or formatting characters or is empty" { abort("wrong empty final diagnostic"); } }
-        Ok(_) => { abort("empty final accepted"); }
+        Err(error) => if error != "child final contains unsupported control or formatting characters or is empty" { abort("wrong empty final diagnostic"); },
+        Ok(_) => abort("empty final accepted"),
     }
     var exact_answer = ""; var i: i32 = 0;
     while i < 4096 limit Iterations(4096) { exact_answer = exact_answer + "a"; i = i + 1; }
     match decode_child("[\"final\",\"" + exact_answer + "\"]", ["sample.txt"], true) {
-        Ok(value) => { if value.text != exact_answer { abort("4096-byte final changed"); } }
-        Err(_) => { abort("4096-byte final refused"); }
+        Ok(value) => if value.text != exact_answer { abort("4096-byte final changed"); },
+        Err(_) => abort("4096-byte final refused"),
     }
     match decode_child("[\"final\",\"" + exact_answer + "a\"]", ["sample.txt"], true) {
-        Err(error) => { if error != "child final exceeds 4096 UTF-8 bytes" { abort("wrong final size diagnostic"); } }
-        Ok(_) => { abort("4097-byte final accepted"); }
+        Err(error) => if error != "child final exceeds 4096 UTF-8 bytes" { abort("wrong final size diagnostic"); },
+        Ok(_) => abort("4097-byte final accepted"),
     }
     var chinese = ""; var j: i32 = 0;
     while j < 1365 limit Iterations(1365) { chinese = chinese + "蓝"; j = j + 1; }
     match decode_child("[\"final\",\"" + chinese + "\"]", ["sample.txt"], true) {
-        Ok(value) => { if value.text != chinese { abort("4095-byte Chinese final changed"); } }
-        Err(_) => { abort("4095-byte Chinese final refused"); }
+        Ok(value) => if value.text != chinese { abort("4095-byte Chinese final changed"); },
+        Err(_) => abort("4095-byte Chinese final refused"),
     }
     match decode_child("[\"final\",\"" + chinese + "蓝\"]", ["sample.txt"], true) {
-        Err(error) => { if error != "child final exceeds 4096 UTF-8 bytes" { abort("wrong Chinese final size diagnostic"); } }
-        Ok(_) => { abort("4098-byte Chinese final accepted"); }
+        Err(error) => if error != "child final exceeds 4096 UTF-8 bytes" { abort("wrong Chinese final size diagnostic"); },
+        Ok(_) => abort("4098-byte Chinese final accepted"),
     }
     match decode_child("[\"final\",\"one" + std.text.from_char('\\') + "nline\"]", ["sample.txt"], true) {
-        Ok(value) => { if value.text != "one line" { abort("escaped newline final normalization changed"); } }
-        Err(_) => { abort("escaped newline final refused"); }
+        Ok(value) => if value.text != "one line" { abort("escaped newline final normalization changed"); },
+        Err(_) => abort("escaped newline final refused"),
     }
     match decode_plan("[\n \"delegate\",\t \"请读取文件\"\r\n]") {
-        Ok(value) => { if value != "请读取文件" { abort("formatted delegation changed"); } }
-        Err(_) => { abort("formatted delegation refused"); }
+        Ok(value) => if value != "请读取文件" { abort("formatted delegation changed"); },
+        Err(_) => abort("formatted delegation refused"),
     }
     match decode_child("[\"final\",\"one\nline\"]", ["sample.txt"], true) {
-        Ok(_) => { abort("literal newline inside string accepted"); } Err(_) => {}
+        Ok(_) => abort("literal newline inside string accepted"), Err(_) => (),
     }
     match decode_child("[\"final\",\"one" + std.text.from_char('\\') + "nline\"]", ["sample.txt"], true) {
-        Ok(value) => { if value.text != "one line" { abort("escaped newline answer normalization changed"); } } Err(_) => { abort("escaped newline answer refused"); }
+        Ok(value) => if value.text != "one line" { abort("escaped newline answer normalization changed"); }, Err(_) => abort("escaped newline answer refused"),
     }
     match decode_child("[\"read\",\"other.txt\"]", ["sample.txt"], false) {
-        Ok(_) => { abort("unallowed path accepted"); } Err(_) => {}
+        Ok(_) => abort("unallowed path accepted"), Err(_) => (),
     }
     match decode_child("[\"read\",\"sample.txt\"]", ["sample.txt"], true) {
-        Ok(_) => { abort("read accepted after tool completion"); } Err(_) => {}
+        Ok(_) => abort("read accepted after tool completion"), Err(_) => (),
     }
-    match decode_plan("[\"delegate\",[\"nested\"]]") { Ok(_) => { abort("nested plan accepted"); } Err(_) => {} }
+    match decode_plan("[\"delegate\",[\"nested\"]]") { Ok(_) => abort("nested plan accepted"), Err(_) => (), }
     match decode_plan("[\"delegate\",\"" + std.text.from_char('\\') + "u001b\"]") {
-        Ok(_) => { abort("escaped control accepted"); } Err(_) => {}
+        Ok(_) => abort("escaped control accepted"), Err(_) => (),
     }
-    match answer("最终答案") { Ok(_) => {} Err(_) => { abort("Unicode answer refused"); } }
+    match answer("最终答案") { Ok(_) => (), Err(_) => abort("Unicode answer refused"), }
     let displayed = display(outcome("complete", "中文<LF>" + decoded("u000a") + "结束", 20));
     if displayed.status != "complete" || displayed.text != "中文<LF>%n结束" { abort("Unicode display changed"); }
     if display(outcome("complete", "中文" + esc, 7)).status != "unsupported" { abort("unsafe file content accepted"); }

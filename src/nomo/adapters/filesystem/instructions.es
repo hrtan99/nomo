@@ -9,11 +9,11 @@ import nomo.adapters.filesystem.file_io.read_text;
 public type ProjectInstructionFiles = {};
 impl ProjectInstructionFiles ~ InstructionFileSource {
     flow normalize(self, pathname: string) -> string ![] {
-        let selected = match path<ProjectRoot>(pathname) { Ok(value) => value, Err(_) => { abort("invalid project instruction path"); } };
+        let selected = match path<ProjectRoot>(pathname) { Ok(value) => value, Err(_) => abort("invalid project instruction path"), };
         return relative_name(selected);
     }
     flow entries(self, scope: string) -> Array<string> ![Fs.list<ProjectRoot>, Error<FileError>] {
-        let selected = match path<ProjectRoot>(scope) { Ok(value) => value, Err(_) => { abort("invalid project instruction path"); } };
+        let selected = match path<ProjectRoot>(scope) { Ok(value) => value, Err(_) => abort("invalid project instruction path"), };
         var result: Array<string> = [];
         for item in list(selected) { result = result.push(relative_name(item)); }
         return result;

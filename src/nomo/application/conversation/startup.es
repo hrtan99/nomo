@@ -25,7 +25,7 @@ public flow select<R ~ ConversationReader, C ~ ConversationCatalog, P ~ Conversa
         },
         SessionSelection.Existing => match catalog.selected(workspace) {
             Some(id) => Some(existing(reader, catalog, workspace, id, activate)),
-            None() => { abort("no saved conversation is selected for this project"); }
+            None() => abort("no saved conversation is selected for this project"),
         }
     };
 }

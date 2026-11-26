@@ -13,7 +13,7 @@ import nomo.application.mutations.ports.{MutationFiles, ChangeJournal, MutationH
 
 flow text<T>(value: T) -> string {
     return match encode(value, "change conversion failed", "change encoding failed") {
-        Ok(value) => value, Err(error) => { abort(error); }
+        Ok(value) => value, Err(error) => abort(error),
     };
 }
 
@@ -23,7 +23,7 @@ flow read_text(name: string) -> string { return perform MutationFiles.read(name)
 flow println(line: string) -> unit { perform MutationOutput.write(line); }
 flow as_json<T>(value: T) -> JsonValue {
     let result: Option<Message<JsonValue>> = Message.new(value).cast<JsonValue>();
-    return match result { Some(value) => value.body, None() => { abort("history conversion failed"); } };
+    return match result { Some(value) => value.body, None() => abort("history conversion failed"), };
 }
 flow record<T>(role: string, name: string, value: T, call: i64) -> i64 { return perform MutationHistory.record(role, name, as_json(value), call); }
 flow tool_finished<T>(name: string, call: i64, value: T) -> unit { perform MutationHistory.finish(name, call, as_json(value)); }
@@ -34,7 +34,7 @@ flow message(id: string, index: i64) -> ChatMessage { return perform MutationHis
 flow result_published(id: string, call: i64, name: string) -> bool { return perform MutationHistory.published(id, call, name); }
 
 flow journal(id: string) -> Journal {
-    let value = match perform ChangeJournal.lookup(id) { Some(value) => value, None() => { abort("native edit journal not found"); } };
+    let value = match perform ChangeJournal.lookup(id) { Some(value) => value, None() => abort("native edit journal not found"), };
     let session = perform SessionContext.current();
     if value.session != session { abort("edit belongs to a different conversation"); }
     return value;
@@ -138,7 +138,7 @@ flow outcome(value: Journal, status: string) -> ChangeOutcome {
     var completed: i64 = 0;
     var index: i64 = 0;
     @limits([Iterations(2147483647)]) while index < value.steps {
-        match perform ChangeJournal.step(step_key(value.id, index)) { Some(step) => { if step.phase == "applied" { completed = completed + 1; } } None() => {} }
+        match perform ChangeJournal.step(step_key(value.id, index)) { Some(step) => if step.phase == "applied" { completed = completed + 1; }, None() => (), }
         index = index + 1;
     }
     return ChangeOutcome { edit = value.id, status, completed, message = value.message };
@@ -182,18 +182,18 @@ flow selected_edit(id: string) -> Journal {
     var selected: Option<Journal> = None();
     for item in journals() {
         if item.phase == "applied" { match selected {
-            Some(previous) => { if item.call > previous.call { selected = Some(item); } }
+            Some(previous) => if item.call > previous.call { selected = Some(item); },
             None() => { selected = Some(item); }
         } }
     }
-    return match selected { Some(value) => value, None() => { abort("no applied native edit to undo"); } };
+    return match selected { Some(value) => value, None() => abort("no applied native edit to undo"), };
 }
 
 flow restore(value: Journal, call: i64, checking: bool) -> bool {
     var index = value.steps - 1;
     @limits([Iterations(2147483647)]) while index >= 0 {
         let key = step_key(value.id, index);
-        let step = match perform ChangeJournal.step(key) { Some(value) => value, None() => { abort("native edit step missing"); } };
+        let step = match perform ChangeJournal.step(key) { Some(value) => value, None() => abort("native edit step missing"), };
         if restoring_phase(step.phase) {
             for item in step.paths {
                 let present = exists(item.path);
@@ -282,7 +282,7 @@ public flow reconcile_changes(edit: string) -> ChangeOutcome ![SessionContext, M
             }
             var undispatched = !pending.complete;
             if pending.complete && is_file_request {
-                let body = match parse(message(session, pending.call).text) { Ok(value) => value, Err(_) => { abort("pending request is not JSON"); } };
+                let body = match parse(message(session, pending.call).text) { Ok(value) => value, Err(_) => abort("pending request is not JSON"), };
                 let converted: Option<Message<PlanRequest>> = Message.new(body).cast<PlanRequest>();
                 undispatched = match converted { Some(value) => value.body.format == "nomo-native-file-plan-1", None() => false };
             }

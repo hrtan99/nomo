@@ -25,16 +25,16 @@ impl LegacySessionStatusReader ~ SessionStatusReader<LegacyStatus> {
         let chat = match load_chat() { Ok(Some(value)) => value, Ok(None()) => { return Err("SESSION missing"); } Err(error) => { return Err(error); } };
         let work = match inspect_work() { Ok(value) => value, Err(error) => { return Err(error); } };
         var work_edit: Option<EditRecord> = None();
-        match work { Some(value) => { work_edit = match inspect_edit(value.id, value.workspace, value.path) { Ok(item) => item, Err(error) => { return Err(error); } }; } None() => {} }
+        match work { Some(value) => { work_edit = match inspect_edit(value.id, value.workspace, value.path) { Ok(item) => item, Err(error) => { return Err(error); } }; } None() => (), }
         let check = match inspect_check() { Ok(value) => value, Err(error) => { return Err(error); } };
         let followup = match inspect_followup() { Ok(value) => value, Err(error) => { return Err(error); } };
         var followup_edit: Option<EditRecord> = None();
-        match followup { Some(value) => { followup_edit = match inspect_followup_edit(value.id, value.workspace, value.path) { Ok(item) => item, Err(error) => { return Err(error); } }; } None() => {} }
+        match followup { Some(value) => { followup_edit = match inspect_followup_edit(value.id, value.workspace, value.path) { Ok(item) => item, Err(error) => { return Err(error); } }; } None() => (), }
         let followup_check = match inspect_followup_check() { Ok(value) => value, Err(error) => { return Err(error); } };
         var decisions: Array<Decision> = [];
         @limits([Iterations(4)]) for target in ["work", "check", "followup", "followup-check"] {
             let decision = match get_decision(target) { Ok(value) => value, Err(error) => { return Err(error); } };
-            match decision { Some(value) => { decisions = decisions.push(value); } None() => {} }
+            match decision { Some(value) => { decisions = decisions.push(value); } None() => (), }
         }
         return Ok(LegacyStatus { chat, work, work_edit, check,
             followup, followup_edit, followup_check, decisions });

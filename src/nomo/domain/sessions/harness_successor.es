@@ -3,7 +3,6 @@ module nomo.domain.sessions.harness_successor;
 import nomo.domain.context.large_context.{message_bytes, history_bytes};
 import nomo.domain.serialization.json.{encode as encode_json, string_fields};
 import std.text.{char_count as len, trim, from_i32, from_usize};
-import std.collections.len as count;
 import nomo.domain.text.text.printable;
 import nomo.core.conversation.{Event, State};
 import nomo.domain.harness.model_tool_contract.{Session, context_error as child_context_error};
@@ -26,7 +25,7 @@ flow previous(saved: Checkpoint) -> Previous {
 }
 
 public flow restore(saved: Checkpoint) -> Result<Invocation, string> {
-    match validate_first(saved, saved.identity) { Ok(_) => {} Err(error) => { return Err(error); } }
+    match validate_first(saved, saved.identity) { Ok(_) => (), Err(error) => { return Err(error); } }
     let invocation = Invocation { usage = saved.usage, maximum = saved.maximum, admitted = saved.admitted, prior = previous(saved) };
     let invalid = turn_error(invocation); if invalid != "" { return Err(invalid); }
     return Ok(invocation);
@@ -38,7 +37,7 @@ public flow validate(saved: Successor, requested: Identity, predecessor_identity
         saved.identity.workspace != predecessor_identity.workspace || saved.identity.allowed != predecessor_identity.allowed {
         return Err("successor identity or predecessor binding mismatch");
     }
-    match validate_first(saved.predecessor, predecessor_identity) { Ok(_) => {} Err(error) => { return Err(error); } }
+    match validate_first(saved.predecessor, predecessor_identity) { Ok(_) => (), Err(error) => { return Err(error); } }
     let restored = match restore(saved.predecessor) { Ok(value) => value, Err(error) => { return Err(error); } };
     if len(saved.predecessor_version) == 0 || len(saved.predecessor_version) > 1024 ||
         !printable(saved.predecessor_version) || trim(saved.predecessor_version) == "" { return Err("invalid predecessor version"); }
@@ -55,7 +54,7 @@ public flow validate(saved: Successor, requested: Identity, predecessor_identity
         tokens = before.tokens + (3 + tools) * 2048, tools = before.tools + tools, scan = before.scan + tools * 4096 };
     if saved.usage != exact || saved.maximum != restored.maximum { return Err("successor cumulative usage or limits mismatch"); }
     let records = saved.records;
-    if count(records) != record_count { return Err("invalid successor record count"); }
+    if records.len() != record_count { return Err("invalid successor record count"); }
     let record_error = records_error(records, history_bytes(), "successor");
     if record_error != "" { return Err(record_error); }
     if !same(records[0], "user", "request", "", saved.request) || !same(records[1], "main", "plan", "", records[1].text) ||
@@ -116,15 +115,15 @@ public flow from_turn(identity: Identity, predecessor: Checkpoint, predecessor_v
 
 
 public flow encode(saved: Successor) -> Result<string, string> {
-    match validate(saved, saved.identity, saved.predecessor.identity) { Err(error) => { return Err(error); } Ok(_) => {} }
+    match validate(saved, saved.identity, saved.predecessor.identity) { Err(error) => { return Err(error); } Ok(_) => (), }
     let predecessor = match encode_first(saved.predecessor) { Ok(value) => value, Err(error) => { return Err(error); } };
-    var second = ""; if count(saved.identity.allowed) == 2 { second = saved.identity.allowed[1]; }
+    var second = ""; if saved.identity.allowed.len() == 2 { second = saved.identity.allowed[1]; }
     var fields = ["nomo-harness-successor-v1", saved.identity.id, saved.identity.workspace, saved.identity.allowed[0], second,
         predecessor, saved.predecessor_version, saved.request, saved.task, saved.result, saved.tool, saved.outcome, saved.answer,
         from_i32(saved.usage.steps), from_i32(saved.usage.calls), from_i32(saved.usage.tokens),
         from_i32(saved.usage.tools), from_i32(saved.usage.scan), from_i32(saved.maximum.steps),
         from_i32(saved.maximum.calls), from_i32(saved.maximum.tokens), from_i32(saved.maximum.tools),
-        from_i32(saved.maximum.scan), "2", "completed", "true", from_usize(count(saved.records))];
+        from_i32(saved.maximum.scan), "2", "completed", "true", from_usize(saved.records.len())];
     @limits([Iterations(18)]) for event in saved.records {
         fields = fields.push(event.role); fields = fields.push(event.kind); fields = fields.push(event.name); fields = fields.push(event.text);
     }
@@ -138,10 +137,10 @@ public flow decode(raw: string) -> Result<Successor, string> {
     if !framed(raw, true) { return Err("successor encoded shape or bounds invalid"); }
     let fields = match string_fields(raw, "invalid successor JSON", "successor fields must be strings") { Ok(value) => value, Err(error) => { return Err(error); } };
     let invalid = fields_error(fields, true); if invalid != "" { return Err(invalid); }
-    if count(fields) != 83 && count(fields) != 99 { return Err("invalid successor field count"); }
+    if fields.len() != 83 && fields.len() != 99 { return Err("invalid successor field count"); }
     if fields[0] != "nomo-harness-successor-v1" { return Err("unsupported successor format"); }
     if fields[23] != "2" || fields[24] != "completed" || fields[25] != "true" { return Err("successor is not completed and settled"); }
-    var record_count: usize = 14; if count(fields) == 99 { record_count = 18; }
+    var record_count: usize = 14; if fields.len() == 99 { record_count = 18; }
     if fields[26] != from_usize(record_count) { return Err("successor record count disagrees with framing"); }
     var allowed = [fields[3]]; if fields[4] != "" { allowed = allowed.push(fields[4]); }
     let identity = Identity { id = fields[1], workspace = fields[2], allowed };

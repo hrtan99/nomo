@@ -31,29 +31,17 @@ public flow run(args: Array<string>) -> i32
     let output = TerminalMutationOutput {};
     let history_store = NativeHistory {};
     let attempts = NativeAttempts {};
-    return handle {
-        handle {
-            handle {
-                handle {
-                    handle {
-                        handle {
-                            handle { entry.run(history_store, history_store, history_store, attempts, history_store, ConsoleConversationPicker {}, args) } with {
-                                ConversationRequests.turn(session, request, check) => { resume conversation.ask(session, request, check); }
-                                ConversationRequests.compact(session, settings) => { conversation.compact(session, settings); resume; }
-                                ConversationRequests.settings(session, check) => { resume conversation.settings_for(session, check); }
-                            }
-                        } with processes.bindings()
-                    } with transfer.operations()
-                } with projects.operations()
-            } with {
-                ChangeOperations.apply(session, name, changes) => { resume mutations.execute(files, journals, history, output, session, "apply", name, changes, ""); }
-                ChangeOperations.undo(session, edit) => { resume mutations.execute(files, journals, history, output, session, "undo", "", [], edit); }
-                ChangeOperations.rollback(session, edit) => { resume mutations.execute(files, journals, history, output, session, "rollback", "", [], edit); }
-                ChangeOperations.reconcile(session, edit) => { resume mutations.execute(files, journals, history, output, session, "reconcile", "", [], edit); }
-                ChangeOperations.replace(session, change) => { resume mutations.replace(files, journals, history, output, session, change); }
-                ChangeOperations.list(session) => { resume mutations.list(files, journals, history, output, session, false); }
-                ChangeOperations.inspect(session) => { resume mutations.list(files, journals, history, output, session, true); }
-            }
-        } with instructions.bindings()
-    } with command.bindings();
+    return handle (handle (handle (handle (handle (handle (handle entry.run(history_store, history_store, history_store, attempts, history_store, ConsoleConversationPicker {}, args) with {
+                                ConversationRequests.turn(session, request, check) => conversation.ask(session, request, check);
+                                ConversationRequests.compact(session, settings) => conversation.compact(session, settings);
+                                ConversationRequests.settings(session, check) => conversation.settings_for(session, check);
+                            }) with processes.bindings()) with transfer.operations()) with projects.operations()) with {
+                ChangeOperations.apply(session, name, changes) => mutations.execute(files, journals, history, output, session, "apply", name, changes, "");
+                ChangeOperations.undo(session, edit) => mutations.execute(files, journals, history, output, session, "undo", "", [], edit);
+                ChangeOperations.rollback(session, edit) => mutations.execute(files, journals, history, output, session, "rollback", "", [], edit);
+                ChangeOperations.reconcile(session, edit) => mutations.execute(files, journals, history, output, session, "reconcile", "", [], edit);
+                ChangeOperations.replace(session, change) => mutations.replace(files, journals, history, output, session, change);
+                ChangeOperations.list(session) => mutations.list(files, journals, history, output, session, false);
+                ChangeOperations.inspect(session) => mutations.list(files, journals, history, output, session, true);
+            }) with instructions.bindings()) with command.bindings();
 }

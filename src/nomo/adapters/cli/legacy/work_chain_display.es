@@ -30,7 +30,7 @@ public flow render(row: Record, journal: Option<Journal>) -> Result<Array<string
         }
         None() => { lines = lines.push("JOURNAL missing; missing journal is not proof that no edit occurred."); }
     }
-    match row.work { Some(value) => { let shown = match work_lines(value) { Ok(item) => item, Err(error) => { return Err(error); } }; @limits([Iterations(7)]) for line in shown { lines = lines.push(line); } } None() => {} }
+    match row.work { Some(value) => { let shown = match work_lines(value) { Ok(item) => item, Err(error) => { return Err(error); } }; @limits([Iterations(7)]) for line in shown { lines = lines.push(line); } } None() => (), }
     var size: usize = 0; @limits([Iterations(16)]) for line in lines { size = size + len(line) + 1; }
     if size > 262144 { return Err("chain display exceeds 262144 ASCII bytes"); }
     return Ok(lines);

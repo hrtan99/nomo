@@ -2,7 +2,6 @@ module app.contract_probe;
 
 import std.io.println;
 import std.text.split;
-import std.collections.len as count;
 import std.json.parse;
 import std.agent.message.Message;
 import nomo.core.conversation.Event;
@@ -35,7 +34,7 @@ flow chosen(input: Context, policies: Array<EventPolicy>, maximum: usize,
     expected: Context, selected: Array<usize>, omitted: Array<usize>, size: usize) -> bool {
     return match select(input, policies, maximum) {
         Ok(value) => value.context == expected && value.selected == selected && value.omitted == omitted &&
-            value.omitted_count == count(omitted) && value.measurement.encoded_bytes == size &&
+            value.omitted_count == omitted.len() && value.measurement.encoded_bytes == size &&
             unknown_tokens(value.measurement) && decoded_context(value.measurement.encoded, expected),
         Err(_) => false,
     };

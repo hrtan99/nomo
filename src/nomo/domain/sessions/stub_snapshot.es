@@ -1,6 +1,5 @@
 module nomo.domain.sessions.stub_snapshot;
 
-import std.collections.len as count;
 import std.text.from_usize;
 import nomo.core.conversation.State;
 import nomo.domain.conversation.state.{fresh, stop};
@@ -14,8 +13,8 @@ public flow caps(maximum: i32, budget: i32) -> Caps {
 // Map observed application data only. An error after a request is not evidence
 // that the requested tool ran, and never becomes a fabricated completed outcome.
 flow mapped(state: State, seed: Snapshot, prefix: usize) -> Result<Snapshot, string> {
-    if count(state.events) > 32 { return Err("stub event count exceeds limit"); }
-    if count(state.events) < prefix { return Err("stub predecessor prefix missing"); }
+    if state.events.len() > 32 { return Err("stub event count exceeds limit"); }
+    if state.events.len() < prefix { return Err("stub predecessor prefix missing"); }
     var operations = seed.operations;
     var references = seed.references;
     var unresolved = false;
@@ -27,7 +26,7 @@ flow mapped(state: State, seed: Snapshot, prefix: usize) -> Result<Snapshot, str
             let operation = if seed.generation == 0 { "stub-request-" + from_usize(index) }
                 else { "stub-successor-request-" + from_usize(index) };
             var status = "pending";
-            if index + 1 < count(state.events) {
+            if index + 1 < state.events.len() {
                 let next = state.events[index + 1];
                 if next.role == "tool" && next.name == event.name && (next.kind == "complete" || next.kind == "error") {
                     status = "completed";
@@ -76,5 +75,5 @@ public flow successor(state: State, prior: Projection, reserved: i32, status: i3
     let seed = Snapshot { format = 1, session_id = prior.session_id, generation = 1, mode = prior.mode, binding = prior.binding,
         lifecycle = "active", history = prior.history, references = prior.references, operations = prior.operations,
         original_caps = prior.original_caps, current_caps = prior.caps, ledger = prior.ledger };
-    return mapped(observed, seed, count(prior.history.events));
+    return mapped(observed, seed, prior.history.events.len());
 }

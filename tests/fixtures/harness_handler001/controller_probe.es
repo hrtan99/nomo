@@ -58,7 +58,7 @@ flow deterministic(request: string, initial: Ledger, chosen: LoopTurn, plan: str
                 outcome = if context.phase == "aggregate" && chosen.state.tools == 1 { "complete: blue<LF>" } else { "" }, allowed = ["a.txt"] };
             if context != expected { finish mismatch("fixture main context changed"); }
             let response = if context.phase == "plan" { plan } else { answer };
-            resume response;
+            response
         }
         LegacyStringStages.child(task, allowed, selected) => {
             let expected = add(empty_history(), event("user", "context", "original", "Q"));
@@ -70,8 +70,8 @@ flow deterministic(request: string, initial: Ledger, chosen: LoopTurn, plan: str
 // Every dispatch in these precondition cases terminates the handler immediately.
 flow no_dispatch(request: string, initial: Ledger) -> Result<Report, Failure> {
     return run_context(request, ["a.txt"], initial, "trap-", false, false, false, false) with {
-        LegacyStringStages.main(_) => { finish mismatch("UNEXPECTED main dispatch"); }
-        LegacyStringStages.child(_, _, _) => { finish mismatch("UNEXPECTED child dispatch"); }
+        LegacyStringStages.main(_) => finish mismatch("UNEXPECTED main dispatch");
+        LegacyStringStages.child(_, _, _) => finish mismatch("UNEXPECTED child dispatch");
     };
 }
 flow child_controller(raw: string, previous: Session, trap: bool) -> LoopTurn {
@@ -89,9 +89,9 @@ flow selected_child() -> Session {
 }
 flow completed() -> Completed {
     let read = usage(7, 4, 1);
-    let request_digest = match digest("Q") { Ok(value) => value, Err(error) => { abort(error); } };
-    let before_digest = match digest("old\n") { Ok(value) => value, Err(error) => { abort(error); } };
-    let after_digest = match digest("blue\n") { Ok(value) => value, Err(error) => { abort(error); } };
+    let request_digest = match digest("Q") { Ok(value) => value, Err(error) => abort(error), };
+    let before_digest = match digest("old\n") { Ok(value) => value, Err(error) => abort(error), };
+    let after_digest = match digest("blue\n") { Ok(value) => value, Err(error) => abort(error), };
     let edit = EditContext { phase = "aggregate", request = "Q", task = "Replace old with blue", id = "fixture", workspace = "synthetic", path = "a.txt",
         before = "old\n", after = "blue\n", request_digest = request_digest, before_digest = before_digest, after_digest = after_digest, before_bytes = 4, after_bytes = 5, completed = true };
     let evidence = Evidence { request = "Q", task = "T", operation = "read", files = ["a.txt"], literal = "", outcome = "complete: blue<LF>", result = "Seen blue", summary = "Answer", allowed = ["a.txt"], ledger = read };
@@ -102,10 +102,10 @@ flow summary_mismatch(state: WorkLedger, error: string) -> Result<Summary, WorkF
     return Err(WorkFailure { state = state, error = error });
 }
 flow summary_controller(value: Completed, answer: string, trap: bool) -> Result<Summary, WorkFailure> {
-    let log = (name: string, state: WorkLedger) => {};
+    let log = (name: string, state: WorkLedger) => ();
     return finish_summary(value, log, true, false) with {
-        LegacyEditStages.plan(_) => { finish summary_mismatch(value.state, "UNEXPECTED edit plan"); }
-        LegacyEditStages.child(_) => { finish summary_mismatch(value.state, "UNEXPECTED edit child"); }
+        LegacyEditStages.plan(_) => finish summary_mismatch(value.state, "UNEXPECTED edit plan");
+        LegacyEditStages.child(_) => finish summary_mismatch(value.state, "UNEXPECTED edit child");
         LegacyEditStages.aggregate(context) => {
             if trap || context != value.context { finish summary_mismatch(value.state, "UNEXPECTED edit aggregate"); }
             resume answer;

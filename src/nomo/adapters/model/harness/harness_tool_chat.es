@@ -20,7 +20,7 @@ impl ChatMain {
 
 public flow run_turn(request: string, allowed: Array<string>, invocation: Invocation) -> TurnResult {
     return run_turn_controller(request, allowed, invocation) with {
-        LegacyChatStages.main(context) => { resume (ChatMain {}).run(context); }
-        LegacyChatStages.child(task, files, selected, _, _, _, _) => { resume child_turn(task, files, selected); }
+        LegacyChatStages.main(context) => (ChatMain {}).run(context);
+        LegacyChatStages.child(task, files, selected, _, _, _, _) => child_turn(task, files, selected);
     };
 }

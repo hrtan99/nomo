@@ -1,7 +1,6 @@
 module nomo.adapters.cli.legacy.session_demo;
 
 import std.io.println;
-import std.collections.len as count;
 import std.memory.{Missing, Match};
 import std.agent.session.Conversation;
 import nomo.adapters.cli.arguments.session_cli_args.{parse, Options};
@@ -21,10 +20,10 @@ flow claim(options: Options, phase: string) -> Claim {
 
 flow initialize(options: Options) -> Result<bool, string> ![Memory, Error<StorageError>] {
     match read_claim() {
-        Some(_) => { return Err("demo already claimed; no reinitialization or repair"); } None() => {}
+        Some(_) => { return Err("demo already claimed; no reinitialization or repair"); } None() => (),
     }
     match read_metadata(options.session_id) {
-        Some(_) => { return Err("demo session metadata already exists"); } None() => {}
+        Some(_) => { return Err("demo session metadata already exists"); } None() => (),
     }
     let version = match write_claim(claim(options, "claimed"), Missing) {
         Ok(value) => value, Err(error) => { return Err(error); }
@@ -34,7 +33,7 @@ flow initialize(options: Options) -> Result<bool, string> ![Memory, Error<Storag
     let history = Conversation.load(SessionConfig.continue_or_new(session_key(options.session_id, options.save_id)));
     let terminal = match history.cursor { None() => true, _ => false };
     let no_summary = match history.summary { None() => true, _ => false };
-    if count(history.messages) != 0 || !terminal || !no_summary { return Err("demo namespace is not empty"); }
+    if history.messages.len() != 0 || !terminal || !no_summary { return Err("demo namespace is not empty"); }
     let ready = match write_claim(claim(options, "ready"), Match(version)) {
         Ok(value) => value, Err(error) => { return Err(error); }
     };
@@ -68,7 +67,7 @@ flow ready(options: Options) -> Result<bool, string> {
     }
     if options.verb == "save" {
         match read_metadata(options.session_id) {
-            Some(_) => { return Err("session metadata already exists"); } None() => {}
+            Some(_) => { return Err("session metadata already exists"); } None() => (),
         }
     } else {
         let row = match read_metadata(options.session_id) { Some(value) => value.value, None() => { return Err("session metadata missing"); } };
@@ -88,7 +87,7 @@ flow ready(options: Options) -> Result<bool, string> {
 
 // Unique opt-in handler; the root default stub remains a separate entry.
 public flow demo(args: Array<string>) -> i32 ![Console, Memory, Error<StorageError>, Error<IndexError>, Error<IOError>] {
-    if count(args) > 0 && args[0] == "continue" {
+    if args.len() > 0 && args[0] == "continue" {
         let options = match parse_continue(args) { Ok(value) => value, Err(error) => { println("REFUSED " + error); return 2; } };
         let owner = match owned(options.turn) { Ok(value) => value, Err(error) => { println("REFUSED " + error); return 3; } };
         if options.turn.save_id != owner.save_id { println("REFUSED predecessor differs from initial demo claim"); return 3; }
@@ -96,7 +95,7 @@ public flow demo(args: Array<string>) -> i32 ![Console, Memory, Error<StorageErr
         if current.snapshot.original_caps != caps(owner.maximum, owner.budget) { println("REFUSED original caps differ from demo claim"); return 3; }
         return run_continue(options);
     }
-    if count(args) > 13 { println("REFUSED expected bounded demo arguments"); return 2; }
+    if args.len() > 13 { println("REFUSED expected bounded demo arguments"); return 2; }
     var initializing = false;
     var normalized: Array<string> = [];
     var index: usize = 0;
@@ -117,7 +116,7 @@ public flow demo(args: Array<string>) -> i32 ![Console, Memory, Error<StorageErr
         return 0;
     }
     let admitted = if initializing { initialize(options) } else { ready(options) };
-    match admitted { Err(error) => { println("REFUSED " + error); return 3; } Ok(_) => {} }
+    match admitted { Err(error) => { println("REFUSED " + error); return 3; } Ok(_) => (), }
     if initializing { println("INITIALIZED demo namespace; one save permitted"); return 0; }
     return run_session(args);
 }

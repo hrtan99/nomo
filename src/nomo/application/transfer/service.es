@@ -13,7 +13,7 @@ import nomo.application.execution.ports.AttemptRepository;
 import nomo.application.execution.service.{begin, dispatching, returned, complete_attempt};
 
 public flow job(id: string) -> CopyJob ![CopyStorage] {
-    return match perform CopyStorage.lookup(id) { Some(value) => value, None() => { abort("conversation copy not found"); } };
+    return match perform CopyStorage.lookup(id) { Some(value) => value, None() => abort("conversation copy not found"), };
 }
 flow prepare(workspace: string, title: string, kind: string, source: string, digest: bytes, total: i64) -> CopyJob {
     let value = perform CopyStorage.prepare(workspace, title, kind, source, digest, total);
@@ -117,7 +117,7 @@ public flow save<R ~ ConversationReader, A ~ AttemptRepository, P ~ ResultPublic
     ![CopyStorage, ArchiveCodec, ArchiveFiles, TransferDisplay, Memory, Error<StorageError>, Error<MemoryConflict>] {
     let selected = history.load(session);
     var copies: Array<CopyJob> = [];
-    match perform CopyStorage.lookup(session) { Some(value) => { copies = copies.push(value); } None() => {} }
+    match perform CopyStorage.lookup(session) { Some(value) => { copies = copies.push(value); } None() => (), }
     let metadata = ExportMetadata { format = "nomo-native-metadata-1", conversation = selected, attempts = attempts.list(session, false), copies };
     let info = PortableInfo { id = selected.id, workspace = selected.workspace, title = selected.title, metadata = perform ArchiveCodec.encode(ArchiveDocument.Metadata(metadata)) };
     let content = perform ArchiveCodec.encode(ArchiveDocument.Conversation(PortableArchive { format = "nomo-native-conversation-1", session = info, events = history.messages(session, 0) }));

@@ -3,7 +3,6 @@ module nomo.adapters.cli.legacy.session_lifecycle;
 import std.io.{println, IOError as ConsoleError};
 import std.fs.IOError as FileError;
 import std.effects.Fs;
-import std.collections.len as count;
 import std.agent.message.Message;
 import std.json.{JsonValue, stringify};
 import nomo.adapters.cli.arguments.session_lifecycle_args.{Request, parse, help_lines, topic_lines};
@@ -19,8 +18,8 @@ flow display(label: string, values: Array<string>) -> unit {
     let conversion: Option<Message<JsonValue>> = message.cast<JsonValue>();
     let json = match conversion { Some(value) => value.body,
         None() => { println("GUIDANCE Use help for the command contract."); return; } };
-    match stringify(json) { Ok(value) => { println(label + " " + value); }
-        Err(_) => { println("GUIDANCE Use help for the command contract."); } }
+    match stringify(json) { Ok(value) => println(label + " " + value),
+        Err(_) => println("GUIDANCE Use help for the command contract."), }
 }
 
 flow help() -> unit { @limits([Iterations(16)]) for line in help_lines() { println(line); } }
@@ -29,7 +28,7 @@ flow refused(action: string, error: string) -> i32 {
 }
 flow bindings(identity: Identity) -> Array<string> {
     var allowed = identity.allowed[0];
-    if count(identity.allowed) == 2 { allowed = allowed + "," + identity.allowed[1]; }
+    if identity.allowed.len() == 2 { allowed = allowed + "," + identity.allowed[1]; }
     return ["--id", identity.id, "--workspace", identity.workspace, "--allow", allowed];
 }
 flow next(entry: string, args: Array<string>) -> unit {

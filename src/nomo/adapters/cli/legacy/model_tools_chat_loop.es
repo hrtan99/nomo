@@ -3,7 +3,6 @@ module nomo.adapters.cli.legacy.model_tools_chat_loop;
 import nomo.domain.context.large_context.request_bytes;
 import std.io.{println, read_line};
 import std.text.{char_count as len, len as byte_len, split, from_i32, starts_with, ends_with};
-import std.collections.len as count;
 import nomo.domain.text.read_text.within;
 import nomo.adapters.cli.arguments.cli_request.parse_line as parse_ascii;
 import nomo.adapters.cli.arguments.read_cli.parse_line as parse_unicode;
@@ -58,27 +57,25 @@ flow loop(allowed: Array<string>, initial: Invocation, unicode: bool, extended: 
         let framing = line_error(raw, unicode);
         if framing != "" { println("REFUSED " + framing); }
         else { match (if unicode { parse_unicode(raw) } else { parse_ascii(raw) }) {
-            Err(error) => { println("REFUSED " + error); },
-            Ok(command) => {
-                if command.kind == "exit" { stop("exit", lines, state, unicode); return 0; }
-                if command.kind == "help" { help(unicode); }
+            Err(error) => println("REFUSED " + error),
+            Ok(command) => if command.kind == "exit" { stop("exit", lines, state, unicode); return 0; }
+            if command.kind == "help" { help(unicode); }
+            else {
+                let invalid = if unicode { unicode_question_error(command.text) } else { ascii_question_error(command.text) };
+                if invalid != "" { println("REFUSED " + invalid); }
+                else if starts_with(command.text, "/") { println("REFUSED unknown slash command"); }
                 else {
-                    let invalid = if unicode { unicode_question_error(command.text) } else { ascii_question_error(command.text) };
-                    if invalid != "" { println("REFUSED " + invalid); }
-                    else if starts_with(command.text, "/") { println("REFUSED unknown slash command"); }
-                    else {
-                        if state.admitted >= turn_limit { println("REFUSED turn limit reached"); stop("turn limit", lines, state, unicode); return 1; }
-                        let capacity = if extended { extended_admission_error(state.usage) } else { admission_error(state.usage, state.maximum) };
-                        if capacity != "" { println("REFUSED " + capacity); stop("budget", lines, state, unicode); return 1; }
-                        println("TURN " + from_i32(state.admitted + 1) + " USER " + command.text);
-                        let result = if unicode { run_unicode_turn(command.text, allowed, state) } else { run_ascii_turn(command.text, allowed, state) };
-                        if !result.resolved { return 1; }
-                        state = result.state;
-                        ledger("TURN " + from_i32(state.admitted) + " ", state.usage, displayed_maximum(unicode, state.maximum));
-                        if result.status != 0 { stop("turn failed", lines, state, unicode); return 1; }
-                    }
+                    if state.admitted >= turn_limit { println("REFUSED turn limit reached"); stop("turn limit", lines, state, unicode); return 1; }
+                    let capacity = if extended { extended_admission_error(state.usage) } else { admission_error(state.usage, state.maximum) };
+                    if capacity != "" { println("REFUSED " + capacity); stop("budget", lines, state, unicode); return 1; }
+                    println("TURN " + from_i32(state.admitted + 1) + " USER " + command.text);
+                    let result = if unicode { run_unicode_turn(command.text, allowed, state) } else { run_ascii_turn(command.text, allowed, state) };
+                    if !result.resolved { return 1; }
+                    state = result.state;
+                    ledger("TURN " + from_i32(state.admitted) + " ", state.usage, displayed_maximum(unicode, state.maximum));
+                    if result.status != 0 { stop("turn failed", lines, state, unicode); return 1; }
                 }
-            }
+            },
         }; }
     }
     println("REFUSED input read limit reached; start a new in-memory invocation");
@@ -86,13 +83,13 @@ flow loop(allowed: Array<string>, initial: Invocation, unicode: bool, extended: 
 }
 
 public flow run_mode(args: Array<string>, unicode: bool) -> i32 {
-    if count(args) == 1 && (args[0] == "help" || args[0] == "--help") { help(unicode); return 0; }
+    if args.len() == 1 && (args[0] == "help" || args[0] == "--help") { help(unicode); return 0; }
     let usage = if unicode { "expected new --allow FILE[,FILE...] [--turns 4] or standalone help" } else { "expected new --allow FILE[,FILE] or standalone help" };
-    if (unicode && count(args) != 3 && count(args) != 5) || (!unicode && count(args) != 3) { return refused(usage, unicode); }
+    if (unicode && args.len() != 3 && args.len() != 5) || (!unicode && args.len() != 3) { return refused(usage, unicode); }
     if args[0] != "new" || args[1] != "--allow" { return refused(usage, unicode); }
-    if unicode && count(args) == 5 && (args[3] != "--turns" || args[4] != "4") { return refused("only --turns 4 is supported", true); }
+    if unicode && args.len() == 5 && (args[3] != "--turns" || args[4] != "4") { return refused("only --turns 4 is supported", true); }
     if (unicode && !within(args[2], 195)) || (!unicode && len(args[2]) > 97) { return refused(if unicode { "raw allowlist exceeds 195 UTF-8 bytes" } else { "raw allowlist exceeds 97 characters" }, unicode); }
     let allowed = split(args[2], ","); let invalid = allowed_error(allowed); if invalid != "" { return refused(invalid, unicode); }
-    let extended = unicode && count(args) == 5;
+    let extended = unicode && args.len() == 5;
     return loop(allowed, if extended { extended_invocation() } else { fresh_invocation() }, unicode, extended);
 }

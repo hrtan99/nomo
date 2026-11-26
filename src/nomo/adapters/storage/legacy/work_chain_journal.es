@@ -34,7 +34,7 @@ public flow available(turn: i32) -> Result<bool, string> {
 public flow begin(chain: string, turn: i32, binding: Binding) -> Result<Ticket, string> ![Memory, Error<StorageError>, Error<IndexError>] {
     let row = Record { format = 2, chain, turn, phase = "intent", binding };
     let error = invalid(row); if error != "" { return Err(error); }
-    match available(turn) { Ok(_) => {} Err(error) => { return Err(error); } }
+    match available(turn) { Ok(_) => (), Err(error) => { return Err(error); } }
     let version = match write(row, Missing) { Ok(value) => value, Err(error) => { return Err(error); } };
     return Ok(Ticket { row, version });
 }

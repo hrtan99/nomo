@@ -25,15 +25,15 @@ public flow run_save(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs
         println("work_save: --id ID --workspace BIND --path FILE --once TASK --allow FILE[,FILE]; one confirmed edit, one durable work record, no executable resume.");
         return 0;
     }
-    match edit_available() { Ok(_) => {} Err(error) => { return refused(fresh(), error); } }
-    match available(input.edit.id, input.edit.workspace, input.edit.path) { Ok(_) => {} Err(error) => { return refused(fresh(), error); } }
+    match edit_available() { Ok(_) => (), Err(error) => { return refused(fresh(), error); } }
+    match available(input.edit.id, input.edit.workspace, input.edit.path) { Ok(_) => (), Err(error) => { return refused(fresh(), error); } }
     let pending = match prepare_work(input) { Ok(value) => value, Err(failure) => { return refused(failure.state, failure.error); } };
     let selected = pending.selected;
     let predicted = match bind(selected.id, selected.workspace, selected.path, pending.prepared) {
         Ok(value) => value, Err(error) => { return refused(pending.state, error); } };
     let candidate = match partial(predicted, pending.evidence, pending.task, pending.prepared) {
         Ok(value) => value, Err(error) => { return refused(pending.state, error); } };
-    match admit(candidate) { Ok(_) => {} Err(error) => { return refused(pending.state, error); } }
+    match admit(candidate) { Ok(_) => (), Err(error) => { return refused(pending.state, error); } }
     let outcome = match execute(selected, pending.prepared) { Ok(value) => value, Err(error) => { return refused(pending.state, error); } };
     let completed = match finish_edit(pending, outcome) { Ok(value) => value, Err(failure) => { return refused(failure.state, failure.error); } };
     if !same_binding(outcome.binding, candidate.binding) || outcome.after != pending.prepared.proposal.after {
@@ -43,7 +43,7 @@ public flow run_save(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs
     let ticket = match publish(candidate) { Ok(value) => value, Err(error) => { return refused(completed.state, "edit completed; work not confirmed saved; " + error); } };
     println("WORK durable edit-completed / summary-unconfirmed; reservation1 step/1 call/2048 generation/65536 native may be attempted; no resume or replay.");
     let summary = match summarize(completed) { Ok(value) => value, Err(failure) => { return refused(failure.state, failure.error); } };
-    match complete(ticket, summary.answer) { Ok(_) => {} Err(error) => { return refused(summary.state, "edit completed; summary update not confirmed saved; " + error); } }
+    match complete(ticket, summary.answer) { Ok(_) => (), Err(error) => { return refused(summary.state, "edit completed; summary update not confirmed saved; " + error); } }
     println("SAVED work record summary-confirmed; edit and work records are separate commits.");
     display("FINAL ", summary.answer); ledger(summary.state); return 0;
 }

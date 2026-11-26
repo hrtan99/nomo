@@ -2,7 +2,6 @@ module app.main;
 
 import std.io.{println, read_all};
 import std.text.{char_count as len, split, from_usize};
-import std.collections.len as count;
 import std.json.parse;
 import std.agent.message.Message;
 import nomo.domain.harness.harness_contract.{Job, ChildTask, ChildResult, Ledger, Exchange, Outcome, Reservation};
@@ -56,9 +55,7 @@ flow assert_admission(item: Case) -> unit {
             }
             if value.ledger.spent + value.ledger.reserved > item.job.maximum { abort("reservation overspent"); }
         }
-        Err(error) => {
-            if item.accepted || !fixed_admission_error(error) { abort("unexpected admission refusal"); }
-        }
+        Err(error) => if item.accepted || !fixed_admission_error(error) { abort("unexpected admission refusal"); },
     }
     if saved != item.job { abort("admission mutated selected job"); }
 }
@@ -80,7 +77,7 @@ flow assert_outcome(item: Case, actual: Outcome) -> unit {
         Exchange { sender = "child-1", recipient = "main", kind = kind, child_id = "child-1", text = item.text },
         Exchange { sender = "main", recipient = "main", kind = "consume", child_id = "child-1", text = final }
     ];
-    if actual.messages != expected_messages || count(actual.messages) != 3 { abort("incorrect delegation message order"); }
+    if actual.messages != expected_messages || actual.messages.len() != 3 { abort("incorrect delegation message order"); }
     if len(actual.text) > 1280 || !printable_text(actual.text) { abort("unbounded parent answer"); }
     var characters: usize = 0;
     for message in actual.messages limit Iterations(3) {
@@ -97,9 +94,7 @@ flow assert_run(item: Case) -> unit {
             if !item.accepted { abort("executed unadmitted child"); }
             assert_outcome(item, value);
         }
-        Err(error) => {
-            if item.accepted || !fixed_admission_error(error) { abort("unexpected coordinator refusal"); }
-        }
+        Err(error) => if item.accepted || !fixed_admission_error(error) { abort("unexpected coordinator refusal"); },
     }
     if before != item.job { abort("child mutated parent context"); }
 }
@@ -114,25 +109,23 @@ flow assert_child(item: Case) -> unit {
 }
 
 flow assert_settle(item: Case) -> unit {
-    let admitted = match admit(item.job) { Ok(value) => value, Err(_) => { abort("invalid settlement fixture"); } };
+    let admitted = match admit(item.job) { Ok(value) => value, Err(_) => abort("invalid settlement fixture"), };
     let reservation = if item.mode == "forged" { item.reservation } else { admitted };
     match settle(reservation, item.reply) {
         Ok(value) => {
             if !item.accepted { abort("accepted forged reservation"); }
             assert_outcome(item, value);
         }
-        Err(error) => {
-            if item.accepted || !fixed_admission_error(error) { abort("unexpected settlement refusal"); }
-        }
+        Err(error) => if item.accepted || !fixed_admission_error(error) { abort("unexpected settlement refusal"); },
     }
 }
 
 public flow main(args: Array<string>) -> i32 {
-    let parsed = match parse(read_all()) { Ok(value) => value, Err(_) => { abort("invalid synthetic JSON"); } };
+    let parsed = match parse(read_all()) { Ok(value) => value, Err(_) => abort("invalid synthetic JSON"), };
     let message = Message.new(parsed);
     let conversion: Option<Message<Array<Case>>> = message.cast<Array<Case>>();
-    let fixtures = match conversion { Some(value) => value.body, None() => { abort("invalid fixture shape"); } };
-    if count(fixtures) == 0 || count(fixtures) > 512 { abort("invalid fixture count"); }
+    let fixtures = match conversion { Some(value) => value.body, None() => abort("invalid fixture shape"), };
+    if fixtures.len() == 0 || fixtures.len() > 512 { abort("invalid fixture count"); }
     var ordinal: usize = 0;
     for item in fixtures limit Iterations(512) {
         println("CASE " + from_usize(ordinal) + " " + item.label);
@@ -144,6 +137,6 @@ public flow main(args: Array<string>) -> i32 {
         println("PASS " + from_usize(ordinal) + " " + item.label);
         ordinal = ordinal + 1;
     }
-    println("PASS HARNESS001A " + from_usize(count(fixtures)));
+    println("PASS HARNESS001A " + from_usize(fixtures.len()));
     return 0;
 }

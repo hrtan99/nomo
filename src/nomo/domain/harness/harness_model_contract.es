@@ -3,7 +3,6 @@ module nomo.domain.harness.harness_model_contract;
 import nomo.domain.context.large_context.{message_bytes, message_frame_bytes, context_bytes};
 import nomo.domain.serialization.json.{FieldError, decode_fields as json_fields};
 import std.text.{char_count as len, trim, from_char};
-import std.collections.len as count;
 import std.json.JsonValue;
 import std.agent.message.Message;
 import nomo.domain.text.text.{printable, context_json_error};
@@ -65,7 +64,7 @@ impl AsciiReadPlan {
             Err(FieldError.Json) => { return Err(if self.compatible { read_plan_error(raw, "json") } else { "invalid delegation JSON" }); }
             Err(FieldError.Shape) => { return Err(if self.compatible { read_plan_error(raw, "shape") } else { "delegation fields must be strings" }); }
         };
-        if count(fields) != 2 { return Err(if self.compatible { read_plan_error(raw, "arity") } else { "unsupported delegation verb or arity" }); }
+        if fields.len() != 2 { return Err(if self.compatible { read_plan_error(raw, "arity") } else { "unsupported delegation verb or arity" }); }
         if fields[0] != "delegate" { return Err(if self.compatible { read_plan_error(raw, "verb") } else { "unsupported delegation verb or arity" }); }
         if !bounded(fields[1], message_bytes()) { return Err(if self.compatible { read_plan_error(raw, "task") } else { "invalid bounded delegated task" }); }
         return Ok(fields[1]);

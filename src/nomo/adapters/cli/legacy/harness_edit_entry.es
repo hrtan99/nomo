@@ -44,7 +44,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.stat
     if input.help { help(); return 0; }
     let selected = Selector { id = input.id, workspace = input.workspace, path = input.path };
     // Before File or Model, every existing slot consumes the invocation.
-    match available() { Ok(_) => {} Err(error) => { return refused(state, error); } }
+    match available() { Ok(_) => (), Err(error) => { return refused(state, error); } }
     let before = match read_original(input.path) { Ok(value) => value, Err(error) => { return refused(state, error); } };
     let initial = context("plan", selected, input.request, "", before);
     let invalid = context_error(initial); if invalid != "" { return refused(state, invalid); }

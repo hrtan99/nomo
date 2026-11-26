@@ -116,8 +116,8 @@ flow post_atomic_failure(summary: string) -> bool {
     let pending = match publish_partial(row, work) { Ok(value) => value, Err(_) => { return false; } };
     let journal = Journal { format = 2, chain = "root-op", turn = 1, phase = "completed", binding = binding };
     if work_summary_error(summary) == "" || validate(pending) != "" || pending.phase != "summary-unconfirmed" || pending.reserved != summary_reservation() { return false; }
-    match confirm(pending, summary) { Ok(_) => { return false; } Err(_) => {} }
-    match successor(pending, "opaque-version", "child-op", "update target from context", ["context.txt"], turn_caps()) { Ok(_) => { return false; } Err(_) => {} }
+    match confirm(pending, summary) { Ok(_) => { return false; } Err(_) => (), }
+    match successor(pending, "opaque-version", "child-op", "update target from context", ["context.txt"], turn_caps()) { Ok(_) => { return false; } Err(_) => (), }
     let lines = match render(pending, Some(journal)) { Ok(value) => value, Err(_) => { return false; } };
     var shown_partial = false; var shown_completed = false;
     for line in lines limit Iterations(16) {

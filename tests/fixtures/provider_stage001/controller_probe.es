@@ -16,7 +16,7 @@ type Case = { label: string, raw: string, maximum: i32, budget: i32, initial: St
     model_expected: bool, context: Context, expected: Turn };
 flow slash() -> string { return std.text.from_char('\\'); }
 flow collect(event: Event) -> unit {
-    let encoded = match json([event.role, event.kind, event.name, event.text]) { Ok(value) => value, Err(_) => { abort("collector encoding refused"); } };
+    let encoded = match json([event.role, event.kind, event.name, event.text]) { Ok(value) => value, Err(_) => abort("collector encoding refused"), };
     println("EVENT " + encoded);
 }
 flow execute(item: Case, initial: State, console: bool) -> Turn {
@@ -24,17 +24,17 @@ flow execute(item: Case, initial: State, console: bool) -> Turn {
         return model_turn_controller(item.raw, item.maximum, item.budget, initial) with {
             ModelText.infer(value) => {
                 if !item.model_expected || value != item.context { abort("model context or dispatch changed"); }
-                println("PORT model"); resume item.reply;
+                println("PORT model"); item.reply
             }
-            ConversationOutput.publish(value) => { resume publish(value); }
+            ConversationOutput.publish(value) => publish(value);
         };
     }
     return model_turn_controller(item.raw, item.maximum, item.budget, initial) with {
         ModelText.infer(value) => {
             if !item.model_expected || value != item.context { abort("model context or dispatch changed"); }
-            println("PORT model"); resume item.reply;
+            println("PORT model"); item.reply
         }
-        ConversationOutput.publish(value) => { resume collect(value); }
+        ConversationOutput.publish(value) => collect(value);
     };
 }
 flow verify(item: Case, initial: State, console: bool) -> Turn {
@@ -60,14 +60,14 @@ public flow model_abort(args: Array<string>) -> i32 {
     let initial = __EMPTY__;
     let result = model_turn_controller("Q", 1, 2, initial) with {
         ModelText.infer(_) => { println("PORT abort model"); abort("D11_EXPECTED_MODEL_ABORT"); }
-        ConversationOutput.publish(value) => { resume collect(value); }
+        ConversationOutput.publish(value) => collect(value);
     };
     println("UNREACHABLE model abort"); return 0;
 }
 public flow output_abort(args: Array<string>) -> i32 {
     let initial = __EMPTY__;
     let result = model_turn_controller("Q", 1, 2, initial) with {
-        ModelText.infer(_) => { abort("UNEXPECTED model after output abort"); }
+        ModelText.infer(_) => abort("UNEXPECTED model after output abort");
         ConversationOutput.publish(_) => { println("PORT abort output"); abort("D11_EXPECTED_OUTPUT_ABORT"); }
     };
     println("UNREACHABLE output abort"); return 0;

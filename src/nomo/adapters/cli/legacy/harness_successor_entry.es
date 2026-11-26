@@ -29,13 +29,13 @@ public flow run_continue(args: Array<string>) -> i32 ![Console, Memory, Fs.read<
     println("TURN 2 USER " + options.request);
     let turn = run_turn(options.request, options.predecessor.allowed, invocation);
     if turn.status != 0 || !turn.resolved {
-        if turn.resolved { match failed(ticket, turn) { Ok(_) => {} Err(error) => { return refused(error); } } }
+        if turn.resolved { match failed(ticket, turn) { Ok(_) => (), Err(error) => { return refused(error); } } }
         return refused("Harness continuation did not complete; admission retained and successor not published");
     }
     let saved = match from_turn(options.successor, ticket.predecessor.checkpoint, ticket.predecessor.version.opaque, turn) {
         Ok(value) => value, Err(error) => { return refused(error); }
     };
-    match publish(ticket, saved) { Ok(_) => {} Err(error) => { return refused(error); } }
+    match publish(ticket, saved) { Ok(_) => (), Err(error) => { return refused(error); } }
     println("SAVED Harness successor " + options.successor.id + " from " + options.predecessor.id);
     return 0;
 }

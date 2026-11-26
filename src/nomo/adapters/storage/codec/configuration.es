@@ -11,7 +11,7 @@ type Entry = { key: string, value: JsonValue };
 
 flow cast<T>(value: JsonValue, label: string) -> T {
     let result: Option<Message<T>> = Message.new(value).cast<T>();
-    return match result { Some(value) => value.body, None() => { abort("project configuration has an invalid field type: " + label); } };
+    return match result { Some(value) => value.body, None() => abort("project configuration has an invalid field type: " + label), };
 }
 
 flow field<T>(values: Array<Entry>, name: string, fallback: T) -> T {
@@ -20,7 +20,7 @@ flow field<T>(values: Array<Entry>, name: string, fallback: T) -> T {
 }
 
 public flow decode(text: string) -> Settings {
-    let root = match parse(text) { Ok(value) => cast<Array<Entry>>(value, "root entries"), Err(_) => { abort("TOML decoder returned invalid JSON"); } };
+    let root = match parse(text) { Ok(value) => cast<Array<Entry>>(value, "root entries"), Err(_) => abort("TOML decoder returned invalid JSON"), };
     var values = root;
     for entry in root {
         if entry.key == "project" { values = cast<Array<Entry>>(entry.value, "project entries"); break; }
@@ -36,9 +36,9 @@ public flow decode(text: string) -> Settings {
 
 public flow fingerprint(text: string) -> bytes {
     let result: Option<Message<bytes>> = Message.new(sha256(utf8_encode(text))).cast<bytes>();
-    return match result { Some(value) => value.body, None() => { abort("SHA-256 representation unavailable"); } };
+    return match result { Some(value) => value.body, None() => abort("SHA-256 representation unavailable"), };
 }
 
 public flow observation(text: string) -> ConfigurationOutput {
-    return match parse(text) { Ok(value) => cast<ConfigurationOutput>(value, "cached observation"), Err(_) => { abort("configuration observation is not JSON"); } };
+    return match parse(text) { Ok(value) => cast<ConfigurationOutput>(value, "cached observation"), Err(_) => abort("configuration observation is not JSON"), };
 }

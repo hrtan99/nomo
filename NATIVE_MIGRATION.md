@@ -2,7 +2,15 @@
 
 The shipping `scripts/nomo` entry still uses the existing Python project controller. The opt-in `native_project` flow is the migration implementation, not a completed replacement.
 
-## Current source and toolchain, 2026-11-26
+## Current handler syntax and toolchain, 2026-11-26
+
+The selected graph is official CLI **0.23.1** at `cb34bdc448dc2f09bdef00adb9d26451f772f802`, paired with its own locked frontend/interpreter and installed SDK. The official incremental build, source/tree/lock/registry checks and SDK receipt verification passed. Existing Cargo registry, build artifacts and native tools are reused instead of allocating another Docker cache volume.
+
+The source now uses the specification's implicit Handler tail resumption. All 203 explicit Handler tail resumptions in business source have been replaced with values or unit-returning expressions. Single-expression Handler, match and lambda arms and handled bodies omit redundant braces. Statement sequences and control flow retain the blocks they require. The legacy `resume` import alias remains an ordinary callable name. Existing fixtures use the same syntax; their expected outputs and data literals are preserved.
+
+An existing positive scenario exposed obsolete free `std.collections.len` imports; those calls now use standard `.len()` methods. After that correction, the same existing `tool_then_final` scenario passes through the actual controller and production output Handler with its original whole-return-value assertion and four expected events. No new negative matrix or real model request was added. The normal full-source check still exits 4 with the effect-identity projection error reported in frontend #101; this migration does not establish complete compiler/runtime acceptance. See [the syntax migration receipt](examples/native-project/handler-syntax-0231-20261126.json) for exact scope and observations.
+
+## Previous 0.23.0 layer migration, 2026-11-26
 
 The working source now contains the combined implementation and its layer migration, rather than only a prepared patch. The selected graph is official CLI **0.23.0** at `f904fa0d`, with the exact core/frontend/interpreter revisions from its Cargo.lock and a matching installed SDK. The existing pinned taplo 0.10.0 binary was copied byte-for-byte into this graph's cache; jq comes from the existing container image.
 

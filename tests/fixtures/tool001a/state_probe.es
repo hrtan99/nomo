@@ -4,7 +4,6 @@ import nomo.domain.conversation.state.{fresh, add};
 import nomo.core.conversation.{Event};
 import nomo.adapters.cli.legacy.tool_agent.{tool_turn, fresh_tools, Session};
 import std.io.println;
-import std.collections.len;
 
 flow main(args: Array<string>) -> i32 {
     let first = tool_turn("read:docs/a.txt", 3, 3, fresh_tools());
@@ -52,7 +51,7 @@ flow raw_refusal(args: Array<string>) -> i32 {
     let history = result.state.history;
     if result.status != 2 || history.spent != 0 || history.stopped { abort("invalid raw request charged or stopped"); }
     if result.state.reserved != 4096 { abort("conservative scan reservation changed"); }
-    if len(history.events) != 2 || history.events[0] != prior.events[0] { abort("unsafe event or prior context changed"); }
+    if history.events.len() != 2 || history.events[0] != prior.events[0] { abort("unsafe event or prior context changed"); }
     let error = history.events[1];
     if error.role != "error" || error.kind != "error" || error.name != "" || error.text != "expected printable ASCII single-line input" {
         abort("raw input stored instead of bounded rejection");

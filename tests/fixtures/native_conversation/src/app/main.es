@@ -57,11 +57,9 @@ public flow main(args: Array<string>) -> i32 ![Memory, Console, Error<StorageErr
         ConversationContext.settings(session) => {
             if session != saved.id || history.load(session).next_event != 1 { abort("settings were not loaded after the user append"); }
             println("PORT settings");
-            resume settings();
+            settings()
         }
-        ConversationContext.acquire(session, task, configuration) => {
-            resume context(history, attempts, session, task, configuration);
-        }
+        ConversationContext.acquire(session, task, configuration) => context(history, attempts, session, task, configuration);
         ConversationModel.summarize(input) => {
             dispatched(history, attempts, saved.id, "summary", 32768);
             if input.request != "" || input.initial_request != request || input.history.len() != 1 || input.history[0].text != request {
@@ -76,7 +74,7 @@ public flow main(args: Array<string>) -> i32 ![Memory, Console, Error<StorageErr
             }
             resume Answer { text = "Completed deterministic turn" };
         }
-        ConversationOutput.write(line) => { println("OUTPUT " + line); resume; }
+        ConversationOutput.write(line) => println("OUTPUT " + line);
     };
     let selected = history.load(saved.id);
     if !accepted || selected.next_event != 3 || selected.first_user != 0 || selected.summary_event != 1 || selected.summary_through != 0 {

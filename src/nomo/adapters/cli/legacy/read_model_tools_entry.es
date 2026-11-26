@@ -2,7 +2,6 @@ module nomo.adapters.cli.legacy.read_model_tools_entry;
 
 import nomo.adapters.cli.legacy.harness_model_tools_entry.extract_allow;
 import std.io.println;
-import std.collections.len as count;
 import std.text.split;
 import nomo.adapters.cli.arguments.read_cli.parse_args;
 import nomo.domain.harness.harness_tool_contract.fresh;
@@ -16,7 +15,7 @@ flow help() -> unit {
 }
 
 public flow run(args: Array<string>) -> i32 {
-    if count(args) == 0 || count(args) > 7 { return refused(fresh(), "expected bounded new --once TEXT --allow FILE[,FILE...]"); }
+    if args.len() == 0 || args.len() > 7 { return refused(fresh(), "expected bounded new --once TEXT --allow FILE[,FILE...]"); }
     let extracted = match extract_allow(args, true) { Ok(value) => value, Err(error) => { return refused(fresh(), error); } };
     let request = match parse_args(extracted.remaining) { Ok(value) => value, Err(error) => { return refused(fresh(), error); } };
     if request.kind == "help" { if extracted.supplied { return refused(fresh(), "help must be used alone"); } help(); return 0; }

@@ -2,7 +2,6 @@ module nomo.domain.sessions.recoverable_events;
 
 import nomo.domain.text.read_text.{data_safe, safe};
 import nomo.domain.context.large_context.{history_bytes, event_bytes};
-import std.collections.len as count;
 import std.text.len as byte_len;
 import nomo.core.conversation.Event;
 import nomo.domain.sessions.redaction.{Policy, policy_error, text as redact};
@@ -40,7 +39,7 @@ flow metadata_error(item: Event, policy: Policy) -> string {
 // persisted frames still cross the full invalid()/decode() boundary on load.
 public flow shape_error(frame: Frame, policy: Policy) -> string {
     let policy_problem = policy_error(policy); if policy_problem != "" { return policy_problem; }
-    let n = count(frame.events);
+    let n = frame.events.len();
     if (frame.format != 1 && frame.format != 2) || frame.turns < 0 || frame.turns > 48 || n > 4096 { return "invalid recoverable event frame"; }
     if frame.turns == 0 && (frame.first_count != 0 || (frame.format == 1 && n != 0)) { return "invalid empty event frame"; }
     if frame.turns == 1 && (frame.first_count == 0 || frame.first_count > (if frame.format == 2 { 768 } else { 24 }) || frame.first_count > n || (frame.format == 1 && frame.first_count != n)) { return "invalid first event boundary"; }
@@ -59,7 +58,7 @@ public flow shape_error(frame: Frame, policy: Policy) -> string {
 
 public flow invalid(frame: Frame, policy: Policy) -> string {
     let policy_problem = policy_error(policy); if policy_problem != "" { return policy_problem; }
-    let n = count(frame.events);
+    let n = frame.events.len();
     if (frame.format != 1 && frame.format != 2) || frame.turns < 0 || frame.turns > 48 || n > 4096 { return "invalid recoverable event frame"; }
     if frame.turns == 0 && (frame.first_count != 0 || (frame.format == 1 && n != 0)) { return "invalid empty event frame"; }
     if frame.turns == 1 && (frame.first_count == 0 || frame.first_count > (if frame.format == 2 { 768 } else { 24 }) || frame.first_count > n || (frame.format == 1 && frame.first_count != n)) { return "invalid first event boundary"; }
@@ -77,7 +76,7 @@ public flow invalid(frame: Frame, policy: Policy) -> string {
 
 public flow append(before: Frame, turn: i32, input: Array<Event>, policy: Policy) -> Result<Advance, string> {
     let error = invalid(before, policy); if error != "" { return Err(error); }
-    if turn != before.turns + 1 || turn > 48 || count(input) == 0 || count(input) > 24 { return Err("invalid recoverable event batch order or size"); }
+    if turn != before.turns + 1 || turn > 48 || input.len() == 0 || input.len() > 24 { return Err("invalid recoverable event batch order or size"); }
     var records = before.events; var replacements: usize = 0;
     @limits([Iterations(24)]) for item in input {
         if !safe(item.role, 128) || !safe(item.kind, 128) || !safe(item.name, 128) { return Err("invalid event metadata"); }
@@ -90,7 +89,7 @@ public flow append(before: Frame, turn: i32, input: Array<Event>, policy: Policy
         replacements = replacements + clean.replacements;
         records = records.push(item { text = clean.value });
     }
-    let first = if turn == 1 { count(records) } else { before.first_count };
+    let first = if turn == 1 { records.len() } else { before.first_count };
     let next = before { turns = turn, first_count = first, events = records };
     let problem = invalid(next, policy); if problem != "" { return Err(problem); }
     return Ok(Advance { frame = next, replacements });
@@ -101,14 +100,14 @@ public flow append(before: Frame, turn: i32, input: Array<Event>, policy: Policy
 // safe/redact/JSON decode/encode before durable large-text externalization.
 public flow append_encoded(before: Frame, turn: i32, input: Array<Event>, policy: Policy) -> Result<Advance, string> {
     let error = shape_error(before, policy); if error != "" { return Err(error); }
-    if turn != before.turns + 1 || turn > 48 || count(input) == 0 || count(input) > 24 { return Err("invalid recoverable event batch order or size"); }
+    if turn != before.turns + 1 || turn > 48 || input.len() == 0 || input.len() > 24 { return Err("invalid recoverable event batch order or size"); }
     var records = before.events;
     @limits([Iterations(24)]) for item in input {
         let problem = metadata_error(item, policy); if problem != "" { return Err(problem); }
         if byte_len(item.text) > event_bytes() { return Err("recoverable event text exceeds limits or is unsafe"); }
         records = records.push(item);
     }
-    let first = if turn == 1 { count(records) } else { before.first_count };
+    let first = if turn == 1 { records.len() } else { before.first_count };
     let next = before { turns = turn, first_count = first, events = records };
     let problem = shape_error(next, policy); if problem != "" { return Err(problem); }
     return Ok(Advance { frame = next, replacements = 0 });
@@ -116,7 +115,7 @@ public flow append_encoded(before: Frame, turn: i32, input: Array<Event>, policy
 
 // The first and followup work use the same bounded, redacted event batch.
 public flow work_batch(records: Array<Event>, policy: Policy) -> Result<Frame, string> {
-    if count(records) == 0 || count(records) > 24 { return Err("invalid work event batch"); }
+    if records.len() == 0 || records.len() > 24 { return Err("invalid work event batch"); }
     var encoded: Array<Event> = [];
     @limits([Iterations(24)]) for item in records {
         let text = match encode(item.text, policy) { Ok(value) => value.value, Err(error) => { return Err(error); } };

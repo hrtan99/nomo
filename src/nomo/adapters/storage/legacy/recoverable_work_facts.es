@@ -3,7 +3,6 @@ module nomo.adapters.storage.legacy.recoverable_work_facts;
 import nomo.domain.sessions.facts.{Facts, WorkFacts};
 import nomo.application.sessions.facts.WorkFactsReader;
 import nomo.domain.sessions.work_fact_projection.{extra_fact, completed_fact, compact, abandoned_fact, settled_usage};
-import std.collections.len as count;
 import nomo.domain.sessions.redaction.Policy;
 import nomo.adapters.storage.legacy.recoverable_work_store.load as load_work;
 import nomo.adapters.storage.legacy.check_lifecycle.{FirstCheck, FollowupCheck};
@@ -21,10 +20,8 @@ flow read_snapshot(policy: Policy, binding: string) -> Result<Facts, string> {
     let second_check = match second_reader.read() { Ok(item) => item, Err(error) => { return Err(error); } };
     var first_facts: Option<WorkFacts> = None(); var second_facts: Option<WorkFacts> = None(); var calls: i32 = 0; var generation: i32 = 0;
     match first {
-        None() => {
-            match edit_available() { Ok(_) => {} Err(_) => { return Err("orphan first edit"); } }
-            match first_check { Some(_) => { return Err("orphan first check"); } None() => {} }
-        }
+        None() => match edit_available() { Ok(_) => (), Err(_) => { return Err("orphan first edit"); } }
+        match first_check { Some(_) => { return Err("orphan first check"); } None() => (), },
         Some(item) => {
             let work = item.value.work;
             if work.phase == "abandoned" {
@@ -41,12 +38,10 @@ flow read_snapshot(policy: Policy, binding: string) -> Result<Facts, string> {
         }
     }
     match followup {
-        None() => {
-            match followup_edit_available() { Ok(_) => {} Err(_) => { return Err("orphan followup edit"); } }
-            match second_check { Some(_) => { return Err("orphan followup check"); } None() => {} }
-        }
+        None() => match followup_edit_available() { Ok(_) => (), Err(_) => { return Err("orphan followup edit"); } }
+        match second_check { Some(_) => { return Err("orphan followup check"); } None() => (), },
         Some(item) => {
-            match first_facts { Some(_) => {} None() => { return Err("first work facts missing"); } }
+            match first_facts { Some(_) => (), None() => { return Err("first work facts missing"); } }
             let work = item.value.work;
             if work.phase == "abandoned" {
                 calls = calls + work.reserved.calls; generation = generation + work.reserved.generation;
@@ -64,16 +59,16 @@ flow read_snapshot(policy: Policy, binding: string) -> Result<Facts, string> {
     var additional: Array<WorkFacts> = [];
     let extra = match load_continuous(binding) { Ok(value) => value, Err(error) => { return Err(error); } };
     match extra { Some(value) => {
-        match second_facts { None() => { return Err("followup facts missing"); } Some(_) => {} }
+        match second_facts { None() => { return Err("followup facts missing"); } Some(_) => (), }
         let items = value.value.history.push(value.value.current);
         var index: usize = 0;
         @limits([Iterations(48)]) for item in items {
             let fact = match extra_fact(item, policy) { Ok(value) => value, Err(error) => { return Err(error); } };
-            additional = additional.push(if index + 2 < count(items) { compact(fact) } else { fact }); index = index + 1; calls = calls + if item.result.phase == "abandoned" { 7 } else { item.result.calls }; generation = generation + if item.result.phase == "abandoned" { if item.result.source == "wide-v5" || item.result.source == "wide-v4" { 286720 } else { if item.result.source == "high-input-v2" { 917504 } else { if item.result.source == "wide-v3" || item.result.source == "high-input-v1" { 188416 } else { if item.result.source == "wide" || item.result.source == "wide-v2" { 61440 } else { 51200 } } } } } else { item.result.generation };
+            additional = additional.push(if index + 2 < items.len() { compact(fact) } else { fact }); index = index + 1; calls = calls + if item.result.phase == "abandoned" { 7 } else { item.result.calls }; generation = generation + if item.result.phase == "abandoned" { if item.result.source == "wide-v5" || item.result.source == "wide-v4" { 286720 } else { if item.result.source == "high-input-v2" { 917504 } else { if item.result.source == "wide-v3" || item.result.source == "high-input-v1" { 188416 } else { if item.result.source == "wide" || item.result.source == "wide-v2" { 61440 } else { 51200 } } } } } else { item.result.generation };
         }
-    } None() => {} }
-    if count(additional) >= 1 { first_facts = match first_facts { Some(value) => Some(compact(value)), None() => None() }; }
-    if count(additional) >= 2 { second_facts = match second_facts { Some(value) => Some(compact(value)), None() => None() }; }
+    } None() => (), }
+    if additional.len() >= 1 { first_facts = match first_facts { Some(value) => Some(compact(value)), None() => None() }; }
+    if additional.len() >= 2 { second_facts = match second_facts { Some(value) => Some(compact(value)), None() => None() }; }
     return Ok(Facts { first = first_facts, followup = second_facts, additional, calls, generation });
 }
 

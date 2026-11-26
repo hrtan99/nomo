@@ -1,6 +1,5 @@
 module nomo.adapters.cli.arguments.harness_successor_args;
 
-import std.collections.len as count;
 import std.text.{char_count as len, split};
 import nomo.domain.harness.model_tool_contract.question_error;
 import nomo.session.harness_checkpoint.Identity;
@@ -9,15 +8,15 @@ import nomo.domain.sessions.harness_checkpoint.identity_error;
 public type Options = { help: bool, predecessor: Identity, successor: Identity, request: string };
 
 public flow parse(args: Array<string>, continuing: bool) -> Result<Options, string> {
-    if count(args) == 1 && (args[0] == "help" || args[0] == "--help") {
+    if args.len() == 1 && (args[0] == "help" || args[0] == "--help") {
         let blank = Identity { id = "", workspace = "", allowed = [] };
         return Ok(Options { help = true, predecessor = blank, successor = blank, request = "" });
     }
     let expected: usize = if continuing { 10 } else { 8 };
-    if count(args) != expected { return Err("expected --id OLD --successor NEW --workspace BIND --allow FILE[,FILE] and continue --once TEXT"); }
+    if args.len() != expected { return Err("expected --id OLD --successor NEW --workspace BIND --allow FILE[,FILE] and continue --once TEXT"); }
     var id = ""; var next = ""; var workspace = ""; var allow = ""; var request = "";
     var seen: Array<string> = []; var index: usize = 0;
-    @limits([Iterations(5)]) while index < count(args) {
+    @limits([Iterations(5)]) while index < args.len() {
         let flag = args[index];
         @limits([Iterations(5)]) for prior in seen { if flag == prior { return Err("duplicate successor option"); } }
         seen = seen.push(flag);

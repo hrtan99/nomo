@@ -227,29 +227,29 @@ flow observation(kind: string, change: string, accepted: bool) -> bool {
     let before = match frame(kind) { Ok(value) => value, Err(_) => { return false; } };
     var after: Snapshot = changed(before, change);
     if change == "present_after_empty" { after = match frame("confirmed") { Ok(value) => value, Err(_) => { return false; } }; }
-    let result = handle { observe_sessions("owned", "target.txt") } with {
+    let result = handle observe_sessions("owned", "target.txt") with {
         SessionObservation.capture(pass) => {
             let value = match pass { ObservationPass.First => before, ObservationPass.Recheck => after };
-            resume Ok(value);
+            Ok(value)
         }
     };
     return match result { Ok(value) => accepted && value == before, Err(_) => !accepted };
 }
 flow observation_error(recheck: bool) -> bool {
     let value = match frame("confirmed") { Ok(value) => value, Err(_) => { return false; } };
-    let result = handle { observe_sessions("owned", "target.txt") } with {
+    let result = handle observe_sessions("owned", "target.txt") with {
         SessionObservation.capture(pass) => {
             let second = match pass { ObservationPass.First => false, ObservationPass.Recheck => true };
             if !recheck && second { abort("observation continued after refusal"); }
             let result: Result<Snapshot, string> = if second == recheck { Err("synthetic observation refused") } else { Ok(value) };
-            resume result;
+            result
         }
     };
     return match result { Ok(_) => false, Err(error) => error == "synthetic observation refused" };
 }
 flow invalid_binding_before_capture() -> bool {
-    let result = handle { observe_sessions("", "target.txt") } with {
-        SessionObservation.capture(pass) => { resume Err("unexpected capture"); }
+    let result = handle observe_sessions("", "target.txt") with {
+        SessionObservation.capture(pass) => Err("unexpected capture");
     };
     return match result { Ok(_) => false, Err(error) => error == "invalid edit operation identity" };
 }
@@ -278,8 +278,8 @@ flow terminal_refused(args: Array<string>) -> bool { return match startup(args) 
 flow latest_bound(args: Array<string>, parent: string, expected: TurnRequest) -> bool {
     let input = match startup(args) { Ok(value) => value, Err(_) => { return false; } };
     if !input.latest || input.root_id != "" || input.parent != "" { return false; }
-    match work_request(input, 2, "replace selected literal") { Ok(_) => { return false; } Err(_) => {} }
-    match show_selector(input, 1) { Ok(_) => { return false; } Err(_) => {} }
+    match work_request(input, 2, "replace selected literal") { Ok(_) => { return false; } Err(_) => (), }
+    match show_selector(input, 1) { Ok(_) => { return false; } Err(_) => (), }
     let selected = match bind_parent(input, parent) { Ok(value) => value, Err(_) => { return false; } };
     return !selected.latest && selected.parent == parent && selected.root_id == parent &&
         match work_request(selected, 2, "replace selected literal") { Ok(value) => value == expected, Err(_) => false };

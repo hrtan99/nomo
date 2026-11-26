@@ -1,6 +1,5 @@
 module nomo.adapters.cli.arguments.config;
 
-import std.collections.len;
 import std.text.{parse_i32, from_i32};
 
 public type Config = { steps: i32, budget: i32, once: bool, request: string, help: bool, error: string };
@@ -15,7 +14,7 @@ public flow load(args: Array<string>) -> Config {
 }
 
 public flow load_for(args: Array<string>, provider: string) -> Config {
-    if len(args) > 9 { return invalid("too many arguments"); }
+    if args.len() > 9 { return invalid("too many arguments"); }
     var steps: i32 = 3;
     var budget: i32 = 16;
     var once = false;
@@ -24,10 +23,10 @@ public flow load_for(args: Array<string>, provider: string) -> Config {
     var seen_budget = false;
     var seen_model = false;
     var index: usize = 0;
-    @limits([Iterations(10)]) while index < len(args) {
+    @limits([Iterations(10)]) while index < args.len() {
         let flag = args[index];
         if flag == "--help" {
-            if len(args) != 1 { return invalid("--help must be used alone"); }
+            if args.len() != 1 { return invalid("--help must be used alone"); }
             return Config { steps, budget, once = false, request = "", help = true, error = "" };
         }
         if flag == "--resume" || flag == "--persist" || flag == "--live" || flag == "--tools" || flag == "--cancel" {
@@ -36,7 +35,7 @@ public flow load_for(args: Array<string>, provider: string) -> Config {
         if flag != "--model" && flag != "--steps" && flag != "--budget" && flag != "--once" {
             return invalid("unknown option");
         }
-        if index + 1 >= len(args) { return invalid("missing option value"); }
+        if index + 1 >= args.len() { return invalid("missing option value"); }
         let value = args[index + 1];
         if flag == "--model" {
             if seen_model { return invalid("duplicate --model"); }

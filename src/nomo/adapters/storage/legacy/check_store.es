@@ -17,8 +17,8 @@ public flow invalid(value: Frame, policy: Policy, binding: string) -> string {
     if value.check.phase != "complete" {
         if value.stdout != "" || value.stderr != "" || value.stdout_truncated || value.stderr_truncated { return "unfinished check has output"; }
     } else {
-        match decode(value.stdout, policy) { Ok(_) => {} Err(problem) => { return problem; } }
-        match decode(value.stderr, policy) { Ok(_) => {} Err(problem) => { return problem; } }
+        match decode(value.stdout, policy) { Ok(_) => (), Err(problem) => { return problem; } }
+        match decode(value.stderr, policy) { Ok(_) => (), Err(problem) => { return problem; } }
     }
     return "";
 }
@@ -36,7 +36,7 @@ public flow load_rows<A ~ CheckAccess>(row: Option<MemoryEntry<string, Frame>>, 
                 if edit != "" { return Err(edit); }
             }
         }
-        None() => {}
+        None() => (),
     }
     return Ok(row);
 }
@@ -51,7 +51,7 @@ public flow write_rows<R ~ CasRows<Frame>>(rows: R, value: Frame, expected: Opti
 }
 
 public flow plan_rows<R ~ CasRows<Frame>>(rows: R, work: Work, digest: string, policy: Policy, binding: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
-    match rows.read() { Ok(None()) => {} Ok(Some(_)) => { return Err("check already planned; no retry"); } Err(error) => { return Err(error); } }
+    match rows.read() { Ok(None()) => (), Ok(Some(_)) => { return Err("check already planned; no retry"); } Err(error) => { return Err(error); } }
     let record = Record { format = 1, phase = "planned", id = work.id, digest, outcome = "", exit_code = "" };
     let frame = Frame { format = 1, policy_binding = binding, work_history = work.history_version, workspace = work.workspace, path = work.path, check = record, stdout = "", stderr = "", stdout_truncated = false, stderr_truncated = false };
     match write_rows(rows, frame, None(), policy, binding) { Ok(_) => Ok(true), Err(error) => Err(error) }

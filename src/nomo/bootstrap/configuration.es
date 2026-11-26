@@ -21,13 +21,13 @@ public flow load() -> Settings ![SessionContext, CommandOperations, Memory, Cons
     let conversion = TaploConfigurationConverter {};
     let cache = NativeConfigurationCache {};
     return load_configuration(NativeHistory {}) with {
-        ConfigurationSource.read() => { resume source.read(); }
-        ConfigurationCodec.fingerprint(raw) => { resume codec.fingerprint(raw); }
-        ConfigurationCodec.decode_json(text) => { resume codec.decode_json(text); }
-        ConfigurationCodec.observation(text) => { resume codec.observation(text); }
-        ConfigurationConversion.toml(raw) => { resume conversion.toml(raw); }
-        ConfigurationConversion.entries(json) => { resume conversion.entries(json); }
-        ConfigurationCache.lookup(workspace) => { resume cache.lookup(workspace); }
-        ConfigurationCache.remember(workspace, value) => { cache.remember(workspace, value); resume; }
+        ConfigurationSource.read() => source.read();
+        ConfigurationCodec.fingerprint(raw) => codec.fingerprint(raw);
+        ConfigurationCodec.decode_json(text) => codec.decode_json(text);
+        ConfigurationCodec.observation(text) => codec.observation(text);
+        ConfigurationConversion.toml(raw) => conversion.toml(raw);
+        ConfigurationConversion.entries(json) => conversion.entries(json);
+        ConfigurationCache.lookup(workspace) => cache.lookup(workspace);
+        ConfigurationCache.remember(workspace, value) => cache.remember(workspace, value);
     };
 }

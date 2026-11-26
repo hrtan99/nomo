@@ -18,10 +18,10 @@ flow file(path: string) -> FileState {
     return match Data.Files.get(path) { Some(value) => value, None() => FileState { exists = false, text = "" } };
 }
 flow journal(id: string) -> Journal {
-    return match Data.Journals.get(id) { Some(value) => value, None() => { abort("fixture journal missing"); } };
+    return match Data.Journals.get(id) { Some(value) => value, None() => abort("fixture journal missing"), };
 }
 flow step(key: string) -> Step {
-    return match Data.Steps.get(key) { Some(value) => value, None() => { abort("fixture step missing"); } };
+    return match Data.Steps.get(key) { Some(value) => value, None() => abort("fixture step missing"), };
 }
 flow command(program: string, arguments: Array<string>) -> bool {
     if program == "/bin/mkdir" { return true; }
@@ -44,16 +44,14 @@ flow command(program: string, arguments: Array<string>) -> bool {
 }
 
 flow execute(history: NativeHistory, session: string, mode: string, edit: string) -> ChangeOutcome {
-    return handle {
-        if mode == "apply" { apply_plan("write_file", [Change { operation = "write", path = "note.txt", target = "", text = "before new\n" }]) }
-        else { if mode == "undo" { undo_changes(edit) } else { rollback_changes(edit) } }
-    } with {
-        SessionContext.current() => { resume session; }
-        MutationFiles.normalize(path) => { resume path; }
-        MutationFiles.exists(path) => { resume file(path).exists; }
-        MutationFiles.read(path) => { resume file(path).text; }
+    return handle if mode == "apply" { apply_plan("write_file", [Change { operation = "write", path = "note.txt", target = "", text = "before new\n" }]) }
+        else { if mode == "undo" { undo_changes(edit) } else { rollback_changes(edit) } } with {
+        SessionContext.current() => session;
+        MutationFiles.normalize(path) => path;
+        MutationFiles.exists(path) => file(path).exists;
+        MutationFiles.read(path) => file(path).text;
         MutationFiles.replace(path, text) => {
-            let pending = match pending_request(session) { Some(value) => value, None() => { abort("write had no pending owner"); } };
+            let pending = match pending_request(session) { Some(value) => value, None() => abort("write had no pending owner"), };
             let id = session + "-" + from_i64(pending.call);
             let current = journal(id); let saved = step(id + "/0");
             if current.phase != "applying" || saved.phase != "applying" || saved.paths.len() != 1 {
@@ -62,33 +60,27 @@ flow execute(history: NativeHistory, session: string, mode: string, edit: string
             if !file(saved.paths[0].before).exists || file(saved.paths[0].before).text != "before old\n" { abort("write preceded its before snapshot"); }
             println("PORT write after durable recovery metadata");
             Data.Files.put(path, FileState { exists = true, text = text });
-            resume;
+            ()
         }
-        MutationFiles.command(program, arguments, call) => { resume command(program, arguments); }
-        ChangeJournal.lookup(id) => { resume Data.Journals.get(id); }
-        ChangeJournal.insert(value) => { Data.Journals.insert(value.id, value); resume; }
-        ChangeJournal.save(value) => { Data.Journals.put(value.id, value); resume; }
-        ChangeJournal.step(key) => { resume Data.Steps.get(key); }
-        ChangeJournal.save_step(key, value) => { Data.Steps.put(key, value); resume; }
+        MutationFiles.command(program, arguments, call) => command(program, arguments);
+        ChangeJournal.lookup(id) => Data.Journals.get(id);
+        ChangeJournal.insert(value) => Data.Journals.insert(value.id, value);
+        ChangeJournal.save(value) => Data.Journals.put(value.id, value);
+        ChangeJournal.step(key) => Data.Steps.get(key);
+        ChangeJournal.save_step(key, value) => Data.Steps.put(key, value);
         ChangeJournal.list(selected) => {
             let page = Data.Journals.page(None(), 100);
             var result: Array<Journal> = [];
             @limits([Iterations(100)]) for item in page.entries   { if item.value.session == selected { result = result.push(item.value); } }
             resume result;
         }
-        MutationHistory.record(role, name, value, call) => {
-            let saved = handle { save_record(role, name, value, call) } with { SessionContext.current() => { resume session; } };
-            resume saved;
-        }
-        MutationHistory.finish(name, call, value) => {
-            handle { tool_finished(name, call, value) } with { SessionContext.current() => { resume session; } };
-            resume;
-        }
-        MutationHistory.session(id) => { resume history.load(id); }
-        MutationHistory.pending(id) => { resume pending_request(id); }
-        MutationHistory.message(id, index) => { resume history.message(id, index); }
-        MutationHistory.published(id, call, name) => { resume result_published(id, call, name); }
-        MutationOutput.write(line) => { println(line); resume; }
+        MutationHistory.record(role, name, value, call) => handle save_record(role, name, value, call) with { SessionContext.current() => session; };
+        MutationHistory.finish(name, call, value) => handle tool_finished(name, call, value) with { SessionContext.current() => session; };
+        MutationHistory.session(id) => history.load(id);
+        MutationHistory.pending(id) => pending_request(id);
+        MutationHistory.message(id, index) => history.message(id, index);
+        MutationHistory.published(id, call, name) => result_published(id, call, name);
+        MutationOutput.write(line) => println(line);
     };
 }
 

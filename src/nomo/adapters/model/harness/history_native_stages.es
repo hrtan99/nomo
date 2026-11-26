@@ -94,7 +94,7 @@ impl HighInputEditChild {
 }
 
 flow frame(fields: Array<string>) -> string {
-    return match encode(fields, "work stage conversion failed", "work stage encoding failed") { Ok(value) => value, Err(error) => { abort(error); } };
+    return match encode(fields, "work stage conversion failed", "work stage encoding failed") { Ok(value) => value, Err(error) => abort(error), };
 }
 
 flow delegated(value: Delegation) -> string { return frame(["delegate", value.task]); }

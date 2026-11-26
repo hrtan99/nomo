@@ -62,7 +62,7 @@ public flow work_data_error(work: Record, events: EventFrame, policy: Policy) ->
         if checked.replacements != 0 || checked.value != field { return "work data contains a known sensitive literal"; }
     }
     @limits([Iterations(48)]) for item in events.events {
-        match decode(item.text, policy) { Ok(_) => {} Err(error) => { return error; } }
+        match decode(item.text, policy) { Ok(_) => (), Err(error) => { return error; } }
     }
     return "";
 }
@@ -92,7 +92,7 @@ flow write(value: Frame, expected: Option<MemoryEntry<string, Frame>>, policy: P
     let version = match commit_native(Runs.Rows, target, desired, condition) { Ok(item) => item, Err(problem) => { return Err(problem); } };
     // commit_native already verifies the exact stored value and version. Keep
     // the value already owned by this process instead of loading it again.
-    match expected { Some(item) => { if item.version.opaque == version.opaque { return Err("recoverable work version did not change"); } } None() => {} }
+    match expected { Some(item) => if item.version.opaque == version.opaque { return Err("recoverable work version did not change"); }, None() => (), }
     return Ok(MemoryEntry { key = "work", value = desired, version });
 }
 
@@ -100,7 +100,7 @@ public flow admit(id: string, workspace: string, path: string, request: string, 
     let chat_error = admission_chat_error(chat, chat); if chat_error != "" { return Err(chat_error); }
     let current = match chat_matches_version(chat.version) { Ok(item) => item, Err(error) => { return Err(error); } };
     if !current { return Err("completed recoverable chat changed; no retry"); }
-    match load(policy, binding) { Ok(None()) => {} Ok(Some(_)) => { return Err("recoverable work already admitted; no retry"); } Err(error) => { return Err(error); } }
+    match load(policy, binding) { Ok(None()) => (), Ok(Some(_)) => { return Err("recoverable work already admitted; no retry"); } Err(error) => { return Err(error); } }
     let wide = chat.value.chat.format >= 13;
     let row = running_record_mode(id, workspace, path, request, chat.version.opaque, wide, chat.value.chat.format == 18 || chat.value.chat.format == 19);
     let frame = Frame { format = 1, policy_binding = binding, work = row, events = empty_events() };

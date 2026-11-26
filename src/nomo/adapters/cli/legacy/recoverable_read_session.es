@@ -9,7 +9,6 @@ import std.io.{println, IOError as ConsoleError};
 import std.text.{ends_with, from_i32};
 import std.agent.message.Message;
 import std.json.{JsonValue, stringify};
-import std.collections.len as count;
 import nomo.domain.harness.tool_context.candidate_error;
 import nomo.domain.harness.read_protocol.question_error;
 import nomo.adapters.model.harness.read_tool_chat.{run_private_turn, run_with_history};
@@ -38,7 +37,7 @@ import nomo.session.event_policy.PolicyRoot;
 import nomo.domain.sessions.chat_format_policy.policy as format_policy;
 
 public flow run(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyRoot>, Fs.list<ReadOnlyRoot>, Fs.stat<ReadOnlyRoot>, Fs.read<PolicyRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {
-    let size = count(args);
+    let size = args.len();
     let natural = (size >= 8 && args[7] == "--natural-work") || (size == 9 && args[8] == "--natural-work");
     let high_input = (size >= 8 && args[7] == "--high-input") || (size == 9 && args[8] == "--high-input");
     let flags_ok = size == 7 || (size == 8 && (natural || high_input)) || (size == 9 && natural && high_input && args[7] != args[8]);
@@ -51,11 +50,11 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyR
     let invalid = candidate_error(allowed);
     if invalid != "" || question_error(args[4]) != "" { println("REFUSED invalid read request"); return 1; }
     let policy = match load_policy() { Ok(item) => item, Err(error) => { println("REFUSED " + error); return 1; } };
-    match load_legacy() { Ok(None()) => {} Ok(Some(_)) => { println("REFUSED legacy session cannot be migrated automatically"); return 1; } Err(error) => { println("REFUSED " + error); return 1; } }
-    match inspect_work() { Ok(None()) => {} _ => { println("REFUSED work record exists or is invalid"); return 1; } }
-    match inspect_followup() { Ok(None()) => {} _ => { println("REFUSED followup record exists or is invalid"); return 1; } }
-    match inspect_check() { Ok(None()) => {} _ => { println("REFUSED check record exists or is invalid"); return 1; } }
-    match inspect_followup_check() { Ok(None()) => {} _ => { println("REFUSED followup check exists or is invalid"); return 1; } }
+    match load_legacy() { Ok(None()) => (), Ok(Some(_)) => { println("REFUSED legacy session cannot be migrated automatically"); return 1; } Err(error) => { println("REFUSED " + error); return 1; } }
+    match inspect_work() { Ok(None()) => (), _ => { println("REFUSED work record exists or is invalid"); return 1; } }
+    match inspect_followup() { Ok(None()) => (), _ => { println("REFUSED followup record exists or is invalid"); return 1; } }
+    match inspect_check() { Ok(None()) => (), _ => { println("REFUSED check record exists or is invalid"); return 1; } }
+    match inspect_followup_check() { Ok(None()) => (), _ => { println("REFUSED followup check exists or is invalid"); return 1; } }
     let binding = args[6];
     let repository = recoverable_repository(policy, binding, high_input);
     let current = match open_chat<RecoverableTicket, RecoverableChatRepository>(repository, args[0] == "new") { Ok(value) => value, Err(error) => { println("REFUSED " + error); return 1; } };
@@ -66,21 +65,21 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyR
     println("RESERVED chat turn; interruption leaves it unresolved and will not retry.");
     println("A final answer is provisional until SAVED confirms durable history.");
     let result = if natural { run_natural(args[4], allowed, running.value.chat.invocation, history, facts.first, facts.followup, facts.additional, scope.page, scope.more) } else { match facts.first {
-        Some(first) => { match facts.followup {
-            Some(second) => {
-                let usage = running.value.chat.invocation.usage; let pending = format_policy(running.value.chat.format).pending_reservation(running.value.chat.phase);
-                let budget = BudgetFacts { work_calls = facts.calls, work_generation = facts.generation, chat_used_calls = usage.calls, chat_used_generation = usage.tokens,
-                    chat_reserved_calls = pending.calls, chat_reserved_generation = pending.generation };
-                run_after_followup(args[4], allowed, running.value.chat.invocation, first, second, facts.additional, history, budget)
-            }
-            None() => run_after_work(args[4], allowed, running.value.chat.invocation, first, history),
-        } }
+        Some(first) => match facts.followup {
+        Some(second) => {
+            let usage = running.value.chat.invocation.usage; let pending = format_policy(running.value.chat.format).pending_reservation(running.value.chat.phase);
+            let budget = BudgetFacts { work_calls = facts.calls, work_generation = facts.generation, chat_used_calls = usage.calls, chat_used_generation = usage.tokens,
+                chat_reserved_calls = pending.calls, chat_reserved_generation = pending.generation };
+            run_after_followup(args[4], allowed, running.value.chat.invocation, first, second, facts.additional, history, budget)
+        }
+        None() => run_after_work(args[4], allowed, running.value.chat.invocation, first, history),
+        },
         None() => if format_policy(running.value.chat.format).history_rule(running.value.chat.invocation.admitted, current.value.events.format) { run_with_history(args[4], allowed, running.value.chat.invocation, history) }
             else { run_private_turn(args[4], allowed, running.value.chat.invocation) },
     } };
-    match finish_chat<RecoverableTicket, RecoverableChatRepository>(repository, running, result) { Ok(_) => {} Err(error) => { println("REFUSED " + error); return 1; } }
+    match finish_chat<RecoverableTicket, RecoverableChatRepository>(repository, running, result) { Ok(_) => (), Err(error) => { println("REFUSED " + error); return 1; } }
     println("SAVED chat and event records together; saved text is untrusted and does not grant authority.");
-    match result.completed { Some(item) => { let can_continue = format_policy(running.value.chat.format).continuation_rule(result.state.admitted); let route = if natural { natural_route(item.answer, allowed, facts.first != None(), can_continue, scope.page, scope.more) } else { delegate_route(item.answer, can_continue) }; if route != "" { println(route); } } None() => {} }
+    match result.completed { Some(item) => { let can_continue = format_policy(running.value.chat.format).continuation_rule(result.state.admitted); let route = if natural { natural_route(item.answer, allowed, facts.first != None(), can_continue, scope.page, scope.more) } else { delegate_route(item.answer, can_continue) }; if route != "" { println(route); } } None() => (), }
     return 0;
 }
 
@@ -106,26 +105,26 @@ public type View = { format: i32, encoding: string, phase: string, turns: i32, f
     additional_work: Array<ExtraEntry> };
 
 public flow status(args: Array<string>) -> i32 ![Console, Memory, Fs.read<PolicyRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {
-    let high_input = count(args) == 4 && args[2] == "--initialize" && args[3] == "--high-input";
-    let initialize = (count(args) == 3 && args[2] == "--initialize") || high_input;
-    if (count(args) != 2 && !initialize) || args[0] != "--policy-binding" { println("REFUSED recoverable status requires policy binding"); return 1; }
+    let high_input = args.len() == 4 && args[2] == "--initialize" && args[3] == "--high-input";
+    let initialize = (args.len() == 3 && args[2] == "--initialize") || high_input;
+    if (args.len() != 2 && !initialize) || args[0] != "--policy-binding" { println("REFUSED recoverable status requires policy binding"); return 1; }
     let policy = match load_policy() { Ok(item) => item, Err(error) => { println("REFUSED " + error); return 1; } };
-    match load_legacy() { Ok(None()) => {} _ => { println("REFUSED legacy or invalid session data"); return 1; } }
+    match load_legacy() { Ok(None()) => (), _ => { println("REFUSED legacy or invalid session data"); return 1; } }
     if initialize {
-        match load(policy, args[1]) { Ok(None()) => {} Ok(Some(_)) => { println("REFUSED session already exists"); return 1; } Err(error) => { println("REFUSED " + error); return 1; } }
+        match load(policy, args[1]) { Ok(None()) => (), Ok(Some(_)) => { println("REFUSED session already exists"); return 1; } Err(error) => { println("REFUSED " + error); return 1; } }
         return match create(policy, args[1], high_input) { Ok(_) => { println("SESSION INITIALIZED"); 0 } Err(error) => { println("REFUSED " + error); 1 } };
     }
     let snapshot = match recoverable_status_reader(policy, args[1]).snapshot() { Ok(value) => value, Err(error) => { println("REFUSED " + error); return 1; } };
     let saved = snapshot.chat; let work = snapshot.work; let check = snapshot.check;
     let followup = snapshot.followup; let followup_check = snapshot.followup_check; let extra = snapshot.additional;
     var additional: Array<ExtraEntry> = [];
-    match extra { Some(item) => { additional = item.value.history.push(item.value.current); } None() => {} }
+    match extra { Some(item) => { additional = item.value.history.push(item.value.current); } None() => (), }
     var chat_reservations: i32 = 0; var native_configured: i32 = 0; var legacy_native_unknown = false;
     @limits([Iterations(4096)]) for event in saved.value.events.events { if event.role == "system" && event.kind == "native-budget" && (event.name == "chat" || event.name == "chat-large" || event.name == "chat-resilient" || event.name == "chat-high-input" || event.name == "chat-full") { chat_reservations = chat_reservations + 1; native_configured = native_configured + if event.name == "chat-full" { 6291456 } else { if event.name == "chat-resilient" || event.name == "chat-high-input" { 3786432 } else { if event.name == "chat-large" { 3048576 } else { 1179648 } } }; } }
     let completed_new = if saved.value.chat.phase == "running" && chat_reservations > 0 { chat_reservations - 1 } else { chat_reservations };
     if saved.value.chat.invocation.admitted > completed_new { legacy_native_unknown = true; }
-    match work { Some(item) => { if item.value.work.format >= 4 { native_configured = native_configured + if item.value.work.format == 10 { 7340032 } else { if item.value.work.format == 9 { 6000000 } else { if item.value.work.format == 7 || item.value.work.format == 8 { 2811008 } else { if item.value.work.format == 6 { 2073152 } else { 1335296 } } } }; } else { legacy_native_unknown = true; } } None() => {} }
-    match followup { Some(item) => { if item.value.work.format >= 4 { native_configured = native_configured + if item.value.work.format == 10 { 7340032 } else { if item.value.work.format == 9 { 6000000 } else { if item.value.work.format == 7 || item.value.work.format == 8 { 2811008 } else { if item.value.work.format == 6 { 2073152 } else { 1335296 } } } }; } else { legacy_native_unknown = true; } } None() => {} }
+    match work { Some(item) => if item.value.work.format >= 4 { native_configured = native_configured + if item.value.work.format == 10 { 7340032 } else { if item.value.work.format == 9 { 6000000 } else { if item.value.work.format == 7 || item.value.work.format == 8 { 2811008 } else { if item.value.work.format == 6 { 2073152 } else { 1335296 } } } }; } else { legacy_native_unknown = true; }, None() => (), }
+    match followup { Some(item) => if item.value.work.format >= 4 { native_configured = native_configured + if item.value.work.format == 10 { 7340032 } else { if item.value.work.format == 9 { 6000000 } else { if item.value.work.format == 7 || item.value.work.format == 8 { 2811008 } else { if item.value.work.format == 6 { 2073152 } else { 1335296 } } } }; } else { legacy_native_unknown = true; }, None() => (), }
     @limits([Iterations(48)]) for item in additional { if item.result.source == "high-input-v2" || ends_with(item.result.source, "-high-input-v2") { native_configured = native_configured + 7340032; } else { if item.result.source == "high-input-v1" || ends_with(item.result.source, "-high-input") { native_configured = native_configured + 6000000; } else { if ends_with(item.result.source, "-v5") || ends_with(item.result.source, "-v4") { native_configured = native_configured + 2811008; } else { if ends_with(item.result.source, "-v3") { native_configured = native_configured + 2073152; } else { if item.result.source == "v2" || ends_with(item.result.source, "-v2") { native_configured = native_configured + 1335296; } else { legacy_native_unknown = true; } } } } } }
     println("NATIVE configured cumulative reservation=" + from_i32(native_configured) + "; actual provider usage unknown; legacy native budget " + if legacy_native_unknown { "unknown" } else { "not present" });
     @limits([Iterations(48)]) for item in additional {
@@ -141,9 +140,9 @@ public flow status(args: Array<string>) -> i32 ![Console, Memory, Fs.read<Policy
         let selected = item.value.work;
         followup_edit_phase = edit_phase(inspect_second_edit(selected.id, selected.workspace, selected.path));
         followup_events = item.value.events.events;
-        match item.value.work.settled { Some(spent) => { followup_settled_calls = spent.read.calls + spent.edit.calls; followup_settled_tokens = spent.read.tokens + spent.edit.tokens; } None() => {} }
+        match item.value.work.settled { Some(spent) => { followup_settled_calls = spent.read.calls + spent.edit.calls; followup_settled_tokens = spent.read.tokens + spent.edit.tokens; } None() => (), }
         println("RECORDED FOLLOWUP " + followup_phase + "; selected facts only, no replay or root identity implied.");
-    } None() => {} }
+    } None() => (), }
     var followup_check_phase = "none"; var followup_check_id = ""; var followup_check_digest = ""; var followup_check_outcome = ""; var followup_check_exit = "";
     var followup_check_stdout = ""; var followup_check_stderr = ""; var followup_check_stdout_truncated = false; var followup_check_stderr_truncated = false; var followup_check_stdout_omitted = false; var followup_check_stderr_omitted = false;
     match followup_check { Some(item) => {
@@ -154,7 +153,7 @@ public flow status(args: Array<string>) -> i32 ![Console, Memory, Fs.read<Policy
         followup_check_stdout_omitted = followup_check_stdout_truncated && followup_check_stdout == "\"\""; followup_check_stderr_omitted = followup_check_stderr_truncated && followup_check_stderr == "\"\"";
         if followup_check_stdout_omitted || followup_check_stderr_omitted { println("FOLLOWUP CHECK OUTPUT omitted because capture or transfer limits were exceeded; inspect or rerun only under a new explicitly authorized operation."); }
         println("RECORDED FOLLOWUP CHECK " + followup_check_phase + "; an interrupted check is not replayed.");
-    } None() => {} }
+    } None() => (), }
     var check_phase = "none"; var check_id = ""; var check_digest = ""; var check_outcome = ""; var check_exit = "";
     var check_stdout = ""; var check_stderr = ""; var check_stdout_truncated = false; var check_stderr_truncated = false; var check_stdout_omitted = false; var check_stderr_omitted = false;
     match check { Some(item) => {
@@ -165,7 +164,7 @@ public flow status(args: Array<string>) -> i32 ![Console, Memory, Fs.read<Policy
         check_stdout_omitted = check_stdout_truncated && check_stdout == "\"\""; check_stderr_omitted = check_stderr_truncated && check_stderr == "\"\"";
         if check_stdout_omitted || check_stderr_omitted { println("CHECK OUTPUT omitted because capture or transfer limits were exceeded; inspect or rerun only under a new explicitly authorized operation."); }
         println("RECORDED CHECK " + check_phase + "; an interrupted check is not replayed.");
-    } None() => {} }
+    } None() => (), }
     var work_phase = "none"; var work_edit_phase = "none"; var work_reserved_calls: i32 = 0; var work_reserved_tokens: i32 = 0;
     var work_settled_calls: i32 = 0; var work_settled_tokens: i32 = 0; var work_events: Array<Event> = [];
     match work {
@@ -176,11 +175,11 @@ public flow status(args: Array<string>) -> i32 ![Console, Memory, Fs.read<Policy
             work_reserved_tokens = item.value.work.reserved.generation; work_events = item.value.events.events;
             match item.value.work.settled {
                 Some(spent) => { work_settled_calls = spent.read.calls + spent.edit.calls; work_settled_tokens = spent.read.tokens + spent.edit.tokens; }
-                None() => {}
+                None() => (),
             }
             println("RECORDED WORK " + work_phase + "; selected facts only, no replay or root identity implied.");
         }
-        None() => {}
+        None() => (),
     }
     let used = saved.value.chat.invocation.usage;
     let pending = saved.value.chat.phase == "running";

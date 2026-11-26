@@ -2,7 +2,6 @@ module nomo.model_tool_test;
 
 import std.io.println;
 import std.text.{split, char_count as len};
-import std.collections.len as count;
 import std.json.{JsonValue, stringify};
 import std.agent.message.Message;
 import nomo.core.conversation.{State, Event};
@@ -15,8 +14,8 @@ import nomo.domain.context.path_policy.valid_path;
 flow emit_action(value: Action) -> unit {
     let message = Message.new(value);
     let converted: Option<Message<JsonValue>> = message.cast<JsonValue>();
-    let json = match converted { Some(item) => item.body, None() => { abort("test action conversion"); } };
-    let encoded = match stringify(json) { Ok(item) => item, Err(_) => { abort("test action JSON"); } };
+    let json = match converted { Some(item) => item.body, None() => abort("test action conversion"), };
+    let encoded = match stringify(json) { Ok(item) => item, Err(_) => abort("test action JSON"), };
     println("OK " + encoded);
 }
 
@@ -34,9 +33,9 @@ flow pure_path(args: Array<string>) -> bool { return valid_path(args[0]); }
 flow probe(args: Array<string>) -> i32 {
     let mode = args[0];
     if mode == "decode" || mode == "final_only" {
-        let allowed = if count(args) > 2 { split(args[2], ",") } else { ["a.txt", "b.txt"] };
+        let allowed = if args.len() > 2 { split(args[2], ",") } else { ["a.txt", "b.txt"] };
         match decode_reply(args[1], allowed, mode == "final_only") {
-            Ok(value) => { emit_action(value); } Err(error) => { println("ERR " + error); }
+            Ok(value) => emit_action(value), Err(error) => println("ERR " + error),
         }
         return 0;
     }
@@ -47,8 +46,8 @@ flow probe(args: Array<string>) -> i32 {
             allowed = [args[2], args[3]], final_only = true };
         let message = Message.new(context);
         let converted: Option<Message<JsonValue>> = message.cast<JsonValue>();
-        let json = match converted { Some(item) => item.body, None() => { abort("test context conversion"); } };
-        let encoded = match stringify(json) { Ok(item) => item, Err(_) => { abort("test context JSON"); } };
+        let json = match converted { Some(item) => item.body, None() => abort("test context conversion"), };
+        let encoded = match stringify(json) { Ok(item) => item, Err(_) => abort("test context JSON"), };
         println("JSON " + encoded);
         println("RESULT " + context_error(context));
         return 0;
@@ -72,7 +71,7 @@ flow probe(args: Array<string>) -> i32 {
             abort("final model accounting");
         }
         if budget_error(final, limits, false) == "" || budget_error(final, limits, true) == "" { abort("hard step cap"); }
-        if first.history.spent != 0 || count(first.history.events) != 0 || first.calls != 0 { abort("pure state was mutated"); }
+        if first.history.spent != 0 || first.history.events.len() != 0 || first.calls != 0 { abort("pure state was mutated"); }
         println("LEDGERS_OK"); return 0;
     }
     if mode == "budgets" {
@@ -124,8 +123,8 @@ flow boundary(args: Array<string>) -> i32 {
     let result = run_loop("hello", ["a.txt"], limits, prior);
     if result.status != 4 || result.state.history.spent != 0 || result.state.calls != prior.calls ||
         result.state.tokens != prior.tokens || result.state.tools != 0 || result.state.scan != 0 { abort("boundary charged denied action"); }
-    if count(result.state.history.events) > 32 || result.state.history.characters > 8192 { abort("terminal reserve exceeded"); }
-    if count(prior.history.events) > 0 && result.state.history.events[0] != prior.history.events[0] {
+    if result.state.history.events.len() > 32 || result.state.history.characters > 8192 { abort("terminal reserve exceeded"); }
+    if prior.history.events.len() > 0 && result.state.history.events[0] != prior.history.events[0] {
         abort("existing history changed");
     }
     println("BOUNDARY_OK"); return 0;

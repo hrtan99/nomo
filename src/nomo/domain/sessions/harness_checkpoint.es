@@ -3,7 +3,6 @@ module nomo.domain.sessions.harness_checkpoint;
 import nomo.domain.context.large_context.{message_bytes, message_frame_bytes, context_bytes, history_bytes};
 import nomo.domain.serialization.json.{encode as encode_json, string_fields};
 import std.text.{char_count as len, len as byte_len, is_ascii, parse_i32, from_char, from_i32, from_usize};
-import std.collections.len as count;
 import nomo.domain.text.text.printable;
 import nomo.core.conversation.{Event, State};
 import nomo.domain.harness.model_tool_contract.Session;
@@ -21,7 +20,7 @@ public type Checkpoint = { format: i32, identity: Identity, request: string, tas
 
 public flow identity_error(identity: Identity) -> string {
     if !bounded(identity.id, 128) || !bounded(identity.workspace, 128) { return "invalid checkpoint identity"; }
-    if count(identity.allowed) > 2 { return "legacy checkpoint supports at most two allowed files"; }
+    if identity.allowed.len() > 2 { return "legacy checkpoint supports at most two allowed files"; }
     return allowed_error(identity.allowed);
 }
 
@@ -48,7 +47,7 @@ public flow validate(saved: Checkpoint, requested: Identity) -> Result<Checkpoin
     if exact.steps > maximum.steps || exact.calls > maximum.calls || exact.tokens > maximum.tokens ||
         exact.tools > maximum.tools || exact.scan > maximum.scan { return Err("checkpoint usage exceeds saved limits"); }
     let records = saved.records;
-    if count(records) != record_count { return Err("invalid checkpoint record count"); }
+    if records.len() != record_count { return Err("invalid checkpoint record count"); }
     let record_error = records_error(records, history_bytes(), "checkpoint");
     if record_error != "" { return Err(record_error); }
     if !same(records[0], "user", "request", "", saved.request) || !same(records[1], "main", "plan", "", records[1].text) ||
@@ -153,7 +152,7 @@ public flow records_error(records: Array<Event>, maximum: usize, label: string) 
 
 public flow fields_error(fields: Array<string>, successor: bool) -> string {
     let error = (if successor { "successor" } else { "checkpoint" }) + " string fields exceed bounds";
-    if count(fields) > (if successor { 100 } else { 80 }) { return error; }
+    if fields.len() > (if successor { 100 } else { 80 }) { return error; }
     var characters: usize = 0; var index: usize = 0;
     @limits([Iterations(100)]) for field in fields {
         if len(field) > (message_frame_bytes()) { return error; }
@@ -164,14 +163,14 @@ public flow fields_error(fields: Array<string>, successor: bool) -> string {
 }
 
 public flow encode(saved: Checkpoint) -> Result<string, string> {
-    match validate(saved, saved.identity) { Err(error) => { return Err(error); } Ok(_) => {} }
-    var second = ""; if count(saved.identity.allowed) == 2 { second = saved.identity.allowed[1]; }
+    match validate(saved, saved.identity) { Err(error) => { return Err(error); } Ok(_) => (), }
+    var second = ""; if saved.identity.allowed.len() == 2 { second = saved.identity.allowed[1]; }
     var fields = ["nomo-harness-checkpoint-v1", saved.identity.id, saved.identity.workspace, saved.identity.allowed[0], second,
         saved.request, saved.task, saved.result, saved.tool, saved.outcome, saved.answer,
         from_i32(saved.usage.steps), from_i32(saved.usage.calls), from_i32(saved.usage.tokens),
         from_i32(saved.usage.tools), from_i32(saved.usage.scan), from_i32(saved.maximum.steps),
         from_i32(saved.maximum.calls), from_i32(saved.maximum.tokens), from_i32(saved.maximum.tools),
-        from_i32(saved.maximum.scan), "1", "completed", "true", from_usize(count(saved.records))];
+        from_i32(saved.maximum.scan), "1", "completed", "true", from_usize(saved.records.len())];
     @limits([Iterations(13)]) for event in saved.records {
         fields = fields.push(event.role); fields = fields.push(event.kind); fields = fields.push(event.name); fields = fields.push(event.text);
     }
@@ -185,10 +184,10 @@ public flow decode(raw: string) -> Result<Checkpoint, string> {
     if !framed(raw, false) { return Err("checkpoint encoded shape or bounds invalid"); }
     let fields = match string_fields(raw, "invalid checkpoint JSON", "checkpoint fields must be strings") { Ok(value) => value, Err(error) => { return Err(error); } };
     let invalid_fields = fields_error(fields, false); if invalid_fields != "" { return Err(invalid_fields); }
-    if count(fields) != 61 && count(fields) != 77 { return Err("invalid checkpoint field count"); }
+    if fields.len() != 61 && fields.len() != 77 { return Err("invalid checkpoint field count"); }
     if fields[0] != "nomo-harness-checkpoint-v1" { return Err("unsupported checkpoint format"); }
     if fields[21] != "1" || fields[22] != "completed" || fields[23] != "true" { return Err("checkpoint is not completed and settled"); }
-    var record_count: usize = 9; if count(fields) == 77 { record_count = 13; }
+    var record_count: usize = 9; if fields.len() == 77 { record_count = 13; }
     if fields[24] != from_usize(record_count) { return Err("checkpoint record count disagrees with framing"); }
     var allowed = [fields[3]]; if fields[4] != "" { allowed = allowed.push(fields[4]); }
     let identity = Identity { id = fields[1], workspace = fields[2], allowed };

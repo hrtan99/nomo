@@ -37,36 +37,36 @@ public flow recoverable_work_probe(args: Array<string>) -> i32 ![Console, Memory
     let policy = Policy { format = 1, literals = ["VERY_SECRET_123"] };
     let binding = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
     if args[0] == "inspect-running" {
-        let row = match load(policy, binding) { Ok(Some(item)) => item, _ => { abort("running work missing"); } };
+        let row = match load(policy, binding) { Ok(Some(item)) => item, _ => abort("running work missing"), };
         if row.value.work.phase != "running" || row.value.work.reserved.calls != 7 || row.value.work.reserved.generation != 286720 ||
             row.value.work.settled != None() || row.value.events.turns != 0 { abort("running work changed across process"); }
-        let chat = match load_chat(policy, binding) { Ok(Some(item)) => item, _ => { abort("chat missing"); } };
+        let chat = match load_chat(policy, binding) { Ok(Some(item)) => item, _ => abort("chat missing"), };
         match admit("again", "private-workspace", "note.txt", "Change value", chat, policy, binding) {
-            Ok(_) => { abort("running work was readmitted"); } Err(_) => {}
+            Ok(_) => abort("running work was readmitted"), Err(_) => (),
         }
         println("PASS running reservation retained and readmission refused"); return 0;
     }
-    match create_chat(policy, binding, false) { Ok(_) => {} Err(_) => { abort("chat create refused"); } }
-    let fresh = match load_chat(policy, binding) { Ok(Some(item)) => item, _ => { abort("chat missing"); } };
-    match reserve_chat(fresh, "First question", policy, binding) { Ok(_) => {} Err(_) => { abort("chat reserve refused"); } }
-    let running = match load_chat(policy, binding) { Ok(Some(item)) => item, _ => { abort("running chat missing"); } };
-    match finish_chat(running, chat_result(running.value.chat.invocation.maximum), policy, binding) { Ok(_) => {} Err(_) => { abort("chat finish refused"); } }
-    let chat = match load_chat(policy, binding) { Ok(Some(item)) => item, _ => { abort("completed chat missing"); } };
+    match create_chat(policy, binding, false) { Ok(_) => (), Err(_) => abort("chat create refused"), }
+    let fresh = match load_chat(policy, binding) { Ok(Some(item)) => item, _ => abort("chat missing"), };
+    match reserve_chat(fresh, "First question", policy, binding) { Ok(_) => (), Err(_) => abort("chat reserve refused"), }
+    let running = match load_chat(policy, binding) { Ok(Some(item)) => item, _ => abort("running chat missing"), };
+    match finish_chat(running, chat_result(running.value.chat.invocation.maximum), policy, binding) { Ok(_) => (), Err(_) => abort("chat finish refused"), }
+    let chat = match load_chat(policy, binding) { Ok(Some(item)) => item, _ => abort("completed chat missing"), };
     let ticket = match admit("work-one", "private-workspace", "note.txt", "Change value", chat, policy, binding) {
-        Ok(item) => item, Err(_) => { abort("work admission refused"); }
+        Ok(item) => item, Err(_) => abort("work admission refused"),
     };
-    match claim(ticket, policy, binding) { Ok(_) => {} Err(_) => { abort("work claim refused"); } }
+    match claim(ticket, policy, binding) { Ok(_) => (), Err(_) => abort("work claim refused"), }
     if args[0] == "reserve" { println("PASS running reservation saved"); return 0; }
     if args[0] == "finish" {
-        match finish(ticket, "Done", spent(), [], policy, binding) { Ok(_) => { abort("empty facts accepted"); } Err(_) => {} }
+        match finish(ticket, "Done", spent(), [], policy, binding) { Ok(_) => abort("empty facts accepted"), Err(_) => (), }
         let records = [Event { role = "user", kind = "request", name = "", text = "Change value" },
             Event { role = "tool", kind = "result", name = "read", text = large_event() },
             Event { role = "tool", kind = "applied", name = "edit", text = "work-one" },
             Event { role = "assistant", kind = "answer", name = "", text = "Done" }];
-        match finish(ticket, "Done", spent(), records, policy, binding) { Ok(_) => {} Err(_) => { abort("work finish refused"); } }
-        match finish(ticket, "Done", spent(), records, policy, binding) { Ok(_) => { abort("stale finish accepted"); } Err(_) => {} }
-        let row = match load(policy, binding) { Ok(Some(item)) => item, _ => { abort("completed work missing"); } };
-        let text = match decode(row.value.events.events[1].text, policy) { Ok(item) => item, Err(_) => { abort("work event decode failed"); } };
+        match finish(ticket, "Done", spent(), records, policy, binding) { Ok(_) => (), Err(_) => abort("work finish refused"), }
+        match finish(ticket, "Done", spent(), records, policy, binding) { Ok(_) => abort("stale finish accepted"), Err(_) => (), }
+        let row = match load(policy, binding) { Ok(Some(item)) => item, _ => abort("completed work missing"), };
+        let text = match decode(row.value.events.events[1].text, policy) { Ok(item) => item, Err(_) => abort("work event decode failed"), };
         if row.value.work.phase != "complete" || row.value.work.reserved.calls != 0 || row.value.events.turns != 1 ||
             !starts_with(text, "complete: blue\n[REDACTED]\n") || byte_len(text) < 262144 { abort("completed work or event changed"); }
         println("PASS work completion and filtered event saved atomically"); return 0;

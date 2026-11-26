@@ -33,17 +33,17 @@ public flow bounded_edit_probe_invalid_path(args: Array<string>) -> i32 {
     if result != Err("invalid relative path") { abort("path mismatch"); } println("PASS invalid_path"); return 0;
 }
 public flow bounded_edit_probe_prepare_consumer(args: Array<string>) -> i32 {
-    let result=match prepare("small.txt","old","new") { Ok(value)=>value, Err(_) => { abort("prepare refused"); } };
+    let result=match prepare("small.txt","old","new") { Ok(value)=>value, Err(_) => abort("prepare refused"), };
     if result.proposal.before != "old\n" || result.proposal.after != "new\n" { abort("proposal mismatch"); }
     println("PASS prepare_consumer"); return 0;
 }
 public flow bounded_edit_probe_apply_changed(args: Array<string>) -> i32 ![Console, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<FileError>, Error<IndexError>, Error<ConsoleError>] {
-    let proposed=match prepare_original("changed.txt","old\n","old","new") { Ok(value)=>value, Err(_) => { abort("setup refused"); } };
+    let proposed=match prepare_original("changed.txt","old\n","old","new") { Ok(value)=>value, Err(_) => abort("setup refused"), };
     if apply(proposed) != Err("edit original changed; intent retained, no write") { abort("changed original not refused"); }
     println("PASS apply_changed"); return 0;
 }
 public flow bounded_edit_probe_apply_success(args: Array<string>) -> i32 ![Console, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<FileError>, Error<IndexError>, Error<ConsoleError>] {
-    let proposed=match prepare_original("small.txt","old\n","old","new") { Ok(value)=>value, Err(_) => { abort("setup refused"); } };
+    let proposed=match prepare_original("small.txt","old\n","old","new") { Ok(value)=>value, Err(_) => abort("setup refused"), };
     if apply(proposed) != Ok(true) { abort("apply refused"); }
     println("PASS apply_success"); return 0;
 }

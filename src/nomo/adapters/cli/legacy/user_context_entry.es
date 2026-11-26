@@ -1,6 +1,5 @@
 module nomo.adapters.cli.legacy.user_context_entry;
 
-import std.collections.len as count;
 import std.text.{char_count as len, starts_with, trim};
 import std.codec.text.utf8_encode;
 import std.bytes.len as byte_count;
@@ -28,20 +27,20 @@ flow root_error(root: string) -> string {
 }
 
 public flow selection(args: Array<string>) -> Result<Selection, string> {
-    if count(args) < 14 || count(args) > 19 || args[0] != "--read-root" || args[2] != "--input-mode" {
+    if args.len() < 14 || args.len() > 19 || args[0] != "--read-root" || args[2] != "--input-mode" {
         return Err("expected --read-root ROOT --input-mode MODE and bounded new-work options");
     }
     let root = args[1]; let mode = args[3];
     let invalid = root_error(root); if invalid != "" { return Err(invalid); }
     if mode != "tty" && mode != "non-tty" { return Err("invalid input mode"); }
     var rest: Array<string> = []; var accepted = false; var index: usize = 4;
-    @limits([Iterations(16)]) while index < count(args) {
+    @limits([Iterations(16)]) while index < args.len() {
         let flag = args[index]; index = index + 1;
         if flag == "--accept-read-root" {
             if accepted { return Err("duplicate --accept-read-root"); }
             accepted = true;
         } else {
-            if index >= count(args) { return Err("work option value missing"); }
+            if index >= args.len() { return Err("work option value missing"); }
             rest = rest.push(flag).push(args[index]); index = index + 1;
         }
     }
@@ -54,7 +53,7 @@ public flow selection(args: Array<string>) -> Result<Selection, string> {
 
 public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read<ReadOnlyRoot>, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {
     let selected = match selection(args) { Ok(value) => value, Err(error) => { println("REFUSED " + error); return 1; } };
-    var second = ""; if count(selected.input.work.allowed) == 2 { second = selected.input.work.allowed[1]; }
+    var second = ""; if selected.input.work.allowed.len() == 2 { second = selected.input.work.allowed[1]; }
     let shown = match object(["root", "file1", "file2"], [selected.root, selected.input.work.allowed[0], second]) {
         Ok(value) => value, Err(error) => { println("REFUSED " + error); return 1; }
     };

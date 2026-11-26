@@ -22,7 +22,7 @@ impl TextModel {
 
 public flow model_turn(raw: string, maximum: i32, budget: i32, previous: State) -> Turn {
     return model_turn_controller(raw, maximum, budget, previous) with {
-        ModelText.infer(context) => { resume (TextModel {}).run(context); }
-        ConversationOutput.publish(event) => { resume publish(event); }
+        ModelText.infer(context) => (TextModel {}).run(context);
+        ConversationOutput.publish(event) => publish(event);
     };
 }

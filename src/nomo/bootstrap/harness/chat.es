@@ -21,7 +21,7 @@ public flow run_private_turn(request: string, allowed: Array<string>, invocation
 flow run_output<S ~ ConversationSink>(sink: S, request: string, allowed: Array<string>, invocation: Invocation, unicode: bool) -> TurnResult {
     let progress = ConsoleProgress {};
     return run_mode(request, allowed, invocation, unicode) with {
-        ConversationOutput.publish(event) => { resume sink.publish(event); }
-        HarnessProgress.write(line) => { resume progress.write(line); }
+        ConversationOutput.publish(event) => sink.publish(event);
+        HarnessProgress.write(line) => progress.write(line);
     };
 }

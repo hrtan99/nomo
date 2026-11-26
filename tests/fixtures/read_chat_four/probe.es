@@ -41,7 +41,7 @@ flow checks() -> bool {
     // A stopped partial turn remains counted; no next turn is authorized from it.
     let failed = match extended_combine(ledger(7, 4, 1), ledger(1, 1, 0)) { Ok(value) => value, Err(_) => { return false; } };
     if failed != ledger(8, 5, 1) || extended_turn_error(invocation(failed, 2, prior("read"))) == "" { return false; }
-    match extended_combine(full, ledger(1, 1, 0)) { Ok(_) => { return false; } Err(_) => {} }
+    match extended_combine(full, ledger(1, 1, 0)) { Ok(_) => { return false; } Err(_) => (), }
     return true;
 }
 public flow read_chat_four_probe(_args: Array<string>) -> i32 {

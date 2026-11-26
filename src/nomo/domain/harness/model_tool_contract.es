@@ -2,7 +2,6 @@ module nomo.domain.harness.model_tool_contract;
 
 import nomo.domain.context.large_context.{message_bytes, message_frame_bytes, context_bytes};
 import std.text.{char_count as len, trim, from_char};
-import std.collections.len as count;
 import std.json.JsonValue;
 import std.agent.message.Message;
 import nomo.domain.serialization.json.{FieldError, decode_fields as json_fields};
@@ -35,7 +34,7 @@ public flow question_error(raw: string) -> string {
 }
 
 flow selected_error(names: Array<string>, allowed: Array<string>) -> string {
-    if count(names) > 4 { return "at most four selected files"; }
+    if names.len() > 4 { return "at most four selected files"; }
     let invalid = allowed_error(names);
     if invalid != "" { return invalid; }
     @limits([Iterations(4)]) for name in names {
@@ -52,7 +51,7 @@ flow selected_error(names: Array<string>, allowed: Array<string>) -> string {
 public flow read_selection_error(operation: string, files: Array<string>, literal: string, allowed: Array<string>) -> string {
     let invalid = candidate_error(allowed); if invalid != "" { return invalid; }
     if operation == "read" {
-        if count(files) != 1 { return "unsupported action or arity"; }
+        if files.len() != 1 { return "unsupported action or arity"; }
         if literal != "" { return "read action requires an empty literal"; }
     } else if operation == "search" {
         if !search_literal(literal) { return "invalid search literal"; }
@@ -104,9 +103,9 @@ public flow decode_reply(raw: string, allowed: Array<string>, final_only: bool) 
         Err(FieldError.Json) => { return Err("invalid action JSON"); }
         Err(FieldError.Shape) => { return Err("action fields must be strings"); }
     };
-    if count(fields) < 2 || count(fields) > 4 { return Err("invalid action field count"); }
+    if fields.len() < 2 || fields.len() > 4 { return Err("invalid action field count"); }
     if fields[0] == "final" {
-        if count(fields) != 2 || len(fields[1]) == 0 || len(fields[1]) > message_bytes() ||
+        if fields.len() != 2 || len(fields[1]) == 0 || len(fields[1]) > message_bytes() ||
             !printable(fields[1]) || trim(fields[1]) == "" { return Err("invalid bounded final answer"); }
         let action = Action { operation = "final", files = [], literal = "", text = fields[1] };
         return Ok(action);
@@ -115,11 +114,11 @@ public flow decode_reply(raw: string, allowed: Array<string>, final_only: bool) 
     if len(raw) > message_frame_bytes() { return Err("tool action exceeds 8388608 raw characters"); }
     var files: Array<string> = [];
     var literal = "";
-    if fields[0] == "read" && count(fields) == 2 { files = [fields[1]]; }
-    else if fields[0] == "search" && (count(fields) == 3 || count(fields) == 4) {
+    if fields[0] == "read" && fields.len() == 2 { files = [fields[1]]; }
+    else if fields[0] == "search" && (fields.len() == 3 || fields.len() == 4) {
         literal = fields[1];
         files = [fields[2]];
-        if count(fields) == 4 { files = files.push(fields[3]); }
+        if fields.len() == 4 { files = files.push(fields[3]); }
     } else { return Err("unsupported action or arity"); }
     let selected = read_selection_error(fields[0], files, literal, allowed);
     if selected != "" { return Err(selected); }

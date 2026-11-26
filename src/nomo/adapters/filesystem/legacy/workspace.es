@@ -6,7 +6,6 @@ import std.bytes.len as byte_len;
 import std.codec.text.{utf8_decode, Strict};
 import std.text.{char_count as len, split, contains, starts_with, from_usize};
 import std.agent.message.Message;
-import std.collections.len as count;
 import nomo.domain.text.read_text.search_literal;
 import nomo.domain.context.path_policy.valid_path;
 import nomo.domain.harness.tool_context.candidate_error;
@@ -69,7 +68,7 @@ public flow discover(page: usize) -> Result<Discovery, string> ![Console, Fs.lis
     return handle {
         var dirs: Array<WorkspacePath<ReadOnlyRoot>> = [root<ReadOnlyRoot>()]; var depths: Array<usize> = [0]; var files: Array<string> = []; var i: usize = 0;
         var deep = false; var unsupported = false; var seen: usize = 0; var more = false;
-        @limits([Iterations(512)]) while i < count(dirs) && !more {
+        @limits([Iterations(512)]) while i < dirs.len() && !more {
             let entries = list_limited(dirs[i], 1024, 131072);
             @limits([Iterations(1024)]) for entry in entries {
                 let name = relative_name(entry);
@@ -79,10 +78,10 @@ public flow discover(page: usize) -> Result<Discovery, string> ![Console, Fs.lis
                         let projected: Option<Message<DiscoveredFileInfo>> = Message.new(stat(entry)).cast<DiscoveredFileInfo>();
                         let info = match projected { Some(value) => value.body, None() => { return Err("file metadata unavailable"); } };
                         if info.is_file {
-                            if seen >= page * 256 { if count(files) == 256 { more = true; break; } files = files.push(name); }
+                            if seen >= page * 256 { if files.len() == 256 { more = true; break; } files = files.push(name); }
                             seen = seen + 1;
                         }
-                        else if info.is_dir && depths[i] < 7 { if count(dirs) >= 512 { return Err("discovery exceeds 512 directories; select a narrower root"); } dirs = dirs.push(entry); depths = depths.push(depths[i] + 1); }
+                        else if info.is_dir && depths[i] < 7 { if dirs.len() >= 512 { return Err("discovery exceeds 512 directories; select a narrower root"); } dirs = dirs.push(entry); depths = depths.push(depths[i] + 1); }
                         else if info.is_dir { deep = true; } else { unsupported = true; }
                     }
                 }
@@ -91,10 +90,10 @@ public flow discover(page: usize) -> Result<Discovery, string> ![Console, Fs.lis
         }
         if deep { println("DISCOVERY INCOMPLETE: directories beyond seven levels were not visited."); }
         if unsupported { println("DISCOVERY INCOMPLETE: unsupported names or file types were omitted."); }
-        if count(files) == 0 { return Err("discovery page is empty"); }
+        if files.len() == 0 { return Err("discovery page is empty"); }
         println("DISCOVERY PAGE " + from_usize(page) + (if more { ": more candidates remain." } else { ": no later candidates found within discovery bounds." }));
         return Ok(Discovery { files, page, more });
-    } with { Error<ListLimitError>.raise(_) => { finish Err("directory exceeds 1024 entries or 131072 name bytes; select a narrower root"); } };
+    } with { Error<ListLimitError>.raise(_) => finish Err("directory exceeds 1024 entries or 131072 name bytes; select a narrower root"); };
 }
 
 // Select an explicit list or a bounded discovery page. All membership is revalidated per turn.
@@ -104,7 +103,7 @@ public flow selection(raw: string) -> Result<Discovery, string> {
     var page: usize = 0;
     @limits([Iterations(8)]) for token in pages { if raw == token { return discover(page); } page = page + 1; }
     let names = split(raw, ",");
-    if count(names) > 4 { return Err("explicit selection supports up to four files"); }
+    if names.len() > 4 { return Err("explicit selection supports up to four files"); }
     return Ok(Discovery { files = names, page = 0, more = false });
 }
 
@@ -142,15 +141,15 @@ public flow read_legacy(name: string) -> Outcome ![Fs.read<ReadOnlyRoot>, Error<
 public flow list_directory(name: string) -> Outcome {
     if !valid_path(name) { return outcome("refused", "invalid relative path", 0); }
     let entries = list(target(name));
-    if count(entries) > 16 { return outcome("refused", "directory exceeds 16 entries (post-list check)", 0); }
-    return outcome("unsupported", "named listing unavailable: opaque WorkspacePath; entries=" + from_usize(count(entries)), 0);
+    if entries.len() > 16 { return outcome("refused", "directory exceeds 16 entries (post-list check)", 0); }
+    return outcome("unsupported", "named listing unavailable: opaque WorkspacePath; entries=" + from_usize(entries.len()), 0);
 }
 
 // Search selected files within the scan reservation. Result text has the same
 // message capacity as model answers; a byte-sized file can have at most n+1 lines.
 // A Host overflow check may probe one additional byte, never return a prefix.
 flow search_with(names: Array<string>, literal: string, maximum: usize) -> Outcome ![Fs.read<ReadOnlyRoot>, Error<FileError>, Error<IndexError>] {
-    if count(names) == 0 || count(names) > (if maximum == 4194304 { 256 } else { 4 }) { return outcome("refused", "search file count exceeds scope", 0); }
+    if names.len() == 0 || names.len() > (if maximum == 4194304 { 256 } else { 4 }) { return outcome("refused", "search file count exceeds scope", 0); }
     if !search_literal(literal) { return outcome("refused", "literal must be 1..65536 safe UTF-8 bytes", 0); }
     let invalid = candidate_error(names); if invalid != "" { return outcome("refused", invalid, 0); }
     var output = "";
@@ -171,7 +170,7 @@ flow search_with(names: Array<string>, literal: string, maximum: usize) -> Outco
         consumed = consumed + file.scanned;
         let lines = split(file.text, "\n");
         let line_limit = file_bytes() + 1;
-        if count(lines) > line_limit { return outcome("refused", "file exceeds line limit", scanned); }
+        if lines.len() > line_limit { return outcome("refused", "file exceeds line limit", scanned); }
         scanned = scanned + file.scanned;
         var line: usize = 0;
         @limits([Iterations(1048577)]) for text in lines {
@@ -184,17 +183,17 @@ flow search_with(names: Array<string>, literal: string, maximum: usize) -> Outco
             }
         }
         }
-        if maximum == 4194304 && consumed >= maximum && name != names[count(names) - 1] { consumed = maximum + 1; break; }
+        if maximum == 4194304 && consumed >= maximum && name != names[names.len() - 1] { consumed = maximum + 1; break; }
     }
     if skipped > 0 || consumed > maximum { return outcome("incomplete", (if consumed > maximum { "scan allowance exhausted; " } else { "" }) + "skipped " + from_usize(skipped) + " unsupported or oversized files; partial results; skipped names (may be partial):\n" + skipped_names + "matches:\n" + output, scanned); }
     return outcome("complete", output, scanned);
 }
 
 public flow search_files(names: Array<string>, literal: string) -> Outcome ![Fs.read<ReadOnlyRoot>, Error<FileError>, Error<IndexError>] ~ NomoSearch<ReadOnlyRoot> {
-    if count(names) > 0 && names[0] == "*" {
-        if count(names) > 257 { return outcome("refused", "search file count exceeds scope", 0); }
+    if names.len() > 0 && names[0] == "*" {
+        if names.len() > 257 { return outcome("refused", "search file count exceeds scope", 0); }
         var selected: Array<string> = []; var i: usize = 1;
-        @limits([Iterations(256)]) while i < count(names) { selected = selected.push(names[i]); i = i + 1; }
+        @limits([Iterations(256)]) while i < names.len() { selected = selected.push(names[i]); i = i + 1; }
         return search_with(selected, literal, 4194304);
     }
     return search_with(names, literal, 16384);

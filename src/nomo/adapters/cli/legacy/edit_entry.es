@@ -4,7 +4,6 @@ import std.io.{println, IOError as ConsoleError};
 import std.fs.IOError as FileError;
 import std.effects.Fs;
 import std.text.from_usize;
-import std.collections.len as count;
 import nomo.adapters.cli.arguments.edit_args.parse;
 import nomo.tools.edit_file.EditableRoot;
 import nomo.adapters.filesystem.legacy.edit_file.prepare;
@@ -27,14 +26,14 @@ flow help() -> unit {
 }
 
 public flow run_help(args: Array<string>) -> i32 {
-    if count(args) > 1 || (count(args) == 1 && args[0] != "help" && args[0] != "--help") { return refused("edit help accepts no selectors"); }
+    if args.len() > 1 || (args.len() == 1 && args[0] != "help" && args[0] != "--help") { return refused("edit help accepts no selectors"); }
     help(); return 0;
 }
 
 public flow run_apply(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {
     let options = match parse(args, true) { Ok(value) => value, Err(error) => { return refused(error); } };
     if options.help { help(); return 0; }
-    match available() { Ok(_) => {} Err(error) => { return refused(error); } }
+    match available() { Ok(_) => (), Err(error) => { return refused(error); } }
     let prepared = match prepare(options.path, options.target, options.replacement) { Ok(value) => value, Err(error) => { return refused(error); } };
     let selector = Selector { id = options.id, workspace = options.workspace, path = options.path };
     return match execute(selector, prepared) { Ok(_) => 0, Err(error) => refused(error) };

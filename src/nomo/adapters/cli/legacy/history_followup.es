@@ -33,7 +33,7 @@ flow refused(error: string) -> i32 { println("REFUSED " + error); return 1; }
 type FollowupPersistence = { ticket: WorkTicket, journal: FollowupEditJournal };
 impl FollowupPersistence ~ WorkPersistence<EditTicket, bool> {
     flow begin(self, selected: Binding) -> Result<EditTicket, string> ![Memory, Error<StorageError>, Error<IndexError>] {
-        match claim(self.ticket) { Ok(_) => {} Err(error) => { return Err(error); } }
+        match claim(self.ticket) { Ok(_) => (), Err(error) => { return Err(error); } }
         return self.journal.begin(selected);
     }
     flow complete(self, ticket: EditTicket) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
@@ -52,7 +52,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
     if cli.edit.help { return refused("select a current read root, owned edit root, target and task"); }
     let input = application(cli);
     let journal = FollowupEditJournal {};
-    match journal.available() { Ok(_) => {} Err(error) => { return refused(error); } }
+    match journal.available() { Ok(_) => (), Err(error) => { return refused(error); } }
     let history = match load_chat() { Ok(Some(value)) => value, _ => { return refused("a saved prior chat turn is required"); } };
     let first_check = match inspect_first_check() { Ok(value) => value, Err(error) => { return refused(error); } };
     var first_output: Option<CheckOutput> = None();
@@ -63,17 +63,17 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
             match saved {
                 Some(found) => { first_output = Some(CheckOutput { stdout = found.stdout, stderr = found.stderr,
                     stdout_truncated = found.stdout_truncated, stderr_truncated = found.stderr_truncated }); }
-                None() => {}
+                None() => (),
             }
         }
-        None() => {}
+        None() => (),
     }
     let ticket = match admit(input.selected.id, input.selected.workspace, input.selected.path, input.request, history) {
         Ok(value) => value, Err(error) => { return refused(error); }
     };
     if ticket.record.parent.check != first_check { return refused("first check changed before followup; no retry"); }
-    match claim(ticket) { Ok(_) => {} Err(error) => { return refused(error); } }
-    if parsed.has_check { match plan_check(ticket, parsed.digest) { Ok(_) => {} Err(error) => { return refused(error); } } }
+    match claim(ticket) { Ok(_) => (), Err(error) => { return refused(error); } }
+    if parsed.has_check { match plan_check(ticket, parsed.digest) { Ok(_) => (), Err(error) => { return refused(error); } } }
     println("RESERVED history-followup; failure or interruption cannot be retried automatically.");
     let checked = match ticket.record.parent.check { Some(value) => value.outcome, None() => "not requested" };
     let exit = match ticket.record.parent.check { Some(value) => value.exit_code, None() => "" };

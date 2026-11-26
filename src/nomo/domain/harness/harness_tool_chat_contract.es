@@ -3,7 +3,6 @@ module nomo.domain.harness.harness_tool_chat_contract;
 import nomo.domain.text.read_text.{data_safe, bounded as utf8_bounded};
 import nomo.domain.context.large_context.{message_bytes, context_bytes, outcome_bytes, child_answer_bytes};
 import std.text.{char_count as len, starts_with};
-import std.collections.len as count;
 import std.json.JsonValue;
 import std.agent.message.Message;
 import nomo.core.conversation.{Event, State};
@@ -81,8 +80,8 @@ public flow inspect_turn_shared(child: Session, status: i32, request: string, ta
     allowed: Array<string>, prior: Previous, unicode: bool) -> Result<Observed, string> {
     let paths = if unicode { candidate_error(allowed) } else { allowed_error(allowed) }; if paths != "" { return Err(paths); }
     let expected = seed(request, prior);
-    let size = count(expected.events);
-    if count(child.history.events) < size + 2 || count(child.history.events) > size + 6 || child.history.stopped {
+    let size = expected.events.len();
+    if child.history.events.len() < size + 2 || child.history.events.len() > size + 6 || child.history.stopped {
         return Err("invalid selected prior history");
     }
     var position: usize = 0;
@@ -103,7 +102,7 @@ public flow inspect_turn_shared(child: Session, status: i32, request: string, ta
     if child.calls == 0 {
         let events = normalized.events;
         let expected_input = Event { role = "user", kind = "input", name = "", text = task };
-        if count(events) != 3 || status != 4 || child.history.spent != 0 || child.tokens != 0 || child.tools != 0 || child.scan != 0 ||
+        if events.len() != 3 || status != 4 || child.history.spent != 0 || child.tokens != 0 || child.tools != 0 || child.scan != 0 ||
             !same(events[1], expected_input) ||
             events[2].role != "error" || events[2].kind != "error" || events[2].name != "" ||
             events[2].text != (if unicode { "model context exceeds 33554432 serialized characters" } else { "model context exceeds 33554432 serialized characters" }) {
