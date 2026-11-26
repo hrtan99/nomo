@@ -19,7 +19,7 @@ Pure wire-format rules remain domain algorithms. Model decoder adapters implemen
 
 ## Construction and execution scopes
 
-`application/conversation/service_ports.es` owns `ConversationService`. The CLI's `TerminalApplication` consumes that spec and receives four construction-time dependencies: history, attempts, picker and conversation. One history object implements its multiple storage roles. The old `ConversationRequests` forwarding effect has been removed.
+`application/conversation/service_ports.es` owns `ConversationService`. The CLI's `TerminalApplication` consumes that spec and receives four construction-time dependencies: history, attempts, picker and conversation. One history object implements its multiple storage roles. The old `ConversationRequests` forwarding effect has been removed. `NativeJobs` directly implements the context consumer’s `SavedJobsReader` port; no intermediate record is needed to forward the read to its existing session job listing.
 
 `adapters/model/conversation_service.es` implements the service with injected storage, context, instruction and model dependencies. `bootstrap/conversation.es` selects these implementations and supplies a configuration loader that shares the same history. Owner-local factories construct records with omitted `@inject` fields inside the provider scope. Generic `T ~ Port` constraints keep startup-selected dependency roles explicit.
 

@@ -5,6 +5,7 @@ import std.text.from_i64;
 import nomo.native.processes.{Data, Job as StoredJob, JobEvent as StoredEvent};
 import nomo.domain.process.jobs.{Job, JobEvent};
 import nomo.application.processes.ports.{JobRepository, OutputArchive};
+import nomo.application.context.ports.SavedJobsReader;
 
 flow job(value: StoredJob) -> Job {
     return Job { id = value.id, session = value.session, program = value.program, arguments = value.arguments, handle = value.handle, phase = value.phase };
@@ -35,6 +36,11 @@ impl NativeJobs ~ JobRepository {
             match page.cursor { Some(value) => { cursor = Some(value); } None() => { break; } }
         }
         return result;
+    }
+}
+impl NativeJobs ~ SavedJobsReader {
+    flow read(self, session: string) -> Array<Job> ![Memory, Error<StorageError>] {
+        return self.list(session);
     }
 }
 public type NativeOutputArchive = {};
