@@ -1,0 +1,910 @@
+{
+  "date": "2026-11-27",
+  "status": "official-0242-release-source-check-passed-runtime-not-accepted",
+  "compiler": {
+    "selector": "latest0242",
+    "version": "0.24.2",
+    "source_overrides": [],
+    "repositories": {
+      "cli": {
+        "repository": "etas",
+        "revision": "e692939c4c22fab5260cfc8ffbcac4ea9e139f93",
+        "tree": "e5a290c95609fe339b5b118514bf7ada050c7841",
+        "packages": [
+          "etas_cli",
+          "etas_driver",
+          "etas_package",
+          "etas_tests"
+        ]
+      },
+      "core": {
+        "repository": "etas-core",
+        "revision": "44a25f003d996dd89230295f111e617c0a2a3783",
+        "tree": "f9e8b1534e6f8e04d4f02071e5d5018c75757f4f",
+        "packages": [
+          "etas_builtin",
+          "etas_cache",
+          "etas_code",
+          "etas_core",
+          "etas_host",
+          "etas_memory_derive",
+          "etas_package_metadata",
+          "etas_std",
+          "etas_utils"
+        ]
+      },
+      "frontend": {
+        "repository": "etas-frontend",
+        "revision": "c0c87cf3acdcfd2cfdd77d13e6bd3a905bc55fd7",
+        "tree": "f3feb789f97e27caebb7d94841df29e25114a543",
+        "packages": [
+          "etas_effects",
+          "etas_frontend",
+          "etas_hir",
+          "etas_hir_analysis",
+          "etas_syntax",
+          "etas_syntax_derive",
+          "etas_types"
+        ]
+      },
+      "interpreter": {
+        "repository": "etas-interpreter",
+        "revision": "420c6ca133de802d1deb4fffaf755f35b988318f",
+        "tree": "c7c71a88d68afdeb40015148fbd3f768a514e2d9",
+        "packages": [
+          "etas_interpreter"
+        ]
+      }
+    },
+    "cache_root": "etas-0242-release",
+    "build_target": "etas-0230/target",
+    "source": "Official CLI 0.24.2 at e692939, standard Cargo release profile and exact locked graph, matching installed SDK; existing cache/target reused. The build container alone was allowed 6 GiB; application checks and runtime retain 4 GiB.",
+    "cargo_lock_sha256": "04ed67d1d6dfd61002e3ff0b98e26c5d392342b55c7188003655e1996ab87f9f",
+    "verified_seed_binary_sha256": "1ff558745bee375c84bbcdda22a4ef894b22d8348edf0eb2d0dabc7612f41d78",
+    "installed_sdk": true,
+    "build_profile": "release"
+  },
+  "installed": {
+    "lock_sha256": "04ed67d1d6dfd61002e3ff0b98e26c5d392342b55c7188003655e1996ab87f9f",
+    "method": "adopted-independently-verified-0242-build",
+    "path": "/home/nomo/.cargo/bin/etas",
+    "sdk": {
+      "abi": {
+        "artifact_hash": "blake3:323713e03d31cf73325e0c64c34d5c04e367ab82399905f9500c01691af90fc2",
+        "body_schema": 97,
+        "compiler_version": "0.21.2",
+        "effect_analysis_hash": "blake3:60a25003218a2301064d50cf89e65e7c43ad4b4440360085248f87b80322dc1f",
+        "interpreter_layout_hash": "blake3:e272f5741672042880076ee66596867cde4186e757ce8196a79c1da09cef2e79",
+        "metadata_schema": 78,
+        "native_binding_abi": "blake3:c2620b315312e5c96f43d67f9160dd81048b8a030de13347e29442d9e30231e3",
+        "schema": 3,
+        "std_contract": "phase1|etas.std.text.contract.v1|etas.std.text.primitive-abi.v1|etas.std.text.source.v1|unicode:17.0.0:7c74aebf116629b6:etas.std.text.unicode.v1|usize:64",
+        "target": "aarch64-unknown-linux-gnu",
+        "toolchain_id": "etas-0.8.0-aarch64-unknown-linux-gnu-c2620b315312"
+      },
+      "manifest_path": "/home/nomo/.cargo/lib/etas/etas-0.8.0-aarch64-unknown-linux-gnu-c2620b315312/std/manifest.json",
+      "manifest_sha256": "8a8a1fc8790e708ce69dfdd2ef9744d043b3755d586a3f44c6c51bbbcfd00e3a",
+      "receipt": "etas-std-install-v2\n000000000000000018eba86431c55638-4220-aarch64-unknown-linux-gnu\nblake3:630fdbb6e6113c9c70207e355fd3bee69c46d27849c04677fe0f803142301594\n"
+    },
+    "sha256": "1ff558745bee375c84bbcdda22a4ef894b22d8348edf0eb2d0dabc7612f41d78",
+    "version": "etas 0.24.2\n"
+  },
+  "build": {
+    "profile": "standard Cargo release",
+    "elapsed_seconds": 1502,
+    "source_overrides": [],
+    "rustflags": null,
+    "cache_volume": "nomo-cargo-0230-20261126-f904fa0",
+    "resource_scope": {
+      "docker_vm_memory_bytes": 12528992256,
+      "release_build_container": "nomo-dependency-run-a85516b0916e",
+      "initial_build_limit_bytes": 4294967296,
+      "temporary_build_limit_bytes": 6442450944,
+      "application_check_and_runtime_limit_bytes": 4294967296,
+      "scope": "Only the current official Cargo release build; compose runtime limits are unchanged."
+    },
+    "prior_dev_binary_and_sdk_preserved": true
+  },
+  "original_witness_reproduction": {
+    "scope": "existing-process-snapshot",
+    "exit": 0,
+    "stdout": "checked 6 files\n",
+    "stderr": "",
+    "elapsed_seconds": 1.293,
+    "resources_before": {
+      "memory.max": "4294967296",
+      "memory.peak": "11468800",
+      "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+      "cpu.max": "400000 100000",
+      "pids.max": "256"
+    },
+    "resources_after": {
+      "memory.max": "4294967296",
+      "memory.peak": "85495808",
+      "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+      "cpu.max": "400000 100000",
+      "pids.max": "256"
+    },
+    "compiler_profile": "standard dev build, same official locked graph"
+  },
+  "source_fixes": {
+    "initial_diagnostics": 402,
+    "initial_check_status": "interrupted after diagnostics, exit 143; not a completed check",
+    "intermediate_check": {
+      "profile": "dev",
+      "optimization": "O0",
+      "exit": 1,
+      "diagnostics": 41,
+      "elapsed_seconds": 460.75
+    },
+    "changes": [
+      "Declare BudgetExceeded through actual bounded operations, consumer specs, callbacks and callers. Preserve execution limits.",
+      "Declare durable write effect rows on storage implementations.",
+      "Pass the configuration session explicitly and bind native coding session/settings inside the concrete adapter.",
+      "Use action-specific current bounds and wrap configuration/mutation operation handlers with their session handler."
+    ],
+    "stored_nominal_and_region_identities_changed": false
+  },
+  "full_source_check": {
+    "exit": 0,
+    "elapsed_seconds": 61.75732002799987,
+    "resources": {
+      "memory.max": "4294967296",
+      "memory.peak": "3312713728",
+      "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+      "cpu.max": "400000 100000",
+      "pids.max": "256"
+    },
+    "source_count": 441,
+    "source_manifest_sha256": "72e11af481da62d064440225fc86406e8e1cde6f481eb76db5bca020cb414bc2",
+    "diagnostics": 0,
+    "command": "etas --no-config --cache off check --format json --all /workspace",
+    "optimization": "O2",
+    "stdout_sha256": "e6d262d70738ab83d6b18d64368006b938a8906ea4334d2cd3518af63cd93db5",
+    "checked_source_matches_review_revision": "c8d07728874965e3f9e70c840e6b148b82100aea"
+  },
+  "architecture": {
+    "review_package": {
+      "modules": 441,
+      "imports": 3303,
+      "identity_only_compatibility_leaves": 48,
+      "status": "passed"
+    },
+    "working_tree_including_optional_local_prototypes": {
+      "modules": 451,
+      "imports": 3360,
+      "identity_only_compatibility_leaves": 51,
+      "status": "passed"
+    }
+  },
+  "native_conversation": {
+    "exit": 3,
+    "stdout": "PORT settings\nPORT context 1\n",
+    "stderr": "error[analysis::MissingCheckedFact]: field `slots` expects 4 record fields, received [\"entries\", \"length\"]\n --> /workspace/src/nomo/native/history.es:13:1\n  | \n  | ^ field `slots` expects 4 record fields, received [\"entries\", \"length\"]\n",
+    "resources": {
+      "memory.max": "4294967296",
+      "memory.peak": "586821632",
+      "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+      "cpu.max": "400000 100000",
+      "pids.max": "256"
+    },
+    "status": "failed",
+    "trace_outcome": {
+      "failure": {
+        "diagnostic": {
+          "code": "Analysis(MissingCheckedFact)",
+          "message": "field `slots` expects 4 record fields, received [\"entries\", \"length\"]",
+          "phase": "analysis",
+          "severity": "error"
+        },
+        "kind": "execution_fault"
+      },
+      "kind": "failed"
+    },
+    "termination": {
+      "local_work_settled": true,
+      "operations": [
+        {
+          "cleanup_errors": [],
+          "completed_units": null,
+          "dispatched": true,
+          "external_outcome": {
+            "kind": "confirmed"
+          },
+          "id": 0,
+          "parent_operation": null,
+          "request_id": 0,
+          "scope": 1
+        },
+        {
+          "cleanup_errors": [],
+          "completed_units": null,
+          "dispatched": true,
+          "external_outcome": {
+            "kind": "confirmed"
+          },
+          "id": 1,
+          "parent_operation": 0,
+          "request_id": 0,
+          "scope": 1
+        },
+        {
+          "cleanup_errors": [],
+          "completed_units": null,
+          "dispatched": true,
+          "external_outcome": {
+            "evidence": {
+              "operation": {
+                "key": "so1:000000006b09bfbf:14f5f7cecde832fd1a8cf92c1c6d27e4",
+                "request_fingerprint": "3b9d94205f79f717fc69914ce705a47509101f9dd08c09a0650e5d8cbff92aad"
+              },
+              "status": {
+                "durability": "sqlite_wal_full",
+                "kind": "committed",
+                "revision": "mv1:cbf7eea6451d7b4add74f792c48d73b6366ed50423ef1bf384273f7983bd763b:881aa486cb021af2fc66c708eb2bc1ad:0000000000000001"
+              }
+            },
+            "kind": "storage_write"
+          },
+          "id": 2,
+          "parent_operation": null,
+          "request_id": 1,
+          "scope": 2
+        },
+        {
+          "cleanup_errors": [],
+          "completed_units": null,
+          "dispatched": true,
+          "external_outcome": {
+            "evidence": {
+              "operation": {
+                "key": "so1:000000006b09bfbf:14f5f7cecde832fd1a8cf92c1c6d27e4",
+                "request_fingerprint": "3b9d94205f79f717fc69914ce705a47509101f9dd08c09a0650e5d8cbff92aad"
+              },
+              "status": {
+                "durability": "sqlite_wal_full",
+                "kind": "committed",
+                "revision": "mv1:cbf7eea6451d7b4add74f792c48d73b6366ed50423ef1bf384273f7983bd763b:881aa486cb021af2fc66c708eb2bc1ad:0000000000000001"
+              }
+            },
+            "kind": "storage_write"
+          },
+          "id": 3,
+          "parent_operation": 2,
+          "request_id": 1,
+          "scope": 2
+        },
+        {
+          "cleanup_errors": [],
+          "completed_units": null,
+          "dispatched": true,
+          "external_outcome": {
+            "evidence": {
+              "operation": {
+                "key": "so1:000000006b09bfc4:28241ab9ad12647ffd000e553aa07ff5",
+                "request_fingerprint": "6304f409f46c9d73a81b3617084d0e2558dd1da9e79d17e816f8f9e2f305deec"
+              },
+              "status": {
+                "durability": "sqlite_wal_full",
+                "kind": "committed",
+                "revision": "mv1:94c1c040df9c7a5837b5347765dd0cbdad4868b8d68a9840204bd02ba950b3c4:2a9b1eeeee0670169663fa22ba70a55d:0000000000000001"
+              }
+            },
+            "kind": "storage_write"
+          },
+          "id": 4,
+          "parent_operation": null,
+          "request_id": 2,
+          "scope": 3
+        },
+        {
+          "cleanup_errors": [],
+          "completed_units": null,
+          "dispatched": true,
+          "external_outcome": {
+            "evidence": {
+              "operation": {
+                "key": "so1:000000006b09bfc4:28241ab9ad12647ffd000e553aa07ff5",
+                "request_fingerprint": "6304f409f46c9d73a81b3617084d0e2558dd1da9e79d17e816f8f9e2f305deec"
+              },
+              "status": {
+                "durability": "sqlite_wal_full",
+                "kind": "committed",
+                "revision": "mv1:94c1c040df9c7a5837b5347765dd0cbdad4868b8d68a9840204bd02ba950b3c4:2a9b1eeeee0670169663fa22ba70a55d:0000000000000001"
+              }
+            },
+            "kind": "storage_write"
+          },
+          "id": 5,
+          "parent_operation": 4,
+          "request_id": 2,
+          "scope": 3
+        },
+        {
+          "cleanup_errors": [],
+          "completed_units": null,
+          "dispatched": true,
+          "external_outcome": {
+            "evidence": {
+              "operation": {
+                "key": "so1:000000006b09bfd0:58a74a51b4aaf08ce087882ed0c347d8",
+                "request_fingerprint": "8fcc1a3ae311e4a8f9fe7f21edfc9ac330c281cdd99917b1daa9df8608ac6c17"
+              },
+              "status": {
+                "durability": "sqlite_wal_full",
+                "kind": "committed",
+                "revision": "mv1:2c645e192e6c9b58d7f695742d4aaad26c8b447b8ad8c9c13d60ecafa4fb3fa9:f4700bc3444c4f62d74085497a630ef0:0000000000000001"
+              }
+            },
+            "kind": "storage_write"
+          },
+          "id": 6,
+          "parent_operation": null,
+          "request_id": 3,
+          "scope": 4
+        },
+        {
+          "cleanup_errors": [],
+          "completed_units": null,
+          "dispatched": true,
+          "external_outcome": {
+            "evidence": {
+              "operation": {
+                "key": "so1:000000006b09bfd0:58a74a51b4aaf08ce087882ed0c347d8",
+                "request_fingerprint": "8fcc1a3ae311e4a8f9fe7f21edfc9ac330c281cdd99917b1daa9df8608ac6c17"
+              },
+              "status": {
+                "durability": "sqlite_wal_full",
+                "kind": "committed",
+                "revision": "mv1:2c645e192e6c9b58d7f695742d4aaad26c8b447b8ad8c9c13d60ecafa4fb3fa9:f4700bc3444c4f62d74085497a630ef0:0000000000000001"
+              }
+            },
+            "kind": "storage_write"
+          },
+          "id": 7,
+          "parent_operation": 6,
+          "request_id": 3,
+          "scope": 4
+        },
+        {
+          "cleanup_errors": [],
+          "completed_units": null,
+          "dispatched": true,
+          "external_outcome": {
+            "kind": "confirmed"
+          },
+          "id": 8,
+          "parent_operation": null,
+          "request_id": 4,
+          "scope": 5
+        },
+        {
+          "cleanup_errors": [],
+          "completed_units": null,
+          "dispatched": true,
+          "external_outcome": {
+            "kind": "confirmed"
+          },
+          "id": 9,
+          "parent_operation": 8,
+          "request_id": 4,
+          "scope": 5
+        },
+        {
+          "cleanup_errors": [],
+          "completed_units": null,
+          "dispatched": true,
+          "external_outcome": {
+            "kind": "confirmed"
+          },
+          "id": 10,
+          "parent_operation": null,
+          "request_id": 5,
+          "scope": 6
+        },
+        {
+          "cleanup_errors": [],
+          "completed_units": null,
+          "dispatched": true,
+          "external_outcome": {
+            "kind": "confirmed"
+          },
+          "id": 11,
+          "parent_operation": 10,
+          "request_id": 5,
+          "scope": 6
+        },
+        {
+          "cleanup_errors": [],
+          "completed_units": null,
+          "dispatched": true,
+          "external_outcome": {
+            "evidence": {
+              "operation": {
+                "key": "so1:000000006b09bfd8:d4eb229266cd820a63cae13b5ebb4ea8",
+                "request_fingerprint": "7bdea28a556de2d26646a5de8df72fff5951440c4ee3de0b446a20fd6782bf71"
+              },
+              "status": {
+                "durability": "sqlite_wal_full",
+                "kind": "committed",
+                "revision": "mv1:94c1c040df9c7a5837b5347765dd0cbdad4868b8d68a9840204bd02ba950b3c4:2a9b1eeeee0670169663fa22ba70a55d:0000000000000002"
+              }
+            },
+            "kind": "storage_write"
+          },
+          "id": 12,
+          "parent_operation": null,
+          "request_id": 6,
+          "scope": 7
+        },
+        {
+          "cleanup_errors": [],
+          "completed_units": null,
+          "dispatched": true,
+          "external_outcome": {
+            "evidence": {
+              "operation": {
+                "key": "so1:000000006b09bfd8:d4eb229266cd820a63cae13b5ebb4ea8",
+                "request_fingerprint": "7bdea28a556de2d26646a5de8df72fff5951440c4ee3de0b446a20fd6782bf71"
+              },
+              "status": {
+                "durability": "sqlite_wal_full",
+                "kind": "committed",
+                "revision": "mv1:94c1c040df9c7a5837b5347765dd0cbdad4868b8d68a9840204bd02ba950b3c4:2a9b1eeeee0670169663fa22ba70a55d:0000000000000002"
+              }
+            },
+            "kind": "storage_write"
+          },
+          "id": 13,
+          "parent_operation": 12,
+          "request_id": 6,
+          "scope": 7
+        },
+        {
+          "cleanup_errors": [],
+          "completed_units": null,
+          "dispatched": true,
+          "external_outcome": {
+            "evidence": {
+              "operation": {
+                "key": "so1:000000006b09bfe4:3dbd4fc540481327b2afa090fb472d22",
+                "request_fingerprint": "96e1dde2182f6bfe671a491f3d0c90e8a603cefd065c8fd55faf05c996eafe7c"
+              },
+              "status": {
+                "durability": "sqlite_wal_full",
+                "kind": "committed",
+                "revision": "mv1:7ed17de8c2de1fbe0402b8cf6c65b992abaf8e20bf04124f5d2391329c0d6cd8:e9b8f0075193b35b1dcd948d8d9ef933:0000000000000001"
+              }
+            },
+            "kind": "storage_write"
+          },
+          "id": 14,
+          "parent_operation": null,
+          "request_id": 7,
+          "scope": 8
+        },
+        {
+          "cleanup_errors": [],
+          "completed_units": null,
+          "dispatched": true,
+          "external_outcome": {
+            "evidence": {
+              "operation": {
+                "key": "so1:000000006b09bfe4:3dbd4fc540481327b2afa090fb472d22",
+                "request_fingerprint": "96e1dde2182f6bfe671a491f3d0c90e8a603cefd065c8fd55faf05c996eafe7c"
+              },
+              "status": {
+                "durability": "sqlite_wal_full",
+                "kind": "committed",
+                "revision": "mv1:7ed17de8c2de1fbe0402b8cf6c65b992abaf8e20bf04124f5d2391329c0d6cd8:e9b8f0075193b35b1dcd948d8d9ef933:0000000000000001"
+              }
+            },
+            "kind": "storage_write"
+          },
+          "id": 15,
+          "parent_operation": 14,
+          "request_id": 7,
+          "scope": 8
+        },
+        {
+          "cleanup_errors": [],
+          "completed_units": null,
+          "dispatched": true,
+          "external_outcome": {
+            "evidence": {
+              "operation": {
+                "key": "so1:000000006b09bfec:7db33821c604eafda7e782f33a97c069",
+                "request_fingerprint": "31db2a9dacb8aa65be16ad6c84e8972ac86ba4f2af1701b78598d4d9e18c6300"
+              },
+              "status": {
+                "durability": "sqlite_wal_full",
+                "kind": "committed",
+                "revision": "mv1:d62dfe9b227644b37873476b222f259e5aa0dd2668dc1f82bab99b2aaa95d5e3:c2034a36b95737e76244f303bbd64e47:0000000000000001"
+              }
+            },
+            "kind": "storage_write"
+          },
+          "id": 16,
+          "parent_operation": null,
+          "request_id": 8,
+          "scope": 9
+        },
+        {
+          "cleanup_errors": [],
+          "completed_units": null,
+          "dispatched": true,
+          "external_outcome": {
+            "evidence": {
+              "operation": {
+                "key": "so1:000000006b09bfec:7db33821c604eafda7e782f33a97c069",
+                "request_fingerprint": "31db2a9dacb8aa65be16ad6c84e8972ac86ba4f2af1701b78598d4d9e18c6300"
+              },
+              "status": {
+                "durability": "sqlite_wal_full",
+                "kind": "committed",
+                "revision": "mv1:d62dfe9b227644b37873476b222f259e5aa0dd2668dc1f82bab99b2aaa95d5e3:c2034a36b95737e76244f303bbd64e47:0000000000000001"
+              }
+            },
+            "kind": "storage_write"
+          },
+          "id": 17,
+          "parent_operation": 16,
+          "request_id": 8,
+          "scope": 9
+        },
+        {
+          "cleanup_errors": [],
+          "completed_units": null,
+          "dispatched": true,
+          "external_outcome": {
+            "evidence": {
+              "operation": {
+                "key": "so1:000000006b09c002:878fa62c0edb6142ba099d78922e700a",
+                "request_fingerprint": "cdc8782884eece3b1a5e3d64a4dfd82da63c571ba00a83a8531d80fdf4124f0f"
+              },
+              "status": {
+                "durability": "sqlite_wal_full",
+                "kind": "committed",
+                "revision": "mv1:7ed17de8c2de1fbe0402b8cf6c65b992abaf8e20bf04124f5d2391329c0d6cd8:e9b8f0075193b35b1dcd948d8d9ef933:0000000000000002"
+              }
+            },
+            "kind": "storage_write"
+          },
+          "id": 18,
+          "parent_operation": null,
+          "request_id": 9,
+          "scope": 10
+        },
+        {
+          "cleanup_errors": [],
+          "completed_units": null,
+          "dispatched": true,
+          "external_outcome": {
+            "evidence": {
+              "operation": {
+                "key": "so1:000000006b09c002:878fa62c0edb6142ba099d78922e700a",
+                "request_fingerprint": "cdc8782884eece3b1a5e3d64a4dfd82da63c571ba00a83a8531d80fdf4124f0f"
+              },
+              "status": {
+                "durability": "sqlite_wal_full",
+                "kind": "committed",
+                "revision": "mv1:7ed17de8c2de1fbe0402b8cf6c65b992abaf8e20bf04124f5d2391329c0d6cd8:e9b8f0075193b35b1dcd948d8d9ef933:0000000000000002"
+              }
+            },
+            "kind": "storage_write"
+          },
+          "id": 19,
+          "parent_operation": 18,
+          "request_id": 9,
+          "scope": 10
+        },
+        {
+          "cleanup_errors": [],
+          "completed_units": null,
+          "dispatched": true,
+          "external_outcome": {
+            "kind": "confirmed"
+          },
+          "id": 20,
+          "parent_operation": null,
+          "request_id": 10,
+          "scope": 11
+        },
+        {
+          "cleanup_errors": [],
+          "completed_units": null,
+          "dispatched": true,
+          "external_outcome": {
+            "kind": "confirmed"
+          },
+          "id": 21,
+          "parent_operation": 20,
+          "request_id": 10,
+          "scope": 11
+        },
+        {
+          "cleanup_errors": [],
+          "completed_units": null,
+          "dispatched": true,
+          "external_outcome": {
+            "kind": "confirmed"
+          },
+          "id": 22,
+          "parent_operation": null,
+          "request_id": 11,
+          "scope": 12
+        },
+        {
+          "cleanup_errors": [],
+          "completed_units": null,
+          "dispatched": true,
+          "external_outcome": {
+            "kind": "confirmed"
+          },
+          "id": 23,
+          "parent_operation": 22,
+          "request_id": 11,
+          "scope": 12
+        },
+        {
+          "cleanup_errors": [],
+          "completed_units": null,
+          "dispatched": true,
+          "external_outcome": {
+            "kind": "confirmed"
+          },
+          "id": 24,
+          "parent_operation": null,
+          "request_id": 12,
+          "scope": 13
+        },
+        {
+          "cleanup_errors": [],
+          "completed_units": null,
+          "dispatched": true,
+          "external_outcome": {
+            "kind": "confirmed"
+          },
+          "id": 25,
+          "parent_operation": 24,
+          "request_id": 12,
+          "scope": 13
+        },
+        {
+          "cleanup_errors": [],
+          "completed_units": null,
+          "dispatched": true,
+          "external_outcome": {
+            "kind": "confirmed"
+          },
+          "id": 26,
+          "parent_operation": null,
+          "request_id": 13,
+          "scope": 14
+        },
+        {
+          "cleanup_errors": [],
+          "completed_units": null,
+          "dispatched": true,
+          "external_outcome": {
+            "kind": "confirmed"
+          },
+          "id": 27,
+          "parent_operation": 26,
+          "request_id": 13,
+          "scope": 14
+        },
+        {
+          "cleanup_errors": [],
+          "completed_units": null,
+          "dispatched": true,
+          "external_outcome": {
+            "kind": "confirmed"
+          },
+          "id": 28,
+          "parent_operation": null,
+          "request_id": 14,
+          "scope": 15
+        },
+        {
+          "cleanup_errors": [],
+          "completed_units": null,
+          "dispatched": true,
+          "external_outcome": {
+            "kind": "confirmed"
+          },
+          "id": 29,
+          "parent_operation": 28,
+          "request_id": 14,
+          "scope": 15
+        },
+        {
+          "cleanup_errors": [],
+          "completed_units": null,
+          "dispatched": true,
+          "external_outcome": {
+            "kind": "confirmed"
+          },
+          "id": 30,
+          "parent_operation": null,
+          "request_id": 15,
+          "scope": 16
+        },
+        {
+          "cleanup_errors": [],
+          "completed_units": null,
+          "dispatched": true,
+          "external_outcome": {
+            "kind": "confirmed"
+          },
+          "id": 31,
+          "parent_operation": 30,
+          "request_id": 15,
+          "scope": 16
+        },
+        {
+          "cleanup_errors": [],
+          "completed_units": null,
+          "dispatched": true,
+          "external_outcome": {
+            "kind": "confirmed"
+          },
+          "id": 32,
+          "parent_operation": null,
+          "request_id": 16,
+          "scope": 17
+        },
+        {
+          "cleanup_errors": [],
+          "completed_units": null,
+          "dispatched": true,
+          "external_outcome": {
+            "kind": "confirmed"
+          },
+          "id": 33,
+          "parent_operation": 32,
+          "request_id": 16,
+          "scope": 17
+        },
+        {
+          "cleanup_errors": [],
+          "completed_units": null,
+          "dispatched": true,
+          "external_outcome": {
+            "kind": "confirmed"
+          },
+          "id": 34,
+          "parent_operation": null,
+          "request_id": 17,
+          "scope": 18
+        },
+        {
+          "cleanup_errors": [],
+          "completed_units": null,
+          "dispatched": true,
+          "external_outcome": {
+            "kind": "confirmed"
+          },
+          "id": 35,
+          "parent_operation": 34,
+          "request_id": 17,
+          "scope": 18
+        },
+        {
+          "cleanup_errors": [],
+          "completed_units": null,
+          "dispatched": true,
+          "external_outcome": {
+            "kind": "confirmed"
+          },
+          "id": 36,
+          "parent_operation": null,
+          "request_id": 18,
+          "scope": 19
+        },
+        {
+          "cleanup_errors": [],
+          "completed_units": null,
+          "dispatched": true,
+          "external_outcome": {
+            "kind": "confirmed"
+          },
+          "id": 37,
+          "parent_operation": 36,
+          "request_id": 18,
+          "scope": 19
+        },
+        {
+          "cleanup_errors": [],
+          "completed_units": null,
+          "dispatched": true,
+          "external_outcome": {
+            "kind": "confirmed"
+          },
+          "id": 38,
+          "parent_operation": null,
+          "request_id": 19,
+          "scope": 20
+        },
+        {
+          "cleanup_errors": [],
+          "completed_units": null,
+          "dispatched": true,
+          "external_outcome": {
+            "kind": "confirmed"
+          },
+          "id": 39,
+          "parent_operation": 38,
+          "request_id": 19,
+          "scope": 20
+        }
+      ],
+      "scope": 0
+    },
+    "host_requests": 20,
+    "qualification": "Existing real SQLite fixture with controlled model effects. Failed during context JSON conversion before summary/coding effects. No OOM; no full conversation acceptance."
+  },
+  "minimal_json_conversion": {
+    "exit": 3,
+    "elapsed_seconds": 1.3979505000002064,
+    "stdout": "",
+    "stderr": "",
+    "trace": {
+      "outcome": {
+        "failure": {
+          "diagnostic": {
+            "code": "Analysis(MissingCheckedFact)",
+            "message": "field `slots` expects 4 record fields, received [\"entries\", \"length\"]",
+            "phase": "analysis",
+            "severity": "error"
+          },
+          "kind": "execution_fault"
+        },
+        "kind": "failed"
+      },
+      "termination": {
+        "local_work_settled": true,
+        "operations": [],
+        "scope": 0
+      },
+      "host_requests": 0
+    },
+    "resources": {
+      "memory.max": "4294967296",
+      "memory.peak": "374546432",
+      "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0"
+    }
+  },
+  "upstream": {
+    "original_witness_pass_followup": "https://github.com/etas-project/etas-frontend/issues/100#issuecomment-7198066650",
+    "json_conversion": "https://github.com/etas-project/etas-interpreter/issues/119",
+    "production_type_graph_limit": "https://github.com/etas-project/etas-frontend/issues/102"
+  },
+  "acceptance": {
+    "whole_source_check": true,
+    "native_conversation": false,
+    "native_production_persistence": false,
+    "default_entry_cutover": false,
+    "real_model_requests": 0,
+    "new_negative_matrix": false
+  },
+  "native_production_persistence": {
+    "status": "failed-before-runtime-preparation-completed",
+    "review_revision": "c8d07728874965e3f9e70c840e6b148b82100aea",
+    "source_count": 441,
+    "optional_untracked_prototypes_included": false,
+    "scenario": "tests/native_project_probe.py --scenario persist",
+    "diagnostic": "consumer type/spec closure: checked definition projection failed: Limit { resource: \"edges\", limit: 262144 }",
+    "local_model_requests": 0,
+    "trace_emitted": false,
+    "synthetic_note_content": "before old\n",
+    "terminal_sha256": "ab2f89e5cd9dc69a2dd7800336533845a5ea1d49ef6da9fbf9c1ad06d4368260",
+    "runtime_resource_counters": "Not captured by this existing PTY scenario; no runtime resource assertion is claimed.",
+    "qualification": "The exact committed package was exported without optional prototypes. An initial export mount setup attempt did not start Etas; after creating the required empty .etas mount directory this run reproduced the compiler preparation limit. No file edit, summary or new-process restoration was reached."
+  },
+  "syntax_checks": {
+    "changed_python_files": 21,
+    "changed_shell_files": 5,
+    "status": "passed"
+  }
+}
