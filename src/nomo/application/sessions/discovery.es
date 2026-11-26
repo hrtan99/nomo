@@ -3,6 +3,7 @@ module nomo.application.sessions.discovery;
 import nomo.session.work_chain.Record;
 import nomo.application.sessions.observation.observe as snapshot;
 import nomo.domain.sessions.work_chain_selection.{Snapshot, ObservedRow, Selector, select, consistent};
+import nomo.domain.sessions.work_chain_observation.ObservationPass;
 import nomo.application.sessions.effects.session_work_chain_discovery.DiscoveryAuthority;
 
 // These contracts bound actual native adapters. Observations are copied values,

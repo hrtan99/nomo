@@ -123,7 +123,7 @@ public flow output<J ~ JobRepository, O ~ OutputArchive, W ~ ConversationWriter,
     for item in history.messages(selected.session, 0) {
         if item.role != "tool_call" || item.name != "command" { continue; }
         match archive.find(selected.session, item.id) {
-            Some(value) => if value.job == job { result = result.push(value); },
+            Some(value) => { if value.job == job { result = result.push(value); } },
             None() => (),
         }
     }

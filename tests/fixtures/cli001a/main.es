@@ -47,8 +47,10 @@ flow args_case(item: Case) -> unit {
                 once_supplied = item.once_supplied, once = item.once };
             if value != expected { abort("request changed expected fields"); }
         }
-        Err(error) => if item.accepted { abort("refused accepted request fixture"); }
-        if !bounded_diagnostic(error) { abort("unbounded request diagnostic"); },
+        Err(error) => {
+            if item.accepted { abort("refused accepted request fixture"); }
+            if !bounded_diagnostic(error) { abort("unbounded request diagnostic"); }
+        },
     }
 }
 
@@ -61,8 +63,10 @@ flow line_case(item: Case) -> unit {
             let expected = LineCommand { kind = item.kind, text = item.text };
             if value != expected { abort("line changed expected fields"); }
         }
-        Err(error) => if item.accepted { abort("refused accepted line fixture"); }
-        if !bounded_diagnostic(error) || !line_diagnostic(error) { abort("non-fixed line diagnostic"); },
+        Err(error) => {
+            if item.accepted { abort("refused accepted line fixture"); }
+            if !bounded_diagnostic(error) || !line_diagnostic(error) { abort("non-fixed line diagnostic"); }
+        },
     }
 }
 

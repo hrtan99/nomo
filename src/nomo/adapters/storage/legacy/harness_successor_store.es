@@ -2,7 +2,7 @@ module nomo.adapters.storage.legacy.harness_successor_store;
 
 import nomo.domain.sessions.cas_rows.Target;
 import nomo.adapters.storage.legacy.cas_rows.commit_native;
-import std.memory.{WriteCondition, MemoryVersion, MemoryEntry, Missing, Match};
+import std.memory.{WriteCondition, MemoryVersion, MemoryEntry, Missing};
 import nomo.domain.harness.model_tool_contract.question_error;
 import nomo.session.harness_checkpoint.Identity;
 import nomo.domain.sessions.harness_checkpoint.identity_error;
@@ -89,7 +89,7 @@ public flow failed(ticket: Ticket, turn: TurnResult) -> Result<bool, string> ![M
     let total = match combine(prior, local, turn.state.maximum) { Ok(value) => value, Err(error) => { return Err(error); } };
     if total != used { return Err("failed continuation cumulative settlement mismatch"); }
     match claim(ticket) { Ok(_) => (), Err(error) => { return Err(error); } }
-    return match write(admission(ticket.predecessor.checkpoint.identity), row(ticket, "failed", "", used, true), Match(ticket.version)) {
+    return match write(admission(ticket.predecessor.checkpoint.identity), row(ticket, "failed", "", used, true), WriteCondition.Match(ticket.version)) {
         Ok(_) => Ok(true), Err(error) => Err(error)
     };
 }
@@ -102,13 +102,13 @@ public flow publish(ticket: Ticket, saved: Successor) -> Result<bool, string> ![
     match claim(ticket) { Ok(_) => (), Err(error) => { return Err(error); } }
     let changed = unchanged(ticket.predecessor); if changed != "" { return Err(changed); }
     match read(key(ticket.successor)) { Some(_) => { return Err("successor already exists; no retry"); } None() => (), }
-    match write(admission(ticket.predecessor.checkpoint.identity), row(ticket, "settled", body, saved.usage, true), Match(ticket.version)) {
+    match write(admission(ticket.predecessor.checkpoint.identity), row(ticket, "settled", body, saved.usage, true), WriteCondition.Match(ticket.version)) {
         Ok(_) => (), Err(error) => { return Err(error); }
     }
     let version = match write(key(ticket.successor), row(ticket, "pending", body, saved.usage, true), Missing) {
         Ok(value) => value, Err(error) => { return Err(error); }
     };
-    let committed = match write(key(ticket.successor), row(ticket, "published", body, saved.usage, true), Match(version)) {
+    let committed = match write(key(ticket.successor), row(ticket, "published", body, saved.usage, true), WriteCondition.Match(version)) {
         Ok(value) => value, Err(error) => { return Err(error); }
     };
     if committed.opaque == version.opaque { return Err("successor publication version did not change"); }

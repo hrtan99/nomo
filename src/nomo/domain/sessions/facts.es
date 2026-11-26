@@ -1,8 +1,5 @@
 module nomo.domain.sessions.facts;
 
-
-
-
 public type CheckOutput = { stdout: string, stderr: string, stdout_truncated: bool, stderr_truncated: bool };
 
 public type WorkFacts = { id: string, summary: string, summary_source: string, selection: Option<string>, evidence: Option<string>, check: string, exit_code: string, output: Option<CheckOutput> };

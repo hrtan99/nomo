@@ -58,22 +58,24 @@ flow loop(allowed: Array<string>, initial: Invocation, unicode: bool, extended: 
         if framing != "" { println("REFUSED " + framing); }
         else { match (if unicode { parse_unicode(raw) } else { parse_ascii(raw) }) {
             Err(error) => println("REFUSED " + error),
-            Ok(command) => if command.kind == "exit" { stop("exit", lines, state, unicode); return 0; }
-            if command.kind == "help" { help(unicode); }
-            else {
-                let invalid = if unicode { unicode_question_error(command.text) } else { ascii_question_error(command.text) };
-                if invalid != "" { println("REFUSED " + invalid); }
-                else if starts_with(command.text, "/") { println("REFUSED unknown slash command"); }
+            Ok(command) => {
+                if command.kind == "exit" { stop("exit", lines, state, unicode); return 0; }
+                if command.kind == "help" { help(unicode); }
                 else {
-                    if state.admitted >= turn_limit { println("REFUSED turn limit reached"); stop("turn limit", lines, state, unicode); return 1; }
-                    let capacity = if extended { extended_admission_error(state.usage) } else { admission_error(state.usage, state.maximum) };
-                    if capacity != "" { println("REFUSED " + capacity); stop("budget", lines, state, unicode); return 1; }
-                    println("TURN " + from_i32(state.admitted + 1) + " USER " + command.text);
-                    let result = if unicode { run_unicode_turn(command.text, allowed, state) } else { run_ascii_turn(command.text, allowed, state) };
-                    if !result.resolved { return 1; }
-                    state = result.state;
-                    ledger("TURN " + from_i32(state.admitted) + " ", state.usage, displayed_maximum(unicode, state.maximum));
-                    if result.status != 0 { stop("turn failed", lines, state, unicode); return 1; }
+                    let invalid = if unicode { unicode_question_error(command.text) } else { ascii_question_error(command.text) };
+                    if invalid != "" { println("REFUSED " + invalid); }
+                    else if starts_with(command.text, "/") { println("REFUSED unknown slash command"); }
+                    else {
+                        if state.admitted >= turn_limit { println("REFUSED turn limit reached"); stop("turn limit", lines, state, unicode); return 1; }
+                        let capacity = if extended { extended_admission_error(state.usage) } else { admission_error(state.usage, state.maximum) };
+                        if capacity != "" { println("REFUSED " + capacity); stop("budget", lines, state, unicode); return 1; }
+                        println("TURN " + from_i32(state.admitted + 1) + " USER " + command.text);
+                        let result = if unicode { run_unicode_turn(command.text, allowed, state) } else { run_ascii_turn(command.text, allowed, state) };
+                        if !result.resolved { return 1; }
+                        state = result.state;
+                        ledger("TURN " + from_i32(state.admitted) + " ", state.usage, displayed_maximum(unicode, state.maximum));
+                        if result.status != 0 { stop("turn failed", lines, state, unicode); return 1; }
+                    }
                 }
             },
         }; }

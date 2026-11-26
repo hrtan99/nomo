@@ -81,8 +81,8 @@ public flow run_with_operations(args: Array<string>) -> i32 ![Console, TerminalW
             Ok(command) => match command {
                 LineCommand.Eof => { println("STOP EOF; captured state is preserved"); return 0; }
                 LineCommand.Exit => { println("STOP exit; captured state is preserved"); return 0; }
-                LineCommand.Help => if help([]) != 0 { return 1; },
-                LineCommand.Show => if show(config, state) != 0 { return 1; },
+                LineCommand.Help => { if help([]) != 0 { return 1; } },
+                LineCommand.Show => { if show(config, state) != 0 { return 1; } },
                 LineCommand.Request(text) => {
                     state = match request(config, state, text) { Ok(value) => value, Err(error) => { return refused(error); } };
                     if work_error(state) != "" { println("STOP selected work complete; no further request in this process"); return 0; }

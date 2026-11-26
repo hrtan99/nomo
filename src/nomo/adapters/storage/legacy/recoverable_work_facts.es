@@ -20,8 +20,10 @@ flow read_snapshot(policy: Policy, binding: string) -> Result<Facts, string> {
     let second_check = match second_reader.read() { Ok(item) => item, Err(error) => { return Err(error); } };
     var first_facts: Option<WorkFacts> = None(); var second_facts: Option<WorkFacts> = None(); var calls: i32 = 0; var generation: i32 = 0;
     match first {
-        None() => match edit_available() { Ok(_) => (), Err(_) => { return Err("orphan first edit"); } }
-        match first_check { Some(_) => { return Err("orphan first check"); } None() => (), },
+        None() => {
+            match edit_available() { Ok(_) => (), Err(_) => { return Err("orphan first edit"); } }
+            match first_check { Some(_) => { return Err("orphan first check"); } None() => (), }
+        },
         Some(item) => {
             let work = item.value.work;
             if work.phase == "abandoned" {
@@ -38,8 +40,10 @@ flow read_snapshot(policy: Policy, binding: string) -> Result<Facts, string> {
         }
     }
     match followup {
-        None() => match followup_edit_available() { Ok(_) => (), Err(_) => { return Err("orphan followup edit"); } }
-        match second_check { Some(_) => { return Err("orphan followup check"); } None() => (), },
+        None() => {
+            match followup_edit_available() { Ok(_) => (), Err(_) => { return Err("orphan followup edit"); } }
+            match second_check { Some(_) => { return Err("orphan followup check"); } None() => (), }
+        },
         Some(item) => {
             match first_facts { Some(_) => (), None() => { return Err("first work facts missing"); } }
             let work = item.value.work;

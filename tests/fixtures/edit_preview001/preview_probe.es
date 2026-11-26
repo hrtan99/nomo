@@ -42,7 +42,7 @@ public flow pure_probe() -> bool {
     for item in checks() limit Iterations(32) { if !evaluate(item) { return false; } }
     let control = match std.char.from_u32(127) { Some(value) => std.text.from_char(value), None() => { return false; } };
     match ascii_json_with("\"" + control + "\"", 16, 16, "encoded", "display") {
-        Ok(value) => if value != "\"" + slash() + "u007f\"" { return false; },
+        Ok(value) => { if value != "\"" + slash() + "u007f\"" { return false; } },
         Err(_) => { return false; }
     }
     return true;
@@ -70,7 +70,7 @@ public flow denied(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.s
         }
     };
     match answer {
-        Err(error) => if error != "native approval denied; no intent or File write" { abort(error); },
+        Err(error) => { if error != "native approval denied; no intent or File write" { abort(error); } },
         Ok(_) => abort("source denial unexpectedly completed edit"),
     }
     println("PASS source denial preserves preview and stops before journal");

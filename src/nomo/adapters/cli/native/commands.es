@@ -29,7 +29,9 @@ flow argv(raw: string) -> Argv {
 }
 flow event_index(raw: string) -> i64 {
     return match parse_i64(trim(raw)) {
-        Ok(value) => if value < 0 { abort("event index must be nonnegative"); } value,
+        Ok(value) => {
+            if value < 0 { abort("event index must be nonnegative"); } value
+        },
         Err(_) => abort("expected an event index"),
     };
 }

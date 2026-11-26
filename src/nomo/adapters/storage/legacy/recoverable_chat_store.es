@@ -2,7 +2,8 @@ module nomo.adapters.storage.legacy.recoverable_chat_store;
 
 import nomo.domain.sessions.cas_rows.Target;
 import nomo.adapters.storage.legacy.cas_rows.commit_native;
-import std.memory.{MemoryEntry, MemoryVersion, Missing, Match};
+import std.memory.{MemoryEntry, MemoryVersion, Missing};
+import std.memory.WriteCondition;
 import nomo.domain.sessions.chat_session_contract.{fresh_events, fresh_high_input_events, invalid as invalid_chat, begin, complete, extend};
 import nomo.domain.harness.harness_tool_chat_contract.TurnResult;
 import nomo.harness.harness_tool_chat_contract.Previous;
@@ -200,12 +201,12 @@ flow write(value: Frame, expected: Option<MemoryEntry<string, Frame>>, policy: P
     let compact = match compact_context_duplicates(value, policy, binding) { Ok(item) => item, Err(error) => { return Err(error); } };
     let desired = compact { format = 1 };
     let error = constructed_frame_error(desired, policy, binding); if error != "" { return Err(error); }
-    let condition: WriteCondition = match expected { Some(item) => Match(item.version), None() => Missing };
+    let condition: WriteCondition = match expected { Some(item) => WriteCondition.Match(item.version), None() => Missing };
     let target = Target { store = ["Rows"], region = "nomo-recoverable-chat-v1", key = "latest", label = "recoverable chat" };
     let version = match commit_native(Frames.Rows, target, desired, condition) { Ok(item) => item, Err(problem) => { return Err(problem); } };
     // commit_native already performs exact raw stored-value and version
     // readback. Do not immediately reload and parse the same MiB-scale frame.
-    match expected { Some(item) => if item.version.opaque == version.opaque { return Err("recoverable chat version did not change"); }, None() => (), }
+    match expected { Some(item) => { if item.version.opaque == version.opaque { return Err("recoverable chat version did not change"); } }, None() => (), }
     return Ok(MemoryEntry { key = "latest", value = desired, version });
 }
 

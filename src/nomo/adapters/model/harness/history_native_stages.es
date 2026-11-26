@@ -1,5 +1,8 @@
 module nomo.adapters.model.harness.history_native_stages;
 
+import nomo.adapters.model.prompt_encoding;
+
+
 import nomo.domain.harness.typed_work_contract.Delegation;
 import nomo.domain.mutations.edit_contribution.Contribution;
 import nomo.domain.serialization.json.encode;
@@ -101,8 +104,8 @@ flow delegated(value: Delegation) -> string { return frame(["delegate", value.ta
 
 flow contributed(value: Contribution) -> string { return frame(["edit", value.target, value.replacement]); }
 
-public flow infer_stage<T>(stage: Stage, wide: bool, high_input: bool, system: string, input: T) -> string {
-    let prompt = Prompt.new().system(Trusted(system)).data(input);
+public flow infer_stage<T>(stage: Stage, wide: bool, high_input: bool, system: Trusted<string>, input: T) -> string {
+    let prompt = Prompt.new().system(system).data(prompt_encoding.input(input));
     return match stage {
         Stage.ReadPlan => delegated(if high_input { (HighInputReadPlan {}).run(prompt) } else { if wide { (WideReadPlan {}).run(prompt) } else { (ReadPlan {}).run(prompt) } }),
         Stage.ReadSummary => if high_input { (HighInputStage {}).run(prompt) } else { if wide { (WideStage {}).run(prompt) } else { (Summary {}).run(prompt) } },

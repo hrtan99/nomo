@@ -2,7 +2,8 @@ module nomo.adapters.storage.legacy.recoverable_work_store;
 
 import nomo.domain.sessions.cas_rows.Target;
 import nomo.adapters.storage.legacy.cas_rows.commit_native;
-import std.memory.{MemoryEntry, Missing, Match};
+import std.memory.{MemoryEntry, Missing};
+import std.memory.WriteCondition;
 import nomo.core.conversation.Event;
 import nomo.domain.sessions.redaction.{Policy, text as redact};
 import nomo.domain.sessions.event_text_codec.decode;
@@ -87,12 +88,12 @@ public flow load(policy: Policy, binding: string) -> Result<Option<MemoryEntry<s
 flow write(value: Frame, expected: Option<MemoryEntry<string, Frame>>, policy: Policy, binding: string) -> Result<MemoryEntry<string, Frame>, string> ![Memory, Error<StorageError>, Error<IndexError>] {
     let desired = value { format = 1 };
     let error = frame_error(desired, policy, binding); if error != "" { return Err(error); }
-    let condition: WriteCondition = match expected { Some(item) => Match(item.version), None() => Missing };
+    let condition: WriteCondition = match expected { Some(item) => WriteCondition.Match(item.version), None() => Missing };
     let target = Target { store = ["Rows"], region = "nomo-recoverable-work-v1", key = "work", label = "recoverable work" };
     let version = match commit_native(Runs.Rows, target, desired, condition) { Ok(item) => item, Err(problem) => { return Err(problem); } };
     // commit_native already verifies the exact stored value and version. Keep
     // the value already owned by this process instead of loading it again.
-    match expected { Some(item) => if item.version.opaque == version.opaque { return Err("recoverable work version did not change"); }, None() => (), }
+    match expected { Some(item) => { if item.version.opaque == version.opaque { return Err("recoverable work version did not change"); } }, None() => (), }
     return Ok(MemoryEntry { key = "work", value = desired, version });
 }
 

@@ -1,7 +1,8 @@
 module nomo.adapters.cli.legacy.session_demo;
 
 import std.io.println;
-import std.memory.{Missing, Match};
+import std.memory.{Missing};
+import std.memory.WriteCondition;
 import std.agent.session.Conversation;
 import nomo.adapters.cli.arguments.session_cli_args.{parse, Options};
 import nomo.adapters.cli.legacy.session_cli.run_session;
@@ -34,7 +35,7 @@ flow initialize(options: Options) -> Result<bool, string> ![Memory, Error<Storag
     let terminal = match history.cursor { None() => true, _ => false };
     let no_summary = match history.summary { None() => true, _ => false };
     if history.messages.len() != 0 || !terminal || !no_summary { return Err("demo namespace is not empty"); }
-    let ready = match write_claim(claim(options, "ready"), Match(version)) {
+    let ready = match write_claim(claim(options, "ready"), WriteCondition.Match(version)) {
         Ok(value) => value, Err(error) => { return Err(error); }
     };
     if ready.opaque == version.opaque { return Err("demo ready version did not change"); }

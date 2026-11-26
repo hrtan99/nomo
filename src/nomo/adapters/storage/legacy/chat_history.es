@@ -2,7 +2,8 @@ module nomo.adapters.storage.legacy.chat_history;
 
 import nomo.domain.sessions.cas_rows.Target;
 import nomo.adapters.storage.legacy.cas_rows.commit_receipt;
-import std.memory.{MemoryVersion, MemoryEntry, Missing, Match};
+import std.memory.{MemoryVersion, MemoryEntry, Missing};
+import std.memory.WriteCondition;
 import nomo.core.conversation.Event;
 import nomo.session.chat_session_contract.Session;
 import nomo.domain.sessions.chat_session_contract.{invalid, fresh, begin, complete};
@@ -53,7 +54,7 @@ public flow load() -> Result<Option<Entry>, string> {
                     }
                     events = value.value.events; first_count = value.value.first_count;
                 }
-                None() => if item.value.format == 2 && item.value.invocation.admitted > 0 { return Err("legacy event history missing"); },
+                None() => { if item.value.format == 2 && item.value.invocation.admitted > 0 { return Err("legacy event history missing"); } },
             }
             return Ok(Some(Entry { key = item.key, value = item.value, version = item.version, first_count, events, schema = item.value.format, pending }));
         }
@@ -111,7 +112,7 @@ flow save_inner(value: Session, expected: Option<Entry>, records: Array<Event>) 
     let before = match load() { Ok(item) => item, Err(problem) => { return Err(problem); } };
     if before != expected { return Err("chat history changed before save; no retry"); }
     let change = transition(before, value); if change != "" { return Err(change); }
-    let condition: WriteCondition = match before { Some(entry) => Match(entry.version), None() => Missing };
+    let condition: WriteCondition = match before { Some(entry) => WriteCondition.Match(entry.version), None() => Missing };
     let schema = match before { Some(entry) => entry.schema, None() => 3 };
     if schema == 1 || schema == 2 {
         if value.format != schema { return Err("legacy history format changed"); }
@@ -122,7 +123,7 @@ flow save_inner(value: Session, expected: Option<Entry>, records: Array<Event>) 
         let version = match commit_receipt(Legacy.Rows, Target { store = ["Rows"], region = "nomo-chat-history-v1", key = "latest", label = "chat history" }, value, condition) { Ok(item) => item, Err(error) => { return Err(error); } };
         let after = match load() { Ok(Some(item)) => item, _ => { return Err("history readback missing"); } };
         if after.value != value || after.version.opaque != version.opaque || after.schema != schema || after.pending { return Err("legacy readback mismatch"); }
-        match before { Some(old) => if old.version.opaque == version.opaque { return Err("history version did not change"); }, None() => (), }
+        match before { Some(old) => { if old.version.opaque == version.opaque { return Err("history version did not change"); } }, None() => (), }
         return Ok(version);
     }
     var events: Array<Event> = []; var first_count: usize = 0; var previous_turns: i32 = 0;
@@ -137,7 +138,7 @@ flow save_inner(value: Session, expected: Option<Entry>, records: Array<Event>) 
     let version = match commit_receipt(Frames.Rows, Target { store = ["Rows"], region = "nomo-chat-history-v3", key = "latest", label = "chat frame" }, frame, condition) { Ok(item) => item, Err(error) => { return Err(error); } };
     let after = match load() { Ok(Some(item)) => item, _ => { return Err("chat frame readback missing"); } };
     if after.value != value || after.events != events || after.first_count != first_count || after.version.opaque != version.opaque || after.schema != 3 { return Err("chat frame readback mismatch"); }
-    match before { Some(old) => if old.version.opaque == version.opaque { return Err("chat frame version did not change"); }, None() => (), }
+    match before { Some(old) => { if old.version.opaque == version.opaque { return Err("chat frame version did not change"); } }, None() => (), }
     return Ok(version);
 }
 

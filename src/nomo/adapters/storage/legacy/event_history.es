@@ -4,7 +4,8 @@ import nomo.domain.text.read_text.{data_safe, safe};
 import nomo.domain.context.large_context.event_bytes;
 import nomo.domain.sessions.cas_rows.Target;
 import nomo.adapters.storage.legacy.cas_rows.commit_receipt;
-import std.memory.{MemoryVersion, MemoryEntry, Missing, Match};
+import std.memory.{MemoryVersion, MemoryEntry, Missing};
+import std.memory.WriteCondition;
 import nomo.core.conversation.Event;
 import nomo.domain.sessions.redaction.{Policy, events as redact_events};
 import nomo.session.event_history.{History, EventStore};
@@ -49,11 +50,11 @@ public flow append(turn: i32, input: Array<Event>, policy: Policy) -> Result<Mem
     @limits([Iterations(24)]) for item in clean.events { prior = prior.push(item); }
     let next = History { format = 1, turns = turn, first_count, events = prior };
     let error = invalid(next); if error != "" { return Err(error); }
-    let condition: WriteCondition = match before { Some(entry) => Match(entry.version), None() => Missing };
+    let condition: WriteCondition = match before { Some(entry) => WriteCondition.Match(entry.version), None() => Missing };
     let version = match commit_receipt(EventStore.Rows, Target { store = ["Rows"], region = "nomo-event-history-v1", key = "events", label = "event history" }, next, condition) { Ok(item) => item, Err(error) => { return Err(error); } };
     let after = match load() { Ok(Some(value)) => value, _ => { return Err("event history readback missing or invalid"); } };
     if after.value != next || after.version.opaque != version.opaque { return Err("event history readback mismatch; no retry"); }
-    match before { Some(value) => if value.version.opaque == version.opaque { return Err("event history version did not change"); }, None() => (), }
+    match before { Some(value) => { if value.version.opaque == version.opaque { return Err("event history version did not change"); } }, None() => (), }
     return Ok(version);
 }
 

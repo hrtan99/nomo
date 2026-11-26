@@ -11,7 +11,7 @@ public flow read(id: string) -> Option<MemoryEntry<string, Record>> { return Met
 // Transition only against the observed/confirmed version, then verify the receipt's
 // committed version and exact row. Unknown/refused writes return without retry.
 public flow publish(row: Record, expected: MemoryVersion) -> Result<MemoryVersion, string> ![Memory, Error<StorageError>] {
-    let committed = match write(row, std.memory.Match(expected)) {
+    let committed = match write(row, std.memory.WriteCondition.Match(expected)) {
         Ok(version) => version, Err(error) => { return Err(error); }
     };
     let observed = match read(row.snapshot.session_id) {

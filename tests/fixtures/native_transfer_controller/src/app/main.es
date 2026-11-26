@@ -41,8 +41,10 @@ public flow main(args: Array<string>) -> i32 ![Memory, Console, Error<StorageErr
         CopyStorage.prepare(workspace, title, kind, original, digest, total) => prepare_copy(workspace, title, kind, original, digest, total);
         CopyStorage.ensure_session(id) => ensure_copy_session(id);
         CopyStorage.advance(id, cursor, phase) => advance_copy(id, cursor, phase);
-        CopyStorage.event(id, index, role, name, text) => if id == partial.id && index == 1 { abort("resume rewrote its completed prefix"); }
-        copy_event(id, index, role, name, text);
+        CopyStorage.event(id, index, role, name, text) => {
+            if id == partial.id && index == 1 { abort("resume rewrote its completed prefix"); }
+            copy_event(id, index, role, name, text)
+        };
         CopyStorage.sealed(id) => sealed_copy_source(id);
         CopyStorage.summary(id, slot) => copy_summary(id, slot);
         CopyStorage.complete(id, index) => copy_record_complete(id, index);

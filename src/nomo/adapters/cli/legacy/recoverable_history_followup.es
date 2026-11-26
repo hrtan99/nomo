@@ -124,7 +124,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
         Ok(value) => value, Err(error) => { return refused(error); }
     };
     if ticket.frame.parent_work_version != first_work.version.opaque { return refused("first work changed before followup"); }
-    match first_check { Some(value) => if ticket.frame.parent_check_version != value.version.opaque { return refused("first check changed before followup"); }, None() => if ticket.frame.parent_check_version != "" { return refused("first check changed before followup"); }, }
+    match first_check { Some(value) => { if ticket.frame.parent_check_version != value.version.opaque { return refused("first check changed before followup"); } }, None() => { if ticket.frame.parent_check_version != "" { return refused("first check changed before followup"); } }, }
     match claim(ticket, policy, binding) { Ok(_) => (), Err(error) => { return refused(error); } }
     if parsed.has_check { match plan_check(ticket, parsed.digest, policy, binding) { Ok(_) => (), Err(error) => { return refused(error); } } }
     println("RESERVED event followup; interruption or uncertain effects cannot be retried automatically.");

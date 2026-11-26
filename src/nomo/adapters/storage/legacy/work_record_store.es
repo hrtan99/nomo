@@ -4,7 +4,7 @@ import nomo.application.sessions.ports.session_cas_rows.CasRows;
 import nomo.domain.sessions.cas_rows.{Target, Submission};
 import nomo.adapters.storage.legacy.cas_rows.submit_native;
 import nomo.application.sessions.persistence.commit_once;
-import std.memory.{WriteCondition, MemoryVersion, MemoryEntry, Missing, Match};
+import std.memory.{WriteCondition, MemoryVersion, MemoryEntry, Missing};
 import nomo.domain.sessions.edit_operation.{selector_error, same_binding};
 import nomo.adapters.storage.legacy.edit_operation_store.inspect as inspect_edit;
 import nomo.session.work_record.Record;
@@ -49,7 +49,7 @@ public flow complete(ticket: Ticket, summary: string) -> Result<bool, string> ![
     if before.key != key(ticket.row.binding.id) || !same_record(before.value, ticket.row) || before.version.opaque != ticket.version.opaque {
         return Err("partial work record binding or version changed; no retry");
     }
-    let version = match write(row, Match(before.version)) { Ok(value) => value, Err(error) => { return Err(error); } };
+    let version = match write(row, WriteCondition.Match(before.version)) { Ok(value) => value, Err(error) => { return Err(error); } };
     if version.opaque == before.version.opaque { return Err("work confirmation version did not change"); }
     return Ok(true);
 }

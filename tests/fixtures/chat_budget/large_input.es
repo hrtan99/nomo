@@ -17,7 +17,7 @@ public flow probe(args: Array<string>) -> i32 {
     let item = Event { role = "user", kind = "context", name = "history", text = text };
     let history = [task, item, item, item, item, item];
     let context = Context { history = history, allowed = ["note.txt"], final_only = false };
-    match measure_context(context, 1048576) { Err(error) => if error != Refusal.TooLarge { abort("unexpected context refusal"); }, _ => abort("old 1 MiB bound should refuse"), }
+    match measure_context(context, 1048576) { Err(error) => { if error != Refusal.TooLarge { abort("unexpected context refusal"); } }, _ => abort("old 1 MiB bound should refuse"), }
     let measured = match measure_context(context, 8388608) { Ok(value) => value, Err(_) => abort("large context was refused"), };
     if measured.encoded_bytes <= 1048576 || measured.tokens != None() { abort("large context measurement is incorrect"); }
     let selected = match select(context, [EventPolicy.Task, EventPolicy.Required, EventPolicy.Required, EventPolicy.Required, EventPolicy.Required, EventPolicy.Required], 8388608) { Ok(value) => value, Err(_) => abort("large context selection refused"), };

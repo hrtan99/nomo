@@ -1,6 +1,6 @@
 module nomo.adapters.storage.legacy.history_check_store;
 
-import std.memory.{WriteCondition, MemoryVersion, Missing, Match};
+import std.memory.{WriteCondition, MemoryVersion, Missing};
 import std.text.{char_count as len, parse_i32, from_i32};
 import nomo.domain.text.text.hex_digest;
 import nomo.session.history_check_store.Record;
@@ -40,7 +40,7 @@ flow transition<R ~ HistoryCheckRows>(rows: R, id: string, digest: string, outco
     let error = invalid(rows, before.value); if error != "" { return Err(error); }
     if before.key != "check" || before.value.id != id || before.value.digest != digest || before.value.phase != (if finishing { "running" } else { "planned" }) { return Err(if finishing { "running check differs; no retry" } else { "planned check differs; no retry" }); }
     let value = Record { format = 1, phase = if finishing { "complete" } else { "running" }, id, digest, outcome, exit_code };
-    let version = match save(rows, value, Match(before.version)) { Ok(item) => item, Err(problem) => { return Err(problem); } };
+    let version = match save(rows, value, WriteCondition.Match(before.version)) { Ok(item) => item, Err(problem) => { return Err(problem); } };
     if version.opaque == before.version.opaque { return Err("check version did not change"); }
     return Ok(true);
 }

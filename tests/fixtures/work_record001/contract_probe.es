@@ -44,7 +44,7 @@ flow roundtrip(binding: Binding, evidence: Evidence, task: string, before: strin
         !same_fields(pending.body, partial_fields) || partial_fields.len() != 52 { return false; }
     let first = match validate(pending) { Ok(value) => value, Err(_) => { return false; } };
     if !captured(first, binding, evidence, task, before, after, target, replacement, "", false) { return false; }
-    match admit(pending) { Ok(value) => if !value { return false; }, Err(_) => { return false; } }
+    match admit(pending) { Ok(value) => { if !value { return false; } }, Err(_) => { return false; } }
     let complete = match confirm(pending, summary) { Ok(value) => value, Err(_) => { return false; } };
     if complete.format != 1 || complete.phase != "summary-confirmed" || complete.binding != binding || same_record(pending, complete) ||
         !same_fields(complete.body, complete_fields) || byte_count(utf8_encode(complete.body)) > 65536 { return false; }

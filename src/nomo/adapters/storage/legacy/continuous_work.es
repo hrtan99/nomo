@@ -2,7 +2,8 @@ module nomo.adapters.storage.legacy.continuous_work;
 
 import nomo.domain.sessions.cas_rows.Target;
 import nomo.adapters.storage.legacy.cas_rows.commit_native;
-import std.memory.{Missing, Match};
+import std.memory.{Missing};
+import std.memory.WriteCondition;
 import nomo.core.conversation.Event;
 import nomo.session.edit_operation.Binding;
 import nomo.domain.sessions.redaction.{Policy, text as redact};
@@ -16,15 +17,15 @@ import nomo.domain.sessions.continuous_work.Stored;
 
 public flow load(binding: string) -> Result<Option<Stored>, string> {
     let row = Books.Rows.get_entry("latest");
-    match row { Some(item) => if item.key != "latest" || item.value.binding != binding { return Err("continuous work policy binding mismatch"); }, None() => (), }
+    match row { Some(item) => { if item.key != "latest" || item.value.binding != binding { return Err("continuous work policy binding mismatch"); } }, None() => (), }
     return match row { Some(item) => Ok(Some(Stored { key = item.key, value = item.value, version = item.version })), None() => Ok(None()) };
 }
 
 flow write(book: Book, previous: Option<Stored>) -> Result<Stored, string> ![Memory, Error<StorageError>, Error<IndexError>] {
-    let condition: WriteCondition = match previous { Some(item) => Match(item.version), None() => Missing };
+    let condition: WriteCondition = match previous { Some(item) => WriteCondition.Match(item.version), None() => Missing };
     let target = Target { store = ["Rows"], region = "nomo-continuous-work-v1", key = "latest", label = "continuous work" };
     let version = match commit_native(Books.Rows, target, book, condition) { Ok(value) => value, Err(error) => { return Err(error); } };
-    match previous { Some(item) => if item.version.opaque == version.opaque { return Err("continuous work version did not change"); }, None() => (), }
+    match previous { Some(item) => { if item.version.opaque == version.opaque { return Err("continuous work version did not change"); } }, None() => (), }
     return Ok(Stored { key = "latest", value = book, version });
 }
 

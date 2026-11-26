@@ -1,8 +1,5 @@
 module nomo.domain.projects.contracts;
 
-
-
-
 public type Change = { operation: string, path: string, target: string, text: string };
 
 public type Action = { tool: string, path: string, target: string, text: string, arguments: Array<string>, changes: Array<Change>, start: string, end: string };

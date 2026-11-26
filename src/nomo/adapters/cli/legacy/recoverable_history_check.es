@@ -19,7 +19,7 @@ public flow run_mode(args: Array<string>, followup: bool) -> i32 ![Console, Memo
     if args.len() < 4 || args[0] != "--policy-binding" { println("REFUSED check policy binding required"); return 1; }
     let policy = match load_policy() { Ok(item) => item, Err(error) => { println("REFUSED " + error); return 1; } };
     let binding = args[1]; var additional = false;
-    if followup { let extra = match load_extra(binding) { Ok(value) => value, Err(error) => { println("REFUSED " + error); return 1; } }; match extra { Some(item) => if item.value.current.core.id == args[3] { additional = true; }, None() => (), } }
+    if followup { let extra = match load_extra(binding) { Ok(value) => value, Err(error) => { println("REFUSED " + error); return 1; } }; match extra { Some(item) => { if item.value.current.core.id == args[3] { additional = true; } }, None() => (), } }
     if additional { return run_lifecycle(ContinuousCheck { redaction = policy, binding }, args, policy, binding); }
     if followup { return run_lifecycle(FollowupCheck { redaction = policy, binding }, args, policy, binding); }
     return run_lifecycle(FirstCheck { redaction = policy, binding }, args, policy, binding);

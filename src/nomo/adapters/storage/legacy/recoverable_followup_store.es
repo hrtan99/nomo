@@ -2,7 +2,8 @@ module nomo.adapters.storage.legacy.recoverable_followup_store;
 
 import nomo.domain.sessions.cas_rows.Target;
 import nomo.adapters.storage.legacy.cas_rows.commit_native;
-import std.memory.{MemoryEntry, MemoryVersion, Missing, Match};
+import std.memory.{MemoryEntry, MemoryVersion, Missing};
+import std.memory.WriteCondition;
 import nomo.core.conversation.Event;
 import nomo.domain.sessions.redaction.Policy;
 import nomo.domain.sessions.recoverable_events.{empty as empty_events, work_batch};
@@ -37,7 +38,9 @@ public flow load(policy: Policy, binding: string) -> Result<Option<MemoryEntry<s
             if parent_edit.phase != "completed" { return Err("first edit unresolved"); }
             }
             let parent_check = match load_parent_check(policy, binding) { Ok(value) => value, Err(error) => { return Err(error); } };
-            let check_version = match parent_check { Some(value) => if value.value.check.phase != "complete" && value.value.check.phase != "abandoned" && !(parent_work.value.work.phase == "abandoned" && value.value.check.phase == "planned") { return Err("first check unresolved"); } value.version.opaque, None() => "" };
+            let check_version = match parent_check { Some(value) => {
+                if value.value.check.phase != "complete" && value.value.check.phase != "abandoned" && !(parent_work.value.work.phase == "abandoned" && value.value.check.phase == "planned") { return Err("first check unresolved"); } value.version.opaque
+            }, None() => "" };
             if check_version != value.parent_check_version { return Err("first check changed"); }
             Ok(Some(item))
         }
@@ -50,10 +53,10 @@ flow write(value: Frame, expected: Option<MemoryEntry<string, Frame>>, policy: P
     let error = frame_error(desired, policy, binding); if error != "" { return Err(error); }
     let before = match load(policy, binding) { Ok(item) => item, Err(problem) => { return Err(problem); } };
     if before != expected { return Err("recoverable followup changed; no retry"); }
-    let condition: WriteCondition = match expected { Some(item) => Match(item.version), None() => Missing };
+    let condition: WriteCondition = match expected { Some(item) => WriteCondition.Match(item.version), None() => Missing };
     let target = Target { store = ["Rows"], region = "nomo-recoverable-followup-v1", key = "followup", label = "recoverable followup" };
     let version = match commit_native(Runs.Rows, target, desired, condition) { Ok(item) => item, Err(problem) => { return Err(problem); } };
-    match expected { Some(item) => if item.version.opaque == version.opaque { return Err("recoverable followup version did not change"); }, None() => (), }
+    match expected { Some(item) => { if item.version.opaque == version.opaque { return Err("recoverable followup version did not change"); } }, None() => (), }
     return Ok(version);
 }
 
@@ -70,7 +73,9 @@ public flow admit(id: string, workspace: string, path: string, request: string, 
     if first_edit.phase != "completed" { return Err("completed first edit required"); }
     }
     let parent_check = match load_parent_check(policy, binding) { Ok(item) => item, Err(error) => { return Err(error); } };
-    let check_version = match parent_check { Some(item) => if item.value.check.phase != "complete" && item.value.check.phase != "abandoned" && !(parent_work.value.work.phase == "abandoned" && item.value.check.phase == "planned") { return Err("first check unresolved"); } item.version.opaque, None() => "" };
+    let check_version = match parent_check { Some(item) => {
+        if item.value.check.phase != "complete" && item.value.check.phase != "abandoned" && !(parent_work.value.work.phase == "abandoned" && item.value.check.phase == "planned") { return Err("first check unresolved"); } item.version.opaque
+    }, None() => "" };
     let frame = Frame { format = 1, policy_binding = binding, parent_work_version = parent_work.version.opaque, parent_check_version = check_version, work = row, events = empty_events() };
     let version = match write(frame, None(), policy, binding) { Ok(item) => item, Err(error) => { return Err(error); } };
     return Ok(Ticket { frame, version, chat });

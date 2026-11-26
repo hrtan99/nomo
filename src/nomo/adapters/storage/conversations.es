@@ -99,7 +99,7 @@ impl NativeHistory ~ ConversationCatalog {
         let value = self.load(id);
         if value.workspace != workspace { abort("native session belongs to a different workspace"); }
         match copy_status(id) {
-            Some(job) => if job.phase != "ready" { abort("conversation copy is " + job.phase + "; use /resume-copy or /discard-copy"); },
+            Some(job) => { if job.phase != "ready" { abort("conversation copy is " + job.phase + "; use /resume-copy or /discard-copy"); } },
             None() => (),
         }
         Data.Selected.put(workspace, id);
@@ -245,7 +245,7 @@ public flow result_published(id: string, call: i64, name: string) -> bool ![Memo
     var published = false;
     @limits([Iterations(2147483647)]) while index < current.next_event {
         match Data.Events.get(key(id, index)) {
-            Some(event) => if event.complete && event.role == "tool" && event.name == name && event.call == call { published = true; break; },
+            Some(event) => { if event.complete && event.role == "tool" && event.name == name && event.call == call { published = true; break; } },
             None() => (),
         }
         index = index + 1;
@@ -361,7 +361,7 @@ public flow copy_event(id: string, index: i64, role: string, name: string, text:
     if index == current.next_event { reserve_event(id, role, name, -1, false); }
     else if index > current.next_event { abort("conversation copy has a noncontiguous target index"); }
     match Data.Events.get(key(id, index)) {
-        Some(event) => if event.complete { return; },
+        Some(event) => { if event.complete { return; } },
         None() => (),
     }
     // Only an unfinished copy uses deterministic slot repair. Ordinary live
@@ -371,7 +371,7 @@ public flow copy_event(id: string, index: i64, role: string, name: string, text:
 
 public flow sealed_copy_source(id: string) -> Option<string> ![Memory, Error<StorageError>] {
     match Data.Events.get(key(id, 0)) {
-        Some(event) => if event.complete { return Some(read_message(id, 0).text); },
+        Some(event) => { if event.complete { return Some(read_message(id, 0).text); } },
         None() => (),
     }
     return None();

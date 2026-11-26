@@ -2,7 +2,7 @@ module nomo.adapters.storage.legacy.history_work_guard;
 
 import nomo.domain.sessions.cas_rows.Target;
 import nomo.adapters.storage.legacy.cas_rows.commit_native;
-import std.memory.{WriteCondition, MemoryVersion, MemoryEntry, Missing, Match};
+import std.memory.{WriteCondition, MemoryVersion, MemoryEntry, Missing};
 import nomo.domain.sessions.chat_history.Entry;
 import nomo.adapters.storage.legacy.chat_history.load as load_chat;
 import nomo.domain.sessions.edit_operation.selector_error;
@@ -89,7 +89,7 @@ public flow finish(ticket: Ticket, summary: string, spent: Ledger) -> Result<boo
     match claim(ticket) { Ok(_) => (), Err(error) => { return Err(error); } }
     let old = ticket.record;
     let row = old { format = 1, phase = "complete", reserved = zero(), settled = Some(spent), summary };
-    let version = match write(row, Match(ticket.version)) { Ok(value) => value, Err(error) => { return Err(error); } };
+    let version = match write(row, WriteCondition.Match(ticket.version)) { Ok(value) => value, Err(error) => { return Err(error); } };
     if version.opaque == ticket.version.opaque { return Err("history-work version did not change"); }
     return Ok(true);
 }

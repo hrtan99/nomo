@@ -2,7 +2,7 @@ module nomo.adapters.storage.legacy.work_chain_store;
 
 import nomo.domain.sessions.cas_rows.Target;
 import nomo.adapters.storage.legacy.cas_rows.commit_native;
-import std.memory.{WriteCondition, MemoryVersion, MemoryEntry, Missing, Match};
+import std.memory.{WriteCondition, MemoryVersion, MemoryEntry, Missing};
 import nomo.domain.sessions.edit_operation.selector_error;
 import nomo.session.work_record.Record as WorkRecord;
 import nomo.session.work_chain.{Record, Caps};
@@ -122,7 +122,7 @@ public flow publish_partial(ticket: Ticket, work: WorkRecord) -> Result<Ticket, 
     match claim(ticket) { Ok(_) => (), Err(error) => { return Err(error); } }
     let parent = parent_error(ticket, row); if parent != "" { return Err(parent); }
     let journal = journal_error(row); if journal != "" { return Err(journal); }
-    let version = match write(row, Match(ticket.version)) { Ok(value) => value, Err(error) => { return Err(error); } };
+    let version = match write(row, WriteCondition.Match(ticket.version)) { Ok(value) => value, Err(error) => { return Err(error); } };
     if version.opaque == ticket.version.opaque { return Err("v2 partial publication version did not change"); }
     return Ok(ticket { row, version });
 }
@@ -132,7 +132,7 @@ public flow complete(ticket: Ticket, summary: string) -> Result<bool, string> ![
     match claim(ticket) { Ok(_) => (), Err(error) => { return Err(error); } }
     let parent = parent_error(ticket, row); if parent != "" { return Err(parent); }
     let journal = journal_error(row); if journal != "" { return Err(journal); }
-    let version = match write(row, Match(ticket.version)) { Ok(value) => value, Err(error) => { return Err(error); } };
+    let version = match write(row, WriteCondition.Match(ticket.version)) { Ok(value) => value, Err(error) => { return Err(error); } };
     if version.opaque == ticket.version.opaque { return Err("v2 summary confirmation version did not change"); }
     let after = parent_error(ticket, row); if after != "" { return Err(after); }
     return Ok(true);

@@ -10,7 +10,7 @@ import sys
 CLI = Path('/home/nomo/.cargo/bin/etas')
 SPEC = Path('/workspace/config/etas-022-official.json')
 LOCK = Path('/workspace/config/etas-022-official.Cargo.lock')
-VERSIONS = {'latest022': '0.2.2', 'latest023': '0.2.3', 'latest024': '0.2.4', 'latest025': '0.2.5', 'latest026': '0.2.6', 'latest026v68': '0.2.6', 'latest030': '0.3.0', 'latest041': '0.4.1', 'latest0120': '0.12.0', 'latest0121': '0.12.1', 'latest0130': '0.13.0', 'latest0131': '0.13.1', 'latest0132': '0.13.2', 'latest0133': '0.13.3', 'latest0134': '0.13.4', 'latest0135': '0.13.5', 'latest0224': '0.22.4', 'latest0227': '0.22.7', 'latest0230': '0.23.0', 'latest0231': '0.23.1'}
+VERSIONS = {'latest022': '0.2.2', 'latest023': '0.2.3', 'latest024': '0.2.4', 'latest025': '0.2.5', 'latest026': '0.2.6', 'latest026v68': '0.2.6', 'latest030': '0.3.0', 'latest041': '0.4.1', 'latest0120': '0.12.0', 'latest0121': '0.12.1', 'latest0130': '0.13.0', 'latest0131': '0.13.1', 'latest0132': '0.13.2', 'latest0133': '0.13.3', 'latest0134': '0.13.4', 'latest0135': '0.13.5', 'latest0224': '0.22.4', 'latest0227': '0.22.7', 'latest0230': '0.23.0', 'latest0231': '0.23.1', 'latest0232': '0.23.2'}
 
 
 def digest(path):
@@ -35,8 +35,8 @@ def verify(cli, spec_path, lock_path, selected):
 
 
 def main():
-    selected = {'026-20261103-a': 'latest026', '026-v68': 'latest026v68', '030-pr67': 'latest030', '041-20261105-a': 'latest041', '0120-20261110-a': 'latest0120', '0121-20261111-a': 'latest0121', '0130-20261111-a': 'latest0130', '0131-20261111-a': 'latest0131', '0132-20261112-a': 'latest0132', '0133-20261112-a': 'latest0133', '0134-20261112-a': 'latest0134', '0135-20261112-a': 'latest0135', '0224-20261125-a': 'latest0224', '0227-20261126-a': 'latest0227', '0230-20261126-a': 'latest0230', '0231-20261126-a': 'latest0231'}.get(os.environ.get('NOMO_NORMAL_GRAPH'), os.environ.get('NOMO_NORMAL_GRAPH'))
-    suffix = {'latest022': '022', 'latest023': '023', 'latest024': '024', 'latest025': '025', 'latest026': '026', 'latest026v68': '026-v68', 'latest030': '030', 'latest041': '041', 'latest0120': '0120', 'latest0121': '0121', 'latest0130': '0130', 'latest0131': '0131', 'latest0132': '0132', 'latest0133': '0133', 'latest0134': '0134', 'latest0224': '0224', 'latest0227': '0227', 'latest0230': '0230', 'latest0231': '0231'}.get(selected)
+    selected = {'026-20261103-a': 'latest026', '026-v68': 'latest026v68', '030-pr67': 'latest030', '041-20261105-a': 'latest041', '0120-20261110-a': 'latest0120', '0121-20261111-a': 'latest0121', '0130-20261111-a': 'latest0130', '0131-20261111-a': 'latest0131', '0132-20261112-a': 'latest0132', '0133-20261112-a': 'latest0133', '0134-20261112-a': 'latest0134', '0135-20261112-a': 'latest0135', '0224-20261125-a': 'latest0224', '0227-20261126-a': 'latest0227', '0230-20261126-a': 'latest0230', '0231-20261126-a': 'latest0231', '0232-20261126-a': 'latest0232'}.get(os.environ.get('NOMO_NORMAL_GRAPH'), os.environ.get('NOMO_NORMAL_GRAPH'))
+    suffix = {'latest022': '022', 'latest023': '023', 'latest024': '024', 'latest025': '025', 'latest026': '026', 'latest026v68': '026-v68', 'latest030': '030', 'latest041': '041', 'latest0120': '0120', 'latest0121': '0121', 'latest0130': '0130', 'latest0131': '0131', 'latest0132': '0132', 'latest0133': '0133', 'latest0134': '0134', 'latest0224': '0224', 'latest0227': '0227', 'latest0230': '0230', 'latest0231': '0231', 'latest0232': '0232'}.get(selected)
     spec = Path('/workspace/config/etas-latest-main.json') if selected == 'latest0135' else Path('/workspace/config/etas-' + suffix + '-official.json') if suffix else SPEC
     lock = Path('/workspace/config/etas-latest.Cargo.lock') if selected == 'latest0135' else Path('/workspace/config/etas-' + suffix + '-official.Cargo.lock') if suffix else LOCK
     cli = Path('/home/nomo/.cargo/etas-030-pr67/bin/etas') if selected == 'latest030' else CLI

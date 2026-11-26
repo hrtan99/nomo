@@ -1,6 +1,7 @@
 module nomo.adapters.storage.legacy.check_store;
 
-import std.memory.{MemoryEntry, MemoryVersion, Missing, Match};
+import std.memory.{MemoryEntry, MemoryVersion, Missing};
+import std.memory.WriteCondition;
 import nomo.domain.sessions.redaction.Policy;
 import nomo.application.sessions.ports.session_cas_rows.CasRows;
 import nomo.application.sessions.persistence.commit_once;
@@ -45,7 +46,7 @@ public flow write_rows<R ~ CasRows<Frame>>(rows: R, value: Frame, expected: Opti
     let error = invalid(value, policy, binding); if error != "" { return Err(error); }
     let before = match rows.read() { Ok(item) => item, Err(problem) => { return Err(problem); } };
     if before != expected { return Err("recoverable check changed; no retry"); }
-    let condition: WriteCondition = match expected { Some(item) => Match(item.version), None() => Missing };
+    let condition: WriteCondition = match expected { Some(item) => WriteCondition.Match(item.version), None() => Missing };
     let previous = match expected { Some(item) => Some(item.version), None() => None() };
     return commit_once<Frame, R>(rows, value, condition, previous);
 }

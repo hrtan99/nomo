@@ -158,7 +158,7 @@ public flow inspect_shared(child: Session, status: i32, request: string, task: s
         if size != 4 || child.calls != 1 || (status != 0 && status != 3) { return Err("invalid direct child shape"); }
     } else {
         if size < 5 || events[3].role != "model" || events[3].kind != "request" { return Err("missing selected child tool request"); }
-        let action = match if unicode { decode_child(events[3].text, allowed, false) } else { decode_reply(events[3].text, allowed, false) } { Ok(value) => value, Err(error) => Err(error) };
+        let action = match if unicode { decode_child(events[3].text, allowed, false) } else { decode_reply(events[3].text, allowed, false) } { Ok(value) => value, Err(error) => { return Err(error); } };
         if (action.operation != "read" && action.operation != "search") || events[3].name != action.operation ||
             events[4].role != "tool" || events[4].name != action.operation { return Err("child tool identity changed"); }
         if size == 5 {

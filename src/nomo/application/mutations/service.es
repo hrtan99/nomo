@@ -138,7 +138,7 @@ flow outcome(value: Journal, status: string) -> ChangeOutcome {
     var completed: i64 = 0;
     var index: i64 = 0;
     @limits([Iterations(2147483647)]) while index < value.steps {
-        match perform ChangeJournal.step(step_key(value.id, index)) { Some(step) => if step.phase == "applied" { completed = completed + 1; }, None() => (), }
+        match perform ChangeJournal.step(step_key(value.id, index)) { Some(step) => { if step.phase == "applied" { completed = completed + 1; } }, None() => (), }
         index = index + 1;
     }
     return ChangeOutcome { edit = value.id, status, completed, message = value.message };
@@ -182,7 +182,7 @@ flow selected_edit(id: string) -> Journal {
     var selected: Option<Journal> = None();
     for item in journals() {
         if item.phase == "applied" { match selected {
-            Some(previous) => if item.call > previous.call { selected = Some(item); },
+            Some(previous) => { if item.call > previous.call { selected = Some(item); } },
             None() => { selected = Some(item); }
         } }
     }

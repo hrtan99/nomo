@@ -5,6 +5,7 @@ import std.fs.{Region, IOError as FileError};
 import std.io.IOError as ConsoleError;
 import nomo.core.conversation.State;
 import nomo.domain.harness.model_tool_contract.LoopTurn;
+import nomo.domain.harness.harness_tool_chat_contract.Context;
 
 public spec ChatMainStage: callable Context => string ![];
 

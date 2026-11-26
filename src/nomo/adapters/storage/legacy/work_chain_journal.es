@@ -2,7 +2,7 @@ module nomo.adapters.storage.legacy.work_chain_journal;
 
 import nomo.domain.sessions.cas_rows.Target;
 import nomo.adapters.storage.legacy.cas_rows.commit_native;
-import std.memory.{WriteCondition, MemoryVersion, MemoryEntry, Missing, Match};
+import std.memory.{WriteCondition, MemoryVersion, MemoryEntry, Missing};
 import nomo.session.edit_operation.Binding;
 import nomo.domain.sessions.edit_operation.selector_error;
 import nomo.domain.sessions.work_chain_journal_contract.{CapturedJournal, invalid as journal_error};
@@ -47,7 +47,7 @@ public flow complete(ticket: Ticket) -> Result<bool, string> ![Memory, Error<Sto
         return Err("v2 edit intent or version changed; no retry");
     }
     let row = ticket.row { format = 2, phase = "completed" };
-    let version = match write(row, Match(before.version)) { Ok(value) => value, Err(error) => { return Err(error); } };
+    let version = match write(row, WriteCondition.Match(before.version)) { Ok(value) => value, Err(error) => { return Err(error); } };
     if version.opaque == before.version.opaque { return Err("v2 edit completion version did not change"); }
     return Ok(true);
 }

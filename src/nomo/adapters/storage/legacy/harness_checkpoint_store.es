@@ -2,7 +2,7 @@ module nomo.adapters.storage.legacy.harness_checkpoint_store;
 
 import nomo.domain.sessions.cas_rows.Target;
 import nomo.adapters.storage.legacy.cas_rows.commit_native;
-import std.memory.{WriteCondition, MemoryVersion, MemoryEntry, Missing, Match};
+import std.memory.{WriteCondition, MemoryVersion, MemoryEntry, Missing};
 import nomo.session.harness_checkpoint.Identity;
 import nomo.domain.sessions.harness_checkpoint.{Checkpoint, identity_error, validate};
 import nomo.application.sessions.codec.{encode_record, decode_record};
@@ -44,7 +44,7 @@ public flow begin(identity: Identity) -> Result<bool, string> ![Memory, Error<St
     let before = match owner(identity, "ready") { Ok(value) => value, Err(error) => { return Err(error); } };
     match read(key(identity)) { Some(_) => { return Err("checkpoint row already exists"); } None() => (), }
     let row = Record { format = 1, phase = "claimed", identity, body = "" };
-    return match write("owner", row, Match(before.version)) { Ok(_) => Ok(true), Err(error) => Err(error) };
+    return match write("owner", row, WriteCondition.Match(before.version)) { Ok(_) => Ok(true), Err(error) => Err(error) };
 }
 
 public flow publish(saved: Checkpoint) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
@@ -56,7 +56,7 @@ public flow publish(saved: Checkpoint) -> Result<bool, string> ![Memory, Error<S
     let pending = Record { format = 1, phase = "pending", identity = saved.identity, body };
     let version = match write(name, pending, Missing) { Ok(value) => value, Err(error) => { return Err(error); } };
     let complete = Record { format = 1, phase = "published", identity = saved.identity, body };
-    let committed = match write(name, complete, Match(version)) { Ok(value) => value, Err(error) => { return Err(error); } };
+    let committed = match write(name, complete, WriteCondition.Match(version)) { Ok(value) => value, Err(error) => { return Err(error); } };
     if committed.opaque == version.opaque { return Err("checkpoint publication version did not change"); }
     return Ok(true);
 }

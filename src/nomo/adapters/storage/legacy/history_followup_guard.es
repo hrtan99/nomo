@@ -2,7 +2,7 @@ module nomo.adapters.storage.legacy.history_followup_guard;
 
 import nomo.domain.sessions.cas_rows.Target;
 import nomo.adapters.storage.legacy.cas_rows.commit_native;
-import std.memory.{WriteCondition, MemoryVersion, MemoryEntry, Missing, Match};
+import std.memory.{WriteCondition, MemoryVersion, MemoryEntry, Missing};
 import std.text.char_count as len;
 import nomo.domain.sessions.chat_history.Entry;
 import nomo.adapters.storage.legacy.chat_history.load as load_chat;
@@ -29,7 +29,7 @@ public flow parent() -> Result<Parent, string> {
     let edit = match inspect_edit(work.id, work.workspace, work.path) { Ok(Some(value)) => value, _ => { return Err("completed first edit required"); } };
     if edit.phase != "completed" { return Err("first edit is unresolved"); }
     let check = match inspect_check() { Ok(value) => value, Err(error) => { return Err(error); } };
-    match check { Some(value) => if value.phase != "complete" || value.id != work.id { return Err("first check is unresolved"); }, None() => (), }
+    match check { Some(value) => { if value.phase != "complete" || value.id != work.id { return Err("first check is unresolved"); } }, None() => (), }
     return Ok(Parent { work, edit, check });
 }
 
@@ -86,7 +86,7 @@ public flow finish(ticket: Ticket, summary: string, spent: Ledger) -> Result<boo
     match claim(ticket) { Ok(_) => (), Err(error) => { return Err(error); } }
     let old = ticket.record;
     let row = old { format = 1, phase = "complete", reserved = zero(), settled = Some(spent), summary };
-    let version = match write(row, Match(ticket.version)) { Ok(value) => value, Err(error) => { return Err(error); } };
+    let version = match write(row, WriteCondition.Match(ticket.version)) { Ok(value) => value, Err(error) => { return Err(error); } };
     if version.opaque == ticket.version.opaque { return Err("followup version did not change"); }
     return Ok(true);
 }

@@ -13,7 +13,7 @@ import nomo.domain.sessions.store_record.{session_key, restore};
 import nomo.adapters.storage.legacy.history_store.{load, empty};
 import nomo.bootstrap.harness.stub.turn;
 import nomo.domain.sessions.session_display.display;
-import std.memory.Match;
+import std.memory.WriteCondition;
 import nomo.adapters.storage.legacy.demo_claim.{read_claim, write_claim};
 
 public flow run_continue(options: ContinueOptions) -> i32 ![Console, Memory, Error<StorageError>, Error<IndexError>, Error<IOError>] {
@@ -40,7 +40,7 @@ public flow run_continue(options: ContinueOptions) -> i32 ![Console, Memory, Err
     }
     let consumed = claim { phase = "continue-claimed" };
     // A one-shot fence blocks restart even if the following metadata CAS never commits.
-    let fenced = match write_claim(consumed, Match(owner.version)) {
+    let fenced = match write_claim(consumed, WriteCondition.Match(owner.version)) {
         Ok(value) => value, Err(error) => { println("REFUSED continuation fence: " + error); return 3; }
     };
     if fenced.opaque == owner.version.opaque { println("REFUSED continuation fence version did not change"); return 3; }

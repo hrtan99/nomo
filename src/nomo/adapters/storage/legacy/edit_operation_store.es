@@ -1,6 +1,6 @@
 module nomo.adapters.storage.legacy.edit_operation_store;
 
-import std.memory.{WriteCondition, MemoryEntry, Missing, Match};
+import std.memory.{WriteCondition, MemoryEntry, Missing};
 import nomo.application.sessions.ports.session_cas_rows.CasRows;
 import nomo.domain.sessions.cas_rows.{Target, Submission};
 import nomo.adapters.storage.legacy.cas_rows.submit_native;
@@ -63,7 +63,7 @@ flow complete_rows<S ~ CasRows<Record>>(rows: S, ticket: Ticket) -> Result<bool,
     let expected = Record { format = 1, phase = "intent", binding = ticket.binding };
     if before.key != "operation" || !same_record(before.value, expected) || before.version.opaque != ticket.version.opaque { return Err("edit intent binding or version changed; no retry"); }
     let row = Record { format = 1, phase = "completed", binding = ticket.binding };
-    return match commit_once<Record, S>(rows, row, Match(before.version), Some(before.version)) { Ok(_) => Ok(true), Err(error) => Err(error) };
+    return match commit_once<Record, S>(rows, row, WriteCondition.Match(before.version), Some(before.version)) { Ok(_) => Ok(true), Err(error) => Err(error) };
 }
 
 // Status reads never mutate or authorize an edit; completion is historical fact.

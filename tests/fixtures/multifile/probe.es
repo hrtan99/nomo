@@ -16,7 +16,7 @@ import nomo.domain.sessions.work_record.partial;
 flow search_probe(args: Array<string>) -> i32 {
     let allowed = ["a.txt", "b.txt", "c.txt", "d.txt"];
     let work_args = ["--id", "edit", "--workspace", "workspace", "--path", "note.txt", "--once", "task", "--allow", "a.txt,b.txt,c.txt,d.txt"];
-    match parse_unicode(work_args) { Ok(item) => if item.allowed != allowed { abort("work allowlist changed"); }, Err(_) => abort("four-file work refused"), }
+    match parse_unicode(work_args) { Ok(item) => { if item.allowed != allowed { abort("work allowlist changed"); } }, Err(_) => abort("four-file work refused"), }
     match parse_legacy(work_args) { Ok(_) => abort("legacy work accepted four"), Err(_) => (), }
     if allowed_error(allowed) != "" || allowed_error(["a.txt"]) != "" || allowed_error(["a.txt", "b.txt"]) != "" { abort("valid allowlist refused"); }
     if allowed_error(["a.txt", "b.txt", "c.txt", "d.txt", "e.txt"]) == "" { abort("five allowed"); }

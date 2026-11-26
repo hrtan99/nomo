@@ -45,8 +45,10 @@ flow read_snapshot() -> Result<Facts, string> {
     let following_check = match inspect_followup_check() { Ok(value) => value, Err(error) => { return Err(error); } };
     var followup_facts: Option<WorkFacts> = None();
     match following {
-        None() => match followup_edit_available() { Ok(_) => (), Err(error) => { return Err("orphan followup edit: " + error); } }
-        match following_check { Some(_) => { return Err("orphan followup check"); } None() => (), },
+        None() => {
+            match followup_edit_available() { Ok(_) => (), Err(error) => { return Err("orphan followup edit: " + error); } }
+            match following_check { Some(_) => { return Err("orphan followup check"); } None() => (), }
+        },
         Some(item) => {
             if item.phase != "complete" { return Err("followup work is unresolved"); }
             match work_facts { None() => { return Err("first work facts missing"); } Some(_) => (), }

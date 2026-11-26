@@ -55,7 +55,7 @@ flow assert_admission(item: Case) -> unit {
             }
             if value.ledger.spent + value.ledger.reserved > item.job.maximum { abort("reservation overspent"); }
         }
-        Err(error) => if item.accepted || !fixed_admission_error(error) { abort("unexpected admission refusal"); },
+        Err(error) => { if item.accepted || !fixed_admission_error(error) { abort("unexpected admission refusal"); } },
     }
     if saved != item.job { abort("admission mutated selected job"); }
 }
@@ -94,7 +94,7 @@ flow assert_run(item: Case) -> unit {
             if !item.accepted { abort("executed unadmitted child"); }
             assert_outcome(item, value);
         }
-        Err(error) => if item.accepted || !fixed_admission_error(error) { abort("unexpected coordinator refusal"); },
+        Err(error) => { if item.accepted || !fixed_admission_error(error) { abort("unexpected coordinator refusal"); } },
     }
     if before != item.job { abort("child mutated parent context"); }
 }
@@ -116,7 +116,7 @@ flow assert_settle(item: Case) -> unit {
             if !item.accepted { abort("accepted forged reservation"); }
             assert_outcome(item, value);
         }
-        Err(error) => if item.accepted || !fixed_admission_error(error) { abort("unexpected settlement refusal"); },
+        Err(error) => { if item.accepted || !fixed_admission_error(error) { abort("unexpected settlement refusal"); } },
     }
 }
 

@@ -22,11 +22,11 @@ public flow journal_error(row: Record, journal: Option<Journal>) -> string {
             if value.chain != row.chain || value.turn != row.turn || value.binding.id != row.id ||
                 value.binding.workspace != row.workspace || value.binding.path != row.path { return "v2 discovery journal binding mismatch"; }
             match row.work {
-                Some(work) => if value.phase != "completed" || !same_binding(value.binding, work.binding) { return "v2 work and completed edit journal differ"; },
+                Some(work) => { if value.phase != "completed" || !same_binding(value.binding, work.binding) { return "v2 work and completed edit journal differ"; } },
                 None() => (),
             }
         }
-        None() => if row.work != None() { return "v2 work has no confirmed edit journal"; },
+        None() => { if row.work != None() { return "v2 work has no confirmed edit journal"; } },
     }
     return "";
 }
@@ -34,7 +34,9 @@ public flow journal_error(row: Record, journal: Option<Journal>) -> string {
 flow journal_row(row: Record, observed: Option<ObservedJournal>) -> string {
     let key = if row.turn == 1 { "turn:1" } else { "turn:2" };
     let selected = match observed {
-        Some(value) => if value.key != key { return "v2 discovery journal slot mismatch"; } Some(value.value),
+        Some(value) => {
+            if value.key != key { return "v2 discovery journal slot mismatch"; } Some(value.value)
+        },
         None() => None(),
     };
     return journal_error(row, selected);
@@ -60,7 +62,7 @@ public flow validate(view: Snapshot, workspace: string, path: string) -> string 
             let invalid = linked(root.value, root.version, child.value); if invalid != "" { return invalid; }
             let edit = journal_row(child.value, view.child_journal); if edit != "" { return edit; }
         }
-        None() => if view.child_journal != None() { return "v2 discovery orphan second journal; slot cannot be reused"; },
+        None() => { if view.child_journal != None() { return "v2 discovery orphan second journal; slot cannot be reused"; } },
     }
     return "";
 }

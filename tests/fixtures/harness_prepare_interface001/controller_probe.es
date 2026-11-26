@@ -151,14 +151,16 @@ public flow production_stages(args: Array<string>) -> i32 {
     }, conversation = [], wide = false, high_input = false, historical = true };
     let result = prepare_stages(stages);
     match result {
-        Ok(value) => if value.prepared != expected_pending().prepared || value.request != "Q" || value.task != "edit T" {
-            abort("production prepare result changed");
-        }
-        if value.evidence.files != ["a.txt"] || value.evidence.result != "Seen blue" || value.evidence.summary != "Answer" {
-            abort("production read evidence changed");
-        }
-        if value.state.read.calls != 4 || value.state.read.tokens != 8192 || value.state.read.tools != 1 || value.state.read.scan != 16384 || value.state.edit != expected_pending().state.edit {
-            abort("production historical ledger changed");
+        Ok(value) => {
+            if value.prepared != expected_pending().prepared || value.request != "Q" || value.task != "edit T" {
+                abort("production prepare result changed");
+            }
+            if value.evidence.files != ["a.txt"] || value.evidence.result != "Seen blue" || value.evidence.summary != "Answer" {
+                abort("production read evidence changed");
+            }
+            if value.state.read.calls != 4 || value.state.read.tokens != 8192 || value.state.read.tools != 1 || value.state.read.scan != 16384 || value.state.edit != expected_pending().state.edit {
+                abort("production historical ledger changed");
+            }
         },
         Err(failure) => abort(failure.error),
     }

@@ -13,9 +13,11 @@ public flow load<R ~ ConversationReader>(history: R) -> Settings {
     let session = perform SessionContext.current();
     let workspace = history.load(session).workspace;
     match perform ConfigurationCache.lookup(workspace) {
-        Some(cached) => if constant_time_eq(cached.digest, digest) {
-            let observation = perform ConfigurationCodec.observation(history.message(cached.session, cached.result_event).text);
-            return perform ConfigurationCodec.decode_json(observation.stdout);
+        Some(cached) => {
+            if constant_time_eq(cached.digest, digest) {
+                let observation = perform ConfigurationCodec.observation(history.message(cached.session, cached.result_event).text);
+                return perform ConfigurationCodec.decode_json(observation.stdout);
+            }
         },
         None() => (),
     }

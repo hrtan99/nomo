@@ -52,7 +52,7 @@ flow main(args: Array<string>) -> i32 ![Memory, Console, Command.run<DefaultComm
         if recorded.program != "synthetic-no-shell" || recorded.arguments.len() != 2 || recorded.arguments[0] != "literal a" || recorded.arguments[1] != "café" {
             abort("command port changed program or argv");
         }
-        match recorded.stdin { Some(value) => if value != "stdin café\n" { abort("command port changed stdin"); }, None() => abort("command stdin lost"), }
+        match recorded.stdin { Some(value) => { if value != "stdin café\n" { abort("command port changed stdin"); } }, None() => abort("command stdin lost"), }
         if archive.load(saved.id).pending != "" || attempts(saved.id, false).len() != 1 { abort("command sequencing did not complete"); }
         let parent = archive.append(saved.id, "tool_call", "fixture_journal", "{}", -1);
         let pending = archive.load(saved.id).pending;
