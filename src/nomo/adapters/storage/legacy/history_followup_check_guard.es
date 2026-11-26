@@ -26,14 +26,12 @@ impl FollowupCheckRows ~ HistoryCheckRows {
     flow allow_abandoned(self) -> bool ![] { return false; }
 }
 
-flow rows() -> FollowupCheckRows { return FollowupCheckRows {}; }
-
 public flow plan(ticket: Ticket, digest: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
-    match claim(ticket) { Ok(_) => plan_rows(rows(), ticket.record.id, digest), Err(error) => Err(error) }
+    match claim(ticket) { Ok(_) => plan_rows(FollowupCheckRows {}, ticket.record.id, digest), Err(error) => Err(error) }
 }
 
-public flow start(id: string, digest: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] { return start_rows(rows(), id, digest); }
+public flow start(id: string, digest: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] { return start_rows(FollowupCheckRows {}, id, digest); }
 
-public flow finish(id: string, digest: string, outcome: string, exit_code: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] { return finish_rows(rows(), id, digest, outcome, exit_code); }
+public flow finish(id: string, digest: string, outcome: string, exit_code: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] { return finish_rows(FollowupCheckRows {}, id, digest, outcome, exit_code); }
 
-public flow inspect() -> Result<Option<Record>, string> { return inspect_rows(rows()); }
+public flow inspect() -> Result<Option<Record>, string> { return inspect_rows(FollowupCheckRows {}); }

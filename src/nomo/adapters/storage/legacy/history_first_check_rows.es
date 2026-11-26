@@ -23,5 +23,3 @@ impl FirstCheckRows ~ HistoryCheckRows {
     flow recorded_work_id(self) -> Result<string, string> { return match inspect_work() { Ok(Some(value)) => Ok(value.id), _ => Err("history-check has no work record") }; }
     flow allow_abandoned(self) -> bool ![] { return true; }
 }
-
-public flow rows() -> FirstCheckRows { return FirstCheckRows {}; }

@@ -22,19 +22,13 @@ public flow compact_frame(raw: string) -> string {
     return match encode_json(values, "action conversion refused", "action encoding refused") { Ok(value) => value, Err(error) => abort(error), };
 }
 
-public type Utf8ReadPlan = { work: bool };
-
-impl Utf8ReadPlan {
-    public flow decode(self, raw: string) -> Result<string, string> {
-        let values = match fields(raw, message_frame_bytes()) { Ok(item) => item, Err(error) => { return Err(error); } };
-        if values.len() != 2 || values[0] != "delegate" || !bounded(values[1], message_bytes()) { return Err("invalid bounded delegated task"); }
-        return Ok(values[1]);
-    }
+public flow decode_plan(raw: string) -> Result<string, string> {
+    let values = match fields(raw, message_frame_bytes()) { Ok(item) => item, Err(error) => { return Err(error); } };
+    if values.len() != 2 || values[0] != "delegate" || !bounded(values[1], message_bytes()) { return Err("invalid bounded delegated task"); }
+    return Ok(values[1]);
 }
 
-public flow decode_plan(raw: string) -> Result<string, string> { let decoder = Utf8ReadPlan { work = false }; return decoder.decode(raw); }
-
-public flow decode_work_plan(raw: string) -> Result<string, string> { let decoder = Utf8ReadPlan { work = true }; return decoder.decode(raw); }
+public flow decode_work_plan(raw: string) -> Result<string, string> { return decode_plan(raw); }
 
 public flow work_plan_rejection(raw: string) -> string {
     let values = match fields(raw, message_frame_bytes()) { Ok(item) => item, Err(_) => { return "unknown"; } };

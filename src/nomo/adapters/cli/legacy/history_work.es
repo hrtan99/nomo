@@ -9,7 +9,6 @@ import nomo.domain.work.protocol.Summary;
 import nomo.adapters.filesystem.legacy_work_editor.LegacyWorkEditor;
 import nomo.adapters.storage.legacy_work_timeline.LegacyWorkTimeline;
 import nomo.adapters.cli.legacy_work_output.LegacyWorkOutput;
-import nomo.bootstrap.legacy_work.{legacy_editor, legacy_timeline, legacy_output};
 import nomo.adapters.cli.arguments.harness_work_args.{parse_recorded, application};
 import nomo.core.conversation.Event;
 import nomo.adapters.model.harness.history_work_model.HistoryStages;
@@ -61,5 +60,5 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
     let run = Run { redaction = Policy { format = 1, literals = [] }, binding = "", wide = false, high_input = false,
         saved = "SAVED history-work; captured history is not a root identity or grant." };
     return execute<HistoryStages, EditTicket, bool, FirstPersistence, LegacyWorkEditor, LegacyWorkTimeline, LegacyWorkOutput>(
-        stages, persistence, legacy_editor(), legacy_timeline(), legacy_output(), input, run);
+        stages, persistence, LegacyWorkEditor {}, LegacyWorkTimeline {}, LegacyWorkOutput {}, input, run);
 }

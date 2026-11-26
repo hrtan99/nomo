@@ -28,7 +28,6 @@ import nomo.adapters.storage.legacy.check_lifecycle.FirstCheck;
 import nomo.application.work.controller.execute;
 import nomo.adapters.filesystem.work_editor.NativeWorkEditor;
 import nomo.adapters.storage.work_timeline.EventWorkTimeline;
-import nomo.bootstrap.work.{native_editor, event_timeline};
 import nomo.adapters.cli.legacy.terminal_work_output.TerminalWorkOutput;
 import nomo.application.work.ports.{WorkPersistence, Run};
 import nomo.tools.workspace.ReadOnlyRoot;
@@ -75,7 +74,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
     let high_input = ticket.frame.work.format == 9 || ticket.frame.work.format == 10;
     let stages = HistoryStages { prior_request, previous, conversation, wide = wide || high_input, high_input, historical = false };
     let persistence = FirstPersistence { ticket, redaction = policy, binding };
-    return execute<HistoryStages, EditTicket, bool, FirstPersistence, NativeWorkEditor, EventWorkTimeline, TerminalWorkOutput>(stages, persistence, native_editor(), event_timeline(history), TerminalWorkOutput {}, input, Run { redaction = policy, binding, wide = wide || high_input, high_input, saved = "SAVED event work facts; no grant or root identity is persisted." });
+    return execute<HistoryStages, EditTicket, bool, FirstPersistence, NativeWorkEditor, EventWorkTimeline, TerminalWorkOutput>(stages, persistence, NativeWorkEditor {}, EventWorkTimeline { chat = history }, TerminalWorkOutput {}, input, Run { redaction = policy, binding, wide = wide || high_input, high_input, saved = "SAVED event work facts; no grant or root identity is persisted." });
 }
 
 public flow abandon(args: Array<string>) -> i32 ![Console, Memory, Fs.read<PolicyRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {

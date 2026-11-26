@@ -3,8 +3,7 @@ module nomo.adapters.cli.legacy.recoverable_read_session;
 import nomo.domain.text.read_text.within;
 import nomo.application.chat.controller.{open as open_chat, reserve_loaded as reserve_chat, finish as finish_chat};
 import nomo.adapters.storage.chat_repositories.{RecoverableTicket, RecoverableChatRepository};
-import nomo.bootstrap.chat.recoverable_repository;
-import nomo.bootstrap.recoverable_status.recoverable_status_reader;
+import nomo.adapters.storage.recoverable_status.RecoverableSessionStatusReader;
 import std.io.{println, IOError as ConsoleError};
 import std.text.{ends_with, from_i32};
 import std.agent.message.Message;
@@ -56,7 +55,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyR
     match inspect_check() { Ok(None()) => (), _ => { println("REFUSED check record exists or is invalid"); return 1; } }
     match inspect_followup_check() { Ok(None()) => (), _ => { println("REFUSED followup check exists or is invalid"); return 1; } }
     let binding = args[6];
-    let repository = recoverable_repository(policy, binding, high_input);
+    let repository = RecoverableChatRepository { redaction = policy, binding, high_input };
     let current = match open_chat<RecoverableTicket, RecoverableChatRepository>(repository, args[0] == "new") { Ok(value) => value, Err(error) => { println("REFUSED " + error); return 1; } };
     let facts = match work_facts(policy, binding) { Ok(item) => item, Err(error) => { println("REFUSED " + error); return 1; } };
     let history = match conversation(current.value.events, current.value.chat.invocation.prior, policy, binding) { Ok(item) => item, Err(error) => { println("REFUSED " + error); return 1; } };
@@ -114,7 +113,7 @@ public flow status(args: Array<string>) -> i32 ![Console, Memory, Fs.read<Policy
         match load(policy, args[1]) { Ok(None()) => (), Ok(Some(_)) => { println("REFUSED session already exists"); return 1; } Err(error) => { println("REFUSED " + error); return 1; } }
         return match create(policy, args[1], high_input) { Ok(_) => { println("SESSION INITIALIZED"); 0 } Err(error) => { println("REFUSED " + error); 1 } };
     }
-    let snapshot = match recoverable_status_reader(policy, args[1]).snapshot() { Ok(value) => value, Err(error) => { println("REFUSED " + error); return 1; } };
+    let snapshot = match (RecoverableSessionStatusReader { redaction = policy, binding = args[1] }).snapshot() { Ok(value) => value, Err(error) => { println("REFUSED " + error); return 1; } };
     let saved = snapshot.chat; let work = snapshot.work; let check = snapshot.check;
     let followup = snapshot.followup; let followup_check = snapshot.followup_check; let extra = snapshot.additional;
     var additional: Array<ExtraEntry> = [];

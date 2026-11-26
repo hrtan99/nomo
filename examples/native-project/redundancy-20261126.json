@@ -1,0 +1,115 @@
+{
+  "date": "2026-11-26",
+  "baseline": "0a6cc38",
+  "status": "redundancy-cleanup-complete-compilation-blocked",
+  "scan": {
+    "tracked_etas_modules_before": 449,
+    "tracked_python_scripts": 65,
+    "all_local_etas_modules_before": 459,
+    "reference_search": [
+      "src",
+      "tests",
+      "scripts",
+      "etas.toml"
+    ],
+    "heuristic_candidates": {
+      "single_field_records": 19,
+      "constructor_factories": 8,
+      "forwarders": 343
+    },
+    "qualification": "Single-field records and single-expression calls are candidates, not an estimate of redundant code. Constructor factories with fields were also reviewed. Frozen reproduction snapshots and untracked local prototypes were not rewritten."
+  },
+  "changes": {
+    "removed_modules": [
+      "src/nomo/adapters/filesystem/guidance.es",
+      "src/nomo/adapters/model/decoders.es",
+      "src/nomo/application/harness/decoders.es",
+      "src/nomo/bootstrap/chat.es",
+      "src/nomo/bootstrap/work.es",
+      "src/nomo/bootstrap/legacy_work.es",
+      "src/nomo/bootstrap/legacy_status.es",
+      "src/nomo/bootstrap/recoverable_status.es"
+    ],
+    "removed_wrapper_types": [
+      "ProjectGuidance",
+      "adapters.model.decoders.AsciiReadPlan",
+      "adapters.model.decoders.Utf8ReadPlan",
+      "adapters.model.decoders.EditProposal",
+      "domain.harness.read_protocol.Utf8ReadPlan"
+    ],
+    "removed_unused_specs": [
+      "ReadPlanDecoder",
+      "EditProposalDecoder"
+    ],
+    "removed_constructor_factories": [
+      "bootstrap.chat.legacy_repository",
+      "bootstrap.chat.recoverable_repository",
+      "bootstrap.legacy_status.legacy_status_reader",
+      "bootstrap.legacy_work.legacy_editor",
+      "bootstrap.legacy_work.legacy_timeline",
+      "bootstrap.legacy_work.legacy_output",
+      "bootstrap.work.native_editor",
+      "bootstrap.work.event_timeline",
+      "bootstrap.recoverable_status.recoverable_status_reader",
+      "bootstrap.instructions.reader",
+      "adapters.storage.legacy.history_first_check_rows.rows",
+      "adapters.storage.legacy.history_followup_check_guard.rows"
+    ],
+    "instruction_reader": "ProjectInstructionFiles directly implements InstructionReader and retains the existing application instruction algorithm and effect interpretation.",
+    "utf8_decoder": "Removed unused work field and duplicate decoder construction. Existing read/work entry names delegate to the same preserved decoder body."
+  },
+  "retained_after_review": [
+    {
+      "name": "PublicStages / PrivateStages",
+      "reason": "They select distinct public versus redacted child execution paths and retain model mode."
+    },
+    {
+      "name": "EventWorkTimeline",
+      "reason": "It captures a specific MemoryEntry version for event publication."
+    },
+    {
+      "name": "RecordRows",
+      "reason": "The field selects the actual CAS storage key and reported target."
+    },
+    {
+      "name": "LegacyChild / AsciiContext / SingleBudget / FormatPolicy / LegacyActions",
+      "reason": "Their stored fields affect budget, validation, protocol or model behavior."
+    },
+    {
+      "name": "Answer / Summary / Delegation records",
+      "reason": "They are domain/model wire contracts, not wrappers around another implementation."
+    },
+    {
+      "name": "FirstPersistence / FollowupPersistence",
+      "reason": "They claim a specific work ticket and finish its durable record in addition to delegating journal operations."
+    },
+    {
+      "name": "Owner-local injected factories",
+      "reason": "They establish constructor provider requests; removing them is not equivalent to deleting a plain record constructor alias."
+    },
+    {
+      "name": "Callable stage adapters / historical storage entry functions",
+      "reason": "They carry callable/spec/effect contracts or select a public storage operation; their short bodies are not enough to classify them as unused."
+    },
+    {
+      "name": "Python single-return candidates",
+      "reason": "The four candidates construct source overrides, select Cargo arguments, aggregate counters, or normalize Docker output."
+    },
+    {
+      "name": "bootstrap.execution",
+      "reason": "The receipt fixture consumes this composition entry; it selects several repository ports rather than only returning a constructed record."
+    }
+  ],
+  "checks": {
+    "exact_review_package_architecture": "PASS architecture: 441 modules, 3307 imports, 48 identity-only compatibility leaves",
+    "utf8_decode_body_tokens_preserved": true,
+    "literal_payloads_in_surviving_modified_source_preserved": true,
+    "compiler": "Official 0.24.0; unchanged installed graph and matching SDK from compiler-0240-20261126.json",
+    "complete_check": {
+      "exit": 4,
+      "stdout": "",
+      "stderr": "frontend session failed: Pipeline(\"native invocation has no checked implementation witness\")\n"
+    },
+    "qualification": "The complete check still exits with the existing native-witness pipeline error, so compilation/runtime acceptance is not established. No new negative cases or real model calls were run."
+  }
+}

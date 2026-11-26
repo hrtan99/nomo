@@ -2,8 +2,7 @@ module nomo.adapters.cli.legacy.read_session;
 
 import nomo.application.chat.controller.{open as open_chat, reserve_loaded as reserve_chat, finish as finish_chat};
 import nomo.adapters.storage.chat_repositories.LegacyChatRepository;
-import nomo.bootstrap.chat.legacy_repository;
-import nomo.bootstrap.legacy_status.legacy_status_reader;
+import nomo.adapters.storage.legacy_status.LegacySessionStatusReader;
 import nomo.domain.sessions.chat_history.Entry as LegacyChatTicket;
 import nomo.adapters.storage.legacy.legacy_work_facts.LegacyWorkFacts;
 import nomo.domain.text.read_text.within;
@@ -39,7 +38,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyR
     let facts = match reader.snapshot() { Ok(value) => value, Err(error) => { println("REFUSED " + error); return 1; } };
     let work_facts = facts.first; let followup_facts = facts.followup;
     let work_calls = facts.calls; let work_generation = facts.generation;
-    let repository = legacy_repository();
+    let repository = LegacyChatRepository {};
     let current = match open_chat<LegacyChatTicket, LegacyChatRepository>(repository, args[0] == "new") {
         Ok(value) => value, Err(error) => { println("REFUSED " + error); return 1; }
     };
@@ -75,7 +74,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyR
 public flow status(args: Array<string>) -> i32 ![Console, Memory, Error<StorageError>, Error<IndexError>, Error<ConsoleError>] {
     let outputs = args.len() == 1 && args[0] == "--outputs";
     if args.len() != 0 && !outputs { println("REFUSED status accepts only --outputs"); return 1; }
-    let snapshot = match legacy_status_reader().snapshot() { Ok(value) => value, Err(error) => {
+    let snapshot = match (LegacySessionStatusReader {}).snapshot() { Ok(value) => value, Err(error) => {
         if error == "SESSION missing" { println(error); } else { println("REFUSED " + error); } return 1;
     } };
     let entry = snapshot.chat;

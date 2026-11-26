@@ -34,7 +34,6 @@ import nomo.session.edit_operation.Binding;
 import nomo.application.work.controller.execute;
 import nomo.adapters.filesystem.work_editor.NativeWorkEditor;
 import nomo.adapters.storage.work_timeline.EventWorkTimeline;
-import nomo.bootstrap.work.{native_editor, event_timeline};
 import nomo.adapters.cli.legacy.terminal_work_output.TerminalWorkOutput;
 import nomo.application.work.ports.{WorkPersistence, Run};
 import nomo.tools.workspace.ReadOnlyRoot;
@@ -81,7 +80,7 @@ flow more(input: WorkRequest, prior_request: string, previous: Previous, convers
     println(if high_input { "RESERVED high-input additional work: 7 calls, 917504 output tokens, 7340032 configured native tokens; interruption leaves this work unresolved." } else { if wide { "RESERVED additional work: 7 calls, 286720 output tokens, 2811008 configured native tokens; interruption leaves this work unresolved." } else { "RESERVED additional work: 7 calls, 51200 output tokens, 1335296 configured native tokens; interruption leaves this work unresolved." } });
     let stages = HistoryStages { prior_request, previous, conversation, prior_work = prior, wide, high_input, historical = false };
     let persistence = ContinuousPersistence { ticket, redaction = policy };
-    return execute<HistoryStages, Stored, Stored, ContinuousPersistence, NativeWorkEditor, EventWorkTimeline, TerminalWorkOutput>(stages, persistence, native_editor(), event_timeline(chat), TerminalWorkOutput {}, input, Run { redaction = policy, binding, wide, high_input, saved = "SAVED additional work facts" });
+    return execute<HistoryStages, Stored, Stored, ContinuousPersistence, NativeWorkEditor, EventWorkTimeline, TerminalWorkOutput>(stages, persistence, NativeWorkEditor {}, EventWorkTimeline { chat }, TerminalWorkOutput {}, input, Run { redaction = policy, binding, wide, high_input, saved = "SAVED additional work facts" });
 }
 
 // Current roots and current approval are supplied by this invocation. Saved
@@ -134,7 +133,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
     let high_input = ticket.frame.work.format == 9 || ticket.frame.work.format == 10;
     let stages = HistoryStages { prior_request, previous, conversation, prior_work, wide = wide || high_input, high_input, historical = false };
     let persistence = FollowupPersistence { ticket, redaction = policy, binding };
-    return execute<HistoryStages, EditTicket, bool, FollowupPersistence, NativeWorkEditor, EventWorkTimeline, TerminalWorkOutput>(stages, persistence, native_editor(), event_timeline(history), TerminalWorkOutput {}, input, Run { redaction = policy, binding, wide = wide || high_input, high_input, saved = "SAVED event followup facts; no grant or root identity is persisted." });
+    return execute<HistoryStages, EditTicket, bool, FollowupPersistence, NativeWorkEditor, EventWorkTimeline, TerminalWorkOutput>(stages, persistence, NativeWorkEditor {}, EventWorkTimeline { chat = history }, TerminalWorkOutput {}, input, Run { redaction = policy, binding, wide = wide || high_input, high_input, saved = "SAVED event followup facts; no grant or root identity is persisted." });
 }
 
 public flow abandon(args: Array<string>) -> i32 ![Console, Memory, Fs.read<PolicyRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {

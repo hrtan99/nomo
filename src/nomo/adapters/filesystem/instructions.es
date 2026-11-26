@@ -2,7 +2,10 @@ module nomo.adapters.filesystem.instructions;
 
 import std.fs.{path, list, relative_name, ReadLimitError, IOError as FileError};
 import std.effects.Fs;
-import nomo.application.instructions.ports.InstructionFileSource;
+import nomo.application.instructions.ports.{InstructionFileSource, InstructionFiles};
+import nomo.application.context.ports.InstructionReader;
+import nomo.application.instructions.service.load as read_guidance;
+import nomo.domain.context.instructions.ProjectInstruction;
 import nomo.native.workspace.ProjectRoot;
 import nomo.adapters.filesystem.file_io.read_text;
 
@@ -19,4 +22,14 @@ impl ProjectInstructionFiles ~ InstructionFileSource {
         return result;
     }
     flow text(self, pathname: string) -> string ![Fs.read<ProjectRoot>, Error<FileError>, Error<ReadLimitError>] { return read_text(pathname); }
+}
+
+impl ProjectInstructionFiles ~ InstructionReader {
+    flow read(self, pathname: string) -> Array<ProjectInstruction> ![Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Error<FileError>, Error<ReadLimitError>] {
+        return read_guidance(pathname) with {
+            InstructionFiles.normalize(name) => self.normalize(name);
+            InstructionFiles.entries(scope) => self.entries(scope);
+            InstructionFiles.text(name) => self.text(name);
+        };
+    }
 }
