@@ -75,7 +75,7 @@ while true; do
   set +e
   task_command=(docker compose --project-name nomo-native --env-file /dev/null \
     --file "$task_root/compose.yaml" \
-    --file "$task_root/config/etas-0230-official-compose.yaml" \
+    --file "$task_root/config/etas-0231-official-compose.yaml" \
     --file "$task_root/config/local-tryout-compose.yaml" \
     --file "$task_root/config/nomo-native-launch-compose.yaml" \
     --file "$task_root/config/nomo-native-compose.yaml" \
