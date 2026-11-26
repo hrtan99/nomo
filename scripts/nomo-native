@@ -5,7 +5,11 @@ set -euo pipefail
 task_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 if [[ "${1:-}" == --help || "${1:-}" == -h ]]; then
   cat <<'HELP'
-Usage: nomo-native [PROJECT_DIRECTORY] [--open | --new | --resume ID] [--once PROMPT]
+Usage: nomo-native [PROJECT_DIRECTORY | --root DIRECTORY] [OPTIONS]
+
+--new, --id ID, --resume [ID], --latest, --title TITLE
+--projects, --open [FOLDER], --sessions [--all], --history, --events, --status
+--import FILE, --export FILE, --once PROMPT, --check PROGRAM [ARG ...]
 
 Launch the opt-in Etas native migration. PROJECT_DIRECTORY defaults to cwd.
 Set MINIMAX_API_KEY for the configured model endpoint. Native state defaults
@@ -24,6 +28,36 @@ if [[ $# -gt 0 && "$1" != --* ]]; then
   task_project="$1"
   shift
 fi
+task_arguments=()
+task_offline=false
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --root|--workspace)
+      task_project="$2"
+      shift 2
+      ;;
+    --root=*|--workspace=*) task_project="${1#*=}"; shift ;;
+    --once|--id|--title|--import)
+      task_arguments+=("$1")
+      shift
+      if [[ $# -gt 0 ]]; then task_arguments+=("$1"); shift; fi
+      ;;
+    --export)
+      task_offline=true
+      task_arguments+=("$1")
+      shift
+      if [[ $# -gt 0 ]]; then task_arguments+=("$1"); shift; fi
+      ;;
+    --projects|--sessions|--history|--events|--status|--export=*)
+      task_offline=true
+      task_arguments+=("$1")
+      shift
+      ;;
+    --check|--check=*) task_arguments+=("$@"); break ;;
+    *) task_arguments+=("$1"); shift ;;
+  esac
+done
+set -- "${task_arguments[@]}"
 umask 077
 task_state="${NOMO_NATIVE_STATE:-${XDG_STATE_HOME:-$HOME/.local/state}/nomo/native}"
 mkdir -p -- "$task_state"
@@ -39,10 +73,9 @@ while true; do
   export NOMO_NATIVE_CONTROL_DIR="$NOMO_NATIVE_EVIDENCE/control"
   mkdir -- "$NOMO_NATIVE_CONTROL_DIR"
   set +e
-  python3 "$task_root/scripts/native-worker-transport.py" \
-    docker compose --project-name nomo-native --env-file /dev/null \
+  task_command=(docker compose --project-name nomo-native --env-file /dev/null \
     --file "$task_root/compose.yaml" \
-    --file "$task_root/config/etas-0135-official-compose.yaml" \
+    --file "$task_root/config/etas-0230-official-compose.yaml" \
     --file "$task_root/config/local-tryout-compose.yaml" \
     --file "$task_root/config/nomo-native-launch-compose.yaml" \
     --file "$task_root/config/nomo-native-compose.yaml" \
@@ -51,7 +84,19 @@ while true; do
     --flow native_project --profile nomo-native --allow-effects \
     --max-tool-rounds "${NOMO_NATIVE_MAX_TOOL_ROUNDS:-256}" \
     --trace-out /native-evidence/trace.json \
-    --args "$@" --workspace "$NOMO_NATIVE_WORKSPACE"
+    --args --workspace "$NOMO_NATIVE_WORKSPACE" "$@")
+  if [[ "$task_offline" == true ]]; then
+    # Startup inspection/export is a separate native invocation; it never
+    # injects input into a resident terminal or its pending approval prompt.
+    if [[ ! -t 0 || ! -t 1 ]]; then
+      for task_index in "${!task_command[@]}"; do
+        if [[ "${task_command[$task_index]}" == --tty=true ]]; then task_command[$task_index]=--tty=false; fi
+      done
+    fi
+    "${task_command[@]}"
+  else
+    python3 "$task_root/scripts/native-worker-transport.py" "${task_command[@]}"
+  fi
   task_status=$?
   set -e
   if [[ "$task_status" -ne 0 ]]; then exit "$task_status"; fi

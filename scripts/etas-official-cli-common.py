@@ -25,7 +25,7 @@ def configure(label, wrapper):
                 '023': ('0.2.3', None),
                 '024': ('0.2.4', None),
                 '025': ('0.2.5', None), '026': ('0.2.6', None), '026-v68': ('0.2.6', None), '030': ('0.3.0', None),
-                '041': ('0.4.1', None), '0120': ('0.12.0', None), '0121': ('0.12.1', None), '0130': ('0.13.0', None), '0131': ('0.13.1', None), '0132': ('0.13.2', None), '0133': ('0.13.3', None), '0134': ('0.13.4', None), '0135': ('0.13.5', None), '0224': ('0.22.4', None)}
+                '041': ('0.4.1', None), '0120': ('0.12.0', None), '0121': ('0.12.1', None), '0130': ('0.13.0', None), '0131': ('0.13.1', None), '0132': ('0.13.2', None), '0133': ('0.13.3', None), '0134': ('0.13.4', None), '0135': ('0.13.5', None), '0224': ('0.22.4', None), '0227': ('0.22.7', None), '0230': ('0.23.0', None)}
     require(label in versions, 'unsupported official graph')
     LABEL = label
     VERSION, LEGACY_SHA = versions[label]
@@ -38,10 +38,10 @@ def configure(label, wrapper):
     SOURCE = ROOT / ('src' if label in ('025', '026', '026-v68', '030') else 'src/cli')
     TARGET = CACHE / SPEC['build_target'] if 'build_target' in SPEC else ROOT / 'target' if label in ('025', '026', '026-v68', '030') else CACHE / 'etas-latest/target'
     INSTALLED = CACHE / SPEC.get('installed_binary', 'bin/etas')
-    PREVIOUS_CONFIG = '98ff380d7e04ca43bca7f28f4af30dcd72e0a5a80dbe6515df41925f6d032962' if label == '041' else None
+    PREVIOUS_CONFIG = '98ff380d7e04ca43bca7f28f4af30dcd72e0a5a80dbe6515df41925f6d032962' if label == '041' else '0b95372bdb89c45b3174b5679886d39cc3a7241ad78138e310f2c85400f4191d' if label == '0227' else '14df3e5547ae101bd9fbf745614584989553156895db06a20db3652c39292e23' if label == '0230' else None
     bridge_path = REPO / 'config/etas-official-legacy-bridge.json'
     bridge = json.loads(bridge_path.read_text())
-    entry = None if label in ('041', '0120', '0121', '0130', '0131', '0132', '0133', '0134', '0135', '0224') else bridge[label]
+    entry = None if label in ('041', '0120', '0121', '0130', '0131', '0132', '0133', '0134', '0135', '0224', '0227', '0230') else bridge[label]
     if entry is not None:
         require(bridge['format'] == 1 and entry['legacy_sha256'] == LEGACY_SHA, 'legacy bridge policy drift')
         require(entry['wrapper_sha256'] == digest(wrapper), 'bootstrap wrapper drift')
@@ -335,6 +335,9 @@ def guard(read_only=False):
         '0134': '8cc4e048d50b74413e0fc7e934edf582742e7d94726095ee92db4381e69bebcb',
         '0135': '08ee4a57006ab509fc4e761cd63671c579351b459d9bfb4cccb056e18246b8f0'}
     if LABEL in previous_v2: accepted.append(previous_v2[LABEL])
+    previous_collection_upgrade = {'0230': 'd2cea32bf13cde7ea246f503b9d98c6aeeb1e174c610ab2744c6d4803106a47b', '0227_pre_0230': '6b369f48987e51b62f987336efde0ef0472d4e14e364c645f6500a789e525661', '0227': 'fe5f265da6e6497bc5a59552a92f85556cdf6ab40b10de830987968549af309b', '0135': '5393d275f0689b86f2dc1726e5501e9d919d5633270d8ace06d663be7ee6dd97', '0224': 'ebe5751d677b13dbd660ee7f17897b8fc964124ecf3a711316ce7b79e15d40f7'}
+    if LABEL in previous_collection_upgrade: accepted.append(previous_collection_upgrade[LABEL])
+    if LABEL == '0227': accepted.append(previous_collection_upgrade['0227_pre_0230'])
     # The 0.4.1 storage-limit pin was prepared and built before its independently
     # reproduced binary hash replaced the prior graph hash in the reviewed spec.
     if LABEL == '041': accepted.append('ddeb6d22d76a7ad8159e04bc504b38560e87e374df8e921004426bcbb0077c42')
