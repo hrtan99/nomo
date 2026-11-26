@@ -2,13 +2,24 @@
 
 The shipping `scripts/nomo` entry still uses the existing Python project controller. The opt-in `native_project` flow is the migration implementation, not a completed replacement.
 
-## Current handler syntax and toolchain, 2026-11-26
+## Current IoC composition and toolchain, 2026-11-26
 
-The selected graph is official CLI **0.23.1** at `cb34bdc448dc2f09bdef00adb9d26451f772f802`, paired with its own locked frontend/interpreter and installed SDK. The official incremental build, source/tree/lock/registry checks and SDK receipt verification passed. Existing Cargo registry, build artifacts and native tools are reused instead of allocating another Docker cache volume.
+The selected graph is official CLI **0.23.2** at `25dcf8f884fca261c9018ab178f8bc82b1b7c9b1`, frontend `08120a4170793477a14f87e0f65896633e8040c2`, with its exact locked core/interpreter and matching installed SDK. Official source/tree/lock/registry and installed SDK verification passed. The standard dev build reuses the existing Cargo target, registry and native tools; no new cache volume or compiler source patch was introduced. The later upstream main commit `5b5ff9e` changes injection documentation and retains the same dependency revisions.
 
-The source now uses the specification's implicit Handler tail resumption. All 203 explicit Handler tail resumptions in business source have been replaced with values or unit-returning expressions. Single-expression Handler, match and lambda arms and handled bodies omit redundant braces. Statement sequences and control flow retain the blocks they require. The legacy `resume` import alias remains an ordinary callable name. Existing fixtures use the same syntax; their expected outputs and data literals are preserved.
+The CLI now consumes `ConversationService` and constructs `TerminalApplication` through four `@inject` fields. The model adapter implements that consumer-owned service using injected history, attempts, instructions, saved jobs, coding/summary models and context projection. Bootstrap selects dependencies and shares the same history with configuration loading. The three `ConversationRequests` forwarding actions are removed. Constructor injection is kept separate from per-call session/settings scopes and the six remaining runtime operation Handlers. Their nesting order is preserved.
 
-An existing positive scenario exposed obsolete free `std.collections.len` imports; those calls now use standard `.len()` methods. After that correction, the same existing `tool_then_final` scenario passes through the actual controller and production output Handler with its original whole-return-value assertion and four expected events. No new negative matrix or real model request was added. The normal full-source check still exits 4 with the effect-identity projection error reported in frontend #101; this migration does not establish complete compiler/runtime acceptance. See [the syntax migration receipt](examples/native-project/handler-syntax-0231-20261126.json) for exact scope and observations.
+The SDK migration uses `WriteCondition.Match`, `StorageDurability.Durable`, explicit `PromptEncode` at the model boundary, literal-only `Trusted` prompt factories, and bound callable-stage wrappers. No stored nominal declaration or Region identity was renamed. `Durable` is the current API spelling, not independent proof of a SQLite WAL durability configuration.
+
+Handler tails retain the 203 implicit resumptions from the previous migration. That migration removed some required blocks incorrectly: this change restores 12 production and four fixture match blocks, 59 statement-if blocks, and four early-return error branches. Single-expression arms still omit optional braces. The older 0.23.1 receipt's brace/lambda counts are historical and do not establish semantic equivalence.
+
+Acceptance remains incomplete:
+
+- The previous effect-identity projection failure (#101) is no longer observed; its [upstream follow-up](https://github.com/etas-project/etas-frontend/issues/101#issuecomment-7188521016) records that scope.
+- The normal complete source check reaches `native invocation has no checked implementation witness` and exits 4 without a source location. The unchanged six-file process-adapter snapshot also reproduces this diagnostic on 0.23.2; the triggering call and common root cause remain unknown. The [#100 follow-up](https://github.com/etas-project/etas-frontend/issues/100#issuecomment-7188512836) includes exact compiler/SDK identities.
+- The existing positive conversation probe invokes `etas run` with real fixture SQLite and controlled model effects. It exits -9 at the unchanged 4 GiB limit, with `oom=1` and `oom_kill=1`. No model request was made. There is no trace proving whether compilation or interpretation exhausted memory, so this is not a conversation, injection-lifecycle or durability pass.
+- Architecture checks pass for the working tree and the exact committed package without optional local v4 prototypes (450 modules, 3,344 imports and 48 compatibility leaves). They do not replace compiler/runtime acceptance. Native read/edit/check/Git/new-process acceptance and default cutover remain unfinished.
+
+No new negative matrix, real model request or repeated conversation run was added. Exact evidence: [official compiler receipt](examples/native-project/compiler-0232-20261126.json) and [IoC scope](examples/native-project/ioc-0232-20261126.json). Earlier results below are historical and do not qualify the current source.
 
 ## Previous 0.23.0 layer migration, 2026-11-26
 

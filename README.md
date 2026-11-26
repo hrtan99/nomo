@@ -4,7 +4,7 @@ Nomo is a local project coding agent built with [ETAS](https://github.com/etas-p
 
 ## Get started
 
-The refactor checkout selects official ETAS **0.23.1**, its matching SDK and the pinned native TOML tools. Source follows the [layer boundaries](ARCHITECTURE.md), checked by `python3 -B scripts/check-architecture.py` and CI. Handler tails use implicit resumption and expression arms omit redundant braces. The existing stub tool/output scenario passes on this graph. Full acceptance remains incomplete: the complete check reports an effect-identity projection error ([etas-frontend#101](https://github.com/etas-project/etas-frontend/issues/101)); the earlier native conversation OOM at 4 GiB has not been requalified. The commands below document the user interface; this checkout is not a verified release.
+The refactor checkout selects official ETAS **0.23.2**, its matching SDK and the pinned native TOML tools. Source follows the [layer boundaries](ARCHITECTURE.md); conversation services and terminal dependencies use consumer-owned specs and construction-time `@inject` providers. Architecture checks pass. Full acceptance remains blocked: the complete check exits with `native invocation has no checked implementation witness` ([etas-frontend#100](https://github.com/etas-project/etas-frontend/issues/100)), and the existing SQLite conversation probe is killed at the 4 GiB memory limit. The former effect-identity failure is no longer observed. The commands below document the user interface; this checkout is not a verified release.
 
 Use the existing Docker image and `MINIMAX_API_KEY` configuration. Open any existing project folder, including an empty one:
 

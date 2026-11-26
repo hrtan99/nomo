@@ -13,14 +13,14 @@ import nomo.adapters.filesystem.configuration.file.ProjectConfigurationFile;
 import nomo.adapters.filesystem.configuration.codec.JsonConfigurationCodec;
 import nomo.adapters.filesystem.configuration.converter.TaploConfigurationConverter;
 import nomo.adapters.storage.configuration_cache.NativeConfigurationCache;
-import nomo.adapters.storage.conversations.NativeHistory;
+import nomo.application.conversation.ports.ConversationReader;
 
-public flow load() -> Settings ![SessionContext, CommandOperations, Memory, Console, Command.run<DefaultCommandSandbox>, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<ConsoleError>, Error<FileError>, Error<ReadLimitError>] {
+public flow load<R ~ ConversationReader>(history: R) -> Settings ![SessionContext, CommandOperations, Memory, Console, Command.run<DefaultCommandSandbox>, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<ConsoleError>, Error<FileError>, Error<ReadLimitError>] {
     let source = ProjectConfigurationFile {};
     let codec = JsonConfigurationCodec {};
     let conversion = TaploConfigurationConverter {};
     let cache = NativeConfigurationCache {};
-    return load_configuration(NativeHistory {}) with {
+    return load_configuration(history) with {
         ConfigurationSource.read() => source.read();
         ConfigurationCodec.fingerprint(raw) => codec.fingerprint(raw);
         ConfigurationCodec.decode_json(text) => codec.decode_json(text);

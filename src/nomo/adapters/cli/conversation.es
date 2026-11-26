@@ -1,5 +1,7 @@
 module nomo.adapters.cli.conversation;
 
+import nomo.application.conversation.service_ports.ConversationService;
+
 import nomo.application.commands.effects.CommandOperations;
 import nomo.application.instructions.ports.ProjectInstructions;
 import nomo.application.mutations.ports.ChangeOperations;
@@ -18,7 +20,6 @@ import nomo.application.conversation.session_context.SessionContext;
 import nomo.application.conversation.effects.ConversationOutput;
 import nomo.domain.conversation.session.Session;
 import nomo.application.execution.ports.AttemptRepository;
-import nomo.application.conversation.requests.ConversationRequests;
 import nomo.application.conversation.turn.{ready, supported};
 import nomo.adapters.filesystem.transfer_tools.{save_archive, load_archive, resume_import, fork, copy_status, copy_jobs, copy_job, resume_fork, discard_copy};
 import nomo.application.transfer.effects.TransferOperations;
@@ -60,10 +61,6 @@ flow process_command(session: string, request: ProcessRequest) -> unit {
         } with { SessionContext.current() => session; };
 }
 
-flow load_settings(session: string, check: Option<Array<string>>) -> Settings {
-    return perform ConversationRequests.settings(session, check);
-}
-
 flow generation_supported(settings: Settings) -> bool {
     return supported(settings) with { ConversationOutput.write(line) => println(line); };
 }
@@ -72,8 +69,8 @@ flow ready_for_turn<A ~ AttemptRepository>(attempts: A, session: string) -> bool
     return ready(attempts, session) with { ConversationOutput.write(line) => println(line); };
 }
 
-flow navigation_command(session: string, operation: string, argument: string, check: Option<Array<string>>) -> unit {
-    let settings = load_settings(session, check);
+flow navigation_command<C ~ ConversationService>(conversation: C, session: string, operation: string, argument: string, check: Option<Array<string>>) -> unit {
+    let settings = conversation.settings(session, check);
     let result = handle match operation {
             "tree" => find_files(argument, "", 3),
             "glob" => find_files(".", argument, 0),
@@ -87,7 +84,7 @@ flow navigation_command(session: string, operation: string, argument: string, ch
 flow show<A ~ AttemptRepository>(attempts: A, value: Session) -> unit {
     println("[SESSION] " + value.id + " · " + value.title);
     match copy_status(value.id) {
-        Some(job) => if job.phase != "ready" { println("[COPY   ] " + job.phase + "; /resume-copy " + job.id + " or /discard-copy " + job.id); },
+        Some(job) => { if job.phase != "ready" { println("[COPY   ] " + job.phase + "; /resume-copy " + job.id + " or /discard-copy " + job.id); } },
         None() => (),
     }
     if value.pending != "" {
@@ -96,10 +93,6 @@ flow show<A ~ AttemptRepository>(attempts: A, value: Session) -> unit {
     for attempt in attempts.list(value.id, true) {
         println("[RUN    ] " + attempt.id + " " + attempt.kind + " " + attempt.phase + "; no completion recorded. Inspect actual state, then /resolve-run ID [NOTE].");
     }
-}
-
-flow ask(session: string, request: string, check: Option<Array<string>>) -> bool {
-    return perform ConversationRequests.turn(session, request, check);
 }
 
 flow show_history<R ~ ConversationReader>(archive: R, session: string, query: string, first: i64, count: i64) -> unit {
@@ -142,118 +135,152 @@ flow edit_command(session: string, operation: string, id: string) -> unit {
         } with { SessionContext.current() => session; };
 }
 
-public flow run<R ~ ConversationReader, W ~ ConversationWriter, C ~ ConversationCatalog, A ~ AttemptRepository, P ~ ResultPublication, K ~ ConversationPicker>(archive: R, writer: W, catalog: C, attempts: A, publication: P, picker: K, args: Array<string>) -> i32
-    ![Agentic, CommandOperations, ProjectInstructions, ConversationRequests, ChangeOperations, ProcessOperations, TransferOperations, ProjectOperations, Memory, Console, Command.run<DefaultCommandSandbox>, Command.start<DefaultCommandSandbox>, Command.reconnect<DefaultCommandSandbox>, Command.read<DefaultCommandSandbox>, Command.write<DefaultCommandSandbox>, Command.stop<DefaultCommandSandbox>, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Fs.stat<ProjectRoot>, Fs.atomic_replace<ProjectRoot>, Fs.atomic_replace<LaunchRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>, Error<IOError>, Error<IndexError>] {
-    let options = parse(args);
-    if options.projects { show_projects(); return 0; }
-    match options.open_project { Some(pathname) => { request_open(pathname, options.workspace); return 0; } None() => (), }
-    if options.sessions {
-        let items = if options.all_sessions { catalog.all_sessions() } else { catalog.sessions(options.workspace) };
-        for item in items { println("[PROJECT] " + item.workspace); show(attempts, item); }
+public type TerminalApplication<
+    History ~ ConversationReader + ConversationWriter + ConversationCatalog + ResultPublication,
+    Attempts ~ AttemptRepository,
+    Picker ~ ConversationPicker,
+    Conversation ~ ConversationService
+> = {
+    @inject history: History,
+    @inject attempts: Attempts,
+    @inject picker: Picker,
+    @inject conversation: Conversation,
+};
+
+impl TerminalApplication<
+    History ~ ConversationReader + ConversationWriter + ConversationCatalog + ResultPublication,
+    Attempts ~ AttemptRepository,
+    Picker ~ ConversationPicker,
+    Conversation ~ ConversationService
+> {
+    public flow run(self, args: Array<string>) -> i32
+        ![Agentic, CommandOperations, ProjectInstructions, ChangeOperations, ProcessOperations, TransferOperations, ProjectOperations, Memory, Console, Command.run<DefaultCommandSandbox>, Command.start<DefaultCommandSandbox>, Command.reconnect<DefaultCommandSandbox>, Command.read<DefaultCommandSandbox>, Command.write<DefaultCommandSandbox>, Command.stop<DefaultCommandSandbox>, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Fs.stat<ProjectRoot>, Fs.atomic_replace<ProjectRoot>, Fs.atomic_replace<LaunchRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>, Error<IOError>, Error<IndexError>] {
+        let history = self.history;
+        let attempts = self.attempts;
+        let picker = self.picker;
+
+        let options = parse(args);
+        if options.projects { show_projects(); return 0; }
+        match options.open_project { Some(pathname) => { request_open(pathname, options.workspace); return 0; } None() => (), }
+        if options.sessions {
+            let items = if options.all_sessions { history.all_sessions() } else { history.sessions(options.workspace) };
+            for item in items { println("[PROJECT] " + item.workspace); show(attempts, item); }
+            return 0;
+        }
+        remember(options.workspace);
+        var selected = match options.import_path {
+            Some(pathname) => load_archive(options.workspace, pathname),
+            None() => match select_start(history, history, picker, options.workspace, options.selection, !offline(options)) {
+                Some(value) => value, None() => { return 0; }
+            }
+        };
+        match options.title { Some(title) => { history.rename(selected.id, title); selected = history.load(selected.id); } None() => (), }
+        if options.status { show_status(selected); return 0; }
+        if options.history { show_history(history, selected.id, "", 0, -1); return 0; }
+        match options.export_path { Some(pathname) => { save_archive(selected.id, pathname); return 0; } None() => (), }
+        show(attempts, selected);
+        for job in copy_jobs(options.workspace) {
+            if job.phase == "staging" || job.phase == "copying" {
+                println("[COPY   ] Unfinished " + job.kind + " " + job.id + "; /resume-copy " + job.id + " or /discard-copy " + job.id);
+            }
+        }
+        match options.once { Some(request) => { return if self.conversation.ask(selected.id, request, options.check) { 0 } else { 4 }; } None() => (), }
+        println("[NATIVE ] Nomo native chat · /help · /quit");
+        @limits([Iterations(2147483647)]) while true {
+            print("nomo> ");
+            let raw = read_line();
+            if raw == "" { return 0; }
+            let request = command(trim(raw));
+            match request {
+                TerminalCommand.Empty => (),
+                TerminalCommand.Quit => { return 0; }
+                TerminalCommand.Help => {
+                    println("Projects: /projects, /open [FOLDER_OR_NUMBER]. Project selection is native; the launcher attaches that folder's execution endpoint and keeps the current endpoint running.");
+                    println("Git: /git status, diff [--staged] [JSON_PATHS], log [COUNT], branches, init, branch NAME, switch NAME, commit JSON. Commit JSON contains message and paths.");
+                    println("Ask about the project; native tools provide recursive/glob discovery, literal/regex search, file reads, approved editing and Git operations.");
+                    println("Terminal: /exec JSON_ARGV, /spawn JSON_ARGV, /jobs, /poll JOB [MAX_BYTES], /send JOB JSON_STRING, /close-input JOB, /stop JOB, /job-output JOB. /poll waits for output or termination. Saved job phases are historical observations; current Host handles are not durable across process restart.");
+                    println("/new [TITLE], /sessions, /resume ID, /rename TITLE, /history [TEXT], /page EVENT, /fork [EVENT], /export FILE, /import FILE, /copies, /resume-copy ID, /discard-copy ID, /runs, /resolve-run ID [NOTE], /config, /check, /compact, /status, /tree [PATH], /glob PATTERN, /search REGEX, /read FILE, /edits, /undo [EDIT], /rollback EDIT, /recover EDIT, /quit");
+                }
+                TerminalCommand.Projects => show_projects(),
+                TerminalCommand.Open(value) => { request_open(value, options.workspace); }
+                TerminalCommand.Git(value) => git_command(selected.id, value),
+                TerminalCommand.Process(value) => process_command(selected.id, value),
+                TerminalCommand.Tree(value) => navigation_command(self.conversation, selected.id, "tree", value, options.check),
+                TerminalCommand.Glob(value) => navigation_command(self.conversation, selected.id, "glob", value, options.check),
+                TerminalCommand.Search(value) => navigation_command(self.conversation, selected.id, "search", value, options.check),
+                TerminalCommand.History(query, first, count) => show_history(history, selected.id, query, first, count),
+                TerminalCommand.Fork(index) => {
+                    let through = match index { Some(value) => value, None() => history.load(selected.id).next_event - 1 };
+                    selected = fork(selected.id, through); show(attempts, selected);
+                }
+                TerminalCommand.Read(value) => edit_command(selected.id, "read", value),
+                TerminalCommand.Edits => edit_command(selected.id, "list", ""),
+                TerminalCommand.Undo(value) => edit_command(selected.id, "undo", value),
+                TerminalCommand.Rollback(value) => edit_command(selected.id, "rollback", value),
+                TerminalCommand.Recover(value) => edit_command(selected.id, "reconcile", value),
+                TerminalCommand.Sessions => { for item in history.sessions(options.workspace) { show(attempts, item); } }
+                TerminalCommand.New(title) => { selected = history.create(options.workspace, title); show(attempts, selected); }
+                TerminalCommand.Resume(id) => { selected = history.select(options.workspace, id); show(attempts, selected); }
+                TerminalCommand.Rename(title) => { history.rename(selected.id, title); selected = history.load(selected.id); show(attempts, selected); }
+                TerminalCommand.Export(pathname) => save_archive(selected.id, pathname),
+                TerminalCommand.Import(pathname) => { selected = load_archive(options.workspace, pathname); show(attempts, selected); }
+                TerminalCommand.Copies => {
+                    for job in copy_jobs(options.workspace) {
+                        let json = match encode(job, "copy conversion failed", "copy encoding failed") { Ok(value) => value, Err(error) => abort(error), };
+                        println("[COPY   ] " + json);
+                    }
+                }
+                TerminalCommand.ResumeCopy(id) => {
+                    let job = copy_job(id);
+                    selected = if job.kind == "fork" { resume_fork(options.workspace, job.id) } else { resume_import(options.workspace, job.id) };
+                    show(attempts, selected);
+                }
+                TerminalCommand.DiscardCopy(id) => { discard_copy(options.workspace, id); println("[COPY   ] Unfinished copy discarded; original and retained copied records are preserved."); }
+                TerminalCommand.Runs => {
+                    for attempt in attempts.list(selected.id, false) {
+                        let json = match encode(attempt, "run conversion failed", "run encoding failed") { Ok(value) => value, Err(error) => abort(error), };
+                        println("[RUN    ] " + json);
+                    }
+                }
+                TerminalCommand.ResolveRun(id, note) => {
+                    let result = resolve(attempts, history, history, history, selected.id, id, note);
+                    println("[RUN    ] " + result.id + " " + result.phase + "; prior operations were not replayed.");
+                }
+                TerminalCommand.Compact => {
+                    if ready_for_turn(attempts, selected.id) {
+                        let settings = self.conversation.settings(selected.id, options.check);
+                        if generation_supported(settings) { self.conversation.compact(selected.id, settings); println("[CONTEXT] Summary saved; full original events retained."); }
+                    }
+                },
+                TerminalCommand.Config => {
+                    let value = configuration_status(self.conversation.settings(selected.id, options.check));
+                    let text = match encode(value, "configuration conversion failed", "configuration encoding failed") { Ok(value) => value, Err(error) => abort(error), };
+                    println("[CONFIG ] " + text);
+                    println("[CONFIG ] Context policy uses text estimates. Runtime token ceilings are static; command_timeout needs retained native jobs and is not active.");
+                }
+                TerminalCommand.Check => {
+                    let settings = self.conversation.settings(selected.id, options.check);
+                    let session = selected.id;
+                    let value = handle check_project() with {
+                        SessionContext.current() => session;
+                        SettingsContext.current() => settings;
+                    };
+                    let text = match encode(value, "check conversion failed", "check encoding failed") { Ok(value) => value, Err(error) => abort(error), };
+                    println("[CHECK  ] " + text);
+                }
+                TerminalCommand.Status => show_status(history.load(selected.id)),
+                TerminalCommand.Ask(value) => { self.conversation.ask(selected.id, value, options.check); }
+            }
+        }
         return 0;
     }
-    remember(options.workspace);
-    var selected = match options.import_path {
-        Some(pathname) => load_archive(options.workspace, pathname),
-        None() => match select_start(archive, catalog, picker, options.workspace, options.selection, !offline(options)) {
-            Some(value) => value, None() => { return 0; }
-        }
-    };
-    match options.title { Some(title) => { catalog.rename(selected.id, title); selected = archive.load(selected.id); } None() => (), }
-    if options.status { show_status(selected); return 0; }
-    if options.history { show_history(archive, selected.id, "", 0, -1); return 0; }
-    match options.export_path { Some(pathname) => { save_archive(selected.id, pathname); return 0; } None() => (), }
-    show(attempts, selected);
-    for job in copy_jobs(options.workspace) {
-        if job.phase == "staging" || job.phase == "copying" {
-            println("[COPY   ] Unfinished " + job.kind + " " + job.id + "; /resume-copy " + job.id + " or /discard-copy " + job.id);
-        }
-    }
-    match options.once { Some(request) => { return if ask(selected.id, request, options.check) { 0 } else { 4 }; } None() => (), }
-    println("[NATIVE ] Nomo native chat · /help · /quit");
-    @limits([Iterations(2147483647)]) while true {
-        print("nomo> ");
-        let raw = read_line();
-        if raw == "" { return 0; }
-        let request = command(trim(raw));
-        match request {
-            TerminalCommand.Empty => (),
-            TerminalCommand.Quit => { return 0; }
-            TerminalCommand.Help => {
-                println("Projects: /projects, /open [FOLDER_OR_NUMBER]. Project selection is native; the launcher attaches that folder's execution endpoint and keeps the current endpoint running.");
-                println("Git: /git status, diff [--staged] [JSON_PATHS], log [COUNT], branches, init, branch NAME, switch NAME, commit JSON. Commit JSON contains message and paths.");
-                println("Ask about the project; native tools provide recursive/glob discovery, literal/regex search, file reads, approved editing and Git operations.");
-                println("Terminal: /exec JSON_ARGV, /spawn JSON_ARGV, /jobs, /poll JOB [MAX_BYTES], /send JOB JSON_STRING, /close-input JOB, /stop JOB, /job-output JOB. /poll waits for output or termination. Saved job phases are historical observations; current Host handles are not durable across process restart.");
-                println("/new [TITLE], /sessions, /resume ID, /rename TITLE, /history [TEXT], /page EVENT, /fork [EVENT], /export FILE, /import FILE, /copies, /resume-copy ID, /discard-copy ID, /runs, /resolve-run ID [NOTE], /config, /check, /compact, /status, /tree [PATH], /glob PATTERN, /search REGEX, /read FILE, /edits, /undo [EDIT], /rollback EDIT, /recover EDIT, /quit");
-            }
-            TerminalCommand.Projects => show_projects(),
-            TerminalCommand.Open(value) => { request_open(value, options.workspace); }
-            TerminalCommand.Git(value) => git_command(selected.id, value),
-            TerminalCommand.Process(value) => process_command(selected.id, value),
-            TerminalCommand.Tree(value) => navigation_command(selected.id, "tree", value, options.check),
-            TerminalCommand.Glob(value) => navigation_command(selected.id, "glob", value, options.check),
-            TerminalCommand.Search(value) => navigation_command(selected.id, "search", value, options.check),
-            TerminalCommand.History(query, first, count) => show_history(archive, selected.id, query, first, count),
-            TerminalCommand.Fork(index) => {
-                let through = match index { Some(value) => value, None() => archive.load(selected.id).next_event - 1 };
-                selected = fork(selected.id, through); show(attempts, selected);
-            }
-            TerminalCommand.Read(value) => edit_command(selected.id, "read", value),
-            TerminalCommand.Edits => edit_command(selected.id, "list", ""),
-            TerminalCommand.Undo(value) => edit_command(selected.id, "undo", value),
-            TerminalCommand.Rollback(value) => edit_command(selected.id, "rollback", value),
-            TerminalCommand.Recover(value) => edit_command(selected.id, "reconcile", value),
-            TerminalCommand.Sessions => { for item in catalog.sessions(options.workspace) { show(attempts, item); } }
-            TerminalCommand.New(title) => { selected = catalog.create(options.workspace, title); show(attempts, selected); }
-            TerminalCommand.Resume(id) => { selected = catalog.select(options.workspace, id); show(attempts, selected); }
-            TerminalCommand.Rename(title) => { catalog.rename(selected.id, title); selected = archive.load(selected.id); show(attempts, selected); }
-            TerminalCommand.Export(pathname) => save_archive(selected.id, pathname),
-            TerminalCommand.Import(pathname) => { selected = load_archive(options.workspace, pathname); show(attempts, selected); }
-            TerminalCommand.Copies => {
-                for job in copy_jobs(options.workspace) {
-                    let json = match encode(job, "copy conversion failed", "copy encoding failed") { Ok(value) => value, Err(error) => abort(error), };
-                    println("[COPY   ] " + json);
-                }
-            }
-            TerminalCommand.ResumeCopy(id) => {
-                let job = copy_job(id);
-                selected = if job.kind == "fork" { resume_fork(options.workspace, job.id) } else { resume_import(options.workspace, job.id) };
-                show(attempts, selected);
-            }
-            TerminalCommand.DiscardCopy(id) => { discard_copy(options.workspace, id); println("[COPY   ] Unfinished copy discarded; original and retained copied records are preserved."); }
-            TerminalCommand.Runs => {
-                for attempt in attempts.list(selected.id, false) {
-                    let json = match encode(attempt, "run conversion failed", "run encoding failed") { Ok(value) => value, Err(error) => abort(error), };
-                    println("[RUN    ] " + json);
-                }
-            }
-            TerminalCommand.ResolveRun(id, note) => {
-                let result = resolve(attempts, publication, archive, writer, selected.id, id, note);
-                println("[RUN    ] " + result.id + " " + result.phase + "; prior operations were not replayed.");
-            }
-            TerminalCommand.Compact => if ready_for_turn(attempts, selected.id) {
-                let settings = load_settings(selected.id, options.check);
-                if generation_supported(settings) { perform ConversationRequests.compact(selected.id, settings); println("[CONTEXT] Summary saved; full original events retained."); }
-            },
-            TerminalCommand.Config => {
-                let value = configuration_status(load_settings(selected.id, options.check));
-                let text = match encode(value, "configuration conversion failed", "configuration encoding failed") { Ok(value) => value, Err(error) => abort(error), };
-                println("[CONFIG ] " + text);
-                println("[CONFIG ] Context policy uses text estimates. Runtime token ceilings are static; command_timeout needs retained native jobs and is not active.");
-            }
-            TerminalCommand.Check => {
-                let settings = load_settings(selected.id, options.check);
-                let session = selected.id;
-                let value = handle check_project() with {
-                    SessionContext.current() => session;
-                    SettingsContext.current() => settings;
-                };
-                let text = match encode(value, "check conversion failed", "check encoding failed") { Ok(value) => value, Err(error) => abort(error), };
-                println("[CHECK  ] " + text);
-            }
-            TerminalCommand.Status => show_status(archive.load(selected.id)),
-            TerminalCommand.Ask(value) => { ask(selected.id, value, options.check); }
-        }
-    }
-    return 0;
+}
+
+public flow application<
+    History ~ ConversationReader + ConversationWriter + ConversationCatalog + ResultPublication,
+    Attempts ~ AttemptRepository,
+    Picker ~ ConversationPicker,
+    Conversation ~ ConversationService
+>() -> TerminalApplication<History, Attempts, Picker, Conversation> {
+    return TerminalApplication<History, Attempts, Picker, Conversation> {};
 }

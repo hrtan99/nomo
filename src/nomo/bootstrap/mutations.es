@@ -1,5 +1,11 @@
 module nomo.bootstrap.mutations;
 
+import nomo.application.mutations.ports.ChangeOperations;
+import nomo.adapters.filesystem.mutation_files.ProjectMutationFiles;
+import nomo.adapters.storage.change_journals.NativeChangeJournals;
+import nomo.adapters.storage.mutation_history.NativeMutationHistory;
+import nomo.adapters.cli.mutations.TerminalMutationOutput;
+
 import nomo.application.mutations.service;
 import nomo.application.commands.effects.CommandOperations;
 import std.effects.Fs;
@@ -47,4 +53,20 @@ public flow replace<F ~ MutationFileAccess, J ~ ChangeJournalStore, H ~ Mutation
 public flow list<F ~ MutationFileAccess, J ~ ChangeJournalStore, H ~ MutationHistoryStore, O ~ MutationOutputSink>(files: F, journals: J, history: H, output: O, session: string, observing: bool) -> Array<Journal>
     ![CommandOperations, Memory, Console, Command.run<DefaultCommandSandbox>, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Fs.atomic_replace<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>, Error<ConsoleError>] {
     return handle service.list(observing) with bindings(files, journals, history, output, session);
+}
+
+public flow operations() -> ![ChangeOperations => CommandOperations, Memory, Console, Command.run<DefaultCommandSandbox>, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Fs.atomic_replace<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>, Error<ConsoleError>] ![] {
+    let files = ProjectMutationFiles {};
+    let journals = NativeChangeJournals {};
+    let history = NativeMutationHistory {};
+    let output = TerminalMutationOutput {};
+    return handler {
+        ChangeOperations.apply(session, name, changes) => execute(files, journals, history, output, session, "apply", name, changes, "");
+        ChangeOperations.undo(session, edit) => execute(files, journals, history, output, session, "undo", "", [], edit);
+        ChangeOperations.rollback(session, edit) => execute(files, journals, history, output, session, "rollback", "", [], edit);
+        ChangeOperations.reconcile(session, edit) => execute(files, journals, history, output, session, "reconcile", "", [], edit);
+        ChangeOperations.replace(session, change) => replace(files, journals, history, output, session, change);
+        ChangeOperations.list(session) => list(files, journals, history, output, session, false);
+        ChangeOperations.inspect(session) => list(files, journals, history, output, session, true);
+    };
 }
