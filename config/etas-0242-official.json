@@ -1,0 +1,63 @@
+{
+  "selector": "latest0242",
+  "version": "0.24.2",
+  "source_overrides": [],
+  "repositories": {
+    "cli": {
+      "repository": "etas",
+      "revision": "e692939c4c22fab5260cfc8ffbcac4ea9e139f93",
+      "tree": "e5a290c95609fe339b5b118514bf7ada050c7841",
+      "packages": [
+        "etas_cli",
+        "etas_driver",
+        "etas_package",
+        "etas_tests"
+      ]
+    },
+    "core": {
+      "repository": "etas-core",
+      "revision": "44a25f003d996dd89230295f111e617c0a2a3783",
+      "tree": "f9e8b1534e6f8e04d4f02071e5d5018c75757f4f",
+      "packages": [
+        "etas_builtin",
+        "etas_cache",
+        "etas_code",
+        "etas_core",
+        "etas_host",
+        "etas_memory_derive",
+        "etas_package_metadata",
+        "etas_std",
+        "etas_utils"
+      ]
+    },
+    "frontend": {
+      "repository": "etas-frontend",
+      "revision": "c0c87cf3acdcfd2cfdd77d13e6bd3a905bc55fd7",
+      "tree": "f3feb789f97e27caebb7d94841df29e25114a543",
+      "packages": [
+        "etas_effects",
+        "etas_frontend",
+        "etas_hir",
+        "etas_hir_analysis",
+        "etas_syntax",
+        "etas_syntax_derive",
+        "etas_types"
+      ]
+    },
+    "interpreter": {
+      "repository": "etas-interpreter",
+      "revision": "420c6ca133de802d1deb4fffaf755f35b988318f",
+      "tree": "c7c71a88d68afdeb40015148fbd3f768a514e2d9",
+      "packages": [
+        "etas_interpreter"
+      ]
+    }
+  },
+  "cache_root": "etas-0242-release",
+  "build_target": "etas-0230/target",
+  "source": "Official CLI 0.24.2 at e692939, standard Cargo release profile and exact locked graph, matching installed SDK; existing cache/target reused. The build container alone was allowed 6 GiB; application checks and runtime retain 4 GiB.",
+  "cargo_lock_sha256": "04ed67d1d6dfd61002e3ff0b98e26c5d392342b55c7188003655e1996ab87f9f",
+  "verified_seed_binary_sha256": "1ff558745bee375c84bbcdda22a4ef894b22d8348edf0eb2d0dabc7612f41d78",
+  "installed_sdk": true,
+  "build_profile": "release"
+}
