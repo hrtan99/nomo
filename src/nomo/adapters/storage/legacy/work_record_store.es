@@ -30,19 +30,19 @@ impl RecordRows ~ CasRows<Record> {
     flow same(self, left: Record, right: Record) -> bool ![] { return same_record(left, right); }
 }
 
-flow write(row: Record, condition: WriteCondition) -> Result<MemoryVersion, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+flow write(row: Record, condition: WriteCondition) -> Result<MemoryVersion, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     match validate(row) { Ok(_) => (), Err(error) => { return Err(error); } }
     let selected = key(row.binding.id);
     return commit_once<Record, RecordRows>(RecordRows { name = selected }, row, condition, None());
 }
 
-public flow publish(row: Record) -> Result<Ticket, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+public flow publish(row: Record) -> Result<Ticket, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     if row.phase != "summary-unconfirmed" { return Err("initial work record must leave summary unconfirmed"); }
     let version = match write(row, Missing) { Ok(value) => value, Err(error) => { return Err(error); } };
     return Ok(Ticket { row, version });
 }
 
-public flow complete(ticket: Ticket, summary: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+public flow complete(ticket: Ticket, summary: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     if ticket.row.phase != "summary-unconfirmed" { return Err("work update requires the original partial ticket"); }
     let row = match confirm(ticket.row, summary) { Ok(value) => value, Err(error) => { return Err(error); } };
     let before = match read(ticket.row.binding.id) { Some(value) => value, None() => { return Err("partial work record missing; no retry"); } };

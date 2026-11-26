@@ -13,9 +13,9 @@ public flow outcome(status: string, text: string, scanned: usize) -> Outcome {
     return Outcome { status, text, scanned };
 }
 
-public spec NomoRead<R ~ Region>: callable string => Outcome ![Fs.read<R>, Error<FileError>, Error<IndexError>];
+public spec NomoRead<R ~ Region>: callable string => Outcome ![Fs.read<R>, Error<FileError>, Error<IndexError>, Error<BudgetExceeded>];
 
-public spec NomoSearch<R ~ Region>: callable (Array<string>, string) => Outcome ![Fs.read<R>, Error<FileError>, Error<IndexError>];
+public spec NomoSearch<R ~ Region>: callable (Array<string>, string) => Outcome ![Fs.read<R>, Error<FileError>, Error<IndexError>, Error<BudgetExceeded>];
 
 // Terminal/history text stays one line. Marker encoding escapes '<' as <LT>,
 // so a literal marker cannot impersonate LF/CR/TAB. Other controls are refused.

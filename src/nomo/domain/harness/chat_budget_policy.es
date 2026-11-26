@@ -11,7 +11,7 @@ import nomo.domain.harness.read_tool_chat_contract.{turn_error as unicode_turn_e
 public spec ChatBudgetPolicy {
     flow maximum(self) -> Ledger ![];
     flow turn_limit(self) -> i32 ![];
-    flow validate_invocation(self, value: Invocation) -> string ![Error<IndexError>];
+    flow validate_invocation(self, value: Invocation) -> string ![Error<IndexError>, Error<BudgetExceeded>];
     flow reserve_stage(self, value: Ledger, call: bool) -> Result<Ledger, string> ![];
     flow settle_child(self, value: Ledger, child: Session) -> Result<Ledger, string> ![];
     flow combine(self, previous: Ledger, local: Ledger) -> Result<Ledger, string> ![];
@@ -42,7 +42,7 @@ impl SingleBudget ~ ChatBudgetPolicy {
     flow turn_limit(self) -> i32 ![] {
         return match self.mode { SingleMode.Extended => 4, SingleMode.Persistent => 32, _ => 2 };
     }
-    flow validate_invocation(self, value: Invocation) -> string ![Error<IndexError>] {
+    flow validate_invocation(self, value: Invocation) -> string ![Error<IndexError>, Error<BudgetExceeded>] {
         return match self.mode { SingleMode.Legacy => turn_error(value), SingleMode.Unicode => unicode_turn_error(value), SingleMode.Extended => extended_turn_error(value), SingleMode.Persistent => session_turn_error(value) };
     }
     flow reserve_stage(self, value: Ledger, call: bool) -> Result<Ledger, string> ![] { return bump(value, call); }
@@ -65,7 +65,7 @@ impl SingleBudget ~ ChatBudgetPolicy {
 impl MultiBudget ~ ChatBudgetPolicy {
     flow maximum(self) -> Ledger ![] { return self.ceiling; }
     flow turn_limit(self) -> i32 ![] { return self.turns; }
-    flow validate_invocation(self, value: Invocation) -> string ![Error<IndexError>] { return multi_turn_error(value, self.turns); }
+    flow validate_invocation(self, value: Invocation) -> string ![Error<IndexError>, Error<BudgetExceeded>] { return multi_turn_error(value, self.turns); }
     flow reserve_stage(self, value: Ledger, call: bool) -> Result<Ledger, string> ![] { return multi_bump(value, call, self.parent); }
     flow settle_child(self, value: Ledger, child: Session) -> Result<Ledger, string> ![] { return multi_settle(value, child, self.parent, self.resilient, self.reasoning); }
     flow combine(self, previous: Ledger, local: Ledger) -> Result<Ledger, string> ![] { return multi_combine(previous, local, self.ceiling); }

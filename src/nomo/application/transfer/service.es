@@ -59,7 +59,7 @@ public flow discard(workspace: string, id: string) -> unit ![CopyStorage] {
     perform CopyStorage.advance(id, value.cursor, "discarded");
 }
 public flow resume_fork<R ~ ConversationReader, C ~ ConversationCatalog>(history: R, catalog: C, workspace: string, id: string) -> Session
-    ![CopyStorage, TransferDisplay, Memory, Error<StorageError>, Error<MemoryConflict>] {
+    ![CopyStorage, TransferDisplay, Memory, Error<StorageError>, Error<MemoryConflict>, Error<BudgetExceeded>] {
     let value = job(id);
     if value.workspace != workspace || value.kind != "fork" { abort("fork does not belong to this workspace"); }
     if value.phase == "ready" { return catalog.select(workspace, id); }
@@ -81,7 +81,7 @@ public flow resume_fork<R ~ ConversationReader, C ~ ConversationCatalog>(history
     return copy_events(catalog, id, events, summary);
 }
 public flow fork<R ~ ConversationReader, C ~ ConversationCatalog>(history: R, catalog: C, id: string, through: i64) -> Session
-    ![CopyStorage, TransferDisplay, Memory, Error<StorageError>, Error<MemoryConflict>] {
+    ![CopyStorage, TransferDisplay, Memory, Error<StorageError>, Error<MemoryConflict>, Error<BudgetExceeded>] {
     let source = history.load(id);
     if through < -1 || through >= source.next_event { abort("fork event is outside the source conversation"); }
     let value = prepare(source.workspace, source.title + " (fork)", "fork", id, utf8_encode(""), through + 1);
@@ -98,7 +98,7 @@ public flow load<C ~ ConversationCatalog>(catalog: C, workspace: string, path: s
     return copy_events(catalog, value.id, source.events, source.summary);
 }
 public flow resume_import<R ~ ConversationReader, C ~ ConversationCatalog>(history: R, catalog: C, workspace: string, id: string) -> Session
-    ![CopyStorage, ArchiveCodec, ArchiveFiles, TransferDisplay, Memory, Error<StorageError>, Error<MemoryConflict>] {
+    ![CopyStorage, ArchiveCodec, ArchiveFiles, TransferDisplay, Memory, Error<StorageError>, Error<MemoryConflict>, Error<BudgetExceeded>] {
     let value = job(id);
     if value.workspace != workspace || value.kind != "import" { abort("import does not belong to this workspace"); }
     if value.phase == "ready" { return catalog.select(workspace, id); }
@@ -114,7 +114,7 @@ public flow resume_import<R ~ ConversationReader, C ~ ConversationCatalog>(histo
     return copy_events(catalog, id, source.events, source.summary);
 }
 public flow save<R ~ ConversationReader, A ~ AttemptRepository, P ~ ResultPublication>(history: R, attempts: A, publication: P, session: string, pathname: string) -> unit
-    ![CopyStorage, ArchiveCodec, ArchiveFiles, TransferDisplay, Memory, Error<StorageError>, Error<MemoryConflict>] {
+    ![CopyStorage, ArchiveCodec, ArchiveFiles, TransferDisplay, Memory, Error<StorageError>, Error<MemoryConflict>, Error<BudgetExceeded>] {
     let selected = history.load(session);
     var copies: Array<CopyJob> = [];
     match perform CopyStorage.lookup(session) { Some(value) => { copies = copies.push(value); } None() => (), }

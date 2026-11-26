@@ -6,7 +6,7 @@ import nomo.domain.execution.transitions.{Transition, next_phase};
 import nomo.application.execution.ports.AttemptRepository;
 import nomo.application.conversation.ports.{ConversationReader, ConversationWriter, ResultPublication};
 
-public flow turn_available<R ~ AttemptRepository>(repository: R, session: string) -> unit ![Memory, Error<StorageError>] {
+public flow turn_available<R ~ AttemptRepository>(repository: R, session: string) -> unit ![Memory, Error<StorageError>, Error<BudgetExceeded>] {
     for value in repository.list(session, true) {
         if value.kind == "coding" || value.kind == "summary" {
             abort("inference has no recorded completion: " + value.id + "; inspect /runs, then /resolve-run ID NOTE before starting a new turn");
@@ -15,7 +15,7 @@ public flow turn_available<R ~ AttemptRepository>(repository: R, session: string
 }
 
 public flow begin<R ~ AttemptRepository>(repository: R, session: string, kind: string, label: string, input_event: i64, through: i64) -> Attempt
-    ![Memory, Error<StorageError>, Error<MemoryConflict>] {
+    ![Memory, Error<StorageError>, Error<MemoryConflict>, Error<BudgetExceeded>] {
     if kind == "coding" || kind == "summary" { turn_available(repository, session); }
     return repository.prepare(session, kind, label, input_event, through);
 }
@@ -26,7 +26,7 @@ public flow dispatching<R ~ AttemptRepository>(repository: R, id: string) -> uni
 }
 
 public flow returned<R ~ AttemptRepository, P ~ ResultPublication>(repository: R, publication: P, id: string, role: string, name: string, text: string, call: i64) -> i64
-    ![Memory, Error<StorageError>, Error<MemoryConflict>] {
+    ![Memory, Error<StorageError>, Error<MemoryConflict>, Error<BudgetExceeded>] {
     let value = repository.load(id);
     let phase = next_phase(value, Transition.Return, false);
     let index = publication.prepare_result(value.session, role, name, call);
@@ -36,7 +36,7 @@ public flow returned<R ~ AttemptRepository, P ~ ResultPublication>(repository: R
 }
 
 public flow complete_attempt<R ~ AttemptRepository, P ~ ResultPublication, C ~ ConversationReader>(repository: R, publication: P, history: C, id: string) -> unit
-    ![Memory, Error<StorageError>, Error<MemoryConflict>] {
+    ![Memory, Error<StorageError>, Error<MemoryConflict>, Error<BudgetExceeded>] {
     let value = repository.load(id);
     if value.phase == "completed" { return; }
     let complete = if value.result_event >= 0 { publication.result_complete(value.session, value.result_event) } else { false };
@@ -50,7 +50,7 @@ public flow complete_attempt<R ~ AttemptRepository, P ~ ResultPublication, C ~ C
 }
 
 public flow resolve<R ~ AttemptRepository, P ~ ResultPublication, C ~ ConversationReader, W ~ ConversationWriter>(repository: R, publication: P, history: C, writer: W, session: string, id: string, note: string) -> Attempt
-    ![Memory, Error<StorageError>, Error<MemoryConflict>] {
+    ![Memory, Error<StorageError>, Error<MemoryConflict>, Error<BudgetExceeded>] {
     let value = repository.load(id);
     if value.session != session { abort("attempt belongs to another conversation"); }
     if value.phase == "completed" || value.phase == "closed_unknown" { return value; }

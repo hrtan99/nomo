@@ -15,7 +15,7 @@ import nomo.bootstrap.configuration.load as load_configuration;
 public alias ConfiguredConversation<H ~ ConversationReader + ConversationWriter + GenerationReservation + ResultPublication, A ~ AttemptRepository> = NativeConversation<H, A, ProjectInstructionFiles, NativeJobs, NativeCodingModel, NativeSummaryModel, RollingContext>;
 
 public flow create<H ~ ConversationReader + ConversationWriter + GenerationReservation + ResultPublication, A ~ AttemptRepository>(history: H, attempts: A) -> ConfiguredConversation<H, A> {
-    return service.create<H, A, ProjectInstructionFiles, NativeJobs, NativeCodingModel, NativeSummaryModel, RollingContext>(() => load_configuration(history)) with {
+    return service.create<H, A, ProjectInstructionFiles, NativeJobs, NativeCodingModel, NativeSummaryModel, RollingContext>(session => load_configuration(history, session)) with {
         history: H => history;
         attempts: A => attempts;
         instructions: ProjectInstructionFiles => ProjectInstructionFiles {};

@@ -33,18 +33,18 @@ public flow request_error(request: TurnRequest) -> string {
     return "";
 }
 
-public flow dispatch(request: TurnRequest) -> WorkOutcome ![TerminalWork.execute, Error<IndexError>] {
+public flow dispatch(request: TurnRequest) -> WorkOutcome ![TerminalWork.execute, Error<IndexError>, Error<BudgetExceeded>] {
     let invalid = request_error(request);
     if invalid != "" { return WorkOutcome.Stopped(WorkStop { state = fresh(), error = invalid }); }
     return perform TerminalWork.execute(request);
 }
 
-public flow read_selected(selected: Selector) -> Result<Option<CapturedShow>, string> ![TerminalRead.show, Error<IndexError>] {
+public flow read_selected(selected: Selector) -> Result<Option<CapturedShow>, string> ![TerminalRead.show, Error<IndexError>, Error<BudgetExceeded>] {
     let invalid = selected_error(selected); if invalid != "" { return Err(invalid); }
     return perform TerminalRead.show(selected);
 }
 
-public flow read_latest(workspace: string, path: string) -> Result<string, string> ![TerminalRead.latest, Error<IndexError>] {
+public flow read_latest(workspace: string, path: string) -> Result<string, string> ![TerminalRead.latest, Error<IndexError>, Error<BudgetExceeded>] {
     let invalid = latest_error(workspace, path); if invalid != "" { return Err(invalid); }
     return perform TerminalRead.latest(workspace, path);
 }

@@ -33,8 +33,8 @@ public spec EntriesCodec {
     flow observation(self, text: string) -> ConfigurationOutput ![];
 }
 public spec TomlConverter {
-    flow toml(self, raw: string) -> Converted ![SessionContext, CommandOperations, Memory, Console, Command.run<DefaultCommandSandbox>, Error<StorageError>, Error<MemoryConflict>, Error<ConsoleError>];
-    flow entries(self, json: string) -> Converted ![SessionContext, CommandOperations, Memory, Console, Command.run<DefaultCommandSandbox>, Error<StorageError>, Error<MemoryConflict>, Error<ConsoleError>];
+    flow toml(self, raw: string) -> Converted ![SessionContext.current, CommandOperations, Memory, Console, Command.run<DefaultCommandSandbox>, Error<StorageError>, Error<MemoryConflict>, Error<ConsoleError>];
+    flow entries(self, json: string) -> Converted ![SessionContext.current, CommandOperations, Memory, Console, Command.run<DefaultCommandSandbox>, Error<StorageError>, Error<MemoryConflict>, Error<ConsoleError>];
 }
 public spec ConfigurationCacheStore {
     flow lookup(self, workspace: string) -> Option<CacheReference> ![Memory, Error<StorageError>];

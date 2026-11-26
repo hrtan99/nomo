@@ -17,7 +17,7 @@ public flow empty(key: string) -> bool {
     return unselected(page) && page.messages.len() == 0;
 }
 
-public flow append(key: string, body: Bundle) -> Result<bool, string> ![Memory, Error<IndexError>] {
+public flow append(key: string, body: Bundle) -> Result<bool, string> ![Memory, Error<IndexError>, Error<BudgetExceeded>] {
     let encoded = match encode(body) { Ok(value) => value, Err(error) => { return Err(error); } };
     let payload = match parse(encoded) { Ok(value) => value, Err(_) => { return Err("invalid encoded bundle"); } };
     let message = Message.with_session(Message.new(payload), SessionConfig.continue_or_new(key));

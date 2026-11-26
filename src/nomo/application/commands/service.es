@@ -9,7 +9,7 @@ import nomo.application.execution.ports.AttemptRepository;
 import nomo.application.execution.service.{begin, dispatching, returned, complete_attempt};
 
 public flow run<R ~ CommandRunner, V ~ CommandPreviewSink, A ~ AttemptRepository, P ~ ResultPublication, C ~ ConversationReader, W ~ ConversationWriter>(runner: R, preview: V, repository: A, publication: P, history: C, writer: W, session: string, mode: CommandMode, request: CommandRequest) -> CommandObservation
-    ![Memory, Command.run<DefaultCommandSandbox>, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>] {
+    ![Memory, Command.run<DefaultCommandSandbox>, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>, Error<BudgetExceeded>] {
     let entry = journal(mode, request.program);
     let call = writer.append(session, entry.role, entry.name, request_text(request), -1);
     let attempt = begin(repository, session, entry.kind, entry.label, call, call);
@@ -22,7 +22,7 @@ public flow run<R ~ CommandRunner, V ~ CommandPreviewSink, A ~ AttemptRepository
 }
 
 public flow step<R ~ CommandRunner, V ~ CommandPreviewSink, W ~ ConversationWriter>(runner: R, preview: V, writer: W, session: string, request: CommandRequest, parent: i64) -> CommandOutput
-    ![Memory, Command.run<DefaultCommandSandbox>, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>] {
+    ![Memory, Command.run<DefaultCommandSandbox>, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>, Error<BudgetExceeded>] {
     writer.append(session, "operation", "command", request_text(request), parent);
     preview.show(request);
     let output = runner.run(request);

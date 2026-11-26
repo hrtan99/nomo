@@ -79,16 +79,16 @@ impl TerminalConsent ~ CurrentEditConsent {
         return Ok(selected);
     }
 }
-public flow confirm_using<P ~ PreviewPresenter, C ~ CurrentEditConsent>(presenter: P, consent: C, selector: Selector, prepared: Prepared) -> Result<Binding, string> ![Console, Approval, Error<ConsoleError>, Error<IndexError>] {
+public flow confirm_using<P ~ PreviewPresenter, C ~ CurrentEditConsent>(presenter: P, consent: C, selector: Selector, prepared: Prepared) -> Result<Binding, string> ![Console, Approval, Error<ConsoleError>, Error<IndexError>, Error<BudgetExceeded>] {
     let shown = match build_preview(selector, prepared) { Ok(value) => value, Err(error) => { return Err(error); } };
     presenter.present(shown);
     return consent.confirm(shown);
 }
-public flow confirm_current(selector: Selector, prepared: Prepared) -> Result<Binding, string> ![Console, Approval, Error<IndexError>, Error<ConsoleError>] {
+public flow confirm_current(selector: Selector, prepared: Prepared) -> Result<Binding, string> ![Console, Approval, Error<IndexError>, Error<ConsoleError>, Error<BudgetExceeded>] {
     return confirm_using(TerminalPreview {}, TerminalConsent {}, selector, prepared);
 }
 
-public flow execute(selector: Selector, prepared: Prepared) -> Result<Confirmed, string> ![Console, Memory, Approval, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {
+public flow execute(selector: Selector, prepared: Prepared) -> Result<Confirmed, string> ![Console, Memory, Approval, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>, Error<BudgetExceeded>] {
     let selected = match confirm_current(selector, prepared) { Ok(value) => value, Err(error) => { return Err(error); } };
     let ticket = match begin(selected) { Ok(value) => value, Err(error) => { return Err(error); } };
     println("INTENT durable " + selector.id);

@@ -28,7 +28,7 @@ public type UnicodeContext = { require_tool: bool, expanded: bool, wide: bool, h
 impl UnicodeContext ~ ReadContextValidation {
     flow request_error(self, value: string) -> string { return question_error(value); }
     flow validate_context(self, value: Context) -> string { return context_error(value); }
-    flow decode(self, value: string) -> Result<string, string> ![Error<IndexError>] { return if self.require_tool { decode_work_plan(value) } else { decode_plan(value) }; }
+    flow decode(self, value: string) -> Result<string, string> ![Error<IndexError>, Error<BudgetExceeded>] { return if self.require_tool { decode_work_plan(value) } else { decode_plan(value) }; }
     flow rejection(self, raw: string, error: string) -> string { return if self.require_tool && error == "invalid bounded delegated task" { "READ_PLAN_REJECTION " + work_plan_rejection(raw) } else { "" }; }
     flow observe_child(self, child: LoopTurn, request: string, task: string, allowed: Array<string>) -> Result<Observed, string> { return if self.require_tool { inspect_work(child.state, child.status, request, task, allowed) } else { inspect(child.state, child.status, request, task, allowed) }; }
     flow result_error(self, value: string) -> string { return if bounded(value, child_answer_bytes()) { "" } else { "invalid bounded child result" }; }
@@ -47,7 +47,7 @@ public type AsciiContext = { compatible: bool };
 impl AsciiContext ~ ReadContextValidation {
     flow request_error(self, value: string) -> string { return legacy_question_error(value); }
     flow validate_context(self, value: Context) -> string { return legacy_context_error(value); }
-    flow decode(self, value: string) -> Result<string, string> ![Error<IndexError>] { return if self.compatible { legacy_decode_read_plan(value) } else { legacy_decode_plan(value) }; }
+    flow decode(self, value: string) -> Result<string, string> ![Error<IndexError>, Error<BudgetExceeded>] { return if self.compatible { legacy_decode_read_plan(value) } else { legacy_decode_plan(value) }; }
     flow rejection(self, raw: string, error: string) -> string ![] { return ""; }
     flow observe_child(self, child: LoopTurn, request: string, task: string, allowed: Array<string>) -> Result<Observed, string> { return legacy_inspect(child.state, child.status, request, task, allowed); }
     flow result_error(self, value: string) -> string { return if legacy_bounded(value, message_bytes()) { "" } else { "invalid bounded child result" }; }

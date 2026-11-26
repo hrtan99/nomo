@@ -39,7 +39,7 @@ public flow load() -> Result<Option<MemoryEntry<string, History>>, string> {
     return Ok(entry);
 }
 
-public flow append(turn: i32, input: Array<Event>, policy: Policy) -> Result<MemoryVersion, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+public flow append(turn: i32, input: Array<Event>, policy: Policy) -> Result<MemoryVersion, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     let clean = match redact_events(input, policy) { Ok(value) => value, Err(error) => { return Err(error); } };
     if clean.events.len() == 0 { return Err("empty event batch"); }
     let before = match load() { Ok(value) => value, Err(error) => { return Err(error); } };
@@ -60,7 +60,7 @@ public flow append(turn: i32, input: Array<Event>, policy: Policy) -> Result<Mem
 
 // A conservative product projection: all free text and unrecognized metadata
 // are removed. This preserves event ordering, not full tool-result content.
-public flow append_metadata(turn: i32, input: Array<Event>) -> Result<MemoryVersion, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+public flow append_metadata(turn: i32, input: Array<Event>) -> Result<MemoryVersion, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     if input.len() < 1 || input.len() > 24 { return Err("event batch exceeds bounds"); }
     var clean: Array<Event> = [];
     @limits([Iterations(24)]) for item in input {

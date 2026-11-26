@@ -10,9 +10,9 @@ import nomo.application.sessions.effects.session_work_chain_discovery.DiscoveryA
 // never native receipts, versions or write authority.
 public spec SnapshotCapture: callable ObservationPass => Result<Snapshot, string> ![Memory, Error<StorageError>, Error<IndexError>];
 
-public spec InspectAuthority: callable (string, string, string) => Result<Option<Record>, string> ![Memory, Error<StorageError>, Error<IndexError>];
+public spec InspectAuthority: callable (string, string, string) => Result<Option<Record>, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>];
 
-public spec ConfirmedParentAuthority: callable (string, string, string) => Result<ObservedRow, string> ![Memory, Error<StorageError>, Error<IndexError>];
+public spec ConfirmedParentAuthority: callable (string, string, string) => Result<ObservedRow, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>];
 
 public flow discover(workspace: string, path: string, selector: Selector) -> Result<Snapshot, string> {
     let before = match snapshot(workspace, path) { Ok(value) => value, Err(error) => { return Err(error); } };

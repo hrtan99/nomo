@@ -49,7 +49,7 @@ public flow get(target: string) -> Result<Option<Decision>, string> {
     }
 }
 
-public flow abandon(target: string, id: string) -> Result<MemoryVersion, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+public flow abandon(target: string, id: string) -> Result<MemoryVersion, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     let error = validate_target(target, id); if error != "" { return Err(error); }
     if read(target) != None() { return Err("recovery decision already recorded; no retry"); }
     let item = Decision { format = 1, id, target, choice = "abandon" };

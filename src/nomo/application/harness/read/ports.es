@@ -9,13 +9,13 @@ public type Report = { request: string, task: string, allowed: Array<string>, ch
 public type Failure = { state: Ledger, error: string, resolved: bool };
 
 public spec ReadContextValidation {
-    flow request_error(self, value: string) -> string ![Error<IndexError>];
+    flow request_error(self, value: string) -> string ![Error<IndexError>, Error<BudgetExceeded>];
     flow validate_context(self, value: Context) -> string ![Error<IndexError>];
-    flow decode(self, value: string) -> Result<string, string> ![Error<IndexError>];
-    flow rejection(self, raw: string, error: string) -> string ![Error<IndexError>];
-    flow observe_child(self, child: LoopTurn, request: string, task: string, allowed: Array<string>) -> Result<Observed, string> ![Error<IndexError>];
-    flow result_error(self, value: string) -> string ![Error<IndexError>];
-    flow answer_error(self, value: string) -> string ![Error<IndexError>];
+    flow decode(self, value: string) -> Result<string, string> ![Error<IndexError>, Error<BudgetExceeded>];
+    flow rejection(self, raw: string, error: string) -> string ![Error<IndexError>, Error<BudgetExceeded>];
+    flow observe_child(self, child: LoopTurn, request: string, task: string, allowed: Array<string>) -> Result<Observed, string> ![Error<IndexError>, Error<BudgetExceeded>];
+    flow result_error(self, value: string) -> string ![Error<IndexError>, Error<BudgetExceeded>];
+    flow answer_error(self, value: string) -> string ![Error<IndexError>, Error<BudgetExceeded>];
 }
 public spec ReadContextBudget {
     flow reserve(self, value: Ledger, call: bool) -> Result<Ledger, string> ![];

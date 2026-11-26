@@ -46,7 +46,7 @@ flow dispatched(history: NativeHistory, attempts: NativeAttempts, session: strin
     println("PORT " + kind + " dispatching");
 }
 
-public flow main(args: Array<string>) -> i32 ![Memory, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>, Error<IndexError>] {
+public flow main(args: Array<string>) -> i32 ![Memory, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>, Error<IndexError>, Error<BudgetExceeded>] {
     let history = NativeHistory {};
     let attempts = NativeAttempts {};
     let saved = history.create("controller-workspace", "Controlled conversation");

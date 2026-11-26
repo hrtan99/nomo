@@ -11,7 +11,7 @@ import nomo.domain.sessions.bundle_codec.encode;
 
 // Shared metadata/history publication tail. The caller must already own the
 // exact current metadata version; unknown writes are never retried.
-public flow publish_snapshot(saved: Snapshot, save_id: string, expected: Record, version: MemoryVersion, continuation: bool) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+public flow publish_snapshot(saved: Snapshot, save_id: string, expected: Record, version: MemoryVersion, continuation: bool) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     let next = published(pending(saved, save_id));
     let body = bundle(saved, save_id);
     match encode(body) { Err(error) => { return Err(error); } Ok(_) => (), }
@@ -26,7 +26,7 @@ public flow publish_snapshot(saved: Snapshot, save_id: string, expected: Record,
 }
 
 // Only a new ID in a fixture-provisioned empty namespace; no update, retry or repair.
-public flow save(saved: Snapshot, requested: Request, save_id: string) -> Result<Projection, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+public flow save(saved: Snapshot, requested: Request, save_id: string) -> Result<Projection, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     if !valid_id(save_id) { return Err("invalid save identity"); }
     let projection = match validate(saved, requested) { Ok(value) => value, Err(error) => { return Err(error); } };
     let body = bundle(saved, save_id);

@@ -14,7 +14,7 @@ public flow render(value: Record) -> Result<string, string> {
     return ascii_json(json, 262144, "check output encoding exceeds bound", "check output display exceeds bound");
 }
 
-public flow show(slot: string, selected: Option<Selection>) -> Result<bool, string> ![Console, Memory, Error<StorageError>, Error<IndexError>, Error<ConsoleError>] {
+public flow show(slot: string, selected: Option<Selection>) -> Result<bool, string> ![Console, Memory, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<BudgetExceeded>] {
     let check = match selected { Some(value) => value, None() => { println("CHECK OUTPUT " + slot + " unavailable: no check"); return Ok(true); } };
     if check.phase != "complete" { println("CHECK OUTPUT " + slot + " unavailable: check unresolved"); return Ok(true); }
     let saved = match load(slot, check.id, check.digest) { Ok(value) => value, Err(error) => { return Err(error); } };

@@ -12,13 +12,13 @@ import nomo.adapters.filesystem.legacy.edit_file.{read_original, apply as apply_
 
 public type LegacyWorkEditor = {};
 impl LegacyWorkEditor ~ WorkEditor {
-    flow read_original(self, path: string) -> Result<string, string> ![Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Error<FileError>, Error<IndexError>] {
+    flow read_original(self, path: string) -> Result<string, string> ![Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Error<FileError>, Error<IndexError>, Error<BudgetExceeded>] {
         return read_original(path);
     }
-    flow confirm(self, selected: Selector, prepared: Prepared) -> Result<Binding, string> ![Console, Approval, Error<ConsoleError>, Error<IndexError>] {
+    flow confirm(self, selected: Selector, prepared: Prepared) -> Result<Binding, string> ![Console, Approval, Error<ConsoleError>, Error<IndexError>, Error<BudgetExceeded>] {
         return confirm_current(selected, prepared);
     }
-    flow apply(self, prepared: Prepared) -> Result<bool, string> ![Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<FileError>, Error<IndexError>] {
+    flow apply(self, prepared: Prepared) -> Result<bool, string> ![Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<FileError>, Error<IndexError>, Error<BudgetExceeded>] {
         return apply_file(prepared);
     }
 }

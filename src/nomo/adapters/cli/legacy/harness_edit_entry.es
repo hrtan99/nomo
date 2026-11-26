@@ -38,7 +38,7 @@ flow help() -> unit {
     println("Current native yes then Nomo y/yes; same/different ID cannot reuse a consumed store. Journal stores edit facts, not model history or resume.");
 }
 
-public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {
+public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>, Error<BudgetExceeded>] {
     var state = fresh();
     let input = match parse(args) { Ok(value) => value, Err(error) => { return refused(state, error); } };
     if input.help { help(); return 0; }

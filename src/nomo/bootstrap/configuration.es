@@ -15,12 +15,12 @@ import nomo.adapters.filesystem.configuration.converter.TaploConfigurationConver
 import nomo.adapters.storage.configuration_cache.NativeConfigurationCache;
 import nomo.application.conversation.ports.ConversationReader;
 
-public flow load<R ~ ConversationReader>(history: R) -> Settings ![SessionContext, CommandOperations, Memory, Console, Command.run<DefaultCommandSandbox>, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<ConsoleError>, Error<FileError>, Error<ReadLimitError>] {
+public flow load<R ~ ConversationReader>(history: R, session: string) -> Settings ![CommandOperations, Memory, Console, Command.run<DefaultCommandSandbox>, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<ConsoleError>, Error<FileError>, Error<ReadLimitError>, Error<BudgetExceeded>] {
     let source = ProjectConfigurationFile {};
     let codec = JsonConfigurationCodec {};
     let conversion = TaploConfigurationConverter {};
     let cache = NativeConfigurationCache {};
-    return load_configuration(history) with {
+    return handle (load_configuration(history) with {
         ConfigurationSource.read() => source.read();
         ConfigurationCodec.fingerprint(raw) => codec.fingerprint(raw);
         ConfigurationCodec.decode_json(text) => codec.decode_json(text);
@@ -29,5 +29,5 @@ public flow load<R ~ ConversationReader>(history: R) -> Settings ![SessionContex
         ConfigurationConversion.entries(json) => conversion.entries(json);
         ConfigurationCache.lookup(workspace) => cache.lookup(workspace);
         ConfigurationCache.remember(workspace, value) => cache.remember(workspace, value);
-    };
+    }) with { SessionContext.current() => session; };
 }

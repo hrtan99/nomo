@@ -24,7 +24,7 @@ import nomo.domain.sessions.chat_format_policy.policy as format_policy;
 
 // Each entry requires an independently selected current read root and grant.
 // Saved conversation is untrusted context; a running reservation never resumes.
-public flow run(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyRoot>, Fs.list<ReadOnlyRoot>, Fs.stat<ReadOnlyRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {
+public flow run(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyRoot>, Fs.list<ReadOnlyRoot>, Fs.stat<ReadOnlyRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>, Error<BudgetExceeded>] {
     let natural = args.len() == 6 && args[5] == "--natural-work";
     if (args.len() != 5 && !natural) || (args[0] != "new" && args[0] != "continue") || args[1] != "--allow" || args[3] != "--once" {
         println("REFUSED expected new|continue --allow FILE[,FILE...] --once QUESTION"); return 1;
@@ -71,7 +71,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyR
 }
 
 // Status is recorded data only. It performs no model or workspace action.
-public flow status(args: Array<string>) -> i32 ![Console, Memory, Error<StorageError>, Error<IndexError>, Error<ConsoleError>] {
+public flow status(args: Array<string>) -> i32 ![Console, Memory, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<BudgetExceeded>] {
     let outputs = args.len() == 1 && args[0] == "--outputs";
     if args.len() != 0 && !outputs { println("REFUSED status accepts only --outputs"); return 1; }
     let snapshot = match (LegacySessionStatusReader {}).snapshot() { Ok(value) => value, Err(error) => {

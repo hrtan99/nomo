@@ -8,10 +8,10 @@ public type SearchBounds = { files: usize, file_bytes: usize, total_bytes: usize
 
 public spec FileReader<R ~ Region> {
     flow maximum_bytes(self) -> usize ![];
-    flow read(self, name: string) -> Outcome ![Fs.read<R>, Error<FileError>, Error<IndexError>];
+    flow read(self, name: string) -> Outcome ![Fs.read<R>, Error<FileError>, Error<IndexError>, Error<BudgetExceeded>];
 }
 
 public spec LiteralSearcher<R ~ Region> {
     flow bounds(self) -> SearchBounds ![];
-    flow search(self, names: Array<string>, literal: string) -> Outcome ![Fs.read<R>, Error<FileError>, Error<IndexError>];
+    flow search(self, names: Array<string>, literal: string) -> Outcome ![Fs.read<R>, Error<FileError>, Error<IndexError>, Error<BudgetExceeded>];
 }

@@ -31,7 +31,7 @@ flow journal_error(row: Record) -> string {
 
 // The first fixed turn row is also the global owner/root admission. It is
 // never removed or adopted under another root ID in this private store.
-flow write(row: Record, condition: WriteCondition) -> Result<MemoryVersion, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+flow write(row: Record, condition: WriteCondition) -> Result<MemoryVersion, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     let error = validate(row); if error != "" { return Err(error); }
     let selected = key(row.turn);
     return commit_native<Record>(Chain.Rows, Target { store = ["Rows"], region = "nomo-work-chain-v2", key = selected, label = "v2 work-chain" }, row, condition);
@@ -93,18 +93,18 @@ flow admit_first(id: string, workspace: string, path: string, request: string, a
     return Ok(Ticket { row, version, parent = None() });
 }
 
-public flow admit_new(id: string, workspace: string, path: string, request: string, allowed: Array<string>, policy: Caps) -> Result<Ticket, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+public flow admit_new(id: string, workspace: string, path: string, request: string, allowed: Array<string>, policy: Caps) -> Result<Ticket, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     return admit_first(id, workspace, path, request, allowed, policy, false);
 }
 
-public flow admit_user_context(id: string, workspace: string, path: string, request: string, allowed: Array<string>, policy: Caps) -> Result<Ticket, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+public flow admit_user_context(id: string, workspace: string, path: string, request: string, allowed: Array<string>, policy: Caps) -> Result<Ticket, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     return admit_first(id, workspace, path, request, allowed, policy, true);
 }
 
 // The caller preflights the parent facts from exactly expected_parent. Missing
 // admission is durable before Model/File; all later failures consume this slot.
 public flow admit_continue(parent_id: string, id: string, workspace: string, path: string, request: string, allowed: Array<string>, policy: Caps,
-    expected_parent: MemoryEntry<string, Record>) -> Result<Ticket, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+    expected_parent: MemoryEntry<string, Record>) -> Result<Ticket, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     let error = selector_error(id, workspace, path); if error != "" { return Err(error); }
     if read(2) != None() { return Err("v2 successor already admitted; no same/changed-ID retry or third turn"); }
     match journal_available(2) { Ok(_) => (), Err(error) => { return Err(error); } }
@@ -117,7 +117,7 @@ public flow admit_continue(parent_id: string, id: string, workspace: string, pat
     return Ok(ticket);
 }
 
-public flow publish_partial(ticket: Ticket, work: WorkRecord) -> Result<Ticket, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+public flow publish_partial(ticket: Ticket, work: WorkRecord) -> Result<Ticket, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     let row = match partial_row(ticket.row, work) { Ok(value) => value, Err(error) => { return Err(error); } };
     match claim(ticket) { Ok(_) => (), Err(error) => { return Err(error); } }
     let parent = parent_error(ticket, row); if parent != "" { return Err(parent); }
@@ -127,7 +127,7 @@ public flow publish_partial(ticket: Ticket, work: WorkRecord) -> Result<Ticket, 
     return Ok(ticket { row, version });
 }
 
-public flow complete(ticket: Ticket, summary: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+public flow complete(ticket: Ticket, summary: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     let row = match confirmed_row(ticket.row, summary) { Ok(value) => value, Err(error) => { return Err(error); } };
     match claim(ticket) { Ok(_) => (), Err(error) => { return Err(error); } }
     let parent = parent_error(ticket, row); if parent != "" { return Err(parent); }
@@ -191,11 +191,11 @@ flow capture_adapter(pass: ObservationPass) -> Result<Snapshot, string> ![Memory
     return observed_snapshot();
 }
 
-flow inspect_adapter(id: string, workspace: string, path: string) -> Result<Option<Record>, string> ![Memory, Error<StorageError>, Error<IndexError>] ~ InspectAuthority {
+flow inspect_adapter(id: string, workspace: string, path: string) -> Result<Option<Record>, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] ~ InspectAuthority {
     return inspect(id, workspace, path);
 }
 
-flow confirmed_parent_adapter(id: string, workspace: string, path: string) -> Result<ObservedRow, string> ![Memory, Error<StorageError>, Error<IndexError>] ~ ConfirmedParentAuthority {
+flow confirmed_parent_adapter(id: string, workspace: string, path: string) -> Result<ObservedRow, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] ~ ConfirmedParentAuthority {
     let actual = match read_parent(id, workspace, path) { Ok(value) => value, Err(error) => { return Err(error); } };
     return Ok(ObservedRow { key = actual.key, version = actual.version.opaque, value = actual.value });
 }

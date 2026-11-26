@@ -11,7 +11,7 @@ import nomo.tools.workspace.ReadOnlyRoot;
 
 public spec WorkModelStages {
     flow read(self, context: ReadContext) -> string ![];
-    flow read_child(self, task: string, files: Array<string>, selected: State) -> LoopTurn ![Fs.read<ReadOnlyRoot>, Error<ConsoleError>, Error<FileError>, Error<IndexError>];
+    flow read_child(self, task: string, files: Array<string>, selected: State) -> LoopTurn ![Fs.read<ReadOnlyRoot>, Error<ConsoleError>, Error<FileError>, Error<IndexError>, Error<BudgetExceeded>];
     flow plan(self, context: Context) -> string ![];
     flow propose(self, context: Context) -> string ![];
     flow summarize(self, context: Context) -> string ![];

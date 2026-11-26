@@ -42,7 +42,7 @@ public flow load_rows<A ~ CheckAccess>(row: Option<MemoryEntry<string, Frame>>, 
     return Ok(row);
 }
 
-public flow write_rows<R ~ CasRows<Frame>>(rows: R, value: Frame, expected: Option<MemoryEntry<string, Frame>>, policy: Policy, binding: string) -> Result<MemoryVersion, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+public flow write_rows<R ~ CasRows<Frame>>(rows: R, value: Frame, expected: Option<MemoryEntry<string, Frame>>, policy: Policy, binding: string) -> Result<MemoryVersion, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     let error = invalid(value, policy, binding); if error != "" { return Err(error); }
     let before = match rows.read() { Ok(item) => item, Err(problem) => { return Err(problem); } };
     if before != expected { return Err("recoverable check changed; no retry"); }
@@ -51,14 +51,14 @@ public flow write_rows<R ~ CasRows<Frame>>(rows: R, value: Frame, expected: Opti
     return commit_once<Frame, R>(rows, value, condition, previous);
 }
 
-public flow plan_rows<R ~ CasRows<Frame>>(rows: R, work: Work, digest: string, policy: Policy, binding: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+public flow plan_rows<R ~ CasRows<Frame>>(rows: R, work: Work, digest: string, policy: Policy, binding: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     match rows.read() { Ok(None()) => (), Ok(Some(_)) => { return Err("check already planned; no retry"); } Err(error) => { return Err(error); } }
     let record = Record { format = 1, phase = "planned", id = work.id, digest, outcome = "", exit_code = "" };
     let frame = Frame { format = 1, policy_binding = binding, work_history = work.history_version, workspace = work.workspace, path = work.path, check = record, stdout = "", stderr = "", stdout_truncated = false, stderr_truncated = false };
     match write_rows(rows, frame, None(), policy, binding) { Ok(_) => Ok(true), Err(error) => Err(error) }
 }
 
-public flow start_rows<R ~ CasRows<Frame>, A ~ CheckAccess>(rows: R, access: A, id: string, digest: string, policy: Policy, binding: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+public flow start_rows<R ~ CasRows<Frame>, A ~ CheckAccess>(rows: R, access: A, id: string, digest: string, policy: Policy, binding: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     let before = match rows.read() { Ok(Some(item)) => item, _ => { return Err("planned check missing or invalid"); } };
     let old = before.value;
     if old.check.id != id || old.check.digest != digest || old.check.phase != "planned" { return Err("planned check differs; no retry"); }
@@ -79,7 +79,7 @@ public flow start_rows<R ~ CasRows<Frame>, A ~ CheckAccess>(rows: R, access: A, 
     match write_rows(rows, frame, Some(before), policy, binding) { Ok(_) => Ok(true), Err(error) => Err(error) }
 }
 
-public flow finish_rows<R ~ CasRows<Frame>>(rows: R, id: string, digest: string, outcome: string, exit_code: string, stdout: string, stderr: string, out_truncated: bool, err_truncated: bool, policy: Policy, binding: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+public flow finish_rows<R ~ CasRows<Frame>>(rows: R, id: string, digest: string, outcome: string, exit_code: string, stdout: string, stderr: string, out_truncated: bool, err_truncated: bool, policy: Policy, binding: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     let before = match rows.read() { Ok(Some(item)) => item, _ => { return Err("running check missing or invalid"); } };
     let old = before.value;
     if old.check.id != id || old.check.digest != digest || old.check.phase != "running" { return Err("running check differs; no retry"); }
@@ -98,7 +98,7 @@ public flow finish_rows<R ~ CasRows<Frame>>(rows: R, id: string, digest: string,
     match write_rows(rows, frame, Some(before), policy, binding) { Ok(_) => Ok(true), Err(error) => Err(error) }
 }
 
-public flow abandon_rows<R ~ CasRows<Frame>>(rows: R, id: string, policy: Policy, binding: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+public flow abandon_rows<R ~ CasRows<Frame>>(rows: R, id: string, policy: Policy, binding: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     let before = match rows.read() { Ok(Some(item)) => item, _ => { return Err("running check missing"); } }; let old = before.value;
     if old.check.id != id || old.check.phase != "running" { return Err("interrupted check identity or phase differs"); }
     let record = old.check { phase = "abandoned", outcome = "", exit_code = "" };

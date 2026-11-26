@@ -12,7 +12,7 @@ let Data = std.memory.region<Schema>(stable_id = "nomo-native-attempts-v1", stor
 public type NativeAttempts = {};
 
 impl NativeAttempts ~ AttemptRepository {
-    flow list(self, session: string, unresolved: bool) -> Array<Attempt> ![Memory, Error<StorageError>] {
+    flow list(self, session: string, unresolved: bool) -> Array<Attempt> ![Memory, Error<StorageError>, Error<BudgetExceeded>] {
         var result: Array<Attempt> = [];
         var cursor: Option<MemoryCursor> = None();
         @limits([Iterations(2147483647)]) while true {
@@ -40,7 +40,7 @@ impl NativeAttempts ~ AttemptRepository {
         Data.Attempts.insert(value.id, value);
         return value;
     }
-    flow update(self, id: string, phase: string, result_event: i64, recovery_event: i64) -> Attempt {
+    flow update(self, id: string, phase: string, result_event: i64, recovery_event: i64) -> Attempt ![Memory, Error<StorageError>, Error<MemoryConflict>] {
         let before = match Data.Attempts.get_entry(id) { Some(value) => value, None() => abort("native attempt not found"), };
         let old = before.value;
         let value = old { id, phase, result_event, recovery_event };

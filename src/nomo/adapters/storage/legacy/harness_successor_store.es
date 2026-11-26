@@ -54,7 +54,7 @@ flow claim(ticket: Ticket) -> Result<MemoryEntry<string, Record>, string> {
 
 // Missing-only admission is never deleted/reset. Its exact durable readback and
 // the unchanged predecessor must both be confirmed before any Model/File call.
-public flow admit(predecessor: Identity, successor: Identity, request: string) -> Result<Ticket, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+public flow admit(predecessor: Identity, successor: Identity, request: string) -> Result<Ticket, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     let invalid = identity_error(successor); if invalid != "" { return Err(invalid); }
     if predecessor.id == successor.id || predecessor.workspace != successor.workspace || predecessor.allowed != successor.allowed {
         return Err("successor lineage or workspace binding mismatch");
@@ -94,7 +94,7 @@ public flow failed(ticket: Ticket, turn: TurnResult) -> Result<bool, string> ![M
     };
 }
 
-public flow publish(ticket: Ticket, saved: Successor) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+public flow publish(ticket: Ticket, saved: Successor) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     match validate(saved, ticket.successor, ticket.predecessor.checkpoint.identity) { Ok(_) => (), Err(error) => { return Err(error); } }
     if saved.predecessor != ticket.predecessor.checkpoint || saved.predecessor_version != ticket.predecessor.version.opaque ||
         saved.request != ticket.request { return Err("successor differs from admitted predecessor or request"); }

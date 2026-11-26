@@ -8,7 +8,7 @@ import nomo.adapters.cli.command_preview.ConsoleCommandPreview;
 import nomo.adapters.storage.attempts.NativeAttempts;
 import nomo.adapters.storage.conversations.NativeHistory;
 
-public flow bindings() -> ![CommandOperations => Memory, Console, Command.run<DefaultCommandSandbox>, Error<StorageError>, Error<MemoryConflict>, Error<IOError>] ![] {
+public flow bindings() -> ![CommandOperations => Memory, Console, Command.run<DefaultCommandSandbox>, Error<StorageError>, Error<MemoryConflict>, Error<IOError>, Error<BudgetExceeded>] ![] {
     let runner = HostCommandRunner {}; let preview = ConsoleCommandPreview {};
     let attempts = NativeAttempts {}; let history = NativeHistory {};
     return handler {

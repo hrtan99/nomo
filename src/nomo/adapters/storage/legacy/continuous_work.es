@@ -33,7 +33,7 @@ flow put(previous: Stored, item: Entry) -> Result<Stored, string> ![Memory, Erro
     return write(previous.value { current = item }, Some(previous));
 }
 
-public flow admit(binding: string, id: string, workspace: string, path: string, request: string, digest: string, policy: Policy, wide: bool, high_input: bool) -> Result<Stored, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+public flow admit(binding: string, id: string, workspace: string, path: string, request: string, digest: string, policy: Policy, wide: bool, high_input: bool) -> Result<Stored, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     let previous = match load(binding) { Ok(item) => item, Err(error) => { return Err(error); } };
     var history: Array<Entry> = [];
     match previous { Some(item) => {
@@ -66,7 +66,7 @@ public flow edit_complete(ticket: Stored) -> Result<Stored, string> ![Memory, Er
     return put(ticket, item { edit = item.edit { phase = "completed" } });
 }
 
-public flow finish(ticket: Stored, summary: string, source: string, spent: Ledger, records: Array<Event>, policy: Policy) -> Result<Stored, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+public flow finish(ticket: Stored, summary: string, source: string, spent: Ledger, records: Array<Event>, policy: Policy) -> Result<Stored, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     let item = ticket.value.current; if item.edit.phase != "completed" || item.result.phase != "running" { return Err("completed work edit required"); }
     if ledger_error(spent) != "" || spent.read.calls + spent.edit.calls != 7 || spent.read.tokens + spent.edit.tokens != (if item.result.source == "wide-v5" || item.result.source == "wide-v4" { 286720 } else { if item.result.source == "high-input-v2" { 917504 } else { if item.result.source == "wide-v3" || item.result.source == "high-input-v1" { 188416 } else { if item.result.source == "wide" || item.result.source == "wide-v2" { 61440 } else { 51200 } } } }) { return Err("additional work ledger differs from reservation"); }
     // High-input sources store their 6M configured run ceiling durably;
@@ -85,7 +85,7 @@ public flow start_check(binding: string, id: string, digest: string) -> Result<S
     return put(row, item { check });
 }
 
-public flow finish_check(binding: string, id: string, digest: string, outcome: string, exit_code: string, stdout: string, stderr: string, out_truncated: bool, err_truncated: bool, policy: Policy) -> Result<Stored, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+public flow finish_check(binding: string, id: string, digest: string, outcome: string, exit_code: string, stdout: string, stderr: string, out_truncated: bool, err_truncated: bool, policy: Policy) -> Result<Stored, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     let row = match load(binding) { Ok(Some(item)) => item, _ => { return Err("work missing"); } }; let item = row.value.current;
     if item.core.id != id || item.check.phase != "running" || item.check.digest != digest { return Err("running check missing"); }
     let out = match encode_prefix(stdout, out_truncated, policy) { Ok(value) => value, Err(error) => { return Err(error); } };

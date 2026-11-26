@@ -12,7 +12,7 @@ import nomo.domain.sessions.session_display.display;
 
 // Opt-in entry only. Initialize the fresh project-owned demo store explicitly.
 // show is a data projection, never resume, dispatch, repair or ID-only discovery.
-public flow run_session(args: Array<string>) -> i32 ![Console, Memory, Error<StorageError>, Error<IndexError>, Error<IOError>] {
+public flow run_session(args: Array<string>) -> i32 ![Console, Memory, Error<StorageError>, Error<IndexError>, Error<IOError>, Error<BudgetExceeded>] {
     let options = match parse(args) {
         Ok(value) => value, Err(error) => { println("REFUSED " + error); return 2; }
     };

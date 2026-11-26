@@ -10,5 +10,5 @@ import nomo.domain.harness.harness_tool_chat_contract.Context;
 
 public spec ReadStages {
     flow main(self, context: Context) -> string ![];
-    flow child(self, task: string, files: Array<string>, selected: State, multi: bool, resilient: bool, high_input: bool, reasoning: bool) -> LoopTurn ![Fs.read<ReadOnlyRoot>, Error<ConsoleError>, Error<FileError>, Error<IndexError>];
+    flow child(self, task: string, files: Array<string>, selected: State, multi: bool, resilient: bool, high_input: bool, reasoning: bool) -> LoopTurn ![Fs.read<ReadOnlyRoot>, Error<ConsoleError>, Error<FileError>, Error<IndexError>, Error<BudgetExceeded>];
 }

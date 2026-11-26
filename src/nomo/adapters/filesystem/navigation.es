@@ -36,7 +36,7 @@ flow info(pathname: WorkspacePath<ProjectRoot>) -> PathInfo {
 
 /// List the actual named entries and metadata in a project directory; use '.' for the root.
 public tool list_directory(pathname: string) -> Array<PathInfo>
-    ![SessionContext, Memory, Fs.list<ProjectRoot>, Fs.stat<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>] {
+    ![SessionContext.current, Memory, Fs.list<ProjectRoot>, Fs.stat<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<BudgetExceeded>] {
     let call = observe_started("list_directory", pathname);
     let entries = list(location(pathname)).iter().map_collect(item => info(item));
     observe_finished("list_directory", call, entries);
@@ -45,7 +45,7 @@ public tool list_directory(pathname: string) -> Array<PathInfo>
 
 /// Read actual metadata for an explicit project path.
 public tool stat_file(pathname: string) -> PathInfo
-    ![SessionContext, Memory, Fs.stat<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>] {
+    ![SessionContext.current, Memory, Fs.stat<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<BudgetExceeded>] {
     let call = observe_started("stat_file", pathname);
     let result = info(location(pathname));
     observe_finished("stat_file", call, result);
@@ -54,7 +54,7 @@ public tool stat_file(pathname: string) -> PathInfo
 
 /// Search exact UTF-8 text in selected files and return every matching line, numbered from one.
 public tool search_files(paths: Array<string>, literal: string) -> Array<MatchLine>
-    ![SessionContext, Memory, Fs.read<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>] {
+    ![SessionContext.current, Memory, Fs.read<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>, Error<BudgetExceeded>] {
     let call = observe_started("search_files", SearchRequest { paths, literal });
     var matches: Array<MatchLine> = [];
     for pathname in paths {
@@ -81,7 +81,7 @@ flow exclude_internal(arguments: Array<string>) -> Array<string> {
 
 /// Discover files recursively with ripgrep's glob syntax and ignore rules. Empty glob uses normal ignore rules; an explicit glob has ripgrep's usual override precedence. depth=0 is unlimited. Exit 1 means no matches.
 public tool find_files(pathname: string, glob: string, depth: i32) -> CommandOutput
-    ![SessionContext, CommandOperations, SettingsContext, Memory, Command.run<DefaultCommandSandbox>, Console, Error<StorageError>, Error<MemoryConflict>, Error<ConsoleError>] {
+    ![SessionContext.current, CommandOperations, SettingsContext.current, Memory, Command.run<DefaultCommandSandbox>, Console, Error<StorageError>, Error<MemoryConflict>, Error<ConsoleError>] {
     var arguments = discovery_arguments().push("--files").push("--sort").push("path");
     if glob != "" { arguments = arguments.push("--glob").push(glob); }
     if depth > 0 { arguments = arguments.push("--max-depth").push(from_i32(depth)); }
@@ -91,7 +91,7 @@ public tool find_files(pathname: string, glob: string, depth: i32) -> CommandOut
 
 /// Search a file or directory recursively. regex=true uses ripgrep regular expressions; false searches literal text. Results include actual path and line numbers. Exit 1 means no matches; exit 2 reports an error.
 public tool search_project(pathname: string, pattern: string, regex: bool) -> CommandOutput
-    ![SessionContext, CommandOperations, SettingsContext, Memory, Command.run<DefaultCommandSandbox>, Console, Error<StorageError>, Error<MemoryConflict>, Error<ConsoleError>] {
+    ![SessionContext.current, CommandOperations, SettingsContext.current, Memory, Command.run<DefaultCommandSandbox>, Console, Error<StorageError>, Error<MemoryConflict>, Error<ConsoleError>] {
     var arguments = discovery_arguments().push("--line-number").push("--with-filename").push("--no-heading").push("--sort").push("path");
     if !regex { arguments = arguments.push("--fixed-strings"); }
     arguments = exclude_internal(arguments).push("--").push(pattern).push(relative_name(location(pathname)));

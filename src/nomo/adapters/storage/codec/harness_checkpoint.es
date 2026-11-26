@@ -8,10 +8,10 @@ public type CheckpointEncoder = {};
 public type CheckpointCodec = {};
 
 impl CheckpointEncoder ~ RecordEncoder<Checkpoint> {
-    flow encode(self, value: Checkpoint) -> Result<string, string> ![Error<IndexError>] { return encode_checkpoint(value); }
+    flow encode(self, value: Checkpoint) -> Result<string, string> ![Error<IndexError>, Error<BudgetExceeded>] { return encode_checkpoint(value); }
 }
 
 impl CheckpointCodec ~ RecordCodec<Checkpoint> {
-    flow encode(self, value: Checkpoint) -> Result<string, string> ![Error<IndexError>] { return encode_checkpoint(value); }
-    flow decode(self, raw: string) -> Result<Checkpoint, string> ![Error<IndexError>] { return decode_checkpoint(raw); }
+    flow encode(self, value: Checkpoint) -> Result<string, string> ![Error<IndexError>, Error<BudgetExceeded>] { return encode_checkpoint(value); }
+    flow decode(self, raw: string) -> Result<Checkpoint, string> ![Error<IndexError>, Error<BudgetExceeded>] { return decode_checkpoint(raw); }
 }

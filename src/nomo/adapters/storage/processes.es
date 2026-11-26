@@ -25,7 +25,7 @@ impl NativeJobs ~ JobRepository {
     flow load(self, id: string) -> Option<Job> ![Memory, Error<StorageError>] { return match Data.Jobs.get(id) { Some(value) => Some(job(value)), None() => None() }; }
     flow insert(self, value: Job) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>] { Data.Jobs.insert(value.id, stored_job(value)); }
     flow save(self, value: Job) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>] { Data.Jobs.put(value.id, stored_job(value)); }
-    flow list(self, session: string) -> Array<Job> ![Memory, Error<StorageError>] {
+    flow list(self, session: string) -> Array<Job> ![Memory, Error<StorageError>, Error<BudgetExceeded>] {
         var result: Array<Job> = [];
         var cursor: Option<MemoryCursor> = None();
         @limits([Iterations(2147483647)]) while true {
@@ -39,7 +39,7 @@ impl NativeJobs ~ JobRepository {
     }
 }
 impl NativeJobs ~ SavedJobsReader {
-    flow read(self, session: string) -> Array<Job> ![Memory, Error<StorageError>] {
+    flow read(self, session: string) -> Array<Job> ![Memory, Error<StorageError>, Error<BudgetExceeded>] {
         return self.list(session);
     }
 }

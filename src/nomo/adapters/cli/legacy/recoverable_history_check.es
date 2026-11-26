@@ -15,7 +15,7 @@ import nomo.adapters.storage.legacy.continuous_work.load as load_extra;
 
 // Called only by the launcher while it retains the session lock. No model or
 // workspace capability is granted to this checkpoint process.
-public flow run_mode(args: Array<string>, followup: bool) -> i32 ![Console, Memory, Fs.read<PolicyRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {
+public flow run_mode(args: Array<string>, followup: bool) -> i32 ![Console, Memory, Fs.read<PolicyRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>, Error<BudgetExceeded>] {
     if args.len() < 4 || args[0] != "--policy-binding" { println("REFUSED check policy binding required"); return 1; }
     let policy = match load_policy() { Ok(item) => item, Err(error) => { println("REFUSED " + error); return 1; } };
     let binding = args[1]; var additional = false;
@@ -45,4 +45,4 @@ flow run_lifecycle<L ~ CheckLifecycle>(lifecycle: L, args: Array<string>, policy
     println("REFUSED invalid check action"); return 1;
 }
 
-public flow run(args: Array<string>) -> i32 ![Console, Memory, Fs.read<PolicyRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] { return run_mode(args, false); }
+public flow run(args: Array<string>) -> i32 ![Console, Memory, Fs.read<PolicyRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>, Error<BudgetExceeded>] { return run_mode(args, false); }

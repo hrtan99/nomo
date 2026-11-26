@@ -42,7 +42,7 @@ flow work_omitted() -> string { return "Large selected tool outcome retained in 
 // main/tool event is restored from the per-turn evidence row instead. Compact
 // every outgoing frame so sessions written by earlier versions are repaired on
 // their next reserve/finish without changing the durable schema or CAS head.
-flow compact_context_duplicates(value: Frame, policy: Policy, binding: string) -> Result<Frame, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+flow compact_context_duplicates(value: Frame, policy: Policy, binding: string) -> Result<Frame, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     let marker = match encode(context_omitted(), policy) { Ok(item) => item.value, Err(error) => { return Err(error); } };
     var events: Array<Event> = []; var chat_turn: i32 = 0;
     @limits([Iterations(4096)]) for item in value.events.events {
@@ -73,7 +73,7 @@ flow evidence_error(value: Evidence, policy: Policy, binding: string) -> string 
     return match decode(value.text, policy) { Ok(_) => "", Err(error) => error };
 }
 
-public flow load_evidence(turn: i32, policy: Policy, binding: string) -> Result<Option<string>, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+public flow load_evidence(turn: i32, policy: Policy, binding: string) -> Result<Option<string>, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     if turn < 1 || turn > 48 { return Err("invalid recoverable chat evidence turn"); }
     let key = from_i32(turn); let entry = EvidenceFrames.Rows.get_entry(key);
     return match entry {
@@ -92,7 +92,7 @@ public flow load_evidence(turn: i32, policy: Policy, binding: string) -> Result<
 // canonical selection separately, so replace only its exact projected copies
 // with explicit references. Earlier turns and non-selected work/check events
 // stay in their original order, including their positions around the references.
-public flow conversation(frame: EventFrame, latest: Previous, policy: Policy, binding: string) -> Result<Array<Event>, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+public flow conversation(frame: EventFrame, latest: Previous, policy: Policy, binding: string) -> Result<Array<Event>, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     var selected: Array<Event> = []; var chat_turn: i32 = 0; var chat_open = false;
     @limits([Iterations(4096)]) for event in frame.events {
         if event.role == "system" && event.kind == "native-budget" &&
@@ -126,7 +126,7 @@ public flow conversation(frame: EventFrame, latest: Previous, policy: Policy, bi
     return Ok(selected);
 }
 
-flow archive_evidence(turn: i32, outcome: string, policy: Policy, binding: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+flow archive_evidence(turn: i32, outcome: string, policy: Policy, binding: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     if byte_len(outcome) <= timeline_inline_bytes() { return Ok(false); }
     let text = match encode(outcome, policy) { Ok(value) => value.value, Err(error) => { return Err(error); } };
     let value = Evidence { format = 1, policy_binding = binding, turn, text };
@@ -183,7 +183,7 @@ flow constructed_frame_error(value: Frame, policy: Policy, binding: string) -> s
     return "";
 }
 
-public flow load(policy: Policy, binding: string) -> Result<Option<MemoryEntry<string, Frame>>, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+public flow load(policy: Policy, binding: string) -> Result<Option<MemoryEntry<string, Frame>>, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     let problem = policy_error(policy); if problem != "" { return Err(problem); }
     let invalid = binding_error(binding); if invalid != "" { return Err(invalid); }
     let entry = Frames.Rows.get_entry("latest");
@@ -197,7 +197,7 @@ public flow load(policy: Policy, binding: string) -> Result<Option<MemoryEntry<s
     };
 }
 
-flow write(value: Frame, expected: Option<MemoryEntry<string, Frame>>, policy: Policy, binding: string) -> Result<MemoryEntry<string, Frame>, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+flow write(value: Frame, expected: Option<MemoryEntry<string, Frame>>, policy: Policy, binding: string) -> Result<MemoryEntry<string, Frame>, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     let compact = match compact_context_duplicates(value, policy, binding) { Ok(item) => item, Err(error) => { return Err(error); } };
     let desired = compact { format = 1 };
     let error = constructed_frame_error(desired, policy, binding); if error != "" { return Err(error); }
@@ -217,11 +217,11 @@ public flow matches_version(expected: MemoryVersion) -> Result<bool, string> ![M
     };
 }
 
-public flow create(policy: Policy, binding: string, high_input: bool) -> Result<MemoryEntry<string, Frame>, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+public flow create(policy: Policy, binding: string, high_input: bool) -> Result<MemoryEntry<string, Frame>, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     return write(Frame { format = 1, encoding = "json-string-v1", policy_binding = binding, chat = if high_input { fresh_high_input_events() } else { fresh_events() }, events = empty_events() }, None(), policy, binding);
 }
 
-public flow reserve(expected: MemoryEntry<string, Frame>, request: string, policy: Policy, binding: string) -> Result<MemoryEntry<string, Frame>, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+public flow reserve(expected: MemoryEntry<string, Frame>, request: string, policy: Policy, binding: string) -> Result<MemoryEntry<string, Frame>, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     let error = frame_error(expected.value, policy, binding); if error != "" { return Err(error); }
     let saved = expected.value.chat;
     if saved.invocation.prior.tool != "" {
@@ -238,7 +238,7 @@ public flow reserve(expected: MemoryEntry<string, Frame>, request: string, polic
     return write(Frame { format = 1, encoding = "json-string-v1", policy_binding = binding, chat = pending, events }, Some(expected), policy, binding);
 }
 
-public flow finish(expected: MemoryEntry<string, Frame>, result: TurnResult, policy: Policy, binding: string) -> Result<MemoryEntry<string, Frame>, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+public flow finish(expected: MemoryEntry<string, Frame>, result: TurnResult, policy: Policy, binding: string) -> Result<MemoryEntry<string, Frame>, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     let error = frame_error(expected.value, policy, binding); if error != "" { return Err(error); }
     let completed = match result.completed { Some(item) => item, None() => { return Err("completed event batch missing"); } };
     let chat = match complete(expected.value.chat, result) { Ok(item) => item, Err(problem) => { return Err(problem); } };
@@ -264,7 +264,7 @@ public flow finish(expected: MemoryEntry<string, Frame>, result: TurnResult, pol
 // Work facts commit separately; only a confirmed subsequent copy enters this order.
 // Callers which already crossed the load() trust boundary retain that exact CAS
 // entry through their work transaction instead of inflating the chat again.
-public flow record_work_from(before: MemoryEntry<string, Frame>, id: string, records: Array<Event>, policy: Policy, binding: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+public flow record_work_from(before: MemoryEntry<string, Frame>, id: string, records: Array<Event>, policy: Policy, binding: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     if before.value.chat.phase == "running" { return Err("chat turn unresolved"); }
     var timeline_records: Array<Event> = [];
     @limits([Iterations(24)]) for item in records {
@@ -279,13 +279,13 @@ public flow record_work_from(before: MemoryEntry<string, Frame>, id: string, rec
     return match write(frame, Some(before), policy, binding) { Ok(_) => Ok(true), Err(error) => Err(error) };
 }
 
-public flow record_work(id: string, records: Array<Event>, policy: Policy, binding: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+public flow record_work(id: string, records: Array<Event>, policy: Policy, binding: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     let before = match load(policy, binding) { Ok(Some(value)) => value, _ => { return Err("existing recoverable session required"); } };
     return record_work_from(before, id, records, policy, binding);
 }
 
 // Record a completed independent check as its own event, without a work/edit row.
-public flow record_check(id: string, digest: string, outcome: string, exit_code: string, stdout: string, stderr: string, out_truncated: bool, err_truncated: bool, independent: bool, policy: Policy, binding: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+public flow record_check(id: string, digest: string, outcome: string, exit_code: string, stdout: string, stderr: string, out_truncated: bool, err_truncated: bool, independent: bool, policy: Policy, binding: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     let bad = invalid_values(1, "complete", id, digest, outcome, exit_code, false); if bad != "" { return Err(bad); }
     let before = match load(policy, binding) { Ok(Some(value)) => value, _ => { return Err("existing recoverable session required"); } };
     if before.value.chat.phase == "running" { return Err("chat turn unresolved"); }

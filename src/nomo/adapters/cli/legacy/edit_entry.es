@@ -30,7 +30,7 @@ public flow run_help(args: Array<string>) -> i32 {
     help(); return 0;
 }
 
-public flow run_apply(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {
+public flow run_apply(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>, Error<BudgetExceeded>] {
     let options = match parse(args, true) { Ok(value) => value, Err(error) => { return refused(error); } };
     if options.help { help(); return 0; }
     match available() { Ok(_) => (), Err(error) => { return refused(error); } }

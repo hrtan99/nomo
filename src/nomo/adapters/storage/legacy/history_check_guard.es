@@ -8,12 +8,12 @@ import nomo.adapters.storage.legacy.history_first_check_rows.FirstCheckRows;
 
 public flow invalid(value: Record) -> string { return invalid_values(value.format, value.phase, value.id, value.digest, value.outcome, value.exit_code, true); }
 
-public flow plan(ticket: Ticket, digest: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+public flow plan(ticket: Ticket, digest: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     match claim(ticket) { Ok(_) => plan_rows(FirstCheckRows {}, ticket.record.id, digest), Err(error) => Err(error) }
 }
 
-public flow start(id: string, digest: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] { return start_rows(FirstCheckRows {}, id, digest); }
+public flow start(id: string, digest: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] { return start_rows(FirstCheckRows {}, id, digest); }
 
-public flow finish(id: string, digest: string, outcome: string, exit_code: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] { return finish_rows(FirstCheckRows {}, id, digest, outcome, exit_code); }
+public flow finish(id: string, digest: string, outcome: string, exit_code: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] { return finish_rows(FirstCheckRows {}, id, digest, outcome, exit_code); }
 
 public flow inspect() -> Result<Option<Record>, string> { return inspect_rows(FirstCheckRows {}); }

@@ -26,7 +26,7 @@ impl ProjectMutationFiles ~ MutationFileAccess {
     }
     flow read(self, name: string) -> string ![Fs.read<ProjectRoot>, Error<FileError>, Error<ReadLimitError>] { return read_text(name); }
     flow replace(self, name: string, text: string) -> unit ![Fs.atomic_replace<ProjectRoot>, Error<FileError>] { atomic_replace(location(name), utf8_encode(text)); }
-    flow command(self, program: string, arguments: Array<string>, call: i64) -> bool ![SessionContext, CommandOperations, Memory, Console, Command.run<DefaultCommandSandbox>, Error<StorageError>, Error<MemoryConflict>, Error<ConsoleError>] {
+    flow command(self, program: string, arguments: Array<string>, call: i64) -> bool ![SessionContext.current, CommandOperations, Memory, Console, Command.run<DefaultCommandSandbox>, Error<StorageError>, Error<MemoryConflict>, Error<ConsoleError>] {
         return execute_step(program, arguments, call).exit_code == 0;
     }
 }

@@ -10,13 +10,13 @@ import std.io.IOError;
 import nomo.application.conversation.session_context.SessionContext;
 
 /// Read the current project's Git branch and working tree status.
-public tool git_status() -> CommandOutput ![SessionContext, CommandOperations, Memory, Command.run<DefaultCommandSandbox>, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>] {
+public tool git_status() -> CommandOutput ![SessionContext.current, CommandOperations, Memory, Command.run<DefaultCommandSandbox>, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>] {
     return execute_readonly("git_status", "/usr/bin/git", ["--no-optional-locks", "-c", "core.fsmonitor=false", "status", "--short", "--branch"]);
 }
 
 /// Read the working-tree or staged diff, optionally restricted to exact paths.
 public tool git_diff(staged: bool, paths: Array<string>) -> CommandOutput
-    ![SessionContext, CommandOperations, Memory, Command.run<DefaultCommandSandbox>, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>] {
+    ![SessionContext.current, CommandOperations, Memory, Command.run<DefaultCommandSandbox>, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>] {
     var arguments = ["--no-optional-locks", "diff", "--no-ext-diff", "--no-textconv"];
     if staged { arguments = arguments.push("--cached"); }
     return execute_readonly("git_diff", "/usr/bin/git", arguments.push("--").extend(paths));
@@ -24,33 +24,33 @@ public tool git_diff(staged: bool, paths: Array<string>) -> CommandOutput
 
 /// Read the most recent count commits.
 public tool git_log(count: i32) -> CommandOutput
-    ![SessionContext, CommandOperations, Memory, Command.run<DefaultCommandSandbox>, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>] {
+    ![SessionContext.current, CommandOperations, Memory, Command.run<DefaultCommandSandbox>, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>] {
     return execute_readonly("git_log", "/usr/bin/git", ["--no-optional-locks", "log", "--oneline", "-n", from_i32(count)]);
 }
 
 /// List local branches.
-public tool git_branches() -> CommandOutput ![SessionContext, CommandOperations, Memory, Command.run<DefaultCommandSandbox>, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>] {
+public tool git_branches() -> CommandOutput ![SessionContext.current, CommandOperations, Memory, Command.run<DefaultCommandSandbox>, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>] {
     return execute_readonly("git_branches", "/usr/bin/git", ["--no-optional-locks", "branch", "--list"]);
 }
 
 /// Initialize this project as a Git repository after native Host approval.
-public tool git_init() -> CommandOutput ![SessionContext, CommandOperations, Memory, Command.run<DefaultCommandSandbox>, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>] {
+public tool git_init() -> CommandOutput ![SessionContext.current, CommandOperations, Memory, Command.run<DefaultCommandSandbox>, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>] {
     return execute("/usr/bin/git", ["init", "--initial-branch=main"]);
 }
 
 /// Create a local branch after native Host approval.
-public tool git_branch(name: string) -> CommandOutput ![SessionContext, CommandOperations, Memory, Command.run<DefaultCommandSandbox>, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>] {
+public tool git_branch(name: string) -> CommandOutput ![SessionContext.current, CommandOperations, Memory, Command.run<DefaultCommandSandbox>, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>] {
     return execute("/usr/bin/git", ["branch", "--", name]);
 }
 
 /// Switch to an existing branch after native Host approval.
-public tool git_switch(name: string) -> CommandOutput ![SessionContext, CommandOperations, Memory, Command.run<DefaultCommandSandbox>, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>] {
+public tool git_switch(name: string) -> CommandOutput ![SessionContext.current, CommandOperations, Memory, Command.run<DefaultCommandSandbox>, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>] {
     return execute("/usr/bin/git", ["switch", "--", name]);
 }
 
 /// Stage selected paths, then commit. Each command receives its own Host approval.
 public tool git_commit(message: string, paths: Array<string>) -> CommandOutput
-    ![SessionContext, CommandOperations, Memory, Command.run<DefaultCommandSandbox>, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>] {
+    ![SessionContext.current, CommandOperations, Memory, Command.run<DefaultCommandSandbox>, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>] {
     if paths.len() > 0 {
         let staged = execute("/usr/bin/git", ["add", "--"].extend(paths));
         if staged.exit_code != 0 { return staged; }
@@ -69,7 +69,7 @@ flow json_paths(raw: string) -> Array<string> {
 
 /// The native command UI delegates to the same tools and approvals as the model.
 public flow shortcut(raw: string) -> CommandOutput
-    ![SessionContext, CommandOperations, Memory, Command.run<DefaultCommandSandbox>, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>] {
+    ![SessionContext.current, CommandOperations, Memory, Command.run<DefaultCommandSandbox>, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>] {
     let (operation, rest) = match split_once(trim(raw), " ") { Some(parts) => parts, None() => (trim(raw), "") };
     let argument = trim(rest);
     if operation == "status" { return git_status(); }

@@ -41,18 +41,18 @@ import nomo.tools.edit_file.EditableRoot;
 
 type FollowupPersistence = { ticket: WorkTicket, redaction: Policy, binding: string };
 impl FollowupPersistence ~ WorkPersistence<EditTicket, bool> {
-    flow begin(self, selected: Binding) -> Result<EditTicket, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+    flow begin(self, selected: Binding) -> Result<EditTicket, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
         match claim(self.ticket, self.redaction, self.binding) { Ok(_) => (), Err(error) => { return Err(error); } }
         return begin(selected);
     }
-    flow complete(self, ticket: EditTicket) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] { return complete(ticket); }
-    flow finish(self, edited: bool, summary: Summary, records: Array<Event>) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] { return finish_work(self.ticket, summary.answer, summary.state, records, self.redaction, self.binding); }
+    flow complete(self, ticket: EditTicket) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] { return complete(ticket); }
+    flow finish(self, edited: bool, summary: Summary, records: Array<Event>) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] { return finish_work(self.ticket, summary.answer, summary.state, records, self.redaction, self.binding); }
 }
 type ContinuousPersistence = { ticket: Stored, redaction: Policy };
 impl ContinuousPersistence ~ WorkPersistence<Stored, Stored> {
     flow begin(self, selected: Binding) -> Result<Stored, string> ![Memory, Error<StorageError>, Error<IndexError>] { return edit_intent(self.ticket, selected); }
     flow complete(self, ticket: Stored) -> Result<Stored, string> ![Memory, Error<StorageError>, Error<IndexError>] { return edit_complete(ticket); }
-    flow finish(self, edited: Stored, summary: Summary, records: Array<Event>) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+    flow finish(self, edited: Stored, summary: Summary, records: Array<Event>) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
         return match finish_extra(edited, summary.answer, if summary.model_generated { "model" } else { "system" }, summary.state, records, self.redaction) { Ok(_) => Ok(true), Err(error) => Err(error) };
     }
 }
@@ -85,7 +85,7 @@ flow more(input: WorkRequest, prior_request: string, previous: Previous, convers
 
 // Current roots and current approval are supplied by this invocation. Saved
 // history is only model input, never proof of a current root or consent.
-public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read<PolicyRoot>, Fs.read<ReadOnlyRoot>, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {
+public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read<PolicyRoot>, Fs.read<ReadOnlyRoot>, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>, Error<BudgetExceeded>] {
     if args.len() < 2 || args[args.len() - 2] != "--policy-binding" { return refused("event followup requires policy binding"); }
     let binding = args[args.len() - 1];
     let parsed = match parse_recorded(args, 2, true) { Ok(value) => value, Err(error) => { return refused(error); } };
@@ -136,7 +136,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
     return execute<HistoryStages, EditTicket, bool, FollowupPersistence, NativeWorkEditor, EventWorkTimeline, TerminalWorkOutput>(stages, persistence, NativeWorkEditor {}, EventWorkTimeline { chat = history }, TerminalWorkOutput {}, input, Run { redaction = policy, binding, wide = wide || high_input, high_input, saved = "SAVED event followup facts; no grant or root identity is persisted." });
 }
 
-public flow abandon(args: Array<string>) -> i32 ![Console, Memory, Fs.read<PolicyRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {
+public flow abandon(args: Array<string>) -> i32 ![Console, Memory, Fs.read<PolicyRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>, Error<BudgetExceeded>] {
     if args.len() != 2 { return refused("recovery requires binding and operation ID"); }
     let policy = match load_policy() { Ok(value) => value, Err(error) => { return refused(error); } };
     let extra = match load_extra(args[0]) { Ok(value) => value, Err(error) => { return refused(error); } };

@@ -35,17 +35,17 @@ import nomo.tools.edit_file.EditableRoot;
 
 type FirstPersistence = { ticket: WorkTicket, redaction: Policy, binding: string };
 impl FirstPersistence ~ WorkPersistence<EditTicket, bool> {
-    flow begin(self, selected: Binding) -> Result<EditTicket, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+    flow begin(self, selected: Binding) -> Result<EditTicket, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
         match claim(self.ticket, self.redaction, self.binding) { Ok(_) => (), Err(error) => { return Err(error); } }
         return begin(selected);
     }
-    flow complete(self, ticket: EditTicket) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] { return complete(ticket); }
-    flow finish(self, edited: bool, summary: Summary, records: Array<Event>) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+    flow complete(self, ticket: EditTicket) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] { return complete(ticket); }
+    flow finish(self, edited: bool, summary: Summary, records: Array<Event>) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
         return finish_work(self.ticket, summary.answer, summary.state, records, self.redaction, self.binding);
     }
 }
 
-public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read<PolicyRoot>, Fs.read<ReadOnlyRoot>, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {
+public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read<PolicyRoot>, Fs.read<ReadOnlyRoot>, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>, Error<BudgetExceeded>] {
     if args.len() < 2 || args[args.len() - 2] != "--policy-binding" { return refused("event work requires a policy binding"); }
     let binding = args[args.len() - 1];
     let parsed = match parse_recorded(args, 2, false) { Ok(value) => value, Err(error) => { return refused(error); } };
@@ -77,7 +77,7 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
     return execute<HistoryStages, EditTicket, bool, FirstPersistence, NativeWorkEditor, EventWorkTimeline, TerminalWorkOutput>(stages, persistence, NativeWorkEditor {}, EventWorkTimeline { chat = history }, TerminalWorkOutput {}, input, Run { redaction = policy, binding, wide = wide || high_input, high_input, saved = "SAVED event work facts; no grant or root identity is persisted." });
 }
 
-public flow abandon(args: Array<string>) -> i32 ![Console, Memory, Fs.read<PolicyRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {
+public flow abandon(args: Array<string>) -> i32 ![Console, Memory, Fs.read<PolicyRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>, Error<BudgetExceeded>] {
     if args.len() != 2 { return refused("recovery requires binding and operation ID"); }
     let policy = match load_policy() { Ok(value) => value, Err(error) => { return refused(error); } };
     let work = match load_work(policy, args[0]) { Ok(Some(value)) => value, _ => { return refused("interrupted work missing"); } };

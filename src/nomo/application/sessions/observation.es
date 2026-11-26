@@ -5,7 +5,7 @@ import nomo.domain.sessions.work_chain_selection.{Snapshot, validate, consistent
 import nomo.application.sessions.effects.session_work_chain_observation.SessionObservation;
 import nomo.domain.sessions.work_chain_observation.ObservationPass;
 
-public flow observe(workspace: string, path: string) -> Result<Snapshot, string> ![SessionObservation.capture, Error<IndexError>] {
+public flow observe(workspace: string, path: string) -> Result<Snapshot, string> ![SessionObservation.capture, Error<IndexError>, Error<BudgetExceeded>] {
     let binding = selector_error("discovery", workspace, path); if binding != "" { return Err(binding); }
     let before = match perform SessionObservation.capture(ObservationPass.First) { Ok(value) => value, Err(error) => { return Err(error); } };
     let after = match perform SessionObservation.capture(ObservationPass.Recheck) { Ok(value) => value, Err(error) => { return Err(error); } };

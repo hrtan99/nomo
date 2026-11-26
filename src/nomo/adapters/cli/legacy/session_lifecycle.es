@@ -53,7 +53,7 @@ public flow run_help(args: Array<string>) -> i32 {
     return 0;
 }
 
-public flow run_init(args: Array<string>) -> i32 ![Console, Memory, Error<StorageError>, Error<IndexError>, Error<ConsoleError>] {
+public flow run_init(args: Array<string>) -> i32 ![Console, Memory, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<BudgetExceeded>] {
     let value = match parse("init", args) { Ok(item) => item, Err(error) => { return refused("init", error); } };
     if value.help { help(); return 0; }
     if initialize(args) != 0 { return incomplete(value.predecessor, bindings(value.predecessor)); }
@@ -61,7 +61,7 @@ public flow run_init(args: Array<string>) -> i32 ![Console, Memory, Error<Storag
     next("new", bindings(value.predecessor).push("--once").push("<request>")); return 0;
 }
 
-public flow run_new(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {
+public flow run_new(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>, Error<BudgetExceeded>] {
     let value = match parse("new", args) { Ok(item) => item, Err(error) => { return refused("new", error); } };
     if value.help { help(); return 0; }
     if start(args) != 0 { return incomplete(value.predecessor, bindings(value.predecessor)); }
@@ -71,7 +71,7 @@ public flow run_new(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadO
         first[2], first[3], first[4], first[5], "--once", "<request>"]); return 0;
 }
 
-public flow run_resume(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {
+public flow run_resume(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>, Error<BudgetExceeded>] {
     let value = match parse("resume", args) { Ok(item) => item, Err(error) => { return refused("resume", error); } };
     if value.help { help(); return 0; }
     if resume(args) != 0 { return incomplete(value.successor, successor_args(value)); }

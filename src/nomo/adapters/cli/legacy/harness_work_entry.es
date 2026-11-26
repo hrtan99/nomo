@@ -162,7 +162,7 @@ public flow summarize_user_context(completed: Completed, parent: Array<ParentFac
     return summarize_chain_mode(completed, parent, inspect_all, true);
 }
 
-public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read<ReadOnlyRoot>, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {
+public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read<ReadOnlyRoot>, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>, Error<BudgetExceeded>] {
     let input = match parse(args) { Ok(value) => value, Err(error) => { return refused(fresh(), error); } };
     if input.edit.help { help(); return 0; }
     match available() { Ok(_) => (), Err(error) => { return refused(fresh(), error); } }

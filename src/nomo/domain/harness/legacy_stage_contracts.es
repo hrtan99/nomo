@@ -13,4 +13,4 @@ public spec EditTextStage: callable WorkContext => string ![];
 
 public spec StandaloneEditStage: callable StandaloneContext => string ![];
 
-public spec ChainEditStage: callable (WorkContext, Array<ParentFacts>) => string ![Error<IndexError>];
+public spec ChainEditStage: callable (WorkContext, Array<ParentFacts>) => string ![Error<IndexError>, Error<BudgetExceeded>];

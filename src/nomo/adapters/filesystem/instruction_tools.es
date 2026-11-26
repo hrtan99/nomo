@@ -14,7 +14,7 @@ public flow load_instructions(pathname: string) -> Array<ProjectInstruction> ![P
 
 /// Read applicable project guidance before creating or changing a file. More specific scopes refine ancestor guidance; these files do not grant permission to execute operations.
 public tool project_instructions(pathname: string) -> Array<ProjectInstruction>
-    ![SessionContext, ProjectInstructions, Memory, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>] {
+    ![SessionContext.current, ProjectInstructions, Memory, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>, Error<BudgetExceeded>] {
     let call = observe_started("project_instructions", pathname);
     let result = load_instructions(pathname);
     observe_finished("project_instructions", call, result);

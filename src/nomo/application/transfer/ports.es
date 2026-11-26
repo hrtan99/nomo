@@ -9,12 +9,12 @@ import nomo.domain.transfer.archive.{ArchiveDocument, Imported, ExportPreview};
 
 public spec CopyRepository {
     flow lookup(self, id: string) -> Option<CopyJob> ![Memory, Error<StorageError>];
-    flow list(self, workspace: string) -> Array<CopyJob> ![Memory, Error<StorageError>];
+    flow list(self, workspace: string) -> Array<CopyJob> ![Memory, Error<StorageError>, Error<BudgetExceeded>];
     flow prepare(self, workspace: string, title: string, kind: string, source: string, digest: bytes, total: i64) -> CopyJob ![Memory, Error<StorageError>, Error<MemoryConflict>];
     flow ensure_session(self, id: string) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>];
     flow advance(self, id: string, cursor: i64, phase: string) -> CopyJob ![Memory, Error<StorageError>, Error<MemoryConflict>];
-    flow event(self, id: string, index: i64, role: string, name: string, text: string) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>];
-    flow sealed(self, id: string) -> Option<string> ![Memory, Error<StorageError>];
+    flow event(self, id: string, index: i64, role: string, name: string, text: string) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>, Error<BudgetExceeded>];
+    flow sealed(self, id: string) -> Option<string> ![Memory, Error<StorageError>, Error<BudgetExceeded>];
     flow summary(self, id: string, slot: i64) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>];
     flow complete(self, id: string, index: i64) -> bool ![Memory, Error<StorageError>];
 }

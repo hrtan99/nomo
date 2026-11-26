@@ -73,7 +73,7 @@ flow frame_error(value: Frame, policy: Policy, binding: string) -> string {
     return work_data_error(value.work, value.events, policy);
 }
 
-public flow load(policy: Policy, binding: string) -> Result<Option<MemoryEntry<string, Frame>>, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+public flow load(policy: Policy, binding: string) -> Result<Option<MemoryEntry<string, Frame>>, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     let row = Runs.Rows.get_entry("work");
     return match row {
         Some(item) => {
@@ -85,7 +85,7 @@ public flow load(policy: Policy, binding: string) -> Result<Option<MemoryEntry<s
     };
 }
 
-flow write(value: Frame, expected: Option<MemoryEntry<string, Frame>>, policy: Policy, binding: string) -> Result<MemoryEntry<string, Frame>, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+flow write(value: Frame, expected: Option<MemoryEntry<string, Frame>>, policy: Policy, binding: string) -> Result<MemoryEntry<string, Frame>, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     let desired = value { format = 1 };
     let error = frame_error(desired, policy, binding); if error != "" { return Err(error); }
     let condition: WriteCondition = match expected { Some(item) => WriteCondition.Match(item.version), None() => Missing };
@@ -97,7 +97,7 @@ flow write(value: Frame, expected: Option<MemoryEntry<string, Frame>>, policy: P
     return Ok(MemoryEntry { key = "work", value = desired, version });
 }
 
-public flow admit(id: string, workspace: string, path: string, request: string, chat: MemoryEntry<string, ChatFrame>, policy: Policy, binding: string) -> Result<Ticket, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+public flow admit(id: string, workspace: string, path: string, request: string, chat: MemoryEntry<string, ChatFrame>, policy: Policy, binding: string) -> Result<Ticket, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     let chat_error = admission_chat_error(chat, chat); if chat_error != "" { return Err(chat_error); }
     let current = match chat_matches_version(chat.version) { Ok(item) => item, Err(error) => { return Err(error); } };
     if !current { return Err("completed recoverable chat changed; no retry"); }
@@ -109,7 +109,7 @@ public flow admit(id: string, workspace: string, path: string, request: string, 
     return Ok(Ticket { frame, version = saved.version, chat });
 }
 
-flow claimed(ticket: Ticket, policy: Policy, binding: string) -> Result<MemoryEntry<string, Frame>, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+flow claimed(ticket: Ticket, policy: Policy, binding: string) -> Result<MemoryEntry<string, Frame>, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     if ticket.frame.work.history_version != ticket.chat.version.opaque || ticket.frame.work.phase != "running" { return Err("recoverable work chat binding changed; no retry"); }
     let current_chat = match chat_matches_version(ticket.chat.version) { Ok(item) => item, Err(error) => { return Err(error); } };
     if !current_chat { return Err("recoverable work chat binding changed; no retry"); }
@@ -118,11 +118,11 @@ flow claimed(ticket: Ticket, policy: Policy, binding: string) -> Result<MemoryEn
     return Ok(current);
 }
 
-public flow claim(ticket: Ticket, policy: Policy, binding: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+public flow claim(ticket: Ticket, policy: Policy, binding: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     return match claimed(ticket, policy, binding) { Ok(_) => Ok(true), Err(error) => Err(error) };
 }
 
-public flow finish(ticket: Ticket, summary: string, spent: Ledger, records: Array<Event>, policy: Policy, binding: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+public flow finish(ticket: Ticket, summary: string, spent: Ledger, records: Array<Event>, policy: Policy, binding: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     let current = match claimed(ticket, policy, binding) { Ok(item) => item, Err(error) => { return Err(error); } };
     let events = match work_batch(records, policy) { Ok(item) => item, Err(error) => { return Err(error); } };
     let row = completed_record(ticket.frame.work, summary, spent);
@@ -131,7 +131,7 @@ public flow finish(ticket: Ticket, summary: string, spent: Ledger, records: Arra
 }
 
 // Only the owner which observed successful cleanup may call this decision flow.
-public flow abandon(id: string, policy: Policy, binding: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+public flow abandon(id: string, policy: Policy, binding: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     let current = match load(policy, binding) { Ok(Some(value)) => value, _ => { return Err("interrupted work missing"); } };
     let row = match abandoned_record(current.value.work, id, "work") { Ok(value) => value, Err(error) => { return Err(error); } };
     let frame = current.value { policy_binding = binding, work = row };

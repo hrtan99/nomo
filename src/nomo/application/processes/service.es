@@ -48,7 +48,7 @@ flow event<J ~ JobRepository, O ~ OutputArchive>(jobs: J, archive: O, job: Job, 
 }
 
 public flow start<Live, C ~ ProcessControl<Live>, J ~ JobRepository, V ~ ProcessPreviewSink, A ~ AttemptRepository, W ~ ConversationWriter, P ~ ResultPublication, H ~ ConversationReader>(control: C, jobs: J, preview_sink: V, attempts: A, writer: W, publication: P, history: H, session: string, program: string, arguments: Array<string>) -> Job
-    ![Memory, Console, Command.start<DefaultCommandSandbox>, Error<StorageError>, Error<MemoryConflict>, Error<IOError>] {
+    ![Memory, Console, Command.start<DefaultCommandSandbox>, Error<StorageError>, Error<MemoryConflict>, Error<IOError>, Error<BudgetExceeded>] {
     let request = StartRequest { operation = "start", program, arguments };
     let attempt = prepare(attempts, writer, session, "start_job", request);
     let job = Job { id = attempt.session + "-job-" + from_i64(attempt.input_event), session = attempt.session,
@@ -64,7 +64,7 @@ public flow start<Live, C ~ ProcessControl<Live>, J ~ JobRepository, V ~ Process
 }
 
 public flow read<Live, C ~ ProcessControl<Live>, J ~ JobRepository, O ~ OutputArchive, V ~ ProcessPreviewSink, A ~ AttemptRepository, W ~ ConversationWriter, P ~ ResultPublication, H ~ ConversationReader>(control: C, jobs: J, archive: O, preview_sink: V, attempts: A, writer: W, publication: P, history: H, session: string, job: string, max_bytes: usize) -> JobEvent
-    ![Memory, Console, Command.reconnect<DefaultCommandSandbox>, Command.read<DefaultCommandSandbox>, Error<StorageError>, Error<MemoryConflict>, Error<IOError>] {
+    ![Memory, Console, Command.reconnect<DefaultCommandSandbox>, Command.read<DefaultCommandSandbox>, Error<StorageError>, Error<MemoryConflict>, Error<IOError>, Error<BudgetExceeded>] {
     let selected = owned(jobs, session, job);
     let request = ReadRequest { operation = "read", job, handle = selected.handle, max_bytes };
     let attempt = prepare(attempts, writer, session, "read_job", request);
@@ -76,7 +76,7 @@ public flow read<Live, C ~ ProcessControl<Live>, J ~ JobRepository, O ~ OutputAr
 }
 
 public flow write<Live, C ~ ProcessControl<Live>, J ~ JobRepository, V ~ ProcessPreviewSink, A ~ AttemptRepository, W ~ ConversationWriter, P ~ ResultPublication, H ~ ConversationReader>(control: C, jobs: J, preview_sink: V, attempts: A, writer: W, publication: P, history: H, session: string, job: string, input: string) -> InputResult
-    ![Memory, Console, Command.reconnect<DefaultCommandSandbox>, Command.write<DefaultCommandSandbox>, Error<StorageError>, Error<MemoryConflict>, Error<IOError>] {
+    ![Memory, Console, Command.reconnect<DefaultCommandSandbox>, Command.write<DefaultCommandSandbox>, Error<StorageError>, Error<MemoryConflict>, Error<IOError>, Error<BudgetExceeded>] {
     let selected = owned(jobs, session, job);
     let request = WriteRequest { operation = "write", job, handle = selected.handle, input };
     let attempt = prepare(attempts, writer, session, "write_job", request);
@@ -89,7 +89,7 @@ public flow write<Live, C ~ ProcessControl<Live>, J ~ JobRepository, V ~ Process
 }
 
 public flow close_input<Live, C ~ ProcessControl<Live>, J ~ JobRepository, V ~ ProcessPreviewSink, A ~ AttemptRepository, W ~ ConversationWriter, P ~ ResultPublication, H ~ ConversationReader>(control: C, jobs: J, preview_sink: V, attempts: A, writer: W, publication: P, history: H, session: string, job: string) -> InputResult
-    ![Memory, Console, Command.reconnect<DefaultCommandSandbox>, Command.write<DefaultCommandSandbox>, Error<StorageError>, Error<MemoryConflict>, Error<IOError>] {
+    ![Memory, Console, Command.reconnect<DefaultCommandSandbox>, Command.write<DefaultCommandSandbox>, Error<StorageError>, Error<MemoryConflict>, Error<IOError>, Error<BudgetExceeded>] {
     let selected = owned(jobs, session, job);
     let request = JobRequest { operation = "close_stdin", job, handle = selected.handle };
     let attempt = prepare(attempts, writer, session, "close_job_input", request);
@@ -102,7 +102,7 @@ public flow close_input<Live, C ~ ProcessControl<Live>, J ~ JobRepository, V ~ P
 }
 
 public flow stop<Live, C ~ ProcessControl<Live>, J ~ JobRepository, O ~ OutputArchive, V ~ ProcessPreviewSink, A ~ AttemptRepository, W ~ ConversationWriter, P ~ ResultPublication, H ~ ConversationReader>(control: C, jobs: J, archive: O, preview_sink: V, attempts: A, writer: W, publication: P, history: H, session: string, job: string) -> JobEvent
-    ![Memory, Console, Command.reconnect<DefaultCommandSandbox>, Command.stop<DefaultCommandSandbox>, Error<StorageError>, Error<MemoryConflict>, Error<IOError>] {
+    ![Memory, Console, Command.reconnect<DefaultCommandSandbox>, Command.stop<DefaultCommandSandbox>, Error<StorageError>, Error<MemoryConflict>, Error<IOError>, Error<BudgetExceeded>] {
     let selected = owned(jobs, session, job);
     let request = JobRequest { operation = "stop", job, handle = selected.handle };
     let attempt = prepare(attempts, writer, session, "stop_job", request);
@@ -113,10 +113,10 @@ public flow stop<Live, C ~ ProcessControl<Live>, J ~ JobRepository, O ~ OutputAr
     return result;
 }
 
-public flow list<J ~ JobRepository>(jobs: J, session: string) -> Array<Job> ![Memory, Error<StorageError>] { return jobs.list(session); }
+public flow list<J ~ JobRepository>(jobs: J, session: string) -> Array<Job> ![Memory, Error<StorageError>, Error<BudgetExceeded>] { return jobs.list(session); }
 
 public flow output<J ~ JobRepository, O ~ OutputArchive, W ~ ConversationWriter, H ~ ConversationReader>(jobs: J, archive: O, writer: W, history: H, session: string, job: string) -> Array<JobEvent>
-    ![Memory, Error<StorageError>, Error<MemoryConflict>] {
+    ![Memory, Error<StorageError>, Error<MemoryConflict>, Error<BudgetExceeded>] {
     let selected = owned(jobs, session, job);
     let call = writer.append(session, "observation_call", "job_output", history_text(job), -1);
     var result: Array<JobEvent> = [];

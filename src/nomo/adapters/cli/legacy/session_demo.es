@@ -87,7 +87,7 @@ flow ready(options: Options) -> Result<bool, string> {
 }
 
 // Unique opt-in handler; the root default stub remains a separate entry.
-public flow demo(args: Array<string>) -> i32 ![Console, Memory, Error<StorageError>, Error<IndexError>, Error<IOError>] {
+public flow demo(args: Array<string>) -> i32 ![Console, Memory, Error<StorageError>, Error<IndexError>, Error<IOError>, Error<BudgetExceeded>] {
     if args.len() > 0 && args[0] == "continue" {
         let options = match parse_continue(args) { Ok(value) => value, Err(error) => { println("REFUSED " + error); return 2; } };
         let owner = match owned(options.turn) { Ok(value) => value, Err(error) => { println("REFUSED " + error); return 3; } };

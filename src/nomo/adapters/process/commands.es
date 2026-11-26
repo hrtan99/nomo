@@ -15,7 +15,7 @@ flow program_path(name: string) -> string {
 
 /// Run the configured project check with exact argv preview and native approval. Empty configuration returns configured=false and no process result.
 public tool check_project() -> CheckOutcome
-    ![SessionContext, CommandOperations, SettingsContext, Memory, Command.run<DefaultCommandSandbox>, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>] {
+    ![SessionContext.current, CommandOperations, SettingsContext.current, Memory, Command.run<DefaultCommandSandbox>, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>] {
     let settings = perform SettingsContext.current();
     var program = "";
     var arguments: Array<string> = [];
@@ -28,12 +28,12 @@ public tool check_project() -> CheckOutcome
 
 /// Execute an allowlisted program in the project after native Host approval of its exact argv. Return its actual exit status, stdout and stderr.
 public tool run_command(program: string, arguments: Array<string>) -> CommandOutput
-    ![SessionContext, CommandOperations, Memory, Command.run<DefaultCommandSandbox>, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>] {
+    ![SessionContext.current, CommandOperations, Memory, Command.run<DefaultCommandSandbox>, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>] {
     return execute(program, arguments);
 }
 
 /// Send one complete UTF-8 stdin value to a foreground program after exact argv/stdin preview and native Host approval. Returns actual command output, without a retained process handle.
 public tool run_command_input(program: string, arguments: Array<string>, input: string) -> CommandOutput
-    ![SessionContext, CommandOperations, Memory, Command.run<DefaultCommandSandbox>, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>] {
+    ![SessionContext.current, CommandOperations, Memory, Command.run<DefaultCommandSandbox>, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>] {
     return execute_input(program, arguments, input);
 }

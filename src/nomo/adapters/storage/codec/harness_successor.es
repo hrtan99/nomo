@@ -8,10 +8,10 @@ public type SuccessorEncoder = {};
 public type SuccessorCodec = {};
 
 impl SuccessorEncoder ~ RecordEncoder<Successor> {
-    flow encode(self, value: Successor) -> Result<string, string> ![Error<IndexError>] { return encode_successor(value); }
+    flow encode(self, value: Successor) -> Result<string, string> ![Error<IndexError>, Error<BudgetExceeded>] { return encode_successor(value); }
 }
 
 impl SuccessorCodec ~ RecordCodec<Successor> {
-    flow encode(self, value: Successor) -> Result<string, string> ![Error<IndexError>] { return encode_successor(value); }
-    flow decode(self, raw: string) -> Result<Successor, string> ![Error<IndexError>] { return decode_successor(raw); }
+    flow encode(self, value: Successor) -> Result<string, string> ![Error<IndexError>, Error<BudgetExceeded>] { return encode_successor(value); }
+    flow decode(self, raw: string) -> Result<Successor, string> ![Error<IndexError>, Error<BudgetExceeded>] { return decode_successor(raw); }
 }

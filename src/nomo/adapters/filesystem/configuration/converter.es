@@ -9,11 +9,11 @@ import nomo.application.commands.requests.execute_readonly_input;
 
 public type TaploConfigurationConverter = {};
 impl TaploConfigurationConverter ~ TomlConverter {
-    flow toml(self, raw: string) -> Converted ![SessionContext, CommandOperations, Memory, Console, Command.run<DefaultCommandSandbox>, Error<StorageError>, Error<MemoryConflict>, Error<ConsoleError>] {
+    flow toml(self, raw: string) -> Converted ![SessionContext.current, CommandOperations, Memory, Console, Command.run<DefaultCommandSandbox>, Error<StorageError>, Error<MemoryConflict>, Error<ConsoleError>] {
         let value = execute_readonly_input("project_configuration", "/home/nomo/.cargo/nomo-native-tools/taplo-0.10.0/bin/taplo", ["get", "-o", "json"], raw);
         return Converted { result_event = value.result_event, output = ConfigurationOutput { exit_code = value.output.exit_code, stdout = value.output.stdout, stderr = value.output.stderr } };
     }
-    flow entries(self, json: string) -> Converted ![SessionContext, CommandOperations, Memory, Console, Command.run<DefaultCommandSandbox>, Error<StorageError>, Error<MemoryConflict>, Error<ConsoleError>] {
+    flow entries(self, json: string) -> Converted ![SessionContext.current, CommandOperations, Memory, Console, Command.run<DefaultCommandSandbox>, Error<StorageError>, Error<MemoryConflict>, Error<ConsoleError>] {
         let value = execute_readonly_input("configuration_entries", "/usr/bin/jq", ["-c", "walk(if type == \"object\" then to_entries else . end)"], json);
         return Converted { result_event = value.result_event, output = ConfigurationOutput { exit_code = value.output.exit_code, stdout = value.output.stdout, stderr = value.output.stderr } };
     }

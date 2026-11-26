@@ -13,7 +13,7 @@ public type FirstCheckRows = {};
 
 impl FirstCheckRows ~ HistoryCheckRows {
     flow read(self) -> Option<MemoryEntry<string, Record>> { return Checks.Rows.get_entry("check"); }
-    flow write(self, row: Record, condition: WriteCondition) -> Result<MemoryVersion, string> { return commit_native<Record>(Checks.Rows, Target { store = ["Rows"], region = "nomo-history-check-v1", key = "check", label = "history-check" }, row, condition); }
+    flow write(self, row: Record, condition: WriteCondition) -> Result<MemoryVersion, string> ![Memory, Error<StorageError>, Error<IndexError>] { return commit_native<Record>(Checks.Rows, Target { store = ["Rows"], region = "nomo-history-check-v1", key = "check", label = "history-check" }, row, condition); }
     flow confirmed_work(self, id: string) -> string {
         let work = match inspect_work() { Ok(Some(value)) => value, _ => { return "completed work record required"; } };
         if work.phase != "complete" || work.id != id { return "completed work identity required"; }

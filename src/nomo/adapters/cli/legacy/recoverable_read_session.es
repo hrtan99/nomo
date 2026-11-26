@@ -35,7 +35,7 @@ import nomo.adapters.filesystem.legacy.workspace.selection;
 import nomo.session.event_policy.PolicyRoot;
 import nomo.domain.sessions.chat_format_policy.policy as format_policy;
 
-public flow run(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyRoot>, Fs.list<ReadOnlyRoot>, Fs.stat<ReadOnlyRoot>, Fs.read<PolicyRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {
+public flow run(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyRoot>, Fs.list<ReadOnlyRoot>, Fs.stat<ReadOnlyRoot>, Fs.read<PolicyRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>, Error<BudgetExceeded>] {
     let size = args.len();
     let natural = (size >= 8 && args[7] == "--natural-work") || (size == 9 && args[8] == "--natural-work");
     let high_input = (size >= 8 && args[7] == "--high-input") || (size == 9 && args[8] == "--high-input");
@@ -103,7 +103,7 @@ public type View = { format: i32, encoding: string, phase: string, turns: i32, f
     followup_check_stdout: string, followup_check_stderr: string, followup_check_stdout_truncated: bool, followup_check_stderr_truncated: bool, followup_check_stdout_omitted: bool, followup_check_stderr_omitted: bool,
     additional_work: Array<ExtraEntry> };
 
-public flow status(args: Array<string>) -> i32 ![Console, Memory, Fs.read<PolicyRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {
+public flow status(args: Array<string>) -> i32 ![Console, Memory, Fs.read<PolicyRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>, Error<BudgetExceeded>] {
     let high_input = args.len() == 4 && args[2] == "--initialize" && args[3] == "--high-input";
     let initialize = (args.len() == 3 && args[2] == "--initialize") || high_input;
     if (args.len() != 2 && !initialize) || args[0] != "--policy-binding" { println("REFUSED recoverable status requires policy binding"); return 1; }

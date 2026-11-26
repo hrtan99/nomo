@@ -31,21 +31,21 @@ flow refused(error: string) -> i32 { println("REFUSED " + error); return 1; }
 
 type FollowupPersistence = { ticket: WorkTicket, journal: FollowupEditJournal };
 impl FollowupPersistence ~ WorkPersistence<EditTicket, bool> {
-    flow begin(self, selected: Binding) -> Result<EditTicket, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+    flow begin(self, selected: Binding) -> Result<EditTicket, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
         match claim(self.ticket) { Ok(_) => (), Err(error) => { return Err(error); } }
         return self.journal.begin(selected);
     }
-    flow complete(self, ticket: EditTicket) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+    flow complete(self, ticket: EditTicket) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
         return self.journal.complete(ticket);
     }
-    flow finish(self, edited: bool, summary: Summary, records: Array<Event>) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+    flow finish(self, edited: bool, summary: Summary, records: Array<Event>) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
         return finish(self.ticket, summary.answer, summary.state);
     }
 }
 
 // Current roots and current approval are supplied by this invocation. Saved
 // history is only model input, never proof of a current root or consent.
-public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read<ReadOnlyRoot>, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {
+public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read<ReadOnlyRoot>, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>, Error<BudgetExceeded>] {
     let parsed = match parse_recorded(args, 0, true) { Ok(value) => value, Err(error) => { return refused(error); } };
     let cli = parsed.input;
     if cli.edit.help { return refused("select a current read root, owned edit root, target and task"); }

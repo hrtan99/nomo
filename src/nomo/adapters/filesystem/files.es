@@ -25,7 +25,7 @@ spec ScopedReplace: trace = +Fs.read<ProjectRoot> & +Fs.list<ProjectRoot> & +Fs.
 
 /// Read a UTF-8 project file, including while another operation awaits recovery.
 public tool read_file(pathname: string) -> FileContent
-    ![SessionContext, ProjectInstructions, Memory, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>] {
+    ![SessionContext.current, ProjectInstructions, Memory, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>, Error<BudgetExceeded>] {
     let call = observe_started("read_file", pathname);
     let result = FileContent { path = pathname, text = read_text(pathname), instructions = load_instructions(pathname) };
     observe_finished("read_file", call, result);
@@ -34,14 +34,14 @@ public tool read_file(pathname: string) -> FileContent
 
 /// Replace an observed file through the native edit journal, with exact content preview and Host approval.
 public tool replace_file(change: FileChange) -> FileOutcome
-    ![SessionContext, ChangeOperations, Memory, Console, Command.run<DefaultCommandSandbox>, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Fs.atomic_replace<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>, Error<ConsoleError>]
+    ![SessionContext.current, ChangeOperations, Memory, Console, Command.run<DefaultCommandSandbox>, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Fs.atomic_replace<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>, Error<ConsoleError>]
     ~ ScopedReplace {
     return perform ChangeOperations.replace(perform SessionContext.current(), change);
 }
 
 /// Replace one uniquely occurring literal through the same undoable native journal.
 public tool edit_file(pathname: string, target: string, replacement: string) -> FileOutcome
-    ![SessionContext, ChangeOperations, Memory, Console, Command.run<DefaultCommandSandbox>, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Fs.atomic_replace<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>, Error<ConsoleError>]
+    ![SessionContext.current, ChangeOperations, Memory, Console, Command.run<DefaultCommandSandbox>, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Fs.atomic_replace<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>, Error<ConsoleError>]
     ~ ScopedReplace {
     return from_literal(pathname, target, replacement);
 }

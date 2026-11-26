@@ -19,7 +19,7 @@ flow help() -> unit {
 
 flow refused(error: string) -> i32 { println("REFUSED " + error); return 1; }
 
-public flow run_init(args: Array<string>) -> i32 ![Console, Memory, Error<StorageError>, Error<IndexError>, Error<ConsoleError>] {
+public flow run_init(args: Array<string>) -> i32 ![Console, Memory, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<BudgetExceeded>] {
     let options = match parse(args, false) { Ok(value) => value, Err(error) => { return refused(error); } };
     if options.help { help(); return 0; }
     match initialize(options.identity) { Ok(_) => (), Err(error) => { return refused(error); } }
@@ -27,7 +27,7 @@ public flow run_init(args: Array<string>) -> i32 ![Console, Memory, Error<Storag
     return 0;
 }
 
-public flow run_save(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {
+public flow run_save(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>, Error<BudgetExceeded>] {
     let options = match parse(args, true) { Ok(value) => value, Err(error) => { return refused(error); } };
     if options.help { help(); return 0; }
     match begin(options.identity) { Ok(_) => (), Err(error) => { return refused(error); } }

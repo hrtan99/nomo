@@ -21,7 +21,7 @@ public spec JobRepository {
     flow load(self, id: string) -> Option<Job> ![Memory, Error<StorageError>];
     flow insert(self, value: Job) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>];
     flow save(self, value: Job) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>];
-    flow list(self, session: string) -> Array<Job> ![Memory, Error<StorageError>];
+    flow list(self, session: string) -> Array<Job> ![Memory, Error<StorageError>, Error<BudgetExceeded>];
 }
 
 public spec OutputArchive {

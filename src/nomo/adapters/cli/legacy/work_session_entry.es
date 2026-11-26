@@ -19,7 +19,7 @@ import nomo.adapters.cli.legacy.edit_context.display;
 import nomo.adapters.cli.legacy.harness_work_entry.{prepare_work, finish_edit, summarize, refused, ledger};
 import nomo.adapters.cli.legacy.work_record_display.render;
 
-public flow run_save(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read<ReadOnlyRoot>, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {
+public flow run_save(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read<ReadOnlyRoot>, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>, Error<BudgetExceeded>] {
     let input = match parse(args) { Ok(value) => value, Err(error) => { return refused(fresh(), error); } };
     if input.edit.help {
         println("work_save: --id ID --workspace BIND --path FILE --once TASK --allow FILE[,FILE]; one confirmed edit, one durable work record, no executable resume.");

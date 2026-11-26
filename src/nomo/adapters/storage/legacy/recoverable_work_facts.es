@@ -82,7 +82,7 @@ impl EventWorkFacts ~ WorkFactsReader {
     flow snapshot(self) -> Result<Facts, string> { return read_snapshot(self.redaction, self.binding); }
 }
 
-public flow snapshot(policy: Policy, binding: string) -> Result<Facts, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+public flow snapshot(policy: Policy, binding: string) -> Result<Facts, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     let reader = EventWorkFacts { redaction = policy, binding };
     return reader.snapshot();
 }

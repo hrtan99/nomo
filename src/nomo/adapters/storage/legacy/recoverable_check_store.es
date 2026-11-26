@@ -31,27 +31,27 @@ impl FirstCheckAdapter ~ CheckAccess {
     }
 }
 
-public flow load(policy: Policy, binding: string) -> Result<Option<MemoryEntry<string, Frame>>, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+public flow load(policy: Policy, binding: string) -> Result<Option<MemoryEntry<string, Frame>>, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     return load_rows(Checks.Rows.get_entry("check"), FirstCheckAdapter { redaction = policy, binding }, policy, binding);
 }
 
-public flow plan(ticket: Ticket, digest: string, policy: Policy, binding: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+public flow plan(ticket: Ticket, digest: string, policy: Policy, binding: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     match claim(ticket, policy, binding) { Ok(_) => (), Err(error) => { return Err(error); } }
     let rows = FirstCheckAdapter { redaction = policy, binding };
     return plan_rows(rows, ticket.frame.work, digest, policy, binding);
 }
 
-public flow start(id: string, digest: string, policy: Policy, binding: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+public flow start(id: string, digest: string, policy: Policy, binding: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     let rows = FirstCheckAdapter { redaction = policy, binding };
     return start_rows(rows, rows, id, digest, policy, binding);
 }
 
-public flow finish(id: string, digest: string, outcome: string, exit_code: string, stdout: string, stderr: string, out_truncated: bool, err_truncated: bool, policy: Policy, binding: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+public flow finish(id: string, digest: string, outcome: string, exit_code: string, stdout: string, stderr: string, out_truncated: bool, err_truncated: bool, policy: Policy, binding: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     let rows = FirstCheckAdapter { redaction = policy, binding };
     return finish_rows(rows, id, digest, outcome, exit_code, stdout, stderr, out_truncated, err_truncated, policy, binding);
 }
 
-public flow abandon(id: string, policy: Policy, binding: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+public flow abandon(id: string, policy: Policy, binding: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     let rows = FirstCheckAdapter { redaction = policy, binding };
     return abandon_rows(rows, id, policy, binding);
 }

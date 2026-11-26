@@ -62,7 +62,7 @@ flow show(config: Config, state: State) -> i32 {
     }
     return 0;
 }
-public flow run_with_operations(args: Array<string>) -> i32 ![Console, TerminalWork.execute, TerminalRead.show, TerminalRead.latest, Error<IndexError>, Error<ConsoleError>] {
+public flow run_with_operations(args: Array<string>) -> i32 ![Console, TerminalWork.execute, TerminalRead.show, TerminalRead.latest, Error<IndexError>, Error<ConsoleError>, Error<BudgetExceeded>] {
     let parsed = match parse(args) { Ok(value) => value, Err(error) => { return refused(error); } };
     if parsed.help { return help([]); }
     let config = match selected_config(parsed) { Ok(value) => value, Err(error) => { return refused(error); } };
@@ -94,7 +94,7 @@ public flow run_with_operations(args: Array<string>) -> i32 ![Console, TerminalW
 }
 
 // No outer request read: missing --once is refused before any work admission.
-public flow run_once_with_operations(args: Array<string>) -> i32 ![Console, TerminalWork.execute, TerminalRead.show, TerminalRead.latest, Error<IndexError>, Error<ConsoleError>] {
+public flow run_once_with_operations(args: Array<string>) -> i32 ![Console, TerminalWork.execute, TerminalRead.show, TerminalRead.latest, Error<IndexError>, Error<ConsoleError>, Error<BudgetExceeded>] {
     let parsed = match parse_once(args) { Ok(value) => value, Err(error) => { return refused(error); } };
     if parsed.help { return help([]); }
     let config = match selected_config(parsed) { Ok(value) => value, Err(error) => { return refused(error); } };
@@ -114,5 +114,5 @@ flow production(args: Array<string>, once: bool) -> i32 {
         TerminalRead.latest(workspace, path) => latest_application(workspace, path);
     };
 }
-public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read<ReadOnlyRoot>, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] { return production(args, false); }
-public flow run_once(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read<ReadOnlyRoot>, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] { return production(args, true); }
+public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read<ReadOnlyRoot>, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>, Error<BudgetExceeded>] { return production(args, false); }
+public flow run_once(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read<ReadOnlyRoot>, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>, Error<BudgetExceeded>] { return production(args, true); }

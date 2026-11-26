@@ -52,9 +52,9 @@ flow read_original_with(name: string, maximum: EditLimit) -> Result<string, stri
     return Ok(original);
 }
 
-public flow read_original(name: string) -> Result<string, string> ![Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Error<FileError>, Error<IndexError>] ~ OriginalReadFunction<EditableRoot> { let reader = LegacyEditFile {}; return reader.read_original(name); }
+public flow read_original(name: string) -> Result<string, string> ![Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Error<FileError>, Error<IndexError>, Error<BudgetExceeded>] ~ OriginalReadFunction<EditableRoot> { let reader = LegacyEditFile {}; return reader.read_original(name); }
 
-public flow read_original_wide(name: string) -> Result<string, string> ![Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Error<FileError>, Error<IndexError>] ~ OriginalReadFunction<EditableRoot> { let reader = WideEditFile {}; return reader.read_original(name); }
+public flow read_original_wide(name: string) -> Result<string, string> ![Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Error<FileError>, Error<IndexError>, Error<BudgetExceeded>] ~ OriginalReadFunction<EditableRoot> { let reader = WideEditFile {}; return reader.read_original(name); }
 
 public flow prepare(name: string, target: string, replacement: string) -> Result<Prepared, string> {
     let original = match read_original(name) { Ok(value) => value, Err(error) => { return Err(error); } };
@@ -75,7 +75,7 @@ flow apply_with(prepared: Prepared, maximum: EditLimit) -> Result<bool, string> 
     return Ok(true);
 }
 
-public flow apply(prepared: Prepared) -> Result<bool, string> ![Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<FileError>, Error<IndexError>] { let writer = LegacyEditFile {}; return writer.apply(prepared); }
+public flow apply(prepared: Prepared) -> Result<bool, string> ![Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<FileError>, Error<IndexError>, Error<BudgetExceeded>] { let writer = LegacyEditFile {}; return writer.apply(prepared); }
 
 impl LegacyEditFile ~ OriginalReader<EditableRoot> {
     flow read_original(self, name: string) -> Result<string, string> { return read_original_with(name, EditLimit { bytes = 16384, metadata = 16384 }); }
@@ -86,9 +86,9 @@ impl WideEditFile ~ OriginalReader<EditableRoot> {
 }
 
 impl LegacyEditFile ~ EditApplier<EditableRoot> {
-    flow apply(self, prepared: Prepared) -> Result<bool, string> ![Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<FileError>, Error<IndexError>] { return apply_with(prepared, EditLimit { bytes = 16384, metadata = 16384 }); }
+    flow apply(self, prepared: Prepared) -> Result<bool, string> ![Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<FileError>, Error<IndexError>, Error<BudgetExceeded>] { return apply_with(prepared, EditLimit { bytes = 16384, metadata = 16384 }); }
 }
 
 impl WideEditFile ~ EditApplier<EditableRoot> {
-    flow apply(self, prepared: Prepared) -> Result<bool, string> ![Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<FileError>, Error<IndexError>] { return apply_with(prepared, EditLimit { bytes = file_bytes(), metadata = file_metadata_bytes() }); }
+    flow apply(self, prepared: Prepared) -> Result<bool, string> ![Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<FileError>, Error<IndexError>, Error<BudgetExceeded>] { return apply_with(prepared, EditLimit { bytes = file_bytes(), metadata = file_metadata_bytes() }); }
 }

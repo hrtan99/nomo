@@ -13,7 +13,7 @@ public flow offline(options: Options) -> bool {
         match options.export_path { Some(_) => true, None() => false };
 }
 
-public flow parse(args: Array<string>) -> Options ![Error<IndexError>] {
+public flow parse(args: Array<string>) -> Options ![Error<IndexError>, Error<BudgetExceeded>] {
     var workspace = "";
     var selection = SessionSelection.Current;
     var once: Option<string> = None();

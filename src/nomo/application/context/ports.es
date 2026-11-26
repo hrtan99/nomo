@@ -17,5 +17,5 @@ public spec InstructionReader {
 }
 
 public spec SavedJobsReader {
-    flow read(self, session: string) -> Array<Job> ![Memory, Error<StorageError>];
+    flow read(self, session: string) -> Array<Job> ![Memory, Error<StorageError>, Error<BudgetExceeded>];
 }

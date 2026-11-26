@@ -17,8 +17,11 @@ import nomo.adapters.model.context.CompactHistory;
 
 public type NativeCodingModel = {};
 impl NativeCodingModel ~ CodingModel {
-    flow code(self, input: Turn) -> Answer ![SessionContext, CommandOperations, ProjectInstructions, ChangeOperations, ProcessOperations, SettingsContext, Memory, Command.run<DefaultCommandSandbox>, Command.start<DefaultCommandSandbox>, Command.reconnect<DefaultCommandSandbox>, Command.read<DefaultCommandSandbox>, Command.write<DefaultCommandSandbox>, Command.stop<DefaultCommandSandbox>, Console, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Fs.stat<ProjectRoot>, Fs.atomic_replace<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>, Error<ConsoleError>] {
-        return (NativeCoding {}).run(input);
+    flow code(self, input: Turn) -> Answer ![CommandOperations, ProjectInstructions, ChangeOperations, ProcessOperations, Memory, Command.run<DefaultCommandSandbox>, Command.start<DefaultCommandSandbox>, Command.reconnect<DefaultCommandSandbox>, Command.read<DefaultCommandSandbox>, Command.write<DefaultCommandSandbox>, Command.stop<DefaultCommandSandbox>, Console, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Fs.stat<ProjectRoot>, Fs.atomic_replace<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>, Error<ConsoleError>, Error<BudgetExceeded>] {
+        return handle (NativeCoding {}).run(input) with {
+            SessionContext.current() => input.session;
+            SettingsContext.current() => input.settings;
+        };
     }
 }
 

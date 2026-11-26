@@ -16,7 +16,7 @@ import nomo.domain.sessions.session_display.display;
 import std.memory.WriteCondition;
 import nomo.adapters.storage.legacy.demo_claim.{read_claim, write_claim};
 
-public flow run_continue(options: ContinueOptions) -> i32 ![Console, Memory, Error<StorageError>, Error<IndexError>, Error<IOError>] {
+public flow run_continue(options: ContinueOptions) -> i32 ![Console, Memory, Error<StorageError>, Error<IndexError>, Error<IOError>, Error<BudgetExceeded>] {
     let input = options.turn;
     let before = match read(input.session_id) { Some(value) => value, None() => { println("REFUSED session metadata missing"); return 3; } };
     let row = before.value;

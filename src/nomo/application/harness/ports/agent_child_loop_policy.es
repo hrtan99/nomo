@@ -6,8 +6,8 @@ import nomo.domain.harness.child_loop_policy.Shape;
 
 public spec ChildLoopPolicy {
     flow shape(self) -> Shape ![];
-    flow allowed_error(self, allowed: Array<string>) -> string ![Error<IndexError>];
-    flow request_error(self, request: string) -> string ![Error<IndexError>];
+    flow allowed_error(self, allowed: Array<string>) -> string ![Error<IndexError>, Error<BudgetExceeded>];
+    flow request_error(self, request: string) -> string ![Error<IndexError>, Error<BudgetExceeded>];
     flow validate_context(self, context: Context) -> string ![Error<IndexError>];
     flow reserve_model(self, state: Session, final_only: bool) -> Result<Session, string> ![Error<IndexError>];
     flow reserve_tool(self, state: Session) -> Result<Session, string> ![Error<IndexError>];

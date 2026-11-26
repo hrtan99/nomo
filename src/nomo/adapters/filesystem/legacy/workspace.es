@@ -64,7 +64,7 @@ flow excluded(name: string) -> bool {
     return false;
 }
 
-public flow discover(page: usize) -> Result<Discovery, string> ![Console, Fs.list<ReadOnlyRoot>, Fs.stat<ReadOnlyRoot>, Error<FileError>, Error<ConsoleError>, Error<IndexError>] {
+public flow discover(page: usize) -> Result<Discovery, string> ![Console, Fs.list<ReadOnlyRoot>, Fs.stat<ReadOnlyRoot>, Error<FileError>, Error<ConsoleError>, Error<IndexError>, Error<BudgetExceeded>] {
     return handle {
         var dirs: Array<WorkspacePath<ReadOnlyRoot>> = [root<ReadOnlyRoot>()]; var depths: Array<usize> = [0]; var files: Array<string> = []; var i: usize = 0;
         var deep = false; var unsupported = false; var seen: usize = 0; var more = false;
@@ -108,7 +108,7 @@ public flow selection(raw: string) -> Result<Discovery, string> {
 }
 
 // The Host enforces the byte cap while reading; overflow never returns a prefix.
-flow read_bounded(name: string, bound: usize) -> Outcome ![Fs.read<ReadOnlyRoot>, Error<FileError>, Error<IndexError>] {
+flow read_bounded(name: string, bound: usize) -> Outcome ![Fs.read<ReadOnlyRoot>, Error<FileError>, Error<IndexError>, Error<BudgetExceeded>] {
     if !valid_path(name) { return outcome("refused", "invalid relative path", 0); }
     return handle {
         let bytes = read_bytes_limited(target(name), bound);
@@ -125,14 +125,14 @@ flow read_bounded(name: string, bound: usize) -> Outcome ![Fs.read<ReadOnlyRoot>
     };
 }
 
-public flow read_file(name: string) -> Outcome ![Fs.read<ReadOnlyRoot>, Error<FileError>, Error<IndexError>] ~ NomoRead<ReadOnlyRoot> {
+public flow read_file(name: string) -> Outcome ![Fs.read<ReadOnlyRoot>, Error<FileError>, Error<IndexError>, Error<BudgetExceeded>] ~ NomoRead<ReadOnlyRoot> {
     return read_bounded(name, 16384);
 }
 
 // Legacy scripted callers retain their original 2 KiB per-file scan reservation.
 
 
-public flow read_legacy(name: string) -> Outcome ![Fs.read<ReadOnlyRoot>, Error<FileError>, Error<IndexError>] ~ NomoRead<ReadOnlyRoot> {
+public flow read_legacy(name: string) -> Outcome ![Fs.read<ReadOnlyRoot>, Error<FileError>, Error<IndexError>, Error<BudgetExceeded>] ~ NomoRead<ReadOnlyRoot> {
     return read_bounded(name, 2048);
 }
 
@@ -148,7 +148,7 @@ public flow list_directory(name: string) -> Outcome {
 // Search selected files within the scan reservation. Result text has the same
 // message capacity as model answers; a byte-sized file can have at most n+1 lines.
 // A Host overflow check may probe one additional byte, never return a prefix.
-flow search_with(names: Array<string>, literal: string, maximum: usize) -> Outcome ![Fs.read<ReadOnlyRoot>, Error<FileError>, Error<IndexError>] {
+flow search_with(names: Array<string>, literal: string, maximum: usize) -> Outcome ![Fs.read<ReadOnlyRoot>, Error<FileError>, Error<IndexError>, Error<BudgetExceeded>] {
     if names.len() == 0 || names.len() > (if maximum == 4194304 { 256 } else { 4 }) { return outcome("refused", "search file count exceeds scope", 0); }
     if !search_literal(literal) { return outcome("refused", "literal must be 1..65536 safe UTF-8 bytes", 0); }
     let invalid = candidate_error(names); if invalid != "" { return outcome("refused", invalid, 0); }
@@ -189,7 +189,7 @@ flow search_with(names: Array<string>, literal: string, maximum: usize) -> Outco
     return outcome("complete", output, scanned);
 }
 
-public flow search_files(names: Array<string>, literal: string) -> Outcome ![Fs.read<ReadOnlyRoot>, Error<FileError>, Error<IndexError>] ~ NomoSearch<ReadOnlyRoot> {
+public flow search_files(names: Array<string>, literal: string) -> Outcome ![Fs.read<ReadOnlyRoot>, Error<FileError>, Error<IndexError>, Error<BudgetExceeded>] ~ NomoSearch<ReadOnlyRoot> {
     if names.len() > 0 && names[0] == "*" {
         if names.len() > 257 { return outcome("refused", "search file count exceeds scope", 0); }
         var selected: Array<string> = []; var i: usize = 1;
@@ -199,8 +199,8 @@ public flow search_files(names: Array<string>, literal: string) -> Outcome ![Fs.
     return search_with(names, literal, 16384);
 }
 
-public flow search_wide(names: Array<string>, literal: string) -> Outcome ![Fs.read<ReadOnlyRoot>, Error<FileError>, Error<IndexError>] ~ NomoSearch<ReadOnlyRoot> { return search_with(names, literal, file_bytes()); }
+public flow search_wide(names: Array<string>, literal: string) -> Outcome ![Fs.read<ReadOnlyRoot>, Error<FileError>, Error<IndexError>, Error<BudgetExceeded>] ~ NomoSearch<ReadOnlyRoot> { return search_with(names, literal, file_bytes()); }
 
-public flow search_legacy(names: Array<string>, literal: string) -> Outcome ![Fs.read<ReadOnlyRoot>, Error<FileError>, Error<IndexError>] ~ NomoSearch<ReadOnlyRoot> {
+public flow search_legacy(names: Array<string>, literal: string) -> Outcome ![Fs.read<ReadOnlyRoot>, Error<FileError>, Error<IndexError>, Error<BudgetExceeded>] ~ NomoSearch<ReadOnlyRoot> {
     return search_with(names, literal, 4096);
 }

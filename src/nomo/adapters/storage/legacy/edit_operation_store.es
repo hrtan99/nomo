@@ -25,8 +25,8 @@ impl FirstEditJournal ~ CasRows<Record> {
 
 impl FirstEditJournal ~ EditJournal {
     flow available(self) -> Result<bool, string> { return available_rows(self); }
-    flow begin(self, binding: Binding) -> Result<Ticket, string> ![Memory, Error<StorageError>, Error<IndexError>] { return begin_rows(self, binding); }
-    flow complete(self, ticket: Ticket) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] { return complete_rows(self, ticket); }
+    flow begin(self, binding: Binding) -> Result<Ticket, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] { return begin_rows(self, binding); }
+    flow complete(self, ticket: Ticket) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] { return complete_rows(self, ticket); }
     flow inspect(self, selector: Selector) -> Result<Option<Record>, string> { return inspect_rows(self, selector); }
 }
 
@@ -39,8 +39,8 @@ impl FollowupEditJournal ~ CasRows<Record> {
 
 impl FollowupEditJournal ~ EditJournal {
     flow available(self) -> Result<bool, string> { return available_rows(self); }
-    flow begin(self, binding: Binding) -> Result<Ticket, string> ![Memory, Error<StorageError>, Error<IndexError>] { return begin_rows(self, binding); }
-    flow complete(self, ticket: Ticket) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] { return complete_rows(self, ticket); }
+    flow begin(self, binding: Binding) -> Result<Ticket, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] { return begin_rows(self, binding); }
+    flow complete(self, ticket: Ticket) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] { return complete_rows(self, ticket); }
     flow inspect(self, selector: Selector) -> Result<Option<Record>, string> { return inspect_rows(self, selector); }
 }
 
@@ -81,8 +81,8 @@ flow inspect_rows<S ~ CasRows<Record>>(rows: S, selector: Selector) -> Result<Op
 
 public flow available() -> Result<bool, string> { let journal = FirstEditJournal {}; return journal.available(); }
 
-public flow begin(binding: Binding) -> Result<Ticket, string> ![Memory, Error<StorageError>, Error<IndexError>] { let journal = FirstEditJournal {}; return journal.begin(binding); }
+public flow begin(binding: Binding) -> Result<Ticket, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] { let journal = FirstEditJournal {}; return journal.begin(binding); }
 
-public flow complete(ticket: Ticket) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] { let journal = FirstEditJournal {}; return journal.complete(ticket); }
+public flow complete(ticket: Ticket) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] { let journal = FirstEditJournal {}; return journal.complete(ticket); }
 
 public flow inspect(id: string, workspace: string, path: string) -> Result<Option<Record>, string> { let journal = FirstEditJournal {}; return journal.inspect(Selector { id, workspace, path }); }

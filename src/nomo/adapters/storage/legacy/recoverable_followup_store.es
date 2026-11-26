@@ -21,7 +21,7 @@ flow frame_error(value: Frame, policy: Policy, binding: string) -> string {
     return work_data_error(value.work, value.events, policy);
 }
 
-public flow load(policy: Policy, binding: string) -> Result<Option<MemoryEntry<string, Frame>>, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+public flow load(policy: Policy, binding: string) -> Result<Option<MemoryEntry<string, Frame>>, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     // Validate the policy/binding against the actual chat frame first; a stale
     // or mismatched policy cannot make an existing work slot look absent.
     match load_chat(policy, binding) { Ok(Some(_)) => (), Ok(None()) => { return Err("recoverable chat missing"); } Err(error) => { return Err(error); } }
@@ -48,7 +48,7 @@ public flow load(policy: Policy, binding: string) -> Result<Option<MemoryEntry<s
     };
 }
 
-flow write(value: Frame, expected: Option<MemoryEntry<string, Frame>>, policy: Policy, binding: string) -> Result<MemoryVersion, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+flow write(value: Frame, expected: Option<MemoryEntry<string, Frame>>, policy: Policy, binding: string) -> Result<MemoryVersion, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     let desired = value { format = 1 };
     let error = frame_error(desired, policy, binding); if error != "" { return Err(error); }
     let before = match load(policy, binding) { Ok(item) => item, Err(problem) => { return Err(problem); } };
@@ -60,7 +60,7 @@ flow write(value: Frame, expected: Option<MemoryEntry<string, Frame>>, policy: P
     return Ok(version);
 }
 
-public flow admit(id: string, workspace: string, path: string, request: string, chat: MemoryEntry<string, ChatFrame>, policy: Policy, binding: string) -> Result<Ticket, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+public flow admit(id: string, workspace: string, path: string, request: string, chat: MemoryEntry<string, ChatFrame>, policy: Policy, binding: string) -> Result<Ticket, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     let current = match load_chat(policy, binding) { Ok(Some(item)) => item, _ => { return Err("recoverable chat missing or invalid"); } };
     let chat_error = admission_chat_error(current, chat); if chat_error != "" { return Err(chat_error); }
     match load(policy, binding) { Ok(None()) => (), Ok(Some(_)) => { return Err("recoverable followup already admitted; no retry"); } Err(error) => { return Err(error); } }
@@ -81,7 +81,7 @@ public flow admit(id: string, workspace: string, path: string, request: string, 
     return Ok(Ticket { frame, version, chat });
 }
 
-public flow claim(ticket: Ticket, policy: Policy, binding: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+public flow claim(ticket: Ticket, policy: Policy, binding: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     let current_chat = match load_chat(policy, binding) { Ok(Some(item)) => item, _ => { return Err("recoverable chat missing or invalid"); } };
     let chat_error = claim_chat_error(current_chat, ticket.chat, ticket.frame.work, "recoverable followup"); if chat_error != "" { return Err(chat_error); }
     let current = match load(policy, binding) { Ok(Some(item)) => item, _ => { return Err("recoverable followup missing or invalid"); } };
@@ -89,7 +89,7 @@ public flow claim(ticket: Ticket, policy: Policy, binding: string) -> Result<boo
     return Ok(true);
 }
 
-public flow finish(ticket: Ticket, summary: string, spent: Ledger, records: Array<Event>, policy: Policy, binding: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+public flow finish(ticket: Ticket, summary: string, spent: Ledger, records: Array<Event>, policy: Policy, binding: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     match claim(ticket, policy, binding) { Ok(_) => (), Err(error) => { return Err(error); } }
     let events = match work_batch(records, policy) { Ok(item) => item, Err(error) => { return Err(error); } };
     let row = completed_record(ticket.frame.work, summary, spent);
@@ -99,7 +99,7 @@ public flow finish(ticket: Ticket, summary: string, spent: Ledger, records: Arra
     match write(frame, Some(current), policy, binding) { Ok(_) => Ok(true), Err(error) => Err(error) }
 }
 
-public flow abandon(id: string, policy: Policy, binding: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+public flow abandon(id: string, policy: Policy, binding: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     let current = match load(policy, binding) { Ok(Some(value)) => value, _ => { return Err("interrupted followup missing"); } }; let old = current.value.work;
     let row = match abandoned_record(old, id, "followup") { Ok(value) => value, Err(error) => { return Err(error); } };
     let frame = current.value { policy_binding = binding, work = row };

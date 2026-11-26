@@ -51,7 +51,7 @@ public flow selection(args: Array<string>) -> Result<Selection, string> {
     return Ok(Selection { root, mode, accepted, input });
 }
 
-public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read<ReadOnlyRoot>, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {
+public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read<ReadOnlyRoot>, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>, Error<BudgetExceeded>] {
     let selected = match selection(args) { Ok(value) => value, Err(error) => { println("REFUSED " + error); return 1; } };
     var second = ""; if selected.input.work.allowed.len() == 2 { second = selected.input.work.allowed[1]; }
     let shown = match object(["root", "file1", "file2"], [selected.root, selected.input.work.allowed[0], second]) {

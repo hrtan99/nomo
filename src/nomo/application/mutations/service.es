@@ -144,7 +144,7 @@ flow outcome(value: Journal, status: string) -> ChangeOutcome {
     return ChangeOutcome { edit = value.id, status, completed, message = value.message };
 }
 
-public flow apply_plan(name: string, changes: Array<Change>) -> ChangeOutcome ![SessionContext, MutationFiles, ChangeJournal, MutationHistory, MutationOutput] {
+public flow apply_plan(name: string, changes: Array<Change>) -> ChangeOutcome ![SessionContext.current, MutationFiles, ChangeJournal, MutationHistory, MutationOutput, Error<BudgetExceeded>] {
     let session = perform SessionContext.current();
     let call = record("tool_call", name, PlanRequest { format = "nomo-native-file-plan-1", changes }, -1);
     let id = session + "-" + from_i64(call);
@@ -172,7 +172,7 @@ public flow apply_plan(name: string, changes: Array<Change>) -> ChangeOutcome ![
     return result;
 }
 
-public flow journals() -> Array<Journal> ![SessionContext, ChangeJournal] {
+public flow journals() -> Array<Journal> ![SessionContext.current, ChangeJournal] {
     let session = perform SessionContext.current();
     return perform ChangeJournal.list(session);
 }
@@ -217,7 +217,7 @@ flow restore(value: Journal, call: i64, checking: bool) -> bool {
 }
 
 /// Undo the selected journal (empty edit selects the latest applied journal). Current contents must match its saved result. Native Host approval applies to every restoration operation.
-public flow undo_changes(edit: string) -> ChangeOutcome ![SessionContext, MutationFiles, ChangeJournal, MutationHistory, MutationOutput] {
+public flow undo_changes(edit: string) -> ChangeOutcome ![SessionContext.current, MutationFiles, ChangeJournal, MutationHistory, MutationOutput, Error<BudgetExceeded>] {
     let source = selected_edit(edit);
     if source.phase != "applied" { abort("only an applied edit can start undo; use rollback_changes for interrupted edits"); }
     let call = record("tool_call", "undo_changes", source.id, -1);
@@ -234,7 +234,7 @@ public flow undo_changes(edit: string) -> ChangeOutcome ![SessionContext, Mutati
 }
 
 /// Explicitly restore an interrupted/partial transaction from its durable before snapshots, after reviewing actual state. This never replays the requested forward changes.
-public flow rollback_changes(edit: string) -> ChangeOutcome ![SessionContext, MutationFiles, ChangeJournal, MutationHistory, MutationOutput] {
+public flow rollback_changes(edit: string) -> ChangeOutcome ![SessionContext.current, MutationFiles, ChangeJournal, MutationHistory, MutationOutput, Error<BudgetExceeded>] {
     let source = journal(edit);
     if completed_phase(source.phase) { abort("journal has no interrupted change to roll back"); }
     let session = perform MutationHistory.session(source.session);
@@ -254,7 +254,7 @@ public flow rollback_changes(edit: string) -> ChangeOutcome ![SessionContext, Mu
 }
 
 /// Inspect this conversation's durable edit phases, including an interrupted edit, without starting another mutation.
-public flow list_changes() -> Array<Journal> ![SessionContext, ChangeJournal, MutationHistory] {
+public flow list_changes() -> Array<Journal> ![SessionContext.current, ChangeJournal, MutationHistory] {
     let call = observe_started("list_changes", "");
     let result = journals();
     observe_finished("list_changes", call, result);
@@ -262,7 +262,7 @@ public flow list_changes() -> Array<Journal> ![SessionContext, ChangeJournal, Mu
 }
 
 /// Reconcile a completed journal/result after interruption without executing any project operation. Unfinished changes still require explicit rollback.
-public flow reconcile_changes(edit: string) -> ChangeOutcome ![SessionContext, MutationFiles, ChangeJournal, MutationHistory, MutationOutput] {
+public flow reconcile_changes(edit: string) -> ChangeOutcome ![SessionContext.current, MutationFiles, ChangeJournal, MutationHistory, MutationOutput, Error<BudgetExceeded>] {
     let session = perform SessionContext.current();
     let pending = match pending_request(session) {
         Some(value) => value,
@@ -316,7 +316,7 @@ public flow reconcile_changes(edit: string) -> ChangeOutcome ![SessionContext, M
     return result;
 }
 
-public flow replace_file(change: FileChange) -> FileOutcome ![SessionContext, MutationFiles, ChangeJournal, MutationHistory, MutationOutput] {
+public flow replace_file(change: FileChange) -> FileOutcome ![SessionContext.current, MutationFiles, ChangeJournal, MutationHistory, MutationOutput, Error<BudgetExceeded>] {
     if read_text(change.path) != change.before {
         let call = record("tool_call", "replace_file", change, -1);
         let result = FileOutcome { path = change.path, status = "original_changed", edit = "" };

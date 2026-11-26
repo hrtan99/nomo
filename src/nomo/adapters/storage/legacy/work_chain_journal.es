@@ -19,7 +19,7 @@ public flow captured(row: Record) -> CapturedJournal {
     return CapturedJournal { format = row.format, chain = row.chain, turn = row.turn, phase = row.phase, binding = row.binding };
 }
 
-flow write(row: Record, condition: WriteCondition) -> Result<MemoryVersion, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+flow write(row: Record, condition: WriteCondition) -> Result<MemoryVersion, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     let error = invalid(row); if error != "" { return Err(error); }
     let selected = key(row.turn);
     return commit_native<Record>(Journal.Rows, Target { store = ["Rows"], region = "nomo-work-chain-edit-v2", key = selected, label = "v2 edit journal" }, row, condition);
@@ -31,7 +31,7 @@ public flow available(turn: i32) -> Result<bool, string> {
     return match read(turn) { None() => Ok(true), Some(_) => Err("v2 edit journal slot consumed; no retry") };
 }
 
-public flow begin(chain: string, turn: i32, binding: Binding) -> Result<Ticket, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+public flow begin(chain: string, turn: i32, binding: Binding) -> Result<Ticket, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     let row = Record { format = 2, chain, turn, phase = "intent", binding };
     let error = invalid(row); if error != "" { return Err(error); }
     match available(turn) { Ok(_) => (), Err(error) => { return Err(error); } }
@@ -39,7 +39,7 @@ public flow begin(chain: string, turn: i32, binding: Binding) -> Result<Ticket, 
     return Ok(Ticket { row, version });
 }
 
-public flow complete(ticket: Ticket) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+public flow complete(ticket: Ticket) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     let error = invalid(ticket.row); if error != "" { return Err(error); }
     if ticket.row.phase != "intent" { return Err("v2 edit completion requires the exact intent"); }
     let before = match read(ticket.row.turn) { Some(value) => value, None() => { return Err("v2 edit intent missing; no retry"); } };

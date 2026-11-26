@@ -19,7 +19,7 @@ flow help() -> unit {
 
 flow refused(error: string) -> i32 { println("REFUSED " + error); return 1; }
 
-public flow run_continue(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {
+public flow run_continue(args: Array<string>) -> i32 ![Console, Memory, Fs.read<ReadOnlyRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>, Error<BudgetExceeded>] {
     let options = match parse(args, true) { Ok(value) => value, Err(error) => { return refused(error); } };
     if options.help { help(); return 0; }
     let ticket = match admit(options.predecessor, options.successor, options.request) {

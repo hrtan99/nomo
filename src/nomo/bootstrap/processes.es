@@ -9,7 +9,7 @@ import nomo.adapters.cli.processes.TerminalProcessPreview;
 import nomo.adapters.storage.conversations.NativeHistory;
 import nomo.adapters.storage.attempts.NativeAttempts;
 
-public flow bindings() -> ![ProcessOperations => Memory, Console, Command.start<DefaultCommandSandbox>, Command.reconnect<DefaultCommandSandbox>, Command.read<DefaultCommandSandbox>, Command.write<DefaultCommandSandbox>, Command.stop<DefaultCommandSandbox>, Error<StorageError>, Error<MemoryConflict>, Error<IOError>] ![] {
+public flow bindings() -> ![ProcessOperations => Memory, Console, Command.start<DefaultCommandSandbox>, Command.reconnect<DefaultCommandSandbox>, Command.read<DefaultCommandSandbox>, Command.write<DefaultCommandSandbox>, Command.stop<DefaultCommandSandbox>, Error<StorageError>, Error<MemoryConflict>, Error<IOError>, Error<BudgetExceeded>] ![] {
     let control = HostProcessControl {};
     let jobs = NativeJobs {}; let archive = NativeOutputArchive {};
     let preview = TerminalProcessPreview {}; let history = NativeHistory {}; let attempts = NativeAttempts {};

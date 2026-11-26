@@ -13,7 +13,7 @@ import nomo.adapters.cli.transfer.TerminalTransfer;
 import nomo.adapters.storage.conversations.NativeHistory;
 import nomo.adapters.storage.attempts.NativeAttempts;
 
-flow bindings() -> ![CopyStorage, ArchiveFiles, ArchiveCodec, TransferDisplay => Memory, Console, Fs.read<ProjectRoot>, Fs.atomic_replace<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>, Error<ConsoleError>] ![] {
+flow bindings() -> ![CopyStorage, ArchiveFiles, ArchiveCodec, TransferDisplay => Memory, Console, Fs.read<ProjectRoot>, Fs.atomic_replace<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>, Error<ConsoleError>, Error<BudgetExceeded>] ![] {
     let copies = NativeCopies {}; let files = ProjectArchives {}; let codec = JsonArchiveEncoding {}; let display = TerminalTransfer {};
     return handler {
         CopyStorage.lookup(id) => copies.lookup(id);
@@ -36,7 +36,7 @@ flow bindings() -> ![CopyStorage, ArchiveFiles, ArchiveCodec, TransferDisplay =>
         TransferDisplay.exported(path) => display.exported(path);
     };
 }
-public flow operations() -> ![TransferOperations => Memory, Console, Fs.read<ProjectRoot>, Fs.atomic_replace<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>, Error<ConsoleError>] ![Memory] {
+public flow operations() -> ![TransferOperations => Memory, Console, Fs.read<ProjectRoot>, Fs.atomic_replace<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>, Error<ConsoleError>, Error<BudgetExceeded>] ![Memory] {
     let history = NativeHistory {}; let attempts = NativeAttempts {};
     return handler {
         TransferOperations.save(session, path) => handle service.save(history, attempts, history, session, path) with bindings();

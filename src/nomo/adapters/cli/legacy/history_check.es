@@ -9,7 +9,7 @@ import nomo.adapters.storage.legacy.check_output.save as save_output;
 
 // Internal launcher boundary. It is not exposed as a user command; the
 // launcher retains the session lock while it runs the selected offline check.
-public flow save_check_output(args: Array<string>, slot: string) -> i32 ![Console, Memory, Error<StorageError>, Error<IndexError>, Error<IOError>] {
+public flow save_check_output(args: Array<string>, slot: string) -> i32 ![Console, Memory, Error<StorageError>, Error<IndexError>, Error<IOError>, Error<BudgetExceeded>] {
     if args.len() != 5 || (slot != "first" && slot != "followup") { println("REFUSED invalid internal check action"); return 1; }
     if (args[3] != "true" && args[3] != "false") || (args[4] != "true" && args[4] != "false") { println("REFUSED invalid output truncation flags"); return 1; }
     let raw = read_line();
@@ -22,7 +22,7 @@ public flow save_check_output(args: Array<string>, slot: string) -> i32 ![Consol
     match save_output(value) { Ok(_) => { println("CHECK OUTPUT SAVED"); return 0; } Err(error) => { println("REFUSED " + error); return 1; } }
 }
 
-public flow run_slot(args: Array<string>, followup: bool) -> i32 ![Console, Memory, Error<StorageError>, Error<IndexError>, Error<IOError>] {
+public flow run_slot(args: Array<string>, followup: bool) -> i32 ![Console, Memory, Error<StorageError>, Error<IndexError>, Error<IOError>, Error<BudgetExceeded>] {
     if args.len() == 3 && args[0] == "start" {
         match (if followup { followup_start(args[1], args[2]) } else { start(args[1], args[2]) }) { Ok(_) => { println("CHECK RESERVED"); return 0; } Err(error) => { println("REFUSED " + error); return 1; } }
     }
@@ -33,4 +33,4 @@ public flow run_slot(args: Array<string>, followup: bool) -> i32 ![Console, Memo
     println("REFUSED invalid internal check action"); return 1;
 }
 
-public flow run(args: Array<string>) -> i32 ![Console, Memory, Error<StorageError>, Error<IndexError>, Error<IOError>] { return run_slot(args, false); }
+public flow run(args: Array<string>) -> i32 ![Console, Memory, Error<StorageError>, Error<IndexError>, Error<IOError>, Error<BudgetExceeded>] { return run_slot(args, false); }

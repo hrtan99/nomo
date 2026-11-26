@@ -30,7 +30,7 @@ flow owner(identity: Identity, phase: string) -> Result<MemoryEntry<string, Reco
 
 // The caller provisions a fresh exclusive project-owned directory. Existing
 // ownership is never adopted, overwritten, repaired or silently reinitialized.
-public flow initialize(identity: Identity) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+public flow initialize(identity: Identity) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     let invalid = identity_error(identity); if invalid != "" { return Err(invalid); }
     match read("owner") { Some(_) => { return Err("checkpoint store already claimed"); } None() => (), }
     match read(key(identity)) { Some(_) => { return Err("checkpoint row already exists"); } None() => (), }
@@ -40,14 +40,14 @@ public flow initialize(identity: Identity) -> Result<bool, string> ![Memory, Err
 
 // Consume ownership before the first inference. A failed/aborted turn cannot
 // obtain a fresh allocation by calling save again in this namespace.
-public flow begin(identity: Identity) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+public flow begin(identity: Identity) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     let before = match owner(identity, "ready") { Ok(value) => value, Err(error) => { return Err(error); } };
     match read(key(identity)) { Some(_) => { return Err("checkpoint row already exists"); } None() => (), }
     let row = Record { format = 1, phase = "claimed", identity, body = "" };
     return match write("owner", row, WriteCondition.Match(before.version)) { Ok(_) => Ok(true), Err(error) => Err(error) };
 }
 
-public flow publish(saved: Checkpoint) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+public flow publish(saved: Checkpoint) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     match validate(saved, saved.identity) { Ok(_) => (), Err(error) => { return Err(error); } }
     let body = match encode_record(CheckpointEncoder {}, saved) { Ok(value) => value, Err(error) => { return Err(error); } };
     match owner(saved.identity, "claimed") { Ok(_) => (), Err(error) => { return Err(error); } }

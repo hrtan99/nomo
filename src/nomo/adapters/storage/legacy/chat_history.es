@@ -107,7 +107,7 @@ flow project(input: Array<Event>) -> Result<Array<Event>, string> {
     return Ok(output);
 }
 
-flow save_inner(value: Session, expected: Option<Entry>, records: Array<Event>) -> Result<MemoryVersion, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+flow save_inner(value: Session, expected: Option<Entry>, records: Array<Event>) -> Result<MemoryVersion, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     let error = invalid(value); if error != "" { return Err(error); }
     let before = match load() { Ok(item) => item, Err(problem) => { return Err(problem); } };
     if before != expected { return Err("chat history changed before save; no retry"); }
@@ -142,6 +142,6 @@ flow save_inner(value: Session, expected: Option<Entry>, records: Array<Event>) 
     return Ok(version);
 }
 
-public flow save(value: Session, expected: Option<Entry>) -> Result<MemoryVersion, string> ![Memory, Error<StorageError>, Error<IndexError>] { return save_inner(value, expected, []); }
+public flow save(value: Session, expected: Option<Entry>) -> Result<MemoryVersion, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] { return save_inner(value, expected, []); }
 
-public flow save_completed(value: Session, expected: Option<Entry>, records: Array<Event>) -> Result<MemoryVersion, string> ![Memory, Error<StorageError>, Error<IndexError>] { return save_inner(value, expected, records); }
+public flow save_completed(value: Session, expected: Option<Entry>, records: Array<Event>) -> Result<MemoryVersion, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] { return save_inner(value, expected, records); }

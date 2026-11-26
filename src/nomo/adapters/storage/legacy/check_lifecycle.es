@@ -44,19 +44,19 @@ impl FollowupCheck ~ CheckFactsReader {
 }
 
 impl FirstCheck ~ CheckLifecycle {
-    flow start(self, id: string, digest: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] { return start(id, digest, self.redaction, self.binding); }
-    flow finish(self, id: string, digest: string, result: CheckResult) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] { return finish(id, digest, result.outcome, result.exit_code, result.stdout, result.stderr, result.stdout_truncated, result.stderr_truncated, self.redaction, self.binding); }
-    flow abandon(self, id: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] { return abandon(id, self.redaction, self.binding); }
+    flow start(self, id: string, digest: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] { return start(id, digest, self.redaction, self.binding); }
+    flow finish(self, id: string, digest: string, result: CheckResult) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] { return finish(id, digest, result.outcome, result.exit_code, result.stdout, result.stderr, result.stdout_truncated, result.stderr_truncated, self.redaction, self.binding); }
+    flow abandon(self, id: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] { return abandon(id, self.redaction, self.binding); }
 }
 
 impl FollowupCheck ~ CheckLifecycle {
-    flow start(self, id: string, digest: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] { return start_followup(id, digest, self.redaction, self.binding); }
-    flow finish(self, id: string, digest: string, result: CheckResult) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] { return finish_followup(id, digest, result.outcome, result.exit_code, result.stdout, result.stderr, result.stdout_truncated, result.stderr_truncated, self.redaction, self.binding); }
-    flow abandon(self, id: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] { return abandon_followup(id, self.redaction, self.binding); }
+    flow start(self, id: string, digest: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] { return start_followup(id, digest, self.redaction, self.binding); }
+    flow finish(self, id: string, digest: string, result: CheckResult) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] { return finish_followup(id, digest, result.outcome, result.exit_code, result.stdout, result.stderr, result.stdout_truncated, result.stderr_truncated, self.redaction, self.binding); }
+    flow abandon(self, id: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] { return abandon_followup(id, self.redaction, self.binding); }
 }
 
 impl ContinuousCheck ~ CheckLifecycle {
     flow start(self, id: string, digest: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] { return match start_check(self.binding, id, digest) { Ok(_) => Ok(true), Err(error) => Err(error) }; }
-    flow finish(self, id: string, digest: string, result: CheckResult) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] { return match finish_check(self.binding, id, digest, result.outcome, result.exit_code, result.stdout, result.stderr, result.stdout_truncated, result.stderr_truncated, self.redaction) { Ok(_) => Ok(true), Err(error) => Err(error) }; }
+    flow finish(self, id: string, digest: string, result: CheckResult) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] { return match finish_check(self.binding, id, digest, result.outcome, result.exit_code, result.stdout, result.stderr, result.stdout_truncated, result.stderr_truncated, self.redaction) { Ok(_) => Ok(true), Err(error) => Err(error) }; }
     flow abandon(self, id: string) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] { return abandon_check(self.binding, id); }
 }

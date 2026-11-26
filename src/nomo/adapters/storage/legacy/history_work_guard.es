@@ -62,12 +62,12 @@ flow history_error(history: Entry) -> string {
     return "";
 }
 
-flow write(row: Record, condition: WriteCondition) -> Result<MemoryVersion, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+flow write(row: Record, condition: WriteCondition) -> Result<MemoryVersion, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     let error = invalid(row); if error != "" { return Err(error); }
     return commit_native<Record>(Runs.Rows, Target { store = ["Rows"], region = "nomo-history-work-v1", key = "work", label = "history-work" }, row, condition);
 }
 
-public flow admit(id: string, workspace: string, path: string, request: string, history: Entry) -> Result<Ticket, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+public flow admit(id: string, workspace: string, path: string, request: string, history: Entry) -> Result<Ticket, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     if read() != None() { return Err("history-work already admitted; no retry"); }
     let error = history_error(history); if error != "" { return Err(error); }
     let row = Record { format = 1, phase = "running", id, workspace, path,
@@ -85,7 +85,7 @@ public flow claim(ticket: Ticket) -> Result<bool, string> {
     return Ok(true);
 }
 
-public flow finish(ticket: Ticket, summary: string, spent: Ledger) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+public flow finish(ticket: Ticket, summary: string, spent: Ledger) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     match claim(ticket) { Ok(_) => (), Err(error) => { return Err(error); } }
     let old = ticket.record;
     let row = old { format = 1, phase = "complete", reserved = zero(), settled = Some(spent), summary };

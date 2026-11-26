@@ -26,21 +26,21 @@ let Copies = std.memory.region<CopySchema>(stable_id = "nomo-native-conversation
 public type NativeHistory = {};
 
 impl NativeHistory ~ GenerationReservation {
-    flow reserve(self, id: string, compact: bool, context_bytes: usize) -> unit {
+    flow reserve(self, id: string, compact: bool, context_bytes: usize) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>] {
         reserve_generation(id, compact, context_bytes);
     }
 }
 
 impl NativeHistory ~ ResultPublication {
-    flow prepare_result(self, id: string, role: string, name: string, call: i64) -> i64 { return reserve_result(id, role, name, call); }
-    flow publish_result(self, id: string, index: i64, text: string) -> unit { complete_result(id, index, text); }
+    flow prepare_result(self, id: string, role: string, name: string, call: i64) -> i64 ![Memory, Error<StorageError>, Error<MemoryConflict>] { return reserve_result(id, role, name, call); }
+    flow publish_result(self, id: string, index: i64, text: string) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>, Error<BudgetExceeded>] { complete_result(id, index, text); }
     flow result_complete(self, id: string, index: i64) -> bool { return complete_event(id, index); }
-    flow select_summary(self, id: string, index: i64, through: i64) -> unit { adopt_summary(id, index, through); }
-    flow finish_command(self, id: string, call: i64) -> unit {
+    flow select_summary(self, id: string, index: i64, through: i64) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>] { adopt_summary(id, index, through); }
+    flow finish_command(self, id: string, call: i64) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>, Error<BudgetExceeded>] {
         handle tool_finished("command", call, "recorded result retained")
             with { SessionContext.current() => id; };
     }
-    flow acknowledge(self, id: string, call: i64, note: string) -> i64 { return acknowledge_command(id, call, note); }
+    flow acknowledge(self, id: string, call: i64, note: string) -> i64 ![Memory, Error<StorageError>, Error<MemoryConflict>, Error<BudgetExceeded>] { return acknowledge_command(id, call, note); }
 }
 
 flow entry(id: string) -> MemoryEntry<string, Session> {
@@ -81,21 +81,21 @@ impl NativeHistory ~ ConversationReader {
 }
 
 impl NativeHistory ~ ConversationWriter {
-    flow append(self, id: string, role: string, name: string, text: string, call: i64) -> i64 {
+    flow append(self, id: string, role: string, name: string, text: string, call: i64) -> i64 ![Memory, Error<StorageError>, Error<MemoryConflict>, Error<BudgetExceeded>] {
         return append_event(id, role, name, text, call, true);
     }
 }
 
 impl NativeHistory ~ ConversationCatalog {
-    flow rename(self, id: string, title: string) -> unit { rename(id, title); }
-    flow create(self, workspace: string, title: string) -> Session {
+    flow rename(self, id: string, title: string) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>] { rename(id, title); }
+    flow create(self, workspace: string, title: string) -> Session ![Memory, Error<StorageError>, Error<MemoryConflict>] {
         let session = empty_session(allocate(), workspace, title);
         Data.Sessions.insert(session.id, session);
         Data.Selected.put(workspace, session.id);
         return session;
     }
     flow selected(self, workspace: string) -> Option<string> { return Data.Selected.get(workspace); }
-    flow select(self, workspace: string, id: string) -> Session {
+    flow select(self, workspace: string, id: string) -> Session ![Memory, Error<StorageError>] {
         let value = self.load(id);
         if value.workspace != workspace { abort("native session belongs to a different workspace"); }
         match copy_status(id) {
@@ -165,11 +165,11 @@ flow append_event(id: string, role: string, name: string, text: string, call: i6
 }
 
 public flow append_historical(id: string, role: string, name: string, text: string) -> i64
-    ![Memory, Error<StorageError>, Error<MemoryConflict>] {
+    ![Memory, Error<StorageError>, Error<MemoryConflict>, Error<BudgetExceeded>] {
     return append_event(id, role, name, text, -1, false);
 }
 
-public flow read_message(id: string, index: i64) -> ChatMessage ![Memory, Error<StorageError>] {
+public flow read_message(id: string, index: i64) -> ChatMessage ![Memory, Error<StorageError>, Error<BudgetExceeded>] {
     let event_key = key(id, index);
     let event = match Data.Events.get(event_key) {
         Some(value) => value,
@@ -199,7 +199,7 @@ public flow reserve_result(id: string, role: string, name: string, call: i64) ->
 }
 
 public flow complete_result(id: string, index: i64, text: string) -> unit
-    ![Memory, Error<StorageError>, Error<MemoryConflict>] {
+    ![Memory, Error<StorageError>, Error<MemoryConflict>, Error<BudgetExceeded>] {
     let event = match Data.Events.get(key(id, index)) { Some(value) => value, None() => abort("reserved result not found"), };
     if !event.complete { write_event(id, index, event.role, event.name, text, event.call); }
 }
@@ -209,7 +209,7 @@ public flow complete_event(id: string, index: i64) -> bool ![Memory, Error<Stora
 }
 
 public flow acknowledge_command(id: string, call: i64, note: string) -> i64
-    ![Memory, Error<StorageError>, Error<MemoryConflict>] {
+    ![Memory, Error<StorageError>, Error<MemoryConflict>, Error<BudgetExceeded>] {
     let archive = NativeHistory {};
     if archive.load(id).pending != key(id, call) + " command" { abort("command recovery does not own the pending request"); }
     let recovery_event = archive.append(id, "recovery", "command_outcome_unknown", note, call);
@@ -219,7 +219,7 @@ public flow acknowledge_command(id: string, call: i64, note: string) -> i64
 }
 
 public flow record<T>(role: string, name: string, value: T, call: i64) -> i64
-    ![SessionContext, Memory, Error<StorageError>, Error<MemoryConflict>] {
+    ![SessionContext.current, Memory, Error<StorageError>, Error<MemoryConflict>, Error<BudgetExceeded>] {
     let id = perform SessionContext.current();
     let text = match encode(value, "history conversion failed", "history encoding failed") {
         Ok(value) => value, Err(error) => abort(error),
@@ -229,7 +229,7 @@ public flow record<T>(role: string, name: string, value: T, call: i64) -> i64
 }
 
 public flow tool_finished<T>(name: string, call: i64, result: T) -> unit
-    ![SessionContext, Memory, Error<StorageError>, Error<MemoryConflict>] {
+    ![SessionContext.current, Memory, Error<StorageError>, Error<MemoryConflict>, Error<BudgetExceeded>] {
     let id = perform SessionContext.current();
     let current = entry(id).value;
     if current.pending != key(id, call) + " " + name { abort("native completion does not match the pending request"); }
@@ -239,7 +239,7 @@ public flow tool_finished<T>(name: string, call: i64, result: T) -> unit
     Data.Sessions.put_versioned(id, value { pending = "" }, before.version);
 }
 
-public flow result_published(id: string, call: i64, name: string) -> bool ![Memory, Error<StorageError>] {
+public flow result_published(id: string, call: i64, name: string) -> bool ![Memory, Error<StorageError>, Error<BudgetExceeded>] {
     let current = entry(id).value;
     var index = call + 1;
     var published = false;
@@ -268,12 +268,12 @@ public flow pending_request(id: string) -> Option<PendingRequest> ![Memory, Erro
 }
 
 public flow observe_started<T>(name: string, request: T) -> i64
-    ![SessionContext, Memory, Error<StorageError>, Error<MemoryConflict>] {
+    ![SessionContext.current, Memory, Error<StorageError>, Error<MemoryConflict>, Error<BudgetExceeded>] {
     return record("observation_call", name, request, -1);
 }
 
 public flow observe_finished<T>(name: string, call: i64, result: T) -> unit
-    ![SessionContext, Memory, Error<StorageError>, Error<MemoryConflict>] {
+    ![SessionContext.current, Memory, Error<StorageError>, Error<MemoryConflict>, Error<BudgetExceeded>] {
     record("tool", name, result, call);
 }
 
@@ -295,7 +295,7 @@ public flow reserve_generation(id: string, compact: bool, context_bytes: usize) 
 }
 
 public flow publish_summary(id: string, text: string, through: i64) -> unit
-    ![Memory, Error<StorageError>, Error<MemoryConflict>] {
+    ![Memory, Error<StorageError>, Error<MemoryConflict>, Error<BudgetExceeded>] {
     let archive = NativeHistory {};
     let index = archive.append(id, "summary", "context_summary", text, -1);
     adopt_summary(id, index, through);
@@ -317,7 +317,7 @@ public flow copy_job(id: string) -> CopyJob ![Memory, Error<StorageError>] {
     return match copy_status(id) { Some(value) => value, None() => abort("conversation copy not found"), };
 }
 
-public flow copy_jobs(workspace: string) -> Array<CopyJob> ![Memory, Error<StorageError>] {
+public flow copy_jobs(workspace: string) -> Array<CopyJob> ![Memory, Error<StorageError>, Error<BudgetExceeded>] {
     var jobs: Array<CopyJob> = [];
     var cursor: Option<MemoryCursor> = None();
     @limits([Iterations(2147483647)]) while true {
@@ -356,7 +356,7 @@ public flow prepare_copy(workspace: string, title: string, kind: string, source:
     return job;
 }
 
-public flow copy_event(id: string, index: i64, role: string, name: string, text: string) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>] {
+public flow copy_event(id: string, index: i64, role: string, name: string, text: string) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>, Error<BudgetExceeded>] {
     let current = entry(id).value;
     if index == current.next_event { reserve_event(id, role, name, -1, false); }
     else if index > current.next_event { abort("conversation copy has a noncontiguous target index"); }
@@ -369,7 +369,7 @@ public flow copy_event(id: string, index: i64, role: string, name: string, text:
     write_event(id, index, role, name, text, -1);
 }
 
-public flow sealed_copy_source(id: string) -> Option<string> ![Memory, Error<StorageError>] {
+public flow sealed_copy_source(id: string) -> Option<string> ![Memory, Error<StorageError>, Error<BudgetExceeded>] {
     match Data.Events.get(key(id, 0)) {
         Some(event) => { if event.complete { return Some(read_message(id, 0).text); } },
         None() => (),

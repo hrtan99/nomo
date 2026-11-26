@@ -18,7 +18,7 @@ import nomo.tools.workspace.ReadOnlyRoot;
 
 // The application owns the order. Concrete confirmation, file IO, event
 // capture, timeline storage and terminal presentation are supplied as ports.
-public flow execute<S ~ WorkStages, Intent, Edited, P ~ WorkPersistence<Intent, Edited>, E ~ WorkEditor, T ~ WorkTimeline, O ~ WorkOutputSink>(stages: S, persistence: P, editor: E, timeline: T, output: O, input: WorkRequest, run: Run) -> i32 ![Console, Memory, Approval, Fs.read<ReadOnlyRoot>, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>] {
+public flow execute<S ~ WorkStages, Intent, Edited, P ~ WorkPersistence<Intent, Edited>, E ~ WorkEditor, T ~ WorkTimeline, O ~ WorkOutputSink>(stages: S, persistence: P, editor: E, timeline: T, output: O, input: WorkRequest, run: Run) -> i32 ![Console, Memory, Approval, Fs.read<ReadOnlyRoot>, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>, Error<BudgetExceeded>] {
     let prepared = stages.prepare(input) with {
         EditOriginal.read(path) => editor.read_original(path);
         HarnessProgress.write(line) => output.progress(line);

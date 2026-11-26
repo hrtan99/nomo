@@ -20,7 +20,7 @@ flow check_binding(slot: string, id: string, digest: string) -> string {
     return "";
 }
 
-public flow save(value: Record) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>] {
+public flow save(value: Record) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     if value.format != 1 || len(value.stdout) > message_frame_bytes() || len(value.stderr) > message_frame_bytes() { return Err("invalid check output"); }
     let problem = check_binding(value.slot, value.id, value.digest); if problem != "" { return Err(problem); }
     if Outputs.Rows.get_entry(value.slot) != None() { return Err("check output already recorded"); }

@@ -33,7 +33,7 @@ impl NativeChangeJournals ~ ChangeJournalStore {
     flow save(self, value: Journal) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>] { Data.Journals.put(value.id, stored(value)); }
     flow step(self, key: string) -> Option<Step> ![Memory, Error<StorageError>] { return match Data.Steps.get(key) { Some(value) => Some(step_view(value)), None() => None() }; }
     flow save_step(self, key: string, value: Step) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>] { Data.Steps.put(key, stored_step(value)); }
-    flow list(self, session: string) -> Array<Journal> ![Memory, Error<StorageError>] {
+    flow list(self, session: string) -> Array<Journal> ![Memory, Error<StorageError>, Error<BudgetExceeded>] {
         var result: Array<Journal> = [];
         var cursor: Option<MemoryCursor> = None();
         @limits([Iterations(2147483647)]) while true {

@@ -13,13 +13,13 @@ import nomo.domain.sessions.redaction.Policy;
 public type LegacyChatRepository = {};
 impl LegacyChatRepository ~ ChatRepository<LegacyEntry> {
     flow load(self) -> Result<Option<LegacyEntry>, string> { return load_legacy(); }
-    flow create(self) -> Result<LegacyEntry, string> {
+    flow create(self) -> Result<LegacyEntry, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
         let version = match save_legacy(fresh(), None()) { Ok(value) => value, Err(error) => { return Err(error); } };
         let saved = match load_legacy() { Ok(Some(value)) => value, _ => { return Err("session missing or invalid"); } };
         if saved.version.opaque != version.opaque || saved.value != fresh() { return Err("session creation changed"); }
         return Ok(saved);
     }
-    flow reserve(self, current: LegacyEntry, request: string) -> Result<LegacyEntry, string> {
+    flow reserve(self, current: LegacyEntry, request: string) -> Result<LegacyEntry, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
         if current.pending { return Err("event history pending; inspect without retry"); }
         let running = match begin(current.value, request) { Ok(value) => value, Err(error) => { return Err(error); } };
         let version = match save_legacy(running, Some(current)) { Ok(value) => value, Err(error) => { return Err(error); } };
@@ -30,7 +30,7 @@ impl LegacyChatRepository ~ ChatRepository<LegacyEntry> {
     flow verified(self, ticket: LegacyEntry) -> Result<bool, string> {
         return match load_legacy() { Ok(Some(value)) => Ok(value == ticket), Ok(None()) => Ok(false), Err(error) => Err(error) };
     }
-    flow finish(self, ticket: LegacyEntry, result: TurnResult) -> Result<bool, string> {
+    flow finish(self, ticket: LegacyEntry, result: TurnResult) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
         let next = match complete(ticket.value, result) { Ok(value) => value, Err(error) => { return Err(error); } };
         let completed = match result.completed { Some(value) => value, None() => { return Err("completed event batch missing"); } };
         return match save_completed(next, Some(ticket), completed.records) { Ok(_) => Ok(true), Err(error) => Err(error) };
@@ -44,10 +44,10 @@ public alias RecoverableTicket = MemoryEntry<string, Frame>;
 public type RecoverableChatRepository = { redaction: Policy, binding: string, high_input: bool };
 impl RecoverableChatRepository ~ ChatRepository<RecoverableTicket> {
     flow load(self) -> Result<Option<RecoverableTicket>, string> { return load_recoverable(self.redaction, self.binding); }
-    flow create(self) -> Result<RecoverableTicket, string> {
+    flow create(self) -> Result<RecoverableTicket, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
         return create_recoverable(self.redaction, self.binding, self.high_input);
     }
-    flow reserve(self, current: RecoverableTicket, request: string) -> Result<RecoverableTicket, string> {
+    flow reserve(self, current: RecoverableTicket, request: string) -> Result<RecoverableTicket, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
         let saved = match reserve_recoverable(current, request, self.redaction, self.binding) { Ok(value) => value, Err(error) => { return Err(error); } };
         if saved.value.chat.phase != "running" { return Err("reservation changed"); }
         return Ok(saved);
@@ -55,7 +55,7 @@ impl RecoverableChatRepository ~ ChatRepository<RecoverableTicket> {
     flow verified(self, ticket: RecoverableTicket) -> Result<bool, string> {
         return matches_version(ticket.version);
     }
-    flow finish(self, ticket: RecoverableTicket, result: TurnResult) -> Result<bool, string> {
+    flow finish(self, ticket: RecoverableTicket, result: TurnResult) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
         return match finish_recoverable(ticket, result, self.redaction, self.binding) { Ok(_) => Ok(true), Err(error) => Err(error) };
     }
     flow exists_error(self) -> string ![] { return "session already exists"; }
