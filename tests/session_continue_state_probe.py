@@ -128,7 +128,7 @@ import nomo.core.conversation.{State, Event};
 import nomo.session.session_state.{Snapshot, Request, Caps, Ledger, Operation, Reference};
 import nomo.session.continuation_state.{plan, continuing};
 import nomo.session.stub_snapshot.successor;
-import nomo.cli.continuation_args.parse_continue;
+import nomo.adapters.cli.arguments.continuation_args.parse_continue;
 '''
     for index, (label, body) in enumerate(cases):
         source += f'flow case_{index}() -> i32 {{ {body} return 0; }}\n'

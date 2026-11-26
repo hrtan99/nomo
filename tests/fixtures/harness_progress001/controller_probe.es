@@ -2,12 +2,15 @@ module app.harness_progress_probe;
 
 import std.io.println;
 import std.text.char_count as len;
-import nomo.core.conversation.{Event, State, add, fresh as empty_history};
-import nomo.model.model_tool_contract.{Session, LoopTurn};
-import nomo.harness.harness_tool_contract.{Context, Ledger, Observed, fresh};
-import nomo.harness.harness_model_tools.{Report, Failure, run_context, run_context_with};
-import nomo.harness.legacy_string_stages.LegacyStringStages;
-import nomo.model.harness_progress.HarnessProgress;
+import nomo.core.conversation.{Event, State};
+import nomo.domain.conversation.state.{add, fresh as empty_history};
+import nomo.domain.harness.model_tool_contract.{Session, LoopTurn};
+import nomo.domain.harness.harness_tool_contract.{Context, Observed, fresh};
+import nomo.harness.harness_tool_contract.{Ledger};
+import nomo.application.harness.read.ports.{Report, Failure};
+import nomo.adapters.model.harness.harness_model_tools.{run_context, run_context_with};
+import nomo.application.harness.effects.harness_legacy_string_stages.LegacyStringStages;
+import nomo.application.harness.effects.model_harness_progress.HarnessProgress;
 
 type Case = { label: string, mode: string, request: string, allowed: Array<string>, plan: string, answer: string, inspect_plan: bool, inspect_all: bool, expected: Result<Report, Failure> };
 flow usage(steps: i32, calls: i32, tools: i32) -> Ledger { return Ledger { steps = steps, calls = calls, tokens = calls * 2048, tools = tools, scan = tools * 4096 }; }

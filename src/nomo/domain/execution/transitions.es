@@ -1,6 +1,6 @@
 module nomo.domain.execution.transitions;
 
-import nomo.native.lifecycle.Attempt;
+import nomo.domain.execution.attempt.Attempt;
 
 public enum Transition { Dispatch, Return, Complete, CloseUnknown }
 

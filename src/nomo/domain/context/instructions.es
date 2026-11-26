@@ -13,7 +13,7 @@ public flow child_scopes(normalized: string) -> Array<string> {
     let parent = match rsplit_once(normalized, "/") { Some((value, _)) => value, None() => "." };
     var result: Array<string> = [];
     var scope = ".";
-    for component in split(parent, "/") limit Iterations(2147483647) {
+    for component in split(parent, "/") {
         if component == "." || component == "" { continue; }
         scope = if scope == "." { component } else { scope + "/" + component };
         result = result.push(scope);

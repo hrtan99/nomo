@@ -6,17 +6,18 @@ import std.codec.text.utf8_encode;
 import std.bytes.len as bytes_len;
 import std.json.{parse, JsonValue};
 import std.agent.message.Message;
-import nomo.core.read_text.{safe, bounded};
-import nomo.cli.read_cli.{parse_args, parse_line};
-import nomo.model.read_protocol.{decode_plan, decode_work_plan, decode_child, compact_frame, answer};
-import nomo.tools.read_contract.outcome;
-import nomo.tools.read_display.display;
-import nomo.tools.read_contract.ReadTools;
-import nomo.model.model_tool_contract.{Session, default_limits};
-import nomo.agent.read_tool_controller.run_loop_controller;
-import nomo.harness.read_tool_contract.fresh;
-import nomo.harness.read_model_tools.run_context;
-import nomo.harness.legacy_string_stages.{LegacyStringStages, LegacyChildModel};
+import nomo.domain.text.read_text.{safe, bounded};
+import nomo.adapters.cli.arguments.read_cli.{parse_args, parse_line};
+import nomo.domain.harness.read_protocol.{decode_plan, decode_work_plan, decode_child, compact_frame, answer};
+
+import nomo.domain.context.read_contract.outcome;
+import nomo.domain.context.read_display.display;
+import nomo.application.context.effects.tools_read_contract.ReadTools;
+import nomo.domain.harness.model_tool_contract.{Session, default_limits};
+import nomo.bootstrap.harness.read.run_loop_controller;
+import nomo.domain.harness.harness_tool_contract.fresh;
+import nomo.adapters.model.harness.read_model_tools.run_context;
+import nomo.application.harness.effects.harness_legacy_string_stages.{LegacyStringStages, LegacyChildModel};
 
 flow integration() -> bool {
     let result = run_context("请总结文件", ["sample.txt"], fresh(), "fixture-", true, false, false, false) with {

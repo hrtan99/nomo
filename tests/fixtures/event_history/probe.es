@@ -2,8 +2,8 @@ module app.event_history_probe;
 import std.io.println;
 import std.collections.len as count;
 import nomo.core.conversation.Event;
-import nomo.session.redaction.Policy;
-import nomo.session.event_history.{append, load};
+import nomo.domain.sessions.redaction.Policy;
+import nomo.adapters.storage.legacy.event_history.{append, load};
 
 public flow event_history_probe(args: Array<string>) -> i32 ![Console, Memory, Error<IOError>, Error<StorageError>, Error<IndexError>] {
     if count(args) != 1 { abort("select test phase"); }

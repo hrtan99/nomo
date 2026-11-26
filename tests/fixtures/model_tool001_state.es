@@ -5,11 +5,12 @@ import std.text.{split, char_count as len};
 import std.collections.len as count;
 import std.json.{JsonValue, stringify};
 import std.agent.message.Message;
-import nomo.core.conversation.{State, Event, fresh, add, stop};
-import nomo.model.model_tool_contract.{Action, Context, Session, Limits, fresh_loop, default_limits,
-    decode_reply, allowed_error, question_error, context_error, budget_error, charge_action};
-import nomo.agent.model_tool.run_loop;
-import nomo.tools.path_policy.valid_path;
+import nomo.core.conversation.{State, Event};
+import nomo.domain.conversation.state.{fresh, add, stop};
+import nomo.domain.harness.model_tool_contract.{Action, Session, Limits, fresh_loop, default_limits, decode_reply, question_error, context_error, budget_error, charge_action};
+import nomo.domain.harness.tool_context.{Context, allowed_error};
+import nomo.adapters.model.legacy.model_tool.run_loop;
+import nomo.domain.context.path_policy.valid_path;
 
 flow emit_action(value: Action) -> unit {
     let message = Message.new(value);

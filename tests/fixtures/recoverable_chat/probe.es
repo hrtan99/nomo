@@ -3,10 +3,11 @@ module app.recoverable_chat_probe;
 import std.io.println;
 import nomo.core.conversation.Event;
 import nomo.harness.harness_tool_contract.Ledger;
-import nomo.harness.harness_tool_chat_contract.{Invocation, Previous, Completed, TurnResult};
-import nomo.session.redaction.Policy;
-import nomo.session.recoverable_chat_store.{create, load, reserve, finish, conversation, record_work};
-import nomo.session.event_text_codec.decode;
+import nomo.harness.harness_tool_chat_contract.{Invocation, Previous};
+import nomo.domain.harness.harness_tool_chat_contract.{Completed, TurnResult};
+import nomo.domain.sessions.redaction.Policy;
+import nomo.adapters.storage.legacy.recoverable_chat_store.{create, load, reserve, finish, conversation, record_work};
+import nomo.domain.sessions.event_text_codec.decode;
 import std.collections.len as count;
 
 flow result(turn: i32, request: string, answer: string, maximum: Ledger) -> TurnResult {

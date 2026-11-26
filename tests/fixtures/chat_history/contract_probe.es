@@ -1,9 +1,11 @@
 module app.chat_session_contract_probe;
 
 import std.io.println;
-import nomo.harness.harness_tool_chat_contract.{Invocation, Previous, Completed, TurnResult, default_maximum};
+import nomo.harness.harness_tool_chat_contract.{Invocation, Previous};
+import nomo.domain.harness.harness_tool_chat_contract.{Completed, TurnResult, default_maximum};
 import nomo.harness.harness_tool_contract.Ledger;
-import nomo.session.chat_session_contract.{Session, fresh, invalid, begin, complete};
+import nomo.session.chat_session_contract.{Session};
+import nomo.domain.sessions.chat_session_contract.{fresh, invalid, begin, complete};
 
 public flow outcome(turns: i32, request: string, answer: string) -> TurnResult {
     let prior = Previous { task = "Answer the question", result = answer, tool = "", outcome = "", answer = answer };

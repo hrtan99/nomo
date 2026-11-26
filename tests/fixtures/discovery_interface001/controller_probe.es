@@ -2,22 +2,25 @@ module app.discovery_interface_probe;
 
 import std.io.println;
 import std.text.{char_count as len, split, from_i32};
-import nomo.session.work_chain_discovery.{DiscoveryAuthority, discover as discover_controller, latest_parent as latest_controller};
-import nomo.session.work_chain.{Record, Caps, initial, successor, validate, linked, publish_partial, confirm,
-    maximum, turn_caps, zero, summary_reservation, values, reserve, policy, caps_error, fingerprint};
+import nomo.application.sessions.effects.session_work_chain_discovery.{DiscoveryAuthority};
+import nomo.application.sessions.discovery.{discover as discover_controller, latest_parent as latest_controller};
+import nomo.session.work_chain.{Record, Caps};
+import nomo.domain.sessions.work_chain.{initial, successor, validate, linked, publish_partial, confirm, maximum, turn_caps, zero, summary_reservation, values, reserve, policy, caps_error, fingerprint};
 import nomo.session.work_record.Record as WorkRecord;
-import nomo.session.work_record.partial;
-import nomo.tools.edit_file.prepare_original;
-import nomo.tools.edit_binding.bind;
-import nomo.harness.harness_work_contract.Evidence;
+import nomo.domain.sessions.work_record.partial;
+import nomo.domain.mutations.edit_contract.prepare_original;
+import nomo.domain.mutations.edit_binding.bind;
+import nomo.domain.harness.harness_work_contract.Evidence;
 import nomo.harness.harness_tool_contract.Ledger;
 
 
-import nomo.session.work_chain_selection.{Snapshot, ObservedRow, ObservedJournal, Selector, select as choose, validate as selection_error, eligible, journal_phase};
-import nomo.session.work_chain_journal_contract.CapturedJournal as Journal;
-import nomo.session.work_chain_observation.{SessionObservation, ObservationPass, observe as observe_sessions};
-import nomo.cli.work_chain_selection_args.{Command, parse as selection_args};
-import nomo.cli.terminal_args.{parse as startup, parse_once, bind_parent, work_arguments, show_arguments};
+import nomo.domain.sessions.work_chain_selection.{Snapshot, ObservedRow, ObservedJournal, Selector, select as choose, validate as selection_error, eligible, journal_phase};
+import nomo.domain.sessions.work_chain_journal_contract.CapturedJournal as Journal;
+import nomo.application.sessions.effects.session_work_chain_observation.{SessionObservation};
+import nomo.domain.sessions.work_chain_observation.{ObservationPass};
+import nomo.application.sessions.observation.{observe as observe_sessions};
+import nomo.adapters.cli.arguments.work_chain_selection_args.{Command, parse as selection_args};
+import nomo.adapters.cli.arguments.terminal_args.{parse as startup, parse_once, bind_parent, work_arguments, show_arguments};
 
 type Check = { label: string, passed: bool };
 flow from_values(value: Array<i32>) -> Caps {

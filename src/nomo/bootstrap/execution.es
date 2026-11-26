@@ -1,11 +1,9 @@
 module nomo.bootstrap.execution;
 
-import nomo.native.lifecycle.Attempt;
-import nomo.adapters.etas.attempts.NativeAttempts;
-import nomo.adapters.etas.conversations.NativeHistory;
-import nomo.application.native.execution.ports.AttemptRepository;
-import nomo.application.native.execution.service.{turn_available as require_turn, begin as prepare_attempt,
-    dispatching as dispatch_attempt, returned as publish_return, complete_attempt as complete, resolve as reconcile};
+import nomo.domain.execution.attempt.Attempt;
+import nomo.adapters.storage.attempts.NativeAttempts;
+import nomo.adapters.storage.conversations.NativeHistory;
+import nomo.application.execution.service.{turn_available as require_turn, begin as prepare_attempt, dispatching as dispatch_attempt, returned as publish_return, complete_attempt as complete, resolve as reconcile};
 
 public flow attempts(session: string, unresolved: bool) -> Array<Attempt> ![Memory, Error<StorageError>] {
     return (NativeAttempts {}).list(session, unresolved);

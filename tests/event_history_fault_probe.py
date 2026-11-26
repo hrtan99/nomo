@@ -10,7 +10,7 @@ def main():
  context=out/'context';context.mkdir(mode=0o700);(context/'context.txt').write_text('blue\n');state=out/'state';state.mkdir(mode=0o700)
  server=HTTPServer(('127.0.0.1',0),Fake);server.phases=[];server.failed=False;thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start()
  try:
-  source=project/'src/nomo/entry/read_session.es';text=source.read_text();needle='    match save(next, Some(reserved)) { Ok(_) => {} Err(error) => { println("REFUSED " + error); return 1; } }';assert text.count(needle)==1;text=text.replace(needle,'    if next.invocation.admitted == 1 { println("INJECTED between event and chat commit"); return 1; }\n'+needle);source.write_text(text)
+  source=project/'src/nomo/adapters/cli/legacy/read_session.es';text=source.read_text();needle='    match save(next, Some(reserved)) { Ok(_) => {} Err(error) => { println("REFUSED " + error); return 1; } }';assert text.count(needle)==1;text=text.replace(needle,'    if next.invocation.admitted == 1 { println("INJECTED between event and chat commit"); return 1; }\n'+needle);source.write_text(text)
   manifest=project/'etas.toml';text=manifest.read_text()
   for name in ('nomo-read-session-new','nomo-read-session-existing'):
    start=text.index('[runtime.profiles.'+name+'.model]');end=text.index('[runtime.profiles.'+name+'.model.timeout]',start);part=text[start:end].replace('https://api.minimax.cn/v1','http://host.docker.internal:%d/v1'%server.server_port).replace('allow_private = false','allow_private = true');text=text[:start]+part+text[end:]

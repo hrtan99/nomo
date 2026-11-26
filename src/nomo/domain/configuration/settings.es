@@ -10,6 +10,11 @@ public flow defaults() -> Settings {
         keep_messages = 12, command_timeout = 600, ignore = [], instructions = [], check = [] };
 }
 
+public flow with_check(settings: Settings, override: Option<Array<string>>) -> Settings {
+    let check = match override { Some(value) => value, None() => { return settings; } };
+    return settings { check };
+}
+
 public flow validate(settings: Settings) -> Settings {
     if settings.max_output_tokens < 1 || settings.max_output_tokens > 131072 || settings.context_window <= settings.max_output_tokens {
         abort("context_window must exceed max_output_tokens (1..131072)");

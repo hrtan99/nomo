@@ -6,13 +6,14 @@ import std.bytes.len as byte_count;
 import std.codec.text.utf8_encode;
 import std.json.{JsonValue, parse, stringify};
 import std.agent.message.Message;
-import nomo.cli.harness_edit_args.Input;
-import nomo.cli.harness_work_args.Work;
-import nomo.cli.harness_work_args.parse as parse_args;
+import nomo.adapters.cli.arguments.harness_edit_args.Input;
+import nomo.adapters.cli.arguments.harness_work_args.Work;
+import nomo.adapters.cli.arguments.harness_work_args.parse as parse_args;
 import nomo.harness.harness_tool_contract.Ledger as ReadLedger;
 import nomo.harness.harness_edit_contract.Ledger as EditLedger;
-import nomo.harness.harness_edit_contract.Context as EditContext;
-import nomo.harness.harness_work_contract.{Evidence, Context, Ledger, fresh, ledger_error, bump_edit, native_tokens, evidence_error, finish_evidence, context_error};
+import nomo.domain.harness.harness_edit_contract.Context as EditContext;
+import nomo.domain.harness.harness_work_contract.{Evidence, Context, fresh, ledger_error, bump_edit, native_tokens, evidence_error, finish_evidence, context_error};
+import nomo.harness.harness_work_contract.{Ledger};
 
 type Check = { label: string, passed: bool };
 flow slash() -> string { return std.text.from_char('\\'); }

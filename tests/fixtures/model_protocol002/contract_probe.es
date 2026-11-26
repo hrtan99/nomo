@@ -5,26 +5,29 @@ import std.agent.message.Message;
 import std.json.{JsonValue, parse, stringify};
 import std.codec.text.utf8_encode;
 import std.bytes.len as byte_count;
-import nomo.harness.harness_edit_contract.Context as EditContext;
-import nomo.harness.harness_work_contract.{Context as WorkContext, context_error as work_context_error};
+import nomo.domain.harness.harness_edit_contract.Context as EditContext;
+import nomo.domain.harness.harness_work_contract.{Context as WorkContext, context_error as work_context_error};
 import std.text.{split, contains, char_count as len};
-import nomo.core.text.printable;
-import nomo.harness.harness_model_contract.{decode_read_plan, read_aggregate_error};
-import nomo.harness.harness_model_contract.decode_plan as legacy_read_plan;
-import nomo.model.model_tool_contract.{decode_work_reply, decode_reply};
-import nomo.harness.harness_edit_contract.{decode_work_plan, decode_work_edit, work_summary_error};
-import nomo.harness.harness_edit_contract.decode_plan as legacy_edit_plan;
-import nomo.harness.harness_edit_contract.decode_edit as legacy_edit_child;
-import nomo.harness.model_plan_diagnostic.{response_error, response_text};
-import nomo.tools.edit_proposal.{Request, propose};
-import nomo.session.work_chain.{Record, initial, publish_partial, confirm, successor, validate, turn_caps, summary_reservation};
+import nomo.domain.text.text.printable;
+import nomo.domain.harness.harness_model_contract.{decode_read_plan, read_aggregate_error};
+
+import nomo.domain.harness.harness_model_contract.decode_plan as legacy_read_plan;
+import nomo.domain.harness.model_tool_contract.{decode_work_reply, decode_reply};
+import nomo.domain.harness.harness_edit_contract.{decode_work_plan, decode_work_edit, work_summary_error};
+
+import nomo.domain.harness.harness_edit_contract.decode_plan as legacy_edit_plan;
+import nomo.domain.harness.harness_edit_contract.decode_edit as legacy_edit_child;
+import nomo.domain.harness.model_plan_diagnostic.{response_error, response_text};
+import nomo.domain.mutations.edit_proposal.{Request, propose};
+import nomo.session.work_chain.{Record};
+import nomo.domain.sessions.work_chain.{initial, publish_partial, confirm, successor, validate, turn_caps, summary_reservation};
 import nomo.session.work_chain_journal.Record as Journal;
-import nomo.session.work_record.partial;
-import nomo.tools.edit_file.prepare_original;
-import nomo.tools.edit_binding.bind;
-import nomo.harness.harness_work_contract.Evidence;
+import nomo.domain.sessions.work_record.partial;
+import nomo.domain.mutations.edit_contract.prepare_original;
+import nomo.domain.mutations.edit_binding.bind;
+import nomo.domain.harness.harness_work_contract.Evidence;
 import nomo.harness.harness_tool_contract.Ledger as ReadLedger;
-import nomo.entry.work_chain_display.render;
+import nomo.adapters.cli.legacy.work_chain_display.render;
 
 type Check = { label: string, passed: bool };
 flow slash() -> string { return std.text.from_char('\\'); }

@@ -2,13 +2,13 @@ module app.contract_probe;
 
 import std.io.println;
 import std.text.char_count as len;
-import nomo.session.work_chain.{Record, Caps, initial, initial_user_context, successor, validate, linked, publish_partial, confirm,
-    maximum, turn_caps, zero, summary_reservation, values, reserve, policy, caps_error, fingerprint};
+import nomo.session.work_chain.{Record, Caps};
+import nomo.domain.sessions.work_chain.{initial, initial_user_context, successor, validate, linked, publish_partial, confirm, maximum, turn_caps, zero, summary_reservation, values, reserve, policy, caps_error, fingerprint};
 import nomo.session.work_record.Record as WorkRecord;
-import nomo.session.work_record.partial;
-import nomo.tools.edit_file.prepare_original;
-import nomo.tools.edit_binding.bind;
-import nomo.harness.harness_work_contract.Evidence;
+import nomo.domain.sessions.work_record.partial;
+import nomo.domain.mutations.edit_contract.prepare_original;
+import nomo.domain.mutations.edit_binding.bind;
+import nomo.domain.harness.harness_work_contract.Evidence;
 import nomo.harness.harness_tool_contract.Ledger;
 
 type Check = { label: string, passed: bool };

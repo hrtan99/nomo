@@ -1,19 +1,20 @@
 module app.main;
 
+import nomo.bootstrap.instructions;
 import std.io.{println, IOError};
 import std.effects.Fs;
 import std.fs.{ReadLimitError, IOError as FileError};
 import nomo.native.workspace.ProjectRoot;
-import nomo.native.project.load_instructions;
-import nomo.core.json.encode;
-import nomo.native.history.SessionContext;
-import nomo.adapters.etas.conversations.NativeHistory;
-import nomo.application.native.conversation.ports.{ConversationCatalog, ConversationReader, ConversationWriter};
-import nomo.application.native.configuration.ports.{ConfigurationSource, ConfigurationCodec, ConfigurationConversion, ConfigurationCache};
-import nomo.application.native.configuration.service.load as load_settings;
-import nomo.application.native.instructions.ports.InstructionFiles;
-import nomo.application.native.instructions.service.load as load_guidance;
-import nomo.adapters.codec.configuration.{decode, fingerprint, observation};
+import nomo.adapters.filesystem.instruction_tools.load_instructions;
+import nomo.domain.serialization.json.encode;
+import nomo.application.conversation.session_context.SessionContext;
+import nomo.adapters.storage.conversations.NativeHistory;
+import nomo.application.conversation.ports.{ConversationCatalog, ConversationReader, ConversationWriter};
+import nomo.application.configuration.ports.{ConfigurationSource, ConfigurationCodec, ConfigurationConversion, ConfigurationCache};
+import nomo.application.configuration.service.load as load_settings;
+import nomo.application.instructions.ports.InstructionFiles;
+import nomo.application.instructions.service.load as load_guidance;
+import nomo.adapters.storage.codec.configuration.{decode, fingerprint, observation};
 import nomo.domain.configuration.conversion.{ConfigurationOutput, Converted, CacheReference};
 import nomo.domain.configuration.settings.Settings;
 import nomo.domain.context.instructions.ProjectInstruction;
@@ -91,7 +92,7 @@ public flow main(args: Array<string>) -> i32 ![Memory, Console, Error<StorageErr
 }
 
 public flow physical_guidance(args: Array<string>) -> i32 ![Console, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Error<FileError>, Error<ReadLimitError>, Error<IOError>] {
-    let guidance = load_instructions("src/future/new.py");
+    let guidance = handle { load_instructions("src/future/new.py") } with instructions.bindings();
     if guidance != [ProjectInstruction { scope = ".", path = "AGENTS.md", text = "Root guidance" },
                     ProjectInstruction { scope = "src", path = "src/AGENTS.md", text = "Scoped guidance" }] {
         abort("physical root-to-leaf guidance changed");

@@ -1,60 +1,48 @@
 module nomo.main;
 
-import nomo.core.large_context.{request_bytes};
-
+import nomo.domain.context.large_context.request_bytes;
 import std.io.{println, read_line};
 import std.text.{trim, char_count as len};
-import nomo.cli.config.load;
-import nomo.agent.loop.{turn, reject};
-import nomo.core.conversation.fresh;
-import nomo.entry.model_entry.run_model;
-import nomo.entry.tool_agent.run_tools;
-import nomo.entry.session_demo.demo;
-import nomo.entry.model_tool_entry.run_model_tools;
-import nomo.entry.harness_entry.run as run_harness;
-import nomo.entry.harness_chat.run as run_harness_chat;
-import nomo.entry.harness_model_entry.run as run_harness_model;
-import nomo.entry.harness_model_tools_entry.run as run_harness_model_tools;
-import nomo.entry.read_model_tools_entry.run as run_read_model_tools;
-import nomo.entry.harness_model_tools_chat.run as run_harness_model_tools_chat;
-import nomo.entry.read_model_tools_chat.run as run_read_model_tools_chat;
-import nomo.entry.read_session.run as run_read_session;
-import nomo.entry.recoverable_read_session.{run as run_recoverable_read_session, status as run_recoverable_read_status};
-import nomo.entry.history_work.run as run_history_work;
-import nomo.entry.recoverable_history_work.{run as run_recoverable_history_work, abandon as abandon_recoverable_work};
-import nomo.entry.recoverable_history_followup.{run as run_recoverable_history_followup, abandon as abandon_recoverable_followup};
-import nomo.entry.recoverable_history_followup_check.run as run_recoverable_history_followup_check;
-import nomo.entry.recoverable_history_check.run as run_recoverable_history_check;
-import nomo.entry.history_followup.run as run_history_followup;
-import nomo.entry.history_followup_check.run as run_history_followup_check;
-import nomo.entry.history_check.run as run_history_check;
-import nomo.entry.recovery_decision.run as run_recovery_decision;
-import nomo.entry.read_session.status as read_session_status_run;
-import nomo.entry.harness_checkpoint_entry.run_init as checkpoint_init;
-import nomo.entry.harness_checkpoint_entry.run_save as checkpoint_save;
-import nomo.entry.harness_checkpoint_entry.run_show as checkpoint_show;
-import nomo.entry.harness_successor_entry.run_continue as checkpoint_continue;
-import nomo.entry.harness_successor_entry.run_show as successor_show;
-import nomo.entry.session_lifecycle.run_help as lifecycle_help;
-import nomo.entry.session_lifecycle.run_init as lifecycle_init;
-import nomo.entry.session_lifecycle.run_new as lifecycle_new;
-import nomo.entry.session_lifecycle.run_resume as lifecycle_resume;
-import nomo.entry.session_lifecycle.run_show as lifecycle_show;
-import nomo.entry.edit_entry.run_apply as edit_apply_run;
-import nomo.entry.edit_entry.run_status as edit_status_run;
-import nomo.entry.edit_entry.run_help as edit_help_run;
-import nomo.entry.harness_edit_entry.run as harness_edit_run;
-import nomo.entry.harness_work_entry.run as harness_work_run;
-import nomo.entry.work_session_entry.{run_save as work_save_run, run_show as work_show_run};
-import nomo.entry.work_chain_entry.{run_new as chain_new_run, run_continue as chain_continue_run, run_inspect as chain_inspect_run, run_observed_new as chain_observed_new_run, run_observed_continue as chain_observed_continue_run};
-import nomo.entry.work_chain_help.help as chain_help_run;
-import nomo.entry.terminal_entry.run as terminal_run;
-import nomo.entry.terminal_entry.run_once as terminal_once_run;
-import nomo.entry.terminal_help.help as terminal_help_run;
-import nomo.entry.work_chain_sessions.{run_sessions as chain_sessions_run, run_show as chain_show_run};
-import nomo.entry.user_context_entry.run as user_context_new_run;
-import nomo.project.entry.run as project_run;
-import nomo.native.entry.run as native_project_run;
+import nomo.adapters.cli.arguments.config.load;
+import nomo.bootstrap.harness.stub.{turn, reject};
+import nomo.domain.conversation.state.fresh;
+import nomo.adapters.cli.legacy.model_entry.run_model;
+import nomo.adapters.cli.legacy.tool_agent.run_tools;
+import nomo.adapters.cli.legacy.session_demo.demo;
+import nomo.adapters.cli.legacy.model_tool_entry.run_model_tools;
+import nomo.adapters.cli.legacy.harness_entry.run as run_harness;
+import nomo.adapters.cli.legacy.harness_chat.run as run_harness_chat;
+import nomo.adapters.cli.legacy.harness_model_entry.run as run_harness_model;
+import nomo.adapters.cli.legacy.harness_model_tools_entry.run as run_harness_model_tools;
+import nomo.adapters.cli.legacy.read_model_tools_entry.run as run_read_model_tools;
+import nomo.adapters.cli.legacy.harness_model_tools_chat.run as run_harness_model_tools_chat;
+import nomo.adapters.cli.legacy.read_model_tools_chat.run as run_read_model_tools_chat;
+import nomo.adapters.cli.legacy.read_session.{run as run_read_session, status as read_session_status_run};
+import nomo.adapters.cli.legacy.recoverable_read_session.{run as run_recoverable_read_session, status as run_recoverable_read_status};
+import nomo.adapters.cli.legacy.history_work.run as run_history_work;
+import nomo.adapters.cli.legacy.recoverable_history_work.{run as run_recoverable_history_work, abandon as abandon_recoverable_work};
+import nomo.adapters.cli.legacy.recoverable_history_followup.{run as run_recoverable_history_followup, abandon as abandon_recoverable_followup};
+import nomo.adapters.cli.legacy.recoverable_history_followup_check.run as run_recoverable_history_followup_check;
+import nomo.adapters.cli.legacy.recoverable_history_check.run as run_recoverable_history_check;
+import nomo.adapters.cli.legacy.history_followup.run as run_history_followup;
+import nomo.adapters.cli.legacy.history_followup_check.run as run_history_followup_check;
+import nomo.adapters.cli.legacy.history_check.run as run_history_check;
+import nomo.adapters.cli.legacy.recovery_decision.run as run_recovery_decision;
+import nomo.adapters.cli.legacy.harness_checkpoint_entry.{run_init as checkpoint_init, run_save as checkpoint_save, run_show as checkpoint_show};
+import nomo.adapters.cli.legacy.harness_successor_entry.{run_continue as checkpoint_continue, run_show as successor_show};
+import nomo.adapters.cli.legacy.session_lifecycle.{run_help as lifecycle_help, run_init as lifecycle_init, run_new as lifecycle_new, run_resume as lifecycle_resume, run_show as lifecycle_show};
+import nomo.adapters.cli.legacy.edit_entry.{run_apply as edit_apply_run, run_status as edit_status_run, run_help as edit_help_run};
+import nomo.adapters.cli.legacy.harness_edit_entry.run as harness_edit_run;
+import nomo.adapters.cli.legacy.harness_work_entry.run as harness_work_run;
+import nomo.adapters.cli.legacy.work_session_entry.{run_save as work_save_run, run_show as work_show_run};
+import nomo.adapters.cli.legacy.work_chain_entry.{run_new as chain_new_run, run_continue as chain_continue_run, run_inspect as chain_inspect_run, run_observed_new as chain_observed_new_run, run_observed_continue as chain_observed_continue_run};
+import nomo.adapters.cli.legacy.work_chain_help.help as chain_help_run;
+import nomo.adapters.cli.legacy.terminal_entry.{run as terminal_run, run_once as terminal_once_run};
+import nomo.adapters.cli.legacy.terminal_help.help as terminal_help_run;
+import nomo.adapters.cli.legacy.work_chain_sessions.{run_sessions as chain_sessions_run, run_show as chain_show_run};
+import nomo.adapters.cli.legacy.user_context_entry.run as user_context_new_run;
+import nomo.adapters.cli.project_agent.run as project_run;
+import nomo.bootstrap.main.run as native_project_run;
 
 // The runtime returns i32 as data; every command uses this same OS-failure boundary.
 flow completed(status: i32, message: string) -> i32 {
@@ -262,7 +250,7 @@ flow main(args: Array<string>) -> i32 {
     }
     println("Nomo foundation (stub, in-memory). /help for limits; /exit to quit.");
     var lines: i32 = 0;
-    while lines < 16 limit Iterations(16) {
+    @limits([Iterations(16)]) while lines < 16 {
         let input = read_line();
         if input == "" { println("bye: EOF"); return 0; }
         lines = lines + 1;

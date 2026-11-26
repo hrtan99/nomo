@@ -1,8 +1,9 @@
 module app.chat_four_probe;
 import std.io.println;
 import nomo.harness.harness_tool_contract.Ledger;
-import nomo.harness.harness_tool_chat_contract.{Invocation, Previous, empty, default_maximum, fresh_invocation, turn_error, admission_error, combine};
-import nomo.harness.read_tool_chat_contract.{extended_invocation, extended_maximum, extended_admission_error, extended_turn_error, extended_combine};
+import nomo.harness.harness_tool_chat_contract.{Invocation, Previous};
+import nomo.domain.harness.harness_tool_chat_contract.{empty, default_maximum, fresh_invocation, turn_error, admission_error, combine};
+import nomo.domain.harness.read_tool_chat_contract.{extended_invocation, extended_maximum, extended_admission_error, extended_turn_error, extended_combine};
 
 flow ledger(steps: i32, calls: i32, tools: i32) -> Ledger {
     return Ledger { steps = steps, calls = calls, tokens = calls * 2048, tools = tools, scan = tools * 4096 };

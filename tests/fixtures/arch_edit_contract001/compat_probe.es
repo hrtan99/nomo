@@ -1,11 +1,11 @@
 module app.contract_probe;
 
 import std.io.println;
-import nomo.tools.edit_contract.{Prepared, Selector, Confirmed, prepare_original};
-import nomo.tools.edit_file.Prepared as AdapterPrepared;
-import nomo.tools.edit_file.prepare_original as adapter_prepare_original;
-import nomo.entry.edit_coordinator.Selector as CoordinatorSelector;
-import nomo.entry.edit_coordinator.Confirmed as CoordinatorConfirmed;
+import nomo.domain.mutations.edit_contract.{Prepared, Selector, Confirmed, prepare_original};
+import nomo.domain.mutations.edit_contract.Prepared as AdapterPrepared;
+import nomo.domain.mutations.edit_contract.prepare_original as adapter_prepare_original;
+import nomo.domain.mutations.edit_contract.Selector as CoordinatorSelector;
+import nomo.domain.mutations.edit_contract.Confirmed as CoordinatorConfirmed;
 import nomo.session.edit_operation.Binding;
 
 flow adapter_value(value: AdapterPrepared) -> Prepared { return value; }

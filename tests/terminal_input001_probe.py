@@ -129,7 +129,7 @@ def copy_closure(source, project):
         if match:
             require(match[1] not in modules, 'Duplicate module: ' + match[1])
             modules[match[1]] = path
-    pending = ['nomo.entry.terminal_entry', 'nomo.entry.terminal_help']
+    pending = ['nomo.adapters.cli.legacy.terminal_entry', 'nomo.adapters.cli.legacy.terminal_help']
     selected = set()
     while pending:
         name = pending.pop()

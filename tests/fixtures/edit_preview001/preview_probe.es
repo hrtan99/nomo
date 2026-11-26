@@ -7,10 +7,13 @@ import std.effects.Fs;
 import std.text.split;
 import std.bytes.len as byte_count;
 import std.codec.text.utf8_encode;
-import nomo.ui.edit_diff.render;
-import nomo.session.session_display.ascii_json_with;
-import nomo.tools.edit_file.{EditableRoot, prepare_original};
-import nomo.entry.edit_coordinator.{Selector, Approval, execute};
+import nomo.adapters.cli.display.edit_diff.render;
+import nomo.domain.sessions.session_display.ascii_json_with;
+import nomo.tools.edit_file.{EditableRoot};
+import nomo.domain.mutations.edit_contract.{prepare_original};
+import nomo.domain.mutations.edit_contract.{Selector};
+import nomo.application.edit.effects.{Approval};
+import nomo.adapters.cli.legacy.edit_coordinator.{execute};
 
 type Check = { label: string, before: string, after: string, expected: string, error: string };
 flow slash() -> string { return std.text.from_char('\\'); }

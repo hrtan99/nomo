@@ -2,8 +2,9 @@ module nomo.domain.transfer.archive;
 
 import std.json.JsonValue;
 import nomo.domain.conversation.messages.ChatMessage;
-import nomo.native.history.{Session, CopyJob};
-import nomo.native.lifecycle.Attempt;
+import nomo.domain.conversation.session.Session;
+import nomo.domain.transfer.copy.CopyJob;
+import nomo.domain.execution.attempt.Attempt;
 
 public type PortableInfo = { id: string, workspace: string, title: string, metadata: string };
 public type PortableArchive = { format: string, session: PortableInfo, events: Array<ChatMessage> };

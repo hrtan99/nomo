@@ -7,12 +7,12 @@ import std.text.from_i64;
 import nomo.native.workspace.ProjectRoot;
 import nomo.domain.process.jobs.{Job, JobEvent};
 import nomo.domain.process.observations.ProcessEvent;
-import nomo.application.native.processes.ports.{ProcessControl, JobRepository, OutputArchive, ProcessPreviewSink};
-import nomo.application.native.processes.service;
-import nomo.adapters.etas.conversations.NativeHistory;
-import nomo.adapters.etas.attempts.NativeAttempts;
-import nomo.application.native.conversation.ports.{ConversationCatalog, ConversationReader};
-import nomo.application.native.execution.ports.AttemptRepository;
+import nomo.application.processes.ports.{ProcessControl, JobRepository, OutputArchive, ProcessPreviewSink};
+import nomo.application.processes.service;
+import nomo.adapters.storage.conversations.NativeHistory;
+import nomo.adapters.storage.attempts.NativeAttempts;
+import nomo.application.conversation.ports.{ConversationCatalog, ConversationReader};
+import nomo.application.execution.ports.AttemptRepository;
 
 alias Schema = MemoryRegion<{ Jobs: Store<string, Job>, Outputs: Store<string, JobEvent> }>;
 let Data = std.memory.region<Schema>(stable_id = "nomo-process-controller-fixture-v1", store = "process-controller-fixture");
@@ -53,7 +53,7 @@ impl Jobs ~ JobRepository {
     flow list(self, session: string) -> Array<Job> ![Memory, Error<StorageError>] {
         let page = Data.Jobs.page(None(), 100);
         var result: Array<Job> = [];
-        for entry in page.entries limit Iterations(100) { if entry.value.session == session { result = result.push(entry.value); } }
+        @limits([Iterations(100)]) for entry in page.entries   { if entry.value.session == session { result = result.push(entry.value); } }
         return result;
     }
 }

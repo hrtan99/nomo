@@ -1,8 +1,8 @@
 module nomo.model_tool_probe;
 
 import nomo.core.conversation.{Event, State};
-import nomo.model.model_tool_contract.{Session, Limits};
-import nomo.agent.model_tool.run_loop;
+import nomo.domain.harness.model_tool_contract.{Session, Limits};
+import nomo.adapters.model.legacy.model_tool.run_loop;
 import std.agent.message.Message;
 import std.json.{JsonValue, stringify};
 import std.io.println;

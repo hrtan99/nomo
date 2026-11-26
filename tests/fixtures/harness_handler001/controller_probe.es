@@ -2,17 +2,25 @@ module app.harness_handler_probe;
 
 import std.io.println;
 import std.text.char_count as len;
-import nomo.core.conversation.{Event, State, add, fresh as empty_history};
-import nomo.model.model_tool_contract.{Session, LoopTurn, Context as ChildContext, question_error, default_limits};
-import nomo.agent.model_tool.run_loop_with;
-import nomo.harness.harness_tool_contract.{Context, Ledger, fresh};
-import nomo.harness.harness_model_contract.decode_plan;
-import nomo.harness.harness_model_tools.{Report, Failure, run_context};
-import nomo.harness.legacy_string_stages.{LegacyStringStages, LegacyChildModel, LegacyEditStages};
-import nomo.harness.harness_work_contract.{Context as WorkContext, Evidence, Ledger as WorkLedger};
-import nomo.harness.harness_edit_contract.{Context as EditContext, Ledger as EditLedger};
-import nomo.entry.harness_work_entry.{Completed, Summary, Failure as WorkFailure, finish_summary};
-import nomo.tools.edit_encoding.digest;
+import nomo.core.conversation.{Event, State};
+import nomo.domain.conversation.state.{add, fresh as empty_history};
+import nomo.domain.harness.model_tool_contract.{Session, LoopTurn, question_error, default_limits};
+import nomo.domain.harness.tool_context.{Context as ChildContext};
+import nomo.adapters.model.legacy.model_tool.run_loop_with;
+import nomo.domain.harness.harness_tool_contract.{Context, fresh};
+import nomo.harness.harness_tool_contract.{Ledger};
+import nomo.domain.harness.harness_model_contract.decode_plan;
+import nomo.application.harness.read.ports.{Report, Failure};
+import nomo.adapters.model.harness.harness_model_tools.{run_context};
+import nomo.application.harness.effects.harness_legacy_string_stages.{LegacyStringStages, LegacyChildModel, LegacyEditStages};
+import nomo.domain.harness.harness_work_contract.{Context as WorkContext, Evidence};
+import nomo.harness.harness_work_contract.{Ledger as WorkLedger};
+import nomo.domain.harness.harness_edit_contract.{Context as EditContext};
+
+import nomo.harness.harness_edit_contract.{Ledger as EditLedger};
+import nomo.domain.work.protocol.{Completed, Summary, Failure as WorkFailure};
+import nomo.adapters.cli.legacy.harness_work_entry.{finish_summary};
+import nomo.domain.mutations.edit_encoding.digest;
 
 flow usage(steps: i32, calls: i32, tools: i32) -> Ledger {
     return Ledger { steps = steps, calls = calls, tokens = calls * 2048, tools = tools, scan = tools * 4096 };

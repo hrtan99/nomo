@@ -3,13 +3,14 @@ module app.provider_stage_probe;
 import std.io.println;
 import std.text.split;
 import nomo.core.conversation.{Event, State};
-import nomo.agent.conversation_events.Turn;
-import nomo.agent.provider_controller.model_turn_controller;
-import nomo.agent.provider.Context as LegacyContext;
-import nomo.model.text_stage.{Context, ModelText};
-import nomo.model.conversation_output.ConversationOutput;
-import nomo.agent.console_events.publish;
-import nomo.tools.edit_encoding.json;
+import nomo.domain.harness.conversation_events.Turn;
+import nomo.application.harness.loops.provider_controller.model_turn_controller;
+import nomo.domain.harness.text_stage.Context as LegacyContext;
+import nomo.domain.harness.text_stage.{Context};
+import nomo.application.harness.effects.model_text_stage.{ModelText};
+import nomo.application.harness.effects.model_conversation_output.ConversationOutput;
+import nomo.adapters.cli.legacy.console_events.publish;
+import nomo.domain.mutations.edit_encoding.json;
 
 type Case = { label: string, raw: string, maximum: i32, budget: i32, initial: State, reply: string,
     model_expected: bool, context: Context, expected: Turn };

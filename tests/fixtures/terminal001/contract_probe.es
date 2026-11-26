@@ -2,12 +2,12 @@ module app.contract_probe;
 
 import std.io.println;
 import std.text.{char_count as len, split};
-import nomo.core.text.printable;
-import nomo.cli.terminal_args.{Config, LineCommand, parse, parse_once, line, work_request, show_selector};
-import nomo.tools.edit_contract.Selector;
+import nomo.domain.text.text.printable;
+import nomo.adapters.cli.arguments.terminal_args.{Config, LineCommand, parse, parse_once, line, work_request, show_selector};
+import nomo.domain.mutations.edit_contract.Selector;
 import nomo.session.work_chain.Caps;
-import nomo.session.work_chain_usecase.{WorkRequest, ContinueRequest, TurnRequest};
-import nomo.ui.terminal_session.{State, fresh, turn, work_error, after_turn, state_line, request_line};
+import nomo.domain.sessions.work_chain_usecase.{WorkRequest, ContinueRequest, TurnRequest};
+import nomo.adapters.cli.display.terminal_session.{State, fresh, turn, work_error, after_turn, state_line, request_line};
 
 type Check = { label: string, passed: bool };
 flow slash() -> string { return std.text.from_char('\\'); }

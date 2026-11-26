@@ -5,7 +5,7 @@ import std.text.contains;
 import std.collections.len as count;
 import nomo.core.conversation.Event;
 import nomo.harness.harness_tool_chat_contract.Previous;
-import nomo.session.redaction.{Policy, policy_error, text, previous, events};
+import nomo.domain.sessions.redaction.{Policy, policy_error, text, previous, events};
 
 public flow redaction_probe(args: Array<string>) -> i32 ![Console, Error<IOError>, Error<IndexError>] {
     let policy = Policy { format = 1, literals = ["VERY_SECRET_123", "ANOTHER_TOKEN_456"] };

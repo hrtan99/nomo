@@ -6,20 +6,15 @@ import std.effects.Fs;
 import nomo.application.work.request.WorkRequest;
 import nomo.application.edit.effects.Approval;
 import nomo.core.conversation.Event;
-import nomo.harness.edit_original.EditOriginal;
-import nomo.harness.harness_work_contract.{Context, Evidence, Ledger};
-import nomo.model.diagnostic_output.DiagnosticOutput;
-import nomo.model.harness_progress.HarnessProgress;
+import nomo.application.harness.effects.harness_edit_original.EditOriginal;
+import nomo.application.harness.effects.model_diagnostic_output.DiagnosticOutput;
+import nomo.application.harness.effects.model_harness_progress.HarnessProgress;
 import nomo.session.edit_operation.Binding;
-import nomo.session.redaction.Policy;
-import nomo.tools.edit_contract.{Selector, Prepared, Confirmed};
+import nomo.domain.sessions.redaction.Policy;
+import nomo.domain.mutations.edit_contract.{Selector, Prepared, Confirmed};
 import nomo.tools.edit_file.EditableRoot;
 import nomo.tools.workspace.ReadOnlyRoot;
-
-public type Failure = { state: Ledger, error: string };
-public type Pending = { selected: Selector, prepared: Prepared, evidence: Evidence, request: string, task: string, state: Ledger, high_input: bool };
-public type Completed = { context: Context, state: Ledger, high_input: bool };
-public type Summary = { answer: string, state: Ledger, model_generated: bool };
+import nomo.domain.work.protocol.{Failure, Pending, Completed, Summary};
 
 public spec WorkStages {
     flow prepare(self, input: WorkRequest) -> Result<Pending, Failure> ![EditOriginal.read, HarnessProgress.write, DiagnosticOutput.write, Fs.read<ReadOnlyRoot>, Error<ConsoleError>, Error<FileError>, Error<IndexError>];

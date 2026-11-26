@@ -106,7 +106,7 @@ edition = "2026"
 root = "src"
 [[bin]]
 name = "demo"
-module = "nomo.entry.session_demo"
+module = "nomo.adapters.cli.legacy.session_demo"
 flow = "demo"
 ''')
     identities = {str(path.relative_to(project)): digest(path) for path in project.rglob('*') if path.is_file()}
@@ -116,7 +116,7 @@ flow = "demo"
               'cache_mount': cache_mount,
               'driver_sha256': digest(evidence / 'driver.py'),
               'effective_profile': {'kind': 'embedded public Host, RunOptions::default; fixture manifest not used by Host',
-                                    'entry_module': 'nomo.entry.session_demo', 'entry_flow': 'demo',
+                                    'entry_module': 'nomo.adapters.cli.legacy.session_demo', 'entry_flow': 'demo',
                                     'other_services': 'denied', 'database_and_fault': 'explicit owned directory/fault per command'},
               'commands': [], 'passed': []}
 
@@ -135,7 +135,7 @@ flow = "demo"
         return process
 
     def invoke(database, args, fault='none'):
-        observed = json.loads(command([host, project / 'src', 'nomo.entry.session_demo', 'demo', database, fault, *args], args[0] if args else 'empty').stdout)
+        observed = json.loads(command([host, project / 'src', 'nomo.adapters.cli.legacy.session_demo', 'demo', database, fault, *args], args[0] if args else 'empty').stdout)
         assert observed['denied_services'] == observed['denied_writes'] == observed['writes_after_fault'] == 0, observed
         return observed
 

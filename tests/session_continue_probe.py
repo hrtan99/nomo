@@ -95,7 +95,7 @@ def main():
     def save_result():
         (evidence / 'results.json').write_text(json.dumps(result, indent=2))
 
-    def command(database, arguments, fault='none', pause=None, module='nomo.entry.session_demo', flow='demo', reject=None, loss=None, readback=None):
+    def command(database, arguments, fault='none', pause=None, module='nomo.adapters.cli.legacy.session_demo', flow='demo', reject=None, loss=None, readback=None):
         command = [str(host), str(project / 'src'), module, flow, str(database), fault, *arguments]
         item = {'command': command, 'sources': retain_sources(), 'pause': pause, 'reject': reject, 'loss': loss, 'readback': readback}
         result['commands'].append(item)

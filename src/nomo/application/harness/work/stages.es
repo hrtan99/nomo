@@ -1,11 +1,10 @@
 module nomo.application.harness.work.stages;
 
 import nomo.application.work.request.WorkRequest;
-import nomo.application.work.ports.{Pending, Failure, Completed, Summary};
+import nomo.domain.work.protocol.{Pending, Failure, Completed, Summary};
 import nomo.application.harness.work.ports.WorkModelStages;
 import nomo.application.harness.work.controller.{HarnessWorkStage, prepare_unicode, prepare_expanded_unicode, finish_history_summary, expanded_stage, historical_stage};
-import nomo.harness.legacy_string_stages.{LegacyStringStages, LegacyEditStages};
-import nomo.model.harness_progress.HarnessProgress;
+import nomo.application.harness.effects.harness_legacy_string_stages.{LegacyStringStages, LegacyEditStages};
 
 public flow prepare<S ~ WorkModelStages>(stages: S, input: WorkRequest, wide: bool, high_input: bool) -> Result<Pending, Failure> {
     let original: (string) -> string ![] = (value: string) => "";

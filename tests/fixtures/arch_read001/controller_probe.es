@@ -5,10 +5,12 @@ import std.fs.Region;
 import std.text.split;
 import std.collections.len as count;
 import nomo.core.conversation.{Event, State};
-import nomo.model.model_tool_contract.{Session, Limits, Context, LoopTurn, fresh_loop};
-import nomo.agent.model_tool_controller.run_loop_controller;
-import nomo.harness.legacy_string_stages.LegacyChildModel;
-import nomo.tools.read_contract.{Outcome, outcome, display, ReadTools, NomoRead, NomoSearch};
+import nomo.domain.harness.model_tool_contract.{Session, Limits, LoopTurn, fresh_loop};
+import nomo.domain.harness.tool_context.{Context};
+import nomo.bootstrap.harness.legacy_model_tool.run_loop_controller;
+import nomo.application.harness.effects.harness_legacy_string_stages.LegacyChildModel;
+import nomo.domain.context.read_contract.{Outcome, outcome, display, NomoRead, NomoSearch};
+import nomo.application.context.effects.tools_read_contract.{ReadTools};
 
 type FixtureRoot;
 impl FixtureRoot ~ Region;

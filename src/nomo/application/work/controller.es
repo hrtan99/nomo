@@ -8,11 +8,11 @@ import nomo.core.conversation.Event;
 import nomo.application.harness.work.controller.complete;
 import nomo.application.work.request.WorkRequest;
 import nomo.application.work.ports.{WorkStages, WorkPersistence, WorkEditor, WorkTimeline, Run};
-import nomo.application.work_output.WorkOutputSink;
-import nomo.harness.edit_original.EditOriginal;
-import nomo.model.diagnostic_output.DiagnosticOutput;
-import nomo.model.harness_progress.HarnessProgress;
-import nomo.tools.edit_contract.Confirmed;
+import nomo.application.work.output.WorkOutputSink;
+import nomo.application.harness.effects.harness_edit_original.EditOriginal;
+import nomo.application.harness.effects.model_diagnostic_output.DiagnosticOutput;
+import nomo.application.harness.effects.model_harness_progress.HarnessProgress;
+import nomo.domain.mutations.edit_contract.Confirmed;
 import nomo.tools.edit_file.EditableRoot;
 import nomo.tools.workspace.ReadOnlyRoot;
 

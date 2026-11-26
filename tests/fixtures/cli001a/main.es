@@ -5,8 +5,8 @@ import std.text.{char_count as len, from_usize};
 import std.collections.len as count;
 import std.json.parse;
 import std.agent.message.Message;
-import nomo.cli.cli_request.{Request, LineCommand, parse_args, parse_line};
-import nomo.core.text.printable;
+import nomo.adapters.cli.arguments.cli_request.{Request, LineCommand, parse_args, parse_line};
+import nomo.domain.text.text.printable;
 
 type Case = { label: string, mode: string, args: Array<string>, raw: string,
     accepted: bool, kind: string, session_id: string, once_supplied: bool,

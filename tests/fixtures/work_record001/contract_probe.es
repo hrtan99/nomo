@@ -8,11 +8,12 @@ import std.codec.text.utf8_encode;
 import std.json.{JsonValue, parse, stringify};
 import std.agent.message.Message;
 import nomo.session.edit_operation.Binding;
-import nomo.session.work_record.{Record, Captured, partial, confirm, validate, admit, same_record};
+import nomo.session.work_record.{Record};
+import nomo.domain.sessions.work_record.{Captured, partial, confirm, validate, admit, same_record};
 import nomo.harness.harness_tool_contract.Ledger as ReadLedger;
-import nomo.harness.harness_work_contract.Evidence;
-import nomo.tools.edit_file.prepare_original;
-import nomo.tools.edit_binding.bind;
+import nomo.domain.harness.harness_work_contract.Evidence;
+import nomo.domain.mutations.edit_contract.prepare_original;
+import nomo.domain.mutations.edit_binding.bind;
 
 type Check = { label: string, passed: bool };
 flow slash() -> string { return std.text.from_char('\\'); }

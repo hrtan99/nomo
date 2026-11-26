@@ -8,16 +8,17 @@ import std.codec.text.utf8_encode;
 import std.json.{JsonValue, parse, stringify};
 import std.agent.message.Message;
 import nomo.session.edit_operation.Binding;
-import nomo.session.work_record.{Record, Captured, partial, confirm, validate, admit, same_record};
+import nomo.session.work_record.{Record};
+import nomo.domain.sessions.work_record.{Captured, partial, confirm, validate, admit, same_record};
 import nomo.harness.harness_tool_contract.Ledger as ReadLedger;
-import nomo.harness.harness_work_contract.Evidence;
-import nomo.harness.harness_edit_contract.Context;
-import nomo.tools.edit_contract.{Prepared, Selector, Confirmed, prepare_original};
-import nomo.tools.edit_binding.bind;
-import nomo.tools.edit_proposal.{Request, Proposal};
-import nomo.entry.edit_context.{context, completed_context};
-import nomo.harness.edit_context.context as leaf_context;
-import nomo.harness.edit_context.completed_context as leaf_completed_context;
+import nomo.domain.harness.harness_work_contract.Evidence;
+import nomo.domain.harness.harness_edit_contract.Context;
+import nomo.domain.mutations.edit_contract.{Prepared, Selector, Confirmed, prepare_original};
+import nomo.domain.mutations.edit_binding.bind;
+import nomo.domain.mutations.edit_proposal.{Request, Proposal};
+import nomo.domain.harness.edit_context.{context, completed_context};
+import nomo.domain.harness.edit_context.context as leaf_context;
+import nomo.domain.harness.edit_context.completed_context as leaf_completed_context;
 
 type Check = { label: string, passed: bool };
 flow slash() -> string { return std.text.from_char('\\'); }

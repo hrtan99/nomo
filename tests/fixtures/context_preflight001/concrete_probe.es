@@ -6,9 +6,9 @@ import std.collections.len as count;
 import std.json.parse;
 import std.agent.message.Message;
 import nomo.core.conversation.Event;
-import nomo.model.tool_context.Context;
-import nomo.context.preflight.{Measurement, Refusal, measure_context, measure_text};
-import nomo.context.selection.{EventPolicy, SelectionRefusal, select};
+import nomo.domain.harness.tool_context.Context;
+import nomo.domain.context.preflight.{Measurement, Refusal, measure_context, measure_text};
+import nomo.domain.context.selection.{EventPolicy, SelectionRefusal, select};
 
 type Check = { label: string, passed: bool };
 flow slash() -> string { return std.text.from_char('\\'); }

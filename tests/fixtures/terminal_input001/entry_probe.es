@@ -8,17 +8,19 @@ import std.fs.IOError as FileError;
 import std.effects.Fs;
 import nomo.tools.workspace.ReadOnlyRoot;
 import nomo.tools.edit_file.EditableRoot;
-import nomo.entry.terminal_entry.run as terminal;
-import nomo.entry.terminal_entry.run_once as terminal_once;
-import nomo.entry.terminal_entry.{run_with_operations, run_once_with_operations};
-import nomo.session.work_chain_usecase.{WorkRequest, ContinueRequest, TurnRequest, WorkOutcome, WorkStop, CapturedShow, TerminalWork, TerminalRead, work};
-import nomo.session.work_chain.{turn_caps, initial};
-import nomo.tools.edit_contract.Selector;
-import nomo.tools.edit_encoding.json;
+import nomo.adapters.cli.legacy.terminal_entry.run as terminal;
+import nomo.adapters.cli.legacy.terminal_entry.run_once as terminal_once;
+import nomo.adapters.cli.legacy.terminal_entry.{run_with_operations, run_once_with_operations};
+import nomo.domain.sessions.work_chain_usecase.{WorkRequest, ContinueRequest, TurnRequest, WorkOutcome, WorkStop, CapturedShow};
+import nomo.application.sessions.effects.session_work_chain_usecase.{TerminalWork, TerminalRead};
+import nomo.application.sessions.work_chain_usecase.{work};
+import nomo.domain.sessions.work_chain.{turn_caps, initial};
+import nomo.domain.mutations.edit_contract.Selector;
+import nomo.domain.mutations.edit_encoding.json;
 import nomo.harness.harness_work_contract.Ledger;
 import nomo.harness.harness_tool_contract.Ledger as ReadLedger;
-import nomo.harness.harness_edit_contract.fresh as edit_fresh;
-import nomo.entry.work_chain_entry.present_outcome;
+import nomo.domain.harness.harness_edit_contract.fresh as edit_fresh;
+import nomo.adapters.cli.legacy.work_chain_entry.present_outcome;
 
 // Calls the actual entry without replacing its controller or Console actions.
 // The broad row acknowledges the entry's existing static contract; the test

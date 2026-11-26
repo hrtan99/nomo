@@ -1,0 +1,34 @@
+{
+  "status": "source-refactor-pending-compiler-acceptance",
+  "compiler": "0.22.7",
+  "compiler_revision": "aaa5e4bc807c3c1cf7b0c98e90007a3c3f1dda4f",
+  "compiler_sha256": "8c497f01faccd88d1ea7760e41d11d5bfabccd201d2593d1fd5a79614149abf3",
+  "scope": [
+    "same-type record updates, including local and nested record values",
+    "same-name field shorthands",
+    "remove the Session copy helper and replace seven calls with value updates",
+    "retain, extend, pure iterator transforms and sequential map_collect",
+    "remove redundant giant bounds on finite array traversal; preserve other loop budgets",
+    "remove unused imports after the source refactor"
+  ],
+  "verification": {
+    "official_locked_build": "passed",
+    "matching_sdk_install_and_identity": "passed",
+    "python_syntax": "passed",
+    "shell_syntax": "passed",
+    "git_diff_check": "passed",
+    "full_source_check": {
+      "exit": 4,
+      "cache": "off",
+      "error": "frontend session failed: Pipeline(\"checked definition projection failed: Invalid(\\\"checked effect tag has conflicting package identities\\\")\")"
+    },
+    "existing_positive_conversation_scenario": "blocked during compilation by unsupported local @limits annotation; no runtime acceptance claimed",
+    "local_limits_minimal_reproduction": {
+      "exit": 1,
+      "error": "syntax::InvalidExpression at @limits before while",
+      "upstream": "https://github.com/etas-project/etas-frontend/issues/97#issuecomment-7184072823"
+    }
+  },
+  "real_model_calls": 0,
+  "compiler_source_overrides": []
+}

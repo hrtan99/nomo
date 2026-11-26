@@ -6,8 +6,8 @@ import std.bytes.len as byte_count;
 import std.codec.text.{utf8_encode, utf8_decode, Strict};
 import std.json.parse;
 import std.agent.message.Message;
-import nomo.tools.path_policy.valid_path;
-import nomo.tools.edit_proposal.{Request, Proposal, propose, validate};
+import nomo.domain.context.path_policy.valid_path;
+import nomo.domain.mutations.edit_proposal.{Request, Proposal, propose, validate};
 
 type Check = { label: string, mode: string, request: Request, expected: Proposal, error: string };
 flow slash() -> string { return std.text.from_char('\\'); }

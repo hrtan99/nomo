@@ -5,10 +5,10 @@ import std.text.{char_count as len, split, from_usize};
 import std.collections.len as count;
 import std.json.parse;
 import std.agent.message.Message;
-import nomo.harness.harness_contract.{Job, ChildTask, ChildResult, Ledger, Exchange, Outcome, Reservation};
-import nomo.harness.harness.{admit, settle, run};
-import nomo.harness.harness_child.run as child_run;
-import nomo.core.text.printable;
+import nomo.domain.harness.harness_contract.{Job, ChildTask, ChildResult, Ledger, Exchange, Outcome, Reservation};
+import nomo.adapters.model.harness.harness.{admit, settle, run};
+import nomo.adapters.model.harness.harness_child.run as child_run;
+import nomo.domain.text.text.printable;
 
 type Case = { label: string, mode: string, job: Job, child: ChildTask,
     reply: ChildResult, reservation: Reservation, accepted: bool,

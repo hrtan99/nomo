@@ -4,7 +4,7 @@ import std.io.println;
 import std.text.split;
 import std.collections.len as count;
 import nomo.session.harness_checkpoint.Identity;
-import nomo.cli.session_lifecycle_args.{Request, parse, help_lines, topic_lines};
+import nomo.adapters.cli.arguments.session_lifecycle_args.{Request, parse, help_lines, topic_lines};
 
 type Check = { label: string, action: string, args: Array<string>, accepted: bool, expected: Request, error: string };
 flow slash() -> string { return std.text.from_char('\\'); }

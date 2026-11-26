@@ -1,0 +1,739 @@
+{
+  "format": 1,
+  "modules": {
+    "nomo.tools.workspace": {
+      "path": "src/nomo/tools/workspace.es",
+      "declarations": [
+        "type ReadOnlyRoot",
+        "impl ReadOnlyRoot"
+      ],
+      "reason": "Preserved stored nominal types, Memory region resources or filesystem Region identity",
+      "shapes": {
+        "ReadOnlyRoot": "3d4c43216ad1418848d08a364878390a78bdb9e80da7862e64cfd0a8956e44ce"
+      },
+      "regions": [
+        "ReadOnlyRoot"
+      ]
+    },
+    "nomo.tools.edit_file": {
+      "path": "src/nomo/tools/edit_file.es",
+      "declarations": [
+        "type EditableRoot",
+        "impl EditableRoot"
+      ],
+      "reason": "Preserved stored nominal types, Memory region resources or filesystem Region identity",
+      "shapes": {
+        "EditableRoot": "0b9645fb4441eff27df72c14f97cbd5de7d5916451220288dcbb8eba28822436"
+      },
+      "regions": [
+        "EditableRoot"
+      ]
+    },
+    "nomo.core.conversation": {
+      "path": "src/nomo/core/conversation.es",
+      "declarations": [
+        "type Event",
+        "type State"
+      ],
+      "reason": "Preserved stored nominal types, Memory region resources or filesystem Region identity",
+      "shapes": {
+        "Event": "cb46c58444fc25524612239f57180f33b4a7d9f11bd19bd612702728eb97762a",
+        "State": "3aca7f52d11a3b6acaff532b977b09fd53f3b6d73015913938a33293ced900da"
+      },
+      "regions": []
+    },
+    "nomo.native.projects": {
+      "path": "src/nomo/native/projects.es",
+      "declarations": [
+        "type LaunchRoot",
+        "impl LaunchRoot",
+        "alias Schema",
+        "let Data"
+      ],
+      "reason": "Preserved stored nominal types, Memory region resources or filesystem Region identity",
+      "shapes": {
+        "LaunchRoot": "fa63e097a1c83af7925be0b92ef01806b4663a8f71b1f4929de146f606d3c3f7",
+        "Schema": "ea4b42652abdb03fbfd95e7b527da4b296185898fbadd46adbb53aef7bfff49a",
+        "Data": "97504468c693443d43c71a648eccac5930d0d665a88676a8aae746a91cc3dc8f"
+      },
+      "regions": [
+        "LaunchRoot"
+      ]
+    },
+    "nomo.native.workspace": {
+      "path": "src/nomo/native/workspace.es",
+      "declarations": [
+        "type ProjectRoot",
+        "impl ProjectRoot"
+      ],
+      "reason": "Preserved stored nominal types, Memory region resources or filesystem Region identity",
+      "shapes": {
+        "ProjectRoot": "4abbcf55a26850da748b5835250e6a78d2b552f36dc86da709035e32adb6ff03"
+      },
+      "regions": [
+        "ProjectRoot"
+      ]
+    },
+    "nomo.native.history": {
+      "path": "src/nomo/native/history.es",
+      "declarations": [
+        "type CopyJob",
+        "type Ledger",
+        "type Session",
+        "type Event"
+      ],
+      "reason": "Preserved stored nominal types, Memory region resources or filesystem Region identity",
+      "shapes": {
+        "CopyJob": "e255bb196c0bc43ee6ffe2bd244f8e99c3edadfbd29bcd120ef0093b83059e37",
+        "Ledger": "676b10f3dc779e08150d1701beff4a41daa5ae86d6f9d07d8251f3c556df389a",
+        "Session": "7c05de0c47f1ac30f5fdcd50cf168c1986115a89eb601045285dff11539b69c2",
+        "Event": "a0d211a419c99ad8d3761518e21e94b11c38f8f852cd34366b03c3d79dc4b99b"
+      },
+      "regions": []
+    },
+    "nomo.native.processes": {
+      "path": "src/nomo/native/processes.es",
+      "declarations": [
+        "type Job",
+        "type JobEvent",
+        "alias Schema",
+        "let Data"
+      ],
+      "reason": "Preserved stored nominal types, Memory region resources or filesystem Region identity",
+      "shapes": {
+        "Job": "bca66197568c87ea7b666852194e401399a15f7ae9778491a1c07909c918b7b4",
+        "JobEvent": "79e7b420f9cb358bb9cc815583b377ddb5b8df0c69879059d4bd3738a021a031",
+        "Schema": "5dadea8137efe86b980d019e5f0a44f9ea60a2ceceaa4d7b452c063ebb94268c",
+        "Data": "eae1dfa6d2567cf044f125930fa097bb918c236c437fdc8cdf59fa22aa65c6c8"
+      },
+      "regions": []
+    },
+    "nomo.native.lifecycle": {
+      "path": "src/nomo/native/lifecycle.es",
+      "declarations": [
+        "type Attempt"
+      ],
+      "reason": "Preserved stored nominal types, Memory region resources or filesystem Region identity",
+      "shapes": {
+        "Attempt": "2af11275de51e1e62ce42874651f9c2d4ab7141a309026a480d82e918432a4f4"
+      },
+      "regions": []
+    },
+    "nomo.native.mutations": {
+      "path": "src/nomo/native/mutations.es",
+      "declarations": [
+        "type Journal",
+        "type SavedPath",
+        "type Step",
+        "alias Schema",
+        "let Data"
+      ],
+      "reason": "Preserved stored nominal types, Memory region resources or filesystem Region identity",
+      "shapes": {
+        "Journal": "9cce31d3edc9c530fadb5933b2d2165fde63518258c7d5cc1726612d0b75dd73",
+        "SavedPath": "49fa690ab59894f77db86c32bbaffe8f200a5001e0c5e08b29830c1daca97c24",
+        "Step": "8cb58ab61446af904e8d9635bafc415aa69fe3e3b9599012ded00b122d437882",
+        "Schema": "c5cfe74dc69b429b4518462b23c35c912ad0828074467aa14dfff50b2099270c",
+        "Data": "839c81e7f96f0e84719e5e6ec2d821e48f3928c771b0e6b8cd0c831a6150dc34"
+      },
+      "regions": []
+    },
+    "nomo.native.configuration": {
+      "path": "src/nomo/native/configuration.es",
+      "declarations": [
+        "type Cached",
+        "alias Schema",
+        "let Data"
+      ],
+      "reason": "Preserved stored nominal types, Memory region resources or filesystem Region identity",
+      "shapes": {
+        "Cached": "2947b893fde62125a46cd1d998f6141f8115abaf9b6a79b170e19bebcd054d47",
+        "Schema": "31328ebb074b4caccfa804a66f38e2f0a593489df1e4a79777c482cd6cda709d",
+        "Data": "0a52745cdfd132d76eba4f4ec1053d0f503d6dbf2aeb77f2a2b2603c05fb379b"
+      },
+      "regions": []
+    },
+    "nomo.project.entry": {
+      "path": "src/nomo/project/entry.es",
+      "declarations": [
+        "type RequestRoot",
+        "impl RequestRoot"
+      ],
+      "reason": "Preserved stored nominal types, Memory region resources or filesystem Region identity",
+      "shapes": {
+        "RequestRoot": "419b6e3acb7d1b5e131ff6f35025f8637a9112a61c0287017fda9b1113b51330"
+      },
+      "regions": [
+        "RequestRoot"
+      ]
+    },
+    "nomo.harness.harness_tool_contract": {
+      "path": "src/nomo/harness/harness_tool_contract.es",
+      "declarations": [
+        "type Ledger"
+      ],
+      "reason": "Preserved stored nominal types, Memory region resources or filesystem Region identity",
+      "shapes": {
+        "Ledger": "6c570d1fba43f256ebaace5d9d2d7797e1bbbfa5856023241979030254354254"
+      },
+      "regions": []
+    },
+    "nomo.harness.harness_work_contract": {
+      "path": "src/nomo/harness/harness_work_contract.es",
+      "declarations": [
+        "type Ledger"
+      ],
+      "reason": "Preserved stored nominal types, Memory region resources or filesystem Region identity",
+      "shapes": {
+        "Ledger": "a3b7771264f76069c7bcfb1d8c0e3c877bb17c8f260d5d5e96067afa7c9e03cf"
+      },
+      "regions": []
+    },
+    "nomo.harness.harness_tool_chat_contract": {
+      "path": "src/nomo/harness/harness_tool_chat_contract.es",
+      "declarations": [
+        "type Previous",
+        "type Invocation"
+      ],
+      "reason": "Preserved stored nominal types, Memory region resources or filesystem Region identity",
+      "shapes": {
+        "Previous": "bb7aa2c384d1ad247e1de0d5def7d78418dc0aa7d175d72f661d1bf5b1f9f2d7",
+        "Invocation": "ff9eaabe2f11c0d6388d926a7c037cc2a47a8bf20fcea51ac1e8bc2e3d88318e"
+      },
+      "regions": []
+    },
+    "nomo.harness.harness_edit_contract": {
+      "path": "src/nomo/harness/harness_edit_contract.es",
+      "declarations": [
+        "type Ledger"
+      ],
+      "reason": "Preserved stored nominal types, Memory region resources or filesystem Region identity",
+      "shapes": {
+        "Ledger": "16a379041aba816b14446a774a98eb1587e5e6e32d57cc29fcf456f92db51d9a"
+      },
+      "regions": []
+    },
+    "nomo.session.history_followup_guard": {
+      "path": "src/nomo/session/history_followup_guard.es",
+      "declarations": [
+        "type Budget",
+        "type Parent",
+        "type Record",
+        "alias Schema",
+        "let Runs"
+      ],
+      "reason": "Preserved stored nominal types, Memory region resources or filesystem Region identity",
+      "shapes": {
+        "Budget": "01a80fd29e5cf94f10a0b268b7508191e519ef8a44e4736a00b4707ea0ef49c5",
+        "Parent": "2504b5bf9aef6a08377e88fe167e6fe39c6121bc83cbd26b7df69b5cfb8b575f",
+        "Record": "65fa6d79db68870daa09b5e635b9e352eacae232e00232b6e74ace5e349e96b8",
+        "Schema": "a033a62506f8b363bf400a1feaa03a1b8e4b351aa4bdc01481d647786be18820",
+        "Runs": "8b9d9b5117e17451a7fc3fc8ea399248f2177e3842599652cbd40649899c910b"
+      },
+      "regions": []
+    },
+    "nomo.session.chat_history": {
+      "path": "src/nomo/session/chat_history.es",
+      "declarations": [
+        "type Frame",
+        "alias LegacySchema",
+        "alias FrameSchema",
+        "let Legacy",
+        "let Frames"
+      ],
+      "reason": "Preserved stored nominal types, Memory region resources or filesystem Region identity",
+      "shapes": {
+        "Frame": "364dddad8e68b9a53af6b4d1b2090c478dc3b28d55ef6fd8dab5934dfdb16a18",
+        "LegacySchema": "409412f14834646f600464f1615aa5da35f6f56c1ebc96e02690e9ae1717af1d",
+        "FrameSchema": "827f11281691dd648830e8068d76aab0b5f807696721e5186e58ba7523f09b32",
+        "Legacy": "cf1bdc6e8042aadb6ee1f2dd4df304614176bb5fafdcd08674f9ed00158e6fe4",
+        "Frames": "e745ad4b789f118f430688b8bab424d43500505776c475dcc7052175d763818d"
+      },
+      "regions": []
+    },
+    "nomo.session.event_history": {
+      "path": "src/nomo/session/event_history.es",
+      "declarations": [
+        "type History",
+        "alias Schema",
+        "let EventStore"
+      ],
+      "reason": "Preserved stored nominal types, Memory region resources or filesystem Region identity",
+      "shapes": {
+        "History": "e926818818ea1182ba64da6bd25a77b8eba464dd1b35c9fe84efce0f7859b1e6",
+        "Schema": "81d29f1989e4d5f64f9a77412eb504caa505cf87c1afed9952da0aacf1d14184",
+        "EventStore": "a482005e2314d5d14b7da2ae0b3b45f7b28b5bfd1eca38112526f9b0b9896e0c"
+      },
+      "regions": []
+    },
+    "nomo.session.recoverable_followup_store": {
+      "path": "src/nomo/session/recoverable_followup_store.es",
+      "declarations": [
+        "type Frame",
+        "alias Schema",
+        "let Runs"
+      ],
+      "reason": "Preserved stored nominal types, Memory region resources or filesystem Region identity",
+      "shapes": {
+        "Frame": "90cb447b57fd230b7f20659b2399fa2ee252cdd777a7cd9c9eb26276862c2bd8",
+        "Schema": "a4d7252c736532e5324e08183fd76ff0a6865a71555f5f32d46a71a95f6e7185",
+        "Runs": "7ba2993f962894a8b1da1e010a5d98558c5c50f309286cf369ee192dfa5bc379"
+      },
+      "regions": []
+    },
+    "nomo.session.recoverable_check_store": {
+      "path": "src/nomo/session/recoverable_check_store.es",
+      "declarations": [
+        "alias Schema",
+        "let Checks"
+      ],
+      "reason": "Preserved stored nominal types, Memory region resources or filesystem Region identity",
+      "shapes": {
+        "Schema": "a4d7252c736532e5324e08183fd76ff0a6865a71555f5f32d46a71a95f6e7185",
+        "Checks": "28eac09a993416b12f1d5a3a7f471ad7c8c498f5b6ecaf2cdf5c625dd39fd787"
+      },
+      "regions": []
+    },
+    "nomo.session.edit_operation_store": {
+      "path": "src/nomo/session/edit_operation_store.es",
+      "declarations": [
+        "alias Schema",
+        "let Operations",
+        "let Followups"
+      ],
+      "reason": "Preserved stored nominal types, Memory region resources or filesystem Region identity",
+      "shapes": {
+        "Schema": "a033a62506f8b363bf400a1feaa03a1b8e4b351aa4bdc01481d647786be18820",
+        "Operations": "76c3f8d688b052fcd4471c885f869253dd475fe6803e498d15b937c7d76c75db",
+        "Followups": "a9389652a4c9ff40b4519b676790a5b72a5eb3e544c6c2c253c8f6a318fdc41a"
+      },
+      "regions": []
+    },
+    "nomo.session.recoverable_followup_check_store": {
+      "path": "src/nomo/session/recoverable_followup_check_store.es",
+      "declarations": [
+        "alias Schema",
+        "let Checks"
+      ],
+      "reason": "Preserved stored nominal types, Memory region resources or filesystem Region identity",
+      "shapes": {
+        "Schema": "a4d7252c736532e5324e08183fd76ff0a6865a71555f5f32d46a71a95f6e7185",
+        "Checks": "a594be3a5a481103de80d30babe14602ebdfd6cb9e0a0f40cda89d83565acf81"
+      },
+      "regions": []
+    },
+    "nomo.session.user_context_chain_v4": {
+      "path": "src/nomo/session/user_context_chain_v4.es",
+      "declarations": [
+        "type RootIdentity",
+        "type Record"
+      ],
+      "reason": "Existing untracked local prototype; preserve its nominal identity when present",
+      "shapes": {
+        "RootIdentity": "db827dcd6b12ec24e6dcad94aec1bba5fac087afaa14d2a14aac13e103b8a9e2",
+        "Record": "66942062c644d4d5e41415ffddc85a2f34cb18523bc52821c41c54b1a75b0ece"
+      },
+      "optional": true,
+      "regions": []
+    },
+    "nomo.session.edit_operation": {
+      "path": "src/nomo/session/edit_operation.es",
+      "declarations": [
+        "type Binding",
+        "type Record"
+      ],
+      "reason": "Preserved stored nominal types, Memory region resources or filesystem Region identity",
+      "shapes": {
+        "Binding": "12983cf21827885552efc64622f1bc272497899b79c69b811ac00e06f503d9bf",
+        "Record": "6b55ef4f9fd11893ca5525efc359df4f099b54b235b2af34b13542ed939c3be7"
+      },
+      "regions": []
+    },
+    "nomo.session.history_work_guard": {
+      "path": "src/nomo/session/history_work_guard.es",
+      "declarations": [
+        "type Budget",
+        "type Record",
+        "alias Schema",
+        "let Runs"
+      ],
+      "reason": "Preserved stored nominal types, Memory region resources or filesystem Region identity",
+      "shapes": {
+        "Budget": "01a80fd29e5cf94f10a0b268b7508191e519ef8a44e4736a00b4707ea0ef49c5",
+        "Record": "ac483024beacb3f1912093be028c999fb697a558fc2d2cd58256ec80a8504c56",
+        "Schema": "a033a62506f8b363bf400a1feaa03a1b8e4b351aa4bdc01481d647786be18820",
+        "Runs": "42a8b0603c175d0963b10a4ce0d4520832e85d2988e9d2ab15f9359d60c079d7"
+      },
+      "regions": []
+    },
+    "nomo.session.check_output": {
+      "path": "src/nomo/session/check_output.es",
+      "declarations": [
+        "type Record",
+        "alias Schema",
+        "let Outputs"
+      ],
+      "reason": "Preserved stored nominal types, Memory region resources or filesystem Region identity",
+      "shapes": {
+        "Record": "fdada6b527c8718d0e45966087e59710acd3929d1b42c84b7345ab30d75c495f",
+        "Schema": "a033a62506f8b363bf400a1feaa03a1b8e4b351aa4bdc01481d647786be18820",
+        "Outputs": "df6458abf7f7e7fe9bda35b9a2da4bb3e011aed0a73cc6404ac42fd9b5d235f0"
+      },
+      "regions": []
+    },
+    "nomo.session.demo_claim": {
+      "path": "src/nomo/session/demo_claim.es",
+      "declarations": [
+        "type Claim",
+        "alias Schema",
+        "let Demo"
+      ],
+      "reason": "Preserved stored nominal types, Memory region resources or filesystem Region identity",
+      "shapes": {
+        "Claim": "011903241603d918a91f8e4c646e14c085838cbff31ca90a808091f7eb191088",
+        "Schema": "4c8ab53e95d4148f6710b4a2ed716544085533b5234deac44ae03a17d3797f70",
+        "Demo": "3a6e88a955cef1647e101b62c6524744ce2e09baab78c7b7535086f167fd64d2"
+      },
+      "regions": []
+    },
+    "nomo.session.recoverable_chat_store": {
+      "path": "src/nomo/session/recoverable_chat_store.es",
+      "declarations": [
+        "type Frame",
+        "alias Schema",
+        "let Frames",
+        "type Evidence",
+        "alias EvidenceSchema",
+        "let EvidenceFrames"
+      ],
+      "reason": "Preserved stored nominal types, Memory region resources or filesystem Region identity",
+      "shapes": {
+        "Frame": "031f1afc457dda643d0ea79cc4d7a35a3a5fc8b2bd161526c5416239f59d7b38",
+        "Schema": "a4d7252c736532e5324e08183fd76ff0a6865a71555f5f32d46a71a95f6e7185",
+        "Frames": "a3fddfb0c0d338b28dbb7e21f078e37a3e960061374f03fc87049729ab999f5e",
+        "Evidence": "ee8345b2f6127335c967572e18ed5c41b420c95f1d29d2888f7a97ea176456ef",
+        "EvidenceSchema": "89161c8001043887743b8b4a0476db8b7c0fa9aee90da259eb1df92d3a9f8861",
+        "EvidenceFrames": "c29ecedaccceded8d75bdd407cca939661111423598642c3bd0e8f938e3b2f57"
+      },
+      "regions": []
+    },
+    "nomo.session.user_context_chain_v4_journal": {
+      "path": "src/nomo/session/user_context_chain_v4_journal.es",
+      "declarations": [
+        "type Record",
+        "alias Schema",
+        "let Journal"
+      ],
+      "reason": "Existing untracked local prototype; preserve its nominal identity when present",
+      "shapes": {
+        "Record": "faa1c2f64a669fc608acc160edec93b210cff0b054a82a5a1a2c0535dae1e19a",
+        "Schema": "a033a62506f8b363bf400a1feaa03a1b8e4b351aa4bdc01481d647786be18820",
+        "Journal": "1e5eec114b7c64d46707c88dfbbcf2b3b2d06488bf6bc48fe9b27f745d8ceb3c"
+      },
+      "optional": true,
+      "regions": []
+    },
+    "nomo.session.harness_checkpoint_store": {
+      "path": "src/nomo/session/harness_checkpoint_store.es",
+      "declarations": [
+        "type Record",
+        "alias Schema",
+        "let Checkpoints"
+      ],
+      "reason": "Preserved stored nominal types, Memory region resources or filesystem Region identity",
+      "shapes": {
+        "Record": "1d6e51220c63116f73b55c8888be1e6dd2d8f132f5bca1c5eef4266bd6f883c0",
+        "Schema": "a033a62506f8b363bf400a1feaa03a1b8e4b351aa4bdc01481d647786be18820",
+        "Checkpoints": "f3647de34ccd51856e9f813c48f96440493aebc78d5809f6206c5bf452eca6bf"
+      },
+      "regions": []
+    },
+    "nomo.session.event_policy": {
+      "path": "src/nomo/session/event_policy.es",
+      "declarations": [
+        "type PolicyRoot",
+        "impl PolicyRoot"
+      ],
+      "reason": "Preserved stored nominal types, Memory region resources or filesystem Region identity",
+      "shapes": {
+        "PolicyRoot": "88885930b64a8ccd09f2a648f2bc075ec5a80935b67afb091675e129593fa05e"
+      },
+      "regions": [
+        "PolicyRoot"
+      ]
+    },
+    "nomo.session.work_record_store": {
+      "path": "src/nomo/session/work_record_store.es",
+      "declarations": [
+        "alias Schema",
+        "let Work"
+      ],
+      "reason": "Preserved stored nominal types, Memory region resources or filesystem Region identity",
+      "shapes": {
+        "Schema": "a033a62506f8b363bf400a1feaa03a1b8e4b351aa4bdc01481d647786be18820",
+        "Work": "7a315d61c4170a5dff0ece09d0c5a399788b27a6649e52412597e0b3ced7c937"
+      },
+      "regions": []
+    },
+    "nomo.session.continuous_work": {
+      "path": "src/nomo/session/continuous_work.es",
+      "declarations": [
+        "type Core",
+        "type Edit",
+        "type ResultData",
+        "type Check",
+        "type Entry",
+        "type Book",
+        "alias Schema",
+        "let Books"
+      ],
+      "reason": "Preserved stored nominal types, Memory region resources or filesystem Region identity",
+      "shapes": {
+        "Core": "d8684d5b6cf900b722666607484f81fab46c826b973e77432df0f4b398903d99",
+        "Edit": "596fdcb9afc4433166bed937a19999c2fa76bcb986a1640a92e73c9c2130d374",
+        "ResultData": "21b16edb6813aa37b68c24a068699b45f2520926b45373d9f451fe88b0027d43",
+        "Check": "5aa32e7681f3cacd1475648c0ac962bbb00ede48d96a2a29e26f13359383a243",
+        "Entry": "953c7f98d3b798b90d1de09806744ddacf3b1f3758104c929b7c9bd117645227",
+        "Book": "0ba96b049c2c2a0146f2c546623765201693bc1f1cccf02d2c803303d1ff4bf0",
+        "Schema": "9473051471488346a83b64fd1a4b9ad1d03162921aa98cc15908ead0dfed9227",
+        "Books": "aaee57b7db35a02d826fab434a6e2d6617057739ff5176dca6e1113488610475"
+      },
+      "regions": []
+    },
+    "nomo.session.work_chain": {
+      "path": "src/nomo/session/work_chain.es",
+      "declarations": [
+        "type Caps",
+        "type Record"
+      ],
+      "reason": "Preserved stored nominal types, Memory region resources or filesystem Region identity",
+      "shapes": {
+        "Caps": "9e21468fc2e2aff79be14a725c02c87c03d35388f3120cc73bd7c128df244aa9",
+        "Record": "7b6da168beb93a332e3ca854b3b8e9f9bb5cfdb035da030ff6978c36b909be72"
+      },
+      "regions": []
+    },
+    "nomo.session.work_chain_store": {
+      "path": "src/nomo/session/work_chain_store.es",
+      "declarations": [
+        "alias Schema",
+        "let Chain"
+      ],
+      "reason": "Preserved stored nominal types, Memory region resources or filesystem Region identity",
+      "shapes": {
+        "Schema": "a033a62506f8b363bf400a1feaa03a1b8e4b351aa4bdc01481d647786be18820",
+        "Chain": "198b3cb5da80dd4f5f2a749bdaaad253bb611820cc6b8e9b2fba52d3cc695b5c"
+      },
+      "regions": []
+    },
+    "nomo.session.work_chain_journal": {
+      "path": "src/nomo/session/work_chain_journal.es",
+      "declarations": [
+        "type Record",
+        "alias Schema",
+        "let Journal"
+      ],
+      "reason": "Preserved stored nominal types, Memory region resources or filesystem Region identity",
+      "shapes": {
+        "Record": "55386862252edebec730c43644890f54279d5541c846dd7038a6515e4e79b59c",
+        "Schema": "a033a62506f8b363bf400a1feaa03a1b8e4b351aa4bdc01481d647786be18820",
+        "Journal": "8877800644932595bb83a1d8a92a5e27613877b01db14a475da9db20863ab731"
+      },
+      "regions": []
+    },
+    "nomo.session.recovery_decision": {
+      "path": "src/nomo/session/recovery_decision.es",
+      "declarations": [
+        "type Decision",
+        "alias Schema",
+        "let Decisions"
+      ],
+      "reason": "Preserved stored nominal types, Memory region resources or filesystem Region identity",
+      "shapes": {
+        "Decision": "86eeceb3323c632bfe3beab64f0809dce5eabc51e4b84872565f06b62fab7d4a",
+        "Schema": "462c6fac07f3d0963da88704197825184c42c8614288bcab1861177fdcddb1cb",
+        "Decisions": "99f1eaf63a0190374b60ee5c88575e0a5f027975c38b6c22d4af1018d4e151db"
+      },
+      "regions": []
+    },
+    "nomo.session.history_followup_check_guard": {
+      "path": "src/nomo/session/history_followup_check_guard.es",
+      "declarations": [
+        "alias Schema",
+        "let Checks"
+      ],
+      "reason": "Preserved stored nominal types, Memory region resources or filesystem Region identity",
+      "shapes": {
+        "Schema": "a033a62506f8b363bf400a1feaa03a1b8e4b351aa4bdc01481d647786be18820",
+        "Checks": "f66dbc93e46ea6088630a3801ad3302140be2bced6966b516613daa49dfa03d1"
+      },
+      "regions": []
+    },
+    "nomo.session.harness_checkpoint": {
+      "path": "src/nomo/session/harness_checkpoint.es",
+      "declarations": [
+        "type Identity"
+      ],
+      "reason": "Preserved stored nominal types, Memory region resources or filesystem Region identity",
+      "shapes": {
+        "Identity": "89619880754b68967c355674c01dc32228438de29b74013244972ec1c1492c03"
+      },
+      "regions": []
+    },
+    "nomo.session.work_record": {
+      "path": "src/nomo/session/work_record.es",
+      "declarations": [
+        "type Record"
+      ],
+      "reason": "Preserved stored nominal types, Memory region resources or filesystem Region identity",
+      "shapes": {
+        "Record": "02126b21fe725bea70381e3d0cab61f142c54676b4fe16a0ca8aba23181c6cd3"
+      },
+      "regions": []
+    },
+    "nomo.session.recoverable_events": {
+      "path": "src/nomo/session/recoverable_events.es",
+      "declarations": [
+        "type Frame"
+      ],
+      "reason": "Preserved stored nominal types, Memory region resources or filesystem Region identity",
+      "shapes": {
+        "Frame": "408c13655d15d5d5581bdcc14c2f68076467f14c643bf282785804e6411e03ed"
+      },
+      "regions": []
+    },
+    "nomo.session.history_check_store": {
+      "path": "src/nomo/session/history_check_store.es",
+      "declarations": [
+        "type Record"
+      ],
+      "reason": "Preserved stored nominal types, Memory region resources or filesystem Region identity",
+      "shapes": {
+        "Record": "7d1da6d0ba6b3080cd09a509bcbf6924977df6513aa3f567d43a2ac980554eb1"
+      },
+      "regions": []
+    },
+    "nomo.session.user_context_chain_v4_store": {
+      "path": "src/nomo/session/user_context_chain_v4_store.es",
+      "declarations": [
+        "alias Schema",
+        "let Chain"
+      ],
+      "reason": "Existing untracked local prototype; preserve its nominal identity when present",
+      "shapes": {
+        "Schema": "a033a62506f8b363bf400a1feaa03a1b8e4b351aa4bdc01481d647786be18820",
+        "Chain": "1b44b44e2d436c34b9191790008c20855fa901c3fc743c6c556f672845960961"
+      },
+      "optional": true,
+      "regions": []
+    },
+    "nomo.session.store_record": {
+      "path": "src/nomo/session/store_record.es",
+      "declarations": [
+        "type Record"
+      ],
+      "reason": "Preserved stored nominal types, Memory region resources or filesystem Region identity",
+      "shapes": {
+        "Record": "993eef0c30f81050aacce073a253ff4ed6debb06e5d8f840ba73f603114f312b"
+      },
+      "regions": []
+    },
+    "nomo.session.metadata_store": {
+      "path": "src/nomo/session/metadata_store.es",
+      "declarations": [
+        "alias Schema",
+        "let Metadata"
+      ],
+      "reason": "Preserved stored nominal types, Memory region resources or filesystem Region identity",
+      "shapes": {
+        "Schema": "a033a62506f8b363bf400a1feaa03a1b8e4b351aa4bdc01481d647786be18820",
+        "Metadata": "f7db9e534834d6b25def5830b98e476f9a807bfd5696cb48ebddc9646ef5e33f"
+      },
+      "regions": []
+    },
+    "nomo.session.check_store": {
+      "path": "src/nomo/session/check_store.es",
+      "declarations": [
+        "type Frame"
+      ],
+      "reason": "Preserved stored nominal types, Memory region resources or filesystem Region identity",
+      "shapes": {
+        "Frame": "ae95ea275639b42858d0f9df21e144d3cb9d98c438eb5487c60e2a80cc3ab960"
+      },
+      "regions": []
+    },
+    "nomo.session.recoverable_work_store": {
+      "path": "src/nomo/session/recoverable_work_store.es",
+      "declarations": [
+        "type Frame",
+        "alias Schema",
+        "let Runs"
+      ],
+      "reason": "Preserved stored nominal types, Memory region resources or filesystem Region identity",
+      "shapes": {
+        "Frame": "48a6b652f8b8f9b12638b381416d927c1f5b6928e70662cb7a85596b2e656ef1",
+        "Schema": "a4d7252c736532e5324e08183fd76ff0a6865a71555f5f32d46a71a95f6e7185",
+        "Runs": "b4f819fa3b54a31bccb8c4e7eaf350462713b7f7de7f838c9b3b4d1324e5cd5a"
+      },
+      "regions": []
+    },
+    "nomo.session.harness_successor_store": {
+      "path": "src/nomo/session/harness_successor_store.es",
+      "declarations": [
+        "type Record",
+        "alias Schema",
+        "let Successors"
+      ],
+      "reason": "Preserved stored nominal types, Memory region resources or filesystem Region identity",
+      "shapes": {
+        "Record": "c2b933413be838b5b36a44e3739422fcade016a650ddec86772917553a063367",
+        "Schema": "a033a62506f8b363bf400a1feaa03a1b8e4b351aa4bdc01481d647786be18820",
+        "Successors": "35c8c3873f05a1491d18593e50f7d7095a2619db4c3ca85f7e1b70fa0b5537e5"
+      },
+      "regions": []
+    },
+    "nomo.session.chat_session_contract": {
+      "path": "src/nomo/session/chat_session_contract.es",
+      "declarations": [
+        "type Session"
+      ],
+      "reason": "Preserved stored nominal types, Memory region resources or filesystem Region identity",
+      "shapes": {
+        "Session": "311f61bc87a1c6f5d9bb9e97305235cbe5eea24bb9e58b2cfdcc4519342de5ed"
+      },
+      "regions": []
+    },
+    "nomo.session.history_first_check_rows": {
+      "path": "src/nomo/session/history_first_check_rows.es",
+      "declarations": [
+        "alias Schema",
+        "let Checks"
+      ],
+      "reason": "Preserved stored nominal types, Memory region resources or filesystem Region identity",
+      "shapes": {
+        "Schema": "a033a62506f8b363bf400a1feaa03a1b8e4b351aa4bdc01481d647786be18820",
+        "Checks": "183a017555609602810257439547d4b07847fee6e76cdf0f1b2d7ad50f7a2a11"
+      },
+      "regions": []
+    },
+    "nomo.session.session_state": {
+      "path": "src/nomo/session/session_state.es",
+      "declarations": [
+        "type Caps",
+        "type Ledger",
+        "type Operation",
+        "type Reference",
+        "type Snapshot"
+      ],
+      "reason": "Preserved stored nominal types, Memory region resources or filesystem Region identity",
+      "shapes": {
+        "Caps": "e5250fd689f6a312032e6cc645e80cd1b316f5876c0eb4c714208164a27926ed",
+        "Ledger": "7a8ac0e168bf448e63444e8a186de9e85e0df5084d178647f42846bdbbe56688",
+        "Operation": "da2c513fe17c6cac41297d7578724b82b10956c89963fbf0a10eafa95dcf49d2",
+        "Reference": "641c1fa6d5f8156d05a79dd6276c1eb6c590ea75c29956f2954e306181974c88",
+        "Snapshot": "2a144cb66a84abbf9c70e28101cfdedd679df74d08aa7d7f662ee127c8297953"
+      },
+      "regions": []
+    }
+  }
+}

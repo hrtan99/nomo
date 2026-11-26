@@ -76,7 +76,7 @@ def helpers(root):
 
 
 def sources(root):
-    pending, found = ['nomo.entry.harness_work_entry'], {}
+    pending, found = ['nomo.adapters.cli.legacy.harness_work_entry'], {}
     while pending:
         module = pending.pop()
         if module in found: continue

@@ -1,7 +1,7 @@
 module app.callable_negative;
 
 import nomo.core.conversation.Event;
-import nomo.model.conversation_output.ConsoleEventSink;
+import nomo.application.harness.ports.model_conversation_output.ConsoleEventSink;
 
 flow bad(event: Event) -> unit ![Error<string>] ~ ConsoleEventSink {
     perform Error<string>.raise("intentional outside-bound error");

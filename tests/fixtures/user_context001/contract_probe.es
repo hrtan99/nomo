@@ -1,17 +1,18 @@
 module app.contract_probe;
 import std.io.println;
-import nomo.entry.user_context_entry.selection;
-import nomo.entry.harness_work_entry.{chain_ledger, user_context_ledger, Pending, Failure, Completed, Summary, prepare_chain_work, summarize_chain};
-import nomo.cli.harness_work_args.Work;
-import nomo.harness.work_chain_context.ParentFacts;
-import nomo.harness.harness_work_contract.fresh;
-import nomo.session.work_chain_usecase.{WorkStop, WorkOutcome};
-import nomo.session.work_chain.{initial_user_context, turn_caps};
-import nomo.session.work_chain_selection.{Snapshot, ObservedRow, ObservedJournal, Selector, validate as selection_error, eligible, select};
-import nomo.session.work_chain_journal_contract.CapturedJournal;
-import nomo.tools.edit_file.prepare_original;
-import nomo.tools.edit_binding.bind;
-import nomo.entry.work_chain_entry.{DetailedWorkOutcome, present_detailed_outcome, project_outcome};
+import nomo.adapters.cli.legacy.user_context_entry.selection;
+import nomo.adapters.cli.legacy.harness_work_entry.{chain_ledger, user_context_ledger, prepare_chain_work, summarize_chain};
+import nomo.domain.work.protocol.{Pending, Failure, Completed, Summary};
+import nomo.adapters.cli.arguments.harness_work_args.Work;
+import nomo.domain.harness.work_chain_context.ParentFacts;
+import nomo.domain.harness.harness_work_contract.fresh;
+import nomo.domain.sessions.work_chain_usecase.{WorkStop, WorkOutcome};
+import nomo.domain.sessions.work_chain.{initial_user_context, turn_caps};
+import nomo.domain.sessions.work_chain_selection.{Snapshot, ObservedRow, ObservedJournal, Selector, validate as selection_error, eligible, select};
+import nomo.domain.sessions.work_chain_journal_contract.CapturedJournal;
+import nomo.domain.mutations.edit_contract.prepare_original;
+import nomo.domain.mutations.edit_binding.bind;
+import nomo.adapters.cli.legacy.work_chain_entry.{DetailedWorkOutcome, present_detailed_outcome, project_outcome};
 
 flow base(root: string, mode: string) -> Array<string> {
     return ["--read-root", root, "--input-mode", mode, "--id", "user-1", "--workspace", "demo", "--path", "demo/value.txt", "--once", "Read the selected file", "--allow", "notes/context.txt"];

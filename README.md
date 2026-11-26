@@ -4,7 +4,9 @@ Nomo is a local project coding agent built with [ETAS](https://github.com/etas-p
 
 ## Get started
 
-Use the existing Docker image, pinned ETAS 0.13.5 installation and `MINIMAX_API_KEY` configuration. Open any existing project folder, including an empty one:
+The refactor checkout selects official ETAS **0.23.0**, its matching SDK and the pinned native TOML tools. Source follows the [layer boundaries](ARCHITECTURE.md), checked by `python3 -B scripts/check-architecture.py` and CI. Runtime acceptance remains blocked: the complete check exits with an internal effect-identity projection error ([etas-frontend#101](https://github.com/etas-project/etas-frontend/issues/101)), and the existing positive conversation invocation was OOM-killed at 4 GiB. The commands below document the user interface; this checkout is not a verified release.
+
+Use the existing Docker image and `MINIMAX_API_KEY` configuration. Open any existing project folder, including an empty one:
 
 ```sh
 ./scripts/nomo --root ~/Projects/nomo-test

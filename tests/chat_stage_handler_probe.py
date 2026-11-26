@@ -259,8 +259,8 @@ def prepare(folder):
     # Complete112 D7 product graph already passed root's early-source-002. This
     # check adds only the new fixture and its actual production-consumer closure.
     roots = ['nomo.harness.harness_tool_chat_controller', 'nomo.harness.harness_tool_chat',
-             'nomo.harness.harness_model_tools', 'nomo.entry.harness_model_tools_chat',
-             'nomo.entry.harness_checkpoint_entry', 'nomo.entry.harness_successor_entry']
+             'nomo.harness.harness_model_tools', 'nomo.adapters.cli.legacy.harness_model_tools_chat',
+             'nomo.adapters.cli.legacy.harness_checkpoint_entry', 'nomo.adapters.cli.legacy.harness_successor_entry']
     positive_sources = {}
     for module in roots: positive_sources.update(closure(module))
     for module, path in positive_sources.items():

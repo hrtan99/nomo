@@ -98,7 +98,7 @@ def cases():
 
 
 def sources():
-    pending, found = ['nomo.ui.edit_diff', 'nomo.entry.edit_coordinator'], {}
+    pending, found = ['nomo.adapters.cli.display.edit_diff', 'nomo.adapters.cli.legacy.edit_coordinator'], {}
     while pending:
         module = pending.pop()
         if module in found:

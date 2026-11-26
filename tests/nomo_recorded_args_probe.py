@@ -5,7 +5,7 @@ from pathlib import Path
 root=Path(__file__).resolve().parent.parent
 with tempfile.TemporaryDirectory(prefix='nomo-recorded-args-') as directory:
  project=Path(directory)/'project';shutil.copytree(root,project,ignore=shutil.ignore_patterns('.git','.etas','tmp','__pycache__'));(project/'.etas').mkdir()
- main=project/'src/nomo/main.es';source=main.read_text().replace('module nomo.main;','module nomo.main;\nimport nomo.cli.harness_work_args.parse_recorded;',1)
+ main=project/'src/nomo/main.es';source=main.read_text().replace('module nomo.main;','module nomo.main;\nimport nomo.adapters.cli.arguments.harness_work_args.parse_recorded;',1)
  source+='''
 public flow recorded_args_probe(args: Array<string>) -> i32 {
     let base = ["--id", "edit1", "--workspace", "private-workspace", "--path", "note.txt", "--once", "change text", "--allow", "note.txt"];

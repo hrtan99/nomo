@@ -7,19 +7,22 @@ import std.effects.Fs;
 import nomo.tools.workspace.ReadOnlyRoot;
 import std.text.{char_count as len, split};
 import nomo.core.conversation.{Event, State};
-import nomo.model.model_tool_contract.{Session, LoopTurn};
-import nomo.model.model_tool_contract.Context as ChildContext;
-import nomo.model.model_tool_contract.context_error as child_context_error;
-import nomo.harness.harness_tool_contract.{Ledger, Observed};
-import nomo.harness.harness_tool_contract.numbers as canonical_numbers;
-import nomo.harness.harness_model_tools.{numbers as legacy_numbers, child_turn};
-import nomo.harness.harness_tool_chat_contract.{Previous, Context, Invocation, Completed, TurnResult, empty, fresh_invocation, seed, context_error};
-import nomo.harness.harness_tool_chat_controller.run_turn_controller;
-import nomo.harness.harness_tool_chat.run_turn;
-import nomo.harness.legacy_chat_stages.LegacyChatStages;
-import nomo.entry.harness_model_tools_chat.run as chat_run;
-import nomo.entry.harness_checkpoint_entry.{run_init, run_save, run_show};
-import nomo.entry.harness_successor_entry.{run_continue, run_show as successor_show};
+import nomo.domain.harness.model_tool_contract.{Session, LoopTurn};
+import nomo.domain.harness.tool_context.Context as ChildContext;
+import nomo.domain.harness.model_tool_contract.context_error as child_context_error;
+import nomo.harness.harness_tool_contract.{Ledger};
+import nomo.domain.harness.harness_tool_contract.{Observed};
+import nomo.domain.harness.harness_tool_contract.numbers as canonical_numbers;
+import nomo.domain.harness.harness_tool_contract.{numbers as legacy_numbers};
+import nomo.adapters.model.harness.harness_model_tools.{child_turn};
+import nomo.harness.harness_tool_chat_contract.{Previous, Invocation};
+import nomo.domain.harness.harness_tool_chat_contract.{Context, Completed, TurnResult, empty, fresh_invocation, seed, context_error};
+import nomo.bootstrap.harness.ascii_chat.run_turn_controller;
+import nomo.adapters.model.harness.harness_tool_chat.run_turn;
+import nomo.application.harness.effects.harness_legacy_chat_stages.LegacyChatStages;
+import nomo.adapters.cli.legacy.harness_model_tools_chat.run as chat_run;
+import nomo.adapters.cli.legacy.harness_checkpoint_entry.{run_init, run_save, run_show};
+import nomo.adapters.cli.legacy.harness_successor_entry.{run_continue, run_show as successor_show};
 
 // This exact shape/helper is copied from the unchanged original pure fixture.
 // Only its original zero_call_child_context_proven Check is embedded below.

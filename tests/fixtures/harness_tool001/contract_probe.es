@@ -3,8 +3,9 @@ module app.contract_probe;
 import std.io.println;
 import std.text.char_count as len;
 import nomo.core.conversation.{Event, State};
-import nomo.model.model_tool_contract.Session;
-import nomo.harness.harness_tool_contract.{Ledger, Context, Observed, fresh, bump, settle, inspect, context_error};
+import nomo.domain.harness.model_tool_contract.Session;
+import nomo.harness.harness_tool_contract.{Ledger};
+import nomo.domain.harness.harness_tool_contract.{Context, Observed, fresh, bump, settle, inspect, context_error};
 
 type Check = { label: string, mode: string, ledger: Ledger, child: Session, status: i32, context: Context,
     accepted: bool, expected_ledger: Ledger, expected_observed: Observed };

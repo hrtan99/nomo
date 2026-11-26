@@ -2,13 +2,15 @@ module app.contract_probe;
 
 import std.io.println;
 import std.text.char_count as len;
-import nomo.core.conversation.{Event, State, add};
-import nomo.model.model_tool_contract.{Session};
-import nomo.model.model_tool_contract.Context as ChildContext;
-import nomo.model.model_tool_contract.context_error as child_context_error;
-import nomo.harness.harness_tool_contract.{Ledger, Observed, inspect};
-import nomo.harness.harness_tool_chat_contract.{Previous, Context, Invocation, empty, seed, prior_error, context_error,
-    invocation_error, admission_error, combine, inspect_turn, default_maximum, fresh_invocation, turn_error};
+import nomo.core.conversation.{Event, State};
+import nomo.domain.conversation.state.{add};
+import nomo.domain.harness.model_tool_contract.{Session};
+import nomo.domain.harness.tool_context.Context as ChildContext;
+import nomo.domain.harness.model_tool_contract.context_error as child_context_error;
+import nomo.harness.harness_tool_contract.{Ledger};
+import nomo.domain.harness.harness_tool_contract.{Observed, inspect};
+import nomo.harness.harness_tool_chat_contract.{Previous, Invocation};
+import nomo.domain.harness.harness_tool_chat_contract.{Context, empty, seed, prior_error, context_error, invocation_error, admission_error, combine, inspect_turn, default_maximum, fresh_invocation, turn_error};
 
 type Check = { label: string, mode: string, ledger: Ledger, usage: Ledger, maximum: Ledger, invocation: Invocation,
     prior: Previous, context: Context, child: Session, legacy: Session, status: i32, allowed: Array<string>,

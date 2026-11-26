@@ -1,13 +1,13 @@
 module app.main;
 
 import std.io.{println, IOError};
-import nomo.adapters.etas.conversations.{NativeHistory, copy_status, copy_jobs, prepare_copy, ensure_copy_session, advance_copy, copy_event, sealed_copy_source, copy_summary, copy_record_complete, copy_job};
-import nomo.application.native.conversation.ports.{ConversationReader, ConversationWriter, ConversationCatalog};
+import nomo.adapters.storage.conversations.{NativeHistory, copy_status, copy_jobs, prepare_copy, ensure_copy_session, advance_copy, copy_event, sealed_copy_source, copy_summary, copy_record_complete, copy_job};
+import nomo.application.conversation.ports.{ConversationReader, ConversationWriter, ConversationCatalog};
 import nomo.domain.conversation.messages.ChatMessage;
 import nomo.domain.transfer.archive.{ArchiveDocument, PortableArchive, PortableInfo};
-import nomo.adapters.codec.archive.{json, decode, fingerprint};
-import nomo.application.native.transfer.service;
-import nomo.application.native.transfer.effects.{CopyStorage, ArchiveCodec, ArchiveFiles, TransferDisplay};
+import nomo.adapters.storage.codec.archive.{json, decode, fingerprint};
+import nomo.application.transfer.service;
+import nomo.application.transfer.effects.{CopyStorage, ArchiveCodec, ArchiveFiles, TransferDisplay};
 
 public flow main(args: Array<string>) -> i32 ![Memory, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>, Error<IndexError>] {
     let history = NativeHistory {};

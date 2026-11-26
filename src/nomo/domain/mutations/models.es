@@ -10,3 +10,6 @@ public type FilePreview = { path: string, before: string, after: string };
 public type Journal = { id: string, session: string, name: string, call: i64, phase: string, steps: i64, message: string, owner_call: i64, owner_name: string };
 public type SavedPath = { path: string, before_exists: bool, before: string, after_exists: bool, after: string };
 public type Step = { phase: string, paths: Array<SavedPath> };
+
+public type FileChange = { path: string, before: string, after: string };
+public type FileOutcome = { path: string, status: string, edit: string };

@@ -4,18 +4,18 @@ import std.io.println;
 import std.text.split;
 import std.bytes.len as byte_count;
 import std.codec.text.utf8_encode;
-import nomo.tools.edit_encoding.digest;
-import nomo.model.model_tool_contract.{Action, decode_reply};
-import nomo.model.model_tool_contract.Context as ToolContext;
-import nomo.harness.harness_tool_contract.Context as ReadContext;
+import nomo.domain.mutations.edit_encoding.digest;
+import nomo.domain.harness.model_tool_contract.{Action, decode_reply};
+import nomo.domain.harness.tool_context.Context as ToolContext;
+import nomo.domain.harness.harness_tool_contract.Context as ReadContext;
 import nomo.harness.harness_tool_contract.Ledger as ReadLedger;
-import nomo.harness.harness_edit_contract.Context as EditContext;
-import nomo.harness.harness_work_contract.{Context, Evidence};
-import nomo.harness.work_chain_model.{Input, ParentFacts, combined};
-import nomo.harness.typed_work_contract.{Delegation, ReadAction, Answer, project_read_plan, project_read_action,
-    project_read_final, project_read_aggregate, settle_read, project_edit_plan, project_edit_child, project_edit_aggregate};
-import nomo.tools.edit_contribution.Contribution;
-import nomo.harness.typed_work_reservation.{Policy, Envelope, Reservation, required, admit, advance, stop, reservation_error};
+import nomo.domain.harness.harness_edit_contract.Context as EditContext;
+import nomo.domain.harness.harness_work_contract.{Context, Evidence};
+import nomo.domain.harness.work_chain_context.{Input, ParentFacts};
+import nomo.adapters.model.harness.work_chain_model.{combined};
+import nomo.domain.harness.typed_work_contract.{Delegation, ReadAction, Answer, project_read_plan, project_read_action, project_read_final, project_read_aggregate, settle_read, project_edit_plan, project_edit_child, project_edit_aggregate};
+import nomo.domain.mutations.edit_contribution.Contribution;
+import nomo.domain.harness.typed_work_reservation.{Policy, Envelope, Reservation, required, admit, advance, stop, reservation_error};
 
 type Check = { label: string, passed: bool };
 flow slash() -> string { return std.text.from_char('\\'); }

@@ -1,12 +1,16 @@
 module app.main;
 
 import std.io.println;
-import nomo.harness.harness_tool_chat_contract.{Invocation, Previous, Completed, TurnResult, empty};
-import nomo.harness.harness_tool_contract.{Ledger, fresh as fresh_ledger};
-import nomo.harness.read_tool_chat_contract.{multi_maximum, multi_wide_maximum, multi_input_maximum, multi_input_reasoning_maximum, multi_full_maximum, multi_large_maximum, multi_resilient_maximum};
-import nomo.harness.read_tool_chat.{MainMode, main_mode};
-import nomo.harness.chat_budget_policy.{SelectedBudget, select};
-import nomo.session.chat_session_contract.{Session, fresh, fresh_events, fresh_high_input_events, invalid, begin, complete};
+import nomo.harness.harness_tool_chat_contract.{Invocation, Previous};
+import nomo.domain.harness.harness_tool_chat_contract.{Completed, TurnResult, empty};
+import nomo.harness.harness_tool_contract.{Ledger};
+import nomo.domain.harness.harness_tool_contract.{fresh as fresh_ledger};
+import nomo.domain.harness.read_tool_chat_contract.{multi_maximum, multi_wide_maximum, multi_input_maximum, multi_input_reasoning_maximum, multi_full_maximum, multi_large_maximum, multi_resilient_maximum};
+import nomo.domain.harness.read_tool_chat.{MainMode};
+import nomo.adapters.model.harness.read_tool_chat.{main_mode};
+import nomo.domain.harness.chat_budget_policy.{SelectedBudget, select};
+import nomo.session.chat_session_contract.{Session};
+import nomo.domain.sessions.chat_session_contract.{fresh, fresh_events, fresh_high_input_events, invalid, begin, complete};
 
 flow completed(request: string, maximum: Ledger, tokens: i32) -> TurnResult {
     let prior = Previous { task = "Read", result = "Answer", tool = "", outcome = "", answer = "Answer" };

@@ -2,6 +2,24 @@
 
 The shipping `scripts/nomo` entry still uses the existing Python project controller. The opt-in `native_project` flow is the migration implementation, not a completed replacement.
 
+## Current source and toolchain, 2026-11-26
+
+The working source now contains the combined implementation and its layer migration, rather than only a prepared patch. The selected graph is official CLI **0.23.0** at `f904fa0d`, with the exact core/frontend/interpreter revisions from its Cargo.lock and a matching installed SDK. The existing pinned taplo 0.10.0 binary was copied byte-for-byte into this graph's cache; jq comes from the existing container image.
+
+The source layout and ownership rules are in [ARCHITECTURE.md](ARCHITECTURE.md). Application interfaces belong to their consumers. Concrete model, storage, process, filesystem and CLI implementations live in adapters. Bootstrap constructs dependencies and installs Handlers; concrete impl bodies and mutation dispatch policy have moved out. Legacy module paths retain identity-only declarations where required for stored nominal types, Memory resources and filesystem Regions.
+
+The dependency check resolves named public imports, rejects reverse layer dependencies and import cycles, and verifies preserved declaration fingerprints and Region markers. The current working tree passes with 458 modules, 3,351 imports and 51 compatibility leaves. Existing untracked v4 prototypes remain optional local source and are not production composition.
+
+Acceptance is still incomplete:
+
+- Normal full-source checks on the adopted 0.23.0 graph exit 4 with `checked effect tag has conflicting package identities`, both for the complete working tree and the exact review package (448 modules, excluding local untracked prototypes). It provides no source position or conflicting keys; the diagnostic limitation is reported as [frontend #101](https://github.com/etas-project/etas-frontend/issues/101). No minimal reproduction is claimed.
+- The existing positive injected-conversation scenario invokes `etas run` with real fixture SQLite and controlled model effects. Its process was killed at the unchanged 4 GiB limit (`oom_kill=1`, exit -9). Current evidence does not distinguish frontend compilation from interpreter execution. This is not a passing conversation or durability result.
+- Consequently the native read/edit/check/Git/new-process scenario and default cutover are not accepted. No real model request or additional historical test matrix was run for this migration.
+
+Earlier preparation and baseline results below are retained as historical evidence; they do not describe the currently selected source or establish current runtime acceptance.
+
+The graph, SDK, declaration fingerprints, exact scope and failed acceptance observations are recorded in [the 0.23.0 migration receipt](examples/native-project/layers-0230-20261126.json).
+
 ## Dependency-inversion and runtime inventory, 2026-11-26
 
 The combined proposal is

@@ -4,9 +4,9 @@ import std.io.IOError as ConsoleError;
 import std.fs.IOError as FileError;
 import std.effects.Fs;
 import nomo.core.conversation.State;
-import nomo.model.model_tool_contract.LoopTurn;
-import nomo.harness.harness_tool_contract.Context as ReadContext;
-import nomo.harness.harness_work_contract.Context;
+import nomo.domain.harness.model_tool_contract.LoopTurn;
+import nomo.domain.harness.harness_tool_contract.Context as ReadContext;
+import nomo.domain.harness.harness_work_contract.Context;
 import nomo.tools.workspace.ReadOnlyRoot;
 
 public spec WorkModelStages {

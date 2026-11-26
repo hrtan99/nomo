@@ -2,13 +2,15 @@ module app.contract_probe;
 
 import std.io.println;
 import std.text.{char_count as len, split};
-import nomo.core.text.printable;
+import nomo.domain.text.text.printable;
 import nomo.core.conversation.Event;
 import nomo.harness.harness_tool_contract.Ledger;
-import nomo.harness.harness_tool_chat_contract.{Invocation, Previous, Completed, TurnResult, Context, turn_error, context_error};
-import nomo.session.harness_checkpoint.{Identity, Checkpoint};
-import nomo.session.harness_successor.{Successor, restore, validate, encode, decode, from_turn};
-import nomo.cli.harness_successor_args.parse;
+import nomo.harness.harness_tool_chat_contract.{Invocation, Previous};
+import nomo.domain.harness.harness_tool_chat_contract.{Completed, TurnResult, Context, turn_error, context_error};
+import nomo.session.harness_checkpoint.{Identity};
+import nomo.domain.sessions.harness_checkpoint.{Checkpoint};
+import nomo.domain.sessions.harness_successor.{Successor, restore, validate, encode, decode, from_turn};
+import nomo.adapters.cli.arguments.harness_successor_args.parse;
 
 type Check = { label: string, mode: string, saved: Successor, requested: Identity, predecessor: Identity,
     raw: string, accepted: bool, status: i32, resolved: bool, present: bool, mutation: string,

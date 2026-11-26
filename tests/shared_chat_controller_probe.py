@@ -259,8 +259,8 @@ def prepare(folder):
     project = folder / 'controller'; (project / 'src/app').mkdir(parents=True)
     # Copy the current candidate's actual production-consumer closure.
     roots = ['nomo.harness.harness_tool_chat_controller', 'nomo.harness.harness_tool_chat',
-             'nomo.harness.harness_model_tools', 'nomo.entry.harness_model_tools_chat',
-             'nomo.entry.harness_checkpoint_entry', 'nomo.entry.harness_successor_entry']
+             'nomo.harness.harness_model_tools', 'nomo.adapters.cli.legacy.harness_model_tools_chat',
+             'nomo.adapters.cli.legacy.harness_checkpoint_entry', 'nomo.adapters.cli.legacy.harness_successor_entry']
     positive_sources = {}
     for module in roots: positive_sources.update(closure(module))
     for module, path in positive_sources.items():

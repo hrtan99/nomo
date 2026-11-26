@@ -1,6 +1,6 @@
 module nomo.application.work.request;
 
-import nomo.tools.edit_contract.Selector;
+import nomo.domain.mutations.edit_contract.Selector;
 
 // Application input after CLI parsing. Help flags, option spelling and command
 // trailers stay in presentation modules.

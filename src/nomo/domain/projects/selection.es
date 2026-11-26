@@ -6,9 +6,7 @@ import std.collections.len;
 public enum ProjectReference { Saved(usize), Folder(string) }
 
 public flow remembered(workspace: string, recent: Array<string>) -> Array<string> {
-    var folders = [workspace];
-    for value in recent limit Iterations(2147483647) { if value != workspace { folders = folders.push(value); } }
-    return folders;
+    return [workspace].extend(recent.retain(value => value != workspace));
 }
 
 public flow reference(selection: string, workspace: string) -> ProjectReference {

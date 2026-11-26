@@ -11,9 +11,9 @@ flow display(value: bytes) -> string {
 
 public flow observed(job: string, call: i64, value: ProcessEvent) -> JobEvent {
     return match value {
-        ProcessEvent.Output(stdout, stderr) => JobEvent { job = job, call = call, phase = "output", exit_code = None(), stdout = display(stdout), stderr = display(stderr), stdout_bytes = stdout, stderr_bytes = stderr },
-        ProcessEvent.Exited(code, stdout, stderr) => JobEvent { job = job, call = call, phase = "exited", exit_code = Some(code), stdout = display(stdout), stderr = display(stderr), stdout_bytes = stdout, stderr_bytes = stderr },
-        ProcessEvent.Stopped(stdout, stderr) => JobEvent { job = job, call = call, phase = "stopped", exit_code = None(), stdout = display(stdout), stderr = display(stderr), stdout_bytes = stdout, stderr_bytes = stderr }
+        ProcessEvent.Output(stdout, stderr) => JobEvent { job, call, phase = "output", exit_code = None(), stdout = display(stdout), stderr = display(stderr), stdout_bytes = stdout, stderr_bytes = stderr },
+        ProcessEvent.Exited(code, stdout, stderr) => JobEvent { job, call, phase = "exited", exit_code = Some(code), stdout = display(stdout), stderr = display(stderr), stdout_bytes = stdout, stderr_bytes = stderr },
+        ProcessEvent.Stopped(stdout, stderr) => JobEvent { job, call, phase = "stopped", exit_code = None(), stdout = display(stdout), stderr = display(stderr), stdout_bytes = stdout, stderr_bytes = stderr }
     };
 }
 

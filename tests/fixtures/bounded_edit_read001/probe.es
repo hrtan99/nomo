@@ -5,8 +5,9 @@ import std.fs.IOError as FileError;
 import std.effects.Fs;
 import std.runtime.error.IndexError;
 import std.io.IOError as ConsoleError;
-import nomo.tools.edit_file.{EditableRoot, read_original, prepare, apply};
-import nomo.tools.edit_contract.prepare_original;
+import nomo.tools.edit_file.{EditableRoot};
+import nomo.adapters.filesystem.legacy.edit_file.{read_original, prepare, apply};
+import nomo.domain.mutations.edit_contract.prepare_original;
 
 flow read_count(name: string, expected: usize) -> bool {
     return match read_original(name) { Ok(value) => len(value) == expected, Err(_) => false };

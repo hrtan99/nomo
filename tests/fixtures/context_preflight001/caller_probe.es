@@ -4,10 +4,11 @@ import std.io.println;
 import std.agent.message.Message;
 import std.json.{JsonValue, stringify};
 import nomo.core.conversation.{Event, State};
-import nomo.model.model_tool_contract.{Session, Limits, context_error};
-import nomo.model.tool_context.Context;
-import nomo.context.preflight.{Refusal, measure_context};
-import nomo.agent.model_tool.{LoopTurn, run_loop};
+import nomo.domain.harness.model_tool_contract.{Session, Limits, context_error};
+import nomo.domain.harness.tool_context.Context;
+import nomo.domain.context.preflight.{Refusal, measure_context};
+import nomo.domain.harness.model_tool_contract.{LoopTurn};
+import nomo.adapters.model.legacy.model_tool.{run_loop};
 
 // These reports are observation values, not a claim that JsonValue measures
 // arbitrary typed numeric Prompt.data inputs. Full typed equality is checked

@@ -3,11 +3,11 @@ module app.main;
 import std.io.{println, IOError};
 import std.text.{from_i64, ends_with};
 import std.json.JsonValue;
-import nomo.native.history.SessionContext;
-import nomo.adapters.etas.conversations.{NativeHistory, record as save_record, tool_finished, pending_request, result_published};
-import nomo.application.native.conversation.ports.{ConversationReader, ConversationCatalog};
-import nomo.application.native.mutations.ports.{MutationFiles, ChangeJournal, MutationHistory, MutationOutput};
-import nomo.application.native.mutations.service.{apply_plan, undo_changes, rollback_changes};
+import nomo.application.conversation.session_context.SessionContext;
+import nomo.adapters.storage.conversations.{NativeHistory, record as save_record, tool_finished, pending_request, result_published};
+import nomo.application.conversation.ports.{ConversationReader, ConversationCatalog};
+import nomo.application.mutations.ports.{MutationFiles, ChangeJournal, MutationHistory, MutationOutput};
+import nomo.application.mutations.service.{apply_plan, undo_changes, rollback_changes};
 import nomo.domain.mutations.models.{Change, ChangeOutcome, Journal, Step};
 
 type FileState = { exists: bool, text: string };
@@ -73,7 +73,7 @@ flow execute(history: NativeHistory, session: string, mode: string, edit: string
         ChangeJournal.list(selected) => {
             let page = Data.Journals.page(None(), 100);
             var result: Array<Journal> = [];
-            for item in page.entries limit Iterations(100) { if item.value.session == selected { result = result.push(item.value); } }
+            @limits([Iterations(100)]) for item in page.entries   { if item.value.session == selected { result = result.push(item.value); } }
             resume result;
         }
         MutationHistory.record(role, name, value, call) => {

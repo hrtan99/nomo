@@ -2,14 +2,16 @@ module app.main;
 
 import std.io.{println, IOError};
 import std.text.from_i64;
-import nomo.adapters.etas.conversations.NativeHistory;
-import nomo.adapters.etas.attempts.NativeAttempts;
-import nomo.application.native.conversation.ports.{ConversationReader, ConversationWriter, ConversationCatalog, GenerationReservation, ResultPublication};
-import nomo.application.native.execution.ports.AttemptRepository;
-import nomo.application.native.conversation.controller.turn;
-import nomo.application.native.conversation.model.{ConversationModel, ConversationOutput};
-import nomo.application.native.context.effects.ConversationContext;
-import nomo.domain.context.projection.{ContextProjection, RollingContext, project};
+import nomo.adapters.storage.conversations.NativeHistory;
+import nomo.adapters.storage.attempts.NativeAttempts;
+import nomo.application.conversation.ports.{ConversationReader, ConversationWriter, ConversationCatalog, GenerationReservation, ResultPublication};
+import nomo.application.execution.ports.AttemptRepository;
+import nomo.application.conversation.turn.turn;
+import nomo.application.conversation.effects.{ConversationModel, ConversationOutput};
+import nomo.application.context.effects.ConversationContext;
+import nomo.application.context.ports.{ContextProjection};
+import nomo.adapters.model.context_projection.{RollingContext};
+import nomo.domain.context.projection.{project};
 import nomo.domain.configuration.settings.Settings;
 import nomo.domain.conversation.turn.{Turn, Answer, Summary};
 
@@ -50,7 +52,7 @@ public flow main(args: Array<string>) -> i32 ![Memory, Console, Error<StorageErr
     let saved = history.create("controller-workspace", "Controlled conversation");
     var request = "";
     var index: i32 = 0;
-    while index < 32 limit Iterations(32) { request = request + "Continue the same coding objective. "; index = index + 1; }
+    @limits([Iterations(32)]) while index < 32   { request = request + "Continue the same coding objective. "; index = index + 1; }
     let accepted = turn(history, history, history, attempts, history, RollingContext {}, saved.id, request) with {
         ConversationContext.settings(session) => {
             if session != saved.id || history.load(session).next_event != 1 { abort("settings were not loaded after the user append"); }
@@ -85,7 +87,7 @@ public flow main(args: Array<string>) -> i32 ![Memory, Console, Error<StorageErr
     }
     let completed = attempts.list(saved.id, false);
     if completed.len() != 2 || attempts.list(saved.id, true).len() != 0 { abort("completed attempts were not settled"); }
-    for value in completed limit Iterations(2) {
+    @limits([Iterations(2)]) for value in completed   {
         if value.phase != "completed" || value.input_event != 0 { abort("attempt completion ordering changed"); }
         if value.kind == "summary" && (value.result_event != 1 || value.through != 0) { abort("summary attempt points to the wrong history slot"); }
         if value.kind == "coding" && (value.result_event != 2 || value.through != 1) { abort("coding attempt points to the wrong history slot"); }

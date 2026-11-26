@@ -4,7 +4,7 @@ import nomo.domain.conversation.messages.ChatMessage;
 import nomo.domain.context.instructions.ProjectInstruction;
 import nomo.domain.configuration.settings.Settings;
 import nomo.domain.process.jobs.Job;
-import nomo.native.lifecycle.Attempt;
+import nomo.domain.execution.attempt.Attempt;
 
 public type Answer = { text: string };
 public type Summary = { text: string };

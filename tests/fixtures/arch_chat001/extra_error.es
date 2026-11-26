@@ -2,8 +2,8 @@ module app.callable_negative;
 
 import std.fs.Region;
 import nomo.core.conversation.State;
-import nomo.model.model_tool_contract.{LoopTurn, fresh_loop};
-import nomo.harness.legacy_chat_stages.ChatChildStage;
+import nomo.domain.harness.model_tool_contract.{LoopTurn, fresh_loop};
+import nomo.application.harness.ports.harness_legacy_chat_stages.ChatChildStage;
 
 type FixtureRoot;
 impl FixtureRoot ~ Region;

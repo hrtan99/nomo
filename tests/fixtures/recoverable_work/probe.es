@@ -2,14 +2,15 @@ module app.recoverable_work_probe;
 
 import std.io.println;
 import nomo.core.conversation.Event;
-import nomo.session.redaction.Policy;
+import nomo.domain.sessions.redaction.Policy;
 import nomo.harness.harness_tool_contract.Ledger as ReadLedger;
 import nomo.harness.harness_edit_contract.Ledger as EditLedger;
 import nomo.harness.harness_work_contract.Ledger as WorkLedger;
-import nomo.harness.harness_tool_chat_contract.{Invocation, Previous, Completed, TurnResult};
-import nomo.session.recoverable_chat_store.{create as create_chat, load as load_chat, reserve as reserve_chat, finish as finish_chat};
-import nomo.session.recoverable_work_store.{admit, claim, finish, load};
-import nomo.session.event_text_codec.decode;
+import nomo.harness.harness_tool_chat_contract.{Invocation, Previous};
+import nomo.domain.harness.harness_tool_chat_contract.{Completed, TurnResult};
+import nomo.adapters.storage.legacy.recoverable_chat_store.{create as create_chat, load as load_chat, reserve as reserve_chat, finish as finish_chat};
+import nomo.adapters.storage.legacy.recoverable_work_store.{admit, claim, finish, load};
+import nomo.domain.sessions.event_text_codec.decode;
 import std.text.{len as byte_len, starts_with};
 
 flow chat_result(maximum: ReadLedger) -> TurnResult {

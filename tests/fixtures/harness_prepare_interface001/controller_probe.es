@@ -2,25 +2,31 @@ module app.prepare_interface_probe;
 
 import std.io.println;
 import std.text.char_count as len;
-import nomo.core.conversation.{Event, State, add, fresh as empty_history};
-import nomo.model.model_tool_contract.{Session, LoopTurn};
-import nomo.cli.harness_edit_args.Input;
-import nomo.cli.harness_work_args.Work;
-import nomo.cli.harness_work_args.application as application_request;
+import nomo.core.conversation.{Event, State};
+import nomo.domain.conversation.state.{add, fresh as empty_history};
+import nomo.domain.harness.model_tool_contract.{Session, LoopTurn};
+import nomo.adapters.cli.arguments.harness_edit_args.Input;
+import nomo.adapters.cli.arguments.harness_work_args.Work;
+import nomo.adapters.cli.arguments.harness_work_args.application as application_request;
 import nomo.application.harness.work.ports.WorkModelStages;
 import nomo.application.harness.work.stages.prepare_legacy;
 import nomo.harness.harness_tool_chat_contract.Previous;
-import nomo.harness.history_work_model.HistoryStages;
-import nomo.model.harness_progress.HarnessProgress;
-import nomo.model.diagnostic_output.DiagnosticOutput;
-import nomo.harness.harness_tool_contract.{Context as ReadContext, Ledger as ReadLedger};
-import nomo.harness.harness_edit_contract.{Context as EditContext, Ledger as EditLedger};
-import nomo.harness.harness_work_contract.{Context as WorkContext, Evidence, Ledger};
-import nomo.harness.legacy_string_stages.{LegacyStringStages, LegacyEditStages};
-import nomo.harness.edit_original.EditOriginal;
-import nomo.entry.harness_work_entry.{prepare_with, Pending, Failure};
-import nomo.tools.edit_contract.{Selector, Prepared};
-import nomo.tools.edit_proposal.{Request, Proposal};
+import nomo.adapters.model.harness.history_work_model.HistoryStages;
+import nomo.application.harness.effects.model_harness_progress.HarnessProgress;
+import nomo.application.harness.effects.model_diagnostic_output.DiagnosticOutput;
+import nomo.domain.harness.harness_tool_contract.{Context as ReadContext};
+import nomo.harness.harness_tool_contract.{Ledger as ReadLedger};
+import nomo.domain.harness.harness_edit_contract.{Context as EditContext};
+
+import nomo.harness.harness_edit_contract.{Ledger as EditLedger};
+import nomo.domain.harness.harness_work_contract.{Context as WorkContext, Evidence};
+import nomo.harness.harness_work_contract.{Ledger};
+import nomo.application.harness.effects.harness_legacy_string_stages.{LegacyStringStages, LegacyEditStages};
+import nomo.application.harness.effects.harness_edit_original.EditOriginal;
+import nomo.adapters.cli.legacy.harness_work_entry.{prepare_with};
+import nomo.domain.work.protocol.{Pending, Failure};
+import nomo.domain.mutations.edit_contract.{Selector, Prepared};
+import nomo.domain.mutations.edit_proposal.{Request, Proposal};
 
 flow event(role: string, kind: string, name: string, text: string) -> Event {
     return Event { role = role, kind = kind, name = name, text = text };

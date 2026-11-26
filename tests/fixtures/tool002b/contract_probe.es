@@ -4,9 +4,10 @@ import std.io.println;
 import std.text.split;
 import std.json.parse as parse_json;
 import std.agent.message.Message;
-import nomo.cli.edit_args.{Options, parse};
-import nomo.tools.edit_encoding.{json, object, digest};
-import nomo.session.edit_operation.{Binding, Record, binding_error, record_error, same_binding, same_record};
+import nomo.adapters.cli.arguments.edit_args.{Options, parse};
+import nomo.domain.mutations.edit_encoding.{json, object, digest};
+import nomo.session.edit_operation.{Binding, Record};
+import nomo.domain.sessions.edit_operation.{binding_error, record_error, same_binding, same_record};
 
 type Check = { label: string, passed: bool };
 flow slash() -> string { return std.text.from_char('\\'); }

@@ -2,8 +2,8 @@ module app.contract_probe;
 
 import std.io.println;
 import std.text.split;
-import nomo.tools.edit_contract.{Prepared, prepare_original};
-import nomo.tools.edit_proposal.{Request, Proposal};
+import nomo.domain.mutations.edit_contract.{Prepared, prepare_original};
+import nomo.domain.mutations.edit_proposal.{Request, Proposal};
 
 type Check = { label: string, passed: bool };
 flow slash() -> string { return std.text.from_char('\\'); }
