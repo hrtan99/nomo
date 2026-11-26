@@ -53,7 +53,7 @@ flow = "main"
         {'type': 'bind', 'source': str(state), 'target': '/state'},
         {'type': 'bind', 'source': str(guidance), 'target': '/guidance', 'read_only': True}]}}}))
     command = ['docker', 'compose', '--env-file', '/dev/null']
-    for name in ('compose.yaml', 'config/etas-0232-official-compose.yaml', 'config/etas-runtime-cache-compose.yaml', str(overlay)):
+    for name in ('compose.yaml', 'config/etas-0240-official-compose.yaml', 'config/etas-runtime-cache-compose.yaml', str(overlay)):
         command += ['--file', str(ROOT / name)]
     inside = '''import json,pathlib,subprocess
 cmd=['/home/nomo/.cargo/bin/etas','--no-config','--cache','off','run','/workspace','--allow-effects','--trace-out','/state/controlled.trace.json']

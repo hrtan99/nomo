@@ -6,7 +6,7 @@ label="${1:-}"
 case "$label" in
     012|022|023|024) target=etas-latest ;;
     025|026|030) target="etas-${label}" ;;
-    0231|0232) target=etas-0230 ;;
+    0231|0232|0240) target=etas-0230 ;;
     0224|0227|0230) target="etas-${label}" ;;
     041|0120|0121|0130|0131|0132|0133|0134|0135) target=etas-latest ;;
     *) echo 'Unsupported official Etas version.' >&2; exit 64 ;;
@@ -17,7 +17,7 @@ if [[ $# -ne 1 ]]; then usage; exit 64; fi
 compose=(docker compose --env-file /dev/null --file "${project_root}/compose.yaml" --file "${project_root}/config/etas-${label}-official-compose.yaml")
 bootstrap="/workspace/scripts/etas-${label}-official-cli-bootstrap.py"
 binary_profile=release
-if [[ "$label" == 0224 || "$label" == 0227 || "$label" == 0230 || "$label" == 0231 || "$label" == 0232 ]]; then binary_profile=debug; fi
+if [[ "$label" == 0224 || "$label" == 0227 || "$label" == 0230 || "$label" == 0231 || "$label" == 0232 || "$label" == 0240 ]]; then binary_profile=debug; fi
 if [[ "$label" == 0135 ]]; then bootstrap="/workspace/scripts/etas-latest-cli-bootstrap.py"; fi
 case "$1" in
     prepare)

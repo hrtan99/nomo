@@ -2,7 +2,15 @@
 
 The shipping `scripts/nomo` entry still uses the existing Python project controller. The opt-in `native_project` flow is the migration implementation, not a completed replacement.
 
-## Current IoC composition and toolchain, 2026-11-26
+## Current compiler recheck: 0.24.0, 2026-11-26
+
+The selected official CLI is **0.24.0**, commit `3443967bf6f728241d6940e7c18f9a878819c622`, with the exact locked frontend `2bf2e31bbc0231a5cd05e2fd93772f7e45649bf2`, core `44a25f003d996dd89230295f111e617c0a2a3783` and interpreter `5564633b2e4a0f27f4bcbd06d25e2177af204a83`. The dev build completed in 4m 27s using the existing cache volume. Official source/tree/lock/registry verification and installation of the matching SDK passed; SDK compiler 0.21.0, body schema 94, metadata schema 78. Previous CLI/SDK bytes are retained under the 0.23.2 cache directory.
+
+The existing six-file process snapshot and the exact same 450-file project source package both still exit 4 with `native invocation has no checked implementation witness`, without a source location ([upstream follow-up](https://github.com/etas-project/etas-frontend/issues/100#issuecomment-7191995196)). Their memory peaks are approximately 80 MiB and 540 MiB, respectively, with no OOM events. This compiler failure is distinct from the earlier conversation probe's 4 GiB OOM. Equal error text does not identify the triggering invocation or establish a common root cause.
+
+The launcher and focused native probe overlays now select 0.24.0; historical session graph markers retain their original identity. No application source change, new negative case, real model request or conversation probe rerun was needed for this requested compiler recheck. The conversation OOM was last observed on 0.23.2 and remains unqualified on 0.24.0. Full compiler/runtime acceptance and native default cutover remain incomplete. Exact compiler, SDK, unchanged source digest and check/resource records: [0.24.0 receipt](examples/native-project/compiler-0240-20261126.json).
+
+## Previous IoC composition and toolchain: 0.23.2, 2026-11-26
 
 The selected graph is official CLI **0.23.2** at `25dcf8f884fca261c9018ab178f8bc82b1b7c9b1`, frontend `08120a4170793477a14f87e0f65896633e8040c2`, with its exact locked core/interpreter and matching installed SDK. Official source/tree/lock/registry and installed SDK verification passed. The standard dev build reuses the existing Cargo target, registry and native tools; no new cache volume or compiler source patch was introduced. The later upstream main commit `5b5ff9e` changes injection documentation and retains the same dependency revisions.
 
