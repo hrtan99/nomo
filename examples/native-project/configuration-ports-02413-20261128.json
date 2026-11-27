@@ -480,5 +480,10 @@
   },
   "supersedes_product_source_receipt": "examples/native-project/compiler-02413-20261128.json",
   "real_provider_requests": 0,
-  "new_negative_matrix": false
+  "new_negative_matrix": false,
+  "complete_ioc_candidate_recheck": {
+    "status": "not-selected-source-check-still-fails",
+    "evidence": "examples/native-project/candidates/mutation-service-injection-02413.json",
+    "issue": "https://github.com/etas-project/etas-frontend/issues/106"
+  }
 }

@@ -14,6 +14,8 @@ A retained actual 0.13.5 configuration database has a populated cache. The produ
 
 The existing controlled transfer consumer also passes application fork and sealed-source import resumption with real SQLite and the actual codec/hash. Its initial check stops before execution because the old fixture entry omits Error<BudgetExceeded>; adding that required declaration makes the same original assertions pass. This accepts controlled sequencing and the hash consumer, not actual archive filesystem operations or project switching.
 
+The complete service-injection candidate is rechecked in isolation after the digest cleanup and still stops at the same outer-call diagnostic in frontend #106. The selected production composition remains unchanged.
+
 These observations accept the configuration/instruction criteria in DIP-11 and this consumer of interpreter #121; they do not establish a compiler-only fix, accept every #121 reproduction, or complete the thirteen-item goal. Full native cutover and the other recorded capability gates remain open. [Exact source, runtime and old-cache evidence](examples/native-project/configuration-ports-02413-20261128.json).
 
 ## Official 0.24.13 and inference overload, 2026-11-28

@@ -257,5 +257,64 @@
     "source_manifest_sha256": "1806e660a0093bfc8b2b4b8dc1a0f7418c44d3d0f3873f5ffdde2c9aba104238",
     "matches_checked_attempt": 2
   },
-  "upstream_callable_diagnostic": "https://github.com/etas-project/etas-frontend/issues/106"
+  "upstream_callable_diagnostic": "https://github.com/etas-project/etas-frontend/issues/106",
+  "current_source_recheck": {
+    "base_commit": "776695548ada6dd8ec0bd9905a6be2adc540ff5a",
+    "root": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-mutation-std-cleanup-02413-7nelrn40",
+    "source_count": 468,
+    "source_manifest_sha256": "f9ec0c5af6371469f3fa70630b3952cd2fc7052039636fa4e7c8ca185be2b54a",
+    "candidate_patch_sha256": "0c110d6699d9e17d4cb48c02ee216798f0b201304e0e273c1d0b8e181cfafac7",
+    "excluded_patch_path": "src/nomo/adapters/model/coding_agent.es (already selected new overload)",
+    "source_check": {
+      "exit": 1,
+      "elapsed_seconds": 40.210798268,
+      "resources": {
+        "memory.max": "4294967296",
+        "memory.peak": "3060133888",
+        "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+        "cpu.max": "400000 100000",
+        "pids.max": "256"
+      }
+    },
+    "diagnostics": [
+      {
+        "diagnostics": [
+          {
+            "code": "effect::IncompleteEffectFacts",
+            "help": null,
+            "labels": [
+              {
+                "message": "call effect selector specialization failed: invalid callable environment: captured callable dependency has no solution slot",
+                "span": {
+                  "end": 4987,
+                  "source": 296,
+                  "start": 4948
+                },
+                "style": "Primary"
+              }
+            ],
+            "message": "call effect selector specialization failed: invalid callable environment: captured callable dependency has no solution slot",
+            "notes": [],
+            "phase": "EffectCheck",
+            "primary": {
+              "label": "call effect selector specialization failed: invalid callable environment: captured callable dependency has no solution slot",
+              "span": {
+                "end": 4987,
+                "endColumn": 56,
+                "endLine": 84,
+                "source": 296,
+                "start": 4948,
+                "startColumn": 17,
+                "startLine": 84
+              }
+            },
+            "severity": "error",
+            "suggestions": []
+          }
+        ],
+        "path": "/workspace/src/nomo/bootstrap/main.es"
+      }
+    ],
+    "qualification": "Original candidate rebased on the accepted standard-digest/configuration cleanup. The same outer application-call diagnostic remains; no candidate runtime or source promotion."
+  }
 }
