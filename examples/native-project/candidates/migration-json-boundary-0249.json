@@ -1,0 +1,104 @@
+{
+  "status": "unselected-no-runtime-improvement",
+  "base_commit": "45543c6d59422818a64fc17a9f4fdffec2d4b9e1",
+  "candidate_patch": "examples/native-project/candidates/migration-json-boundary-0249.patch",
+  "candidate_patch_sha256": "395bb891a8ae06a539fbdfb97f2c1a3687e0d3742b65c664b7a33378fb49377e",
+  "review": {
+    "root": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-migration-codec-review-vw8vb450",
+    "base_commit": "45543c6d59422818a64fc17a9f4fdffec2d4b9e1",
+    "source_count": 467,
+    "source_manifest_sha256": "6ae1980cdf469f2920046e21746e97fa1cc193394a3b5ae20f3e4403a952adca",
+    "changed_files": {
+      "src/nomo/adapters/filesystem/migration_packet.es": "5235cd6c3d21d1d416f64b7606cbd77eccbff4545291854f6a6a240b8650728d",
+      "src/nomo/adapters/filesystem/native_migration.es": "d1e40212e0f097849bcf3095b33346db54fc249a689a9a5ef676dedc08f798c0",
+      "src/nomo/adapters/filesystem/project_migration.es": "d43695b33891be204ba88c94de260bc616c4d439b3a64c1a1e4e3512fc491c80"
+    },
+    "check-architecture.py": {
+      "exit": 0,
+      "stdout": "PASS architecture: 467 modules, 3479 imports, 48 identity-only compatibility leaves\n",
+      "stderr": ""
+    },
+    "count-sloc.py": {
+      "exit": 0,
+      "stdout": "counter: nomo-physical-v4; authoritative; blank and comment-only # / // lines excluded\nproduct roots: src; reviewed runtime inventory: scripts/nomo, scripts/nomo_project_chat.py, scripts/nomo_project_model.py, scripts/nomo_project_tools.py, scripts/nomo_project.py, scripts/nomo_history.py, scripts/nomo_jobs.py, scripts/nomo_git.py, scripts/nomo-read.sh, scripts/nomo-session-chat.py, scripts/nomo-session-id.py, scripts/nomo-read-session.py, scripts/nomo-history-work.py, scripts/nomo-edit.py, scripts/nomo-session-storage.py, scripts/nomo-event-policy.py, scripts/nomo-bounded-check.py, scripts/nomo-verified-etas.py, scripts/nomo_model_transport.py, scripts/nomo_terminal.py, scripts/terminal-transport.py, scripts/nomo-native, scripts/native-worker-transport.py, scripts/nomo-migrate-native, scripts/nomo_migration.py, scripts/etas003_gateway.py, scripts/local-tryout.sh, scripts/prepare-local-tryout.py, scripts/session-demo.sh\nsrc: 18216 SLOC, 21500 raw lines, 467 files\nruntime: 4892 SLOC, 5435 raw lines, 29 files\nruntime-entry: 114 SLOC, 126 raw lines, 1 files\nruntime-project: 1256 SLOC, 1409 raw lines, 7 files\nruntime-legacy: 2032 SLOC, 2199 raw lines, 9 files\nruntime-shared: 498 SLOC, 567 raw lines, 4 files\nruntime-native: 609 SLOC, 687 raw lines, 4 files\nruntime-gateway: 165 SLOC, 188 raw lines, 1 files\nruntime-tryout: 218 SLOC, 259 raw lines, 3 files\nproduct: 23108 SLOC, 26935 raw lines, 496 files\ntests: 47936 SLOC, 52247 raw lines, 426 files\nexamples: 1363 SLOC, 1591 raw lines, 65 files\nscripts: 9951 SLOC, 11268 raw lines, 134 files\nengineering-scripts: 5059 SLOC, 5833 raw lines, 105 files\n",
+      "stderr": ""
+    }
+  },
+  "source_check": {
+    "exit": 0,
+    "elapsed_seconds": 40.489655434999996,
+    "resources": {
+      "memory.max": "4294967296",
+      "memory.peak": "3115786240",
+      "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+      "cpu.max": "400000 100000",
+      "pids.max": "256"
+    }
+  },
+  "runtime": {
+    "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-project-state-migration-nv49t451/production-codec",
+    "receipt": {
+      "status": "incomplete",
+      "source_database_sha256": "b7edfbf245e9a0bb8bf06d0f2a5815002b9dcdfbe8c93b201f3bdb5597fa433d",
+      "source_snapshot_sha256": "f3afdc04c1f83b663f65517d4850410707f2ff2a37d42fee034104a344bdddb3",
+      "source_format": "project",
+      "rows": 24,
+      "source": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-project-state-migration-nv49t451/original/project.sqlite3",
+      "state": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-project-state-migration-nv49t451/production-codec/state",
+      "snapshots": null,
+      "project_files_backup": {
+        "format": "nomo-project-files-1",
+        "directories": [
+          "edits"
+        ],
+        "files": {
+          "edits/4050a2fa89d7aa50.json": {
+            "bytes": 455,
+            "sha256": "ef7134a1d7d8599a38409494843353366c1dacf8c41128a04b9e0a7ca2f62ffb"
+          },
+          "edits/bc57233d5d162f4b.json": {
+            "bytes": 813,
+            "sha256": "4fd0f04788bfb115c7ee0f9c5f6e5446e61335b01d6a98258ebbf5da41a1bdb2"
+          }
+        },
+        "native_import": "not-performed",
+        "scope": "Original edit snapshots, job status and raw output only. No native edit journal, job ownership, live handle or completed outcome is synthesized.",
+        "prepared_edits": [
+          "bc57233d5d162f4b",
+          "4050a2fa89d7aa50"
+        ],
+        "unowned_edits": []
+      },
+      "project_edit_import": {
+        "status": "incomplete",
+        "edits": [
+          "bc57233d5d162f4b",
+          "4050a2fa89d7aa50"
+        ],
+        "unowned_edits": []
+      },
+      "scope": "Shipping project database only: original session IDs, full source archives, summary fences and catalogue selection. Source event IDs map to native local positions; original IDs, timestamps, parent, kind, data and measured usage remain in each source archive and backup. Owned editor journals map to native journals/steps with original archive provenance and materialized before/after bytes and file modes. Applying records stay interrupted; the source did not record directory modes, timestamps, links or per-step dispatch. Unowned journals and workspace-owned job files remain under input, without native ownership or live handles. Bounded legacy sessions are not migrated. The native allowance ledger begins at zero for new execution. No command, model, recovery or live-handle replay.",
+      "exit": 3,
+      "source_database_after": "b7edfbf245e9a0bb8bf06d0f2a5815002b9dcdfbe8c93b201f3bdb5597fa433d"
+    },
+    "outcome": {
+      "failure": {
+        "diagnostic": {
+          "code": "Analysis(MissingCheckedFact)",
+          "message": "checked revision value conversion failed: Value { source: TypeId(1159), target: TypeId(114), failure: UnmaterializedType(\"specialized type was not materialized: Applied { constructor: TypeConstructorId(105), args: [TypeId(4), TypeId(97)] }\") }",
+          "phase": "analysis",
+          "severity": "error"
+        },
+        "kind": "execution_fault"
+      },
+      "kind": "failed"
+    },
+    "settled": true,
+    "paired_requests": 1,
+    "host_actions": {
+      "Fs.read": 1
+    },
+    "business_rows": 0
+  },
+  "scope": "Same actual 24-row shipping image, standard parser and checked cast. Parsing moved into a non-generic read flow, typed conversion kept separate. Same internal error persists before business Memory; this refutes treating that source rewrite as a fix, not a general diagnosis of generic contexts. Full candidate is unselected and the three selected product files are restored byte-for-byte. No alternate parser, anchor, unchecked conversion or new negative matrix."
+}
