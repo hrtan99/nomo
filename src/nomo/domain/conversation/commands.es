@@ -7,7 +7,7 @@ public enum ProcessRequest { Exec(Argv), Spawn(Argv), Jobs, Poll(string, usize),
 public enum Command {
     Empty, Quit, Help, Projects, Open(string), Git(GitRequest), Process(ProcessRequest),
     Tree(string), Glob(string), Search(string), History(string, i64, i64), Fork(Option<i64>),
-    Read(string), Edits, Undo(string), Rollback(string), Recover(string), Sessions,
-    New(string), Resume(string), Rename(string), Export(string), Import(string), Copies,
+    Read(string), Edits, Undo(string), Rollback(string), Recover(string), Sessions(bool),
+    New(string), Resume(Option<string>), Rename(string), Export(string), Import(string), Copies,
     ResumeCopy(string), DiscardCopy(string), Runs, ResolveRun(string, string), Compact, Config, Check, Status, Ask(string)
 }

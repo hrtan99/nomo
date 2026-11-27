@@ -6,7 +6,8 @@ import nomo.application.workspace.ports.WorkspaceObservations;
 import nomo.application.mutations.ports.ChangeOperations;
 import nomo.application.processes.ports.ProcessOperations;
 import nomo.domain.conversation.commands.{Command as TerminalCommand, ProcessRequest};
-import nomo.domain.conversation.start.{Options, offline};
+import nomo.domain.conversation.start.{Options, EntryMode, SessionSelection, offline, forwarded};
+import nomo.domain.projects.selection.LaunchRequest;
 import nomo.domain.execution.git.GitRequest;
 import nomo.application.conversation.terminal_ports.{TerminalInput, TerminalEvent, TerminalOutput};
 import nomo.native.workspace.ProjectRoot;
@@ -123,32 +124,45 @@ impl TerminalApplication<
     Conversation ~ ConversationService,
     Input ~ TerminalInput
 > {
-    public flow run(self, options: Options) -> i32
+    public flow run(self, options: Options, mode: EntryMode) -> i32
         ![TerminalOutput, Agentic, CommandOperations, WorkspaceObservations, ChangeOperations, ProcessOperations, TransferOperations, ProjectOperations, Memory, Console, Command.run<DefaultCommandSandbox>, Command.start<DefaultCommandSandbox>, Command.reconnect<DefaultCommandSandbox>, Command.read<DefaultCommandSandbox>, Command.write<DefaultCommandSandbox>, Command.stop<DefaultCommandSandbox>, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Fs.stat<ProjectRoot>, Fs.atomic_replace<ProjectRoot>, Fs.atomic_replace<LaunchRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>, Error<IOError>, Error<IndexError>, Error<BudgetExceeded>] {
         let history = self.history;
         let attempts = self.attempts;
         let picker = self.picker;
 
         let input = self.input;
+        if mode == EntryMode.Attach {
+            match options.once { Some(_) => abort("one-shot requests use a separate native invocation"), None() => (), }
+            match options.check { Some(_) => abort("a running endpoint keeps its check override; use --once or start a new endpoint"), None() => (), }
+        }
         if options.projects { perform ProjectOperations.show(); return 0; }
-        match options.open_project { Some(pathname) => { perform ProjectOperations.open(pathname, options.workspace); return 0; } None() => (), }
+        match options.open_project { Some(pathname) => { perform ProjectOperations.open(pathname, options.workspace, forwarded(options, options.selection)); return 0; } None() => (), }
         if options.sessions {
             let items = if options.all_sessions { history.all_sessions() } else { history.sessions(options.workspace) };
             for item in items { perform TerminalOutput.show(TerminalEvent.Project(item.workspace)); show(attempts, item); }
             return 0;
         }
-        perform ProjectOperations.remember(options.workspace);
         var selected = match options.import_path {
             Some(pathname) => perform TransferOperations.load(options.workspace, pathname),
-            None() => match select_start(history, history, picker, options.workspace, options.selection, !offline(options)) {
+            None() => match select_start(history, history, picker, options.workspace, options.selection, !offline(options), options.all_sessions) {
                 Some(value) => value, None() => { return 0; }
             }
         };
+        if selected.workspace != options.workspace && !options.status && !options.history {
+            perform ProjectOperations.launch(LaunchRequest { workspace = selected.workspace,
+                arguments = forwarded(options, SessionSelection.Exact(selected.id)) });
+            return 0;
+        }
+        perform ProjectOperations.remember(selected.workspace);
         match options.title { Some(title) => { history.rename(selected.id, title); selected = history.load(selected.id); } None() => (), }
         if options.status { perform TerminalOutput.show(TerminalEvent.Status(selected)); return 0; }
         if options.history { show_history(history, selected.id, "", 0, -1); return 0; }
         match options.export_path { Some(pathname) => { perform TransferOperations.save(selected.id, pathname); return 0; } None() => (), }
         show(attempts, selected);
+        if mode == EntryMode.Attach {
+            perform TerminalOutput.show(TerminalEvent.Message("[SESSION] The next terminal command uses this conversation. Any in-flight operation keeps its original session; no terminal input or approval answer is injected."));
+            return 0;
+        }
         for job in perform TransferOperations.copies(options.workspace) {
             if job.phase == "staging" || job.phase == "copying" {
                 perform TerminalOutput.show(TerminalEvent.UnfinishedCopy(job));
@@ -158,12 +172,18 @@ impl TerminalApplication<
         perform TerminalOutput.show(TerminalEvent.Welcome);
         @limits([Iterations(2147483647)]) while true {
             let request = match input.next() { Some(value) => value, None() => { return 0; } };
+            // Another explicit startup may select a session while this Host is
+            // waiting for input. Adopt it only at the next command boundary.
+            match history.selected(options.workspace) {
+                Some(id) => { if id != selected.id { selected = history.load(id); show(attempts, selected); } }
+                None() => (),
+            }
             match request {
                 TerminalCommand.Empty => (),
                 TerminalCommand.Quit => { return 0; }
                 TerminalCommand.Help => perform TerminalOutput.show(TerminalEvent.Help),
                 TerminalCommand.Projects => perform ProjectOperations.show(),
-                TerminalCommand.Open(value) => { perform ProjectOperations.open(value, options.workspace); }
+                TerminalCommand.Open(value) => { perform ProjectOperations.open(value, options.workspace, []); }
                 TerminalCommand.Git(value) => show_git(selected.id, value),
                 TerminalCommand.Process(value) => process_command(selected.id, value),
                 TerminalCommand.Tree(value) => navigation_command(self.conversation, selected.id, "tree", value, options.check),
@@ -179,9 +199,24 @@ impl TerminalApplication<
                 TerminalCommand.Undo(value) => edit_command(selected.id, "undo", value),
                 TerminalCommand.Rollback(value) => edit_command(selected.id, "rollback", value),
                 TerminalCommand.Recover(value) => edit_command(selected.id, "reconcile", value),
-                TerminalCommand.Sessions => { for item in history.sessions(options.workspace) { show(attempts, item); } }
+                TerminalCommand.Sessions(all) => {
+                    let items = if all { history.all_sessions() } else { history.sessions(options.workspace) };
+                    for item in items {
+                        perform TerminalOutput.show(TerminalEvent.Project(item.workspace)); show(attempts, item);
+                    }
+                }
                 TerminalCommand.New(title) => { selected = history.create(options.workspace, title); show(attempts, selected); }
-                TerminalCommand.Resume(id) => { selected = history.select(options.workspace, id); show(attempts, selected); }
+                TerminalCommand.Resume(id) => {
+                    let selection = match id { Some(value) => SessionSelection.Exact(value), None() => SessionSelection.Choose };
+                    match select_start(history, history, picker, options.workspace, selection, true, true) {
+                        Some(value) => {
+                            if value.workspace != options.workspace {
+                                perform ProjectOperations.launch(LaunchRequest { workspace = value.workspace, arguments = ["--id", value.id] });
+                            } else { selected = value; show(attempts, selected); }
+                        }
+                        None() => (),
+                    }
+                }
                 TerminalCommand.Rename(title) => { history.rename(selected.id, title); selected = history.load(selected.id); show(attempts, selected); }
                 TerminalCommand.Export(pathname) => perform TransferOperations.save(selected.id, pathname),
                 TerminalCommand.Import(pathname) => { selected = perform TransferOperations.load(options.workspace, pathname); show(attempts, selected); }

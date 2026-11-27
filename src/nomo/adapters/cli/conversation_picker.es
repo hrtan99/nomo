@@ -11,6 +11,7 @@ impl ConsoleConversationPicker ~ ConversationPicker {
         var number: usize = 1;
         for item in sessions {
             println("[SESSION] " + from_usize(number) + " · " + item.id + " · " + item.title);
+            println("          " + item.workspace);
             number = number + 1;
         }
         print("Conversation number or ID (empty cancels): ");

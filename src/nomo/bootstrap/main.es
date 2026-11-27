@@ -4,6 +4,7 @@ import nomo.application.conversation.terminal as entry;
 import nomo.application.conversation.terminal_handlers;
 import nomo.adapters.cli.conversation.{ConsoleTerminalInput, ConsoleTerminalDisplay};
 import nomo.adapters.cli.native.options.parse;
+import nomo.domain.conversation.start.EntryMode;
 import nomo.bootstrap.conversation;
 import nomo.bootstrap.conversation.ConfiguredConversation;
 import nomo.application.commands.handlers as command;
@@ -37,7 +38,7 @@ import std.effects.Fs;
 import std.fs.{ReadLimitError, IOError as FileError};
 import std.io.IOError;
 
-public flow run(args: Array<string>) -> i32
+public flow run(args: Array<string>, mode: EntryMode) -> i32
     ![Agentic, Memory, Console, Command.run<DefaultCommandSandbox>, Command.start<DefaultCommandSandbox>, Command.reconnect<DefaultCommandSandbox>, Command.read<DefaultCommandSandbox>, Command.write<DefaultCommandSandbox>, Command.stop<DefaultCommandSandbox>, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Fs.stat<ProjectRoot>, Fs.atomic_replace<ProjectRoot>, Fs.atomic_replace<LaunchRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>, Error<IOError>, Error<IndexError>, Error<BudgetExceeded>] {
     let history = NativeHistory {};
     let attempts = NativeAttempts {};
@@ -59,7 +60,7 @@ public flow run(args: Array<string>) -> i32
     let folders = projects.operations(NativeRecentProjects {}, NativeProjectLaunch {}, TerminalProjects {});
     let archives = transfer.operations(history, attempts, ProjectArchives {}, JsonArchiveEncoding {}, TerminalTransfer {});
     let jobs_handler = processes.bindings(history, attempts, HostProcessControl {}, jobs, NativeOutputArchive {}, output);
-    return ((((((application.run(parse(args)) with jobs_handler)
+    return ((((((application.run(parse(args), mode) with jobs_handler)
         with archives) with folders) with changes)
         with observations) with commands) with terminal;
 }

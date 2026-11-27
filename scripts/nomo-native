@@ -37,7 +37,13 @@ while [[ $# -gt 0 ]]; do
       shift 2
       ;;
     --root=*|--workspace=*) task_project="${1#*=}"; shift ;;
-    --once|--id|--title|--import)
+    --once)
+      task_offline=true
+      task_arguments+=("$1")
+      shift
+      if [[ $# -gt 0 ]]; then task_arguments+=("$1"); shift; fi
+      ;;
+    --id|--title|--import)
       task_arguments+=("$1")
       shift
       if [[ $# -gt 0 ]]; then task_arguments+=("$1"); shift; fi
@@ -48,7 +54,7 @@ while [[ $# -gt 0 ]]; do
       shift
       if [[ $# -gt 0 ]]; then task_arguments+=("$1"); shift; fi
       ;;
-    --projects|--sessions|--history|--events|--status|--export=*)
+    --projects|--sessions|--history|--events|--status|--export=*|--once=*)
       task_offline=true
       task_arguments+=("$1")
       shift
@@ -94,15 +100,25 @@ while true; do
       done
     fi
     "${task_command[@]}"
+    task_status=$?
+    if [[ "$task_status" -eq 0 && -f "$NOMO_NATIVE_CONTROL_DIR/next-project" ]]; then
+      mv -- "$NOMO_NATIVE_CONTROL_DIR/next-project" "$NOMO_NATIVE_EVIDENCE/next-project"
+      task_status=$?
+    fi
   else
     python3 "$task_root/scripts/native-worker-transport.py" "${task_command[@]}"
+    task_status=$?
   fi
-  task_status=$?
   set -e
   if [[ "$task_status" -ne 0 ]]; then exit "$task_status"; fi
   if [[ ! -f "$NOMO_NATIVE_EVIDENCE/next-project" ]]; then exit 0; fi
-  # Etas has already selected the next folder. Transport only its mount path;
-  # Etas in that endpoint owns its selected conversation and live tasks.
-  task_project="$(< "$NOMO_NATIVE_EVIDENCE/next-project")"
+  # The application chose the folder and argv. Decode its private transport
+  # record, preserving argument boundaries without terminal input injection.
+  python3 "$task_root/scripts/native-worker-transport.py" --handoff "$NOMO_NATIVE_EVIDENCE/next-project" > "$NOMO_NATIVE_EVIDENCE/launch.argv"
+  task_first=true
   set --
+  while IFS= read -r -d '' task_value; do
+    if [[ "$task_first" == true ]]; then task_project="$task_value"; task_first=false;
+    else set -- "$@" "$task_value"; fi
+  done < "$NOMO_NATIVE_EVIDENCE/launch.argv"
 done

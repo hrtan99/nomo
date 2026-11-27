@@ -77,10 +77,12 @@ public flow command(request: string) -> Command {
     if request == "/undo" { return Command.Undo(""); }
     match strip_prefix(request, "/undo ") { Some(value) => { return Command.Undo(trim(value)); } None() => (), }
     match strip_prefix(request, "/rollback ") { Some(value) => { return Command.Rollback(trim(value)); } None() => (), }
-    if request == "/sessions" { return Command.Sessions; }
+    if request == "/sessions" { return Command.Sessions(false); }
+    if request == "/sessions all" { return Command.Sessions(true); }
     if request == "/new" { return Command.New("New conversation"); }
     match strip_prefix(request, "/new ") { Some(value) => { return Command.New(trim(value)); } None() => (), }
-    match strip_prefix(request, "/resume ") { Some(value) => { return Command.Resume(trim(value)); } None() => (), }
+    if request == "/resume" { return Command.Resume(None()); }
+    match strip_prefix(request, "/resume ") { Some(value) => { return Command.Resume(Some(trim(value))); } None() => (), }
     match strip_prefix(request, "/rename ") { Some(value) => { return Command.Rename(trim(value)); } None() => (), }
     match strip_prefix(request, "/export ") { Some(value) => { return Command.Export(trim(value)); } None() => (), }
     match strip_prefix(request, "/import ") { Some(value) => { return Command.Import(trim(value)); } None() => (), }

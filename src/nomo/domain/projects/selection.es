@@ -3,6 +3,7 @@ module nomo.domain.projects.selection;
 import std.text.{parse_usize, strip_prefix};
 
 public enum ProjectReference { Saved(usize), Folder(string) }
+public type LaunchRequest = { workspace: string, arguments: Array<string> };
 
 public flow remembered(workspace: string, recent: Array<string>) -> Array<string> {
     return [workspace].extend(recent.retain(value => value != workspace));

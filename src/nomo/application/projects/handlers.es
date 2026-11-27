@@ -20,6 +20,7 @@ public flow operations<P ~ RecentProjects, L ~ ProjectLaunchControl, R ~ Project
     return handler {
         ProjectOperations.remember(workspace) => service.remember(recent, workspace);
         ProjectOperations.show() => handle service.show(recent) with output;
-        ProjectOperations.open(raw, workspace) => handle service.open(recent, launch, raw, workspace) with output;
+        ProjectOperations.open(raw, workspace, arguments) => handle service.open(recent, launch, raw, workspace, arguments) with output;
+        ProjectOperations.launch(request) => handle service.launch(launch, request) with output;
     };
 }

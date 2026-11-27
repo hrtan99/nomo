@@ -2,12 +2,101 @@
 from pathlib import Path
 import json
 import os
+import subprocess
 import tempfile
 
-from native_recovery_probe import audit
+from native_recovery_probe import audit, terminal
 from native_worker_probe import Client, ECHO, TEXT, execution_pid
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def selected(text):
+    return json.loads(next(line.split('[STATUS ] ', 1)[1] for line in reversed(text.splitlines()) if '[STATUS ] {' in line))
+
+
+def startup_routing(evidence, env, first, second, expected, approve, original):
+    command = [str(ROOT / 'scripts/nomo-native'), str(first)]
+    print('PHASE startup session routing', flush=True)
+    other = Client([str(ROOT / 'scripts/nomo-native'), str(second), '--id', original['id']], env, evidence,
+                   'startup-second', approver=approve)
+    second_worker = next(line.split('[WORKER ] ', 1)[1] for line in other.output.decode().splitlines() if '[WORKER ] ' in line)
+    second_pid, _ = execution_pid(second_worker)
+    other.leave(detach=True)
+
+    fresh = Client(command + ['--new', '--title', 'Additional A'], env, evidence, 'startup-first', approver=approve)
+    first_worker = next(line.split('[WORKER ] ', 1)[1] for line in fresh.output.decode().splitlines() if '[WORKER ] ' in line)
+    first_pid, _ = execution_pid(first_worker)
+    additional = selected(fresh.send('/status'))
+    assert additional['id'] == 'native-2' and additional['title'] == 'Additional A'
+    fresh.leave(detach=True)
+
+    # Selection is recorded by a separate native flow; attachment sends no command.
+    exact = Client(command + ['--id', 'native-0', '--title', 'Resumed A'], env, evidence, 'startup-exact', approver=approve)
+    assert first_worker in exact.output.decode() and execution_pid(first_worker)[0] == first_pid
+    resumed = selected(exact.send('/status'))
+    assert resumed['id'] == 'native-0' and resumed['title'] == 'Resumed A'
+    assert exact.approvals == 0
+    exact.leave(detach=True)
+
+    chooser = Client(command + ['--resume', '--all'], env, evidence, 'startup-all', approver=approve,
+                     prompts=(b'Conversation number or ID',))
+    listing = chooser.output.decode()
+    assert str(first) in listing and str(second) in listing and additional['id'] in listing
+    row = next(line for line in listing.splitlines() if line.startswith('[SESSION] ') and ' · ' + original['id'] + ' · ' in line)
+    choice = row.split('[SESSION] ', 1)[1].split(' · ', 1)[0]
+    expected.append(str(second))
+    chooser.prompts = (b'nomo> ',)
+    routed = chooser.switch(choice, second, startup=True)
+    assert second_worker in routed and execution_pid(second_worker)[0] == second_pid
+    assert selected(chooser.send('/status'))['id'] == original['id']
+    assert chooser.approvals == 1
+    chooser.leave()
+
+    # A foreign ID can be inspected without borrowing the resident terminal.
+    inspected = subprocess.run(command + ['--id', original['id'], '--status'], cwd=ROOT, env=env,
+                               capture_output=True, text=True)
+    (evidence / 'startup-foreign-status.txt').write_text(inspected.stdout + inspected.stderr)
+    assert inspected.returncode == 0, inspected.stdout + inspected.stderr
+    foreign = selected(inspected.stdout)
+    assert foreign['id'] == original['id'] and foreign['workspace'] == str(second)
+    assert execution_pid(first_worker)[0] == first_pid
+
+    # Keep all startup fields when --open changes the mounted project.
+    expected.append(str(second))
+    code, output, approvals, _ = terminal(command + ['--open', str(second), '--new', '--title', 'Forwarded startup', '--status'],
+                                         env, [], first, approve=approve)
+    (evidence / 'startup-forwarded.txt').write_text(output)
+    assert code == 0 and approvals == 1, output
+    forwarded = selected(output)
+    assert forwarded['workspace'] == str(second) and forwarded['id'] == 'native-3'
+    assert forwarded['title'] == 'Forwarded startup' and forwarded['next_event'] == 0
+
+    final = Client(command, env, evidence, 'startup-final', approver=approve)
+    assert first_worker in final.output.decode() and execution_pid(first_worker)[0] == first_pid
+    assert selected(final.send('/status'))['id'] == 'native-0'
+    final.leave()
+    traces = [path for path in (evidence / 'traces').glob('run-*/trace.json')]
+    total_commands = total_controls = 0
+    for path in traces:
+        trace = json.loads(path.read_text())
+        assert trace['outcome']['kind'] == 'completed' and trace['termination']['local_work_settled']
+        assert not audit(trace['events']), path
+        starts = [event for event in trace['events'] if event['kind'] == 'host_request_started']
+        ends = [event for event in trace['events'] if event['kind'] == 'host_request_finished']
+        assert len(starts) == len(ends) and {event['id'] for event in starts} == {event['id'] for event in ends}
+        assert all(event['outcome']['kind'] == 'succeeded' for event in ends)
+        assert not any(event.get('request_kind') == 'model' for event in starts)
+        total_commands += sum(event.get('qualified_action', '').startswith('Command.') for event in starts)
+        total_controls += sum(event.get('qualified_action') == 'Fs.atomic_replace' for event in starts)
+    assert total_commands == 11 and total_controls == 5
+    return {'status': 'passed', 'first_worker': first_worker, 'first_etas_pid': first_pid,
+            'second_worker': second_worker, 'second_etas_pid': second_pid, 'additional': additional,
+            'resumed': resumed, 'foreign_status': foreign, 'forwarded': forwarded,
+            'native_command_actions_including_original_case': total_commands,
+            'native_control_actions_including_original_case': total_controls, 'traces': len(traces),
+            'scope': 'Same-Host exact startup selection, global chooser to a retained foreign Host, isolated foreign-ID inspection, '
+                     'and --open preserving new/title/status. No startup command or consent is sent to resident stdin.'}
 
 
 def main():
@@ -100,6 +189,8 @@ def main():
         'first_worker': first_worker, 'second_worker': second_worker, 'first_etas_pid': first_pid, 'second_etas_pid': second_pid,
         'selected_paths': observed, 'restored_status': status, 'traces': [str(path) for path in dict.fromkeys(traces)],
         'scope': 'Etas-owned project selection, same-Host project return and original live job Unicode I/O/EOF, separate histories, startup chooser reattaching another retained Host'}
+    (evidence / 'retained-project-functional.json').write_text(json.dumps(result, ensure_ascii=False, indent=2))
+    result['startup_routing'] = startup_routing(evidence, env, first, second, expected, approve, status)
     (evidence / 'functional.json').write_text(json.dumps(result, ensure_ascii=False, indent=2))
     print('PASS native project switching with retained Hosts and live jobs: ' + str(evidence), flush=True)
 
