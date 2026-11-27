@@ -10,7 +10,8 @@ import nomo.domain.sessions.recoverable_events.{empty as empty_events, work_batc
 import nomo.session.recoverable_chat_store.Frame as ChatFrame;
 import nomo.adapters.storage.legacy.recoverable_chat_store.load as load_chat;
 import nomo.harness.harness_work_contract.Ledger;
-import nomo.adapters.storage.legacy.recoverable_work_store.{load as load_parent_work, work_data_error, running_record_mode, completed_record, abandoned_record, admission_chat_error, claim_chat_error};
+import nomo.adapters.storage.legacy.recoverable_work_store.load as load_parent_work;
+import nomo.domain.sessions.recoverable_work_state.{work_data_error, running_record_mode, completed_record, abandoned_record, admission_chat_error, claim_chat_error};
 import nomo.adapters.storage.legacy.recoverable_check_store.load as load_parent_check;
 import nomo.adapters.storage.legacy.edit_operation_store.inspect as inspect_parent_edit;
 import nomo.session.recoverable_followup_store.{Frame, Runs};

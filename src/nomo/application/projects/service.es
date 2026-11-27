@@ -31,7 +31,6 @@ public flow open<R ~ RecentProjects, L ~ ProjectLaunchControl>(recent: R, launch
         ProjectReference.Folder(path) => path
     };
     perform ProjectDisplay.preview(selected);
-    let target = launch.target();
-    launch.publish(target, selected);
+    launch.publish(selected);
     return true;
 }
