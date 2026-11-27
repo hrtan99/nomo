@@ -12,7 +12,8 @@ from native_recovery_probe import audit, terminal
 
 ROOT = Path(__file__).resolve().parents[1]
 ECHO = ['-u', '-c', "import sys; print('ready',flush=True)\nfor line in sys.stdin: print('echo:'+line.rstrip('\\n'),flush=True)"]
-SLEEP = ['-u', '-c', "import time; print('sleeping',flush=True); time.sleep(300)"]
+# The child must remain live until the explicit stop, even with runtime #120.
+SLEEP = ['-u', '-c', "import signal; print('sleeping',flush=True); signal.pause()"]
 TEXT = '鹈鹕 café\n'
 
 
