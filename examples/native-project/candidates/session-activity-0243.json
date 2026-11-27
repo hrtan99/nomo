@@ -1,0 +1,46 @@
+{
+  "date": "2026-11-27",
+  "status": "unselected-source-checked-runtime-blocked-by-clock-readiness",
+  "base_commit": "1247aac875f8e75ba37860146dadf20b7439c8a3",
+  "base_tree": "afb979f1087af026bb39ea147b58201f980b23b0",
+  "candidate_tree": "17a7a44b19fae7ad7ef35ee4d4973971f363d9f4",
+  "patch": "examples/native-project/candidates/session-activity-0243.patch",
+  "patch_sha256": "7f655c9c8fd325a9f7110c07a435f56f07dd250b021972c6f7898ebdc8b87e2e",
+  "full_check": {
+    "exit": 0,
+    "elapsed_seconds": 63.97905169600017,
+    "resources": {
+      "memory.max": "4294967296",
+      "memory.peak": "3259691008",
+      "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+      "cpu.max": "400000 100000",
+      "pids.max": "256"
+    },
+    "source_count": 440,
+    "diagnostics": 0
+  },
+  "snapshot": {
+    "root": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-qkovl5xy",
+    "tree": "5347ceaf60436392722fcea3747755fe581302b9",
+    "evidence": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-qkovl5xy/compiler-evidence",
+    "overlay": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-qkovl5xy/compiler-compose.json",
+    "source_count": 440,
+    "source_manifest_sha256": "4ff4f3e59ad58fd0b34f27539df0961b22e8d01042a8be96f092ff21a406ef39"
+  },
+  "fixture_typecheck": {
+    "exit": 0,
+    "elapsed_seconds": 5.288995166076347,
+    "source_count": 24,
+    "scope": "typecheck only; actual Clock behavior remains blocked by CLI #91"
+  },
+  "upstream": "https://github.com/etas-project/etas/issues/91",
+  "changes": [
+    "Separate SessionActivity region preserves original Session/schema/resource declarations. New creations record real Clock.now milliseconds; completed event writes update recency. Missing old creation/update times remain unknown.",
+    "Catalog supplies timestamped listings ordered by real updated values. --latest selects the newest recorded update; ordinary startup keeps the selected binding. Offline latest inspection does not change selection.",
+    "CLI session/picker/status output reports explicit Unix milliseconds; old missing timestamps are not synthesized.",
+    "One positive actual Clock/SQLite/latest-vs-selected/fresh-process case is prepared and typechecked. It has no fake production clock, model or process bridge."
+  ],
+  "qualification": "Normal product and fixture checks pass. No actual activity consumer has run: independent legal Clock.now passes check but CLI preflight exits 3 with missing Phase 1 host service for Time (#91). The full original startup/import/check/resident scenario remains unaccepted; JSON #121 and generic Task #103 also remain independent gates. The candidate is not selected in the default or opt-in native entry.",
+  "runtime_acceptance": false,
+  "negative_matrix_added": false
+}
