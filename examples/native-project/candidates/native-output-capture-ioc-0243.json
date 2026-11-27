@@ -3,7 +3,7 @@
   "status": "unselected-candidate-normal-check-failed",
   "baseline": "accf3d8d97cf764f8229065add2f76c16f5126ea",
   "patch": "examples/native-project/candidates/native-output-capture-ioc-0243.patch",
-  "patch_sha256": "d9ab90d405e3eadd41679b86dfb17a68a8bc2c0f13540d012b740f141335b06a",
+  "patch_sha256": "f6e85d385cb6a1a180202c9c731951777298e2285bfce143f4c4eba669b1ab91",
   "snapshot": {
     "root": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-jx9bov8z",
     "tree": "d9f4360309ab10bd548838f40792d0f09f3cbd54",
@@ -203,7 +203,23 @@
   "upstream": "https://github.com/etas-project/etas-frontend/issues/103",
   "scope": "Migrates the retained original capture task/append-head/cursor/quit-cancellation pattern onto current application ports. The normal check fails before runtime. No capture/window/cancellation/fresh-process/interrupted-read acceptance is claimed.",
   "oracle": "Original 2555904-byte payload, 20-second idle capture interval, exact bytes, quit cancellation and fresh-process 17-byte prefix retained. Only prompt-observation timeout (90 to 600 seconds for this probe), pinned ETS1 observer and optional capture-read approval audit are adapted.",
-  "qualification": "The final candidate adds migration of the controlled fixture after the checked snapshot; that fixture change is not counted as checked here. The existing-source Task and parameterized-effect observations are reproduced independently, without asserting one shared root cause. Existing selected product is restored; this patch is not the default or an accepted collector. Patch rebased mechanically after the independently selected Live/reference split; the normal-check source snapshot remains the exact earlier tree. No failed generic capture pattern was replaced. Later process Job/JobEvent aliases are selected independently. The candidate still applies to the selected tree, but the retained failed-check snapshot predates those aliases.",
-  "candidate_tree": "060ae11d99fba854fb1fbf1eb974b5d89ac81b41",
-  "initial_baseline": "61b807ab3407d9a0fac517fcf1fc96edd960b439"
+  "qualification": "The final candidate adds migration of the controlled fixture after the checked snapshot; that fixture change is not counted as checked here. The existing-source Task and parameterized-effect observations are reproduced independently, without asserting one shared root cause. Existing selected product is restored; this patch is not the default or an accepted collector. Patch rebased mechanically after the independently selected Live/reference split; the normal-check source snapshot remains the exact earlier tree. No failed generic capture pattern was replaced. Later process Job/JobEvent aliases are selected independently. The candidate still applies to the selected tree, but the retained failed-check snapshot predates those aliases. Test-helper-only rebase removes the already-selected identical ETS1 helper and adapts the Client hunk to its current 1800-second default. The explicit capture prompt observer remains 600 seconds. Current complete candidate tree/preflight is recorded separately; no new compiler or runtime acceptance is inferred.",
+  "candidate_tree": "a868a08d6e1d7dd9e541eb251af4f37ca07b19a7",
+  "initial_baseline": "61b807ab3407d9a0fac517fcf1fc96edd960b439",
+  "historical_candidate_tree": "060ae11d99fba854fb1fbf1eb974b5d89ac81b41",
+  "test_helper_rebase": {
+    "base_commit": "9770f9fbe3b95ed5347e82699b5763bcab0e45d2",
+    "base_tree": "9db6d5e1fb7ec7390918f32186f1edf941e04a05",
+    "candidate_tree": "a868a08d6e1d7dd9e541eb251af4f37ca07b19a7",
+    "preflight": "passed",
+    "changes": "The exact pinned ETS1 observer is now shared selected test infrastructure. The current Client observation default is 1800 seconds; the unselected capture case retains its explicit original 600-second outer prompt observer. Product capture algorithm, payload/window, authority and exact-byte/cancellation/restore oracle are unchanged.",
+    "scope": "Apply/preflight only on the current selected policy tree. The full_check and snapshot above retain the exact historical failed compiler invocation; this rebased package has not been compiled or executed."
+  },
+  "current_preflight": {
+    "base_commit": "12bccddf562593766fc33a049b017ace3c514e77",
+    "base_tree": "9d500b17d9df25571caafd37945f5f230ab7fe7e",
+    "candidate_tree": "64cf544fe37b2450d26b714d32e55cc73a955026",
+    "status": "passed",
+    "scope": "Temporary-index apply only against the selected final source. Earlier exact compiler/runtime snapshots retain their original scope; no new compile/runtime acceptance is inferred."
+  }
 }

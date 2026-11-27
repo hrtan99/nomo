@@ -1,0 +1,184 @@
+diff --git a/src/nomo/adapters/cli/legacy/edit_coordinator.es b/src/nomo/adapters/cli/legacy/edit_coordinator.es
+index af39015..ab29622 100644
+--- a/src/nomo/adapters/cli/legacy/edit_coordinator.es
++++ b/src/nomo/adapters/cli/legacy/edit_coordinator.es
+@@ -4,6 +4,7 @@ import std.io.{println, read_line, IOError as ConsoleError};
+ import std.fs.IOError as FileError;
+ import std.effects.Fs;
+ import std.text.{trim, lowercase, char_count as len};
++import std.runtime.approval.{approve, Risk};
+ import nomo.tools.edit_file.EditableRoot;
+ import nomo.domain.mutations.edit_contract.Prepared;
+ import nomo.adapters.filesystem.legacy_work_editor.LegacyWorkEditor;
+@@ -11,7 +12,7 @@ import nomo.adapters.cli.legacy_work_output.LegacyWorkOutput;
+ import nomo.session.edit_operation.Binding;
+ import nomo.adapters.storage.legacy.edit_operation_store.FirstEditJournal;
+ import nomo.application.edit.execute.execute as execute_using;
+-public import nomo.application.edit.effects.Approval;
++import std.effects.Approval;
+ public import nomo.domain.mutations.edit_contract.{Selector, Confirmed};
+ 
+ public import nomo.application.edit.ports.{Preview, PreviewPresenter, CurrentEditConsent};
+@@ -32,7 +33,7 @@ impl TerminalPreview ~ PreviewPresenter {
+ impl TerminalConsent ~ CurrentEditConsent {
+     flow confirm(self, preview: Preview) -> Result<Binding, string> ![Console, Approval, Error<ConsoleError>] {
+         let selected = preview.binding;
+-        let approved = perform Approval.request("Nomo edit " + selected.id + " request=" + selected.request_digest);
++        let approved = approve("Nomo edit " + selected.id + " request=" + selected.request_digest, preview.machine, Risk.High);
+         if !approved { return Err("native approval denied; no intent or File write"); }
+         println("CONFIRM Apply this exact preview? [y/N]");
+         let raw = read_line();
+diff --git a/src/nomo/adapters/cli/legacy/edit_entry.es b/src/nomo/adapters/cli/legacy/edit_entry.es
+index 94e7b10..dc89921 100644
+--- a/src/nomo/adapters/cli/legacy/edit_entry.es
++++ b/src/nomo/adapters/cli/legacy/edit_entry.es
+@@ -10,7 +10,7 @@ import nomo.adapters.filesystem.legacy.edit_file.prepare;
+ import nomo.domain.mutations.edit_encoding.object;
+ import nomo.session.edit_operation.Record;
+ import nomo.adapters.storage.legacy.edit_operation_store.{available, inspect};
+-import nomo.application.edit.effects.Approval;
++import std.effects.Approval;
+ import nomo.domain.mutations.edit_contract.Selector;
+ import nomo.adapters.cli.legacy.edit_coordinator.execute;
+ 
+diff --git a/src/nomo/adapters/cli/legacy/harness_edit_entry.es b/src/nomo/adapters/cli/legacy/harness_edit_entry.es
+index 68b5177..5360326 100644
+--- a/src/nomo/adapters/cli/legacy/harness_edit_entry.es
++++ b/src/nomo/adapters/cli/legacy/harness_edit_entry.es
+@@ -12,7 +12,7 @@ import nomo.tools.edit_file.EditableRoot;
+ import nomo.adapters.filesystem.legacy.edit_file.read_original;
+ import nomo.domain.mutations.edit_contract.{prepare_original_legacy as prepare_original, Selector};
+ import nomo.adapters.storage.legacy.edit_operation_store.available;
+-import nomo.application.edit.effects.Approval;
++import std.effects.Approval;
+ import nomo.adapters.cli.legacy.edit_coordinator.execute;
+ import nomo.domain.harness.edit_context.{context, completed_context};
+ import nomo.adapters.cli.legacy.edit_context.{recorded, display};
+diff --git a/src/nomo/adapters/cli/legacy/harness_work_entry.es b/src/nomo/adapters/cli/legacy/harness_work_entry.es
+index 33cd600..50da6e7 100644
+--- a/src/nomo/adapters/cli/legacy/harness_work_entry.es
++++ b/src/nomo/adapters/cli/legacy/harness_work_entry.es
+@@ -20,7 +20,7 @@ import nomo.tools.workspace.ReadOnlyRoot;
+ import nomo.tools.edit_file.EditableRoot;
+ import nomo.adapters.filesystem.legacy.edit_file.{read_original, read_original_wide};
+ import nomo.adapters.storage.legacy.edit_operation_store.available;
+-import nomo.application.edit.effects.Approval;
++import std.effects.Approval;
+ import nomo.domain.mutations.edit_contract.Confirmed;
+ import nomo.adapters.cli.legacy.edit_coordinator.execute;
+ import nomo.adapters.cli.legacy.edit_context.{recorded, display};
+diff --git a/src/nomo/adapters/cli/legacy/work_chain_entry.es b/src/nomo/adapters/cli/legacy/work_chain_entry.es
+index 66ff092..ce060c8 100644
+--- a/src/nomo/adapters/cli/legacy/work_chain_entry.es
++++ b/src/nomo/adapters/cli/legacy/work_chain_entry.es
+@@ -25,7 +25,7 @@ import nomo.domain.sessions.work_chain_store.{Ticket, ParentAccess};
+ import nomo.adapters.storage.legacy.work_chain_store.{read_parent_access, admit_new, admit_user_context, admit_continue, claim, publish_partial, complete, inspect};
+ import nomo.adapters.storage.legacy.work_chain_journal.{begin, complete as complete_edit, inspect as journal, captured as captured_journal};
+ import nomo.domain.sessions.work_chain_journal_contract.CapturedJournal as Journal;
+-import nomo.application.edit.effects.Approval;
++import std.effects.Approval;
+ import nomo.adapters.cli.legacy.edit_coordinator.confirm_current;
+ import nomo.adapters.cli.legacy.edit_context.display;
+ import nomo.domain.work.protocol.Pending;
+diff --git a/src/nomo/adapters/cli/legacy/work_session_entry.es b/src/nomo/adapters/cli/legacy/work_session_entry.es
+index ffe5839..5d6b1a3 100644
+--- a/src/nomo/adapters/cli/legacy/work_session_entry.es
++++ b/src/nomo/adapters/cli/legacy/work_session_entry.es
+@@ -5,7 +5,7 @@ import std.fs.IOError as FileError;
+ import std.effects.Fs;
+ import nomo.tools.workspace.ReadOnlyRoot;
+ import nomo.tools.edit_file.EditableRoot;
+-import nomo.application.edit.effects.Approval;
++import std.effects.Approval;
+ import nomo.adapters.cli.arguments.harness_work_args.parse;
+ import nomo.adapters.cli.arguments.edit_args.parse as selectors;
+ import nomo.domain.harness.harness_work_contract.fresh;
+diff --git a/src/nomo/application/edit/confirmation.es b/src/nomo/application/edit/confirmation.es
+index e265db1..f6875a4 100644
+--- a/src/nomo/application/edit/confirmation.es
++++ b/src/nomo/application/edit/confirmation.es
+@@ -2,7 +2,7 @@ module nomo.application.edit.confirmation;
+ 
+ import std.io.IOError as ConsoleError;
+ import std.text.from_usize;
+-import nomo.application.edit.effects.Approval;
++import std.effects.Approval;
+ import nomo.application.edit.ports.{Preview, PreviewPresenter, CurrentEditConsent};
+ import nomo.domain.mutations.edit_contract.{Selector, Prepared};
+ import nomo.domain.mutations.edit_proposal.validate;
+diff --git a/src/nomo/application/edit/effects.es b/src/nomo/application/edit/effects.es
+deleted file mode 100644
+index c0e3cab..0000000
+--- a/src/nomo/application/edit/effects.es
++++ /dev/null
+@@ -1,5 +0,0 @@
+-module nomo.application.edit.effects;
+-
+-// Native approval is requested by the application and handled by the selected
+-// terminal/runtime adapter for the current invocation.
+-public effect Approval { action request(reason: string) -> bool; }
+diff --git a/src/nomo/application/edit/execute.es b/src/nomo/application/edit/execute.es
+index 72a73f2..a67cd0a 100644
+--- a/src/nomo/application/edit/execute.es
++++ b/src/nomo/application/edit/execute.es
+@@ -3,7 +3,7 @@ module nomo.application.edit.execute;
+ import std.io.IOError as ConsoleError;
+ import std.fs.IOError as FileError;
+ import std.effects.Fs;
+-import nomo.application.edit.effects.Approval;
++import std.effects.Approval;
+ import nomo.application.sessions.ports.session_edit_operation_store.EditJournal;
+ import nomo.application.work.ports.{WorkEditor, WorkConfirmation};
+ import nomo.application.work.output.WorkOutputSink;
+diff --git a/src/nomo/application/edit/ports.es b/src/nomo/application/edit/ports.es
+index 20b96f0..ba899ec 100644
+--- a/src/nomo/application/edit/ports.es
++++ b/src/nomo/application/edit/ports.es
+@@ -1,7 +1,7 @@
+ module nomo.application.edit.ports;
+ 
+ import std.io.IOError as ConsoleError;
+-import nomo.application.edit.effects.Approval;
++import std.effects.Approval;
+ import nomo.session.edit_operation.Binding;
+ 
+ public type Preview = { binding: Binding, machine: string, diff: string };
+diff --git a/src/nomo/application/work/controller.es b/src/nomo/application/work/controller.es
+index dd16eb0..52ef277 100644
+--- a/src/nomo/application/work/controller.es
++++ b/src/nomo/application/work/controller.es
+@@ -3,7 +3,7 @@ module nomo.application.work.controller;
+ import std.io.IOError as ConsoleError;
+ import std.fs.IOError as FileError;
+ import std.effects.Fs;
+-import nomo.application.edit.effects.Approval;
++import std.effects.Approval;
+ import nomo.core.conversation.Event;
+ import nomo.application.harness.work.controller.complete;
+ import nomo.application.work.request.WorkRequest;
+diff --git a/src/nomo/application/work/ports.es b/src/nomo/application/work/ports.es
+index 875ba1c..eb39493 100644
+--- a/src/nomo/application/work/ports.es
++++ b/src/nomo/application/work/ports.es
+@@ -4,7 +4,7 @@ import std.io.IOError as ConsoleError;
+ import std.fs.IOError as FileError;
+ import std.effects.Fs;
+ import nomo.application.work.request.WorkRequest;
+-import nomo.application.edit.effects.Approval;
++import std.effects.Approval;
+ import nomo.core.conversation.Event;
+ import nomo.application.harness.effects.harness_edit_original.EditOriginal;
+ import nomo.application.harness.effects.model_diagnostic_output.DiagnosticOutput;
+diff --git a/tests/fixtures/edit_preview001/preview_probe.es b/tests/fixtures/edit_preview001/preview_probe.es
+index 2353a4b..9b27c5d 100644
+--- a/tests/fixtures/edit_preview001/preview_probe.es
++++ b/tests/fixtures/edit_preview001/preview_probe.es
+@@ -12,7 +12,7 @@ import nomo.domain.sessions.session_display.ascii_json_with;
+ import nomo.tools.edit_file.{EditableRoot};
+ import nomo.domain.mutations.edit_contract.{prepare_original};
+ import nomo.domain.mutations.edit_contract.{Selector};
+-import nomo.application.edit.effects.{Approval};
++import std.effects.{Approval};
+ import nomo.application.edit.execute.execute;
+ import nomo.application.edit.confirmation.build_preview;
+ import nomo.application.work.ports.WorkConfirmation;

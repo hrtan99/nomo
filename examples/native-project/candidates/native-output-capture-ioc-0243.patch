@@ -440,73 +440,6 @@ index 0000000..b015232
 +
 +if __name__ == '__main__':
 +    main()
-diff --git a/tests/native_memory_value.py b/tests/native_memory_value.py
-new file mode 100644
-index 0000000..98eb5c3
---- /dev/null
-+++ b/tests/native_memory_value.py
-@@ -0,0 +1,61 @@
-+"""Read this fixture's ETS1 values using the pinned std.memory.binary layout.
-+
-+Test observation only; Nomo continues to use the official typed Memory codec.
-+"""
-+from io import BytesIO
-+
-+
-+class Reader:
-+    def __init__(self, data):
-+        self.input = BytesIO(data)
-+
-+    def integer(self, width=8, signed=False):
-+        data = self.input.read(width)
-+        assert len(data) == width
-+        return int.from_bytes(data, 'little', signed=signed)
-+
-+    def blob(self):
-+        length = self.integer()
-+        data = self.input.read(length)
-+        assert len(data) == length
-+        return data
-+
-+    def text(self):
-+        return self.blob().decode()
-+
-+    def value(self):
-+        tag = self.integer(1)
-+        if tag == 0:
-+            return None
-+        if tag == 1:
-+            return bool(self.integer(1))
-+        if 16 <= tag <= 21 or 24 <= tag <= 29:
-+            width = self.integer(1) if tag in (21, 29) else 1 << (tag % 8)
-+            return self.integer(width, signed=tag < 24)
-+        if tag == 48:
-+            return self.text()
-+        if tag == 49:
-+            return self.blob()
-+        if 64 <= tag <= 71:
-+            return [self.value() for _ in range(self.integer())]
-+        if tag == 80:
-+            return {self.text(): self.value() for _ in range(self.integer())}
-+        if tag == 81:
-+            self.text()
-+            return self.value()
-+        if tag == 82:
-+            self.text()
-+            name = self.text()
-+            return {'name': name, 'fields': [self.value() for _ in range(self.integer())]}
-+        raise AssertionError(f'unexpected fixture storage tag: {tag}')
-+
-+
-+def value(raw):
-+    assert raw['kind'] == 'bytes'
-+    reader = Reader(bytes(raw['value']))
-+    header = reader.input.read(5)
-+    assert header[:4] == b'ETS\x01' and header[4] in (0, 1)
-+    reader.text()  # checked schema identity, retained by the native runtime
-+    result = reader.value()
-+    assert reader.input.read() == b''
-+    return result
 diff --git a/tests/native_recovery_probe.py b/tests/native_recovery_probe.py
 index f30afc2..612eba7 100644
 --- a/tests/native_recovery_probe.py
@@ -527,25 +460,24 @@ index f30afc2..612eba7 100644
              if approval is None or event['authority']['approval_count'] != approval['authority']['approval_count'] + 1:
                  failures.append({'request': event['id'], 'action': event['qualified_action'],
 diff --git a/tests/native_worker_probe.py b/tests/native_worker_probe.py
-index 67c68fb..0eb85d9 100644
 --- a/tests/native_worker_probe.py
 +++ b/tests/native_worker_probe.py
-@@ -25,7 +25,8 @@ def execution_pid(worker):
+@@ -25,7 +25,8 @@
  
  
  class Client:
 -    def __init__(self, command, environment, evidence, name, approver=None, prompts=(b'nomo> ',)):
-+    def __init__(self, command, environment, evidence, name, approver=None, prompts=(b'nomo> ',), prompt_timeout=90):
++    def __init__(self, command, environment, evidence, name, approver=None, prompts=(b'nomo> ',), prompt_timeout=1800):
 +        self.prompt_timeout = prompt_timeout
          self.master, slave = pty.openpty()
          self.process = subprocess.Popen(command, cwd=ROOT, env=environment, stdin=slave, stdout=slave, stderr=slave)
          os.close(slave)
-@@ -50,7 +51,7 @@ class Client:
- 
-     def collect(self, prompt, approve=True, marker=None):
+@@ -52,7 +53,7 @@
          start, approvals = len(self.output), 0
--        deadline = time.monotonic() + 90
-+        deadline = time.monotonic() + (self.prompt_timeout if prompt else 90)
+         # Observation only: official 0.24.3 currently spends long CPU gaps
+         # between Host actions (interpreter #120). Keep the same live worker.
+-        deadline = time.monotonic() + 1800
++        deadline = time.monotonic() + (self.prompt_timeout if prompt else 1800)
          while time.monotonic() < deadline:
              readable, _, _ = select.select([self.master], [], [], 0.2)
              if readable:
