@@ -327,7 +327,7 @@ flow = "main"
         {'type': 'bind', 'source': str(state), 'target': '/state'},
         {'type': 'bind', 'source': str(incoming), 'target': '/migration', 'read_only': True}]}}}))
     command = ['docker', 'compose', '--env-file', '/dev/null']
-    for name in ('compose.yaml', 'config/etas-02412-official-compose.yaml', 'config/etas-runtime-cache-compose.yaml',
+    for name in ('compose.yaml', 'config/etas-02413-official-compose.yaml', 'config/etas-runtime-cache-compose.yaml',
                  'config/nomo-native-launch-compose.yaml', str(overlay)):
         command += ['--file', str(ROOT / name)]
     command += ['run', '--rm', '--no-deps', '--pull', 'never', '--tty=false', 'dev',

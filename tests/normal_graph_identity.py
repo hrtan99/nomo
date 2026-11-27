@@ -17,14 +17,14 @@ def digest(path):
 
 
 def selected_graph():
-    selected = os.environ.get('NOMO_NORMAL_GRAPH', 'latest02412')
-    if selected not in ('latest02412', 'latest0249', 'latest0247', 'latest0246', 'latest0245', 'latest0244', 'latest0243', 'latest', 'latest0121', 'latest0120', 'latest024', 'latest023', 'latest022', 'latest012', 'latest009', 'legacy', 'etas0013'):
-        raise RuntimeError('NOMO_NORMAL_GRAPH must be latest02412, latest0249, latest0247, latest0246, latest0245, latest0244, latest0243, latest, latest0121, latest0120, latest024, latest023, latest022, latest012, latest009, legacy or etas0013')
+    selected = os.environ.get('NOMO_NORMAL_GRAPH', 'latest02413')
+    if selected not in ('latest02413', 'latest02412', 'latest0249', 'latest0247', 'latest0246', 'latest0245', 'latest0244', 'latest0243', 'latest', 'latest0121', 'latest0120', 'latest024', 'latest023', 'latest022', 'latest012', 'latest009', 'legacy', 'etas0013'):
+        raise RuntimeError('NOMO_NORMAL_GRAPH must be latest02413, latest02412, latest0249, latest0247, latest0246, latest0245, latest0244, latest0243, latest, latest0121, latest0120, latest024, latest023, latest022, latest012, latest009, legacy or etas0013')
     return selected
 
 
 def bootstrap_path():
-    names = {'latest02412': 'etas-02412-official-cli-bootstrap.py', 'latest0249': 'etas-0249-official-cli-bootstrap.py', 'latest0247': 'etas-0247-official-cli-bootstrap.py', 'latest0246': 'etas-0246-official-cli-bootstrap.py', 'latest0245': 'etas-0245-official-cli-bootstrap.py', 'latest0244': 'etas-0244-official-cli-bootstrap.py', 'latest0243': 'etas-0243-official-cli-bootstrap.py', 'latest': 'etas-latest-cli-bootstrap.py', 'latest0121': 'etas-latest-cli-bootstrap.py', 'latest0120': 'etas-0120-official-cli-bootstrap.py', 'latest024': 'etas-024-official-cli-bootstrap.py', 'latest023': 'etas-023-official-cli-bootstrap.py', 'latest022': 'etas-022-official-cli-bootstrap.py', 'latest012': 'etas-012-official-cli-bootstrap.py', 'latest009': 'etas-009-cli-bootstrap.py', 'etas0013': 'etas-0013-cli-bootstrap.py',
+    names = {'latest02413': 'etas-02413-official-cli-bootstrap.py', 'latest02412': 'etas-02412-official-cli-bootstrap.py', 'latest0249': 'etas-0249-official-cli-bootstrap.py', 'latest0247': 'etas-0247-official-cli-bootstrap.py', 'latest0246': 'etas-0246-official-cli-bootstrap.py', 'latest0245': 'etas-0245-official-cli-bootstrap.py', 'latest0244': 'etas-0244-official-cli-bootstrap.py', 'latest0243': 'etas-0243-official-cli-bootstrap.py', 'latest': 'etas-latest-cli-bootstrap.py', 'latest0121': 'etas-latest-cli-bootstrap.py', 'latest0120': 'etas-0120-official-cli-bootstrap.py', 'latest024': 'etas-024-official-cli-bootstrap.py', 'latest023': 'etas-023-official-cli-bootstrap.py', 'latest022': 'etas-022-official-cli-bootstrap.py', 'latest012': 'etas-012-official-cli-bootstrap.py', 'latest009': 'etas-009-cli-bootstrap.py', 'etas0013': 'etas-0013-cli-bootstrap.py',
              'legacy': 'etas-003-cli-bootstrap.sh'}
     return ROOT / 'scripts' / names[selected_graph()]
 
@@ -32,7 +32,7 @@ def bootstrap_path():
 def bootstrap_evidence_paths():
     paths = [bootstrap_path()]
     selected = selected_graph()
-    if selected in ('latest012', 'latest022', 'latest023', 'latest024', 'latest0243', 'latest0244', 'latest0245', 'latest0246', 'latest0247', 'latest0249', 'latest02412'):
+    if selected in ('latest012', 'latest022', 'latest023', 'latest024', 'latest0243', 'latest0244', 'latest0245', 'latest0246', 'latest0247', 'latest0249', 'latest02412', 'latest02413'):
         label = selected.removeprefix('latest')
         paths.extend([ROOT / 'scripts/etas-official-cli-common.py',
                       ROOT / 'config/etas-official-legacy-bridge.json',
