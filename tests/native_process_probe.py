@@ -7,10 +7,11 @@ import tempfile
 import threading
 
 from native_recovery_probe import terminal, audit
+from native_json import byte_values
 
 ROOT = Path(__file__).resolve().parents[1]
 ECHO = ['-u', '-c', "import sys; print('ready', flush=True)\nfor line in sys.stdin: print('echo:' + line.rstrip('\\n'), flush=True)"]
-SLEEP = ['-u', '-c', "import time; print('sleeping', flush=True); time.sleep(30)"]
+SLEEP = ['-u', '-c', "import threading; print('sleeping', flush=True); threading.Event().wait()"]
 INPUT = '鹈鹕 café\n'
 
 
@@ -30,18 +31,18 @@ class Model(BaseHTTPRequestHandler):
             assert result['phase'] == 'started' and result['handle'], result
             self.server.jobs.append(result)
         if index == 2:
-            assert result['stdout'] == 'ready\n' and bytes(result['stdout_bytes']) == b'ready\n', result
+            assert result['stdout'] == 'ready\n' and byte_values(result['stdout_bytes']) == b'ready\n', result
         if index in (3, 5):
             assert result['status'] == 'completed', result
         if index == 4:
-            assert result['stdout'] == 'echo:' + INPUT and bytes(result['stdout_bytes']) == ('echo:' + INPUT).encode(), result
+            assert result['stdout'] == 'echo:' + INPUT and byte_values(result['stdout_bytes']) == ('echo:' + INPUT).encode(), result
         if index == 6:
             assert result['phase'] == 'exited' and result['exit_code'] == {'name': 'Some', 'fields': [0]}, result
         if index == 8:
             assert result['phase'] == 'stopped', result
         if index == 9:
             assert len(result) == 3 and [item['phase'] for item in result] == ['output', 'output', 'exited'], result
-            assert b''.join(bytes(item['stdout_bytes']) for item in result) == ('ready\necho:' + INPUT).encode(), result
+            assert b''.join(byte_values(item['stdout_bytes']) for item in result) == ('ready\necho:' + INPUT).encode(), result
         first = self.server.jobs[0]['id'] if self.server.jobs else ''
         if index == 0:
             name, arguments = 'start_job', {'program': '/usr/bin/python3', 'arguments': ECHO}
