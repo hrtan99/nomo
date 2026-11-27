@@ -50,7 +50,9 @@ class Client:
 
     def collect(self, prompt, approve=True, marker=None):
         start, approvals = len(self.output), 0
-        deadline = time.monotonic() + 90
+        # Observation only: official 0.24.3 currently spends long CPU gaps
+        # between Host actions (interpreter #120). Keep the same live worker.
+        deadline = time.monotonic() + 1800
         while time.monotonic() < deadline:
             readable, _, _ = select.select([self.master], [], [], 0.2)
             if readable:
