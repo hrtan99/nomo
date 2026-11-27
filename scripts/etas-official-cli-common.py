@@ -25,7 +25,7 @@ def configure(label, wrapper):
                 '023': ('0.2.3', None),
                 '024': ('0.2.4', None),
                 '025': ('0.2.5', None), '026': ('0.2.6', None), '026-v68': ('0.2.6', None), '030': ('0.3.0', None),
-                '041': ('0.4.1', None), '0120': ('0.12.0', None), '0121': ('0.12.1', None), '0130': ('0.13.0', None), '0131': ('0.13.1', None), '0132': ('0.13.2', None), '0133': ('0.13.3', None), '0134': ('0.13.4', None), '0135': ('0.13.5', None), '0224': ('0.22.4', None), '0227': ('0.22.7', None), '0230': ('0.23.0', None), '0231': ('0.23.1', None), '0232': ('0.23.2', None), '0240': ('0.24.0', None), '0242': ('0.24.2', None), '0243': ('0.24.3', None), '0244': ('0.24.4', None), '0245': ('0.24.5', None), '0246': ('0.24.6', None), '0247': ('0.24.7', None), '0249': ('0.24.9', None)}
+                '041': ('0.4.1', None), '0120': ('0.12.0', None), '0121': ('0.12.1', None), '0130': ('0.13.0', None), '0131': ('0.13.1', None), '0132': ('0.13.2', None), '0133': ('0.13.3', None), '0134': ('0.13.4', None), '0135': ('0.13.5', None), '0224': ('0.22.4', None), '0227': ('0.22.7', None), '0230': ('0.23.0', None), '0231': ('0.23.1', None), '0232': ('0.23.2', None), '0240': ('0.24.0', None), '0242': ('0.24.2', None), '0243': ('0.24.3', None), '0244': ('0.24.4', None), '0245': ('0.24.5', None), '0246': ('0.24.6', None), '0247': ('0.24.7', None), '0249': ('0.24.9', None), '02412': ('0.24.12', None)}
     require(label in versions, 'unsupported official graph')
     LABEL = label
     VERSION, LEGACY_SHA = versions[label]
@@ -41,7 +41,7 @@ def configure(label, wrapper):
     PREVIOUS_CONFIG = '98ff380d7e04ca43bca7f28f4af30dcd72e0a5a80dbe6515df41925f6d032962' if label == '041' else '0b95372bdb89c45b3174b5679886d39cc3a7241ad78138e310f2c85400f4191d' if label == '0227' else '14df3e5547ae101bd9fbf745614584989553156895db06a20db3652c39292e23' if label == '0230' else None
     bridge_path = REPO / 'config/etas-official-legacy-bridge.json'
     bridge = json.loads(bridge_path.read_text())
-    entry = None if label in ('041', '0120', '0121', '0130', '0131', '0132', '0133', '0134', '0135', '0224', '0227', '0230', '0231', '0232', '0240', '0242', '0243', '0244', '0245', '0246', '0247', '0249') else bridge[label]
+    entry = None if label in ('041', '0120', '0121', '0130', '0131', '0132', '0133', '0134', '0135', '0224', '0227', '0230', '0231', '0232', '0240', '0242', '0243', '0244', '0245', '0246', '0247', '0249', '02412') else bridge[label]
     if entry is not None:
         require(bridge['format'] == 1 and entry['legacy_sha256'] == LEGACY_SHA, 'legacy bridge policy drift')
         require(entry['wrapper_sha256'] == digest(wrapper), 'bootstrap wrapper drift')

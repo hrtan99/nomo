@@ -1,8 +1,8 @@
 """One shipping SQL image through the migration application and real native storage.
 
-The controlled source supplies typed input independently of the unresolved standard
-JSON parser. This qualifies the application/storage boundary, not the packet codec.
-Fresh status/history then use the ordinary native product entry.
+The controlled source qualifies the application/storage boundary independently of
+the packet codec. --production compares the formal codec with that retained full
+image. Fresh history uses the ordinary native product entry.
 """
 import argparse
 import hashlib
@@ -327,7 +327,7 @@ flow = "main"
         {'type': 'bind', 'source': str(state), 'target': '/state'},
         {'type': 'bind', 'source': str(incoming), 'target': '/migration', 'read_only': True}]}}}))
     command = ['docker', 'compose', '--env-file', '/dev/null']
-    for name in ('compose.yaml', 'config/etas-0249-official-compose.yaml', 'config/etas-runtime-cache-compose.yaml',
+    for name in ('compose.yaml', 'config/etas-02412-official-compose.yaml', 'config/etas-runtime-cache-compose.yaml',
                  'config/nomo-native-launch-compose.yaml', str(overlay)):
         command += ['--file', str(ROOT / name)]
     command += ['run', '--rm', '--no-deps', '--pull', 'never', '--tty=false', 'dev',

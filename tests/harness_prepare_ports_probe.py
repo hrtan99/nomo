@@ -164,6 +164,6 @@ pathlib.Path('/fixture-evidence/result.json').write_text(json.dumps(r,indent=2)+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--binary', default='/home/nomo/.cargo/bin/etas')
-    parser.add_argument('--graph', default='0249', help='official graph label, e.g. 0247')
+    parser.add_argument('--graph', default='02412', help='official graph label, e.g. 0247')
     args = parser.parse_args()
     main(args.binary, args.graph)
