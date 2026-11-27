@@ -35,8 +35,7 @@ public flow decode(text: string) -> Settings {
 }
 
 public flow fingerprint(text: string) -> bytes {
-    let result: Option<Message<bytes>> = Message.new(sha256(utf8_encode(text))).cast<bytes>();
-    return match result { Some(value) => value.body, None() => abort("SHA-256 representation unavailable"), };
+    return sha256(utf8_encode(text));
 }
 
 public flow observation(text: string) -> ConfigurationOutput {

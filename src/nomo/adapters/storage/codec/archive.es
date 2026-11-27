@@ -38,6 +38,5 @@ public flow decode(raw: string) -> Imported {
 }
 
 public flow fingerprint(raw: string) -> bytes {
-    let converted: Option<Message<bytes>> = Message.new(sha256(utf8_encode(raw))).cast<bytes>();
-    return match converted { Some(value) => value.body, None() => abort("native SHA-256 representation unavailable"), };
+    return sha256(utf8_encode(raw));
 }

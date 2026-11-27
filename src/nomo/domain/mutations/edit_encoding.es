@@ -4,7 +4,6 @@ import std.text.{char_get, concat, from_char, is_ascii, join, len as byte_len};
 import std.bytes.len as byte_count;
 import std.codec.text.utf8_encode;
 import std.crypto.sha256;
-import std.agent.message.Message;
 import nomo.domain.context.large_context.{file_bytes, edit_json_bytes};
 import nomo.domain.serialization.json.encode as encode_json;
 
@@ -105,10 +104,7 @@ public flow object(keys: Array<string>, values: Array<string>) -> Result<string,
 }
 
 public flow digest(text: string) -> Result<string, string> {
-    let message = Message.new(sha256(utf8_encode(text)));
-    let converted: Option<Message<bytes>> = message.cast<bytes>();
-    let data = match converted { Some(value) => value.body, None() => { return Err("SHA-256 representation refused"); } };
-    if byte_count(data) != 32 { return Err("invalid SHA-256 length"); }
+    let data = sha256(utf8_encode(text));
     var parts: Array<string> = []; var index: usize = 0;
     @limits([Iterations(32)]) while index < 32 { parts = parts.push(byte_hex(data[index])); index = index + 1; }
     return Ok(concat(parts));
