@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 OUTPUTS = [
     ('typed', {'task': 'T'}),
     ('text', '["read","a.txt"]'),
-    ('typed', {'text': 'Seen blue'}),
+    ('text', '["final","Seen blue"]'),
     ('text', 'Answer'),
     ('typed', {'task': 'edit T'}),
     ('typed', {'target': 'old', 'replacement': 'blue'}),
@@ -41,7 +41,7 @@ class Model(BaseHTTPRequestHandler):
                 assert 'blue' in json.dumps(data), data
             elif index == 3:
                 assert data['current']['phase'] == 'aggregate' and data['current']['result'] == 'Seen blue', data
-                assert data['current']['tool'] == 'read' and data['current']['outcome'] == 'complete: blue<LF>', data
+                assert data['current']['tool'] == 'read' and data['current']['outcome'] == 'complete: blue%n', data
             elif index in (4, 5):
                 assert data['current']['edit']['before'] == 'old\n', data
                 assert data['current']['evidence']['summary'] == 'Answer', data
@@ -80,7 +80,7 @@ def main(binary, graph):
     sources = copy_sources(ROOT, package, fixture)
     (package / 'src/app/main.es').rename(package / 'src/app/prepare_interface_probe.es')
     (evidence / 'sources.json').write_text(json.dumps(sources, indent=2) + '\n')
-    server = ThreadingHTTPServer(('127.0.0.1', 0), Model)
+    server = ThreadingHTTPServer(('0.0.0.0', 0), Model)
     server.requests, server.failures, server.evidence = [], [], evidence
     threading.Thread(target=server.serve_forever, daemon=True).start()
     (package / 'etas.toml').write_text(f'''[package]
@@ -97,6 +97,7 @@ model = "synthetic-harness-stages"
 base_url = "http://host.docker.internal:{server.server_port}/v1"
 api_key_env = "NOMO_HARNESS_PROBE_TOKEN"
 allow_private = true
+typed_output_encoding = "output-tool"
 [runtime.profiles.local.model.retry]
 attempts = 1
 delay_ms = 0
@@ -115,6 +116,7 @@ flow = "production_stages"
 ''')
     overlay = evidence / 'compose.json'
     overlay.write_text(json.dumps({'services': {'dev': {
+        'network_mode': 'bridge',
         'environment': {'NOMO_HARNESS_PROBE_TOKEN': 'synthetic-local-only'},
         'volumes': [{'type': 'bind', 'source': str(package), 'target': '/workspace', 'read_only': True},
                     {'type': 'bind', 'source': str(observed), 'target': '/fixture-evidence'},
@@ -148,8 +150,8 @@ pathlib.Path('/fixture-evidence/result.json').write_text(json.dumps(r,indent=2)+
         for item in starts.values():
             name = item['qualified_action']
             actions[name] = actions.get(name, 0) + 1
-        assert actions.get('Agentic.infer') == 6 and actions.get('Fs.read') == 1, actions
-        assert set(actions) <= {'Agentic.infer', 'Fs.read', 'Fs.stat', 'Console.stdout_write', 'Policy.evaluate'}, actions
+        assert actions.get('Agentic.step') == 6 and actions.get('Fs.read') == 1, actions
+        assert set(actions) <= {'Agentic.step', 'Fs.read', 'Fs.stat', 'Console.stdout_write', 'Policy.evaluate'}, actions
         result.update(status='passed', paired_requests=len(starts), host_actions=actions,
                       qualification='Real HistoryStages/child loop with six synthetic-local responses and one read. Original acquisition is controlled; no edit, approval, Memory, command, persistence or completed-work claim.')
         (evidence / 'result.json').write_text(json.dumps(result, indent=2) + '\n')
@@ -162,6 +164,6 @@ pathlib.Path('/fixture-evidence/result.json').write_text(json.dumps(r,indent=2)+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--binary', default='/home/nomo/.cargo/bin/etas')
-    parser.add_argument('--graph', default='0247', help='official graph label, e.g. 0247')
+    parser.add_argument('--graph', default='0249', help='official graph label, e.g. 0247')
     args = parser.parse_args()
     main(args.binary, args.graph)

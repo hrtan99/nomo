@@ -60,6 +60,38 @@ impl FixtureSource ~ ProjectStateSource {
 '''
 
 
+def interrupted_source(project, state, session):
+    target = project / 'interrupted.txt'
+    target.write_text('before old\n')
+    target.chmod(0o751)
+    program = '''import sys
+from pathlib import Path
+import nomo_project_tools as tools
+from nomo_project import Workspace
+restore = tools.restore
+def retain(path, node):
+    restore(path, node)
+    print('source write retained', flush=True)
+    sys.stdin.buffer.read(1)
+tools.restore = retain
+editor = tools.BatchEditor(Workspace(Path(sys.argv[1])), Path(sys.argv[2]), sys.argv[3])
+editor.apply(editor.prepare([{'operation':'edit','path':'interrupted.txt','target':'old','text':'new'}]))
+'''
+    environment = dict(os.environ, PYTHONPATH=str(ROOT / 'scripts'))
+    process = subprocess.Popen([sys.executable, '-B', '-c', program, str(project), str(state), session],
+        env=environment, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    try:
+        assert process.stdout.readline() == b'source write retained\n'
+        assert target.read_bytes() == b'before new\n'
+    finally:
+        if process.poll() is None:
+            process.kill()
+        process.communicate()
+    journal, = [json.loads(path.read_text()) for path in (state / 'edits').glob('*.json')
+                 if json.loads(path.read_text())['session'] == session]
+    assert journal['phase'] == 'applying'
+
+
 def source(evidence):
     first, second = evidence / 'project A', evidence / 'project 鹈鹕'
     first.mkdir()
@@ -88,6 +120,7 @@ def source(evidence):
     history.rename(branch, 'Saved fork')
     other = history.create(second, 'Another folder')
     history.append(other, 'user', 'Inspect the other project.')
+    interrupted_source(second, history.state, other)
     registry = ProjectRegistry(history.state)
     registry.touch(first)
     registry.touch(second)
@@ -127,14 +160,13 @@ def verify_projection(original, migrated):
     return {'sessions': len(sessions), 'context_messages': messages, 'matches_shipping_projection': True}
 
 
-def undo_imported(evidence, environment, project, edit):
+def restore_imported(evidence, environment, project, edit, operation):
     commands = []
     for saved in reversed(edit['paths']):
         if saved['after_exists']:
-            commands.extend([
-                {'program': '/usr/bin/diff', 'arguments': ['-r', '--no-dereference', '--', saved['path'], saved['after']]},
-                {'program': '/bin/rm', 'arguments': ['-rf', '--', saved['path']]},
-            ])
+            if operation == 'undo':
+                commands.append({'program': '/usr/bin/diff', 'arguments': ['-r', '--no-dereference', '--', saved['path'], saved['after']]})
+            commands.append({'program': '/bin/rm', 'arguments': ['-rf', '--', saved['path']]})
         if saved['before_exists']:
             commands.append({'program': '/bin/cp', 'arguments': ['-a', '--', saved['before'], saved['path']]})
     approved = []
@@ -147,14 +179,16 @@ def undo_imported(evidence, environment, project, edit):
 
     command = [str(ROOT / 'scripts/nomo-native'), str(project), '--id', edit['session']]
     code, output, approvals, _ = terminal(command, environment,
-        ['/edits', '/undo ' + edit['id'], '/edits', '/status', '/quit'], project, approve=approve)
-    (evidence / 'undo-terminal.txt').write_text(output)
+        ['/edits', '/' + operation + ' ' + edit['id'], '/edits', '/status', '/quit'], project, approve=approve)
+    (evidence / (operation + '-terminal.txt')).write_text(output)
     assert code == 0 and approvals == len(commands) == len(approved), output
-    assert '"phase":"applied"' in output and '"phase":"undone"' in output
-    assert (project / 'note.txt').read_bytes() == b'before old\n'
-    assert (project / 'note.txt').stat().st_mode & 0o777 == 0o751
+    before, after = ('applied', 'undone') if operation == 'undo' else ('interrupted', 'rolled_back')
+    assert '"phase":"' + before + '"' in output and '"phase":"' + after + '"' in output
+    target = 'note.txt' if operation == 'undo' else 'interrupted.txt'
+    assert (project / target).read_bytes() == b'before old\n'
+    assert (project / target).stat().st_mode & 0o777 == 0o751
     assert not (project / 'new').exists()
-    trace_path, = list((evidence / 'undo-traces').glob('run-*/trace.json'))
+    trace_path, = list((evidence / (operation + '-traces')).glob('run-*/trace.json'))
     trace = json.loads(trace_path.read_text())
     assert trace['outcome']['kind'] == 'completed' and trace['termination']['local_work_settled']
     starts = {event['id']: event for event in trace['events'] if event['kind'] == 'host_request_started'}
@@ -165,12 +199,16 @@ def undo_imported(evidence, environment, project, edit):
     assert sum(event['qualified_action'] == 'Command.run' for event in starts.values()) == len(commands)
     migrated = rows(Path(environment['NOMO_NATIVE_STATE']) / 'conversations.sqlite3', memory_value)
     journal = migrated[('nomo-native-file-journals-v1', '["Journals"]', edit['id'])]
-    assert journal['phase'] == 'undone' and journal['owner_name'] == 'undo_changes'
+    assert journal['phase'] == after and journal['owner_name'] == operation + '_changes'
+    assert journal['owner_call'] > journal['call']
+    request = migrated[('nomo-native-conversations-v1', '["Events"]', edit['session'] + ':' + str(journal['owner_call']))]
+    assert request['role'] == 'tool_call' and request['name'] == operation + '_changes'
     assert migrated[('nomo-native-conversations-v1', '["Sessions"]', edit['session'])]['pending'] == ''
     return {'status': 'passed', 'edit': edit['id'], 'native_approvals': approvals,
             'command_actions': len(commands), 'paired_host_requests': len(starts),
             'authority_audit': 'passed', 'model_requests': 0,
-            'restored': ['note.txt bytes', 'note.txt mode 0751', 'absence of created new/ subtree']}
+            'restored': [target + ' bytes', target + ' mode 0751'] +
+                        (['absence of created new/ subtree'] if operation == 'undo' else [])}
 
 
 def main():
@@ -223,7 +261,7 @@ flow = "main"
         {'type': 'bind', 'source': str(state), 'target': '/state'},
         {'type': 'bind', 'source': str(incoming), 'target': '/migration', 'read_only': True}]}}}))
     command = ['docker', 'compose', '--env-file', '/dev/null']
-    for name in ('compose.yaml', 'config/etas-0247-official-compose.yaml', 'config/etas-runtime-cache-compose.yaml',
+    for name in ('compose.yaml', 'config/etas-0249-official-compose.yaml', 'config/etas-runtime-cache-compose.yaml',
                  'config/nomo-native-launch-compose.yaml', str(overlay)):
         command += ['--file', str(ROOT / name)]
     command += ['run', '--rm', '--no-deps', '--pull', 'never', '--tty=false', 'dev',
@@ -238,6 +276,9 @@ flow = "main"
     report = json.loads(run.stdout)
     assert report == {'source_sha256': image['source_sha256'], 'rows': sum(1 + len(old['events']) for old in image['conversations']) + len(image['edits'])}
     migrated = rows(state / 'conversations.sqlite3', memory_value)
+    (evidence / 'migration-values.json').write_text(json.dumps([
+        {'region': region, 'store': store, 'key': key, 'value': value}
+        for (region, store, key), value in sorted(migrated.items())], indent=2) + '\n')
     region = 'nomo-native-conversations-v1'
 
     def text(identifier, index):
@@ -262,16 +303,17 @@ flow = "main"
             assert current['summary_event'] == -1 and current['summary_through'] == -1
         assert all(value == 0 for value in current['ledger'].values())
     projection = verify_projection(original, migrated)
-    assert len(image['edits']) == 1
-    edit = image['edits'][0]
-    journal = migrated[('nomo-native-file-journals-v1', '["Journals"]', edit['id'])]
-    assert journal['session'] == selected_id and journal['phase'] == 'applied'
-    assert journal['steps'] == len(edit['paths']) and journal['owner_call'] == journal['call']
-    assert json.loads(text(selected_id, journal['call'])) == json.loads(edit['archive'])
-    assert migrated[(region, '["Events"]', selected_id + ':' + str(journal['call']))]['role'] == 'archive'
-    for index, saved in enumerate(edit['paths']):
-        assert migrated[('nomo-native-file-journals-v1', '["Steps"]', edit['id'] + '/' + str(index))] == {
-            'phase': 'applied', 'paths': [saved]}
+    assert len(image['edits']) == 2
+    for edit in image['edits']:
+        journal = migrated[('nomo-native-file-journals-v1', '["Journals"]', edit['id'])]
+        assert journal['session'] == edit['session'] and journal['phase'] == ('applied' if edit['phase'] == 'applied' else 'interrupted')
+        assert journal['steps'] == len(edit['paths']) and journal['owner_call'] == journal['call']
+        assert json.loads(text(edit['session'], journal['call'])) == json.loads(edit['archive'])
+        assert migrated[(region, '["Events"]', edit['session'] + ':' + str(journal['call']))]['role'] == 'archive'
+        for index, saved in enumerate(edit['paths']):
+            assert migrated[('nomo-native-file-journals-v1', '["Steps"]', edit['id'] + '/' + str(index))] == {
+                'phase': edit['phase'], 'paths': [saved]}
+    edit, = [edit for edit in image['edits'] if edit['session'] == selected_id]
     for workspace in {old['session']['root'] for old in expected.values()}:
         newest = max((old for old in expected.values() if old['session']['root'] == workspace), key=lambda old: old['session']['updated'])
         assert migrated[(region, '["Selected"]', workspace)] == newest['session']['id']
@@ -294,19 +336,23 @@ flow = "main"
     assert (project / 'note.txt').read_bytes() == b'before new\n'
     assert (project / 'new/sub/readme.txt').read_text() == '鹈鹕 café\n'
     undo_environment = dict(fresh_environment, NOMO_NATIVE_TRACE_ROOT=str(evidence / 'undo-traces'))
-    undone = undo_imported(evidence, undo_environment, project, edit)
-    assert (original.parent / 'edits' / (edit['id'] + '.json')).read_text() == edit['archive']
+    undone = restore_imported(evidence, undo_environment, project, edit, 'undo')
+    interrupted, = [edit for edit in image['edits'] if edit['phase'] == 'applying']
+    rollback_environment = dict(fresh_environment, NOMO_NATIVE_TRACE_ROOT=str(evidence / 'rollback-traces'))
+    rolled_back = restore_imported(evidence, rollback_environment, Path(interrupted['workspace']), interrupted, 'rollback')
+    for edit in image['edits']:
+        assert (original.parent / 'edits' / (edit['id'] + '.json')).read_text() == edit['archive']
     assert digest(original) == before
     record = {'status': 'passed-application-and-real-storage', 'source': str(original), 'source_sha256': before,
               'original_sessions': len(expected), 'original_rows': report['rows'], 'source_unchanged': True, 'projection': projection,
               'migration_host_requests': requests, 'fresh_status_history_host_requests': restore_requests,
-              'real_provider_requests': 0, 'migration_command_actions': 0, 'native_undo': undone,
+              'real_provider_requests': 0, 'migration_command_actions': 0, 'native_undo': undone, 'native_rollback': rolled_back,
               'qualification': 'One actual shipping SQL image generated through its public history/compaction/fork APIs. '
                   'The read-only source adapter matches complete original exports. A controlled typed source exercises '
                   'the production migration application, NativeStateWriter and historical append, followed by ordinary '
-                  'fresh native status/history and an explicit native undo of its actual owned BatchEditor journal. '
+                  'fresh native status/history, an explicit native undo and explicit rollback of two actual owned BatchEditor journals. '
                   'Original journal remains exact. The old format does not preserve directory modes, timestamps or links. '
-                  'This does not qualify the production packet JSON codec, interrupted-import rollback, job conversion, '
+                  'This does not qualify the production packet JSON codec, job conversion, '
                   'bounded legacy sessions or default cutover.'}
     (evidence / 'result.json').write_text(json.dumps(record, indent=2) + '\n')
     print('PASS project migration policy, original archives and fresh native history: ' + str(evidence), flush=True)
