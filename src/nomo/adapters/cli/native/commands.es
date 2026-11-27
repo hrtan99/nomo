@@ -32,6 +32,11 @@ flow process(operation: string, argument: string) -> ProcessRequest {
     if operation == "/exec" { return ProcessRequest.Exec(argv(argument)); }
     if operation == "/spawn" { return ProcessRequest.Spawn(argv(argument)); }
     if operation == "/jobs" { return ProcessRequest.Jobs; }
+    if operation == "/archived-output" {
+        let (job, part) = match split_once(argument, " ") { Some(parts) => parts, None() => (argument, "0") };
+        let index = match parse_usize(trim(part)) { Ok(value) => value, Err(_) => abort("expected an archived output part number"), };
+        return ProcessRequest.ArchivedOutput(job, index);
+    }
     if operation == "/poll" {
         let (job, bytes) = match split_once(argument, " ") { Some(parts) => parts, None() => (argument, "65536") };
         let count = match parse_usize(trim(bytes)) { Ok(value) => value, Err(_) => abort("expected a read byte count"), };
@@ -59,7 +64,7 @@ public flow command(request: string) -> Command {
     if request == "/git" { return Command.Git(parse_git("status")); }
     match strip_prefix(request, "/git ") { Some(value) => { return Command.Git(parse_git(value)); } None() => (), }
     let (operation, argument) = match split_once(request, " ") { Some(parts) => parts, None() => (request, "") };
-    if operation == "/exec" || operation == "/spawn" || operation == "/jobs" || operation == "/poll" || operation == "/send" || operation == "/close-input" || operation == "/stop" || operation == "/job-output" {
+    if operation == "/exec" || operation == "/spawn" || operation == "/jobs" || operation == "/poll" || operation == "/send" || operation == "/close-input" || operation == "/stop" || operation == "/job-output" || operation == "/archived-output" {
         return Command.Process(process(operation, trim(argument)));
     }
     if request == "/tree" { return Command.Tree("."); }

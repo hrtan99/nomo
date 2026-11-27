@@ -2,7 +2,7 @@ module nomo.application.migration.project_state;
 
 import std.effects.Fs;
 import std.fs.{IOError as FileError, ReadLimitError};
-import std.text.{strip_prefix, parse_i64, from_i64};
+import std.text.{strip_prefix, parse_i64, from_i64, from_usize};
 import nomo.application.migration.ports.{ProjectStateSource, NativeStateDestination, HistoricalEvents, MigrationRoot};
 import nomo.application.conversation.ports.ResultPublication;
 import nomo.domain.migration.native_state.{NativeRecord, MigrationReport};
@@ -75,6 +75,16 @@ public flow migrate<S ~ ProjectStateSource, D ~ NativeStateDestination, E ~ Hist
             },
             None() => (),
         }
+        rows = rows + 1;
+    }
+    for job in image.jobs {
+        destination.insert(NativeRecord.ArchivedJob(job.record.id, job.record));
+        var part: usize = 0;
+        for data in job.chunks {
+            destination.insert(NativeRecord.ArchivedPart(job.record.id + "/" + from_usize(part), data));
+            part = part + 1;
+        }
+        if !projects.iter().any(workspace => workspace == job.record.workspace) { projects = projects.push(job.record.workspace); }
         rows = rows + 1;
     }
     destination.insert(NativeRecord.Counter("session", next_id));

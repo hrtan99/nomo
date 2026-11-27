@@ -7,6 +7,7 @@ import nomo.domain.execution.attempt.Attempt as SavedAttempt;
 import nomo.native.configuration.Cached;
 import nomo.native.mutations.{Journal as SavedJournal, Step as SavedStep};
 import nomo.domain.process.jobs.{Job as SavedJob, JobEvent};
+import nomo.domain.process.archived_jobs.ArchivedJob as SavedProjectJob;
 
 // Stored facts, including incomplete records, are copied without executing them.
 public enum NativeRecord {
@@ -14,7 +15,8 @@ public enum NativeRecord {
     Event(string, SavedEvent), Chunk(string, string), Copy(string, CopyJob),
     AttemptCounter(string, i64), Attempt(string, SavedAttempt),
     Configuration(string, Cached), Projects(string, Array<string>),
-    Journal(string, SavedJournal), Step(string, SavedStep), Job(string, SavedJob), Output(string, JobEvent)
+    Journal(string, SavedJournal), Step(string, SavedStep), Job(string, SavedJob), Output(string, JobEvent),
+    ArchivedJob(string, SavedProjectJob), ArchivedPart(string, bytes)
 }
 
 public type NativeImage = { source_sha256: string, records: Array<NativeRecord> };

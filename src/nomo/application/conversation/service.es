@@ -4,7 +4,7 @@ import nomo.application.conversation.service_ports.{ConversationService, Convers
 
 import nomo.application.commands.effects.CommandOperations;
 import nomo.application.workspace.ports.WorkspaceObservations;
-import nomo.application.processes.ports.ProcessOperations;
+import nomo.application.processes.ports.{ProcessOperations, ArchivedJobCatalog};
 import nomo.application.mutations.ports.ChangeOperations;
 import nomo.application.conversation.ports.{ConversationReader, ConversationWriter, GenerationReservation, ResultPublication};
 import nomo.application.execution.ports.AttemptRepository;
@@ -25,7 +25,7 @@ public type Conversation<
     History ~ ConversationReader + ConversationWriter + GenerationReservation + ResultPublication,
     Attempts ~ AttemptRepository,
     Instructions ~ InstructionReader,
-    Jobs ~ SavedJobsReader,
+    Jobs ~ SavedJobsReader + ArchivedJobCatalog,
     Coding ~ CodingModel,
     Summary ~ SummaryModel,
     Projection ~ ContextProjection,
@@ -47,7 +47,7 @@ impl Conversation<
     History ~ ConversationReader + ConversationWriter + GenerationReservation + ResultPublication,
     Attempts ~ AttemptRepository,
     Instructions ~ InstructionReader,
-    Jobs ~ SavedJobsReader,
+    Jobs ~ SavedJobsReader + ArchivedJobCatalog,
     Coding ~ CodingModel,
     Summary ~ SummaryModel,
     Projection ~ ContextProjection,

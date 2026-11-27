@@ -2,12 +2,14 @@ module nomo.application.processes.service;
 
 import std.codec.text.utf8_encode;
 import std.text.from_i64;
+import std.bytes.from_array;
 import std.io.IOError;
 import nomo.domain.serialization.json.encode;
 import nomo.domain.execution.attempt.Attempt;
 import nomo.domain.process.jobs.{Job, JobEvent, StartRequest, JobRequest, ReadRequest, WriteRequest, InputResult};
 import nomo.domain.process.observations.{ProcessEvent, observed, recorded_phase};
-import nomo.application.processes.ports.{ProcessControl, JobRepository, OutputArchive, ProcessPreviewSink};
+import nomo.application.processes.ports.{ProcessControl, JobRepository, OutputArchive, ProcessPreviewSink, ArchivedJobCatalog, ArchivedJobParts};
+import nomo.domain.process.archived_jobs.{ArchivedJob, ArchivedOutput};
 import nomo.application.execution.ports.AttemptRepository;
 import nomo.application.execution.service.{begin, dispatching, returned, complete_attempt};
 import nomo.application.conversation.ports.{ConversationReader, ConversationWriter, ResultPublication};
@@ -114,6 +116,21 @@ public flow stop<Live, C ~ ProcessControl<Live>, J ~ JobRepository, O ~ OutputAr
 }
 
 public flow list<J ~ JobRepository>(jobs: J, session: string) -> Array<Job> ![Memory, Error<StorageError>, Error<BudgetExceeded>] { return jobs.list(session); }
+
+public flow archived_jobs<J ~ ArchivedJobCatalog, H ~ ConversationReader>(jobs: J, history: H, session: string) -> Array<ArchivedJob>
+    ![Memory, Error<StorageError>, Error<BudgetExceeded>] {
+    return jobs.archived_jobs(history.load(session).workspace);
+}
+
+public flow archived_output<J ~ ArchivedJobCatalog + ArchivedJobParts, H ~ ConversationReader>(jobs: J, history: H, session: string, id: string, part: usize) -> ArchivedOutput
+    ![Memory, Error<StorageError>] {
+    let job = match jobs.archived_job(id) { Some(value) => value, None() => abort("archived project job not found"), };
+    if job.workspace != history.load(session).workspace { abort("archived job belongs to another project"); }
+    if part >= job.parts { return ArchivedOutput { job = id, part, next_part = None(), total_bytes = job.output_bytes, data = from_array([]) }; }
+    let data = match jobs.archived_part(id, part) { Some(value) => value, None() => abort("archived job output part is missing"), };
+    return ArchivedOutput { job = id, part, next_part = if part + 1 < job.parts { Some(part + 1) } else { None() },
+        total_bytes = job.output_bytes, data };
+}
 
 public flow output<J ~ JobRepository, O ~ OutputArchive, W ~ ConversationWriter, H ~ ConversationReader>(jobs: J, archive: O, writer: W, history: H, session: string, job: string) -> Array<JobEvent>
     ![Memory, Error<StorageError>, Error<MemoryConflict>, Error<BudgetExceeded>] {

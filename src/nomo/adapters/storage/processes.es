@@ -1,11 +1,15 @@
 module nomo.adapters.storage.processes;
 
 import std.memory.MemoryCursor;
-import std.text.from_i64;
+import std.text.{from_i64, from_usize};
 import nomo.native.processes.Data;
 import nomo.domain.process.jobs.{Job, JobEvent};
-import nomo.application.processes.ports.{JobRepository, OutputArchive};
+import nomo.application.processes.ports.{JobRepository, OutputArchive, ArchivedJobCatalog, ArchivedJobParts};
+import nomo.domain.process.archived_jobs.ArchivedJob;
 import nomo.application.context.ports.SavedJobsReader;
+
+alias ArchivedSchema = MemoryRegion<{ Jobs: Store<string, ArchivedJob>, Parts: Store<string, bytes> }>;
+public let ArchivedJobs = std.memory.region<ArchivedSchema>(stable_id = "nomo-native-project-jobs-v1", store = "native-project-jobs");
 
 public type NativeJobs = {};
 impl NativeJobs ~ JobRepository {
@@ -28,6 +32,24 @@ impl NativeJobs ~ JobRepository {
 impl NativeJobs ~ SavedJobsReader {
     flow read(self, session: string) -> Array<Job> ![Memory, Error<StorageError>, Error<BudgetExceeded>] {
         return self.list(session);
+    }
+}
+impl NativeJobs ~ ArchivedJobCatalog {
+    flow archived_job(self, id: string) -> Option<ArchivedJob> ![Memory, Error<StorageError>] { return ArchivedJobs.Jobs.get(id); }
+    flow archived_jobs(self, workspace: string) -> Array<ArchivedJob> ![Memory, Error<StorageError>, Error<BudgetExceeded>] {
+        var result: Array<ArchivedJob> = [];
+        var cursor: Option<MemoryCursor> = None();
+        @limits([Iterations(2147483647)]) while true {
+            let page = ArchivedJobs.Jobs.page(cursor, 100);
+            result = result.extend(page.entries.iter().filter(item => item.value.workspace == workspace).map(item => item.value).collect());
+            match page.cursor { Some(value) => { cursor = Some(value); } None() => { break; } }
+        }
+        return result;
+    }
+}
+impl NativeJobs ~ ArchivedJobParts {
+    flow archived_part(self, job: string, part: usize) -> Option<bytes> ![Memory, Error<StorageError>] {
+        return ArchivedJobs.Parts.get(job + "/" + from_usize(part));
     }
 }
 public type NativeOutputArchive = {};

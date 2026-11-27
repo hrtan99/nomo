@@ -30,7 +30,7 @@ impl ConsoleTerminalDisplay ~ TerminalDisplay {
                     println("Projects: /projects, /open [FOLDER_OR_NUMBER]. Project selection is native; the launcher attaches that folder's execution endpoint and keeps the current endpoint running.");
                     println("Git: /git status, diff [--staged] [JSON_PATHS], log [COUNT], branches, init, branch NAME, switch NAME, commit JSON. Commit JSON contains message and paths.");
                     println("Ask about the project; native tools provide recursive/glob discovery, literal/regex search, file reads, approved editing and Git operations.");
-                    println("Terminal: /exec JSON_ARGV, /spawn JSON_ARGV, /jobs, /poll JOB [MAX_BYTES], /send JOB JSON_STRING, /close-input JOB, /stop JOB, /job-output JOB. /poll waits for output or termination. Saved job phases are historical observations; current Host handles are not durable across process restart.");
+                    println("Terminal: /exec JSON_ARGV, /spawn JSON_ARGV, /jobs, /poll JOB [MAX_BYTES], /send JOB JSON_STRING, /close-input JOB, /stop JOB, /job-output JOB. /jobs also lists migrated workspace jobs with [OLD JOB]; /archived-output JOB [PART] reads their retained raw output and next_part. /poll waits for output or termination. Saved job phases are historical observations; current Host handles are not durable across process restart.");
                     println("/new [TITLE], /sessions [all], /resume [ID], /rename TITLE, /history [TEXT], /page EVENT, /fork [EVENT], /export FILE, /import FILE, /copies, /resume-copy ID, /discard-copy ID, /runs, /resolve-run ID [NOTE], /config, /check, /compact, /status, /tree [PATH], /glob PATTERN, /search REGEX, /read FILE, /edits, /undo [EDIT], /rollback EDIT, /recover EDIT, /quit");
             },
             TerminalEvent.Welcome => println("[NATIVE ] Nomo native chat · /help · /quit"),
@@ -51,6 +51,8 @@ impl ConsoleTerminalDisplay ~ TerminalDisplay {
             TerminalEvent.JobRead(value) => json("[JOB    ] ", value, "process conversion failed", "process encoding failed"),
             TerminalEvent.JobInput(value) => json("[JOB    ] ", value, "process conversion failed", "process encoding failed"),
             TerminalEvent.JobOutput(value) => json("[JOB    ] ", value, "process conversion failed", "process encoding failed"),
+            TerminalEvent.ArchivedJob(value) => json("[OLD JOB] ", value, "archived job conversion failed", "archived job encoding failed"),
+            TerminalEvent.ArchivedOutput(value) => json("[OLD OUT] ", value, "archived output conversion failed", "archived output encoding failed"),
             TerminalEvent.Discovery(value) => {
                 println(value.stdout);
                 if value.stderr != "" { println(value.stderr); }

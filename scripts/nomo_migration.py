@@ -177,6 +177,24 @@ def _project_edits(directory, conversations, state):
     return edits, unowned
 
 
+def _project_jobs(directory):
+    """Read workspace ownership and raw merged PTY output from the retained copy."""
+    jobs = []
+    for path in sorted((directory / 'jobs').glob('*/status.json')):
+        original = path.read_text()
+        saved = json.loads(original)
+        chunks = []
+        size = 0
+        with (path.parent / 'output.log').open('rb') as stream:
+            while data := stream.read(262144):
+                chunks.append(list(data))
+                size += len(data)
+        jobs.append({'id': path.parent.name, 'workspace': saved['root'], 'arguments': saved['arguments'],
+                     'phase': saved['status'], 'exit_code': None if saved['exit_code'] is None else str(saved['exit_code']),
+                     'output_bytes': str(size), 'original': original, 'chunks': chunks})
+    return jobs
+
+
 def project_packet(source, archive, state):
     """Export the complete shipping SQL rows plus the native consumer's view."""
     backup(source, archive)
@@ -207,7 +225,9 @@ def project_packet(source, archive, state):
                             'name': event['name'], 'text': event['content']} for event in events],
             })
     edits, unowned = _project_edits(archive.parent, conversations, state)
-    manifest.update(prepared_edits=[edit['id'] for edit in edits], unowned_edits=unowned)
+    jobs = _project_jobs(archive.parent)
+    manifest.update(prepared_edits=[edit['id'] for edit in edits], unowned_edits=unowned,
+                    prepared_jobs=[job['id'] for job in jobs])
     (archive.parent / 'project-files.json').write_text(json.dumps(manifest, indent=2) + '\n')
-    return {'format': 'nomo-project-state-2', 'source_sha256': digest(archive),
-            'projects': projects, 'conversations': conversations, 'edits': edits}
+    return {'format': 'nomo-project-state-3', 'source_sha256': digest(archive),
+            'projects': projects, 'conversations': conversations, 'edits': edits, 'jobs': jobs}

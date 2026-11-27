@@ -9,6 +9,7 @@ import nomo.domain.execution.attempt.Attempt;
 import nomo.domain.execution.command.CommandOutput;
 import nomo.domain.execution.checks.CheckOutcome;
 import nomo.domain.process.jobs.{Job, JobEvent, InputResult};
+import nomo.domain.process.archived_jobs.{ArchivedJob as SavedProjectJob, ArchivedOutput as SavedProjectOutput};
 import nomo.domain.workspace.files.FileContent;
 import nomo.domain.mutations.models.{Journal, ChangeOutcome};
 import nomo.domain.configuration.status.ConfigurationStatus;
@@ -18,7 +19,7 @@ public enum TerminalEvent {
     CopyState(CopyJob), Pending(string), UnresolvedAttempt(Attempt),
     History(ChatMessage), MoreHistory(i64), Status(Session), Git(CommandOutput),
     CommandResult(CommandOutput), ProcessJob(Job), JobRead(JobEvent), JobInput(InputResult),
-    JobOutput(Array<JobEvent>), Discovery(CommandOutput), File(FileContent),
+    JobOutput(Array<JobEvent>), ArchivedJob(SavedProjectJob), ArchivedOutput(SavedProjectOutput), Discovery(CommandOutput), File(FileContent),
     Edit(Journal), EditResult(ChangeOutcome), Copy(CopyJob), UnfinishedCopy(CopyJob),
     Run(Attempt), Resolved(Attempt), Config(ConfigurationStatus), Check(CheckOutcome)
 }

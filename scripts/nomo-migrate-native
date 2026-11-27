@@ -27,7 +27,7 @@ def migrate(source, destination, source_format):
     project_backup = (json.loads((incoming / 'project-files.json').read_text())
                       if source_format == 'project' else None)
     count = (len(image['rows']) if source_format == 'native-0135' else
-             sum(1 + len(conversation['events']) for conversation in image['conversations']) + len(image['edits']))
+             sum(1 + len(conversation['events']) for conversation in image['conversations']) + len(image['edits']) + len(image['jobs']))
     snapshot = incoming / 'snapshot.json'
     snapshot.write_text(json.dumps(image, ensure_ascii=False, separators=(',', ':')) + '\n')
     snapshot.chmod(0o600)
@@ -39,6 +39,9 @@ def migrate(source, destination, source_format):
                'project_edit_import': ({'status': 'incomplete', 'edits': project_backup['prepared_edits'],
                                         'unowned_edits': project_backup['unowned_edits']}
                                        if source_format == 'project' else None),
+               'project_job_import': ({'status': 'incomplete', 'jobs': project_backup['prepared_jobs'],
+                                       'ownership': 'workspace', 'live_handles': False}
+                                      if source_format == 'project' else None),
                'scope': ('Native format-3 records only. Original receipts/CAS namespaces remain in the source backup; '
                          'fresh SDK writes establish new destination versions.' if source_format == 'native-0135' else
                          'Shipping project database only: original session IDs, full source archives, summary fences '
@@ -47,8 +50,9 @@ def migrate(source, destination, source_format):
                          'Owned editor journals map to native journals/steps with original archive provenance and '
                          'materialized before/after bytes and file modes. Applying records stay interrupted; '
                          'the source did not record directory modes, timestamps, links or per-step dispatch. '
-                         'Unowned journals and workspace-owned job files remain under input, without native '
-                         'ownership or live handles. Bounded legacy sessions are not migrated. '
+                         'Workspace-owned job metadata and raw merged output map to read-only native archives; '
+                         'original status JSON and all edit/job files remain under input. No conversation '
+                         'ownership, live handles or current liveness is inferred. Unowned journals and bounded legacy sessions are not migrated. '
                          'The native allowance ledger begins at zero for new execution.') +
                         ' No command, model, recovery or live-handle replay.'}
     manifest = destination / 'migration.json'
@@ -82,16 +86,17 @@ def migrate(source, destination, source_format):
         receipt.update(status='completed', report=report)
         if source_format == 'project':
             receipt['project_edit_import']['status'] = 'completed'
+            receipt['project_job_import']['status'] = 'completed'
     manifest.write_text(json.dumps(receipt, indent=2) + '\n')
     if result.returncode:
         print(result.stderr or result.stdout, end='')
         print('[MIGRATE] Incomplete destination retained at ' + str(destination))
     else:
-        label = 'Native state' if source_format == 'native-0135' else 'Conversation history, catalogue and owned edit journals'
+        label = 'Native state' if source_format == 'native-0135' else 'Conversation history, catalogue, owned edit journals and workspace job archives'
         print('[MIGRATE] ' + label + ' completed. Original source retained; launch with NOMO_NATIVE_STATE=' + str(state))
         if project_backup and project_backup['files']:
             print('[MIGRATE] Original Python edit/job files are backed up in ' + str(incoming) +
-                  '; workspace job and unowned journal import remain pending.')
+                  '; unowned journals remain archived without native edit authority.')
     return result.returncode
 
 

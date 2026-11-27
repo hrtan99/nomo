@@ -8,6 +8,7 @@ import nomo.native.configuration.Data as Configuration;
 import nomo.native.projects.Data as Projects;
 import nomo.native.mutations.Data as Mutations;
 import nomo.native.processes.Data as Jobs;
+import nomo.adapters.storage.processes.ArchivedJobs;
 
 public type NativeStateWriter = {};
 impl NativeStateWriter ~ HistoricalEvents {
@@ -33,6 +34,8 @@ impl NativeStateWriter ~ NativeStateDestination {
             NativeRecord.Step(key, value) => Mutations.Steps.insert(key, value),
             NativeRecord.Job(key, value) => Jobs.Jobs.insert(key, value),
             NativeRecord.Output(key, value) => Jobs.Outputs.insert(key, value),
+            NativeRecord.ArchivedJob(key, value) => ArchivedJobs.Jobs.insert(key, value),
+            NativeRecord.ArchivedPart(key, value) => ArchivedJobs.Parts.insert(key, value),
         }
     }
 }

@@ -41,7 +41,10 @@ flow show_git(session: string, request: GitRequest) -> unit {
 
 flow process_command(session: string, request: ProcessRequest) -> unit {
     handle match request {
-            ProcessRequest.Jobs => { for value in perform ProcessOperations.list(session) { perform TerminalOutput.show(TerminalEvent.ProcessJob(value)); } }
+            ProcessRequest.Jobs => {
+                for value in perform ProcessOperations.list(session) { perform TerminalOutput.show(TerminalEvent.ProcessJob(value)); }
+                for value in perform ProcessOperations.archived_jobs(session) { perform TerminalOutput.show(TerminalEvent.ArchivedJob(value)); }
+            }
             ProcessRequest.Exec(argv) => perform TerminalOutput.show(TerminalEvent.CommandResult(execute_command(argv.program, argv.arguments))),
             ProcessRequest.Spawn(argv) => perform TerminalOutput.show(TerminalEvent.ProcessJob(perform ProcessOperations.start(session, argv.program, argv.arguments))),
             ProcessRequest.Poll(job, bytes) => perform TerminalOutput.show(TerminalEvent.JobRead(perform ProcessOperations.read(session, job, bytes))),
@@ -49,6 +52,7 @@ flow process_command(session: string, request: ProcessRequest) -> unit {
             ProcessRequest.CloseInput(job) => perform TerminalOutput.show(TerminalEvent.JobInput(perform ProcessOperations.close_input(session, job))),
             ProcessRequest.Stop(job) => perform TerminalOutput.show(TerminalEvent.JobRead(perform ProcessOperations.stop(session, job))),
             ProcessRequest.Output(job) => perform TerminalOutput.show(TerminalEvent.JobOutput(perform ProcessOperations.output(session, job))),
+            ProcessRequest.ArchivedOutput(job, part) => perform TerminalOutput.show(TerminalEvent.ArchivedOutput(perform ProcessOperations.archived_output(session, job, part))),
         } with { SessionContext.current() => session; };
 }
 

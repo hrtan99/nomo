@@ -11,11 +11,13 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
+import time
 
 from native_sources import copy_sources
 from native_memory_value import value as memory_value
 from native_state_migration_probe import rows, audit
 from native_recovery_probe import terminal, audit as audit_authority
+from native_json import byte_values
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
@@ -24,6 +26,7 @@ from nomo_project import ProjectRegistry
 from nomo_migration import project_packet, digest
 from nomo_project import Workspace
 from nomo_project_tools import BatchEditor
+from nomo_jobs import ProcessService
 
 
 def quote(value):
@@ -45,16 +48,26 @@ def fixture(image):
                  for saved in edit['paths']]
         edits.append('ProjectEdit { ' + ', '.join(name + ' = ' + quote(edit[name])
                      for name in ('id', 'session', 'workspace', 'phase', 'archive')) + ', paths = [' + ', '.join(paths) + '] }')
+    jobs = []
+    for old in image['jobs']:
+        record = ', '.join(name + ' = ' + quote(old[name]) for name in ('id', 'workspace', 'arguments', 'phase', 'original'))
+        exit_code = 'None()' if old['exit_code'] is None else 'Some(' + old['exit_code'] + ')'
+        chunks = ', '.join('from_array(' + quote(data) + ')' for data in old['chunks'])
+        jobs.append('ProjectJob { record = ArchivedJob { ' + record + ', exit_code = ' + exit_code +
+                    ', output_bytes = ' + old['output_bytes'] + ', parts = ' + str(len(old['chunks'])) +
+                    ' }, chunks = [' + chunks + '] }')
     return '''module app.source;
 import std.effects.Fs;
 import std.fs.{IOError as FileError, ReadLimitError};
+import std.bytes.from_array;
 import nomo.application.migration.ports.{ProjectStateSource, MigrationRoot};
-import nomo.domain.migration.project_state.{ProjectImage, ProjectConversation, ProjectEvent, ProjectEdit};
+import nomo.domain.migration.project_state.{ProjectImage, ProjectConversation, ProjectEvent, ProjectEdit, ProjectJob};
+import nomo.domain.process.archived_jobs.ArchivedJob;
 import nomo.domain.mutations.models.SavedPath;
 public type FixtureSource = {};
 impl FixtureSource ~ ProjectStateSource {
     flow load(self) -> ProjectImage ![Fs.read<MigrationRoot>, Error<FileError>, Error<ReadLimitError>, Error<IndexError>] {
-        return ProjectImage { source_sha256 = ''' + quote(image['source_sha256']) + ', projects = ' + quote(image['projects']) + ', conversations = [' + ',\n'.join(conversations) + '], edits = [' + ',\n'.join(edits) + '''] };
+        return ProjectImage { source_sha256 = ''' + quote(image['source_sha256']) + ', projects = ' + quote(image['projects']) + ', conversations = [' + ',\n'.join(conversations) + '], edits = [' + ',\n'.join(edits) + '], jobs = [' + ',\n'.join(jobs) + '''] };
     }
 }
 '''
@@ -121,6 +134,14 @@ def source(evidence):
     other = history.create(second, 'Another folder')
     history.append(other, 'user', 'Inspect the other project.')
     interrupted_source(second, history.state, other)
+    service = ProcessService(history.state, first)
+    job = service.start([sys.executable, '-B', '-c', 'import os; os.write(1, bytes([65, 0, 255, 10]))'])
+    deadline = time.monotonic() + 10
+    while job['status'] != 'completed' and time.monotonic() < deadline:
+        time.sleep(0.02)
+        job = {'job': job['job'], **service.poll(job['job'])}
+    assert job['status'] == 'completed' and job['exit_code'] == 0
+    assert (history.state / 'jobs' / job['job'] / 'output.log').read_bytes() == b'A\x00\xff\r\n'
     registry = ProjectRegistry(history.state)
     registry.touch(first)
     registry.touch(second)
@@ -274,11 +295,11 @@ flow = "main"
     (evidence / 'stderr.txt').write_text(run.stderr)
     assert run.returncode == 0, run.stdout + run.stderr
     report = json.loads(run.stdout)
-    assert report == {'source_sha256': image['source_sha256'], 'rows': sum(1 + len(old['events']) for old in image['conversations']) + len(image['edits'])}
+    assert report == {'source_sha256': image['source_sha256'], 'rows': sum(1 + len(old['events']) for old in image['conversations']) + len(image['edits']) + len(image['jobs'])}
     migrated = rows(state / 'conversations.sqlite3', memory_value)
     (evidence / 'migration-values.json').write_text(json.dumps([
         {'region': region, 'store': store, 'key': key, 'value': value}
-        for (region, store, key), value in sorted(migrated.items())], indent=2) + '\n')
+        for (region, store, key), value in sorted(migrated.items())], indent=2, default=list) + '\n')
     region = 'nomo-native-conversations-v1'
 
     def text(identifier, index):
@@ -319,6 +340,13 @@ flow = "main"
         assert migrated[(region, '["Selected"]', workspace)] == newest['session']['id']
     assert migrated[('nomo-native-projects-v1', '["Recent"]', 'folders')] == image['projects']
     requests = audit(state / 'migration.trace.json')
+    job, = image['jobs']
+    archive_region = 'nomo-native-project-jobs-v1'
+    saved_job = migrated[(archive_region, '["Jobs"]', job['id'])]
+    assert saved_job == {name: job[name] for name in ('id', 'workspace', 'arguments', 'phase', 'original')} | {
+        'exit_code': {'name': 'Some', 'fields': [0]}, 'output_bytes': 5, 'parts': 1}
+    assert migrated[(archive_region, '["Parts"]', job['id'] + '/0')] == b'A\x00\xff\r\n'
+    assert not any(region == 'nomo-native-processes-v1' for region, _, _ in migrated)
     fresh_environment = dict(environment, MINIMAX_API_KEY='unused-no-model', NOMO_NATIVE_STATE=str(state),
                              NOMO_NATIVE_TRACE_ROOT=str(evidence / 'restore-traces'))
     restored = {}
@@ -333,6 +361,20 @@ flow = "main"
     for event in expected[selected_id]['events']:
         assert event['content'] in restored['--history']
     restore_requests = sum(audit(path) for path in (evidence / 'restore-traces').glob('run-*/trace.json'))
+    job_environment = dict(fresh_environment, NOMO_NATIVE_TRACE_ROOT=str(evidence / 'job-traces'))
+    code, output, approvals, _ = terminal([str(ROOT / 'scripts/nomo-native'), str(project), '--id', selected_id],
+        job_environment, ['/jobs', '/archived-output ' + job['id'], '/quit'], project)
+    (evidence / 'archived-job-terminal.txt').write_text(output)
+    assert code == 0 and approvals == 0, output
+    listed = json.loads(next(line.split('[OLD JOB] ', 1)[1] for line in output.splitlines() if '[OLD JOB] {' in line))
+    archived = json.loads(next(line.split('[OLD OUT] ', 1)[1] for line in output.splitlines() if '[OLD OUT] {' in line))
+    assert listed['id'] == job['id'] and listed['workspace'] == str(project) and listed['phase'] == 'completed'
+    assert 'handle' not in listed and 'session' not in listed
+    assert archived['job'] == job['id'] and archived['part'] == 0 and archived['next_part'] == {'name': 'None', 'fields': []} and archived['total_bytes'] == 5
+    assert byte_values(archived['data']) == b'A\x00\xff\r\n'
+    job_requests = sum(audit(path) for path in (evidence / 'job-traces').glob('run-*/trace.json'))
+    assert (original.parent / 'jobs' / job['id'] / 'status.json').read_text() == job['original']
+    assert (original.parent / 'jobs' / job['id'] / 'output.log').read_bytes() == b'A\x00\xff\r\n'
     assert (project / 'note.txt').read_bytes() == b'before new\n'
     assert (project / 'new/sub/readme.txt').read_text() == '鹈鹕 café\n'
     undo_environment = dict(fresh_environment, NOMO_NATIVE_TRACE_ROOT=str(evidence / 'undo-traces'))
@@ -346,13 +388,18 @@ flow = "main"
     record = {'status': 'passed-application-and-real-storage', 'source': str(original), 'source_sha256': before,
               'original_sessions': len(expected), 'original_rows': report['rows'], 'source_unchanged': True, 'projection': projection,
               'migration_host_requests': requests, 'fresh_status_history_host_requests': restore_requests,
+              'workspace_job_archive': {'id': job['id'], 'workspace': job['workspace'], 'raw_bytes': 5,
+                  'fresh_terminal_host_requests': job_requests, 'native_approvals': approvals,
+                  'fabricated_native_handles': 0, 'source_files_unchanged': True},
               'real_provider_requests': 0, 'migration_command_actions': 0, 'native_undo': undone, 'native_rollback': rolled_back,
               'qualification': 'One actual shipping SQL image generated through its public history/compaction/fork APIs. '
                   'The read-only source adapter matches complete original exports. A controlled typed source exercises '
                   'the production migration application, NativeStateWriter and historical append, followed by ordinary '
                   'fresh native status/history, an explicit native undo and explicit rollback of two actual owned BatchEditor journals. '
-                  'Original journal remains exact. The old format does not preserve directory modes, timestamps or links. '
-                  'This does not qualify the production packet JSON codec, job conversion, '
+                  'A real completed shipping PTY job is imported with workspace ownership and exact raw output, '
+                  'then listed and read through the fresh native terminal with no model or command action. '
+                  'Original journals and job files remain exact. The old edit format does not preserve directory modes, timestamps or links. '
+                  'This does not qualify the production packet JSON codec, '
                   'bounded legacy sessions or default cutover.'}
     (evidence / 'result.json').write_text(json.dumps(record, indent=2) + '\n')
     print('PASS project migration policy, original archives and fresh native history: ' + str(evidence), flush=True)

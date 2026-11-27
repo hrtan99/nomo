@@ -3,6 +3,7 @@ module nomo.adapters.model.tools.processes;
 import nomo.application.conversation.session_context.SessionContext;
 import nomo.application.processes.ports.ProcessOperations;
 import nomo.domain.process.jobs.{Job as JobView, JobEvent as JobEventView, InputResult};
+import nomo.domain.process.archived_jobs.{ArchivedJob, ArchivedOutput};
 
 /// Start an allowlisted background process in the project after native approval. The handle belongs to this live Etas Host; persistence of metadata does not keep the Host alive.
 public tool start_job(program: string, arguments: Array<string>) -> JobView
@@ -51,4 +52,16 @@ public tool job_output(job: string) -> Array<JobEventView>
     ![SessionContext.current, ProcessOperations] {
     let session = perform SessionContext.current();
     return perform ProcessOperations.output(session, job);
+}
+
+/// List old project jobs retained by migration. Workspace ownership and saved phases are historical; these records contain no native process handle.
+public tool archived_jobs() -> Array<ArchivedJob>
+    ![SessionContext.current, ProcessOperations] {
+    return perform ProcessOperations.archived_jobs(perform SessionContext.current());
+}
+
+/// Read one retained raw output part from an old project job. next_part identifies the next part, if any; no process is polled or restarted.
+public tool archived_job_output(job: string, part: usize = 0) -> ArchivedOutput
+    ![SessionContext.current, ProcessOperations] {
+    return perform ProcessOperations.archived_output(perform SessionContext.current(), job, part);
 }

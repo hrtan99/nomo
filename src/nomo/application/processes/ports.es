@@ -5,6 +5,7 @@ import std.io.IOError;
 import nomo.native.workspace.ProjectRoot;
 import nomo.domain.process.jobs.{Job, JobEvent, InputResult};
 import nomo.domain.process.observations.ProcessEvent;
+import nomo.domain.process.archived_jobs.{ArchivedJob, ArchivedOutput};
 
 // Live is the implementation's transient capability, never persisted as a Job.
 public spec ProcessControl<Live> {
@@ -30,6 +31,14 @@ public spec OutputArchive {
     flow find(self, session: string, event: string) -> Option<JobEvent> ![Memory, Error<StorageError>];
 }
 
+public spec ArchivedJobCatalog {
+    flow archived_job(self, id: string) -> Option<ArchivedJob> ![Memory, Error<StorageError>];
+    flow archived_jobs(self, workspace: string) -> Array<ArchivedJob> ![Memory, Error<StorageError>, Error<BudgetExceeded>];
+}
+public spec ArchivedJobParts {
+    flow archived_part(self, job: string, part: usize) -> Option<bytes> ![Memory, Error<StorageError>];
+}
+
 public spec ProcessPreviewSink { flow write(self, line: string) -> unit ![Console, Error<IOError>]; }
 
 // Session is carried across the outer bootstrap handler explicitly.
@@ -41,4 +50,6 @@ public effect ProcessOperations {
     action stop(session: string, job: string) -> JobEvent;
     action list(session: string) -> Array<Job>;
     action output(session: string, job: string) -> Array<JobEvent>;
+    action archived_jobs(session: string) -> Array<ArchivedJob>;
+    action archived_output(session: string, job: string, part: usize) -> ArchivedOutput;
 }
