@@ -1,6 +1,6 @@
 module nomo.adapters.cli.conversation;
 
-import std.io.{println, print, read_line, IOError};
+import std.io.{println, read_line, IOError};
 import std.text.{trim, from_i64, from_i32};
 import nomo.domain.serialization.json.encode;
 import nomo.domain.conversation.commands.Command;
@@ -10,7 +10,7 @@ import nomo.application.conversation.terminal_ports.{TerminalInput, TerminalDisp
 public type ConsoleTerminalInput = {};
 impl ConsoleTerminalInput ~ TerminalInput {
     flow next(self) -> Option<Command> ![Console, Error<IOError>] {
-        print("nomo> ");
+        println("nomo> ");
         let raw = read_line();
         return if raw == "" { None() } else { Some(command(trim(raw))) };
     }

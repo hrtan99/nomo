@@ -27,9 +27,12 @@ def startup_routing(evidence, env, first, second, expected, approve, original):
     fresh = Client(command + ['--new', '--title', 'Additional A'], env, evidence, 'startup-first', approver=approve)
     first_worker = next(line.split('[WORKER ] ', 1)[1] for line in fresh.output.decode().splitlines() if '[WORKER ] ' in line)
     first_pid, _ = execution_pid(first_worker)
-    additional = selected(fresh.send('/status'))
-    assert additional['id'] == 'native-2' and additional['title'] == 'Additional A'
     fresh.leave(detach=True)
+    idle = Client(command, env, evidence, 'startup-idle', approver=approve)
+    assert first_worker in idle.output.decode() and execution_pid(first_worker)[0] == first_pid
+    additional = selected(idle.send('/status'))
+    assert additional['id'] == 'native-2' and additional['title'] == 'Additional A'
+    idle.leave(detach=True)
 
     # Selection is recorded by a separate native flow; attachment sends no command.
     exact = Client(command + ['--id', 'native-0', '--title', 'Resumed A'], env, evidence, 'startup-exact', approver=approve)

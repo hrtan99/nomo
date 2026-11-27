@@ -1,6 +1,6 @@
 {
   "date": "2026-11-27",
-  "status": "official-0245-source-passed-configuration-runtime-failure-retained",
+  "status": "official-0245-source-and-retained-projects-passed-configuration-gate-retained",
   "compiler": {
     "selector": "latest0245",
     "version": "0.24.5",
@@ -172,5 +172,15 @@
   "default_native_cutover": false,
   "full_13_item_refactor_complete": false,
   "real_provider_requests": 0,
-  "new_negative_matrix": false
+  "new_negative_matrix": false,
+  "retained_projects": {
+    "status": "passed",
+    "receipt": "examples/native-project/startup-routing-0245-20261127.json",
+    "traces": 11,
+    "paired_successful_host_requests": 1090,
+    "native_commands": 11,
+    "native_control_writes": 5,
+    "fresh_idle_reattach": true,
+    "real_provider_requests": 0
+  }
 }
