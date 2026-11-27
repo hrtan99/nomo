@@ -1,0 +1,242 @@
+{
+  "date": "2026-11-28",
+  "status": "unselected-candidate-normal-check-failed",
+  "base_commit": "53419f7fd283f14995502060408260eb12609c99",
+  "patch": "examples/native-project/candidates/native-output-capture-ioc-02413.patch",
+  "patch_sha256": "cf154fcbda9b4cef1d4f0e4835d647a845f5ae351d9bfb47adecec9916ff4d29",
+  "toolchain": {
+    "selector": "latest02413",
+    "version": "0.24.13",
+    "source_overrides": [],
+    "repositories": {
+      "cli": {
+        "repository": "etas",
+        "revision": "e3ea414b85c76bb86c961617ed0354a6f2dce9f2",
+        "tree": "7ae316dc7789d2639f9a9495dea5d62823867a6e",
+        "packages": [
+          "etas_cli",
+          "etas_driver",
+          "etas_package",
+          "etas_tests"
+        ]
+      },
+      "core": {
+        "repository": "etas-core",
+        "revision": "178e9f7e5852ed4f724c8e4289ccc43df8b6a8ac",
+        "tree": "d2d9e20938479a84ca9c172b92e589e4b836d6a4",
+        "packages": [
+          "etas_builtin",
+          "etas_cache",
+          "etas_code",
+          "etas_core",
+          "etas_host",
+          "etas_memory_derive",
+          "etas_package_metadata",
+          "etas_std",
+          "etas_utils"
+        ]
+      },
+      "frontend": {
+        "repository": "etas-frontend",
+        "revision": "5f79f46337a30e668636dc4a4e9e3369244142ea",
+        "tree": "178086c6f7db75c63a9556e0c82c7f3b4b5b90d1",
+        "packages": [
+          "etas_effects",
+          "etas_frontend",
+          "etas_hir",
+          "etas_hir_analysis",
+          "etas_syntax",
+          "etas_syntax_derive",
+          "etas_types"
+        ]
+      },
+      "interpreter": {
+        "repository": "etas-interpreter",
+        "revision": "5ccfe47ca67c47e7d59d2761b21468c4437bd875",
+        "tree": "05ddc2c790bf246854a8231bbcb6c518e5497e51",
+        "packages": [
+          "etas_interpreter"
+        ]
+      }
+    },
+    "cache_root": "etas-02413-release",
+    "build_target": "etas-0230/target",
+    "source": "Official CLI 0.24.13 e3ea414 and its exact official lock graph, including std 0.9.0 and data/system inference overload; standard release, shared dependency cache, one Cargo job, 6 GiB build only; source/runtime 4 GiB.",
+    "installed_sdk": true,
+    "build_profile": "release",
+    "cargo_lock_sha256": "901a17e91e8e168732d42d832c390894eae152a14f7a06e411b2b89b6f959e9d",
+    "verified_seed_binary_sha256": "95809f4d563219895925dba0acd405b094cd93669fbdb00f1871d00a12166e0b"
+  },
+  "snapshot": {
+    "root": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-capture-02413-s48pqtk2",
+    "source_count": 472,
+    "source_manifest_sha256": "d132c869afc7a47905edf722c2a092d48dca43388f1773ad148c5226dd9f2c1a"
+  },
+  "source_check": {
+    "exit": 1,
+    "elapsed_seconds": 39.98735397700011,
+    "resources": {
+      "memory.max": "4294967296",
+      "memory.peak": "2945093632",
+      "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+      "cpu.max": "400000 100000",
+      "pids.max": "256"
+    }
+  },
+  "diagnostics": [
+    {
+      "diagnostics": [
+        {
+          "code": "effect::IncompleteEffectFacts",
+          "help": null,
+          "labels": [
+            {
+              "message": "external call effect selector specialization failed: checked latent flow summary is missing for parameter `read`",
+              "span": {
+                "end": 1960,
+                "source": 250,
+                "start": 1901
+              },
+              "style": "Primary"
+            }
+          ],
+          "message": "external call effect selector specialization failed: checked latent flow summary is missing for parameter `read`",
+          "notes": [],
+          "phase": "EffectCheck",
+          "primary": {
+            "label": "external call effect selector specialization failed: checked latent flow summary is missing for parameter `read`",
+            "span": {
+              "end": 1960,
+              "endColumn": 96,
+              "endLine": 38,
+              "source": 250,
+              "start": 1901,
+              "startColumn": 37,
+              "startLine": 38
+            }
+          },
+          "severity": "error",
+          "suggestions": []
+        },
+        {
+          "code": "effect::IncompleteEffectFacts",
+          "help": null,
+          "labels": [
+            {
+              "message": "external call effect selector specialization failed: invalid callable environment: captured callable has no checked free-parameter binding for Native(SymbolId(17982))",
+              "span": {
+                "end": 2189,
+                "source": 250,
+                "start": 1610
+              },
+              "style": "Primary"
+            }
+          ],
+          "message": "external call effect selector specialization failed: invalid callable environment: captured callable has no checked free-parameter binding for Native(SymbolId(17982))",
+          "notes": [],
+          "phase": "EffectCheck",
+          "primary": {
+            "label": "external call effect selector specialization failed: invalid callable environment: captured callable has no checked free-parameter binding for Native(SymbolId(17982))",
+            "span": {
+              "end": 2189,
+              "endColumn": 8,
+              "endLine": 45,
+              "source": 250,
+              "start": 1610,
+              "startColumn": 12,
+              "startLine": 33
+            }
+          },
+          "severity": "error",
+          "suggestions": []
+        }
+      ],
+      "path": "/workspace/src/nomo/application/processes/capture.es"
+    },
+    {
+      "diagnostics": [
+        {
+          "code": "effect::EscapedEffect",
+          "help": null,
+          "labels": [
+            {
+              "message": "requested action ProcessCapture.register is not handled by a scoped or default handler and is outside the declared effect row",
+              "span": {
+                "end": 2478,
+                "source": 252,
+                "start": 529
+              },
+              "style": "Primary"
+            }
+          ],
+          "message": "requested action ProcessCapture.register is not handled by a scoped or default handler and is outside the declared effect row",
+          "notes": [],
+          "phase": "EffectCheck",
+          "primary": {
+            "label": "requested action ProcessCapture.register is not handled by a scoped or default handler and is outside the declared effect row",
+            "span": {
+              "end": 2478,
+              "endColumn": 2,
+              "endLine": 22,
+              "source": 252,
+              "start": 529,
+              "startColumn": 8,
+              "startLine": 10
+            }
+          },
+          "severity": "error",
+          "suggestions": []
+        }
+      ],
+      "path": "/workspace/src/nomo/application/processes/handlers.es"
+    }
+  ],
+  "architecture": {
+    "exit": 0,
+    "stdout": "PASS architecture: 472 modules, 3532 imports, 48 identity-only compatibility leaves\n",
+    "stderr": ""
+  },
+  "sloc": {
+    "inclusive_core": 23371,
+    "temporary_user_waiver": true
+  },
+  "unchanged_algorithm_and_oracle": {
+    "src/nomo/application/processes/capture.es": "f5b474e5d0e512af9d0abc40223368c555925bb8c14d6963596639b003a65a9f",
+    "src/nomo/application/processes/capture_ports.es": "fe6dcf4ee12c7de80759c15161086291397d0f29a128febd8ac559939f683095",
+    "src/nomo/adapters/storage/capture.es": "4aede56f63b1b188e21339e4a3822e2be4358d7cb180c6ec3f3293f464f2ba47",
+    "src/nomo/domain/process/capture.es": "0023e66d8046770cce617ee8e1c624657e7c3f5f519af46b9272ca6c5b4026a7",
+    "tests/native_capture_probe.py": "fe5cbbbcebf2dd7e49407c012f6c79628ffd7ae4ebec6f654b41339419564156"
+  },
+  "original_candidate": "examples/native-project/candidates/native-output-capture-ioc-0243.json",
+  "rebase": {
+    "status": "prepared",
+    "manual_files": [
+      "src/nomo/application/processes/handlers.es",
+      "src/nomo/application/processes/service.es",
+      "src/nomo/bootstrap/main.es"
+    ],
+    "preserved": "Current typed EntryMode, direct constructors, handler construction order, recorded_phase logic and archived job query operations. All original capture algorithm/data/fixture oracle files apply byte-for-byte."
+  },
+  "preparation_correction": "The first container exited before compiler startup because the owned snapshot lacked its empty .etas tmpfs mountpoint. Directory created; source and oracle unchanged.",
+  "reconstruction": {
+    "root": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-capture-02413-patch-e0qgwnw5",
+    "exact_checked_source": true,
+    "manifest_sha256": "d132c869afc7a47905edf722c2a092d48dca43388f1773ad148c5226dd9f2c1a"
+  },
+  "upstream": "https://github.com/etas-project/etas-frontend/issues/103",
+  "oracle": "Original 2555904-byte payload, 20-second UI-idle interval, exact bytes, quit cancellation and fresh-Host 17-byte prefix. Algorithm and oracle files remain byte-for-byte identical.",
+  "scope": "Full current application, terminal-output Handler, typed startup mode and archived-job queries composed with original capture scope. Source checking fails before runtime. No collector runtime is accepted.",
+  "authority": "The original unselected proposal retains its explicit Command.read allow rule. No selected policy changes or approval/provenance acceptance are made by this source-only candidate.",
+  "not_accepted": [
+    "UI-idle continuous capture",
+    "exact captured bytes and Host-buffer overflow handling",
+    "blocked-reader cancellation",
+    "fresh-Host archive prefix",
+    "interrupted consumer-result/cursor restoration",
+    "native approval behavior with the collector selected"
+  ],
+  "compiler_or_host_patch": false,
+  "alternative_reader_or_type_anchor": false,
+  "real_provider_requests": 0,
+  "new_negative_matrix": false
+}
