@@ -15,12 +15,15 @@ import tempfile
 from native_sources import copy_sources
 from native_memory_value import value as memory_value
 from native_state_migration_probe import rows, audit
+from native_recovery_probe import terminal, audit as audit_authority
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
 from nomo_history import SqliteHistory
 from nomo_project import ProjectRegistry
 from nomo_migration import project_packet, digest
+from nomo_project import Workspace
+from nomo_project_tools import BatchEditor
 
 
 def quote(value):
@@ -36,15 +39,22 @@ def fixture(image):
         conversations.append('ProjectConversation { ' +
             ', '.join(name + ' = ' + quote(old[name]) for name in ('id', 'workspace', 'title', 'summary', 'archive')) +
             ', compacted_through = ' + old['compacted_through'] + ', events = [' + events + '] }')
+    edits = []
+    for edit in image['edits']:
+        paths = ['SavedPath { ' + ', '.join(name + ' = ' + quote(value) for name, value in saved.items()) + ' }'
+                 for saved in edit['paths']]
+        edits.append('ProjectEdit { ' + ', '.join(name + ' = ' + quote(edit[name])
+                     for name in ('id', 'session', 'workspace', 'phase', 'archive')) + ', paths = [' + ', '.join(paths) + '] }')
     return '''module app.source;
 import std.effects.Fs;
 import std.fs.{IOError as FileError, ReadLimitError};
 import nomo.application.migration.ports.{ProjectStateSource, MigrationRoot};
-import nomo.domain.migration.project_state.{ProjectImage, ProjectConversation, ProjectEvent};
+import nomo.domain.migration.project_state.{ProjectImage, ProjectConversation, ProjectEvent, ProjectEdit};
+import nomo.domain.mutations.models.SavedPath;
 public type FixtureSource = {};
 impl FixtureSource ~ ProjectStateSource {
     flow load(self) -> ProjectImage ![Fs.read<MigrationRoot>, Error<FileError>, Error<ReadLimitError>, Error<IndexError>] {
-        return ProjectImage { source_sha256 = ''' + quote(image['source_sha256']) + ', projects = ' + quote(image['projects']) + ', conversations = [' + ',\n'.join(conversations) + '''] };
+        return ProjectImage { source_sha256 = ''' + quote(image['source_sha256']) + ', projects = ' + quote(image['projects']) + ', conversations = [' + ',\n'.join(conversations) + '], edits = [' + ',\n'.join(edits) + '''] };
     }
 }
 '''
@@ -56,9 +66,18 @@ def source(evidence):
     second.mkdir()
     history = SqliteHistory(evidence / 'original')
     older = history.create(first, 'Saved bicycle task')
+    note = first / 'note.txt'
+    note.write_text('before old\n')
+    note.chmod(0o751)
+    editor = BatchEditor(Workspace(first), history.state, older)
+    applied = editor.apply(editor.prepare([
+        {'operation': 'edit', 'path': 'note.txt', 'target': 'old', 'text': 'new'},
+        {'operation': 'create', 'path': 'new/sub/readme.txt', 'text': '鹈鹕 café\n'},
+    ]))
     history.append(older, 'user', 'Create a 鹈鹕 bicycle page.')
     history.append(older, 'assistant', '{"tool":"write"}', kind='action', name='write', data={'tool': 'write'})
     history.append(older, 'tool', 'Created index.html', name='write', data={'edit': 'old-edit-1', 'status': 'applied'})
+    history.append(older, 'tool', json.dumps(applied), name='apply_changes', data=applied)
     history.append(older, 'assistant', '{"tool":"answer"}', kind='action', name='answer', data={'text': 'Page created.'})
     through = history.append(older, 'assistant', 'Page created.')
     history.compact(older, through, 'A bicycle page was created and checked.')
@@ -108,20 +127,66 @@ def verify_projection(original, migrated):
     return {'sessions': len(sessions), 'context_messages': messages, 'matches_shipping_projection': True}
 
 
+def undo_imported(evidence, environment, project, edit):
+    commands = []
+    for saved in reversed(edit['paths']):
+        if saved['after_exists']:
+            commands.extend([
+                {'program': '/usr/bin/diff', 'arguments': ['-r', '--no-dereference', '--', saved['path'], saved['after']]},
+                {'program': '/bin/rm', 'arguments': ['-rf', '--', saved['path']]},
+            ])
+        if saved['before_exists']:
+            commands.append({'program': '/bin/cp', 'arguments': ['-a', '--', saved['before'], saved['path']]})
+    approved = []
+
+    def approve(output):
+        line = next(line for line in reversed(output.decode().splitlines()) if '[COMMAND] ' in line)
+        preview = json.loads(line.split('[COMMAND] ', 1)[1])
+        assert preview == commands[len(approved)], preview
+        approved.append(preview)
+
+    command = [str(ROOT / 'scripts/nomo-native'), str(project), '--id', edit['session']]
+    code, output, approvals, _ = terminal(command, environment,
+        ['/edits', '/undo ' + edit['id'], '/edits', '/status', '/quit'], project, approve=approve)
+    (evidence / 'undo-terminal.txt').write_text(output)
+    assert code == 0 and approvals == len(commands) == len(approved), output
+    assert '"phase":"applied"' in output and '"phase":"undone"' in output
+    assert (project / 'note.txt').read_bytes() == b'before old\n'
+    assert (project / 'note.txt').stat().st_mode & 0o777 == 0o751
+    assert not (project / 'new').exists()
+    trace_path, = list((evidence / 'undo-traces').glob('run-*/trace.json'))
+    trace = json.loads(trace_path.read_text())
+    assert trace['outcome']['kind'] == 'completed' and trace['termination']['local_work_settled']
+    starts = {event['id']: event for event in trace['events'] if event['kind'] == 'host_request_started'}
+    ends = {event['id']: event for event in trace['events'] if event['kind'] == 'host_request_finished'}
+    assert starts.keys() == ends.keys() and all(event['outcome']['kind'] == 'succeeded' for event in ends.values())
+    assert not audit_authority(trace['events'])
+    assert not any(event.get('request_kind') == 'model' for event in starts.values())
+    assert sum(event['qualified_action'] == 'Command.run' for event in starts.values()) == len(commands)
+    migrated = rows(Path(environment['NOMO_NATIVE_STATE']) / 'conversations.sqlite3', memory_value)
+    journal = migrated[('nomo-native-file-journals-v1', '["Journals"]', edit['id'])]
+    assert journal['phase'] == 'undone' and journal['owner_name'] == 'undo_changes'
+    assert migrated[('nomo-native-conversations-v1', '["Sessions"]', edit['session'])]['pending'] == ''
+    return {'status': 'passed', 'edit': edit['id'], 'native_approvals': approvals,
+            'command_actions': len(commands), 'paired_host_requests': len(starts),
+            'authority_audit': 'passed', 'model_requests': 0,
+            'restored': ['note.txt bytes', 'note.txt mode 0751', 'absence of created new/ subtree']}
+
+
 def main():
     evidence = Path(tempfile.mkdtemp(prefix='nomo-project-state-migration-')).resolve()
     original, expected, selected_id, project = source(evidence)
     before = digest(original)
     incoming = evidence / 'input'
     incoming.mkdir()
-    image = project_packet(original, incoming / 'legacy-source.sqlite3')
+    state, package = evidence / 'state', evidence / 'package'
+    state.mkdir()
+    package.mkdir()
+    image = project_packet(original, incoming / 'legacy-source.sqlite3', state)
     for old in image['conversations']:
         assert json.loads(old['archive']) == expected[old['id']]
     assert digest(original) == before
     (incoming / 'snapshot.json').write_text(json.dumps(image, ensure_ascii=False) + '\n')
-    state, package = evidence / 'state', evidence / 'package'
-    state.mkdir()
-    package.mkdir()
     (package / '.etas').mkdir()
     copied = copy_sources(ROOT, package, ROOT / 'tests/fixtures/native_project_migration/src/app/main.es')
     generated = package / 'src/app/source.es'
@@ -171,7 +236,7 @@ flow = "main"
     (evidence / 'stderr.txt').write_text(run.stderr)
     assert run.returncode == 0, run.stdout + run.stderr
     report = json.loads(run.stdout)
-    assert report == {'source_sha256': image['source_sha256'], 'rows': sum(1 + len(old['events']) for old in image['conversations'])}
+    assert report == {'source_sha256': image['source_sha256'], 'rows': sum(1 + len(old['events']) for old in image['conversations']) + len(image['edits'])}
     migrated = rows(state / 'conversations.sqlite3', memory_value)
     region = 'nomo-native-conversations-v1'
 
@@ -197,6 +262,16 @@ flow = "main"
             assert current['summary_event'] == -1 and current['summary_through'] == -1
         assert all(value == 0 for value in current['ledger'].values())
     projection = verify_projection(original, migrated)
+    assert len(image['edits']) == 1
+    edit = image['edits'][0]
+    journal = migrated[('nomo-native-file-journals-v1', '["Journals"]', edit['id'])]
+    assert journal['session'] == selected_id and journal['phase'] == 'applied'
+    assert journal['steps'] == len(edit['paths']) and journal['owner_call'] == journal['call']
+    assert json.loads(text(selected_id, journal['call'])) == json.loads(edit['archive'])
+    assert migrated[(region, '["Events"]', selected_id + ':' + str(journal['call']))]['role'] == 'archive'
+    for index, saved in enumerate(edit['paths']):
+        assert migrated[('nomo-native-file-journals-v1', '["Steps"]', edit['id'] + '/' + str(index))] == {
+            'phase': 'applied', 'paths': [saved]}
     for workspace in {old['session']['root'] for old in expected.values()}:
         newest = max((old for old in expected.values() if old['session']['root'] == workspace), key=lambda old: old['session']['updated'])
         assert migrated[(region, '["Selected"]', workspace)] == newest['session']['id']
@@ -216,16 +291,23 @@ flow = "main"
     for event in expected[selected_id]['events']:
         assert event['content'] in restored['--history']
     restore_requests = sum(audit(path) for path in (evidence / 'restore-traces').glob('run-*/trace.json'))
+    assert (project / 'note.txt').read_bytes() == b'before new\n'
+    assert (project / 'new/sub/readme.txt').read_text() == '鹈鹕 café\n'
+    undo_environment = dict(fresh_environment, NOMO_NATIVE_TRACE_ROOT=str(evidence / 'undo-traces'))
+    undone = undo_imported(evidence, undo_environment, project, edit)
+    assert (original.parent / 'edits' / (edit['id'] + '.json')).read_text() == edit['archive']
     assert digest(original) == before
     record = {'status': 'passed-application-and-real-storage', 'source': str(original), 'source_sha256': before,
               'original_sessions': len(expected), 'original_rows': report['rows'], 'source_unchanged': True, 'projection': projection,
               'migration_host_requests': requests, 'fresh_status_history_host_requests': restore_requests,
-              'real_provider_requests': 0, 'command_actions': 0,
+              'real_provider_requests': 0, 'migration_command_actions': 0, 'native_undo': undone,
               'qualification': 'One actual shipping SQL image generated through its public history/compaction/fork APIs. '
                   'The read-only source adapter matches complete original exports. A controlled typed source exercises '
                   'the production migration application, NativeStateWriter and historical append, followed by ordinary '
-                  'fresh native status/history. It does not qualify the production packet JSON codec, separate Python '
-                  'tool journals/processes, bounded legacy sessions or default cutover.'}
+                  'fresh native status/history and an explicit native undo of its actual owned BatchEditor journal. '
+                  'Original journal remains exact. The old format does not preserve directory modes, timestamps or links. '
+                  'This does not qualify the production packet JSON codec, interrupted-import rollback, job conversion, '
+                  'bounded legacy sessions or default cutover.'}
     (evidence / 'result.json').write_text(json.dumps(record, indent=2) + '\n')
     print('PASS project migration policy, original archives and fresh native history: ' + str(evidence), flush=True)
 

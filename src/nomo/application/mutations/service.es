@@ -145,6 +145,7 @@ flow outcome(value: Journal, status: string) -> ChangeOutcome {
 }
 
 public flow apply_plan(name: string, changes: Array<Change>) -> ChangeOutcome ![SessionContext.current, MutationFiles, ChangeJournal, MutationHistory, MutationOutput, Error<BudgetExceeded>] {
+    require_settled_edits();
     let session = perform SessionContext.current();
     let call = record("tool_call", name, PlanRequest { format = "nomo-native-file-plan-1", changes }, -1);
     let id = session + "-" + from_i64(call);
@@ -177,6 +178,12 @@ public flow journals() -> Array<Journal> ![SessionContext.current, ChangeJournal
     return perform ChangeJournal.list(session);
 }
 
+flow require_settled_edits() -> unit ![SessionContext.current, ChangeJournal] {
+    for value in journals() {
+        if !completed_phase(value.phase) { abort("unfinished edit requires explicit rollback before another mutation"); }
+    }
+}
+
 flow selected_edit(id: string) -> Journal {
     if id != "" { return journal(id); }
     var selected: Option<Journal> = None();
@@ -187,6 +194,11 @@ flow selected_edit(id: string) -> Journal {
         } }
     }
     return match selected { Some(value) => value, None() => abort("no applied native edit to undo"), };
+}
+
+flow imported_edit(value: Journal) -> bool {
+    let origin = message(value.session, value.call);
+    return origin.role == "archive" && origin.name == "migrated_project_edit";
 }
 
 flow restore(value: Journal, call: i64, checking: bool) -> bool {
@@ -218,6 +230,7 @@ flow restore(value: Journal, call: i64, checking: bool) -> bool {
 
 /// Undo the selected journal (empty edit selects the latest applied journal). Current contents must match its saved result. Native Host approval applies to every restoration operation.
 public flow undo_changes(edit: string) -> ChangeOutcome ![SessionContext.current, MutationFiles, ChangeJournal, MutationHistory, MutationOutput, Error<BudgetExceeded>] {
+    require_settled_edits();
     let source = selected_edit(edit);
     if source.phase != "applied" { abort("only an applied edit can start undo; use rollback_changes for interrupted edits"); }
     let call = record("tool_call", "undo_changes", source.id, -1);
@@ -238,15 +251,21 @@ public flow rollback_changes(edit: string) -> ChangeOutcome ![SessionContext.cur
     let source = journal(edit);
     if completed_phase(source.phase) { abort("journal has no interrupted change to roll back"); }
     let session = perform MutationHistory.session(source.session);
-    let call = source.owner_call;
-    let name = source.owner_name;
+    var active = source;
+    var call = source.owner_call;
+    var name = source.owner_name;
     let binding = source.session + ":" + from_i64(call) + " " + name;
-    if session.pending != binding { abort("rollback does not match the selected conversation's pending operation"); }
+    if session.pending == "" && imported_edit(source) {
+        call = record("tool_call", "rollback_changes", source.id, -1);
+        name = "rollback_changes";
+        active = source { owner_call = call, owner_name = name };
+        perform ChangeJournal.save(active);
+    } else if session.pending != binding { abort("rollback does not match the selected conversation's pending operation"); }
     record("recovery", "rollback_changes", source.id, call);
-    if !restore(source, call, false) {
+    if !restore(active, call, false) {
         let result = outcome(journal(edit), "recovery_required"); record("partial_result", "rollback_changes", result, call); return result;
     }
-    let complete = update(source, "rolled_back", source.steps, "");
+    let complete = update(active, "rolled_back", active.steps, "");
     let result = outcome(complete, "rolled_back");
     record("recovery_result", "rollback_changes", result, call);
     tool_finished(name, call, result);
@@ -298,9 +317,13 @@ public flow reconcile_changes(edit: string) -> ChangeOutcome ![SessionContext.cu
         }
     };
     if source.session != session { abort("edit belongs to another conversation"); }
-    if source.phase == "applied" && pending.name == "undo_changes" && pending.complete
+    let unclaimed_undo = source.phase == "applied" && pending.name == "undo_changes";
+    let unclaimed_rollback = pending.name == "rollback_changes" && imported_edit(source);
+    if (unclaimed_undo || unclaimed_rollback) && pending.complete
         && message(session, pending.call).text == text(source.id) && source.owner_call != pending.call {
-        let result = ChangeOutcome { edit, status = "undo_not_started", completed = source.steps, message = "Undo stopped before claiming the journal; the recorded edit remains applied." };
+        let result = ChangeOutcome { edit, status = if unclaimed_undo { "undo_not_started" } else { "rollback_not_started" },
+            completed = outcome(source, source.phase).completed,
+            message = "Recovery stopped before claiming the journal; the recorded edit phase is unchanged." };
         record("recovery", "reconcile_changes", result, pending.call);
         tool_finished(pending.name, pending.call, result);
         return result;

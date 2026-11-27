@@ -2,12 +2,28 @@ module nomo.application.migration.project_state;
 
 import std.effects.Fs;
 import std.fs.{IOError as FileError, ReadLimitError};
-import std.text.{strip_prefix, parse_i64};
+import std.text.{strip_prefix, parse_i64, from_i64};
 import nomo.application.migration.ports.{ProjectStateSource, NativeStateDestination, HistoricalEvents, MigrationRoot};
 import nomo.application.conversation.ports.ResultPublication;
 import nomo.domain.migration.native_state.{NativeRecord, MigrationReport};
 import nomo.domain.conversation.session.{Session, Ledger};
-import nomo.domain.migration.project_state.ProjectEvent;
+import nomo.domain.migration.project_state.{ProjectEvent, ProjectEdit, edit_phases};
+import nomo.domain.mutations.models.{Journal, Step};
+
+flow migrate_edit<D ~ NativeStateDestination, E ~ HistoricalEvents>(edit: ProjectEdit, destination: D, events: E) -> unit
+    ![Memory, Error<StorageError>, Error<MemoryConflict>, Error<BudgetExceeded>] {
+    let call = events.append(edit.session, "archive", "migrated_project_edit", edit.archive);
+    let (phase, step_phase) = edit_phases(edit.phase);
+    var steps: i64 = 0;
+    for saved in edit.paths {
+        destination.insert(NativeRecord.Step(edit.id + "/" + from_i64(steps), Step { phase = step_phase, paths = [saved] }));
+        steps = steps + 1;
+    }
+    destination.insert(NativeRecord.Journal(edit.id, Journal { id = edit.id, session = edit.session,
+        name = "migrated_project_edit", call, phase, steps,
+        message = "Imported old project journal. Directory modes, timestamps, links and per-step dispatch were not recorded by the source format.",
+        owner_call = call, owner_name = "migrated_project_edit" }));
+}
 
 flow role(event: ProjectEvent) -> string {
     // Match the shipping projection: compactions and duplicate answer actions
@@ -36,6 +52,12 @@ public flow migrate<S ~ ProjectStateSource, D ~ NativeStateDestination, E ~ Hist
             let index = events.append(old.id, role(event), event.name, event.text);
             if event.id <= old.compacted_through { through = index; }
             rows = rows + 1;
+        }
+        for edit in image.edits {
+            if edit.session == old.id && edit.workspace == old.workspace {
+                migrate_edit(edit, destination, events);
+                rows = rows + 1;
+            }
         }
         if old.summary != "" {
             let index = events.append(old.id, "summary", "context_summary", old.summary);

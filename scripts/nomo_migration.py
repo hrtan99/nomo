@@ -1,4 +1,5 @@
 """Read-only source adapters for one-time saved-state migration."""
+import base64
 import hashlib
 import json
 from pathlib import PurePosixPath
@@ -136,10 +137,50 @@ def _project_files(source, directory):
     return manifest
 
 
-def project_packet(source, archive):
+def _materialize_node(path, node):
+    """Decode an old embedded snapshot into the fresh destination snapshot area."""
+    if node is None:
+        return
+    if 'directory' in node:
+        path.mkdir()
+        for name, child in node['directory'].items():
+            _materialize_node(path / name, child)
+    else:
+        path.write_bytes(base64.b64decode(node['bytes']))
+        path.chmod(node['mode'])
+
+
+def _project_edits(directory, conversations, state):
+    owners = {(old['id'], old['workspace']) for old in conversations}
+    edits, unowned = [], []
+    journals = sorted((directory / 'edits').glob('*.json'), key=lambda path: (path.stat().st_mtime_ns, path.name))
+    for path in journals:
+        original = path.read_text()
+        old = json.loads(original)
+        if (old['session'], old['root']) not in owners:
+            unowned.append(path.name)
+            continue
+        snapshots = state / 'edits' / old['id']
+        snapshots.mkdir(parents=True)
+        paths = []
+        for index, step in enumerate(old['steps']):
+            stem = str(index) + '-0'
+            saved = {'path': step['path']}
+            for side in ('before', 'after'):
+                saved[side + '_exists'] = step[side] is not None
+                saved[side] = '/native-state/edits/' + old['id'] + '/' + stem + '.' + side
+                if step[side] is not None:
+                    _materialize_node(snapshots / (stem + '.' + side), step[side])
+            paths.append(saved)
+        edits.append({'id': old['id'], 'session': old['session'], 'workspace': old['root'],
+                      'phase': old['phase'], 'archive': original, 'paths': paths})
+    return edits, unowned
+
+
+def project_packet(source, archive, state):
     """Export the complete shipping SQL rows plus the native consumer's view."""
     backup(source, archive)
-    _project_files(source, archive.parent)
+    manifest = _project_files(source, archive.parent)
     registry = source.parent / 'projects.json'
     projects = []
     if registry.is_file():
@@ -165,5 +206,8 @@ def project_packet(source, archive):
                 'events': [{'id': str(event['id']), 'role': event['role'], 'kind': event['kind'],
                             'name': event['name'], 'text': event['content']} for event in events],
             })
-    return {'format': 'nomo-project-state-1', 'source_sha256': digest(archive),
-            'projects': projects, 'conversations': conversations}
+    edits, unowned = _project_edits(archive.parent, conversations, state)
+    manifest.update(prepared_edits=[edit['id'] for edit in edits], unowned_edits=unowned)
+    (archive.parent / 'project-files.json').write_text(json.dumps(manifest, indent=2) + '\n')
+    return {'format': 'nomo-project-state-2', 'source_sha256': digest(archive),
+            'projects': projects, 'conversations': conversations, 'edits': edits}

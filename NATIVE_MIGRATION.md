@@ -2,6 +2,18 @@
 
 The shipping `scripts/nomo` entry still uses the existing Python project controller. The opt-in `native_project` flow is the migration implementation, not a completed replacement.
 
+## Owned project edit journals, 2026-11-27
+
+Project packet v2 now carries owned old-editor journals alongside conversation history. The source adapter materializes their embedded before/after snapshots only in the fresh destination. Application policy writes the existing native Journal/Step/SavedPath contracts and archives each complete original journal in its actual source conversation. Archive positions preserve provenance and source latest-edit ordering; no former native attempt, pending request or approval is fabricated. Journals without a matching source session/workspace remain backed up and explicitly listed as unowned. Jobs remain workspace-owned and unimported.
+
+The existing positive migration consumer now includes a real BatchEditor apply. Three shipping conversations and 23 source rows pass the production migration application and real SQLite storage through a controlled typed source: 136 paired successful requests, then 90 for fresh ordinary status/history. A new ordinary native process explicitly undoes the imported journal with nine commands and nine native approvals; all 469 requests pair and succeed, and authority auditing passes. File bytes, file mode 0751 and removal of the created subtree match the original state. Original SQL and journal bytes remain unchanged. This qualifies the application/storage/fresh-undo path, not JSON decoding.
+
+The formal JSON entry is then run once against that same quiescent source image into another fresh target. On official 0.24.7 it still fails at std.json.parse with MissingCheckedFact/UnmaterializedType after one Fs.read, before business Memory or project operations. The target has zero business rows, remains incomplete, and is not retried; source database hashes match. This is recorded under [interpreter #121](https://github.com/etas-project/etas-interpreter/issues/121). The migration command is therefore still not end-to-end accepted.
+
+Old applying journals map to interrupted records without inventing per-step outcomes. Explicit recovery while idle can establish a new native rollback request; unfinished journals block another apply/undo. These interrupted-import branches have source checking only; no extra adverse case was added. Directory modes, timestamps, links and per-step dispatch were absent from the old format and cannot be recovered from it.
+
+Final source checking passes 467 modules with zero diagnostics in 42.283 s; architecture resolves 3,478 imports and preserves 48 identities. Physical-v4 inclusive Core is 23,107 SLOC under the existing temporary waiver. [Exact source, checks, original producer, successful undo and failed production entry](examples/native-project/project-edit-migration-ioc-20261127.json). Interrupted-import runtime acceptance, job conversion, bounded saved sessions and complete DIP-13/default native cutover remain open.
+
 
 ## Official 0.24.7 continuation, 2026-11-27
 

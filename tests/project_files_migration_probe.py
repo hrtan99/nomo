@@ -47,9 +47,11 @@ def main():
     trees = {name: snapshot_tree(state / name) for name in ('edits', 'jobs')}
     workspace = snapshot_tree(project)
     database, registry = digest(history.database), (state / 'projects.json').read_bytes()
-    image = project_packet(history.database, archive / 'legacy-source.sqlite3')
+    native = evidence / 'native-state'
+    native.mkdir()
+    image = project_packet(history.database, archive / 'legacy-source.sqlite3', native)
     manifest = json.loads((archive / 'project-files.json').read_text())
-    assert image['format'] == 'nomo-project-state-1' and image['conversations'][0]['id'] == session
+    assert image['format'] == 'nomo-project-state-2' and image['conversations'][0]['id'] == session
     assert image['conversations'][0]['events'][-1]['name'] == 'apply_changes'
     assert manifest['native_import'] == 'not-performed' and manifest['directories'] == ['edits', 'jobs']
     assert set(manifest['files']) == {path.relative_to(state).as_posix()

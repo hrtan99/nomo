@@ -21,13 +21,13 @@ def migrate(source, destination, source_format):
     for directory in (incoming, state, evidence):
         directory.mkdir(mode=0o700)
     before = digest(source)
-    reader = native_packet if source_format == 'native-0135' else project_packet
-    image = reader(source, incoming / 'legacy-source.sqlite3')
+    image = (native_packet(source, incoming / 'legacy-source.sqlite3') if source_format == 'native-0135' else
+             project_packet(source, incoming / 'legacy-source.sqlite3', state))
     snapshots = native_snapshots(source, image, state) if source_format == 'native-0135' else None
     project_backup = (json.loads((incoming / 'project-files.json').read_text())
                       if source_format == 'project' else None)
     count = (len(image['rows']) if source_format == 'native-0135' else
-             sum(1 + len(conversation['events']) for conversation in image['conversations']))
+             sum(1 + len(conversation['events']) for conversation in image['conversations']) + len(image['edits']))
     snapshot = incoming / 'snapshot.json'
     snapshot.write_text(json.dumps(image, ensure_ascii=False, separators=(',', ':')) + '\n')
     snapshot.chmod(0o600)
@@ -36,13 +36,19 @@ def migrate(source, destination, source_format):
                'source': str(source), 'state': str(state),
                'snapshots': snapshots,
                'project_files_backup': project_backup,
+               'project_edit_import': ({'status': 'incomplete', 'edits': project_backup['prepared_edits'],
+                                        'unowned_edits': project_backup['unowned_edits']}
+                                       if source_format == 'project' else None),
                'scope': ('Native format-3 records only. Original receipts/CAS namespaces remain in the source backup; '
                          'fresh SDK writes establish new destination versions.' if source_format == 'native-0135' else
                          'Shipping project database only: original session IDs, full source archives, summary fences '
                          'and catalogue selection. Source event IDs map to native local positions; original IDs, '
                          'timestamps, parent, kind, data and measured usage remain in each source archive and backup. '
-                         'Separate Python tool journals and job files are retained under input, but are not '
-                         'imported as native journals/jobs. Bounded legacy sessions are not migrated. '
+                         'Owned editor journals map to native journals/steps with original archive provenance and '
+                         'materialized before/after bytes and file modes. Applying records stay interrupted; '
+                         'the source did not record directory modes, timestamps, links or per-step dispatch. '
+                         'Unowned journals and workspace-owned job files remain under input, without native '
+                         'ownership or live handles. Bounded legacy sessions are not migrated. '
                          'The native allowance ledger begins at zero for new execution.') +
                         ' No command, model, recovery or live-handle replay.'}
     manifest = destination / 'migration.json'
@@ -74,16 +80,18 @@ def migrate(source, destination, source_format):
         if report['source_sha256'] != image['source_sha256'] or report['rows'] != count:
             raise RuntimeError('native migration did not confirm the complete source image')
         receipt.update(status='completed', report=report)
+        if source_format == 'project':
+            receipt['project_edit_import']['status'] = 'completed'
     manifest.write_text(json.dumps(receipt, indent=2) + '\n')
     if result.returncode:
         print(result.stderr or result.stdout, end='')
         print('[MIGRATE] Incomplete destination retained at ' + str(destination))
     else:
-        label = 'Native state' if source_format == 'native-0135' else 'Conversation history and catalogue'
+        label = 'Native state' if source_format == 'native-0135' else 'Conversation history, catalogue and owned edit journals'
         print('[MIGRATE] ' + label + ' completed. Original source retained; launch with NOMO_NATIVE_STATE=' + str(state))
         if project_backup and project_backup['files']:
             print('[MIGRATE] Original Python edit/job files are backed up in ' + str(incoming) +
-                  '; native edit/job restoration remains pending.')
+                  '; workspace job and unowned journal import remain pending.')
     return result.returncode
 
 
