@@ -515,3 +515,12 @@ The complete candidate replaces outward ChangeOperations forwarding with a consu
 A standalone positive program with only the official standard library independently reproduces UnknownEffectTag at Inject<? ~ Changes> and escaped std.effects.Inject.get despite a matching provider. Source check only, exit 1 in 0.155 s; no inference or other runtime action executed. Report: [frontend #105](https://github.com/etas-project/etas-frontend/issues/105). This does not certify the candidate or close the older JSON #121, model-tool Handler #123, generic capture #103, migration or default-entry gates. The selected product source remains byte-identical to the previously accepted 0.24.6 revision. The candidate passes apply preflight against that baseline.
 
 [Complete candidate and diagnostics](examples/native-project/candidates/mutation-service-injection-0246.json); [independent positive reproduction](examples/repros/injected-tools-0246/src/app/main.es).
+
+
+## Harness preparation acceptance continuation, 2026-11-27
+
+The existing preparation fixture now consumes application WorkRequest and prepare_with directly, observes HarnessWorkStage in the test Handler, and uses the current finite-array loop/implicit arm result syntax. Its original context, child outcome, original-file observation, edit precharge and pending-proposal assertions remain. The original positive_prepare entry passes on official 0.24.6: all 94 transitive sources check in 3.277 s, runtime completes in 6.154 s with nine paired successful Console requests and no model, filesystem, Memory, command or approval action. No negative cases run.
+
+The identical 94 sources with the existing production HistoryStages entry fail entry preparation in 4.996 s: MissingCheckedFact, checked record slot 0 does not hold field task, at history_native_stages.es:103. There are zero HTTP and Host requests; planned six synthetic responses/one read are unexecuted. The production probe retains its original assertions and fails visibly. Two initial owned profile/entry-selector launch mistakes stopped with zero HTTP and are retained separately. This compiler observation is reported as [interpreter #124](https://github.com/etas-project/etas-interpreter/issues/124); no shared cause with prior issues is established. DIP-07 production acceptance and the full default cutover remain open.
+
+[Exact controlled/production scopes and source hashes](examples/native-project/harness-prepare-ioc-0246-20261127.json). The shipping/native product sources and their selected toolchain are unchanged in this continuation.

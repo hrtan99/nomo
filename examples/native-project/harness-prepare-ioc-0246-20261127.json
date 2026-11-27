@@ -1,0 +1,310 @@
+{
+  "date": "2026-11-27",
+  "status": "controlled-positive-passed-production-entry-rejected-before-dispatch",
+  "compiler": {
+    "selector": "latest0246",
+    "version": "0.24.6",
+    "source_overrides": [],
+    "repositories": {
+      "cli": {
+        "repository": "etas",
+        "revision": "9ed6827f16ee081cdaa327780941a3aee8b0c039",
+        "tree": "4cb70e1880936d594ad43e73ba6ed72e57a088be",
+        "packages": [
+          "etas_cli",
+          "etas_driver",
+          "etas_package",
+          "etas_tests"
+        ]
+      },
+      "core": {
+        "repository": "etas-core",
+        "revision": "e0be95b0f5b2ad0f52cb92ca23e88d00cce5ea9f",
+        "tree": "c1f83ef6dabd7134e99ca34b9105a0d413aaf1ed",
+        "packages": [
+          "etas_builtin",
+          "etas_cache",
+          "etas_code",
+          "etas_core",
+          "etas_host",
+          "etas_memory_derive",
+          "etas_package_metadata",
+          "etas_std",
+          "etas_utils"
+        ]
+      },
+      "frontend": {
+        "repository": "etas-frontend",
+        "revision": "6ae9e9be24163c2da6d08c1cf53cf097ba13be6a",
+        "tree": "eac75c1c9d34722a8db062ce709f1baef0dce1ef",
+        "packages": [
+          "etas_effects",
+          "etas_frontend",
+          "etas_hir",
+          "etas_hir_analysis",
+          "etas_syntax",
+          "etas_syntax_derive",
+          "etas_types"
+        ]
+      },
+      "interpreter": {
+        "repository": "etas-interpreter",
+        "revision": "4e1f7226e82afdc15ef140baabd7596f31870507",
+        "tree": "b15889c052e5d3cba41839c1280546d9f86ef31b",
+        "packages": [
+          "etas_interpreter"
+        ]
+      }
+    },
+    "cache_root": "etas-0246-release",
+    "build_target": "etas-0230/target",
+    "source": "Official CLI 0.24.6 at 9ed6827 and its exact official lock graph, standard Cargo release profile. Separate 6 GiB/1 Cargo job build; the prior installed CLI/SDK are preserved. Normal source/runtime remain 4 GiB.",
+    "installed_sdk": true,
+    "build_profile": "release",
+    "cargo_lock_sha256": "1922fa1369c94d2b81c59f1a81800b90ecc63d61de0a677b697f4f61f3d56437",
+    "verified_seed_binary_sha256": "b49158c9bbf4dbdc835062813b1fe7897fe38594693edeccf9c631226b10fd89"
+  },
+  "sources": {
+    "tests/fixtures/harness_prepare_interface001/controller_probe.es": "836a7c2288dd2923c07b9fa35e285529535b75daa18dfc7a3781231f94bd1d34",
+    "src/nomo/core/conversation.es": "6bdc3d1567c80f5f2a4cff60332abd9b289ebfd87b4a26d2d6076f8c6bf82040",
+    "src/nomo/domain/conversation/state.es": "b5461aaeefdfdf5734cecbdbcbb63f6d22e710909fb49a061277ecd47f3ad9f1",
+    "src/nomo/domain/harness/model_tool_contract.es": "9cf22342bfb79affdbce78e22e77b0bbc44403ce55a4e84702849404cf93d963",
+    "src/nomo/application/work/request.es": "a5a4ec54d10dbd427e9e8c2c2df6da90166dad6e01def772dc87040cb68d2ebe",
+    "src/nomo/application/harness/work/ports.es": "2554de6f45ee32af8854bf35c248dc8fd3083bac9850d92915958e59d6c9f61d",
+    "src/nomo/application/harness/work/stages.es": "59f9793aa8dc684811108247770c934f5502d90f6638847622246207d7b11055",
+    "src/nomo/harness/harness_tool_chat_contract.es": "2fe0b790d99b6c6c128ca692f5ef0cc21b94b9c38dceeca92c9d301d1dab0d25",
+    "src/nomo/adapters/model/harness/history_work_model.es": "3c432d4a6d31121f07f978b1310aefad2eb7a9296af4069f0196b00af20fb228",
+    "src/nomo/application/harness/effects/model_harness_progress.es": "57547867dc4e692a2520c0b8b2339eb3b9ae15a33f8d1277f0084bd3a12072ec",
+    "src/nomo/application/harness/effects/model_diagnostic_output.es": "cd43dd2337624069f7c78f6624ae1268452714af6c91a0c591d5a4a837f8e7e6",
+    "src/nomo/domain/harness/harness_tool_contract.es": "aeeee6b303cea20fc199eba0af4af069ae5f87f64762fdba6b708499924799d3",
+    "src/nomo/harness/harness_tool_contract.es": "87ec3ffaa47bb0cf19deebaa2cd94e8fd519e696c96e24dbe7c7f824c3ddd932",
+    "src/nomo/domain/harness/harness_edit_contract.es": "cfb03a17b0bd15dd700f7c3ac9a440a77e64418504f59c173ad64cebdb1c7985",
+    "src/nomo/harness/harness_edit_contract.es": "29cb11803032df2f6805b692b6886a6c417aa04fa1497f8684c15eb37ccf3fe6",
+    "src/nomo/domain/harness/harness_work_contract.es": "2d1e7cb437f91b01c2fe96450f5da3a9a87329327d3fb24b68098482fe5353fa",
+    "src/nomo/harness/harness_work_contract.es": "869a1876868ada44abe4cbed316f1705caf4497475dff637e332d5fd4f81df67",
+    "src/nomo/application/harness/effects/harness_legacy_string_stages.es": "5d0efbce8f4da3b7dc87d023a9af3b2b644c2210651b95d2b008b63c953739d9",
+    "src/nomo/application/harness/effects/harness_edit_original.es": "00cf56758acb9ebd90f76b0b9dd3a3df99d56cd7e795d24108206d491d23614a",
+    "src/nomo/application/harness/work/controller.es": "0389705fe57d417a5b6cec30ee5d42c9fa5588511d66040ef914b4eb6a5df893",
+    "src/nomo/domain/work/protocol.es": "08b91a3f8ca90e6a24767a2a5a340661b1ce6f79b52ffd54adade97758c81ee4",
+    "src/nomo/domain/mutations/edit_contract.es": "fcd08a4422a6f27ff17246a540724b5a25c6ffacff108f88b19380494fde4e9d",
+    "src/nomo/domain/mutations/edit_proposal.es": "97b0e40f7805183b2278ab9a6bc00a69a389523644a639c5493e900947d58752",
+    "src/nomo/domain/context/path_policy.es": "4707a46633ab9d560f4e16436dfc2e82b62c18e414fc24edd78f5c643d622fc5",
+    "src/nomo/domain/context/large_context.es": "c1f41161b98b66841876663e08e64f0d63b55377dafe0bfa231e835608f85f19",
+    "src/nomo/domain/text/read_text.es": "a52310c5a0c564bc22593064f97b9d5499d969d8f6e40c023080d02a5a1775b9",
+    "src/nomo/domain/serialization/json.es": "f84d219dfe4a44fb1456f45df2b51daa7a59265a59ab44343551cb3f95f82a7f",
+    "src/nomo/session/edit_operation.es": "0a96b077befa4cf4d774a0d801c7944b30e4ad9ad61d3645c505086353696dd5",
+    "src/nomo/application/harness/read/controller.es": "13a500269343695fb38ac3d1050473d5fdc950a93d15e5deb3e9e75d2ebec3a3",
+    "src/nomo/application/harness/read/policy.es": "7f629de5ec6120ef8a133a0857741926ce28e5b86c5b5e4dbdd6c6ccb4d5c526",
+    "src/nomo/domain/harness/edit_context.es": "fcff995357bf2a85b5221662a49e5a97ed728b465aa4001b6ee0592e6ca1c731",
+    "src/nomo/domain/harness/model_plan_diagnostic.es": "279774350b85da5e2a5b73ffda5ec89747aafc1079f90d7a3ea9d5451b39257b",
+    "src/nomo/domain/mutations/edit_encoding.es": "c40131aa2f41b9ef13b9996c07210faea664e900c10117b0e4c5d528078f5935",
+    "src/nomo/application/harness/read/ports.es": "00394006806628974e1b7938aba3b11ca054f39dacc272aa93d133e505849021",
+    "src/nomo/domain/harness/read_protocol.es": "d158a4dadea2eff4780ccfc3be6b458717d752ddc4f7f4df123b8bbd79d0504f",
+    "src/nomo/domain/harness/harness_model_contract.es": "87fe743413bc61699dfad358ef23073ea2c1bd8f3c9f04d56ba85672a4a7e508",
+    "src/nomo/domain/harness/read_tool_contract.es": "45984a64a44f7da35d6df877ac04126359c5d9d5fa6354c8c3526ae7dd2e7125",
+    "src/nomo/domain/text/text.es": "ead6e9306fc316c8b1f22a8111c71c2caf229666cf816ef2c0b34685dad90882",
+    "src/nomo/domain/harness/tool_context.es": "5e72eac170541c13bb88b37421359e6508242cab8b91a00c55a5215ef9501a75",
+    "src/nomo/domain/mutations/edit_text.es": "7c6d565818d2346ca3596cf2b194b7a2d8104a84b4d4d2a8dc3befef927ea549",
+    "src/nomo/domain/sessions/edit_operation.es": "5152b2efe57da9fdd99d634beb052ec6e3cf2baa9015245f0f2f9b23c92e7e5c",
+    "src/nomo/application/work/ports.es": "a24e0e63b7040faaba8e0e97e2a5556805da52aed0d94e0b13b1a557ff4c24ab",
+    "src/nomo/adapters/model/harness/read_model_tools.es": "7cb0d477bf46deb221a92ec6a0c88a0d41e85f961bc59890c54e31297ef0eecc",
+    "src/nomo/adapters/model/harness/harness_work_model.es": "cc012735f53ba49782632cb77d003173e85c0d302a44c600e47bf27a42e1f922",
+    "src/nomo/domain/harness/stage_context.es": "9ce5508d041572d6a03cd286f44bdb9d5c795c538446ec9f254ded32839eaca2",
+    "src/nomo/domain/harness/history_native_stages.es": "d86b9e0f7a0fb4da4a509306aff56e8f2f5bd683c21a8d95eca84ae35af4a428",
+    "src/nomo/adapters/model/harness/history_native_stages.es": "aa2ccbd9af8d6c6ca4a24f2d1325d4ee76a8b75789d77ffe0dfa9cdb97da7e47",
+    "src/nomo/domain/harness/history_work_model.es": "4563f465424e0407b95e44c8b081124143d5bdc171182d6a9558b48ec8457149",
+    "src/nomo/adapters/model/prompt_encoding.es": "08df0c099bc57d5a4b4c4fadb4be3d38b7ab4e54006c33b503270d054e94f133",
+    "src/nomo/domain/harness/typed_work_contract.es": "56e5208a65844452b3e38ae65df7bea0dda4516c863457bbf4588f364ba2f78b",
+    "src/nomo/domain/mutations/edit_contribution.es": "acb488bcae84401e187b749a15aa7e55e2420c5176180649fcceba98d005919f",
+    "src/nomo/domain/harness/work_chain_context.es": "10b85efa0d4f2b0b2cf3f3ae4221dbd896eca1dc4734177b4a98f28ff96bb983",
+    "src/nomo/domain/harness/typed_edit_contract.es": "9309af681085ba300572ce14ce2ddd4e4814b33316e05674e83e32c49ae9c020",
+    "src/nomo/session/work_chain.es": "a6629879ecde719dcf0c76685c0a7492de94911db0b90955712ccab9709d18d7",
+    "src/nomo/domain/sessions/work_chain.es": "50da19ad5768d65f1f2ebfb6cfb06771d69e493710571a4cee2e7d62e3ecefbd",
+    "src/nomo/domain/sessions/work_record.es": "101e66dfb3b2aa5ec9f82b8855c8f06944d872c9562d39cf3948ea25b044af03",
+    "src/nomo/domain/mutations/edit_binding.es": "e50d119f23fdf74cd377b4b602460db747dcc76440809d8b90b73fd6156816e8",
+    "src/nomo/session/work_record.es": "d22e87bfb4c24b20dd71c3958f86893d95439e5a3b2f6f312e3b6a7caa27a2ad",
+    "src/nomo/domain/harness/legacy_stage_contracts.es": "8a79014297716ca63d1e7d124edd115319f4d452620f0bb6d0b63d7a03efe5dc",
+    "src/nomo/adapters/model/legacy/read_tool.es": "9c8350e8a2c9a5d0b39a90a728fbcfdedd3c761d7eca2794495cf9eaf4676362",
+    "src/nomo/adapters/cli/legacy/console_progress.es": "0ab82593c96418595ad9aa32f1f554417184bb6ae229621dec8a0465715b8c46",
+    "src/nomo/application/harness/ports/harness_legacy_chat_stages.es": "25376af4537ea9ed49c445e6561e67e0f4e09644c6c305774cd265158f9d81d1",
+    "src/nomo/tools/workspace.es": "5b04513ef71574015467d87f1d08b368fd8fe675e8e4d6db6d851b4fbf156b75",
+    "src/nomo/domain/harness/harness_tool_chat_contract.es": "62b5cdcad3a40072ded08e795448269b93a230324c9f51706de81fa076c1a19d",
+    "src/nomo/application/harness/ports/model_harness_progress.es": "579a879b2273da0f1c14c1c380bd06f907df006bc7b9ed5e32c0a6f9970fd073",
+    "src/nomo/adapters/filesystem/legacy/workspace.es": "e9dff74458ab2376598acc6940ac580828fb2a3e0b70ab20debb05c4fcd5db97",
+    "src/nomo/domain/context/read_capabilities.es": "217db9c0e773649e1b95b97fbe1e88a8a5a25ee21207d09339f88fcabf31b5a6",
+    "src/nomo/application/context/effects/tools_read_contract.es": "c1d273ca594577d8654ae2c0f46e677a7af6a6025fe51f413ad4484263760602",
+    "src/nomo/bootstrap/harness/read.es": "e03ebce9658b11262a2c8ae27465f8ea806d3e0de36da82ff51bb7a27736a5dc",
+    "src/nomo/domain/harness/read_tool.es": "5432802e256782928a48878cf45853a13f3ef5742bf123e7bad802ca503a6465",
+    "src/nomo/application/harness/ports/agent_read_tool.es": "ff30eea7badda0a7b176b993af0a23493b7d7e667e3688c496a0eb6f93185ae3",
+    "src/nomo/application/harness/loops/child_loop_policy.es": "3cd35c13e97b052bb6f2de2a78eb3058952c3683501baea5748e5c8f6e85d8b3",
+    "src/nomo/adapters/cli/legacy/console_events.es": "b9aecc1dbcb08a885dd4d9c1bb50bb1392d5d5d4a601bebba3043449017bc914",
+    "src/nomo/adapters/cli/legacy/console_diagnostics.es": "eba691edbe6ceffc163394448422747949e19acc91413ccf1d6cbc52da5169da",
+    "src/nomo/adapters/model/legacy/action_decoder.es": "410aff6c799f4a913212724486df05fe8a9cfcb1df56e563918b614b1e81fdab",
+    "src/nomo/application/harness/loops/read_tool_controller.es": "ad4a21624a159fbfeaa3fab18f98ff020182865a1a318d177b8767c8efb341ea",
+    "src/nomo/application/harness/ports/agent_child_loop_policy.es": "fea3e33b60219f90d8abec2aeb2e4e65ceb467a38433034f485fc2700bd520d6",
+    "src/nomo/application/harness/loops/model_context.es": "30bb0a80432b5fda8712bc6b875fbd3df020845406903903f677d5059ebcaaaf",
+    "src/nomo/application/harness/loops/conversation_events.es": "0abbbe755f6cd33e92f3231b8b49229388ffa5791d38e4f37d76611c0ecf4312",
+    "src/nomo/application/harness/ports/model_diagnostic_output.es": "5a9430d2244623626371812de5c807136ea2e7e41f0c421a6784693e639a680f",
+    "src/nomo/application/harness/effects/model_conversation_output.es": "712e49f803e936c8b13fec8f2e4b06763062876c27fff638998007f494842079",
+    "src/nomo/application/harness/ports/model_conversation_output.es": "ccfd7f2d7e2ae523ede5c8377b8426a4950b1a53894bba8cd707a18bb7e9fabf",
+    "src/nomo/domain/context/read_contract.es": "308007afc8322515e688cb4eb1a0c065f6e91b2b5dbc9425d22fe55634332226",
+    "src/nomo/domain/context/read_display.es": "0a434c66796122de2988d4cc7edca4fd2a0a23cb04fd3cafceca3df0044eff94",
+    "src/nomo/application/harness/ports/model_action_decoder.es": "f9e690ee4165dd00daa796577c77e93f121ae82fea94899755b97a0630cb28c5",
+    "src/nomo/domain/harness/conversation_events.es": "84926edf5484b50988b23af5cbddd805053d5fac4ca6455d87a76a2b0872a7f8",
+    "src/nomo/domain/context/selection.es": "26664e0a14701caa535e6756f168fef318f1c3f9161c0c764afe64bac6424557",
+    "src/nomo/domain/context/preflight.es": "46dd0a3a7adc67db3411f51477eaae67edbe368204ce45299b6d88c53ddbf691",
+    "src/nomo/domain/harness/child_loop_policy.es": "2bc8dc0f2ab0af59b35bfd6edb58924e704500b6761513ca9f70c4f8b1d51cb8",
+    "src/nomo/domain/context/workspace.es": "9e5aeed9f59f0386f52eea1665c37c353da314fc692077029356ad810aa94a3d",
+    "src/nomo/application/edit/effects.es": "11bfa998c14f1b85ccc812fbfbb65326ec5f2da3510b9d0f024abf2cd1f5f608",
+    "src/nomo/domain/sessions/redaction.es": "e041e38a0cb73b018826ae9866f7821924aee56964ac56180585ec85a8f08a30",
+    "src/nomo/tools/edit_file.es": "f0f25614f993607c3bb29867779f72d4e62db04bfe8d728d87d6879e3936e2bd",
+    "src/nomo/domain/harness/read_tool_chat_contract.es": "d28801a1a611427bc2e18c4489c028a6da1284d9392359a4ac29f0dcff2d0863"
+  },
+  "source_count": 94,
+  "same_sources_across_cases": true,
+  "changes": "Existing fixture uses application WorkRequest/prepare_with and HarnessWorkStage; original successful legacy context/ledger assertions are retained. No negative cases run.",
+  "controlled": {
+    "evidence": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-harness-prepare-0246-q8wfd0h8",
+    "result": {
+      "commands": [
+        {
+          "label": "check",
+          "command": [
+            "/home/nomo/.cargo/bin/etas",
+            "--no-config",
+            "--cache",
+            "off",
+            "check",
+            "--all",
+            "--format",
+            "json",
+            "/workspace"
+          ],
+          "exit": 0,
+          "elapsed_seconds": 3.2772860010000002
+        },
+        {
+          "label": "positive_prepare",
+          "command": [
+            "/home/nomo/.cargo/bin/etas",
+            "--no-config",
+            "--cache",
+            "off",
+            "run",
+            "/workspace",
+            "--flow",
+            "positive_prepare",
+            "--allow-effects",
+            "--trace-out",
+            "/fixture-evidence/prepare.trace.json"
+          ],
+          "exit": 0,
+          "elapsed_seconds": 6.153508795
+        }
+      ],
+      "resources": {
+        "memory.max": "4294967296",
+        "memory.peak": "672645120",
+        "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+        "cpu.max": "400000 100000",
+        "pids.max": "256"
+      }
+    },
+    "stdout": "PORT legacy read-main plan\nPORT legacy read-child\nPORT legacy read-main aggregate\nPORT legacy read-original dir/file.txt\nPORT legacy stage edit-plan\nPORT legacy edit-plan\nPORT legacy stage edit-child\nPORT legacy edit-child\nPASS legacy\n",
+    "trace": {
+      "outcome": {
+        "kind": "completed"
+      },
+      "local_work_settled": true,
+      "incomplete": false,
+      "paired_requests": 9,
+      "host_actions": {
+        "Console.stdout_write": 9
+      },
+      "all_finished_successful": true
+    },
+    "flow": "positive_prepare"
+  },
+  "production": {
+    "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-harness-ports-0246-91m8b4kl",
+    "result": {
+      "exit": 3,
+      "elapsed_seconds": 4.9963048349999895,
+      "stdout": "",
+      "stderr": "error[analysis::MissingCheckedFact]: checked record slot 0 does not hold field `task`\n --> /workspace/src/nomo/adapters/model/harness/history_native_stages.es:103:73\n  | flow delegated(value: Delegation) -> string { return frame([\"delegate\", value.task]); }\n  |                                                                         ^ checked record slot 0 does not hold field `task`\n",
+      "resources": {
+        "memory.max": "4294967296",
+        "memory.peak": "1092366336",
+        "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+        "cpu.max": "400000 100000",
+        "pids.max": "256"
+      },
+      "model_requests": 0,
+      "observer_failures": []
+    },
+    "trace": {
+      "outcome": {
+        "failure": {
+          "diagnostic": {
+            "code": "Analysis(MissingCheckedFact)",
+            "message": "checked record slot 0 does not hold field `task`",
+            "phase": "analysis",
+            "severity": "error"
+          },
+          "kind": "execution_fault"
+        },
+        "kind": "failed"
+      },
+      "local_work_settled": true,
+      "incomplete": false,
+      "paired_requests": 0,
+      "host_actions": {},
+      "all_finished_successful": true
+    },
+    "flow": "production_stages",
+    "qualification": "Original production HistoryStages and child pipeline. Entry preparation fails before any HTTP or Host action; planned six-response/one-read assertions are not executed or passed.",
+    "observed_driver_sha256": "3d261c143b9aa398447bf3d8ba031a443d6cbe52e8ca287a85daccb70a42ae5c"
+  },
+  "initial_owned_launch_errors": [
+    {
+      "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-harness-ports-0246-e3ngx9bx",
+      "result": {
+        "exit": 2,
+        "elapsed_seconds": 0.0018161250000048312,
+        "stdout": "",
+        "stderr": "runtime model `enable_thinking` is only supported by the `omlx-openai` adapter, not `openai`\n",
+        "resources": {
+          "memory.max": "4294967296",
+          "memory.peak": "12189696",
+          "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+          "cpu.max": "400000 100000",
+          "pids.max": "256"
+        },
+        "model_requests": 0,
+        "observer_failures": []
+      },
+      "qualification": "Owned launch/profile failure, zero HTTP. Not attributed to the compiler."
+    },
+    {
+      "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-harness-ports-0246-51amkmui",
+      "result": {
+        "exit": 1,
+        "elapsed_seconds": 0.6979273750000061,
+        "stdout": "",
+        "stderr": "error[analysis::InvalidEntry]: entry flow `main` was not found\n --> /workspace/src/app/prepare_interface_probe.es:1:1\n  | module app.prepare_interface_probe;\n  | ^ entry flow `main` was not found\n",
+        "resources": {
+          "memory.max": "4294967296",
+          "memory.peak": "169791488",
+          "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+          "cpu.max": "400000 100000",
+          "pids.max": "256"
+        },
+        "model_requests": 0,
+        "observer_failures": []
+      },
+      "qualification": "Owned launch/profile failure, zero HTTP. Not attributed to the compiler."
+    }
+  ],
+  "full_goal": "DIP-07 production acceptance and DIP-13 default cutover remain open; existing other gates are unaffected.",
+  "upstream_issue": "https://github.com/etas-project/etas-interpreter/issues/124"
+}

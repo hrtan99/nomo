@@ -5,9 +5,7 @@ import std.text.char_count as len;
 import nomo.core.conversation.{Event, State};
 import nomo.domain.conversation.state.{add, fresh as empty_history};
 import nomo.domain.harness.model_tool_contract.{Session, LoopTurn};
-import nomo.adapters.cli.arguments.harness_edit_args.Input;
-import nomo.adapters.cli.arguments.harness_work_args.Work;
-import nomo.adapters.cli.arguments.harness_work_args.application as application_request;
+import nomo.application.work.request.WorkRequest;
 import nomo.application.harness.work.ports.WorkModelStages;
 import nomo.application.harness.work.stages.prepare_legacy;
 import nomo.harness.harness_tool_chat_contract.Previous;
@@ -23,7 +21,7 @@ import nomo.domain.harness.harness_work_contract.{Context as WorkContext, Eviden
 import nomo.harness.harness_work_contract.{Ledger};
 import nomo.application.harness.effects.harness_legacy_string_stages.{LegacyStringStages, LegacyEditStages};
 import nomo.application.harness.effects.harness_edit_original.EditOriginal;
-import nomo.adapters.cli.legacy.harness_work_entry.{prepare_with};
+import nomo.application.harness.work.controller.{prepare_with, HarnessWorkStage};
 import nomo.domain.work.protocol.{Pending, Failure};
 import nomo.domain.mutations.edit_contract.{Selector, Prepared};
 import nomo.domain.mutations.edit_proposal.{Request, Proposal};
@@ -37,7 +35,7 @@ flow child(original: string) -> LoopTurn {
         event("tool", "complete", "read", "complete: blue<LF>"), event("model", "text", "qwen", ""),
         event("assistant", "final", "", "Seen blue")];
     var characters: usize = 0;
-    for item in events limit Iterations(7) { characters = characters + len(item.name) + len(item.text); }
+    for item in events { characters = characters + len(item.name) + len(item.text); }
     return LoopTurn { status = 0, state = Session { history = State { events = events, characters = characters, spent = 3, stopped = false },
         calls = 2, tokens = 4096, tools = 1, scan = 4096 } };
 }
@@ -49,8 +47,9 @@ flow evidence() -> Evidence {
     return Evidence { request = "Q", task = "T", operation = "read", files = ["a.txt"], literal = "",
         outcome = "complete: blue<LF>", result = "Seen blue", summary = "Answer", allowed = ["a.txt"], ledger = read_ledger() };
 }
-flow input() -> Work {
-    return Work { edit = Input { help = false, id = "fixture", workspace = "synthetic", path = "dir/file.txt", request = "Q" }, allowed = ["a.txt"] };
+flow input() -> WorkRequest {
+    return WorkRequest { selected = Selector { id = "fixture", workspace = "synthetic", path = "dir/file.txt" },
+        request = "Q", allowed = ["a.txt"] };
 }
 flow edit_context(phase: string, task: string) -> WorkContext {
     let edit = EditContext { phase = phase, request = "Q", task = task, id = "fixture", workspace = "synthetic", path = "dir/file.txt",
@@ -72,7 +71,10 @@ flow run_case(label: string, mode: string, chain: bool) -> Result<Pending, Failu
         if state.edit != expected { abort("edit stage was not precharged"); }
         println("PORT " + label + " stage " + name);
     };
-    return prepare_with(input(), original, log, chain, false, false) with {
+    return prepare_with(input(), original, chain, false, false) with {
+        HarnessWorkStage.write(name, state) => log(name, state);
+        HarnessProgress.write(_) => ();
+        DiagnosticOutput.write(_) => ();
         LegacyStringStages.main(value) => {
             let expected = ReadContext { phase = value.phase, request = "Q", task = if value.phase == "plan" { "" } else { "T" },
                 result = if value.phase == "plan" { "" } else { "Seen blue" }, tool = if value.phase == "plan" { "" } else { "read" },
@@ -116,8 +118,8 @@ flow verify(label: string, mode: string, chain: bool, expected: string, read: Re
     println("PASS " + label);
 }
 public flow controller_unhandled() -> Result<Pending, Failure> {
-    let original = (value: string) => ""; let log = (name: string, state: Ledger) => ();
-    return prepare_with(input(), original, log, false, false, false);
+    let original = (value: string) => "";
+    return prepare_with(input(), original, false, false, false);
 }
 public flow observe(args: Array<string>) -> i32 {
     let zero = edit_ledger(0, 0, 0, 0, 0); let initial = ReadLedger { steps = 1, calls = 1, tokens = 2048, tools = 0, scan = 0 };
@@ -135,10 +137,10 @@ public flow abort_probe(args: Array<string>) -> i32 {
 }
 
 flow prepare_stages<S ~ WorkModelStages>(stages: S) -> Result<Pending, Failure> {
-    return prepare_legacy(stages, application_request(input())) with {
+    return prepare_legacy(stages, input()) with {
         EditOriginal.read(path) => {
             if path != "dir/file.txt" { abort("injected original path changed"); }
-            resume Ok("old\n");
+            Ok("old\n")
         }
         HarnessProgress.write(_) => ();
         DiagnosticOutput.write(_) => ();
