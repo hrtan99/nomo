@@ -1,0 +1,73 @@
+{
+  "exit": 1,
+  "elapsed_seconds": 0.15534125099998164,
+  "stderr": "",
+  "command": "etas --no-config --cache off check --all --format json .",
+  "runtime_executed": false,
+  "model_requests": 0,
+  "source_overrides": [],
+  "compiler": {
+    "selector": "latest0246",
+    "version": "0.24.6",
+    "source_overrides": [],
+    "repositories": {
+      "cli": {
+        "repository": "etas",
+        "revision": "9ed6827f16ee081cdaa327780941a3aee8b0c039",
+        "tree": "4cb70e1880936d594ad43e73ba6ed72e57a088be",
+        "packages": [
+          "etas_cli",
+          "etas_driver",
+          "etas_package",
+          "etas_tests"
+        ]
+      },
+      "core": {
+        "repository": "etas-core",
+        "revision": "e0be95b0f5b2ad0f52cb92ca23e88d00cce5ea9f",
+        "tree": "c1f83ef6dabd7134e99ca34b9105a0d413aaf1ed",
+        "packages": [
+          "etas_builtin",
+          "etas_cache",
+          "etas_code",
+          "etas_core",
+          "etas_host",
+          "etas_memory_derive",
+          "etas_package_metadata",
+          "etas_std",
+          "etas_utils"
+        ]
+      },
+      "frontend": {
+        "repository": "etas-frontend",
+        "revision": "6ae9e9be24163c2da6d08c1cf53cf097ba13be6a",
+        "tree": "eac75c1c9d34722a8db062ce709f1baef0dce1ef",
+        "packages": [
+          "etas_effects",
+          "etas_frontend",
+          "etas_hir",
+          "etas_hir_analysis",
+          "etas_syntax",
+          "etas_syntax_derive",
+          "etas_types"
+        ]
+      },
+      "interpreter": {
+        "repository": "etas-interpreter",
+        "revision": "4e1f7226e82afdc15ef140baabd7596f31870507",
+        "tree": "b15889c052e5d3cba41839c1280546d9f86ef31b",
+        "packages": [
+          "etas_interpreter"
+        ]
+      }
+    },
+    "cache_root": "etas-0246-release",
+    "build_target": "etas-0230/target",
+    "source": "Official CLI 0.24.6 at 9ed6827 and its exact official lock graph, standard Cargo release profile. Separate 6 GiB/1 Cargo job build; the prior installed CLI/SDK are preserved. Normal source/runtime remain 4 GiB.",
+    "installed_sdk": true,
+    "build_profile": "release",
+    "cargo_lock_sha256": "1922fa1369c94d2b81c59f1a81800b90ecc63d61de0a677b697f4f61f3d56437",
+    "verified_seed_binary_sha256": "b49158c9bbf4dbdc835062813b1fe7897fe38594693edeccf9c631226b10fd89"
+  },
+  "upstream_issue": "https://github.com/etas-project/etas-frontend/issues/105"
+}
