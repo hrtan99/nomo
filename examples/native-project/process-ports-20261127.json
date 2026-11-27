@@ -1,6 +1,6 @@
 {
   "date": "2026-11-27",
-  "status": "source-and-corrected-controlled-process-runtime-passed-capture-blocked",
+  "status": "source-controlled-and-real-host-process-passed-capture-blocked",
   "source_commit": "accf3d8d97cf764f8229065add2f76c16f5126ea",
   "compiler": "official 0.24.3 with matching installed SDK; see compiler-0243-20261127.json",
   "changes": [
@@ -44,7 +44,7 @@
     "qualification": "Original assertion tools==5 is wrong for five commands plus one job_output observation. Native operations reached exact-input/raw-byte and saved-output assertions; final abort is at the old fixture check. Original driver is failed, not relabelled passed. The corrected final-source case is recorded separately below and passes.",
     "driver_exit": 1,
     "native_exit": 3,
-    "stdout": "[PROCESS] {\"arguments\":[\"utf8\"],\"operation\":\"start\",\"program\":\"controlled\"}\n[PROCESS] {\"handle\":\"fixture-handle\",\"job\":\"native-0-job-0\",\"operation\":\"reconnect\"}\n[PROCESS] {\"handle\":\"fixture-handle\",\"job\":\"native-0-job-0\",\"max_bytes\":4096.0,\"operation\":\"read\"}\n[PROCESS] {\"handle\":\"fixture-handle\",\"job\":\"native-0-job-0\",\"operation\":\"reconnect\"}\n[PROCESS] {\"handle\":\"fixture-handle\",\"input\":\"\u9e48\u9e55 caf\u00e9\\n\",\"job\":\"native-0-job-0\",\"operation\":\"write\"}\n[PROCESS] {\"handle\":\"fixture-handle\",\"job\":\"native-0-job-0\",\"operation\":\"reconnect\"}\n[PROCESS] {\"handle\":\"fixture-handle\",\"job\":\"native-0-job-0\",\"operation\":\"close_stdin\"}\n[PROCESS] {\"handle\":\"fixture-handle\",\"job\":\"native-0-job-0\",\"operation\":\"reconnect\"}\n[PROCESS] {\"handle\":\"fixture-handle\",\"job\":\"native-0-job-0\",\"operation\":\"stop\"}\nPASS process controller exact input and observed bytes\n",
+    "stdout": "[PROCESS] {\"arguments\":[\"utf8\"],\"operation\":\"start\",\"program\":\"controlled\"}\n[PROCESS] {\"handle\":\"fixture-handle\",\"job\":\"native-0-job-0\",\"operation\":\"reconnect\"}\n[PROCESS] {\"handle\":\"fixture-handle\",\"job\":\"native-0-job-0\",\"max_bytes\":4096.0,\"operation\":\"read\"}\n[PROCESS] {\"handle\":\"fixture-handle\",\"job\":\"native-0-job-0\",\"operation\":\"reconnect\"}\n[PROCESS] {\"handle\":\"fixture-handle\",\"input\":\"鹈鹕 café\\n\",\"job\":\"native-0-job-0\",\"operation\":\"write\"}\n[PROCESS] {\"handle\":\"fixture-handle\",\"job\":\"native-0-job-0\",\"operation\":\"reconnect\"}\n[PROCESS] {\"handle\":\"fixture-handle\",\"job\":\"native-0-job-0\",\"operation\":\"close_stdin\"}\n[PROCESS] {\"handle\":\"fixture-handle\",\"job\":\"native-0-job-0\",\"operation\":\"reconnect\"}\n[PROCESS] {\"handle\":\"fixture-handle\",\"job\":\"native-0-job-0\",\"operation\":\"stop\"}\nPASS process controller exact input and observed bytes\n",
     "stderr": "error[analysis::ExecutionAborted]: durable completion changed\n --> /workspace/src/app/main.es:93:103\n  |     if final.pending != \"\" || final.ledger.tools != 5 || attempts.list(session.id, true).len() != 0 { abort(\"durable completion changed\"); }\n  |                                                                                                       ^ durable completion changed\n",
     "resources": {
       "memory.max": "4294967296",
@@ -92,7 +92,7 @@
     "upstream": "https://github.com/etas-project/etas-frontend/issues/103",
     "qualification": "The original full consumer requirement remains unaccepted; the minimal positive compiler diagnostic is not capture acceptance."
   },
-  "remaining": "Configuration JSON #121, final production process/transfer/recovery lifetimes, continuous capture, shipping startup migration, actual provider operation and default native cutover remain incomplete.",
+  "remaining": "Configuration JSON #121, retained-Host detach/project-switch and remaining transfer/recovery lifetimes, continuous capture #103, shipping startup/legacy migration including Clock #91, and default native cutover remain incomplete.",
   "real_provider_requests": 0,
   "negative_matrix_added": false,
   "canonical_contract_cleanup": {
@@ -139,7 +139,7 @@
     "probe": "tests/native_process_controller_probe.py",
     "qualification": "Application process sequencing, exact input, raw observations and durable output order. Real fixture SQLite jobs, outputs, attempts and conversation history, with a controlled transient Token type rather than a real Host handle. No native process, approval, reconnection or production adapter acceptance is claimed.",
     "exit": 0,
-    "stdout": "[PROCESS] {\"arguments\":[\"utf8\"],\"operation\":\"start\",\"program\":\"controlled\"}\n[PROCESS] {\"handle\":\"fixture-handle\",\"job\":\"native-0-job-0\",\"operation\":\"reconnect\"}\n[PROCESS] {\"handle\":\"fixture-handle\",\"job\":\"native-0-job-0\",\"max_bytes\":4096.0,\"operation\":\"read\"}\n[PROCESS] {\"handle\":\"fixture-handle\",\"job\":\"native-0-job-0\",\"operation\":\"reconnect\"}\n[PROCESS] {\"handle\":\"fixture-handle\",\"input\":\"\u9e48\u9e55 caf\u00e9\\n\",\"job\":\"native-0-job-0\",\"operation\":\"write\"}\n[PROCESS] {\"handle\":\"fixture-handle\",\"job\":\"native-0-job-0\",\"operation\":\"reconnect\"}\n[PROCESS] {\"handle\":\"fixture-handle\",\"job\":\"native-0-job-0\",\"operation\":\"close_stdin\"}\n[PROCESS] {\"handle\":\"fixture-handle\",\"job\":\"native-0-job-0\",\"operation\":\"reconnect\"}\n[PROCESS] {\"handle\":\"fixture-handle\",\"job\":\"native-0-job-0\",\"operation\":\"stop\"}\nPASS process controller exact input and observed bytes\nPASS process controller durable output ordering\n",
+    "stdout": "[PROCESS] {\"arguments\":[\"utf8\"],\"operation\":\"start\",\"program\":\"controlled\"}\n[PROCESS] {\"handle\":\"fixture-handle\",\"job\":\"native-0-job-0\",\"operation\":\"reconnect\"}\n[PROCESS] {\"handle\":\"fixture-handle\",\"job\":\"native-0-job-0\",\"max_bytes\":4096.0,\"operation\":\"read\"}\n[PROCESS] {\"handle\":\"fixture-handle\",\"job\":\"native-0-job-0\",\"operation\":\"reconnect\"}\n[PROCESS] {\"handle\":\"fixture-handle\",\"input\":\"鹈鹕 café\\n\",\"job\":\"native-0-job-0\",\"operation\":\"write\"}\n[PROCESS] {\"handle\":\"fixture-handle\",\"job\":\"native-0-job-0\",\"operation\":\"reconnect\"}\n[PROCESS] {\"handle\":\"fixture-handle\",\"job\":\"native-0-job-0\",\"operation\":\"close_stdin\"}\n[PROCESS] {\"handle\":\"fixture-handle\",\"job\":\"native-0-job-0\",\"operation\":\"reconnect\"}\n[PROCESS] {\"handle\":\"fixture-handle\",\"job\":\"native-0-job-0\",\"operation\":\"stop\"}\nPASS process controller exact input and observed bytes\nPASS process controller durable output ordering\n",
     "stderr": "",
     "resources": {
       "memory.max": "4294967296",
@@ -163,7 +163,7 @@
     "trace_sha256": "9bcea8648282345683b735924e3c00b810e21af29b85cb20e972c99eb38e673f"
   },
   "real_host_validation": {
-    "status": "running",
+    "status": "passed",
     "snapshot": {
       "root": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-wcsythf0",
       "tree": "afb979f1087af026bb39ea147b58201f980b23b0",
@@ -174,6 +174,218 @@
     },
     "probe": "tests/native_process_probe.py",
     "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-process-0h8a1_yt",
-    "qualification": "One existing real Host scenario, not a retry of the controlled fixture. Original exact UTF-8 bytes, I/O, EOF, stop, 14 per-operation approvals and fresh-process saved output assertions are retained. The fixture observes integer-valued JSON number spellings losslessly; the stop target waits until explicitly stopped rather than expiring during slow runtime. No pass is claimed before completion."
+    "qualification": "Original real Host process I/O, exact Unicode bytes, EOF, explicit stop, next turn and fresh-Host saved metadata/output scenario passes on its immutable 438-module canonical-contract snapshot. Fourteen individual native approvals and the original strict authority audit pass. The restart executes zero Command actions and grants zero approvals. This is saved-state recovery, not reconnecting a live child after Host destruction, PTY, continuous capture, retained-project switching, or complete default-entry acceptance. Later legacy-edit source changes have their separate full source check and are not claimed runtime-tested by this case.",
+    "initial_invocation": {
+      "status": "passed-original-invocation-assertions",
+      "trace": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-process-0h8a1_yt/traces/run-0X0nm1ab/trace.json",
+      "trace_sha256": "a2d095cc2449bf52e9148ac9b4605d4308adda56d524cb4e151449126c2b7e16",
+      "trace_outcome": {
+        "kind": "completed"
+      },
+      "local_work_settled": true,
+      "native_approvals": 14,
+      "localhost_model_requests": 11,
+      "paired_successful_host_requests": 1073,
+      "timing": {
+        "scope": "initial real Host process invocation; second invocation is not yet accepted",
+        "host_requests": 1073,
+        "trace_wall_seconds": 2080.357172,
+        "summed_host_duration_seconds": 0.495863,
+        "host_duration_seconds_by_action": {
+          "Policy.evaluate": 0.024419,
+          "Memory.read": 0.057763,
+          "Memory.write": 0.293309,
+          "Console.stdout_write": 0.007075,
+          "Console.stdin_read_line": 0.000673,
+          "Fs.list": 0.003166,
+          "Agentic.step": 0.077706,
+          "Approval.request": 0.02036,
+          "Command.start": 0.009908,
+          "Command.reconnect": 0.00044,
+          "Command.read": 0.00023,
+          "Command.write": 0.00031,
+          "Command.stop": 0.000504
+        },
+        "all_paired": true,
+        "all_succeeded": true,
+        "settled": true
+      },
+      "qualification": "The original first-invocation exit/approval/model assertions pass. The complete separate fresh-Host phase is recorded in functional/traces below."
+    },
+    "performance_followup": "https://github.com/etas-project/etas-interpreter/issues/120#issuecomment-7209890879",
+    "driver_exit": 0,
+    "functional": {
+      "functional_status": "passed",
+      "approval_status": "passed",
+      "model_http_requests": 12,
+      "native_approvals": 14,
+      "native_actions": [
+        "Command.start",
+        "Command.reconnect",
+        "Command.read",
+        "Command.reconnect",
+        "Command.write",
+        "Command.reconnect",
+        "Command.read",
+        "Command.reconnect",
+        "Command.write",
+        "Command.reconnect",
+        "Command.read",
+        "Command.start",
+        "Command.reconnect",
+        "Command.stop"
+      ],
+      "restored_commands": 0,
+      "jobs": [
+        {
+          "arguments": [
+            "-u",
+            "-c",
+            "import sys; print('ready', flush=True)\nfor line in sys.stdin: print('echo:' + line.rstrip('\\n'), flush=True)"
+          ],
+          "handle": "6111a56d378789fa719de4fe862f0ebe",
+          "id": "native-0-job-1",
+          "phase": "started",
+          "program": "/usr/bin/python3",
+          "session": "native-0"
+        },
+        {
+          "arguments": [
+            "-u",
+            "-c",
+            "import threading; print('sleeping', flush=True); threading.Event().wait()"
+          ],
+          "handle": "954ff7371b9807bfcbd45a39c41c5538",
+          "id": "native-0-job-13",
+          "phase": "started",
+          "program": "/usr/bin/python3",
+          "session": "native-0"
+        }
+      ],
+      "saved_output_events": [
+        {
+          "call": 3.0,
+          "exit_code": {
+            "fields": [],
+            "name": "None"
+          },
+          "job": "native-0-job-1",
+          "phase": "output",
+          "stderr": "",
+          "stderr_bytes": [],
+          "stdout": "ready\n",
+          "stdout_bytes": [
+            114.0,
+            101.0,
+            97.0,
+            100.0,
+            121.0,
+            10.0
+          ]
+        },
+        {
+          "call": 7.0,
+          "exit_code": {
+            "fields": [],
+            "name": "None"
+          },
+          "job": "native-0-job-1",
+          "phase": "output",
+          "stderr": "",
+          "stderr_bytes": [],
+          "stdout": "echo:鹈鹕 café\n",
+          "stdout_bytes": [
+            101.0,
+            99.0,
+            104.0,
+            111.0,
+            58.0,
+            233.0,
+            185.0,
+            136.0,
+            233.0,
+            185.0,
+            149.0,
+            32.0,
+            99.0,
+            97.0,
+            102.0,
+            195.0,
+            169.0,
+            10.0
+          ]
+        },
+        {
+          "call": 11.0,
+          "exit_code": {
+            "fields": [
+              0.0
+            ],
+            "name": "Some"
+          },
+          "job": "native-0-job-1",
+          "phase": "exited",
+          "stderr": "",
+          "stderr_bytes": [],
+          "stdout": "",
+          "stdout_bytes": []
+        }
+      ],
+      "traces": [
+        "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-process-0h8a1_yt/traces/run-0X0nm1ab/trace.json",
+        "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-process-0h8a1_yt/traces/run-t1RMEaL5/trace.json"
+      ],
+      "approval_audit": [],
+      "limitation": "Live process operations accepted within one Etas Host; the restart checks saved metadata/output, not a live process reattachment."
+    },
+    "traces": [
+      {
+        "path": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-process-0h8a1_yt/traces/run-0X0nm1ab/trace.json",
+        "sha256": "a2d095cc2449bf52e9148ac9b4605d4308adda56d524cb4e151449126c2b7e16",
+        "outcome": {
+          "kind": "completed"
+        },
+        "local_work_settled": true,
+        "paired_successful_host_requests": 1073,
+        "action_counts": {
+          "Policy.evaluate": 536,
+          "Memory.read": 276,
+          "Memory.write": 174,
+          "Console.stdout_write": 38,
+          "Console.stdin_read_line": 6,
+          "Fs.list": 4,
+          "Agentic.step": 11,
+          "Approval.request": 14,
+          "Command.start": 2,
+          "Command.reconnect": 6,
+          "Command.read": 3,
+          "Command.write": 2,
+          "Command.stop": 1
+        },
+        "trace_wall_seconds": 2080.357172,
+        "summed_host_duration_seconds": 0.495863
+      },
+      {
+        "path": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-process-0h8a1_yt/traces/run-t1RMEaL5/trace.json",
+        "sha256": "4447ef61b1cb25ddacf180880635c3082b62f349ada3a44c8d1db2ad7fb93f0b",
+        "outcome": {
+          "kind": "completed"
+        },
+        "local_work_settled": true,
+        "paired_successful_host_requests": 396,
+        "action_counts": {
+          "Policy.evaluate": 199,
+          "Memory.read": 138,
+          "Memory.write": 25,
+          "Console.stdout_write": 25,
+          "Console.stdin_read_line": 6,
+          "Fs.list": 2,
+          "Agentic.step": 1
+        },
+        "trace_wall_seconds": 466.466811,
+        "summed_host_duration_seconds": 0.09366
+      }
+    ],
+    "paired_successful_host_requests": 1469
   }
 }
