@@ -1,6 +1,6 @@
 {
   "date": "2026-11-27",
-  "status": "source-checked-original-capture-blocked-corrected-controller-running-at-checkpoint",
+  "status": "source-and-corrected-controlled-process-runtime-passed-capture-blocked",
   "source_commit": "accf3d8d97cf764f8229065add2f76c16f5126ea",
   "compiler": "official 0.24.3 with matching installed SDK; see compiler-0243-20261127.json",
   "changes": [
@@ -41,7 +41,7 @@
     "status": "original-driver-failed-old-fixture-tool-count",
     "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-process-controller-95oxpc36",
     "probe": "tests/native_process_controller_probe.py",
-    "qualification": "Original assertion tools==5 is wrong for five commands plus one job_output observation. Native operations reached exact-input/raw-byte and saved-output assertions; final abort is at the old fixture check. Original driver is failed, not relabelled passed. Corrected final-source case will run separately.",
+    "qualification": "Original assertion tools==5 is wrong for five commands plus one job_output observation. Native operations reached exact-input/raw-byte and saved-output assertions; final abort is at the old fixture check. Original driver is failed, not relabelled passed. The corrected final-source case is recorded separately below and passes.",
     "driver_exit": 1,
     "native_exit": 3,
     "stdout": "[PROCESS] {\"arguments\":[\"utf8\"],\"operation\":\"start\",\"program\":\"controlled\"}\n[PROCESS] {\"handle\":\"fixture-handle\",\"job\":\"native-0-job-0\",\"operation\":\"reconnect\"}\n[PROCESS] {\"handle\":\"fixture-handle\",\"job\":\"native-0-job-0\",\"max_bytes\":4096.0,\"operation\":\"read\"}\n[PROCESS] {\"handle\":\"fixture-handle\",\"job\":\"native-0-job-0\",\"operation\":\"reconnect\"}\n[PROCESS] {\"handle\":\"fixture-handle\",\"input\":\"\u9e48\u9e55 caf\u00e9\\n\",\"job\":\"native-0-job-0\",\"operation\":\"write\"}\n[PROCESS] {\"handle\":\"fixture-handle\",\"job\":\"native-0-job-0\",\"operation\":\"reconnect\"}\n[PROCESS] {\"handle\":\"fixture-handle\",\"job\":\"native-0-job-0\",\"operation\":\"close_stdin\"}\n[PROCESS] {\"handle\":\"fixture-handle\",\"job\":\"native-0-job-0\",\"operation\":\"reconnect\"}\n[PROCESS] {\"handle\":\"fixture-handle\",\"job\":\"native-0-job-0\",\"operation\":\"stop\"}\nPASS process controller exact input and observed bytes\n",
@@ -125,9 +125,8 @@
     },
     "qualification": "Full source and identity-fingerprint checks only; the controlled runtime case uses the preceding Live/reference snapshot."
   },
-  "checkpoint_utc": "2026-11-27T03:30:53.939880+00:00",
   "corrected_controller": {
-    "status": "running-at-checkpoint",
+    "status": "passed",
     "snapshot": {
       "root": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-_2gr6_z0",
       "tree": "48bf4ca2f5f7820629d286e56cb31b28fbec3609",
@@ -138,6 +137,43 @@
     },
     "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-process-controller-_25xi_hu",
     "probe": "tests/native_process_controller_probe.py",
-    "qualification": "Corrected six-tool ledger expectation and final canonical process contracts; no runtime pass is claimed yet. Product source manifest is identical to the passed final full check."
+    "qualification": "Application process sequencing, exact input, raw observations and durable output order. Real fixture SQLite jobs, outputs, attempts and conversation history, with a controlled transient Token type rather than a real Host handle. No native process, approval, reconnection or production adapter acceptance is claimed.",
+    "exit": 0,
+    "stdout": "[PROCESS] {\"arguments\":[\"utf8\"],\"operation\":\"start\",\"program\":\"controlled\"}\n[PROCESS] {\"handle\":\"fixture-handle\",\"job\":\"native-0-job-0\",\"operation\":\"reconnect\"}\n[PROCESS] {\"handle\":\"fixture-handle\",\"job\":\"native-0-job-0\",\"max_bytes\":4096.0,\"operation\":\"read\"}\n[PROCESS] {\"handle\":\"fixture-handle\",\"job\":\"native-0-job-0\",\"operation\":\"reconnect\"}\n[PROCESS] {\"handle\":\"fixture-handle\",\"input\":\"\u9e48\u9e55 caf\u00e9\\n\",\"job\":\"native-0-job-0\",\"operation\":\"write\"}\n[PROCESS] {\"handle\":\"fixture-handle\",\"job\":\"native-0-job-0\",\"operation\":\"reconnect\"}\n[PROCESS] {\"handle\":\"fixture-handle\",\"job\":\"native-0-job-0\",\"operation\":\"close_stdin\"}\n[PROCESS] {\"handle\":\"fixture-handle\",\"job\":\"native-0-job-0\",\"operation\":\"reconnect\"}\n[PROCESS] {\"handle\":\"fixture-handle\",\"job\":\"native-0-job-0\",\"operation\":\"stop\"}\nPASS process controller exact input and observed bytes\nPASS process controller durable output ordering\n",
+    "stderr": "",
+    "resources": {
+      "memory.max": "4294967296",
+      "memory.peak": "609153024",
+      "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+      "cpu.max": "400000 100000",
+      "pids.max": "256"
+    },
+    "source_count": 28,
+    "paired_host_requests": 223,
+    "host_actions": {
+      "Memory.read": 120,
+      "Memory.write": 92,
+      "Console.stdout_write": 11
+    },
+    "driver_exit": 0,
+    "trace_outcome": {
+      "kind": "completed"
+    },
+    "local_work_settled": true,
+    "trace_sha256": "9bcea8648282345683b735924e3c00b810e21af29b85cb20e972c99eb38e673f"
+  },
+  "real_host_validation": {
+    "status": "running",
+    "snapshot": {
+      "root": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-wcsythf0",
+      "tree": "afb979f1087af026bb39ea147b58201f980b23b0",
+      "evidence": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-wcsythf0/compiler-evidence",
+      "overlay": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-wcsythf0/compiler-compose.json",
+      "source_count": 438,
+      "source_manifest_sha256": "f5ac001e79c7ec5645cd1c16de1dfe03adb1227e53fa68e55af40f3f1efae3be"
+    },
+    "probe": "tests/native_process_probe.py",
+    "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-process-0h8a1_yt",
+    "qualification": "One existing real Host scenario, not a retry of the controlled fixture. Original exact UTF-8 bytes, I/O, EOF, stop, 14 per-operation approvals and fresh-process saved output assertions are retained. The fixture observes integer-valued JSON number spellings losslessly; the stop target waits until explicitly stopped rather than expiring during slow runtime. No pass is claimed before completion."
   }
 }

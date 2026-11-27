@@ -37,6 +37,12 @@ Generic command, process, project, transfer, mutation and workspace Handlers liv
 
 Model-enabled runtime profiles explicitly allow the agentic boundary as well as model requests; tool, filesystem and command approval rules remain separate. Bounded operations declare `Error<BudgetExceeded>` through their consumer specs and callers; storage implementations explicitly declare their durable write effects. Current positive-path validation and the independent standard JSON execution blocker are scoped in [the IoC receipt](examples/native-project/ioc-20261127.json).
 
+## Legacy edit boundary
+
+The Work controller consumes separate `WorkEditor` and `WorkConfirmation` roles. File adapters implement rooted reads/replacement; terminal adapters own presentation and current consent. `application/edit/confirmation.es` constructs the validated preview, and `domain/mutations/edit_diff.es` renders its pure diff. `application/edit/execute.es` owns confirmation, durable intent, file application and journal completion through the existing journal and output roles. The legacy CLI coordinator selects implementations and invokes that use case.
+
+The two confirmation gates and the original persistence/write order remain in place. Exact final compilation scope and the runtime qualification are in [the edit receipt](examples/native-project/edit-confirmation-ioc-20261127.json).
+
 ## Compatibility identities
 
 Some old module paths remain as **declaration-only compatibility leaves**. They preserve nominal types already used by saved records, Memory schema/resources and filesystem Region configuration. They contain no workflow, model, tool, effect or concrete method bodies. Their executable code has moved into the layers above.
