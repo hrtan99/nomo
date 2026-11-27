@@ -2,6 +2,18 @@
 
 The shipping `scripts/nomo` entry still uses the existing Python project controller. The opt-in `native_project` flow is the migration implementation, not a completed replacement.
 
+## Official 0.24.13 and inference overload, 2026-11-28
+
+The default toolchain selects official CLI e3ea414 (0.24.13), its exact official lock graph and matching std 0.9.0 SDK. All fifteen specifications match that same revision's Git blobs. Standard release compilation takes 17m26s with one Cargo job and a 6 GiB build allowance, peak 5,338,001,408 bytes, no OOM. The prior binary/SDK remain unchanged through independent-prefix acceptance and are retained under `etas-02412-release/accepted-before-02413` before global installation. The checked and global prefixes have the same binary and standard artifact; their actual per-prefix manifests are retained separately.
+
+The selected 468-module source passes ordinary cache-off whole-package checking with zero diagnostics in 40.444 s under normal 4 GiB/4 CPU/256 PID, peak 2,946,363,392 bytes, no OOM. NativeCoding now uses `infer(data, system = Trusted(...))`; the existing tools and prior service composition stay selected. The launcher selectors, compatibility markers and existing probe defaults follow 0.24.13. Default graph identity and both launcher help commands pass.
+
+The retained 0.24.9 history restores from a coherent SQL copy: all 36 complete events match exactly, 224 requests pair and succeed, and the original source/Events/Chunks remain unchanged. The original native batch/undo probe also passes: four local synthetic model requests, 1,932 paired successful requests, thirty commands/two replacements and thirty-two individually audited native approvals. Original text, binary bytes, directory and mode 0751 restore; pending clears and ledger.tools=2.
+
+The complete MutationService candidate is **not selected**. Its public patch reconstructs the checked source exactly. A generic factory/capture form and a direct-construction/service-capture form each stop at the outer application call with `effect::IncompleteEffectFacts: captured callable dependency has no solution slot`. Both retain model-tool trace restrictions. No runtime was attempted for either candidate, and no compiler root cause is established by those full-consumer observations. [Candidate and exact diagnostic evidence](examples/native-project/candidates/mutation-service-injection-02413.json).
+
+Formal migration and the six-request shipping-model scenario retain their recorded 0.24.12 acceptance scope below; they were not repeated here. The full thirteen-item goal remains active, including complete service integration, independent token controls, full native coding/Git/restart acceptance, capture/Task/Clock/process capabilities, bounded-session migration, in-loop compaction and default native cutover. [Exact 0.24.13 compiler, SDK and scoped acceptance receipt](examples/native-project/compiler-02413-20261128.json).
+
 ## Official 0.24.12 and formal migrations, 2026-11-27
 
 The default toolchain now selects official CLI e9a8417 (0.24.12), its exact official Core/Frontend/Interpreter graph and matching std 0.9.0 SDK. All fifteen specification files are saved from that same immutable CLI revision and match their Git blobs. Standard release compilation takes 20m01s with one Cargo job, a 6 GiB build-only allowance, 5,092,462,592-byte peak and no OOM. The user reported this newer release during the prior 0.24.11 build; only that owned build was stopped (143), with completed cache preserved and no SDK/runtime acceptance claimed for it. Existing 0.24.9 binary/SDK/receipt stayed unchanged through independent-prefix checks and are preserved under accepted-before-02412 before global installation.
