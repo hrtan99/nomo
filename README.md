@@ -109,7 +109,10 @@ The default switch does not mean all thirteen architecture tasks are accepted.
 
 Docker with Compose, Git and Python 3.11+ are needed for the local Docker-terminal
 transport, compiler tooling, tests and one-time SQLite migration. Python no longer
-runs the product's model, conversation, tool, file-edit or Git controller. Historical
+runs the default project's model, conversation, tool, file-edit or Git controller.
+The old bounded-session launchers still provide legacy compatibility and recovery;
+they are not reached by the default entry and cannot all be removed before that
+state migration is complete. Historical
 format producers used only by migration probes live in
 [tests/fixtures/legacy_project](tests/fixtures/legacy_project/README.md).
 

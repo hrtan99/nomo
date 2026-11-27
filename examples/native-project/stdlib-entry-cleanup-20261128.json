@@ -90,7 +90,7 @@
     "historical_test_producers": "Only the SQL/journal/PTY format producers needed by existing migration probes remain in tests/fixtures/legacy_project. They are not imported by either launcher.",
     "remaining_python": [
       "Docker terminal/container transport, without model/tool/conversation policy.",
-      "Historical bounded-format inspection and one-time SQLite source extraction.",
+      "Legacy bounded-session compatibility/recovery launchers still contain old orchestration, separate from the default project entry; one-time SQLite source extraction also remains. Complete bounded-state migration is required before deleting that compatibility path.",
       "Compiler/build/test engineering tools."
     ],
     "retired_identity": "nomo.project.entry.RequestRoot was only the removed /project-request bridge Region; it had no Memory store. All 47 remaining stored/Region identities pass the unchanged-shape check."

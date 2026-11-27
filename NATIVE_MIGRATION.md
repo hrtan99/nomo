@@ -4,7 +4,10 @@
 launcher. The shipping Python project controller/model loop/tool catalogue/Git
 adapter and their Etas action bridge are removed. Historical SQL/journal/process
 producers required by migration probes are isolated under tests/fixtures/legacy_project;
-old format inspection tools and the one-time read-only SQLite source adapter remain.
+legacy bounded-session compatibility/recovery launchers and the one-time read-only
+SQLite source adapter remain. These legacy launchers still contain old orchestration;
+the new default does not call them. Complete bounded-state migration is required
+before deleting that remaining compatibility path.
 The Docker client transport remains infrastructure Python. No automatic old-state
 conversion is performed. NOMO_STATE_DIR selects a parent with a native subdirectory;
 NOMO_NATIVE_STATE selects the exact native directory.
