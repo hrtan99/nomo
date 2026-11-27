@@ -90,7 +90,8 @@ public flow main(args: Array<string>) -> i32 ![Memory, Console, Command.start<De
     let listed = service.list(jobs, session.id);
     if listed.len() != 1 || listed[0].phase != "stopped" { abort("saved job phase changed"); }
     let final = history.load(session.id);
-    if final.pending != "" || final.ledger.tools != 5 || attempts.list(session.id, true).len() != 0 { abort("durable completion changed"); }
+    // Five commands and one job_output observation are counted as tool use.
+    if final.pending != "" || final.ledger.tools != 6 || attempts.list(session.id, true).len() != 0 { abort("durable completion changed"); }
     println("PASS process controller durable output ordering");
     return 0;
 }
