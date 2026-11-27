@@ -23,7 +23,11 @@ case "$1" in
     prepare)
         exec "${compose[@]}" --profile networked run --rm --no-deps --tty=false dependency \
             python3 -B "$bootstrap" prepare ;;
-    build|verify)
+    build)
+        build_resources="${project_root}/config/etas-${label}-build-compose.yaml"
+        if [[ -f "$build_resources" ]]; then compose+=(--file "$build_resources"); fi
+        exec "${compose[@]}" run --rm --no-deps --tty=false dev python3 -B "$bootstrap" build ;;
+    verify)
         exec "${compose[@]}" run --rm --no-deps --tty=false dev python3 -B "$bootstrap" "$1" ;;
     register-existing)
         exec "${compose[@]}" run --rm --no-deps --tty=false dev \
