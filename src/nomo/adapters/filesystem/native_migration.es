@@ -1,12 +1,10 @@
 module nomo.adapters.filesystem.native_migration;
 
 import std.effects.Fs;
-import std.fs.{path, read_bytes_limited, IOError as FileError, ReadLimitError};
-import std.codec.text.{utf8_decode, Strict};
-import std.json.parse;
-import std.agent.message.Message;
+import std.fs.{IOError as FileError, ReadLimitError};
 import std.bytes.from_array;
-import std.text.{parse_i64, parse_i32, parse_usize};
+import std.text.parse_i32;
+import nomo.adapters.filesystem.migration_packet.{decode, integer, size, read};
 import nomo.application.migration.ports.{NativeStateSource, MigrationRoot};
 import nomo.domain.migration.native_state.{NativeImage, NativeRecord};
 import nomo.domain.conversation.session.{Session, Ledger};
@@ -35,17 +33,6 @@ type WireOption = { tag: string, values: Array<string> };
 type WireOutput = { job: string, call: string, phase: string, exit_code: WireOption,
     stdout: string, stderr: string, stdout_bytes: Array<u8>, stderr_bytes: Array<u8> };
 
-flow decode<T>(text: string) -> T {
-    let json = match parse(text) { Ok(value) => value, Err(_) => abort("native migration packet is not JSON"), };
-    let typed: Option<Message<T>> = Message.new(json).cast<T>();
-    return match typed { Some(value) => value.body, None() => abort("native migration packet has an invalid stored value"), };
-}
-flow integer(text: string) -> i64 {
-    return match parse_i64(text) { Ok(value) => value, Err(_) => abort("native migration i64 is invalid"), };
-}
-flow size(text: string) -> usize {
-    return match parse_usize(text) { Ok(value) => value, Err(_) => abort("native migration usize is invalid"), };
-}
 flow session(value: WireSession) -> Session {
     let old = value.ledger;
     let ledger = Ledger { turns = integer(old.turns), compactions = integer(old.compactions),
@@ -105,11 +92,7 @@ flow record(row: WireRow) -> NativeRecord ![Error<IndexError>] {
 public type LegacyNativePacket = {};
 impl LegacyNativePacket ~ NativeStateSource {
     flow load(self) -> NativeImage ![Fs.read<MigrationRoot>, Error<FileError>, Error<ReadLimitError>, Error<IndexError>] {
-        let source = match path<MigrationRoot>("snapshot.json") { Ok(value) => value, Err(_) => abort("native migration packet path is unavailable"), };
-        let text = match utf8_decode(read_bytes_limited(source, 536870912), Strict) {
-            Ok(value) => value, Err(_) => abort("native migration packet is not UTF-8"),
-        };
-        let packet = decode<Packet>(text);
+        let packet = read<Packet>();
         if packet.format != "nomo-native-state-0135-v1" { abort("unsupported native migration packet format"); }
         return NativeImage { source_sha256 = packet.source_sha256, records = packet.rows.iter().map(row => record(row)).collect() };
     }

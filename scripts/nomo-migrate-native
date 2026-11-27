@@ -1,88 +1,41 @@
 #!/usr/bin/env python3
-"""Copy native 0.13.5 state into a fresh, unpublished current-format state directory."""
+"""Copy saved native or shipping project history into a fresh, unpublished native directory."""
 import argparse
-import hashlib
 import json
 import os
 from pathlib import Path
-import sqlite3
 import subprocess
 
+from nomo_migration import digest, native_packet, project_packet
+
 ROOT = Path(__file__).resolve().parents[1]
-STORES = {
-    'nomo-native-conversations-v1': ('conversations', ('Counters', 'Selected', 'Sessions', 'Events', 'Chunks')),
-    'nomo-native-conversation-copies-v1': ('copies', ('Jobs',)),
-    'nomo-native-attempts-v1': ('attempts', ('Counter', 'Attempts')),
-    'nomo-native-configuration-v1': ('configuration', ('Parsed',)),
-    'nomo-native-projects-v1': ('projects', ('Recent',)),
-    'nomo-native-file-journals-v1': ('mutations', ('Journals', 'Steps')),
-    'nomo-native-processes-v1': ('processes', ('Jobs', 'Outputs')),
-}
 
 
-def digest(path):
-    with path.open('rb') as stream:
-        return hashlib.file_digest(stream, 'sha256').hexdigest()
-
-
-def legacy_value(value):
-    """Decode the old public HostEncodedValue envelope, without re-encoding Memory bytes."""
-    kind = value['kind']
-    if kind in ('string', 'bool', 'bytes'):
-        return value['value']
-    if kind in ('int', 'uint'):
-        return str(value['value'])
-    if kind == 'list':
-        return [legacy_value(item) for item in value['items']]
-    if kind == 'record':
-        return {item['name']: legacy_value(item['value']) for item in value['fields']}
-    if kind == 'variant':
-        return {'tag': value['name'], 'values': [legacy_value(item) for item in value['fields']]}
-    raise ValueError('unsupported native 0.13.5 value kind: ' + kind)
-
-
-def packet(source, archive):
-    """Read a coherent SQLite backup; keep all original stores and receipts in that backup."""
-    with sqlite3.connect(source.as_uri() + '?mode=ro', uri=True) as old:
-        with sqlite3.connect(archive) as backup:
-            old.backup(backup)
-    archive.chmod(0o600)
-    rows = []
-    with sqlite3.connect(archive.as_uri() + '?mode=ro', uri=True) as db:
-        version, = db.execute('SELECT format FROM etas_memory_schema WHERE id=1').fetchone()
-        if version != 3:
-            raise ValueError('this migration accepts native SQLite format 3 only')
-        for region, path in db.execute('SELECT region,path FROM memory_stores'):
-            prefix, paths = STORES[region]
-            if json.loads(path) not in [[name] for name in paths]:
-                raise ValueError('unsupported native store: ' + region + ' ' + path)
-        for region, path, key, value in db.execute(
-                'SELECT region,path,key_json,value_json FROM memory_entries ORDER BY region,path,key_json'):
-            prefix, _ = STORES[region]
-            key = legacy_value(json.loads(key))
-            if not isinstance(key, str):
-                raise ValueError('native store key must be a string')
-            rows.append({'store': prefix + '.' + json.loads(path)[0], 'key': key,
-                         'value': json.dumps(legacy_value(json.loads(value)), ensure_ascii=False, separators=(',', ':'))})
-    return {'format': 'nomo-native-state-0135-v1', 'source_sha256': digest(archive), 'rows': rows}
-
-
-def migrate(source, destination):
+def migrate(source, destination, source_format):
     # A separate fresh directory is the publication boundary: no live selector is changed.
     destination.mkdir(mode=0o700)
     incoming, state, evidence = (destination / name for name in ('input', 'state', 'trace'))
     for directory in (incoming, state, evidence):
         directory.mkdir(mode=0o700)
     before = digest(source)
-    image = packet(source, incoming / 'legacy-source.sqlite3')
+    reader = native_packet if source_format == 'native-0135' else project_packet
+    image = reader(source, incoming / 'legacy-source.sqlite3')
+    count = (len(image['rows']) if source_format == 'native-0135' else
+             sum(1 + len(conversation['events']) for conversation in image['conversations']))
     snapshot = incoming / 'snapshot.json'
     snapshot.write_text(json.dumps(image, ensure_ascii=False, separators=(',', ':')) + '\n')
     snapshot.chmod(0o600)
     receipt = {'status': 'incomplete', 'source_database_sha256': before,
-               'source_snapshot_sha256': image['source_sha256'], 'rows': len(image['rows']),
+               'source_snapshot_sha256': image['source_sha256'], 'source_format': source_format, 'rows': count,
                'source': str(source), 'state': str(state),
-               'scope': 'Native format-3 records only. Original receipts/CAS namespaces remain in the source backup; '
-                        'fresh SDK writes establish new destination versions. No command, model, recovery or live-handle replay.'}
+               'scope': ('Native format-3 records only. Original receipts/CAS namespaces remain in the source backup; '
+                         'fresh SDK writes establish new destination versions.' if source_format == 'native-0135' else
+                         'Shipping project database only: original session IDs, full source archives, summary fences '
+                         'and catalogue selection. Source event IDs map to native local positions; original IDs, '
+                         'timestamps, parent, kind, data and measured usage remain in each source archive and backup. '
+                         'Separate Python tool journals, processes and bounded legacy sessions are not migrated. '
+                         'The native allowance ledger begins at zero for new execution.') +
+                        ' No command, model, recovery or live-handle replay.'}
     manifest = destination / 'migration.json'
     manifest.write_text(json.dumps(receipt, indent=2) + '\n')
     overlay = destination / 'compose.json'
@@ -98,9 +51,9 @@ def migrate(source, destination):
         command += ['--file', str(ROOT / name)]
     command += ['run', '--rm', '--no-deps', '--pull', 'never', '--tty=false', 'dev',
                 '/home/nomo/.cargo/bin/etas', '--no-config', '--cache', 'off', 'run', '/workspace',
-                '--flow', 'native_state_migrate', '--profile', 'nomo-native-migrate', '--allow-effects',
+                '--flow', 'native_state_migrate' if source_format == 'native-0135' else 'project_state_migrate', '--profile', 'nomo-native-migrate', '--allow-effects',
                 '--trace-out', '/migration-evidence/trace.json']
-    print('[MIGRATE] Prepared ' + str(len(image['rows'])) + ' native rows; destination ' + str(destination), flush=True)
+    print('[MIGRATE] Prepared ' + str(count) + ' source rows; destination ' + str(destination), flush=True)
     environment = dict(os.environ, NOMO_NATIVE_UID=str(os.getuid()), NOMO_NATIVE_GID=str(os.getgid()))
     result = subprocess.run(command, cwd=ROOT, env=environment, stdin=subprocess.DEVNULL, capture_output=True, text=True)
     (destination / 'stdout.txt').write_text(result.stdout)
@@ -109,7 +62,7 @@ def migrate(source, destination):
     if result.returncode == 0:
         report = json.loads(next(line.removeprefix('[MIGRATE] ') for line in result.stdout.splitlines()
                                  if line.startswith('[MIGRATE] {')))
-        if report['source_sha256'] != image['source_sha256'] or report['rows'] != len(image['rows']):
+        if report['source_sha256'] != image['source_sha256'] or report['rows'] != count:
             raise RuntimeError('native migration did not confirm the complete source image')
         receipt.update(status='completed', report=report)
     manifest.write_text(json.dumps(receipt, indent=2) + '\n')
@@ -123,11 +76,13 @@ def migrate(source, destination):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('source', type=Path, help='old native conversations.sqlite3; stop the old Nomo first')
+    parser.add_argument('--from', dest='source_format', choices=('native-0135', 'project'), default='native-0135',
+                        help='source database format; stop the old Nomo before migration')
+    parser.add_argument('source', type=Path, help='old conversations.sqlite3 or shipping project.sqlite3')
     parser.add_argument('destination', type=Path, help='new directory; it must not already exist')
     args = parser.parse_args()
     os.umask(0o077)
-    return migrate(args.source.expanduser().resolve(), args.destination.expanduser().resolve())
+    return migrate(args.source.expanduser().resolve(), args.destination.expanduser().resolve(), args.source_format)
 
 
 if __name__ == '__main__':

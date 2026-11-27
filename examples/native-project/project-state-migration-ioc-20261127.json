@@ -1,0 +1,172 @@
+{
+  "date": "2026-11-27",
+  "status": "application-storage-fresh-history-passed-production-json-blocked",
+  "toolchain": "official 0.24.5 exact graph and matching SDK",
+  "checked_snapshot": {
+    "root": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-project-migration-review-isttxx2_",
+    "tree": "3cdf0952c999b7647dc1924ba0e1bf8b3a2ce790",
+    "evidence": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-project-migration-review-isttxx2_/compiler-evidence",
+    "overlay": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-project-migration-review-isttxx2_/compiler-compose.json",
+    "source_count": 467,
+    "source_manifest_sha256": "2f28323e798f127d966f230f0609a80bd37e724b9f2c88981d9c7ad5c71359f4"
+  },
+  "runtime_snapshot": {
+    "root": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-project-migration-review-z0dafl5m",
+    "tree": "9832e41eec44d30111d8bdf61fa5538b32bda998",
+    "evidence": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-project-migration-review-z0dafl5m/compiler-evidence",
+    "overlay": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-project-migration-review-z0dafl5m/compiler-compose.json",
+    "source_count": 467,
+    "source_manifest_sha256": "2f28323e798f127d966f230f0609a80bd37e724b9f2c88981d9c7ad5c71359f4"
+  },
+  "full_source_check": {
+    "exit": 0,
+    "elapsed_seconds": 59.134299486,
+    "resources": {
+      "memory.max": "4294967296",
+      "memory.peak": "3335753728",
+      "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+      "cpu.max": "400000 100000",
+      "pids.max": "256"
+    },
+    "source_count": 467,
+    "diagnostics": 0
+  },
+  "architecture": {
+    "status": "passed",
+    "modules": 467,
+    "imports": 3472,
+    "preserved_identity_leaves": 48
+  },
+  "source_adapter": "Read-only coherent SQLite backup; original exports and registry copy preserved; only I/O projection/transport in Python. Conversion/selection/summary policy belongs to the Etas migration application.",
+  "application_case": {
+    "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-project-state-migration-cw9zgjbf",
+    "result": {
+      "status": "passed-application-and-real-storage",
+      "source": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-project-state-migration-cw9zgjbf/original/project.sqlite3",
+      "source_sha256": "4258e07001b2eae2a9dee5ed939bc8c940a5e2e128d15f6d61bf4286b190249f",
+      "original_sessions": 3,
+      "original_rows": 20.0,
+      "source_unchanged": true,
+      "migration_host_requests": 116,
+      "fresh_status_history_host_requests": 78,
+      "real_provider_requests": 0,
+      "command_actions": 0,
+      "qualification": "One actual shipping SQL image generated through its public history/compaction/fork APIs. The read-only source adapter matches complete original exports. A controlled typed source exercises the production migration application, NativeStateWriter and historical append, followed by ordinary fresh native status/history. It does not qualify the production packet JSON codec, separate Python tool journals/processes, bounded legacy sessions or default cutover."
+    },
+    "executed_driver_sha256": "cf777a2e56acf050886fc3cdc3d2bbf4946452ee54ca1b18d7866868bdbd0688",
+    "traces": [
+      {
+        "path": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-project-state-migration-cw9zgjbf/state/migration.trace.json",
+        "sha256": "8c7dec8c833c91c19fe933a88eea662ef594900ab7fc6cbda8e3b2f5d8f20f43",
+        "outcome": {
+          "kind": "completed"
+        },
+        "settled": true,
+        "started": 116,
+        "finished": 116,
+        "actions": {
+          "Console.stdout_write": 1,
+          "Memory.read": 23,
+          "Memory.write": 92
+        }
+      },
+      {
+        "path": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-project-state-migration-cw9zgjbf/restore-traces/run-DoRpLhsg/trace.json",
+        "sha256": "6a552c9b40410c8125b0fac9b268d6243d0e0b92b67c0f2cd126a41df030df75",
+        "outcome": {
+          "kind": "completed"
+        },
+        "settled": true,
+        "started": 10,
+        "finished": 10,
+        "actions": {
+          "Console.stdout_write": 2,
+          "Memory.read": 2,
+          "Memory.write": 1,
+          "Policy.evaluate": 5
+        }
+      },
+      {
+        "path": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-project-state-migration-cw9zgjbf/restore-traces/run-XyiEaGGe/trace.json",
+        "sha256": "36bd43d2c5f2b075a20a74b5cb41a6eb261b38ea57a0f7521d922607986bfbb6",
+        "outcome": {
+          "kind": "completed"
+        },
+        "settled": true,
+        "started": 68,
+        "finished": 68,
+        "actions": {
+          "Console.stdout_write": 10,
+          "Memory.read": 23,
+          "Memory.write": 1,
+          "Policy.evaluate": 34
+        }
+      }
+    ]
+  },
+  "retained_context_observer": {
+    "sessions": 3,
+    "context_messages": 9,
+    "matches_shipping_projection": true,
+    "scope": "Post-run observer on the same retained application/storage result; no Etas/source action rerun.",
+    "observer_sha256": "77d49949b3656482a2bdb114066f071913665f9193fa689a1fd5c15798c9fc1d"
+  },
+  "production_packet_case": {
+    "receipt": {
+      "status": "incomplete",
+      "source_database_sha256": "4258e07001b2eae2a9dee5ed939bc8c940a5e2e128d15f6d61bf4286b190249f",
+      "source_snapshot_sha256": "2c61070d12919f8e9ef312981ee2ee2a41a1b232de7f3f4232f9c55fd6fe27e4",
+      "source_format": "project",
+      "rows": 20,
+      "source": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-project-state-migration-cw9zgjbf/original/project.sqlite3",
+      "state": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-project-state-migration-cw9zgjbf/production/state",
+      "scope": "Shipping project database only: original session IDs, full source archives, summary fences and catalogue selection. Source event IDs map to native local positions; original IDs, timestamps, parent, kind, data and measured usage remain in each source archive and backup. Separate Python tool journals, processes and bounded legacy sessions are not migrated. The native allowance ledger begins at zero for new execution. No command, model, recovery or live-handle replay.",
+      "exit": 3,
+      "source_database_after": "4258e07001b2eae2a9dee5ed939bc8c940a5e2e128d15f6d61bf4286b190249f"
+    },
+    "trace": {
+      "path": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-project-state-migration-cw9zgjbf/production/trace/trace.json",
+      "sha256": "f3b4ceeb9c62880a06a3ec6fd9a56a8785c19171e516f20d485e9742616bb34d",
+      "outcome": {
+        "failure": {
+          "diagnostic": {
+            "code": "Analysis(MissingCheckedFact)",
+            "message": "checked revision value conversion failed: Value { source: TypeId(1159), target: TypeId(114), failure: UnmaterializedType(\"specialized type was not materialized: Applied { constructor: TypeConstructorId(105), args: [TypeId(4), TypeId(97)] }\") }",
+            "phase": "analysis",
+            "severity": "error"
+          },
+          "kind": "execution_fault"
+        },
+        "kind": "failed"
+      },
+      "settled": true,
+      "started": 1,
+      "finished": 1,
+      "actions": {
+        "Fs.read": 1
+      }
+    },
+    "business_rows": 0,
+    "upstream_issue": "https://github.com/etas-project/etas-interpreter/issues/121",
+    "qualification": "One invocation on the same normal shipping SQL source. Standard parse fails after one Fs.read, before any business Memory request/write. Destination remains incomplete and original database hashes agree. No fallback JSON parser, model call, command or live-state selector change."
+  },
+  "inclusive_core": {
+    "counter": "nomo-physical-v4",
+    "source_sloc": 18154,
+    "runtime_sloc": 4772,
+    "runtime_files": 29,
+    "total_sloc": 22926,
+    "limit_exception": "Existing explicit user authorization temporarily waives the code ceiling."
+  },
+  "new_negative_matrix": false,
+  "real_provider_requests": 0,
+  "default_native_cutover": false,
+  "full_thirteen_item_goal_complete": false,
+  "remaining": [
+    "Production standard JSON ingestion and complete end-to-end migration acceptance.",
+    "Separate shipping Python tool journals/process records and bounded legacy sessions.",
+    "Clock/activity, capture and canonical approval upstream capabilities and remaining production acceptance.",
+    "Default native entry and retirement of superseded Python business logic."
+  ],
+  "qualification": "The controlled source is a test implementation of the actual application-owned ProjectStateSource, not a production alternative codec. Original archive/session/summary facts and ordinary fresh native status/history pass. The later observer compares all three native context projections (nine messages) with the actual shipping history API on the same retained result; no Etas/source action is rerun. Published test code includes that observer. This does not turn the failed production packet case into a pass."
+}

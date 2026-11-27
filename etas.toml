@@ -1003,3 +1003,9 @@ name = "nomo-native-migrate"
 module = "nomo.main"
 flow = "native_state_migrate"
 profile = "nomo-native-migrate"
+
+[[bin]]
+name = "nomo-project-migrate"
+module = "nomo.main"
+flow = "project_state_migrate"
+profile = "nomo-native-migrate"

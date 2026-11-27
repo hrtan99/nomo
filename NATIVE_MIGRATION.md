@@ -3,6 +3,18 @@
 The shipping `scripts/nomo` entry still uses the existing Python project controller. The opt-in `native_project` flow is the migration implementation, not a completed replacement.
 
 
+## Project database migration boundary, 2026-11-27
+
+The migration command now has an explicit shipping-history source: `scripts/nomo-migrate-native --from project OLD_PROJECT_SQLITE NEW_DIRECTORY`. The implementation is prepared, but the production packet path is **not end-to-end accepted**. Python only makes a read-only coherent SQLite backup, preserves the registry and complete original exports, and transports exact decimal integer IDs. The Etas application owns historical conversion, catalogue selection and summary fences through ProjectStateSource/HistoricalEvents and existing native storage/publication ports. Historical text reuses the original chunked append; no duplicate chunk codec or tool execution is introduced.
+
+Original conversation IDs stay intact. Source event IDs map to local native positions; every original ID, timestamp, parent, kind, data value and measured usage record stays in the complete source archive and backup. Native allowance accounting begins at zero for subsequent native execution. Compaction records and duplicate answer actions remain saved while matching the shipping context projection. Separate Python tool journals/processes and bounded legacy sessions are not migrated by this database operation.
+
+The exact 467-module source check passes with zero diagnostics in 59.13 seconds; architecture preserves 48 identities across 3,472 imports. One real shipping-history fixture, generated through its existing create/append/compact/fork APIs, contains three conversations and twenty original records. The read-only source adapter matches the complete original exports. A controlled typed source then exercises the actual migration application, NativeStateWriter and historical append. Original archives, session IDs, summary boundaries, fork metadata and selection compare correctly. Ordinary fresh native status/history also pass: three completed/settled traces, 194 paired successful Host requests, no model or command actions. A subsequent observer on this same retained result confirms that all three context projections, nine messages, match the shipping history API; no producer/action is repeated.
+
+The one actual production-packet invocation on that same source exits at standard `std.json.parse` with the existing MissingCheckedFact/UnmaterializedType family ([interpreter #121](https://github.com/etas-project/etas-interpreter/issues/121)). It performs one Fs.read, zero business Memory requests/writes, leaves zero business rows and retains an incomplete destination. The original hash is unchanged. The controlled source does not substitute for, or qualify, that failed JSON codec. [Exact implementation, source, observations and remaining scope](examples/native-project/project-state-migration-ioc-20261127.json).
+
+The physical-v4 inventory includes the one-time SQLite adapter: 18,154 source + 4,772 runtime = 22,926 inclusive Core SLOC. The user's existing temporary code-limit exception applies. The default entry and full thirteen-item goal remain unchanged and incomplete.
+
 ## Official 0.24.5 toolchain, 2026-11-27
 
 The checkout selects the unmodified official CLI 0.24.5 at `20a757e`, its exact locked dependency graph and the matching newly installed SDK. The standard release build takes 19m57s using one Cargo job and the separate 6 GiB build profile, with no OOM. Prior CLI/SDK hashes remain unchanged throughout the build; their exact bytes are preserved before installation, after all retained older Hosts have completed. Normal checks and application runtime keep the 4 GiB/4 CPU/256 PID profile.
