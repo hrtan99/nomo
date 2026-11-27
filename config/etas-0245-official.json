@@ -1,0 +1,63 @@
+{
+  "selector": "latest0245",
+  "version": "0.24.5",
+  "source_overrides": [],
+  "repositories": {
+    "cli": {
+      "repository": "etas",
+      "revision": "20a757e92037d4704b8b951433a805d605d0f2a2",
+      "tree": "a867c5291352fd81748b53fa9bf8c99fb2b707a3",
+      "packages": [
+        "etas_cli",
+        "etas_driver",
+        "etas_package",
+        "etas_tests"
+      ]
+    },
+    "core": {
+      "repository": "etas-core",
+      "revision": "4b5a048e20c190b4b5dcda7a72c5a90b95ba7ebf",
+      "tree": "c2d18ed4923ac23057cdf217cda4d63291567318",
+      "packages": [
+        "etas_builtin",
+        "etas_cache",
+        "etas_code",
+        "etas_core",
+        "etas_host",
+        "etas_memory_derive",
+        "etas_package_metadata",
+        "etas_std",
+        "etas_utils"
+      ]
+    },
+    "frontend": {
+      "repository": "etas-frontend",
+      "revision": "73587b841fea909810f251f4ae6fb3d23b91a3b9",
+      "tree": "ce8bd2f0644b23aaaa185eecd50fb75196e78aa0",
+      "packages": [
+        "etas_effects",
+        "etas_frontend",
+        "etas_hir",
+        "etas_hir_analysis",
+        "etas_syntax",
+        "etas_syntax_derive",
+        "etas_types"
+      ]
+    },
+    "interpreter": {
+      "repository": "etas-interpreter",
+      "revision": "4d1bb1506a558c460fdbb9360627bd34c77b2a9b",
+      "tree": "5716b1fcec7205a333298eaa9f69edca831b6ac1",
+      "packages": [
+        "etas_interpreter"
+      ]
+    }
+  },
+  "cache_root": "etas-0245-release",
+  "build_target": "etas-0230/target",
+  "source": "Official CLI 0.24.5 at 20a757e and its exact official lock graph, standard Cargo release profile. A separate 6 GiB/1 Cargo job build reuses the existing target/cache while the prior invocation keeps its installed CLI/SDK. Normal application checks/runtime remain 4 GiB. Installation requires matching SDK and preserved prior bytes.",
+  "installed_sdk": true,
+  "build_profile": "release",
+  "cargo_lock_sha256": "dc6d1c86c5b0f994fccea1bb7dcd24640d0b0dcbd0e66b1da7d6a402ac9f3a0b",
+  "verified_seed_binary_sha256": "230258da48bae1122466d3584e93eacd05b9afe994d579df2388daecc24bb195"
+}

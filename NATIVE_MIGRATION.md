@@ -3,6 +3,12 @@
 The shipping `scripts/nomo` entry still uses the existing Python project controller. The opt-in `native_project` flow is the migration implementation, not a completed replacement.
 
 
+## Official 0.24.5 toolchain, 2026-11-27
+
+The checkout selects the unmodified official CLI 0.24.5 at `20a757e`, its exact locked dependency graph and the matching newly installed SDK. The standard release build takes 19m57s using one Cargo job and the separate 6 GiB build profile, with no OOM. Prior CLI/SDK hashes remain unchanged throughout the build; their exact bytes are preserved before installation, after all retained older Hosts have completed. Normal checks and application runtime keep the 4 GiB/4 CPU/256 PID profile.
+
+The exact 463-module source snapshot passes the normal O2/cache-off check with zero diagnostics in 61.15 seconds. Architecture resolves 3,442 imports and preserves all 48 identities. The existing positive configuration consumer still exits at standard `std.json.parse` with MissingCheckedFact/UnmaterializedType; its physical-guidance continuation does not run. This is reported on [interpreter #121](https://github.com/etas-project/etas-interpreter/issues/121#issuecomment-7214683282). The migration is not redundantly rerun against the same observed standard JSON gate. No new all-row/fresh-history migration acceptance is claimed. Existing graph markers remain recognized; historical runtime receipts retain their own graph scope. [Compiler, SDK, build, source and configuration evidence](examples/native-project/compiler-0245-20261127.json).
+
 ## Typed startup and retained selection, 2026-11-27
 
 Project handoff now carries an application-owned resolved workspace/argv record. Startup keeps new/title/status/check/once fields across a mounted-project change; exact foreign IDs can be inspected through saved data and the all-session chooser shows project roots. A separate native Attach entry records existing-Host session selection under its endpoint lock; that Host adopts it at the next command boundary. No startup command, wakeup byte or consent is produced by the transport. One-shot work uses a separate invocation. Existing Hosts keep their original check override; replacement is explicitly unsupported. Older folder-only Hosts retain bare reconnect and are not silently replaced.

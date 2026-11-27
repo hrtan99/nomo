@@ -4,7 +4,7 @@ Nomo is a local project coding agent built with [ETAS](https://github.com/etas-p
 
 ## Get started
 
-The refactor checkout selects official ETAS **0.24.4** and its matching SDK. The complete 457-module package passes source and architecture checks. Application-owned ports separate orchestration from storage, model, filesystem, process and CLI implementations; the terminal consumes typed requests and emits typed outcomes. The existing controlled SQLite conversation passes. The 0.24.3 resident-worker case also completes its original pending-approval reconnect, Unicode I/O, EOF, stop and fresh-Host archive requirements after explicitly retained launcher/observer interruptions. Cross-version data migration remains incomplete: a real 0.13.5 state copy is rejected with `schema_mismatch` by 0.24.4, while its source database remains unchanged. See [current evidence and remaining scope](NATIVE_MIGRATION.md). The commands below document the shipping Python project entry; the native replacement remains opt-in.
+The refactor checkout selects official ETAS **0.24.5** and its matching SDK. The complete 463-module package passes normal source and architecture checks. Application-owned ports separate orchestration from storage, model, filesystem, process and CLI implementations; the terminal consumes typed requests and emits typed outcomes. Standard JSON parsing still fails in the existing positive configuration consumer on this compiler ([upstream #121](https://github.com/etas-project/etas-interpreter/issues/121)), so configuration and historical-data migration are not yet accepted. See [current evidence and remaining scope](NATIVE_MIGRATION.md). The commands below document the shipping Python project entry; the native replacement remains opt-in.
 
 Use the existing Docker image and `MINIMAX_API_KEY` configuration. Open any existing project folder, including an empty one:
 
@@ -51,12 +51,12 @@ Python 3.11+, Docker with Compose, and Git are required. For a fresh local toolc
 
 ```sh
 ./scripts/container-build.sh
-./scripts/etas-0244-official-container.sh prepare
-./scripts/etas-0244-official-container.sh build
-./scripts/etas-0244-official-container.sh verify
+./scripts/etas-0245-official-container.sh prepare
+./scripts/etas-0245-official-container.sh build
+./scripts/etas-0245-official-container.sh verify
 ```
 
-Set `MINIMAX_API_KEY` in your shell before starting a model-backed task. The selected toolchain identity is recorded in `config/etas-0244-official.json`.
+Set `MINIMAX_API_KEY` in your shell before starting a model-backed task. The selected toolchain identity is recorded in `config/etas-0245-official.json`.
 
 ETAS 0.12.0 no longer accepts native `storage` limit overrides. The earlier `--legacy` workflows use upstream native storage defaults (1 MiB per value, 4 MiB per result); the current project workflow stores its conversation history in host SQLite and is unaffected. Use the earlier Nomo revision with ETAS 0.4.1 for legacy workflows requiring the enlarged native storage limits.
 
