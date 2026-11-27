@@ -39,7 +39,38 @@
     "evidence": "tmp/edit-confirmation-preview/edit-preview001-8hze9pkl",
     "scope": "Updated source discovery and fixture import after the module move. No fixture execution or native approval acceptance claimed."
   },
-  "qualification": "Complete source check and dependency/identity checks only. Existing legacy coordinator execution still composes concrete storage/files; its application extraction is not claimed complete. Real Host process validation is a separate immutable source snapshot.",
+  "qualification": "Complete source and dependency/identity checks only; the later application edit.execute extraction has its exact final check below. The real Host process validation uses its separate immutable 438-module snapshot.",
   "real_provider_requests": 0,
-  "negative_matrix_added": false
+  "negative_matrix_added": false,
+  "execution_use_case": {
+    "snapshot": {
+      "root": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-kmx17ms9",
+      "tree": "08aba28f83bc8d761b5cc214871afb48b3d0993e",
+      "evidence": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-kmx17ms9/compiler-evidence",
+      "overlay": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-kmx17ms9/compiler-compose.json",
+      "source_count": 441,
+      "source_manifest_sha256": "fa92918e77314ea6198a1832770816fadbf20ab55468377a9ae2d235804f55f2"
+    },
+    "full_check": {
+      "exit": 0,
+      "elapsed_seconds": 64.42639027899986,
+      "resources": {
+        "memory.max": "4294967296",
+        "memory.peak": "3223678976",
+        "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+        "cpu.max": "400000 100000",
+        "pids.max": "256"
+      },
+      "source_count": 441,
+      "diagnostics": 0
+    },
+    "architecture": {
+      "status": "passed",
+      "modules": 441,
+      "imports": 3295,
+      "identity_leaves": 48
+    },
+    "changes": "Application edit.execute owns confirmation -> durable intent -> file apply -> journal completion. It consumes existing WorkEditor, WorkConfirmation, EditJournal and WorkOutputSink roles. The legacy CLI coordinator only chooses existing implementations and invokes the use case. No new forwarding effect or wrapper type is introduced.",
+    "qualification": "Full source and preserved-identity checks only. Existing real legacy write/approval/CAS consumer has not been rerun on this snapshot."
+  }
 }

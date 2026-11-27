@@ -6,9 +6,11 @@ import std.effects.Fs;
 import std.text.{trim, lowercase, char_count as len};
 import nomo.tools.edit_file.EditableRoot;
 import nomo.domain.mutations.edit_contract.Prepared;
-import nomo.adapters.filesystem.legacy.edit_file.apply;
+import nomo.adapters.filesystem.legacy_work_editor.LegacyWorkEditor;
+import nomo.adapters.cli.legacy_work_output.LegacyWorkOutput;
 import nomo.session.edit_operation.Binding;
-import nomo.adapters.storage.legacy.edit_operation_store.{begin, complete};
+import nomo.adapters.storage.legacy.edit_operation_store.FirstEditJournal;
+import nomo.application.edit.execute.execute as execute_using;
 public import nomo.application.edit.effects.Approval;
 public import nomo.domain.mutations.edit_contract.{Selector, Confirmed};
 
@@ -51,11 +53,5 @@ public flow confirm_current(selector: Selector, prepared: Prepared) -> Result<Bi
 }
 
 public flow execute(selector: Selector, prepared: Prepared) -> Result<Confirmed, string> ![Console, Memory, Approval, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>, Error<BudgetExceeded>] {
-    let selected = match confirm_current(selector, prepared) { Ok(value) => value, Err(error) => { return Err(error); } };
-    let ticket = match begin(selected) { Ok(value) => value, Err(error) => { return Err(error); } };
-    println("INTENT durable " + selector.id);
-    match apply(prepared) { Ok(_) => (), Err(error) => { return Err(error); } }
-    match complete(ticket) { Ok(_) => (), Err(error) => { return Err(error); } }
-    println("APPLIED " + selector.id);
-    return Ok(Confirmed { binding = selected, after = prepared.proposal.after });
+    return execute_using(LegacyWorkEditor {}, FirstEditJournal {}, TerminalPreview {}, LegacyWorkOutput {}, selector, prepared);
 }
