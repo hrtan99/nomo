@@ -7,7 +7,7 @@ import nomo.application.edit.effects.Approval;
 import nomo.core.conversation.Event;
 import nomo.application.harness.work.controller.complete;
 import nomo.application.work.request.WorkRequest;
-import nomo.application.work.ports.{WorkStages, WorkPersistence, WorkEditor, WorkTimeline, Run};
+import nomo.application.work.ports.{WorkStages, WorkPersistence, WorkEditor, WorkConfirmation, WorkTimeline, Run};
 import nomo.application.work.output.WorkOutputSink;
 import nomo.application.harness.effects.harness_edit_original.EditOriginal;
 import nomo.application.harness.effects.model_diagnostic_output.DiagnosticOutput;
@@ -18,14 +18,14 @@ import nomo.tools.workspace.ReadOnlyRoot;
 
 // The application owns the order. Concrete confirmation, file IO, event
 // capture, timeline storage and terminal presentation are supplied as ports.
-public flow execute<S ~ WorkStages, Intent, Edited, P ~ WorkPersistence<Intent, Edited>, E ~ WorkEditor, T ~ WorkTimeline, O ~ WorkOutputSink>(stages: S, persistence: P, editor: E, timeline: T, output: O, input: WorkRequest, run: Run) -> i32 ![Console, Memory, Approval, Fs.read<ReadOnlyRoot>, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>, Error<BudgetExceeded>] {
+public flow execute<S ~ WorkStages, Intent, Edited, P ~ WorkPersistence<Intent, Edited>, E ~ WorkEditor, C ~ WorkConfirmation, T ~ WorkTimeline, O ~ WorkOutputSink>(stages: S, persistence: P, editor: E, confirmation: C, timeline: T, output: O, input: WorkRequest, run: Run) -> i32 ![Console, Memory, Approval, Fs.read<ReadOnlyRoot>, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>, Error<BudgetExceeded>] {
     let prepared = stages.prepare(input) with {
         EditOriginal.read(path) => editor.read_original(path);
         HarnessProgress.write(line) => output.progress(line);
         DiagnosticOutput.write(line) => output.diagnostic(line);
     };
     let pending = match prepared { Ok(value) => value, Err(failure) => { output.ledger(failure.state, run.wide, run.high_input); return output.refused(failure.error); } };
-    let selected = match editor.confirm(pending.selected, pending.prepared) { Ok(value) => value, Err(error) => { return output.refused(error); } };
+    let selected = match confirmation.confirm(pending.selected, pending.prepared) { Ok(value) => value, Err(error) => { return output.refused(error); } };
     let begun: Result<Intent, string> = persistence.begin(selected);
     let intent = match begun { Ok(value) => value, Err(error) => { return output.refused(error); } };
     output.progress("INTENT durable " + selected.id);

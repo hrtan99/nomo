@@ -1,4 +1,4 @@
-module nomo.adapters.cli.display.edit_diff;
+module nomo.domain.mutations.edit_diff;
 
 import nomo.domain.context.large_context.message_bytes;
 import std.text.{char_count as len, len as byte_len, concat, ends_with, find, split, strip_prefix, strip_suffix, from_usize};

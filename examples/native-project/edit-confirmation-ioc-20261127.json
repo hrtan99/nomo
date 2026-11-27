@@ -1,0 +1,45 @@
+{
+  "date": "2026-11-27",
+  "status": "source-checked",
+  "compiler": "official Etas 0.24.3 with matching SDK",
+  "snapshot": {
+    "root": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-y1lx8pu9",
+    "tree": "a0c0511f8657b24eabde29d812447abbd86a51f5",
+    "evidence": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-y1lx8pu9/compiler-evidence",
+    "overlay": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-y1lx8pu9/compiler-compose.json",
+    "source_count": 440,
+    "source_manifest_sha256": "22be95edf351ec98a2531cde75575387c5c826f04cc33ddeddf7383052597443"
+  },
+  "full_check": {
+    "exit": 0,
+    "elapsed_seconds": 62.69753857000069,
+    "resources": {
+      "memory.max": "4294967296",
+      "memory.peak": "3222048768",
+      "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+      "cpu.max": "400000 100000",
+      "pids.max": "256"
+    },
+    "source_count": 440,
+    "diagnostics": 0
+  },
+  "architecture": {
+    "modules": 440,
+    "imports": 3285,
+    "identity_leaves": 48,
+    "status": "passed"
+  },
+  "changes": [
+    "WorkEditor contains file operations only; WorkConfirmation is supplied independently by CLI composition roots. Filesystem adapters no longer import CLI confirmation.",
+    "Preview construction and consumer-owned preview/consent interfaces move to application/edit; pure diff rendering moves to domain/mutations. Existing CLI presentation and two approval gates remain unchanged."
+  ],
+  "preserved_order": "prepare -> preview/confirm -> durable intent -> file apply -> journal completion -> summary/history",
+  "preview_fixture": {
+    "status": "prepared-only",
+    "evidence": "tmp/edit-confirmation-preview/edit-preview001-8hze9pkl",
+    "scope": "Updated source discovery and fixture import after the module move. No fixture execution or native approval acceptance claimed."
+  },
+  "qualification": "Complete source check and dependency/identity checks only. Existing legacy coordinator execution still composes concrete storage/files; its application extraction is not claimed complete. Real Host process validation is a separate immutable source snapshot.",
+  "real_provider_requests": 0,
+  "negative_matrix_added": false
+}

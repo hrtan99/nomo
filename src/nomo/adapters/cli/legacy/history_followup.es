@@ -4,6 +4,7 @@ import std.io.{println, IOError as ConsoleError};
 import std.fs.IOError as FileError;
 import std.effects.Fs;
 import nomo.application.work.controller.execute;
+import nomo.adapters.cli.legacy.edit_coordinator.TerminalPreview;
 import nomo.application.work.ports.{WorkPersistence, Run};
 import nomo.domain.work.protocol.Summary;
 import nomo.adapters.filesystem.legacy_work_editor.LegacyWorkEditor;
@@ -83,6 +84,6 @@ public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read
     let persistence = FollowupPersistence { ticket, journal };
     let run = Run { redaction = Policy { format = 1, literals = [] }, binding = "", wide = false, high_input = false,
         saved = "SAVED history-followup; captured history is not a root identity or grant." };
-    return execute<HistoryStages, EditTicket, bool, FollowupPersistence, LegacyWorkEditor, LegacyWorkTimeline, LegacyWorkOutput>(
-        stages, persistence, LegacyWorkEditor {}, LegacyWorkTimeline {}, LegacyWorkOutput {}, input, run);
+    return execute<HistoryStages, EditTicket, bool, FollowupPersistence, LegacyWorkEditor, TerminalPreview, LegacyWorkTimeline, LegacyWorkOutput>(
+        stages, persistence, LegacyWorkEditor {}, TerminalPreview {}, LegacyWorkTimeline {}, LegacyWorkOutput {}, input, run);
 }

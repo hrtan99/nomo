@@ -7,7 +7,7 @@ import std.effects.Fs;
 import std.text.split;
 import std.bytes.len as byte_count;
 import std.codec.text.utf8_encode;
-import nomo.adapters.cli.display.edit_diff.render;
+import nomo.domain.mutations.edit_diff.render;
 import nomo.domain.sessions.session_display.ascii_json_with;
 import nomo.tools.edit_file.{EditableRoot};
 import nomo.domain.mutations.edit_contract.{prepare_original};
