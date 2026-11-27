@@ -57,7 +57,7 @@ public flow start<Live, C ~ ProcessControl<Live>, J ~ JobRepository, V ~ Process
     let root = control.root();
     preview(preview_sink, request);
     let process = control.start(root, program, arguments);
-    let result = job { program, arguments, handle = process, phase = "started" };
+    let result = job { program, arguments, handle = control.reference(process), phase = "started" };
     jobs.save(result);
     complete(attempts, publication, history, attempt, result);
     return result;

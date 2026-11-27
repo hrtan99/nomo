@@ -21,10 +21,11 @@ type Token = { reference: string };
 type ControlledProcess = {};
 impl ControlledProcess ~ ProcessControl<Token> {
     flow root(self) -> WorkspacePath<ProjectRoot> ![] { return match path<ProjectRoot>(".") { Ok(value) => value, Err(_) => abort("fixture path failed"), }; }
-    flow start(self, root: WorkspacePath<ProjectRoot>, program: string, arguments: Array<string>) -> string ![Command.start<DefaultCommandSandbox>] {
+    flow start(self, root: WorkspacePath<ProjectRoot>, program: string, arguments: Array<string>) -> Token ![Command.start<DefaultCommandSandbox>] {
         if program != "controlled" || arguments != ["utf8"] { abort("start arguments changed"); }
-        return "fixture-handle";
+        return Token { reference = "fixture-handle" };
     }
+    flow reference(self, process: Token) -> string ![] { return process.reference; }
     flow attach(self, reference: string) -> Token ![Command.reconnect<DefaultCommandSandbox>] {
         if reference != "fixture-handle" { abort("saved reference changed"); }
         return Token { reference = reference };
@@ -50,7 +51,7 @@ impl Jobs ~ JobRepository {
     flow load(self, id: string) -> Option<Job> ![Memory, Error<StorageError>] { return Data.Jobs.get(id); }
     flow insert(self, value: Job) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>] { Data.Jobs.insert(value.id, value); }
     flow save(self, value: Job) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>] { Data.Jobs.put(value.id, value); }
-    flow list(self, session: string) -> Array<Job> ![Memory, Error<StorageError>] {
+    flow list(self, session: string) -> Array<Job> ![Memory, Error<StorageError>, Error<BudgetExceeded>] {
         let page = Data.Jobs.page(None(), 100);
         var result: Array<Job> = [];
         @limits([Iterations(100)]) for entry in page.entries   { if entry.value.session == session { result = result.push(entry.value); } }
@@ -69,7 +70,7 @@ impl Preview ~ ProcessPreviewSink {
     flow write(self, line: string) -> unit ![Console, Error<IOError>] { println(line); }
 }
 
-public flow main(args: Array<string>) -> i32 ![Memory, Console, Command.start<DefaultCommandSandbox>, Command.reconnect<DefaultCommandSandbox>, Command.read<DefaultCommandSandbox>, Command.write<DefaultCommandSandbox>, Command.stop<DefaultCommandSandbox>, Error<StorageError>, Error<MemoryConflict>, Error<IOError>, Error<IndexError>] {
+public flow main(args: Array<string>) -> i32 ![Memory, Console, Command.start<DefaultCommandSandbox>, Command.reconnect<DefaultCommandSandbox>, Command.read<DefaultCommandSandbox>, Command.write<DefaultCommandSandbox>, Command.stop<DefaultCommandSandbox>, Error<StorageError>, Error<MemoryConflict>, Error<IOError>, Error<IndexError>, Error<BudgetExceeded>] {
     let history = NativeHistory {}; let attempts = NativeAttempts {};
     let jobs = Jobs {}; let archive = Outputs {}; let control = ControlledProcess {}; let preview = Preview {};
     let session = history.create("process-controller", "Controlled process observations");

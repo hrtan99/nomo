@@ -9,7 +9,8 @@ import nomo.domain.process.observations.ProcessEvent;
 // Live is the implementation's transient capability, never persisted as a Job.
 public spec ProcessControl<Live> {
     flow root(self) -> WorkspacePath<ProjectRoot> ![];
-    flow start(self, root: WorkspacePath<ProjectRoot>, program: string, arguments: Array<string>) -> string ![Command.start<DefaultCommandSandbox>];
+    flow start(self, root: WorkspacePath<ProjectRoot>, program: string, arguments: Array<string>) -> Live ![Command.start<DefaultCommandSandbox>];
+    flow reference(self, process: Live) -> string ![];
     flow attach(self, reference: string) -> Live ![Command.reconnect<DefaultCommandSandbox>];
     flow read(self, process: Live, max_bytes: usize) -> ProcessEvent ![Command.read<DefaultCommandSandbox>];
     flow write(self, process: Live, input: bytes) -> unit ![Command.write<DefaultCommandSandbox>];

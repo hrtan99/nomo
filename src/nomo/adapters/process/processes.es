@@ -18,10 +18,10 @@ impl HostProcessControl ~ ProcessControl<CommandHandle> {
     flow root(self) -> WorkspacePath<ProjectRoot> ![] {
         return match path<ProjectRoot>(".") { Ok(value) => value, Err(_) => abort("project root is unavailable"), };
     }
-    flow start(self, root: WorkspacePath<ProjectRoot>, program: string, arguments: Array<string>) -> string ![Command.start<DefaultCommandSandbox>] {
-        let process = start(HostCommand.new(program, arguments).with_cwd(root), DefaultCommandSandbox);
-        return process.id();
+    flow start(self, root: WorkspacePath<ProjectRoot>, program: string, arguments: Array<string>) -> CommandHandle ![Command.start<DefaultCommandSandbox>] {
+        return start(HostCommand.new(program, arguments).with_cwd(root), DefaultCommandSandbox);
     }
+    flow reference(self, process: CommandHandle) -> string ![] { return process.id(); }
     flow attach(self, reference: string) -> CommandHandle ![Command.reconnect<DefaultCommandSandbox>] { return reconnect(reference, DefaultCommandSandbox); }
     flow read(self, process: CommandHandle, max_bytes: usize) -> ProcessEvent ![Command.read<DefaultCommandSandbox>] { return observed(process.read(max_bytes)); }
     flow write(self, process: CommandHandle, input: bytes) -> unit ![Command.write<DefaultCommandSandbox>] { process.write(input); }

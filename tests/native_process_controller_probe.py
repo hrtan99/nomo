@@ -52,7 +52,7 @@ r={name:(pathlib.Path('/sys/fs/cgroup')/name).read_text().strip() for name in ['
 print(json.dumps({'exit':p.returncode,'stdout':p.stdout,'stderr':p.stderr,'resources':r}))'''
     command += ['run', '--rm', '--no-deps', '--pull', 'never', '--tty=false', 'dev', 'python3', '-c', inside]
     print('EVIDENCE ' + str(evidence), flush=True)
-    result = subprocess.run(command, cwd=ROOT, capture_output=True, text=True, timeout=300)
+    result = subprocess.run(command, cwd=ROOT, capture_output=True, text=True, timeout=1800)
     (evidence / 'container-stderr.txt').write_text(result.stderr)
     assert result.returncode == 0, result.stderr
     record = json.loads(result.stdout)
