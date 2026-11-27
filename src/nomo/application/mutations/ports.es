@@ -66,9 +66,7 @@ public spec ChangeJournalStore {
 public spec MutationHistoryStore {
     flow record(self, role: string, name: string, value: JsonValue, call: i64) -> i64 ![SessionContext.current, Memory, Error<StorageError>, Error<MemoryConflict>, Error<BudgetExceeded>];
     flow finish(self, name: string, call: i64, value: JsonValue) -> unit ![SessionContext.current, Memory, Error<StorageError>, Error<MemoryConflict>, Error<BudgetExceeded>];
-    flow session(self, id: string) -> Session ![Memory, Error<StorageError>];
     flow pending(self, id: string) -> Option<PendingRequest> ![Memory, Error<StorageError>];
-    flow message(self, id: string, index: i64) -> ChatMessage ![Memory, Error<StorageError>, Error<BudgetExceeded>];
     flow published(self, id: string, call: i64, name: string) -> bool ![Memory, Error<StorageError>, Error<BudgetExceeded>];
 }
 public spec MutationOutputSink { flow write(self, line: string) -> unit ![Console, Error<ConsoleError>]; }

@@ -18,3 +18,13 @@ public spec ConversationService {
     flow compact(self, session: string, settings: Settings) -> unit
     ![Agentic, Memory, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>, Error<BudgetExceeded>];
 }
+
+// These roles belong to the conversation consumer, independently of configuration IO and CLI rendering.
+public spec ConversationConfiguration {
+    flow load(self, session: string) -> Settings
+    ![CommandOperations, Memory, Console, Command.run<DefaultCommandSandbox>, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<ConsoleError>, Error<FileError>, Error<ReadLimitError>, Error<BudgetExceeded>];
+}
+
+public spec ConversationOutputSink {
+    flow write(self, line: string) -> unit ![Console, Error<ConsoleError>];
+}

@@ -1,12 +1,9 @@
-module nomo.bootstrap.mutations;
+module nomo.application.mutations.handlers;
 
 import nomo.application.mutations.ports.ChangeOperations;
-import nomo.adapters.filesystem.mutation_files.ProjectMutationFiles;
-import nomo.adapters.storage.change_journals.NativeChangeJournals;
-import nomo.adapters.storage.mutation_history.NativeMutationHistory;
-import nomo.adapters.cli.mutations.TerminalMutationOutput;
 
 import nomo.application.mutations.service;
+import nomo.application.conversation.ports.ConversationReader;
 import nomo.application.commands.effects.CommandOperations;
 import std.effects.Fs;
 import std.fs.{ReadLimitError, IOError as FileError};
@@ -16,7 +13,7 @@ import nomo.application.conversation.session_context.SessionContext;
 import nomo.domain.mutations.models.{Change, ChangeOutcome, Journal, FileChange, FileOutcome};
 import nomo.application.mutations.ports.{MutationFiles, ChangeJournal, MutationHistory, MutationOutput, MutationFileAccess, ChangeJournalStore, MutationHistoryStore, MutationOutputSink};
 
-flow bindings<F ~ MutationFileAccess, J ~ ChangeJournalStore, H ~ MutationHistoryStore, O ~ MutationOutputSink>(files: F, journals: J, history: H, output: O) -> ![MutationFiles, ChangeJournal, MutationHistory, MutationOutput => SessionContext.current, CommandOperations, Memory, Console, Command.run<DefaultCommandSandbox>, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Fs.atomic_replace<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>, Error<ConsoleError>, Error<BudgetExceeded>] ![] {
+flow bindings<F ~ MutationFileAccess, J ~ ChangeJournalStore, H ~ MutationHistoryStore + ConversationReader, O ~ MutationOutputSink>(files: F, journals: J, history: H, output: O) -> ![MutationFiles, ChangeJournal, MutationHistory, MutationOutput => SessionContext.current, CommandOperations, Memory, Console, Command.run<DefaultCommandSandbox>, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Fs.atomic_replace<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>, Error<ConsoleError>, Error<BudgetExceeded>] ![] {
     return handler {
         MutationFiles.normalize(path) => files.normalize(path);
         MutationFiles.exists(path) => files.exists(path);
@@ -31,7 +28,7 @@ flow bindings<F ~ MutationFileAccess, J ~ ChangeJournalStore, H ~ MutationHistor
         ChangeJournal.list(selected) => journals.list(selected);
         MutationHistory.record(role, name, value, call) => history.record(role, name, value, call);
         MutationHistory.finish(name, call, value) => history.finish(name, call, value);
-        MutationHistory.session(id) => history.session(id);
+        MutationHistory.session(id) => history.load(id);
         MutationHistory.pending(id) => history.pending(id);
         MutationHistory.message(id, index) => history.message(id, index);
         MutationHistory.published(id, call, name) => history.published(id, call, name);
@@ -39,26 +36,22 @@ flow bindings<F ~ MutationFileAccess, J ~ ChangeJournalStore, H ~ MutationHistor
     };
 }
 
-public flow execute<F ~ MutationFileAccess, J ~ ChangeJournalStore, H ~ MutationHistoryStore, O ~ MutationOutputSink>(files: F, journals: J, history: H, output: O, session: string, operation: string, name: string, changes: Array<Change>, edit: string) -> ChangeOutcome
+public flow execute<F ~ MutationFileAccess, J ~ ChangeJournalStore, H ~ MutationHistoryStore + ConversationReader, O ~ MutationOutputSink>(files: F, journals: J, history: H, output: O, session: string, operation: string, name: string, changes: Array<Change>, edit: string) -> ChangeOutcome
     ![CommandOperations, Memory, Console, Command.run<DefaultCommandSandbox>, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Fs.atomic_replace<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>, Error<ConsoleError>, Error<BudgetExceeded>] {
     return handle (service.execute(operation, name, changes, edit) with bindings(files, journals, history, output)) with { SessionContext.current() => session; };
 }
 
-public flow replace<F ~ MutationFileAccess, J ~ ChangeJournalStore, H ~ MutationHistoryStore, O ~ MutationOutputSink>(files: F, journals: J, history: H, output: O, session: string, change: FileChange) -> FileOutcome
+public flow replace<F ~ MutationFileAccess, J ~ ChangeJournalStore, H ~ MutationHistoryStore + ConversationReader, O ~ MutationOutputSink>(files: F, journals: J, history: H, output: O, session: string, change: FileChange) -> FileOutcome
     ![CommandOperations, Memory, Console, Command.run<DefaultCommandSandbox>, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Fs.atomic_replace<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>, Error<ConsoleError>, Error<BudgetExceeded>] {
     return handle (service.replace_file(change) with bindings(files, journals, history, output)) with { SessionContext.current() => session; };
 }
 
-public flow list<F ~ MutationFileAccess, J ~ ChangeJournalStore, H ~ MutationHistoryStore, O ~ MutationOutputSink>(files: F, journals: J, history: H, output: O, session: string, observing: bool) -> Array<Journal>
+public flow list<F ~ MutationFileAccess, J ~ ChangeJournalStore, H ~ MutationHistoryStore + ConversationReader, O ~ MutationOutputSink>(files: F, journals: J, history: H, output: O, session: string, observing: bool) -> Array<Journal>
     ![CommandOperations, Memory, Console, Command.run<DefaultCommandSandbox>, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Fs.atomic_replace<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>, Error<ConsoleError>, Error<BudgetExceeded>] {
     return handle (service.list(observing) with bindings(files, journals, history, output)) with { SessionContext.current() => session; };
 }
 
-public flow operations() -> ![ChangeOperations => CommandOperations, Memory, Console, Command.run<DefaultCommandSandbox>, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Fs.atomic_replace<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>, Error<ConsoleError>, Error<BudgetExceeded>] ![] {
-    let files = ProjectMutationFiles {};
-    let journals = NativeChangeJournals {};
-    let history = NativeMutationHistory {};
-    let output = TerminalMutationOutput {};
+public flow operations<F ~ MutationFileAccess, J ~ ChangeJournalStore, H ~ MutationHistoryStore + ConversationReader, O ~ MutationOutputSink>(files: F, journals: J, history: H, output: O) -> ![ChangeOperations => CommandOperations, Memory, Console, Command.run<DefaultCommandSandbox>, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Fs.atomic_replace<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>, Error<ConsoleError>, Error<BudgetExceeded>] ![] {
     return handler {
         ChangeOperations.apply(session, name, changes) => execute(files, journals, history, output, session, "apply", name, changes, "");
         ChangeOperations.undo(session, edit) => execute(files, journals, history, output, session, "undo", "", [], edit);

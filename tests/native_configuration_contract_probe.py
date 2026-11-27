@@ -73,8 +73,7 @@ print(json.dumps({'exit':p.returncode,'stdout':p.stdout,'stderr':p.stderr,'resou
     record = json.loads(result.stdout)
     (evidence / 'result.json').write_text(json.dumps(record, indent=2) + '\n')
     assert record['exit'] == 0 and not record['stderr'], str(evidence) + '\n' + record['stderr'][:2400]
-    expected = ['PORT source', 'PORT session', 'PORT lookup', 'PORT toml', 'PORT entries', 'PORT remember',
-                'PORT source', 'PORT session', 'PORT lookup', 'PORT scope .', 'PORT guidance AGENTS.md',
+    expected = ['PORT toml', 'PORT entries', 'PORT scope .', 'PORT guidance AGENTS.md',
                 'PORT scope .', 'PORT scope src', 'PORT guidance src/AGENTS.md', 'PORT scope src',
                 'PASS configuration cache and instruction application effects']
     assert record['stdout'].splitlines() == expected, record['stdout']

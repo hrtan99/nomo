@@ -52,7 +52,3 @@ public tool job_output(job: string) -> Array<JobEventView>
     let session = perform SessionContext.current();
     return perform ProcessOperations.output(session, job);
 }
-
-public flow jobs(session: string) -> Array<JobView> ![ProcessOperations] {
-    return perform ProcessOperations.list(session);
-}

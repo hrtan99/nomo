@@ -1,27 +1,29 @@
 module nomo.bootstrap.conversation;
 
-import nomo.adapters.model.conversation_service.NativeConversation;
-import nomo.adapters.model.conversation_service as service;
+import nomo.application.conversation.service.Conversation;
+import nomo.application.conversation.service as service;
 import nomo.adapters.filesystem.instructions.ProjectInstructionFiles;
 import nomo.application.conversation.ports.{ConversationReader, ConversationWriter, GenerationReservation, ResultPublication};
 import nomo.application.execution.ports.AttemptRepository;
-import nomo.application.context.ports.{InstructionReader, SavedJobsReader, ContextProjection};
-import nomo.application.conversation.effects.{CodingModel, SummaryModel};
 import nomo.adapters.storage.processes.NativeJobs;
 import nomo.adapters.model.native.{NativeCodingModel, NativeSummaryModel};
 import nomo.adapters.model.context_projection.RollingContext;
-import nomo.bootstrap.configuration.load as load_configuration;
+import nomo.bootstrap.configuration;
+import nomo.bootstrap.configuration.ConfiguredConfiguration;
+import nomo.adapters.cli.output.ConsoleLines;
 
-public alias ConfiguredConversation<H ~ ConversationReader + ConversationWriter + GenerationReservation + ResultPublication, A ~ AttemptRepository> = NativeConversation<H, A, ProjectInstructionFiles, NativeJobs, NativeCodingModel, NativeSummaryModel, RollingContext>;
+public alias ConfiguredConversation<H ~ ConversationReader + ConversationWriter + GenerationReservation + ResultPublication, A ~ AttemptRepository> = Conversation<H, A, ProjectInstructionFiles, NativeJobs, NativeCodingModel, NativeSummaryModel, RollingContext, ConfiguredConfiguration<H>, ConsoleLines>;
 
-public flow create<H ~ ConversationReader + ConversationWriter + GenerationReservation + ResultPublication, A ~ AttemptRepository>(history: H, attempts: A) -> ConfiguredConversation<H, A> {
-    return service.create<H, A, ProjectInstructionFiles, NativeJobs, NativeCodingModel, NativeSummaryModel, RollingContext>(session => load_configuration(history, session)) with {
+public flow create<H ~ ConversationReader + ConversationWriter + GenerationReservation + ResultPublication, A ~ AttemptRepository>(history: H, attempts: A, instructions: ProjectInstructionFiles, jobs: NativeJobs, output: ConsoleLines) -> ConfiguredConversation<H, A> {
+    return service.create<H, A, ProjectInstructionFiles, NativeJobs, NativeCodingModel, NativeSummaryModel, RollingContext, ConfiguredConfiguration<H>, ConsoleLines>() with {
         history: H => history;
         attempts: A => attempts;
-        instructions: ProjectInstructionFiles => ProjectInstructionFiles {};
-        jobs: NativeJobs => NativeJobs {};
+        instructions: ProjectInstructionFiles => instructions;
+        jobs: NativeJobs => jobs;
         coding: NativeCodingModel => NativeCodingModel {};
         summary: NativeSummaryModel => NativeSummaryModel {};
         projection: RollingContext => RollingContext {};
+        configuration: ConfiguredConfiguration<H> => configuration.create(history);
+        output: ConsoleLines => output;
     };
 }

@@ -1,6 +1,6 @@
-module nomo.adapters.model.conversation_service;
+module nomo.application.conversation.service;
 
-import nomo.application.conversation.service_ports.ConversationService;
+import nomo.application.conversation.service_ports.{ConversationService, ConversationConfiguration, ConversationOutputSink};
 
 import nomo.application.commands.effects.CommandOperations;
 import nomo.application.instructions.ports.ProjectInstructions;
@@ -16,19 +16,21 @@ import nomo.application.conversation.turn.turn;
 import nomo.application.conversation.compact.compact as compact_conversation;
 import nomo.domain.configuration.settings.{Settings, with_check};
 import nomo.native.workspace.ProjectRoot;
-import std.io.{println, IOError as ConsoleError};
+import std.io.IOError as ConsoleError;
 import std.effects.Fs;
 import std.fs.{ReadLimitError, IOError as FileError};
 
 // Dependencies are resolved at construction. Session/settings stay local to each call.
-public type NativeConversation<
+public type Conversation<
     History ~ ConversationReader + ConversationWriter + GenerationReservation + ResultPublication,
     Attempts ~ AttemptRepository,
     Instructions ~ InstructionReader,
     Jobs ~ SavedJobsReader,
     Coding ~ CodingModel,
     Summary ~ SummaryModel,
-    Projection ~ ContextProjection
+    Projection ~ ContextProjection,
+    Configuration ~ ConversationConfiguration,
+    Output ~ ConversationOutputSink
 > = {
     @inject history: History,
     @inject attempts: Attempts,
@@ -37,22 +39,25 @@ public type NativeConversation<
     @inject coding: Coding,
     @inject summary: Summary,
     @inject projection: Projection,
-    configuration: (string) -> Settings ![CommandOperations, Memory, Console, Command.run<DefaultCommandSandbox>, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<ConsoleError>, Error<FileError>, Error<ReadLimitError>, Error<BudgetExceeded>],
+    @inject configuration: Configuration,
+    @inject output: Output,
 };
 
-impl NativeConversation<
+impl Conversation<
     History ~ ConversationReader + ConversationWriter + GenerationReservation + ResultPublication,
     Attempts ~ AttemptRepository,
     Instructions ~ InstructionReader,
     Jobs ~ SavedJobsReader,
     Coding ~ CodingModel,
     Summary ~ SummaryModel,
-    Projection ~ ContextProjection
+    Projection ~ ContextProjection,
+    Configuration ~ ConversationConfiguration,
+    Output ~ ConversationOutputSink
 > ~ ConversationService {
 
     public flow settings(self, session: string, check: Option<Array<string>>) -> Settings
         ![CommandOperations, Memory, Console, Command.run<DefaultCommandSandbox>, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<ConsoleError>, Error<FileError>, Error<ReadLimitError>, Error<BudgetExceeded>] {
-        let value = (self.configuration)(session);
+        let value = self.configuration.load(session);
         return with_check(value, check);
     }
 
@@ -64,7 +69,7 @@ impl NativeConversation<
             ConversationContext.acquire(selected, task, settings) => build(dependencies.history, dependencies.instructions, dependencies.attempts, dependencies.jobs, selected, task, settings);
             ConversationModel.code(input) => dependencies.coding.code(input);
             ConversationModel.summarize(input) => dependencies.summary.summarize(input);
-            ConversationOutput.write(line) => println(line);
+            ConversationOutput.write(line) => dependencies.output.write(line);
         };
     }
 
@@ -85,7 +90,9 @@ public flow create<
     Jobs ~ SavedJobsReader,
     Coding ~ CodingModel,
     Summary ~ SummaryModel,
-    Projection ~ ContextProjection
->(configuration: (string) -> Settings ![CommandOperations, Memory, Console, Command.run<DefaultCommandSandbox>, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<ConsoleError>, Error<FileError>, Error<ReadLimitError>, Error<BudgetExceeded>]) -> NativeConversation<History, Attempts, Instructions, Jobs, Coding, Summary, Projection> {
-    return NativeConversation<History, Attempts, Instructions, Jobs, Coding, Summary, Projection> { configuration };
+    Projection ~ ContextProjection,
+    Configuration ~ ConversationConfiguration,
+    Output ~ ConversationOutputSink
+>() -> Conversation<History, Attempts, Instructions, Jobs, Coding, Summary, Projection, Configuration, Output> {
+    return Conversation<History, Attempts, Instructions, Jobs, Coding, Summary, Projection, Configuration, Output> {};
 }
