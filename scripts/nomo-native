@@ -57,7 +57,7 @@ while [[ $# -gt 0 ]]; do
     *) task_arguments+=("$1"); shift ;;
   esac
 done
-set -- "${task_arguments[@]}"
+set -- ${task_arguments[@]+"${task_arguments[@]}"}
 umask 077
 task_state="${NOMO_NATIVE_STATE:-${XDG_STATE_HOME:-$HOME/.local/state}/nomo/native}"
 mkdir -p -- "$task_state"
