@@ -166,7 +166,7 @@ delete = false
     (project / 'etas.toml').write_text(manifest)
     result = dict(task='EDIT-PREVIEW-001', status='prepared', sources=copied,
                   fixture_sha256=hashlib.sha256(FIXTURE.read_bytes()).hexdigest(), checks=[item['label'] for item in checks], commands=[],
-                  qualification='Pure line display and source-handled Approval=false in the existing execute controller. Actual host Approval0; no native consent/write/lifecycle claim.')
+                  qualification='Pure line display and substituted WorkConfirmation refusal in the existing application execute controller. Actual host Approval0; no native consent/write/lifecycle claim.')
     output = evidence / 'results.json'
     def save():
         output.write_text(json.dumps(result, indent=2) + '\n')
