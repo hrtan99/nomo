@@ -48,6 +48,9 @@ Legacy edit-journal transitions now live in `application/sessions/edit_operation
 
 Followup admission/claim/completion and predecessor sequencing also belong to application/sessions/history_followup. Its FollowupPredecessors port exposes the first work, edit and check observations; NativeHistoryFollowup supplies those readers plus the existing CAS/chat roles. Recoverable work record constructors and pure binding/event rules live in domain/sessions/recoverable_work_state. ProjectLaunchControl exposes only publication of the selected directory; its filesystem adapter owns the control-file path. Final checked scope and remaining runtime work are recorded in [the followup receipt](examples/native-project/followup-policy-ioc-20261127.json).
 
+
+Terminal orchestration lives in application/conversation/terminal. Domain Options/Command/GitRequest describe requests; TerminalInput supplies parsed commands, and TerminalOutput emits typed outcomes to TerminalDisplay. CLI owns input parsing, JSON encoding, tags and help text. Git and configured-check policy are application use cases shared by the terminal and model tool entry adapters. Bootstrap selects the concrete terminal implementations. Exact source and ongoing original runtime scope: [terminal IoC receipt](examples/native-project/terminal-ioc-20261127.json).
+
 ## Compatibility identities
 
 Some old module paths remain as **declaration-only compatibility leaves**. They preserve nominal types already used by saved records, Memory schema/resources and filesystem Region configuration. They contain no workflow, model, tool, effect or concrete method bodies. Their executable code has moved into the layers above.

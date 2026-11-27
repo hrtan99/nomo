@@ -1,0 +1,136 @@
+{
+  "date": "2026-11-27",
+  "status": "source-check-passed-original-worker-continuation-running",
+  "source_commit": "bc8021d0d8918e2d4ef5373737f7327711aa4222",
+  "snapshot": {
+    "root": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-eoo3c0ga",
+    "tree": "41003e0ba0c6ae0c4e2a6a8cea185ae780e4cf22",
+    "evidence": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-eoo3c0ga/compiler-evidence",
+    "overlay": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-eoo3c0ga/compiler-compose.json",
+    "source_count": 457,
+    "source_manifest_sha256": "b6f2b00f1d844c58a3568f15e9e76817aec7a9a68e0ed8293caf35d9e87589c8"
+  },
+  "full_check": {
+    "exit": 0,
+    "elapsed_seconds": 58.97450740200001,
+    "resources": {
+      "memory.max": "4294967296",
+      "memory.peak": "3181809664",
+      "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+      "cpu.max": "400000 100000",
+      "pids.max": "256"
+    },
+    "source_count": 457,
+    "diagnostics": 0
+  },
+  "architecture": {
+    "status": "passed",
+    "modules": 457,
+    "imports": 3389,
+    "preserved_identity_leaves": 48
+  },
+  "changes": [
+    "TerminalApplication moves from the CLI to application/conversation/terminal. It consumes domain Options/Command, injected TerminalInput and application TerminalOutput with typed TerminalEvent outcomes.",
+    "ConsoleTerminalInput parses user input. ConsoleTerminalDisplay owns existing help, tags, text and JSON presentation. The application imports no CLI/process adapter. Bootstrap selects the input/display and installs its generic output Handler.",
+    "Git CLI parses GitRequest; model tools and terminal use one application Git command policy. Configured checks share an application use case and a domain CheckOutcome; model tool entry names/docs remain.",
+    "All original terminal string literals remain present in the split application/view sources. This is a static literal-set observation, not proof of byte ordering; the original runtime case is being collected."
+  ],
+  "initial_check_failure": {
+    "snapshot": {
+      "root": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-tdhdxhxh",
+      "tree": "a77b86b5d0a9ce7fb59a0bafe2334f2de9384d59",
+      "evidence": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-tdhdxhxh/compiler-evidence",
+      "overlay": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-tdhdxhxh/compiler-compose.json",
+      "source_count": 457,
+      "source_manifest_sha256": "e6c588fa1b0c6303b111ec185009ee199d60a9a82a905d7ad070973d0ee0f778"
+    },
+    "result": {
+      "exit": 1,
+      "elapsed_seconds": 2.466262042,
+      "resources": {
+        "memory.max": "4294967296",
+        "memory.peak": "632418304",
+        "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+        "cpu.max": "400000 100000",
+        "pids.max": "256"
+      }
+    },
+    "diagnostic_codes": [
+      "type::TypeMismatch",
+      "type::UnknownField"
+    ],
+    "cause": "Owned enum members Session/Job collided with imported type names in the new output union. Renamed to SessionHeader/ProcessJob; not reported as a compiler bug."
+  },
+  "runtime": {
+    "probe": "tests/native_worker_probe.py",
+    "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-worker-g_tbo464",
+    "initial_driver": {
+      "exit": 1,
+      "elapsed_seconds": 495.71829262492247,
+      "snapshot": {
+        "root": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-eoo3c0ga",
+        "tree": "41003e0ba0c6ae0c4e2a6a8cea185ae780e4cf22",
+        "evidence": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-eoo3c0ga/compiler-evidence",
+        "overlay": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-eoo3c0ga/compiler-compose.json",
+        "source_count": 457,
+        "source_manifest_sha256": "b6f2b00f1d844c58a3568f15e9e76817aec7a9a68e0ed8293caf35d9e87589c8"
+      },
+      "log": "/Users/hrtan/Projects/nomo/tmp/terminal-resident-host-0243.log"
+    },
+    "initial_failure": "macOS Bash 3.2 nounset treats the empty task_arguments array as unset. Bare second-client startup exits before it can attach. The original failure/output remain retained.",
+    "actual_observed_before_failure": [
+      "new session and rename",
+      "approved real echo child start",
+      "approved reconnect/read with exact ready output",
+      "detached while the second child start approval was still pending",
+      "same Host PID 891, container-init PID 877 and first live child retained"
+    ],
+    "launcher_correction": {
+      "snapshot": {
+        "root": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-eoo3c0ga",
+        "tree": "41003e0ba0c6ae0c4e2a6a8cea185ae780e4cf22",
+        "evidence": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-eoo3c0ga/compiler-evidence",
+        "overlay": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-eoo3c0ga/compiler-compose.json",
+        "source_count": 457,
+        "source_manifest_sha256": "b6f2b00f1d844c58a3568f15e9e76817aec7a9a68e0ed8293caf35d9e87589c8"
+      },
+      "failed_driver": {
+        "exit": 1,
+        "elapsed_seconds": 495.71829262492247,
+        "snapshot": {
+          "root": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-eoo3c0ga",
+          "tree": "41003e0ba0c6ae0c4e2a6a8cea185ae780e4cf22",
+          "evidence": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-eoo3c0ga/compiler-evidence",
+          "overlay": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-eoo3c0ga/compiler-compose.json",
+          "source_count": 457,
+          "source_manifest_sha256": "b6f2b00f1d844c58a3568f15e9e76817aec7a9a68e0ed8293caf35d9e87589c8"
+        },
+        "log": "/Users/hrtan/Projects/nomo/tmp/terminal-resident-host-0243.log"
+      },
+      "change": "Only scripts/nomo-native changes in the exported runtime folder, before the second successful terminal attachment. The exact original is retained; all Etas source files and the same live container/Host/approval are preserved. This is continuation of the original invocation, not a fresh rerun or an immutable-helper claim.",
+      "launcher_before_sha256": "bbf7b05c6d6925801e724ceac755dc46423cad0b4a8f8f0ef84be32a09bbe2cf",
+      "launcher_after_sha256": "903fe6947b9e35ae25fccf6e3d4d8dbc6581bb8f38f6a0cf71c5807904351ed3",
+      "worker": "0e4d465ba355517dcaff661a22b7f9a8b64acb7781d46178a3809be2e7f31620",
+      "etas_pid": 891,
+      "container_init_pid": 877,
+      "evidence": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-eoo3c0ga/compiler-evidence/resident-host-reconnect"
+    },
+    "continuation": {
+      "status": "running",
+      "same_etas_pid": 891,
+      "same_container_init_pid": 877,
+      "reconnected_to_original_pending_preview": true,
+      "qualification": "The same original Host/approval is resumed, without restarting completed actions. Only its launcher helper was corrected in the exported folder; all checked Etas sources remain unchanged. Remaining original input/EOF/stop/fresh-Host assertions and final authority/trace audit are not yet accepted.",
+      "observed_after_fix": [
+        "Bare launcher attaches the original worker and replays the exact still-pending start preview.",
+        "After explicit confirmation, the original Host returns native-0-job-4 for the waiting child; the next original read is in progress."
+      ]
+    },
+    "fixture_timing": "The existing synthetic waiting child now uses signal.pause instead of a 300-second expiry so the original explicit-stop oracle remains meaningful under interpreter #120. No new case/matrix is added."
+  },
+  "launcher_fix_commit": "fa20b0e",
+  "fixture_timing_commit": "b79c678",
+  "real_provider_requests": 0,
+  "new_negative_matrix": false,
+  "qualification": "This is an original-consumer continuation, not a clean full native-worker pass. Original driver exit 1 remains authoritative. Full startup/cross-project/legacy compatibility, required remaining scenario acceptance and native default cutover remain open."
+}

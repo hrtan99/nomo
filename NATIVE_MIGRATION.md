@@ -16,6 +16,15 @@ A separate unselected candidate implements real creation/update metadata, recenc
 
 The complete candidate and exact checks are retained in `examples/native-project/candidates/session-activity-0243.{patch,json}`; its full original startup/import/check/resident acceptance is still required. Configuration JSON #121 and generic Task/capture #103 remain separate gates.
 
+
+## Terminal application ownership, 2026-11-27
+
+The actual terminal workflow moves out of the CLI into application/conversation/terminal. It accepts domain startup/command requests and an injected TerminalInput, and emits typed TerminalEvent outcomes through an application output Handler. The CLI retains parsing and all existing textual/JSON rendering. Git/check policy is shared application code used by both terminal and model entry adapters. The complete official 0.24.3 O2/cache-off check passes 457 modules with zero diagnostics in 58.97 seconds, 3,181,809,664-byte peak and no OOM; architecture passes 3,389 imports and all 48 preserved identity leaves. The first check's owned enum/type-name collision is corrected and its failed snapshot remains retained.
+
+The original resident-worker scenario is still being collected. Initial creation, rename, actual approved child start/read and detach during a pending second-child approval succeed, retaining the same Host/PIDs. Bare reattachment then exposes a Nomo launcher bug: macOS Bash 3.2 rejects its empty argument array under nounset before connecting. The one-line shell expansion is fixed and the same live Host/PID/approval is reattached, with the original failure retained. Only that launcher helper changes in the exported runtime folder; checked Etas source stays byte-identical. The existing synthetic waiting child now waits for explicit stop instead of expiring at 300 seconds under interpreter #120. Remaining exact I/O, EOF, stop, fresh-Host output and final authority/trace assertions are pending; no clean full pass is claimed. [Terminal receipt](examples/native-project/terminal-ioc-20261127.json).
+
+The unselected continuous-capture candidate is mechanically rebased around this new terminal assembly; its four capture implementation files and complete original runtime oracle remain byte-identical. Capture and canonical-approval candidates pass current apply preflight only. Their earlier normal-check/runtime failures and upstream gates remain unchanged; they are not rerun or installed by this refactor.
+
 ## Legacy persistence ownership, 2026-11-27
 
 Edit-journal availability, intent, completion and inspection now run in application/sessions/edit_operations over CasRows. History-work format/budget rules belong to the domain; admission, prior-history binding, claim, completion and inspection run in an application service over CasRows and PriorChatReader. Native adapters retain their original Memory stores. Five existing WorkPersistence implementations move out of four CLI roots into adapters/storage/work_persistence; no wrapper type is added.

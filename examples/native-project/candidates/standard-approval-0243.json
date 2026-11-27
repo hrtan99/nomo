@@ -88,6 +88,13 @@
     "qualification": "Independent selected fixture changes use WorkConfirmation substitution and original pure preview requirements. Type-check only; no additional runtime matrix."
   },
   "current_preflight": {
+    "base_commit": "b79c678c5546e773acf68c46415ab0967e433b29",
+    "base_tree": "0fb34edf8ae1a2dd9ba4db0d49eb3655d7621c30",
+    "candidate_tree": "66a2a07a33a47819224a38038479f3290fc6327f",
+    "status": "passed",
+    "scope": "Apply only against the terminal application refactor; original canonical API failed-runtime snapshots remain exact and unchanged. No compiler/runtime rerun or acceptance is inferred."
+  },
+  "previous_preflight": {
     "base_commit": "12bccddf562593766fc33a049b017ace3c514e77",
     "base_tree": "9d500b17d9df25571caafd37945f5f230ab7fe7e",
     "candidate_tree": "1b76c4abb764c3c824eab5b91d2f8c61eb933e26",

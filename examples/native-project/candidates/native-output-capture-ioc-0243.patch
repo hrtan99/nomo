@@ -258,10 +258,10 @@ index 267fefb..6229d45 100644
      for item in history.messages(selected.session, 0) {
          if item.role != "tool_call" || item.name != "command" { continue; }
 diff --git a/src/nomo/bootstrap/main.es b/src/nomo/bootstrap/main.es
-index 9c830d6..0c4e557 100644
+index a8465aa..db08adc 100644
 --- a/src/nomo/bootstrap/main.es
 +++ b/src/nomo/bootstrap/main.es
-@@ -7,6 +7,8 @@ import nomo.application.commands.handlers as command;
+@@ -10,6 +10,8 @@ import nomo.application.commands.handlers as command;
  import nomo.application.workspace.handlers as workspace;
  import nomo.adapters.filesystem.project_files.ProjectFiles;
  import nomo.application.processes.handlers as processes;
@@ -270,7 +270,7 @@ index 9c830d6..0c4e557 100644
  import nomo.application.transfer.handlers as transfer;
  import nomo.application.projects.handlers as projects;
  import nomo.application.mutations.handlers as mutations;
-@@ -35,10 +37,12 @@ import std.fs.{ReadLimitError, IOError as FileError};
+@@ -38,10 +40,12 @@ import std.fs.{ReadLimitError, IOError as FileError};
  import std.io.IOError;
  
  public flow run(args: Array<string>) -> i32
@@ -283,25 +283,34 @@ index 9c830d6..0c4e557 100644
 +    let captured = NativeCapture {};
      let guidance = ProjectInstructionFiles {};
      let output = ConsoleLines {};
-     let application = entry.application<NativeHistory, NativeAttempts, ConsoleConversationPicker, ConfiguredConversation<NativeHistory, NativeAttempts>>() with {
-@@ -48,15 +52,17 @@ public flow run(args: Array<string>) -> i32
+     let application = entry.application<NativeHistory, NativeAttempts, ConsoleConversationPicker, ConfiguredConversation<NativeHistory, NativeAttempts>, ConsoleTerminalInput>() with {
+@@ -52,17 +56,19 @@ public flow run(args: Array<string>) -> i32
          conversation: ConfiguredConversation<NativeHistory, NativeAttempts> => conversation.create(history, attempts, guidance, jobs, output);
      };
      // Runtime handlers interpret requests using the same selected dependencies.
 -    return handle (
+-        handle (
 +    return capture.scope(control, jobs, captured, () => {
 +        return handle (
-         handle (
              handle (
                  handle (
                      handle (
--                        handle application.run(args) with processes.bindings(history, attempts, HostProcessControl {}, jobs, NativeOutputArchive {}, output)
-+                        handle application.run(args) with processes.bindings(history, attempts, control, jobs, NativeOutputArchive {}, captured, output)
-                     ) with transfer.operations(history, attempts, ProjectArchives {}, JsonArchiveEncoding {}, TerminalTransfer {})
-                 ) with projects.operations(NativeRecentProjects {}, NativeProjectLaunch {}, TerminalProjects {})
-             ) with mutations.operations(ProjectMutationFiles {}, NativeChangeJournals {}, history, output)
-         ) with workspace.bindings(history, ProjectFiles {}, guidance)
-     ) with command.bindings(history, attempts, HostCommandRunner {}, ConsoleCommandPreview {});
+                         handle (
+-                            handle application.run(parse(args)) with processes.bindings(history, attempts, HostProcessControl {}, jobs, NativeOutputArchive {}, output)
+-                        ) with transfer.operations(history, attempts, ProjectArchives {}, JsonArchiveEncoding {}, TerminalTransfer {})
+-                    ) with projects.operations(NativeRecentProjects {}, NativeProjectLaunch {}, TerminalProjects {})
+-                ) with mutations.operations(ProjectMutationFiles {}, NativeChangeJournals {}, history, output)
+-            ) with workspace.bindings(history, ProjectFiles {}, guidance)
+-        ) with command.bindings(history, attempts, HostCommandRunner {}, ConsoleCommandPreview {})
+-    ) with terminal_handlers.output(ConsoleTerminalDisplay {});
++                            handle (
++                                handle application.run(parse(args)) with processes.bindings(history, attempts, control, jobs, NativeOutputArchive {}, captured, output)
++                            ) with transfer.operations(history, attempts, ProjectArchives {}, JsonArchiveEncoding {}, TerminalTransfer {})
++                        ) with projects.operations(NativeRecentProjects {}, NativeProjectLaunch {}, TerminalProjects {})
++                    ) with mutations.operations(ProjectMutationFiles {}, NativeChangeJournals {}, history, output)
++                ) with workspace.bindings(history, ProjectFiles {}, guidance)
++            ) with command.bindings(history, attempts, HostCommandRunner {}, ConsoleCommandPreview {})
++        ) with terminal_handlers.output(ConsoleTerminalDisplay {});
 +    });
  }
 diff --git a/src/nomo/domain/process/capture.es b/src/nomo/domain/process/capture.es
@@ -315,7 +324,7 @@ index 0000000..cf06b78
 +public type CaptureHead = { events: i64, phase: string };
 +public type CaptureCursor = { event: i64, stdout: usize, stderr: usize };
 diff --git a/tests/fixtures/native_process_controller/src/app/main.es b/tests/fixtures/native_process_controller/src/app/main.es
-index fa3d017..0c5640d 100644
+index 2cc0476..397f504 100644
 --- a/tests/fixtures/native_process_controller/src/app/main.es
 +++ b/tests/fixtures/native_process_controller/src/app/main.es
 @@ -9,6 +9,8 @@ import nomo.domain.process.jobs.{Job, JobEvent};
@@ -460,9 +469,10 @@ index f30afc2..612eba7 100644
              if approval is None or event['authority']['approval_count'] != approval['authority']['approval_count'] + 1:
                  failures.append({'request': event['id'], 'action': event['qualified_action'],
 diff --git a/tests/native_worker_probe.py b/tests/native_worker_probe.py
+index 8f0c9ff..af7872f 100644
 --- a/tests/native_worker_probe.py
 +++ b/tests/native_worker_probe.py
-@@ -25,7 +25,8 @@
+@@ -26,7 +26,8 @@ def execution_pid(worker):
  
  
  class Client:
@@ -472,7 +482,7 @@ diff --git a/tests/native_worker_probe.py b/tests/native_worker_probe.py
          self.master, slave = pty.openpty()
          self.process = subprocess.Popen(command, cwd=ROOT, env=environment, stdin=slave, stdout=slave, stderr=slave)
          os.close(slave)
-@@ -52,7 +53,7 @@
+@@ -53,7 +54,7 @@ class Client:
          start, approvals = len(self.output), 0
          # Observation only: official 0.24.3 currently spends long CPU gaps
          # between Host actions (interpreter #120). Keep the same live worker.
