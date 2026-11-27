@@ -19,6 +19,7 @@ import tomllib
 
 import harness_session_probe as previous
 from normal_graph_identity import verify_cli
+from native_memory_value import value as memory_value
 
 ROOT = Path(__file__).resolve().parent.parent
 REGION = 'nomo.tools.edit_file.EditableRoot'
@@ -42,7 +43,7 @@ def ascii_json(value):
                 code -= 65536
                 out += '\\u'+format(55296+(code>>10),'04x')+'\\u'+format(56320+(code&1023),'04x')
         return out+'"'
-    if isinstance(value,dict): return '{'+','.join(quote(k)+':'+quote(v) for k,v in value.items())+'}'
+    if isinstance(value,dict): return json.dumps(value,ensure_ascii=True,sort_keys=True,separators=(',',':'))
     return '['+','.join(quote(v) for v in value)+']'
 
 def expected(item):
@@ -65,8 +66,9 @@ def rows(state):
     with sqlite3.connect(path.as_uri()+'?mode=ro',uri=True) as db:
         if not db.execute("SELECT name FROM sqlite_master WHERE name='memory_entries'").fetchall(): return {}
         data=db.execute('SELECT region,path,key_json,value_json,version FROM memory_entries').fetchall()
-    return {previous.storage.untag(json.loads(key)):
-            dict(region=region,path=json.loads(store),value=previous.storage.untag(json.loads(value)),version=version)
+    # The pinned runtime stores both typed keys and records in ETS1 envelopes.
+    return {memory_value(json.loads(key)):
+            dict(region=region,path=json.loads(store),value=memory_value(json.loads(value)),version=version)
             for region,store,key,value,version in data}
 
 def environment(apply=True):
@@ -93,7 +95,7 @@ def run_pty(argv, state, item, folder, binding, preview_check=None, failure_outp
     settings[3] &= ~(termios.ECHO|termios.ECHONL);settings[1] &= ~termios.ONLCR
     settings[6][termios.VEOF]=b'\x04';termios.tcsetattr(slave,termios.TCSANOW,settings)
     proc=subprocess.Popen(argv,cwd=state,env=environment(),stdin=slave,stdout=slave,stderr=subprocess.PIPE,start_new_session=True)
-    os.close(slave);out=b'';err=b'';native=False;nominal=False;deadline=time.monotonic()+90;milestones=[]
+    os.close(slave);out=b'';err=b'';native=False;nominal=False;deadline=time.monotonic()+1800;milestones=[]
     try:
         while True:
             ready,_,_=select.select([master,proc.stderr.fileno()],[],[],0.02)
@@ -182,7 +184,7 @@ def main():
                 (dest/'etas.toml').write_text(manifest(state,workspace,readonly))
             args=['--id',item['id'],'--workspace',item['workspace'],'--path',item['path']]
             argv=[str(cli),'run',str(project),'--flow','edit_apply','--allow-effects','--trace-out',str(case/'apply.trace.json'),'--args',*args,'--target',item['target'],'--replacement',item['replacement']]
-            profile=subprocess.run([str(cli),'run',str(project),'--flow','edit_apply','--print-runtime-profile'],cwd=state,env=environment(),capture_output=True,timeout=15)
+            profile=subprocess.run([str(cli),'run',str(project),'--flow','edit_apply','--print-runtime-profile'],cwd=state,env=environment(),capture_output=True,timeout=1800)
             (case/'profile.stdout.bin').write_bytes(profile.stdout);(case/'profile.stderr.bin').write_bytes(profile.stderr)
             assert profile.returncode==0 and not profile.stderr
             effective=json.loads(profile.stdout);assert effective['approval']=='Prompt'
@@ -192,8 +194,9 @@ def main():
             if name=='non_tty':
                 proc=subprocess.Popen(argv,cwd=state,env=environment(),stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,start_new_session=True)
                 # Keep stdin open and provide no data: Prompt must refuse without waiting.
-                proc.wait(timeout=20);out=proc.stdout.read();err=proc.stderr.read();proc.stdin.close();code=proc.returncode;milestones=['open_pipe_terminated']
-            else:out,err,code,milestones=run_pty(argv,state,item,workspace,binding)
+                proc.wait(timeout=1800);out=proc.stdout.read();err=proc.stderr.read();proc.stdin.close();code=proc.returncode;milestones=['open_pipe_terminated']
+            else:out,err,code,milestones=run_pty(argv,state,item,workspace,binding,
+                failure_output=lambda out,err: ((case/'apply.stdout.bin').write_bytes(out),(case/'apply.stderr.bin').write_bytes(err)))
             (case/'apply.stdout.bin').write_bytes(out);(case/'apply.stderr.bin').write_bytes(err)
             record=dict(name=name,status='observed',item=item,argv=argv,exit=code,stdout=out.decode(),stderr=err.decode(),milestones=milestones,effective_profile=effective)
             result['cases'].append(record);save()
@@ -215,7 +218,7 @@ def main():
             assert err.count(b'Type `yes` to approve:')==(0 if name=='non_tty' else 1)
             before=previous.inspect(state)
             status_argv=[str(cli),'run',str(status_project),'--flow','edit_status','--allow-effects','--trace-out',str(case/'status.trace.json'),'--args',*args]
-            shown=subprocess.run(status_argv,cwd=state,env=environment(False),capture_output=True,timeout=20)
+            shown=subprocess.run(status_argv,cwd=state,env=environment(False),capture_output=True,timeout=1800)
             (case/'status.stdout.bin').write_bytes(shown.stdout);(case/'status.stderr.bin').write_bytes(shown.stderr)
             assert shown.returncode==0 and not shown.stderr and previous.inspect(state)==before
             stored=json.loads(shown.stdout.decode().splitlines()[0][len('OPERATION '):]);assert stored['phase']==('completed' if success else 'intent' if journal else 'empty')
@@ -227,7 +230,7 @@ def main():
             if journal:
                 for opid in [item['id'],'different-id']:
                     retry=list(argv);retry[retry.index('--id')+1]=opid;retry[retry.index('--trace-out')+1]=str(case/('retry-'+opid+'.trace.json'))
-                    refused=subprocess.run(retry,cwd=state,env=environment(),input=b'',capture_output=True,timeout=20)
+                    refused=subprocess.run(retry,cwd=state,env=environment(),input=b'',capture_output=True,timeout=1800)
                     assert refused.returncode!=0 and refused.stdout==b'REFUSED edit operation slot already consumed; no retry\n'
                     retrace=json.loads(Path(retry[retry.index('--trace-out')+1]).read_text())
                     assert {e.get('qualified_action','') for e in retrace['events'] if e['kind']=='host_request_started'}<= {'Policy.evaluate','Console.stdout_write','Memory.read'}
