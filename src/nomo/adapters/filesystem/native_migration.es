@@ -3,8 +3,7 @@ module nomo.adapters.filesystem.native_migration;
 import std.effects.Fs;
 import std.fs.{IOError as FileError, ReadLimitError};
 import std.bytes.from_array;
-import std.text.parse_i32;
-import nomo.adapters.filesystem.migration_packet.{decode, integer, size, read};
+import nomo.adapters.filesystem.migration_packet.{decode, integer, size, read, WireExitCode, exit_code};
 import nomo.application.migration.ports.{NativeStateSource, MigrationRoot};
 import nomo.domain.migration.native_state.{NativeImage, NativeRecord};
 import nomo.domain.conversation.session.{Session, Ledger};
@@ -29,8 +28,7 @@ type WireAttempt = { id: string, session: string, kind: string, label: string, p
 type WireCache = { digest: Array<u8>, session: string, result_event: string };
 type WireJournal = { id: string, session: string, name: string, call: string, phase: string,
     steps: string, message: string, owner_call: string, owner_name: string };
-type WireOption = { tag: string, values: Array<string> };
-type WireOutput = { job: string, call: string, phase: string, exit_code: WireOption,
+type WireOutput = { job: string, call: string, phase: string, exit_code: WireExitCode,
     stdout: string, stderr: string, stdout_bytes: Array<u8>, stderr_bytes: Array<u8> };
 
 flow session(value: WireSession) -> Session {
@@ -55,11 +53,6 @@ flow attempt(value: WireAttempt) -> Attempt {
 flow journal(value: WireJournal) -> Journal {
     return Journal { id = value.id, session = value.session, name = value.name, call = integer(value.call), phase = value.phase,
         steps = integer(value.steps), message = value.message, owner_call = integer(value.owner_call), owner_name = value.owner_name };
-}
-flow exit_code(value: WireOption) -> Option<i32> ![Error<IndexError>] {
-    if value.tag == "None" && value.values.len() == 0 { return None(); }
-    if value.tag != "Some" || value.values.len() != 1 { abort("native migration exit code has an invalid option" ); }
-    return Some(match parse_i32(value.values[0]) { Ok(value) => value, Err(_) => abort("native migration exit code is invalid"), });
 }
 flow output(value: WireOutput) -> JobEvent ![Error<IndexError>] {
     return JobEvent { job = value.job, call = integer(value.call), phase = value.phase, exit_code = exit_code(value.exit_code),

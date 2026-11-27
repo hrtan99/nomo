@@ -4,6 +4,7 @@ The controlled source supplies typed input independently of the unresolved stand
 JSON parser. This qualifies the application/storage boundary, not the packet codec.
 Fresh status/history then use the ordinary native product entry.
 """
+import argparse
 import hashlib
 import json
 import os
@@ -51,7 +52,7 @@ def fixture(image):
     jobs = []
     for old in image['jobs']:
         record = ', '.join(name + ' = ' + quote(old[name]) for name in ('id', 'workspace', 'arguments', 'phase', 'original'))
-        exit_code = 'None()' if old['exit_code'] is None else 'Some(' + old['exit_code'] + ')'
+        exit_code = 'None()' if old['exit_code']['tag'] == 'None' else 'Some(' + old['exit_code']['values'][0] + ')'
         chunks = ', '.join('from_array(' + quote(data) + ')' for data in old['chunks'])
         jobs.append('ProjectJob { record = ArchivedJob { ' + record + ', exit_code = ' + exit_code +
                     ', output_bytes = ' + old['output_bytes'] + ', parts = ' + str(len(old['chunks'])) +
@@ -232,7 +233,51 @@ def restore_imported(evidence, environment, project, edit, operation):
                         (['absence of created new/ subtree'] if operation == 'undo' else [])}
 
 
+def production(retained, destination):
+    """Qualify the formal codec against the already accepted complete typed image."""
+    retained, destination = retained.resolve(), destination.resolve()
+    source = retained / 'original/project.sqlite3'
+    before = digest(source)
+    expected = json.loads((retained / 'migration-values.json').read_text())
+    environment = dict(os.environ, NOMO_NATIVE_UID=str(os.getuid()), NOMO_NATIVE_GID=str(os.getgid()))
+    command = [str(ROOT / 'scripts/nomo-migrate-native'), '--from', 'project', str(source), str(destination)]
+    run = subprocess.run(command, cwd=ROOT, env=environment, capture_output=True, text=True)
+    (retained / (destination.name + '-driver.txt')).write_text(run.stdout + run.stderr)
+    assert run.returncode == 0, run.stdout + run.stderr
+    receipt = json.loads((destination / 'migration.json').read_text())
+    assert receipt['status'] == 'completed' and receipt['source_database_sha256'] == before == digest(source)
+    actual = rows(destination / 'state/conversations.sqlite3', memory_value)
+    normalized = json.loads(json.dumps([{'region': region, 'store': store, 'key': key, 'value': value}
+        for (region, store, key), value in sorted(actual.items())], default=list))
+    assert normalized == expected, 'formal packet conversion differs from the complete typed-source result'
+    migration_requests = audit(destination / 'trace/trace.json')
+    image = json.loads((retained / 'input/snapshot.json').read_text())
+    conversation = next(old for old in image['conversations'] if old['title'] == 'Saved bicycle task')
+    environment.update(MINIMAX_API_KEY='unused-no-model', NOMO_NATIVE_STATE=str(destination / 'state'),
+                       NOMO_NATIVE_TRACE_ROOT=str(destination / 'history-traces'))
+    history = subprocess.run([str(ROOT / 'scripts/nomo-native'), conversation['workspace'], '--id', conversation['id'], '--history'],
+                             cwd=ROOT, env=environment, capture_output=True, text=True)
+    (destination / 'fresh-history.txt').write_text(history.stdout + history.stderr)
+    assert history.returncode == 0, history.stdout + history.stderr
+    assert all(event['text'] in history.stdout for event in conversation['events'])
+    history_requests = sum(audit(path) for path in (destination / 'history-traces').glob('run-*/trace.json'))
+    result = {'status': 'passed-formal-codec-all-rows-and-fresh-history', 'source': str(source),
+              'source_sha256': before, 'source_unchanged': True, 'business_rows_compared': len(expected),
+              'source_rows': receipt['rows'], 'migration_host_requests': migration_requests,
+              'fresh_history_host_requests': history_requests, 'model_requests': 0,
+              'command_actions': 0, 'retained_reference': str(retained)}
+    (destination / 'qualification.json').write_text(json.dumps(result, indent=2) + '\n')
+    print('PASS formal project packet, all business rows and fresh history: ' + str(destination), flush=True)
+
+
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--production', nargs=2, type=Path, metavar=('RETAINED_EVIDENCE', 'NEW_DESTINATION'),
+                        help='run the formal codec once against an existing accepted typed image, without repeating its producer or edits')
+    arguments = parser.parse_args()
+    if arguments.production:
+        production(*arguments.production)
+        return
     evidence = Path(tempfile.mkdtemp(prefix='nomo-project-state-migration-')).resolve()
     original, expected, selected_id, project = source(evidence)
     before = digest(original)

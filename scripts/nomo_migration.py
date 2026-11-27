@@ -189,8 +189,10 @@ def _project_jobs(directory):
             while data := stream.read(262144):
                 chunks.append(list(data))
                 size += len(data)
+        exit_code = ({'tag': 'None', 'values': []} if saved['exit_code'] is None else
+                     {'tag': 'Some', 'values': [str(saved['exit_code'])]})
         jobs.append({'id': path.parent.name, 'workspace': saved['root'], 'arguments': saved['arguments'],
-                     'phase': saved['status'], 'exit_code': None if saved['exit_code'] is None else str(saved['exit_code']),
+                     'phase': saved['status'], 'exit_code': exit_code,
                      'output_bytes': str(size), 'original': original, 'chunks': chunks})
     return jobs
 

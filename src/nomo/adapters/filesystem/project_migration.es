@@ -3,28 +3,23 @@ module nomo.adapters.filesystem.project_migration;
 import std.effects.Fs;
 import std.fs.{IOError as FileError, ReadLimitError};
 import std.bytes.from_array;
-import std.text.parse_i32;
 import nomo.application.migration.ports.{ProjectStateSource, MigrationRoot};
 import nomo.domain.migration.project_state.{ProjectImage, ProjectConversation, ProjectEvent, ProjectEdit, ProjectJob};
 import nomo.domain.process.archived_jobs.ArchivedJob;
-import nomo.adapters.filesystem.migration_packet.{read, integer, size};
+import nomo.adapters.filesystem.migration_packet.{read, integer, size, WireExitCode, exit_code};
 
 // Original SQLite integer IDs travel as decimal strings, never JSON numbers.
 type WireEvent = { id: string, role: string, kind: string, name: string, text: string };
 type WireConversation = { id: string, workspace: string, title: string, compacted_through: string,
     summary: string, archive: string, events: Array<WireEvent> };
 type WireJob = { id: string, workspace: string, arguments: Array<string>, phase: string,
-    exit_code: Option<string>, output_bytes: string, original: string, chunks: Array<Array<u8>> };
+    exit_code: WireExitCode, output_bytes: string, original: string, chunks: Array<Array<u8>> };
 type Packet = { format: string, source_sha256: string, projects: Array<string>,
     conversations: Array<WireConversation>, edits: Array<ProjectEdit>, jobs: Array<WireJob> };
 
-flow job(old: WireJob) -> ProjectJob {
-    let exit_code = match old.exit_code {
-        Some(text) => match parse_i32(text) { Ok(value) => Some(value), Err(_) => abort("migration job exit code is invalid"), },
-        None() => None(),
-    };
+flow job(old: WireJob) -> ProjectJob ![Error<IndexError>] {
     return ProjectJob { record = ArchivedJob { id = old.id, workspace = old.workspace,
-        arguments = old.arguments, phase = old.phase, exit_code, output_bytes = size(old.output_bytes),
+        arguments = old.arguments, phase = old.phase, exit_code = exit_code(old.exit_code), output_bytes = size(old.output_bytes),
         parts = old.chunks.len(), original = old.original },
         chunks = old.chunks.iter().map(data => from_array(data)).collect() };
 }
