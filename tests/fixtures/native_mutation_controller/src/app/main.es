@@ -5,23 +5,24 @@ import std.text.{from_i64, ends_with};
 import std.json.JsonValue;
 import nomo.application.conversation.session_context.SessionContext;
 import nomo.adapters.storage.conversations.{NativeHistory, record as save_record, tool_finished, pending_request, result_published};
+import nomo.adapters.storage.change_journals.NativeChangeJournals;
 import nomo.application.conversation.ports.{ConversationReader, ConversationCatalog};
-import nomo.application.mutations.ports.{MutationFiles, ChangeJournal, MutationHistory, MutationOutput};
+import nomo.application.mutations.ports.{MutationFiles, ChangeJournal, MutationHistory, MutationOutput, ChangeJournalStore};
 import nomo.application.mutations.service.{apply_plan, undo_changes, rollback_changes};
 import nomo.domain.mutations.models.{Change, ChangeOutcome, Journal, Step};
 
 type FileState = { exists: bool, text: string };
-alias Schema = MemoryRegion<{ Journals: Store<string, Journal>, Steps: Store<string, Step>, Files: Store<string, FileState>, Flags: Store<string, bool> }>;
+alias Schema = MemoryRegion<{ Files: Store<string, FileState>, Flags: Store<string, bool> }>;
 let Data = std.memory.region<Schema>(stable_id = "nomo-mutation-controller-fixture-v1", store = "mutation-controller-fixture");
 
 flow file(path: string) -> FileState {
     return match Data.Files.get(path) { Some(value) => value, None() => FileState { exists = false, text = "" } };
 }
 flow journal(id: string) -> Journal {
-    return match Data.Journals.get(id) { Some(value) => value, None() => abort("fixture journal missing"), };
+    return match (NativeChangeJournals {}).lookup(id) { Some(value) => value, None() => abort("fixture journal missing"), };
 }
 flow step(key: string) -> Step {
-    return match Data.Steps.get(key) { Some(value) => value, None() => abort("fixture step missing"), };
+    return match (NativeChangeJournals {}).step(key) { Some(value) => value, None() => abort("fixture step missing"), };
 }
 flow command(program: string, arguments: Array<string>) -> bool {
     if program == "/bin/mkdir" { return true; }
@@ -44,6 +45,7 @@ flow command(program: string, arguments: Array<string>) -> bool {
 }
 
 flow execute(history: NativeHistory, session: string, mode: string, edit: string) -> ChangeOutcome {
+    let journals = NativeChangeJournals {};
     return handle if mode == "apply" { apply_plan("write_file", [Change { operation = "write", path = "note.txt", target = "", text = "before new\n" }]) }
         else { if mode == "undo" { undo_changes(edit) } else { rollback_changes(edit) } } with {
         SessionContext.current() => session;
@@ -63,17 +65,12 @@ flow execute(history: NativeHistory, session: string, mode: string, edit: string
             ()
         }
         MutationFiles.command(program, arguments, call) => command(program, arguments);
-        ChangeJournal.lookup(id) => Data.Journals.get(id);
-        ChangeJournal.insert(value) => Data.Journals.insert(value.id, value);
-        ChangeJournal.save(value) => Data.Journals.put(value.id, value);
-        ChangeJournal.step(key) => Data.Steps.get(key);
-        ChangeJournal.save_step(key, value) => Data.Steps.put(key, value);
-        ChangeJournal.list(selected) => {
-            let page = Data.Journals.page(None(), 100);
-            var result: Array<Journal> = [];
-            @limits([Iterations(100)]) for item in page.entries   { if item.value.session == selected { result = result.push(item.value); } }
-            resume result;
-        }
+        ChangeJournal.lookup(id) => journals.lookup(id);
+        ChangeJournal.insert(value) => journals.insert(value);
+        ChangeJournal.save(value) => journals.save(value);
+        ChangeJournal.step(key) => journals.step(key);
+        ChangeJournal.save_step(key, value) => journals.save_step(key, value);
+        ChangeJournal.list(selected) => journals.list(selected);
         MutationHistory.record(role, name, value, call) => handle save_record(role, name, value, call) with { SessionContext.current() => session; };
         MutationHistory.finish(name, call, value) => handle tool_finished(name, call, value) with { SessionContext.current() => session; };
         MutationHistory.session(id) => history.load(id);
@@ -84,7 +81,7 @@ flow execute(history: NativeHistory, session: string, mode: string, edit: string
     };
 }
 
-public flow main(args: Array<string>) -> i32 ![Memory, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>, Error<IndexError>] {
+public flow main(args: Array<string>) -> i32 ![Memory, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>, Error<IndexError>, Error<BudgetExceeded>] {
     let history = NativeHistory {}; let session = history.create("mutation-controller", "Controlled mutation recovery");
     Data.Files.put("note.txt", FileState { exists = true, text = "before old\n" });
     let applied = execute(history, session.id, "apply", "");

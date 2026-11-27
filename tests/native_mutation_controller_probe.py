@@ -79,7 +79,7 @@ print(json.dumps({'exit':p.returncode,'stdout':p.stdout,'stderr':p.stderr,'resou
     events = dict(line.split() for line in resources['memory.events'].splitlines())
     assert all(events[key] == '0' for key in ('max', 'oom', 'oom_kill', 'oom_group_kill'))
     record.update(status='passed', source_count=len(sources), paired_host_requests=len(starts), host_actions=actions,
-                  qualification='Apply/undo and explicitly required recovery after a retained write. Real fixture SQLite journal/history with controlled file/command effects; no actual project mutation or native command. This does not certify on-disk rollback or production adapter acceptance.')
+                  qualification='Apply/undo and explicitly required recovery after a retained write. Actual NativeChangeJournals and real SQLite history with controlled file/command effects. This does not certify actual project filesystem writes, on-disk rollback or native approvals.')
     (evidence / 'result.json').write_text(json.dumps(record, indent=2) + '\n')
     print('PASS application mutation ordering, undo and retained-write rollback', flush=True)
 

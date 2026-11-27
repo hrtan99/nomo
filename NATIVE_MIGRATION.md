@@ -3,6 +3,12 @@
 The shipping `scripts/nomo` entry still uses the existing Python project controller. The opt-in `native_project` flow is the migration implementation, not a completed replacement.
 
 
+## Canonical journal and cache contracts, 2026-11-27
+
+Journal/SavedPath/Step and CacheReference now expose the preserved passive stored declarations instead of introducing same-field nominal copies. Native storage directly implements the existing application-owned roles. Six journal/path/step conversion functions and two cache record reconstructions are removed; actual stored declarations and Region IDs are unchanged. Full normal checking passes all 463 modules with zero diagnostics in 58.47 seconds; architecture preserves 48 identities across 3,431 imports. The initial public-import placement error is corrected and retained as an owned source failure.
+
+The existing mutation consumer selects the actual NativeChangeJournals adapter and real SQLite history while retaining controlled file/command effects. All original durable-before-write, apply/undo, partial-write and explicitly requested rollback assertions pass, with 210 paired successful Host requests and completed/settled work. The actual native journal region retains `undone` and `rolled_back`; no project file/command/model action occurs. This qualifies that journal/application boundary, not on-disk filesystem rollback or native approvals. Cache simplification has source acceptance only; configuration JSON remains #121 and is not redundantly rerun. [Exact source, scope and results](examples/native-project/canonical-contracts-ioc-20261127.json).
+
 ## Explicit native-state migration, 2026-11-27
 
 The one-time `scripts/nomo-migrate-native OLD_CONVERSATIONS_SQLITE NEW_DIRECTORY` implementation is prepared but **not runtime accepted** on the selected compiler. The old SQLite adapter creates a read-only coherent backup and preserves all original receipt/schema data there. It emits exact decimal integer strings and byte arrays into a migration packet. Application-owned NativeStateSource/NativeStateDestination contracts sequence typed records; the destination uses official SDK Store.insert for all fourteen native store paths and original nominal identities. A new directory is required; the live state selector is never changed. Failed state remains explicitly incomplete. Old CAS generations/receipts remain in the backup and are not fabricated as current capabilities. Saved process handles/phases remain historical facts.
