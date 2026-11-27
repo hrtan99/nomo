@@ -43,6 +43,7 @@ import nomo.adapters.cli.legacy.work_chain_sessions.{run_sessions as chain_sessi
 import nomo.adapters.cli.legacy.user_context_entry.run as user_context_new_run;
 import nomo.adapters.cli.project_agent.run as project_run;
 import nomo.bootstrap.main.run as native_project_run;
+import nomo.bootstrap.native_migration.run as native_migration_run;
 
 // The runtime returns i32 as data; every command uses this same OS-failure boundary.
 flow completed(status: i32, message: string) -> i32 {
@@ -52,6 +53,7 @@ flow completed(status: i32, message: string) -> i32 {
 
 flow project_agent(args: Array<string>) -> i32 { return completed(project_run(args), "Nomo project worker stopped"); }
 flow native_project(args: Array<string>) -> i32 { return completed(native_project_run(args), "Nomo native project stopped"); }
+flow native_state_migrate(args: Array<string>) -> i32 { return completed(native_migration_run(args), "Nomo native state migration stopped"); }
 
 flow terminal(args: Array<string>) -> i32 {
     return completed(terminal_run(args), "Nomo terminal stopped; inspect current journal and work state");

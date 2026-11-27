@@ -22,9 +22,9 @@ alias Schema = MemoryRegion<{
     Events: Store<string, Event>,
     Chunks: Store<string, string>,
 }>;
-let Data = std.memory.region<Schema>(stable_id = "nomo-native-conversations-v1", store = "native-conversations");
+public let Data = std.memory.region<Schema>(stable_id = "nomo-native-conversations-v1", store = "native-conversations");
 alias CopySchema = MemoryRegion<{ Jobs: Store<string, CopyJob> }>;
-let Copies = std.memory.region<CopySchema>(stable_id = "nomo-native-conversation-copies-v1", store = "native-conversation-copies");
+public let Copies = std.memory.region<CopySchema>(stable_id = "nomo-native-conversation-copies-v1", store = "native-conversation-copies");
 
 
 public type NativeHistory = {};

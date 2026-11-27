@@ -7,7 +7,7 @@ import nomo.domain.execution.transitions.unresolved as is_unresolved;
 import nomo.application.execution.ports.AttemptRepository;
 
 alias Schema = MemoryRegion<{ Counter: Store<string, i64>, Attempts: Store<string, Attempt> }>;
-let Data = std.memory.region<Schema>(stable_id = "nomo-native-attempts-v1", store = "native-attempts");
+public let Data = std.memory.region<Schema>(stable_id = "nomo-native-attempts-v1", store = "native-attempts");
 
 public type NativeAttempts = {};
 

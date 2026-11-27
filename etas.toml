@@ -984,3 +984,22 @@ name = "nomo-native"
 module = "nomo.main"
 flow = "native_project"
 profile = "nomo-native"
+
+[runtime.profiles.nomo-native-migrate.memory]
+backend = "sqlite"
+path = "/migration-target/conversations.sqlite3"
+[runtime.profiles.nomo-native-migrate.filesystem.regions."nomo.application.migration.ports.MigrationRoot"]
+root = "/migration"
+read = true
+write = false
+[runtime.profiles.nomo-native-migrate.policy]
+mode = "local-static"
+rules = ["console=allow", "memory=allow", "filesystem:Fs.read=allow"]
+[runtime.profiles.nomo-native-migrate.approval]
+mode = "deny"
+
+[[bin]]
+name = "nomo-native-migrate"
+module = "nomo.main"
+flow = "native_state_migrate"
+profile = "nomo-native-migrate"

@@ -24,7 +24,7 @@ RUNTIME_GROUPS = {
         "scripts/nomo-verified-etas.py", "scripts/nomo_model_transport.py",
         "scripts/nomo_terminal.py", "scripts/terminal-transport.py",
     ),
-    "native": ("scripts/nomo-native", "scripts/native-worker-transport.py"),
+    "native": ("scripts/nomo-native", "scripts/native-worker-transport.py", "scripts/nomo-migrate-native"),
     "gateway": ("scripts/etas003_gateway.py",),
     "tryout": (
         "scripts/local-tryout.sh", "scripts/prepare-local-tryout.py",
