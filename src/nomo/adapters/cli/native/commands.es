@@ -4,15 +4,8 @@ import std.text.{trim, strip_prefix, split_once, parse_i64, parse_usize};
 import std.json.parse;
 import std.agent.message.Message;
 
-public type Argv = { program: string, arguments: Array<string> };
-public enum ProcessRequest { Exec(Argv), Spawn(Argv), Jobs, Poll(string, usize), Send(string, string), CloseInput(string), Stop(string), Output(string) }
-public enum Command {
-    Empty, Quit, Help, Projects, Open(string), Git(string), Process(ProcessRequest),
-    Tree(string), Glob(string), Search(string), History(string, i64, i64), Fork(Option<i64>),
-    Read(string), Edits, Undo(string), Rollback(string), Recover(string), Sessions,
-    New(string), Resume(string), Rename(string), Export(string), Import(string), Copies,
-    ResumeCopy(string), DiscardCopy(string), Runs, ResolveRun(string, string), Compact, Config, Check, Status, Ask(string)
-}
+import nomo.domain.conversation.commands.{Argv, ProcessRequest, Command};
+import nomo.adapters.cli.native.git.parse as parse_git;
 
 flow argv(raw: string) -> Argv {
     let parsed = match parse(raw) { Ok(value) => value, Err(_) => abort("use a JSON argv array, for example [\"/usr/bin/git\",\"status\"]"), };
@@ -63,8 +56,8 @@ public flow command(request: string) -> Command {
     if request == "/projects" { return Command.Projects; }
     if request == "/open" { return Command.Open(""); }
     match strip_prefix(request, "/open ") { Some(value) => { return Command.Open(value); } None() => (), }
-    if request == "/git" { return Command.Git("status"); }
-    match strip_prefix(request, "/git ") { Some(value) => { return Command.Git(value); } None() => (), }
+    if request == "/git" { return Command.Git(parse_git("status")); }
+    match strip_prefix(request, "/git ") { Some(value) => { return Command.Git(parse_git(value)); } None() => (), }
     let (operation, argument) = match split_once(request, " ") { Some(parts) => parts, None() => (request, "") };
     if operation == "/exec" || operation == "/spawn" || operation == "/jobs" || operation == "/poll" || operation == "/send" || operation == "/close-input" || operation == "/stop" || operation == "/job-output" {
         return Command.Process(process(operation, trim(argument)));

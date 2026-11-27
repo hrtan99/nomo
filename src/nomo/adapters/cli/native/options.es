@@ -3,15 +3,7 @@ module nomo.adapters.cli.native.options;
 import std.text.{split_once, strip_prefix};
 import nomo.domain.conversation.start.SessionSelection;
 
-public type Options = { workspace: string, selection: SessionSelection, once: Option<string>,
-    open_project: Option<string>, projects: bool, sessions: bool, all_sessions: bool,
-    history: bool, status: bool, title: Option<string>, import_path: Option<string>,
-    export_path: Option<string>, check: Option<Array<string>> };
-
-public flow offline(options: Options) -> bool {
-    return options.projects || options.sessions || options.history || options.status ||
-        match options.export_path { Some(_) => true, None() => false };
-}
+import nomo.domain.conversation.start.Options;
 
 public flow parse(args: Array<string>) -> Options ![Error<IndexError>, Error<BudgetExceeded>] {
     var workspace = "";

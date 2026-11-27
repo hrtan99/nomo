@@ -7,23 +7,13 @@ import nomo.application.conversation.session_context.SessionContext;
 import std.io.IOError;
 import nomo.application.configuration.context.SettingsContext;
 
-public type CheckOutcome = { configured: bool, output: Array<CommandOutput> };
-
-flow program_path(name: string) -> string {
-    return match name { "python3" => "/usr/bin/python3", "git" => "/usr/bin/git", "sh" => "/bin/sh", _ => name };
-}
+public import nomo.domain.execution.checks.CheckOutcome;
+import nomo.application.commands.checks.run as run_check;
 
 /// Run the configured project check with exact argv preview and native approval. Empty configuration returns configured=false and no process result.
 public tool check_project() -> CheckOutcome
     ![SessionContext.current, CommandOperations, SettingsContext.current, Memory, Command.run<DefaultCommandSandbox>, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>] {
-    let settings = perform SettingsContext.current();
-    var program = "";
-    var arguments: Array<string> = [];
-    for value in settings.check {
-        if program == "" { program = value; } else { arguments = arguments.push(value); }
-    }
-    if program == "" { return CheckOutcome { configured = false, output = [] }; }
-    return CheckOutcome { configured = true, output = [execute(program_path(program), arguments)] };
+    return run_check();
 }
 
 /// Execute an allowlisted program in the project after native Host approval of its exact argv. Return its actual exit status, stdout and stderr.

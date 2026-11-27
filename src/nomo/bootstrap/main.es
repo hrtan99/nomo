@@ -1,6 +1,9 @@
 module nomo.bootstrap.main;
 
-import nomo.adapters.cli.conversation as entry;
+import nomo.application.conversation.terminal as entry;
+import nomo.application.conversation.terminal_handlers;
+import nomo.adapters.cli.conversation.{ConsoleTerminalInput, ConsoleTerminalDisplay};
+import nomo.adapters.cli.native.options.parse;
 import nomo.bootstrap.conversation;
 import nomo.bootstrap.conversation.ConfiguredConversation;
 import nomo.application.commands.handlers as command;
@@ -41,10 +44,11 @@ public flow run(args: Array<string>) -> i32
     let jobs = NativeJobs {};
     let guidance = ProjectInstructionFiles {};
     let output = ConsoleLines {};
-    let application = entry.application<NativeHistory, NativeAttempts, ConsoleConversationPicker, ConfiguredConversation<NativeHistory, NativeAttempts>>() with {
+    let application = entry.application<NativeHistory, NativeAttempts, ConsoleConversationPicker, ConfiguredConversation<NativeHistory, NativeAttempts>, ConsoleTerminalInput>() with {
         history: NativeHistory => history;
         attempts: NativeAttempts => attempts;
         picker: ConsoleConversationPicker => ConsoleConversationPicker {};
+        input: ConsoleTerminalInput => ConsoleTerminalInput {};
         conversation: ConfiguredConversation<NativeHistory, NativeAttempts> => conversation.create(history, attempts, guidance, jobs, output);
     };
     // Runtime handlers interpret requests using the same selected dependencies.
@@ -53,10 +57,12 @@ public flow run(args: Array<string>) -> i32
             handle (
                 handle (
                     handle (
-                        handle application.run(args) with processes.bindings(history, attempts, HostProcessControl {}, jobs, NativeOutputArchive {}, output)
-                    ) with transfer.operations(history, attempts, ProjectArchives {}, JsonArchiveEncoding {}, TerminalTransfer {})
-                ) with projects.operations(NativeRecentProjects {}, NativeProjectLaunch {}, TerminalProjects {})
-            ) with mutations.operations(ProjectMutationFiles {}, NativeChangeJournals {}, history, output)
-        ) with workspace.bindings(history, ProjectFiles {}, guidance)
-    ) with command.bindings(history, attempts, HostCommandRunner {}, ConsoleCommandPreview {});
+                        handle (
+                            handle application.run(parse(args)) with processes.bindings(history, attempts, HostProcessControl {}, jobs, NativeOutputArchive {}, output)
+                        ) with transfer.operations(history, attempts, ProjectArchives {}, JsonArchiveEncoding {}, TerminalTransfer {})
+                    ) with projects.operations(NativeRecentProjects {}, NativeProjectLaunch {}, TerminalProjects {})
+                ) with mutations.operations(ProjectMutationFiles {}, NativeChangeJournals {}, history, output)
+            ) with workspace.bindings(history, ProjectFiles {}, guidance)
+        ) with command.bindings(history, attempts, HostCommandRunner {}, ConsoleCommandPreview {})
+    ) with terminal_handlers.output(ConsoleTerminalDisplay {});
 }
