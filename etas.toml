@@ -40,7 +40,7 @@ delay_ms = 0
 
 [runtime.profiles.gateway-qwen.policy]
 mode = "local-static"
-rules = ["console=allow", "model=allow"]
+rules = ["console=allow", "agentic=allow", "model=allow"]
 
 [runtime.profiles.gateway-qwen.approval]
 mode = "deny"
@@ -71,7 +71,7 @@ write = false
 
 [runtime.profiles.gateway-qwen-readonly.policy]
 mode = "local-static"
-rules = ["console=allow", "model=allow", "filesystem=allow"]
+rules = ["console=allow", "agentic=allow", "model=allow", "filesystem=allow"]
 
 [runtime.profiles.gateway-qwen-readonly.approval]
 mode = "deny"
@@ -160,7 +160,7 @@ write = false
 
 [runtime.profiles.harness-checkpoint-save.policy]
 mode = "local-static"
-rules = ["console=allow", "memory=allow", "model=allow", "filesystem=allow"]
+rules = ["console=allow", "memory=allow", "agentic=allow", "model=allow", "filesystem=allow"]
 
 [runtime.profiles.harness-checkpoint-save.approval]
 mode = "deny"
@@ -286,7 +286,7 @@ write = true
 delete = false
 [runtime.profiles.harness-edit.policy]
 mode = "local-static"
-rules = ["console=allow", "memory=allow", "model=allow", "approval=allow", "filesystem:Fs.stat=allow", "filesystem:Fs.read=allow", "filesystem:Fs.atomic_replace=allow", "filesystem:Fs.write=deny", "filesystem:HostFilesystem.delete=deny"]
+rules = ["console=allow", "memory=allow", "agentic=allow", "model=allow", "approval=allow", "filesystem:Fs.stat=allow", "filesystem:Fs.read=allow", "filesystem:Fs.atomic_replace=allow", "filesystem:Fs.write=deny", "filesystem:HostFilesystem.delete=deny"]
 [runtime.profiles.harness-edit.approval]
 mode = "prompt"
 
@@ -326,7 +326,7 @@ write = true
 delete = false
 [runtime.profiles.harness-work.policy]
 mode = "local-static"
-rules = ["console=allow", "memory=allow", "model=allow", "approval=allow", "filesystem:Fs.stat=allow", "filesystem:Fs.read=allow", "filesystem:Fs.atomic_replace=allow", "filesystem:Fs.write=deny", "filesystem:HostFilesystem.delete=deny"]
+rules = ["console=allow", "memory=allow", "agentic=allow", "model=allow", "approval=allow", "filesystem:Fs.stat=allow", "filesystem:Fs.read=allow", "filesystem:Fs.atomic_replace=allow", "filesystem:Fs.write=deny", "filesystem:HostFilesystem.delete=deny"]
 [runtime.profiles.harness-work.approval]
 mode = "prompt"
 
@@ -366,7 +366,7 @@ write = true
 delete = false
 [runtime.profiles.harness-work-save.policy]
 mode = "local-static"
-rules = ["console=allow", "memory=allow", "model=allow", "approval=allow", "filesystem:Fs.stat=allow", "filesystem:Fs.read=allow", "filesystem:Fs.atomic_replace=allow", "filesystem:Fs.write=deny", "filesystem:HostFilesystem.delete=deny"]
+rules = ["console=allow", "memory=allow", "agentic=allow", "model=allow", "approval=allow", "filesystem:Fs.stat=allow", "filesystem:Fs.read=allow", "filesystem:Fs.atomic_replace=allow", "filesystem:Fs.write=deny", "filesystem:HostFilesystem.delete=deny"]
 [runtime.profiles.harness-work-save.approval]
 mode = "prompt"
 
@@ -424,7 +424,7 @@ write = true
 delete = false
 [runtime.profiles.work-chain.policy]
 mode = "local-static"
-rules = ["console=allow", "memory=allow", "model=allow", "approval=allow", "filesystem:Fs.stat=allow", "filesystem:Fs.read=allow", "filesystem:Fs.atomic_replace=allow", "filesystem:Fs.write=deny", "filesystem:HostFilesystem.delete=deny"]
+rules = ["console=allow", "memory=allow", "agentic=allow", "model=allow", "approval=allow", "filesystem:Fs.stat=allow", "filesystem:Fs.read=allow", "filesystem:Fs.atomic_replace=allow", "filesystem:Fs.write=deny", "filesystem:HostFilesystem.delete=deny"]
 [runtime.profiles.work-chain.approval]
 mode = "prompt"
 
@@ -521,7 +521,7 @@ write = true
 delete = false
 [runtime.profiles.work-chain-once.policy]
 mode = "local-static"
-rules = ["console=allow", "memory=allow", "model=allow", "approval=allow", "filesystem:Fs.stat=allow", "filesystem:Fs.read=allow", "filesystem:Fs.atomic_replace=allow", "filesystem:Fs.write=deny", "filesystem:HostFilesystem.delete=deny"]
+rules = ["console=allow", "memory=allow", "agentic=allow", "model=allow", "approval=allow", "filesystem:Fs.stat=allow", "filesystem:Fs.read=allow", "filesystem:Fs.atomic_replace=allow", "filesystem:Fs.write=deny", "filesystem:HostFilesystem.delete=deny"]
 [runtime.profiles.work-chain-once.approval]
 mode = "deny"
 
@@ -562,7 +562,7 @@ write = false
 
 [runtime.profiles.gateway-minimax-readonly.policy]
 mode = "local-static"
-rules = ["console=allow", "model=allow", "filesystem=allow"]
+rules = ["console=allow", "agentic=allow", "model=allow", "filesystem=allow"]
 
 [runtime.profiles.gateway-minimax-readonly.approval]
 mode = "deny"
@@ -593,7 +593,7 @@ write = true
 delete = false
 [runtime.profiles.harness-minimax-edit.policy]
 mode = "local-static"
-rules = ["console=allow", "memory=allow", "model=allow", "approval=allow", "filesystem:Fs.stat=allow", "filesystem:Fs.read=allow", "filesystem:Fs.atomic_replace=allow", "filesystem:Fs.write=deny", "filesystem:HostFilesystem.delete=deny"]
+rules = ["console=allow", "memory=allow", "agentic=allow", "model=allow", "approval=allow", "filesystem:Fs.stat=allow", "filesystem:Fs.read=allow", "filesystem:Fs.atomic_replace=allow", "filesystem:Fs.write=deny", "filesystem:HostFilesystem.delete=deny"]
 [runtime.profiles.harness-minimax-edit.approval]
 mode = "prompt"
 
@@ -629,7 +629,7 @@ write = true
 delete = false
 [runtime.profiles.harness-minimax-work.policy]
 mode = "local-static"
-rules = ["console=allow", "memory=allow", "model=allow", "approval=allow", "filesystem:Fs.stat=allow", "filesystem:Fs.read=allow", "filesystem:Fs.atomic_replace=allow", "filesystem:Fs.write=deny", "filesystem:HostFilesystem.delete=deny"]
+rules = ["console=allow", "memory=allow", "agentic=allow", "model=allow", "approval=allow", "filesystem:Fs.stat=allow", "filesystem:Fs.read=allow", "filesystem:Fs.atomic_replace=allow", "filesystem:Fs.write=deny", "filesystem:HostFilesystem.delete=deny"]
 [runtime.profiles.harness-minimax-work.approval]
 mode = "prompt"
 
@@ -657,7 +657,7 @@ read = true
 write = false
 [runtime.profiles.nomo-read-session-new.policy]
 mode = "local-static"
-rules = ["console=allow", "memory=allow", "model=allow", "filesystem=allow"]
+rules = ["console=allow", "memory=allow", "agentic=allow", "model=allow", "filesystem=allow"]
 [runtime.profiles.nomo-read-session-new.approval]
 mode = "deny"
 
@@ -685,7 +685,7 @@ read = true
 write = false
 [runtime.profiles.nomo-read-session-existing.policy]
 mode = "local-static"
-rules = ["console=allow", "memory=allow", "model=allow", "filesystem=allow"]
+rules = ["console=allow", "memory=allow", "agentic=allow", "model=allow", "filesystem=allow"]
 [runtime.profiles.nomo-read-session-existing.approval]
 mode = "deny"
 
@@ -743,7 +743,7 @@ write = true
 delete = false
 [runtime.profiles.nomo-history-work.policy]
 mode = "local-static"
-rules = ["console=allow", "memory=allow", "model=allow", "approval=allow", "filesystem:Fs.stat=allow", "filesystem:Fs.read=allow", "filesystem:Fs.atomic_replace=allow", "filesystem:Fs.write=deny", "filesystem:HostFilesystem.delete=deny"]
+rules = ["console=allow", "memory=allow", "agentic=allow", "model=allow", "approval=allow", "filesystem:Fs.stat=allow", "filesystem:Fs.read=allow", "filesystem:Fs.atomic_replace=allow", "filesystem:Fs.write=deny", "filesystem:HostFilesystem.delete=deny"]
 [runtime.profiles.nomo-history-work.approval]
 mode = "prompt"
 
@@ -796,7 +796,7 @@ read = true
 write = false
 [runtime.profiles.nomo-read-events-new.policy]
 mode = "local-static"
-rules = ["console=allow", "memory=allow", "model=allow", "filesystem=allow"]
+rules = ["console=allow", "memory=allow", "agentic=allow", "model=allow", "filesystem=allow"]
 [runtime.profiles.nomo-read-events-new.approval]
 mode = "deny"
 
@@ -829,7 +829,7 @@ read = true
 write = false
 [runtime.profiles.nomo-read-events-existing.policy]
 mode = "local-static"
-rules = ["console=allow", "memory=allow", "model=allow", "filesystem=allow"]
+rules = ["console=allow", "memory=allow", "agentic=allow", "model=allow", "filesystem=allow"]
 [runtime.profiles.nomo-read-events-existing.approval]
 mode = "deny"
 
@@ -897,7 +897,7 @@ write = true
 delete = false
 [runtime.profiles.nomo-history-events-work.policy]
 mode = "local-static"
-rules = ["console=allow", "memory=allow", "model=allow", "approval=allow", "filesystem:Fs.stat=allow", "filesystem:Fs.read=allow", "filesystem:Fs.atomic_replace=allow", "filesystem:Fs.write=deny", "filesystem:HostFilesystem.delete=deny"]
+rules = ["console=allow", "memory=allow", "agentic=allow", "model=allow", "approval=allow", "filesystem:Fs.stat=allow", "filesystem:Fs.read=allow", "filesystem:Fs.atomic_replace=allow", "filesystem:Fs.write=deny", "filesystem:HostFilesystem.delete=deny"]
 [runtime.profiles.nomo-history-events-work.approval]
 mode = "prompt"
 
@@ -934,7 +934,7 @@ read = true
 write = false
 [runtime.profiles.nomo-project.policy]
 mode = "local-static"
-rules = ["console=allow", "model=allow", "filesystem:Fs.read=allow"]
+rules = ["console=allow", "agentic=allow", "model=allow", "filesystem:Fs.read=allow"]
 [runtime.profiles.nomo-project.approval]
 mode = "deny"
 
@@ -975,7 +975,7 @@ allow = ["/usr/bin/git", "/usr/bin/python3", "/bin/sh", "/bin/cp", "/bin/mkdir",
 isolation = "trusted-unconfined"
 [runtime.profiles.nomo-native.policy]
 mode = "local-static"
-rules = ["console=allow", "memory=allow", "model=allow", "tool=allow", "approval=allow", "command=approval", "filesystem:Fs.read=allow", "filesystem:Fs.list=allow", "filesystem:Fs.stat=allow", "filesystem:Fs.atomic_replace=approval"]
+rules = ["console=allow", "memory=allow", "agentic=allow", "model=allow", "tool=allow", "approval=allow", "command=approval", "filesystem:Fs.read=allow", "filesystem:Fs.list=allow", "filesystem:Fs.stat=allow", "filesystem:Fs.atomic_replace=approval"]
 [runtime.profiles.nomo-native.approval]
 mode = "prompt"
 
