@@ -21,6 +21,7 @@ from native_recovery_probe import terminal, audit as audit_authority
 from native_json import byte_values
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / 'tests/fixtures/legacy_project'))
 sys.path.insert(0, str(ROOT / 'scripts'))
 from nomo_history import SqliteHistory
 from nomo_project import ProjectRegistry
@@ -91,7 +92,7 @@ tools.restore = retain
 editor = tools.BatchEditor(Workspace(Path(sys.argv[1])), Path(sys.argv[2]), sys.argv[3])
 editor.apply(editor.prepare([{'operation':'edit','path':'interrupted.txt','target':'old','text':'new'}]))
 '''
-    environment = dict(os.environ, PYTHONPATH=str(ROOT / 'scripts'))
+    environment = dict(os.environ, PYTHONPATH=os.pathsep.join([str(ROOT / 'tests/fixtures/legacy_project'), str(ROOT / 'scripts')]))
     process = subprocess.Popen([sys.executable, '-B', '-c', program, str(project), str(state), session],
         env=environment, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     try:

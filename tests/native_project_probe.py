@@ -117,6 +117,7 @@ def main():
     (project / 'native.txt').write_text('native Git evidence\n')
     (project / 'note.txt').write_text('before old\n')
     if args.scenario in ('transfer', 'auto'):
+        sys.path.insert(0, str(ROOT / 'tests/fixtures/legacy_project'))
         sys.path.insert(0, str(ROOT / 'scripts'))
         from nomo_history import SqliteHistory
         legacy = SqliteHistory(evidence / 'legacy-state')

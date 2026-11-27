@@ -128,7 +128,7 @@ def main():
     project.mkdir(mode=0o700)
     environment = dict(os.environ, MINIMAX_API_KEY='unused-no-model', NOMO_NATIVE_STATE=str(evidence / 'state'),
                        NOMO_NATIVE_TRACE_ROOT=str(evidence / 'traces'))
-    command = [str(ROOT / 'scripts/nomo-native'), str(project)]
+    command = [str(ROOT / 'scripts/nomo'), str(project)]
     print('EVIDENCE ' + str(evidence), flush=True)
     first = Client(command + ['--new'], environment, evidence, 'first-client')
     worker = next(line.split('[WORKER ] ', 1)[1] for line in first.output.decode().splitlines() if '[WORKER ] ' in line)

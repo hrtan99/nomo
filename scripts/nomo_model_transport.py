@@ -42,11 +42,6 @@ class ModelTransport(BaseHTTPRequestHandler):
             self.send_error(403); return
         raw = self.rfile.read(int(self.headers['Content-Length']))
         payload = json.loads(raw)
-        project_input = Path('/project-request/input.json')
-        if project_input.is_file():
-            allowance = json.loads(project_input.read_text()).get('output_allowance', 131072)
-            payload['max_tokens'] = min(payload.get('max_tokens', 131072), allowance)
-            raw = json.dumps(payload, ensure_ascii=False).encode()
         if payload.get('model') == 'MiniMax-M3.1-Flash':
             payload.setdefault('reasoning_effort', os.environ.get('NOMO_REASONING_EFFORT', 'medium'))
             raw = json.dumps(payload, ensure_ascii=False).encode()

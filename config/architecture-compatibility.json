@@ -153,20 +153,6 @@
       },
       "regions": []
     },
-    "nomo.project.entry": {
-      "path": "src/nomo/project/entry.es",
-      "declarations": [
-        "type RequestRoot",
-        "impl RequestRoot"
-      ],
-      "reason": "Preserved stored nominal types, Memory region resources or filesystem Region identity",
-      "shapes": {
-        "RequestRoot": "419b6e3acb7d1b5e131ff6f35025f8637a9112a61c0287017fda9b1113b51330"
-      },
-      "regions": [
-        "RequestRoot"
-      ]
-    },
     "nomo.harness.harness_tool_contract": {
       "path": "src/nomo/harness/harness_tool_contract.es",
       "declarations": [

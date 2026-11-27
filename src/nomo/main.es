@@ -41,7 +41,6 @@ import nomo.adapters.cli.legacy.terminal_entry.{run as terminal_run, run_once as
 import nomo.adapters.cli.legacy.terminal_help.help as terminal_help_run;
 import nomo.adapters.cli.legacy.work_chain_sessions.{run_sessions as chain_sessions_run, run_show as chain_show_run};
 import nomo.adapters.cli.legacy.user_context_entry.run as user_context_new_run;
-import nomo.adapters.cli.project_agent.run as project_run;
 import nomo.bootstrap.main.run as native_project_run;
 import nomo.domain.conversation.start.EntryMode;
 import nomo.bootstrap.native_migration.{run as native_migration_run, project as project_migration_run};
@@ -52,7 +51,6 @@ flow completed(status: i32, message: string) -> i32 {
     return status;
 }
 
-flow project_agent(args: Array<string>) -> i32 { return completed(project_run(args), "Nomo project worker stopped"); }
 flow native_project(args: Array<string>) -> i32 { return completed(native_project_run(args, EntryMode.Interactive), "Nomo native project stopped"); }
 flow native_attach(args: Array<string>) -> i32 { return completed(native_project_run(args, EntryMode.Attach), "Nomo native startup selection stopped"); }
 flow native_state_migrate(args: Array<string>) -> i32 { return completed(native_migration_run(args), "Nomo native state migration stopped"); }

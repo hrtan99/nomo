@@ -8,11 +8,6 @@ PRODUCT_ROOTS = ("src",)
 OTHER_ROOTS = ("tests", "examples", "scripts")
 RUNTIME_GROUPS = {
     "entry": ("scripts/nomo",),
-    "project": (
-        "scripts/nomo_project_chat.py", "scripts/nomo_project_model.py",
-        "scripts/nomo_project_tools.py", "scripts/nomo_project.py",
-        "scripts/nomo_history.py", "scripts/nomo_jobs.py", "scripts/nomo_git.py",
-    ),
     "legacy": (
         "scripts/nomo-read.sh", "scripts/nomo-session-chat.py",
         "scripts/nomo-session-id.py", "scripts/nomo-read-session.py",

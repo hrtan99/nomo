@@ -31,7 +31,7 @@ class SlocCounterTest(unittest.TestCase):
     def test_moved_storage_contributes_to_canonical_product(self):
         self.write("src/nomo/main.es", "// note\ncode;\n\n")
         self.write("src/nomo/store.es", "first;\nsecond;\n")
-        self.write("scripts/nomo_project_chat.py", "project()\n")
+        self.write("scripts/nomo", "entry()\n")
         self.write("scripts/nomo_model_transport.py", "model_transport()\n")
         self.write("scripts/native-worker-transport.py", "attach()\n")
         self.write("tests/fixture.py", "fixture()\n")

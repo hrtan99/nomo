@@ -8,6 +8,7 @@ import time
 from native_state_migration_probe import snapshot_tree
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / 'tests/fixtures/legacy_project'))
 sys.path.insert(0, str(ROOT / 'scripts'))
 from nomo_history import SqliteHistory
 from nomo_jobs import ProcessService
@@ -51,7 +52,7 @@ def main():
     native.mkdir()
     image = project_packet(history.database, archive / 'legacy-source.sqlite3', native)
     manifest = json.loads((archive / 'project-files.json').read_text())
-    assert image['format'] == 'nomo-project-state-2' and image['conversations'][0]['id'] == session
+    assert image['format'] == 'nomo-project-state-3' and image['conversations'][0]['id'] == session
     assert image['conversations'][0]['events'][-1]['name'] == 'apply_changes'
     assert manifest['native_import'] == 'not-performed' and manifest['directories'] == ['edits', 'jobs']
     assert set(manifest['files']) == {path.relative_to(state).as_posix()

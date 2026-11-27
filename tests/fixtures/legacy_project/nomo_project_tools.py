@@ -1,22 +1,12 @@
 """Object adapters implementing the project tool catalogue declared in Etas."""
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Protocol
 import base64
 import copy
-import difflib
 import json
 import os
 import secrets
 import shutil
-from nomo_jobs import ProcessService
 from nomo_project import write_json
-
-
-class ProjectTool(Protocol):
-    name: str
-    mutates: bool
-    def execute(self, action): ...
 
 
 def snapshot(path):
@@ -134,19 +124,6 @@ class BatchEditor:
                 stage(destination, previous, before)
         return steps
 
-    def preview(self, steps):
-        parts = []
-        for step in steps:
-            before, after, name = step['before'], step['after'], step['path']
-            if before == after:
-                continue
-            if (before and 'directory' in before) or (after and 'directory' in after):
-                parts.append(('Delete directory ' if after is None else 'Create/restore directory ') + name)
-            else:
-                parts.extend(difflib.unified_diff(node_text(before).splitlines(keepends=True), node_text(after).splitlines(keepends=True),
-                                                 fromfile='a/' + name if before else '/dev/null', tofile='b/' + name if after else '/dev/null'))
-        return ''.join(part if part.endswith('\n') else part + '\n' for part in parts) or 'No changes.\n'
-
     def apply(self, steps):
         identifier = secrets.token_hex(8)
         record = {'id': identifier, 'root': str(self.workspace.root), 'session': self.session, 'phase': 'applying', 'steps': steps}
@@ -167,100 +144,3 @@ class BatchEditor:
             raise
         record['phase'] = 'applied'; write_json(journal, record)
         return {'edit': identifier, 'paths': [step['path'] for step in steps], 'status': 'applied'}
-
-    def undo(self, identifier=''):
-        records = [json.loads(path.read_text()) for path in self.directory.glob('*.json')]
-        records = [row for row in records if row['root'] == str(self.workspace.root) and row['session'] == self.session and row['phase'] == 'applied']
-        if identifier:
-            records = [row for row in records if row['id'] == identifier]
-        if not records:
-            raise ValueError('no applied edit to undo')
-        record = records[-1] if identifier else max(records, key=lambda row: (self.directory / (row['id'] + '.json')).stat().st_mtime_ns)
-        inverse = [{'path': item['path'], 'before': item['after'], 'after': item['before']} for item in reversed(record['steps'])]
-        result = self.apply(inverse)
-        record['phase'] = 'undone'; write_json(self.directory / (record['id'] + '.json'), record)
-        return result
-
-
-@dataclass
-class NavigationTool:
-    name: str
-    workspace: object
-    mutates: bool = False
-
-    def execute(self, action):
-        if self.name == 'tree':
-            return self.workspace.tree(action['path'] or '.', action['end'] or 3)
-        if self.name == 'glob':
-            return self.workspace.glob(action['text'] or '**/*')
-        if self.name == 'read':
-            return self.workspace.read(action['path'], action['start'] or 1, action['end'])
-        return self.workspace.search(action['text'], action['path'] or '.', self.name == 'regex')
-
-
-@dataclass
-class FileTool:
-    name: str
-    editor: BatchEditor
-    mutates: bool = True
-
-    def changes(self, action):
-        return action['changes'] if self.name == 'batch' else [{'operation': self.name, 'path': action['path'], 'target': action['target'], 'text': action['text']}]
-
-    def preview(self, action):
-        if self.name == 'undo':
-            return 'Undo edit ' + (action['target'] or 'most recent edit')
-        self.prepared = self.editor.prepare(self.changes(action))
-        return self.editor.preview(self.prepared)
-
-    def execute(self, action):
-        return self.editor.undo(action['target']) if self.name == 'undo' else self.editor.apply(self.prepared)
-
-
-@dataclass
-class TerminalTool:
-    name: str
-    processes: ProcessService
-    timeout: int
-    mutates: bool = True
-
-    def preview(self, action):
-        return json.dumps(action['arguments'] if self.name in ('exec', 'spawn') else {'job': action['target'], 'text': action['text'], 'operation': self.name}, ensure_ascii=False)
-
-    def execute(self, action):
-        if self.name == 'exec':
-            return self.processes.execute(action['arguments'], self.timeout)
-        if self.name == 'spawn':
-            return self.processes.start(action['arguments'])
-        if self.name == 'poll':
-            return self.processes.poll(action['target'], action['start'])
-        if self.name == 'jobs':
-            return self.processes.jobs()
-        return self.processes.send(action['target'], action['text'], self.name == 'stop')
-
-
-class ToolRegistry:
-    def __init__(self, workspace, state, session):
-        self.tools = {}
-        editor = BatchEditor(workspace, state, session)
-        processes = ProcessService(state, workspace.root)
-        for name in ('tree', 'glob', 'read', 'search', 'regex'):
-            self.register(NavigationTool(name, workspace))
-        for name in ('write', 'create', 'edit', 'mkdir', 'delete', 'move', 'batch', 'undo'):
-            self.register(FileTool(name, editor))
-        for name in ('exec', 'spawn', 'poll', 'jobs', 'write_stdin', 'stop'):
-            self.register(TerminalTool(name, processes, workspace.config.command_timeout, name not in ('poll', 'jobs')))
-        from nomo_git import register_git
-        register_git(self, workspace.root)
-
-    def register(self, tool: ProjectTool):
-        self.tools[tool.name] = tool
-
-    def execute(self, action, approve):
-        action = {**action, 'start': int(action['start'] or 0), 'end': int(action['end'] or 0)}
-        tool = self.tools[action['tool']]
-        if tool.mutates:
-            preview = tool.preview(action)
-            if not approve(preview):
-                return {'status': 'declined', 'tool': tool.name}
-        return tool.execute(action)
