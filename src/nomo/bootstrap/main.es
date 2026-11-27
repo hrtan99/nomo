@@ -4,7 +4,8 @@ import nomo.adapters.cli.conversation as entry;
 import nomo.bootstrap.conversation;
 import nomo.bootstrap.conversation.ConfiguredConversation;
 import nomo.application.commands.handlers as command;
-import nomo.application.instructions.handlers as instructions;
+import nomo.application.workspace.handlers as workspace;
+import nomo.adapters.filesystem.project_files.ProjectFiles;
 import nomo.application.processes.handlers as processes;
 import nomo.application.transfer.handlers as transfer;
 import nomo.application.projects.handlers as projects;
@@ -56,6 +57,6 @@ public flow run(args: Array<string>) -> i32
                     ) with transfer.operations(history, attempts, ProjectArchives {}, JsonArchiveEncoding {}, TerminalTransfer {})
                 ) with projects.operations(NativeRecentProjects {}, NativeProjectLaunch {}, TerminalProjects {})
             ) with mutations.operations(ProjectMutationFiles {}, NativeChangeJournals {}, history, output)
-        ) with instructions.bindings(guidance)
+        ) with workspace.bindings(history, ProjectFiles {}, guidance)
     ) with command.bindings(history, attempts, HostCommandRunner {}, ConsoleCommandPreview {});
 }

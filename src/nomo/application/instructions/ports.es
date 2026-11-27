@@ -1,6 +1,5 @@
 module nomo.application.instructions.ports;
 
-import nomo.domain.context.instructions.ProjectInstruction;
 import std.effects.Fs;
 import std.fs.{ReadLimitError, IOError as FileError};
 import nomo.native.workspace.ProjectRoot;
@@ -16,5 +15,3 @@ public spec InstructionFileSource {
     flow entries(self, scope: string) -> Array<string> ![Fs.list<ProjectRoot>, Error<FileError>];
     flow text(self, path: string) -> string ![Fs.read<ProjectRoot>, Error<FileError>, Error<ReadLimitError>];
 }
-
-public effect ProjectInstructions { action read(path: string) -> Array<ProjectInstruction>; }

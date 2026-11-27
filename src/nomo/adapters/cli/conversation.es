@@ -3,7 +3,7 @@ module nomo.adapters.cli.conversation;
 import nomo.application.conversation.service_ports.ConversationService;
 
 import nomo.application.commands.effects.CommandOperations;
-import nomo.application.instructions.ports.ProjectInstructions;
+import nomo.application.workspace.ports.WorkspaceObservations;
 import nomo.application.mutations.ports.ChangeOperations;
 import nomo.application.processes.ports.ProcessOperations;
 import std.io.{println, print, read_line};
@@ -23,8 +23,7 @@ import nomo.application.execution.ports.AttemptRepository;
 import nomo.application.conversation.turn.{ready, supported};
 import nomo.application.transfer.effects.TransferOperations;
 import nomo.application.projects.effects.ProjectOperations;
-import nomo.adapters.filesystem.files.read_file;
-import nomo.adapters.filesystem.navigation.{find_files, search_project};
+import nomo.application.workspace.discovery.{find_files, search_project};
 import nomo.application.execution.service.resolve;
 import nomo.domain.configuration.settings.Settings;
 import nomo.application.configuration.context.SettingsContext;
@@ -115,7 +114,7 @@ flow show_status(value: Session) -> unit {
 
 flow edit_command(session: string, operation: string, id: string) -> unit {
     handle if operation == "read" {
-            let result = read_file(id);
+            let result = perform WorkspaceObservations.read(session, id);
             let json = match encode(result, "file conversion failed", "file encoding failed") { Ok(value) => value, Err(error) => abort(error), };
             println("[FILE   ] " + json);
         }
@@ -151,7 +150,7 @@ impl TerminalApplication<
     Conversation ~ ConversationService
 > {
     public flow run(self, args: Array<string>) -> i32
-        ![Agentic, CommandOperations, ProjectInstructions, ChangeOperations, ProcessOperations, TransferOperations, ProjectOperations, Memory, Console, Command.run<DefaultCommandSandbox>, Command.start<DefaultCommandSandbox>, Command.reconnect<DefaultCommandSandbox>, Command.read<DefaultCommandSandbox>, Command.write<DefaultCommandSandbox>, Command.stop<DefaultCommandSandbox>, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Fs.stat<ProjectRoot>, Fs.atomic_replace<ProjectRoot>, Fs.atomic_replace<LaunchRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>, Error<IOError>, Error<IndexError>, Error<BudgetExceeded>] {
+        ![Agentic, CommandOperations, WorkspaceObservations, ChangeOperations, ProcessOperations, TransferOperations, ProjectOperations, Memory, Console, Command.run<DefaultCommandSandbox>, Command.start<DefaultCommandSandbox>, Command.reconnect<DefaultCommandSandbox>, Command.read<DefaultCommandSandbox>, Command.write<DefaultCommandSandbox>, Command.stop<DefaultCommandSandbox>, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Fs.stat<ProjectRoot>, Fs.atomic_replace<ProjectRoot>, Fs.atomic_replace<LaunchRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>, Error<IOError>, Error<IndexError>, Error<BudgetExceeded>] {
         let history = self.history;
         let attempts = self.attempts;
         let picker = self.picker;

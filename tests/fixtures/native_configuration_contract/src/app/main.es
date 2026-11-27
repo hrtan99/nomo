@@ -1,12 +1,11 @@
 module app.main;
 
-import nomo.application.instructions.handlers as instructions;
 import std.io.{println, IOError};
 import std.effects.Fs;
 import nomo.application.commands.effects.CommandOperations;
 import std.fs.{ReadLimitError, IOError as FileError};
 import nomo.native.workspace.ProjectRoot;
-import nomo.adapters.filesystem.instruction_tools.load_instructions;
+import nomo.application.context.ports.InstructionReader;
 import nomo.domain.serialization.json.encode;
 import nomo.adapters.storage.conversations.NativeHistory;
 import nomo.application.conversation.ports.{ConversationCatalog, ConversationReader, ConversationWriter};
@@ -101,7 +100,7 @@ public flow main(args: Array<string>) -> i32 ![CommandOperations, Memory, Consol
 }
 
 public flow physical_guidance(args: Array<string>) -> i32 ![Console, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Error<FileError>, Error<ReadLimitError>, Error<IOError>] {
-    let guidance = handle load_instructions("src/future/new.py") with instructions.bindings(ProjectInstructionFiles {});
+    let guidance = (ProjectInstructionFiles {}).read("src/future/new.py");
     if guidance != [ProjectInstruction { scope = ".", path = "AGENTS.md", text = "Root guidance" },
                     ProjectInstruction { scope = "src", path = "src/AGENTS.md", text = "Scoped guidance" }] {
         abort("physical root-to-leaf guidance changed");

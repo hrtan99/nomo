@@ -1,7 +1,7 @@
 module nomo.application.conversation.effects;
 
 import nomo.application.commands.effects.CommandOperations;
-import nomo.application.instructions.ports.ProjectInstructions;
+import nomo.application.workspace.ports.WorkspaceObservations;
 import nomo.application.processes.ports.ProcessOperations;
 import nomo.application.mutations.ports.ChangeOperations;
 import std.effects.Fs;
@@ -18,7 +18,7 @@ public effect ConversationModel {
 public effect ConversationOutput { action write(line: string) -> unit; }
 
 public spec CodingModel {
-    flow code(self, input: Turn) -> Answer ![CommandOperations, ProjectInstructions, ChangeOperations, ProcessOperations, Memory, Command.run<DefaultCommandSandbox>, Command.start<DefaultCommandSandbox>, Command.reconnect<DefaultCommandSandbox>, Command.read<DefaultCommandSandbox>, Command.write<DefaultCommandSandbox>, Command.stop<DefaultCommandSandbox>, Console, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Fs.stat<ProjectRoot>, Fs.atomic_replace<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>, Error<ConsoleError>, Error<BudgetExceeded>];
+    flow code(self, input: Turn) -> Answer ![CommandOperations, WorkspaceObservations, ChangeOperations, ProcessOperations, Memory, Command.run<DefaultCommandSandbox>, Command.start<DefaultCommandSandbox>, Command.reconnect<DefaultCommandSandbox>, Command.read<DefaultCommandSandbox>, Command.write<DefaultCommandSandbox>, Command.stop<DefaultCommandSandbox>, Console, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Fs.stat<ProjectRoot>, Fs.atomic_replace<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>, Error<ConsoleError>, Error<BudgetExceeded>];
 }
 
 public spec SummaryModel {

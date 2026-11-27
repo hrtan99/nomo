@@ -271,16 +271,6 @@ public flow pending_request(id: string) -> Option<PendingRequest> ![Memory, Erro
     return Some(PendingRequest { call, name, complete });
 }
 
-public flow observe_started<T>(name: string, request: T) -> i64
-    ![SessionContext.current, Memory, Error<StorageError>, Error<MemoryConflict>, Error<BudgetExceeded>] {
-    return record("observation_call", name, request, -1);
-}
-
-public flow observe_finished<T>(name: string, call: i64, result: T) -> unit
-    ![SessionContext.current, Memory, Error<StorageError>, Error<MemoryConflict>, Error<BudgetExceeded>] {
-    record("tool", name, result, call);
-}
-
 public flow rename(id: string, title: string) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>] {
     let before = entry(id); let value = before.value;
     Data.Sessions.put_versioned(id, value { title }, before.version);
