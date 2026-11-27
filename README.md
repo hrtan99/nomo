@@ -4,7 +4,7 @@ Nomo is a local project coding agent built with [ETAS](https://github.com/etas-p
 
 ## Get started
 
-The refactor checkout selects official ETAS **0.24.13** and matching std 0.9.0 SDK. Its 468-module package passes normal source and architecture checks; native coding uses the new `infer(data, system = ...)` overload. Existing complete history and the original native batch/undo scenario pass. The full MutationService composition candidate remains unselected with a callable-environment diagnostic; independent cumulative/context/output controls [#125](https://github.com/etas-project/etas-interpreter/issues/125) also remain unfinished. See [current evidence and remaining scope](NATIVE_MIGRATION.md). The commands below use the Python project entry; the complete thirteen-item refactor and native default cutover remain unfinished.
+The refactor checkout selects official ETAS **0.24.13** and matching std 0.9.0 SDK. Its 468-module package passes normal source and architecture checks; native coding uses the new `infer(data, system = ...)` overload. Existing complete history and the original native batch/undo scenario pass. The full MutationService composition candidate remains unselected with a [callable-environment diagnostic](https://github.com/etas-project/etas-frontend/issues/106); independent cumulative/context/output controls [#125](https://github.com/etas-project/etas-interpreter/issues/125) also remain unfinished. See [current evidence and remaining scope](NATIVE_MIGRATION.md). The commands below use the Python project entry; the complete thirteen-item refactor and native default cutover remain unfinished.
 
 Use the existing Docker image and `MINIMAX_API_KEY` configuration. Open any existing project folder, including an empty one:
 

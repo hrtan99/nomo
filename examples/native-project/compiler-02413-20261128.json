@@ -754,5 +754,6 @@
   ],
   "goal": "all thirteen DIP/IoC items remain active; this receipt accepts only the scopes listed above",
   "line_limit": "temporary user waiver remains in effect",
-  "real_provider_calls": 0
+  "real_provider_calls": 0,
+  "upstream_callable_diagnostic": "https://github.com/etas-project/etas-frontend/issues/106"
 }

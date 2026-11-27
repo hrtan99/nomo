@@ -256,5 +256,6 @@
     "source_count": 468,
     "source_manifest_sha256": "1806e660a0093bfc8b2b4b8dc1a0f7418c44d3d0f3873f5ffdde2c9aba104238",
     "matches_checked_attempt": 2
-  }
+  },
+  "upstream_callable_diagnostic": "https://github.com/etas-project/etas-frontend/issues/106"
 }
