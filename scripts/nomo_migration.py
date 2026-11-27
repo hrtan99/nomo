@@ -1,8 +1,11 @@
 """Read-only source adapters for one-time saved-state migration."""
 import hashlib
 import json
+from pathlib import PurePosixPath
 import shutil
 import sqlite3
+import tarfile
+import tempfile
 
 STORES = {
     'nomo-native-conversations-v1': ('conversations', ('Counters', 'Selected', 'Sessions', 'Events', 'Chunks')),
@@ -65,6 +68,39 @@ def backup(source, archive):
         with sqlite3.connect(archive) as snapshot:
             old.backup(snapshot)
     archive.chmod(0o600)
+
+
+def native_snapshots(source, image, state):
+    """Retain the filesystem objects referenced by the old native edit rows."""
+    edits = source.parent / 'edits'
+    copied = []
+    if edits.exists():
+        # A locally produced tar preserves modes, symlinks and hard-link groups;
+        # no foreign archive is extracted. The temporary stream is deleted on close.
+        with tempfile.TemporaryFile() as stream:
+            with tarfile.open(fileobj=stream, mode='w') as archive:
+                archive.add(edits.resolve(), arcname='edits')
+            stream.seek(0)
+            with tarfile.open(fileobj=stream, mode='r') as archive:
+                archive.extractall(state, filter='fully_trusted')
+        # Tar timestamps use floating-point seconds. Retain the source's exact
+        # filesystem timestamps and platform metadata after copying its objects.
+        for original in [edits, *edits.rglob('*')]:
+            shutil.copystat(original, state / 'edits' / original.relative_to(edits), follow_symlinks=False)
+        copied.append('edits')
+    references = set()
+    for row in image['rows']:
+        if row['store'] != 'mutations.Steps':
+            continue
+        for saved in json.loads(row['value'])['paths']:
+            for side in ('before', 'after'):
+                if saved[side + '_exists']:
+                    relative = PurePosixPath(saved[side]).relative_to('/native-state')
+                    target = state.joinpath(*relative.parts)
+                    if not target.exists() and not target.is_symlink():
+                        raise FileNotFoundError('native edit snapshot is missing: ' + saved[side])
+                    references.add(str(relative))
+    return {'directories': copied, 'referenced_snapshots': len(references)}
 
 
 def project_packet(source, archive):

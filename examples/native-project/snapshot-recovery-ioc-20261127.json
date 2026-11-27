@@ -1,0 +1,285 @@
+{
+  "date": "2026-11-27",
+  "status": "snapshot-copy-and-application-undo-qualified-model-tool-path-open",
+  "snapshot": {
+    "root": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0246-review-yaidi1ar",
+    "tree": "a0e2e89501c59a9b8131fa636b96d760064fab91",
+    "evidence": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0246-review-yaidi1ar/compiler-evidence",
+    "overlay": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0246-review-yaidi1ar/compiler-compose.json",
+    "source_count": 467,
+    "source_manifest_sha256": "8dd761b1e6276fdabb1c7a4740d4db7a21dd2d3141535308c28b3f75d64ee9c0"
+  },
+  "compiler_receipt": "examples/native-project/compiler-0246-20261127.json",
+  "changes": [
+    "Application policy requests the backup namespace from its owned MutationFiles/MutationFileAccess boundary; the concrete path stays in ProjectMutationFiles.",
+    "The native migration copies real edit snapshot objects before typed insertion, retains native references, and rejects a destination inside that source tree.",
+    "A locally produced tar preserves object/link structure; copystat retains exact platform metadata and nanosecond timestamps. No foreign archive is accepted."
+  ],
+  "snapshot_preservation": {
+    "status": "passed-snapshot-preservation-after-timestamp-fix",
+    "evidence": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-snapshot-preservation-qc7vi71v",
+    "source": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-mutations-554gkkl2/state/conversations.sqlite3",
+    "source_sha256": "eac707ef17f883505677ff3a905a089cd709ff5d57942979b4ea5581411808a5",
+    "rows": 197,
+    "snapshots": {
+      "directories": [
+        "edits"
+      ],
+      "referenced_snapshots": 9
+    },
+    "source_tree": {
+      "nodes": {
+        ".": {
+          "kind": 16384,
+          "mode": 493,
+          "mtime_ns": 1795629925528374512
+        },
+        "native-0-1": {
+          "kind": 16384,
+          "mode": 493,
+          "mtime_ns": 1795629925725330291
+        },
+        "native-0-1/0-0.after": {
+          "kind": 16384,
+          "mode": 493,
+          "mtime_ns": 1795629925000000000
+        },
+        "native-0-1/1-0.after": {
+          "kind": 16384,
+          "mode": 493,
+          "mtime_ns": 1795629925000000000
+        },
+        "native-0-1/2-0.after": {
+          "kind": 32768,
+          "mode": 420,
+          "mtime_ns": 1795629925604243315,
+          "sha256": "122e0441abd44b4829297bc21cd483f672418bfaf6eea9fd3ed14eb71f93eb90"
+        },
+        "native-0-1/3-0.after": {
+          "kind": 32768,
+          "mode": 420,
+          "mtime_ns": 1795629925637286119,
+          "sha256": "c07d6190ee3b4da91b545a74cd1928acde9afa9966f004f2eccd3a9c839e0177"
+        },
+        "native-0-1/3-0.before": {
+          "kind": 32768,
+          "mode": 420,
+          "mtime_ns": 1795629919128554707,
+          "sha256": "ad33bf05950ad45f88947e6f4b2c0f5c0badfd3e1b7985c4491b3f7c8ae0e132"
+        },
+        "native-0-1/4-0.after": {
+          "kind": 16384,
+          "mode": 493,
+          "mtime_ns": 1795629925000000000
+        },
+        "native-0-1/5-0.before": {
+          "kind": 32768,
+          "mode": 420,
+          "mtime_ns": 1795629919128909874,
+          "sha256": "6d1dc71fb8c1d9f7786ddddd833d3f60835dd60e3b86b652e4458f780c6532f6"
+        },
+        "native-0-1/5-1.after": {
+          "kind": 32768,
+          "mode": 420,
+          "mtime_ns": 1795629919128909874,
+          "sha256": "6d1dc71fb8c1d9f7786ddddd833d3f60835dd60e3b86b652e4458f780c6532f6"
+        },
+        "native-0-1/6-0.before": {
+          "kind": 16384,
+          "mode": 493,
+          "mtime_ns": 1795629919000000000
+        },
+        "native-0-1/6-0.before/program": {
+          "kind": 32768,
+          "mode": 489,
+          "mtime_ns": 1795629919129249709,
+          "sha256": "6d1dc71fb8c1d9f7786ddddd833d3f60835dd60e3b86b652e4458f780c6532f6"
+        }
+      },
+      "hardlink_groups": []
+    },
+    "initial_copy": {
+      "evidence": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-snapshot-migration-u1yrk038",
+      "scope": "Byte/type/mode copy passed; later timestamp observation found eight differences due to tar float precision. The original result is retained, not relabelled as full metadata preservation."
+    },
+    "qualification": "Same actual earlier native batch/undo fixture. Copies nine referenced snapshots with bytes/types/modes/link groups/nanosecond mtimes intact. No model, command tool or native database insertion. Complete typed migration remains separately gated."
+  },
+  "controlled_case": {
+    "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-mutation-controller-aaysxapf",
+    "result": {
+      "exit": 0,
+      "stdout": "[BATCH  ] [{\"operation\":\"write\",\"path\":\"note.txt\",\"target\":\"\",\"text\":\"before new\\n\"}]\n[CHANGE ] {\"operation\":\"write\",\"path\":\"note.txt\",\"target\":\"\",\"text\":\"before new\\n\"}\n[PREVIEW] {\"after\":\"before new\\n\",\"before\":\"before old\\n\",\"path\":\"note.txt\"}\nPORT write after durable recovery metadata\n[RESTORE] {\"after\":\"/fixture-snapshots/native-0-0/0-0.after\",\"after_exists\":true,\"before\":\"/fixture-snapshots/native-0-0/0-0.before\",\"before_exists\":true,\"path\":\"note.txt\"}\nPASS controlled apply and undo\n[BATCH  ] [{\"operation\":\"write\",\"path\":\"note.txt\",\"target\":\"\",\"text\":\"before new\\n\"}]\n[CHANGE ] {\"operation\":\"write\",\"path\":\"note.txt\",\"target\":\"\",\"text\":\"before new\\n\"}\n[PREVIEW] {\"after\":\"before new\\n\",\"before\":\"before old\\n\",\"path\":\"note.txt\"}\nPORT write after durable recovery metadata\nPORT after-write snapshot failed\nPORT partial write retained\n[RESTORE] {\"after\":\"/fixture-snapshots/native-0-8/0-0.after\",\"after_exists\":false,\"before\":\"/fixture-snapshots/native-0-8/0-0.before\",\"before_exists\":true,\"path\":\"note.txt\"}\nPASS controlled explicit rollback after write\n",
+      "stderr": "",
+      "resources": {
+        "memory.max": "4294967296",
+        "memory.peak": "601612288",
+        "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+        "cpu.max": "400000 100000",
+        "pids.max": "256"
+      },
+      "status": "passed",
+      "source_count": 23,
+      "paired_host_requests": 210,
+      "host_actions": {
+        "Memory.read": 96,
+        "Memory.write": 100,
+        "Console.stdout_write": 14
+      },
+      "qualification": "Apply/undo and explicitly required recovery after a retained write. Actual NativeChangeJournals and real SQLite history with controlled file/command effects. This does not certify actual project filesystem writes, on-disk rollback or native approvals."
+    },
+    "traces": [
+      {
+        "path": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-mutation-controller-aaysxapf/state/mutations.trace.json",
+        "sha256": "b2b3b88a3fe3228b1bbcfd6b29014b3c7ed4dab9e1583a20b6db7ef14954cfa0",
+        "outcome": {
+          "kind": "completed"
+        },
+        "settled": true,
+        "paired_host_requests": 210,
+        "actions": {
+          "Console.stdout_write": 14,
+          "Memory.read": 96,
+          "Memory.write": 100
+        },
+        "model_requests": 0,
+        "native_authority_audit": []
+      }
+    ],
+    "qualification": "Original actual NativeChangeJournals/SQLite case and all durable-before-write, apply/undo, retained-write/explicit rollback assertions pass. The existing fixture supplies /fixture-snapshots and checks that the consumer uses it. No real file/command/model action in this controlled case."
+  },
+  "production_model_case": {
+    "status": "failed-not-relabelled-by-terminal-continuation",
+    "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-mutations-mchtkztw",
+    "trace": {
+      "path": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-mutations-mchtkztw/native/trace.json",
+      "sha256": "fd2d231576fc684faf9347e13eb948b4012e33a4df390f9243a373a01de15e24",
+      "outcome": {
+        "failure": {
+          "diagnostic": {
+            "code": "Analysis(UnhandledEffectAction)",
+            "message": "unhandled effect action ChangeOperations.undo escaped the checked-HIR interpreter entry",
+            "phase": "analysis",
+            "severity": "error"
+          },
+          "kind": "language"
+        },
+        "kind": "failed"
+      },
+      "settled": true,
+      "paired_host_requests": 1207,
+      "actions": {
+        "Agentic.step": 3,
+        "Approval.request": 17,
+        "Command.run": 15,
+        "Console.stdin_read_line": 2,
+        "Console.stdout_write": 30,
+        "Fs.atomic_replace": 2,
+        "Fs.list": 30,
+        "Fs.read": 1,
+        "Memory.read": 259,
+        "Memory.write": 250,
+        "Policy.evaluate": 598
+      },
+      "model_requests": 3,
+      "native_authority_audit": []
+    },
+    "original_expected_http_requests": 4,
+    "observed_http_requests": 3,
+    "driver_exit": 1,
+    "upstream_report": "examples/repros/model-tool-handlers-0246/UPSTREAM_ISSUE.md",
+    "qualification": "First model turn applies the original batch; the second model tool undo escapes the installed outer ChangeOperations handler. Exact cause and regression status are unproven. No further model/forward action is repeated."
+  },
+  "explicit_terminal_continuation": {
+    "result": {
+      "exit": 0,
+      "approvals": 15,
+      "scope": "One explicit terminal undo on the same retained applied journal. Forward changes and model requests are not repeated; the original model-driven test remains failed.",
+      "status": "passed-explicit-terminal-undo",
+      "model_requests": 0
+    },
+    "trace": {
+      "path": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-mutations-mchtkztw/native/manual-undo.trace.json",
+      "sha256": "5588b92882855940925a8c98f97d8bc4ecaed5c07a2f20f185a6eb5f7baa94de",
+      "outcome": {
+        "kind": "completed"
+      },
+      "settled": true,
+      "paired_host_requests": 719,
+      "actions": {
+        "Approval.request": 15,
+        "Command.run": 15,
+        "Console.stdin_read_line": 4,
+        "Console.stdout_write": 34,
+        "Fs.list": 16,
+        "Memory.read": 108,
+        "Memory.write": 175,
+        "Policy.evaluate": 352
+      },
+      "model_requests": 0,
+      "native_authority_audit": []
+    },
+    "qualification": "Same retained journal restored with new per-operation approvals and zero model requests. Original model test stays failed. The second coding attempt remains dispatching without a result; no automatic inference resolution or success is fabricated."
+  },
+  "production_migration": {
+    "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-state-migration-knljw8ok",
+    "result": {
+      "status": "observed",
+      "migration_exit": 3,
+      "source_before": "eac707ef17f883505677ff3a905a089cd709ff5d57942979b4ea5581411808a5",
+      "source_after": "eac707ef17f883505677ff3a905a089cd709ff5d57942979b4ea5581411808a5",
+      "original_rows": 197
+    },
+    "receipt": {
+      "status": "incomplete",
+      "source_database_sha256": "eac707ef17f883505677ff3a905a089cd709ff5d57942979b4ea5581411808a5",
+      "source_snapshot_sha256": "c84230fea83808433c2757493e4034f5a4f3eb74176166fd56b81e9536e271f1",
+      "source_format": "native-0135",
+      "rows": 197,
+      "source": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-mutations-554gkkl2/state/conversations.sqlite3",
+      "state": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-state-migration-knljw8ok/migrated/state",
+      "snapshots": {
+        "directories": [
+          "edits"
+        ],
+        "referenced_snapshots": 9
+      },
+      "scope": "Native format-3 records only. Original receipts/CAS namespaces remain in the source backup; fresh SDK writes establish new destination versions. No command, model, recovery or live-handle replay.",
+      "exit": 3,
+      "source_database_after": "eac707ef17f883505677ff3a905a089cd709ff5d57942979b4ea5581411808a5"
+    },
+    "trace": {
+      "path": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-state-migration-knljw8ok/migrated/trace/trace.json",
+      "sha256": "d6aa6f6f4b9c24db3c1eb611d15fb3744a95ba2dcea9939aab6712faf493401c",
+      "outcome": {
+        "failure": {
+          "diagnostic": {
+            "code": "Analysis(MissingCheckedFact)",
+            "message": "checked revision value conversion failed: Value { source: TypeId(1159), target: TypeId(114), failure: UnmaterializedType(\"specialized type was not materialized: Applied { constructor: TypeConstructorId(105), args: [TypeId(4), TypeId(97)] }\") }",
+            "phase": "analysis",
+            "severity": "error"
+          },
+          "kind": "execution_fault"
+        },
+        "kind": "failed"
+      },
+      "settled": true,
+      "paired_host_requests": 1,
+      "actions": {
+        "Fs.read": 1
+      },
+      "model_requests": 0,
+      "native_authority_audit": []
+    },
+    "business_rows": 0,
+    "qualification": "Existing actual 197-row 0.13.5 batch/undo source and nine native snapshot references. Snapshot copy matches source, including nanosecond mtimes. Standard parse still fails before business Memory access. Full all-row and fresh-history assertions are unexecuted; original source unchanged. No old 49-row retry or new negative matrix."
+  },
+  "inclusive_core": {
+    "counter": "nomo-physical-v4",
+    "source_sloc": 18158,
+    "runtime_sloc": 4806,
+    "runtime_files": 29,
+    "total_sloc": 22964,
+    "limit_exception": "Existing explicit user-authorized temporary code ceiling waiver."
+  },
+  "qualification": "The physical-copy fix closes an owned omission; it does not fix standard JSON, qualify the failed model-tool path, complete Python/bounded saved-state migration, or switch the default entry. Older runtime receipts retain their own immutable scope."
+}

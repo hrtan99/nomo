@@ -50,7 +50,7 @@ flow command(program: string, arguments: Array<string>, call: i64) -> bool {
     return perform MutationFiles.command(program, arguments, call);
 }
 
-flow backup_root(value: Journal) -> string { return "/native-state/edits/" + value.id; }
+flow backup_root(value: Journal) -> string { return perform MutationFiles.backup(value.id); }
 flow step_key(id: string, index: i64) -> string { return id + "/" + from_i64(index); }
 
 flow save_before(value: Journal, index: i64, name: string, slot: usize) -> Option<SavedPath> {

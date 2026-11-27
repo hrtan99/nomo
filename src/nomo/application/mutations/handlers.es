@@ -15,6 +15,7 @@ import nomo.application.mutations.ports.{MutationFiles, ChangeJournal, MutationH
 
 flow bindings<F ~ MutationFileAccess, J ~ ChangeJournalStore, H ~ MutationHistoryStore + ConversationReader, O ~ MutationOutputSink>(files: F, journals: J, history: H, output: O) -> ![MutationFiles, ChangeJournal, MutationHistory, MutationOutput => SessionContext.current, CommandOperations, Memory, Console, Command.run<DefaultCommandSandbox>, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Fs.atomic_replace<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>, Error<ConsoleError>, Error<BudgetExceeded>] ![] {
     return handler {
+        MutationFiles.backup(id) => files.backup(id);
         MutationFiles.normalize(path) => files.normalize(path);
         MutationFiles.exists(path) => files.exists(path);
         MutationFiles.read(path) => files.read(path);

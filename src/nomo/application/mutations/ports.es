@@ -13,6 +13,7 @@ import nomo.domain.conversation.messages.ChatMessage;
 import nomo.domain.mutations.models.{Change, ChangeOutcome, Journal, Step, FileChange, FileOutcome};
 
 public effect MutationFiles {
+    action backup(id: string) -> string;
     action normalize(path: string) -> string;
     action exists(path: string) -> bool;
     action read(path: string) -> string;
@@ -49,6 +50,7 @@ public effect ChangeOperations {
 }
 
 public spec MutationFileAccess {
+    flow backup(self, id: string) -> string ![];
     flow normalize(self, path: string) -> string ![];
     flow exists(self, path: string) -> bool ![Fs.list<ProjectRoot>, Error<FileError>];
     flow read(self, path: string) -> string ![Fs.read<ProjectRoot>, Error<FileError>, Error<ReadLimitError>];

@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 import sqlite3
+import stat
 import subprocess
 import sys
 import tempfile
@@ -41,6 +42,23 @@ def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def snapshot_tree(root):
+    if not root.exists():
+        return None
+    nodes, links = {}, {}
+    for path in [root, *sorted(root.rglob('*'))]:
+        name = str(path.relative_to(root))
+        info = path.lstat()
+        node = {'kind': stat.S_IFMT(info.st_mode), 'mode': stat.S_IMODE(info.st_mode), 'mtime_ns': info.st_mtime_ns}
+        if path.is_symlink():
+            node['target'] = os.readlink(path)
+        elif path.is_file():
+            node['sha256'] = digest(path)
+            links.setdefault((info.st_dev, info.st_ino), []).append(name)
+        nodes[name] = node
+    return {'nodes': nodes, 'hardlink_groups': sorted(sorted(group) for group in links.values() if len(group) > 1)}
+
+
 def audit(path):
     trace = json.loads(path.read_text())
     assert trace['outcome']['kind'] == 'completed' and trace['termination']['local_work_settled']
@@ -60,6 +78,7 @@ def main():
     evidence = Path(tempfile.mkdtemp(prefix='nomo-native-state-migration-')).resolve()
     destination = evidence / 'migrated'
     before = digest(source)
+    snapshots = snapshot_tree(source.parent / 'edits')
     expected = rows(source, old_value)
     print('EVIDENCE ' + str(evidence), flush=True)
     result = subprocess.run([sys.executable, str(ROOT / 'scripts/nomo-migrate-native'), str(source), str(destination)],
@@ -71,6 +90,8 @@ def main():
     (evidence / 'result.json').write_text(json.dumps(report, indent=2) + '\n')
     assert result.returncode == 0, result.stdout + result.stderr
     assert digest(source) == before
+    assert snapshot_tree(source.parent / 'edits') == snapshots
+    assert snapshot_tree(destination / 'state/edits') == snapshots
     migrated = destination / 'state/conversations.sqlite3'
     assert rows(migrated, current_value) == expected, 'migration changed stored keys or values'
     receipt = json.loads((destination / 'migration.json').read_text())

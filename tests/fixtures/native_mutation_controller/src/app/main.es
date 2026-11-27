@@ -1,7 +1,7 @@
 module app.main;
 
 import std.io.{println, IOError};
-import std.text.{from_i64, ends_with};
+import std.text.{from_i64, ends_with, starts_with};
 import std.json.JsonValue;
 import nomo.application.conversation.session_context.SessionContext;
 import nomo.adapters.storage.conversations.{NativeHistory, record as save_record, tool_finished, pending_request, result_published};
@@ -49,6 +49,7 @@ flow execute(history: NativeHistory, session: string, mode: string, edit: string
     return handle if mode == "apply" { apply_plan("write_file", [Change { operation = "write", path = "note.txt", target = "", text = "before new\n" }]) }
         else { if mode == "undo" { undo_changes(edit) } else { rollback_changes(edit) } } with {
         SessionContext.current() => session;
+        MutationFiles.backup(id) => "/fixture-snapshots/" + id;
         MutationFiles.normalize(path) => path;
         MutationFiles.exists(path) => file(path).exists;
         MutationFiles.read(path) => file(path).text;
@@ -56,6 +57,7 @@ flow execute(history: NativeHistory, session: string, mode: string, edit: string
             let pending = match pending_request(session) { Some(value) => value, None() => abort("write had no pending owner"), };
             let id = session + "-" + from_i64(pending.call);
             let current = journal(id); let saved = step(id + "/0");
+            if !starts_with(saved.paths[0].before, "/fixture-snapshots/") { abort("snapshot location ignored the supplied file port"); }
             if current.phase != "applying" || saved.phase != "applying" || saved.paths.len() != 1 {
                 abort("write preceded durable applying state");
             }

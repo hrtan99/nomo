@@ -17,6 +17,7 @@ flow location(name: string) -> WorkspacePath<ProjectRoot> {
 }
 public type ProjectMutationFiles = {};
 impl ProjectMutationFiles ~ MutationFileAccess {
+    flow backup(self, id: string) -> string ![] { return "/native-state/edits/" + id; }
     flow normalize(self, name: string) -> string ![] { return relative_name(location(name)); }
     flow exists(self, name: string) -> bool ![Fs.list<ProjectRoot>, Error<FileError>] {
         for item in list(location(parent(name))) {
