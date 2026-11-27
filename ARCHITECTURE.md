@@ -43,6 +43,11 @@ The Work controller consumes separate `WorkEditor` and `WorkConfirmation` roles.
 
 The two confirmation gates and the original persistence/write order remain in place. Exact final compilation scope and the runtime qualification are in [the edit receipt](examples/native-project/edit-confirmation-ioc-20261127.json).
 
+Legacy edit-journal transitions now live in `application/sessions/edit_operations.es`, consuming the existing `CasRows` role. History-work format/budget checks live in the domain, while its application service consumes `CasRows` and `PriorChatReader`. Native adapters provide Memory rows and chat reads. Five concrete WorkPersistence implementations belong to `adapters/storage/work_persistence.es`; the four CLI roots construct them without defining storage implementations. The exact source/runtime qualification is in [the legacy persistence receipt](examples/native-project/legacy-persistence-ioc-20261127.json).
+
+
+Followup admission/claim/completion and predecessor sequencing also belong to application/sessions/history_followup. Its FollowupPredecessors port exposes the first work, edit and check observations; NativeHistoryFollowup supplies those readers plus the existing CAS/chat roles. Recoverable work record constructors and pure binding/event rules live in domain/sessions/recoverable_work_state. ProjectLaunchControl exposes only publication of the selected directory; its filesystem adapter owns the control-file path. Final checked scope and remaining runtime work are recorded in [the followup receipt](examples/native-project/followup-policy-ioc-20261127.json).
+
 ## Compatibility identities
 
 Some old module paths remain as **declaration-only compatibility leaves**. They preserve nominal types already used by saved records, Memory schema/resources and filesystem Region configuration. They contain no workflow, model, tool, effect or concrete method bodies. Their executable code has moved into the layers above.
