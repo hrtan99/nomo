@@ -2,6 +2,20 @@
 
 The shipping `scripts/nomo` entry still uses the existing Python project controller. The opt-in `native_project` flow is the migration implementation, not a completed replacement.
 
+## Transfer, project lifetime and capture gate, 2026-11-28
+
+The current 468-module production source now passes the original actual transfer/project/terminal scenarios on official 0.24.13/std 0.9.0. Its source manifest is identical to the checked configuration slice below; no new product validation, alternative IO implementation or default selector is introduced.
+
+Actual import is interrupted after durable progress, then the original source file is renamed. A new process resumes from the sealed source, completes all 300 original events, forks the requested prefix and restores the complete history in another process. The sealed raw input, event order/content and independent SHA-256 digest match. All three traces settle and pair their requests; resumed/restored invocations complete without model, command or filesystem-write actions.
+
+Actual export is interrupted at native approval. Original target contents remain unchanged and no write dispatch occurs. A fresh Host retains the dispatching attempt; explicit inspection/resolution records closed_unknown without replay. A separately approved new export writes its exact preview once; importing it keeps the old attempt metadata historical. This covers the original pre-write approval window, not every post-write finalization window.
+
+Project switching retains the actual Etas Host/PID for each folder and the same live job across return. Unicode input/output, EOF and saved output pass. The original startup-routing continuation also passes resident new/title/id selection, global chooser routing to another retained Host, isolated foreign-ID inspection and --open forwarding new/title/status. Across all project traces, eleven Command actions and five launch-control writes have sixteen native approval requests; no model action occurs. Same-Host retention does not establish fresh-Host live-job reconnection.
+
+The complete continuous-capture candidate is mechanically rebased onto current typed startup, constructor composition and archived-job queries. The four capture algorithm/data modules and original oracle remain byte-for-byte identical: 2,555,904 bytes, the 20-second UI-idle interval, quit cancellation and fresh-Host 17-byte prefix. Its 472-module normal source check still fails before runtime in 39.987 s: missing latent read behavior, a captured free-parameter fact and a generic ProcessCapture.register escape, the family reported in frontend #103. The initial owned snapshot mountpoint omission is corrected before compiler execution. No collector runtime or selected-policy change is accepted, and interrupted consumer-result/cursor restoration remains separate.
+
+These results accept the transfer/project/terminal criteria in DIP-12 on the current source. The full thirteen-item objective, continuous capture, other recorded capability gates and default native cutover remain open. [Production transfer/project evidence](examples/native-project/transfer-project-ports-02413-20261128.json); [complete unselected capture candidate and exact diagnostics](examples/native-project/candidates/native-output-capture-ioc-02413.json).
+
 ## Configuration ports and migrated cache acceptance, 2026-11-28
 
 The configuration/instruction boundary now has current-graph functional acceptance on official 0.24.13/std 0.9.0. ConfigurationLoader consumes the existing source, codec, converter, cache and conversation-reader roles; bootstrap selects implementations. Settings/defaults and context calculations remain domain rules. Instruction policy retains root-to-leaf order and receives its filesystem operations through the application contract. No stored type, Region, configured check argv or inactive timeout behavior changes.
