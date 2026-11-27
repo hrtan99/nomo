@@ -70,23 +70,28 @@ def backup(source, archive):
     archive.chmod(0o600)
 
 
+def _retain_tree(source, destination, name):
+    """Copy a quiescent source tree, preserving its filesystem object metadata."""
+    # A locally produced tar preserves modes, symlinks and hard-link groups;
+    # no foreign archive is extracted. The temporary stream is deleted on close.
+    with tempfile.TemporaryFile() as stream:
+        with tarfile.open(fileobj=stream, mode='w') as archive:
+            archive.add(source.resolve(), arcname=name)
+        stream.seek(0)
+        with tarfile.open(fileobj=stream, mode='r') as archive:
+            archive.extractall(destination, filter='fully_trusted')
+    # Tar timestamps use floating-point seconds. Retain exact nanoseconds and
+    # platform metadata after copying the objects.
+    for original in [source, *source.rglob('*')]:
+        shutil.copystat(original, destination / name / original.relative_to(source), follow_symlinks=False)
+
+
 def native_snapshots(source, image, state):
     """Retain the filesystem objects referenced by the old native edit rows."""
     edits = source.parent / 'edits'
     copied = []
     if edits.exists():
-        # A locally produced tar preserves modes, symlinks and hard-link groups;
-        # no foreign archive is extracted. The temporary stream is deleted on close.
-        with tempfile.TemporaryFile() as stream:
-            with tarfile.open(fileobj=stream, mode='w') as archive:
-                archive.add(edits.resolve(), arcname='edits')
-            stream.seek(0)
-            with tarfile.open(fileobj=stream, mode='r') as archive:
-                archive.extractall(state, filter='fully_trusted')
-        # Tar timestamps use floating-point seconds. Retain the source's exact
-        # filesystem timestamps and platform metadata after copying its objects.
-        for original in [edits, *edits.rglob('*')]:
-            shutil.copystat(original, state / 'edits' / original.relative_to(edits), follow_symlinks=False)
+        _retain_tree(edits, state, 'edits')
         copied.append('edits')
     references = set()
     for row in image['rows']:
@@ -103,9 +108,38 @@ def native_snapshots(source, image, state):
     return {'directories': copied, 'referenced_snapshots': len(references)}
 
 
+def _project_files(source, directory):
+    """Retain old editor journals and job files without importing native authority.
+
+    The old Nomo and its background job writers must be stopped before copying.
+    Process metadata belongs to a workspace, not an inferred conversation.
+    """
+    retained = []
+    files = {}
+    for name in ('edits', 'jobs'):
+        original = source.parent / name
+        if not original.exists():
+            continue
+        _retain_tree(original, directory, name)
+        retained.append(name)
+        for path in sorted((directory / name).rglob('*')):
+            relative = path.relative_to(directory).as_posix()
+            if path.is_symlink():
+                files[relative] = {'link': str(path.readlink())}
+            elif path.is_file():
+                files[relative] = {'bytes': path.stat().st_size, 'sha256': digest(path)}
+    manifest = {'format': 'nomo-project-files-1', 'directories': retained, 'files': files,
+                'native_import': 'not-performed',
+                'scope': 'Original edit snapshots, job status and raw output only. '
+                         'No native edit journal, job ownership, live handle or completed outcome is synthesized.'}
+    (directory / 'project-files.json').write_text(json.dumps(manifest, indent=2) + '\n')
+    return manifest
+
+
 def project_packet(source, archive):
     """Export the complete shipping SQL rows plus the native consumer's view."""
     backup(source, archive)
+    _project_files(source, archive.parent)
     registry = source.parent / 'projects.json'
     projects = []
     if registry.is_file():
