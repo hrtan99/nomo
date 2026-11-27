@@ -1,0 +1,143 @@
+{
+  "date": "2026-11-27",
+  "status": "source-checked-original-capture-blocked-corrected-controller-running-at-checkpoint",
+  "source_commit": "accf3d8d97cf764f8229065add2f76c16f5126ea",
+  "compiler": "official 0.24.3 with matching installed SDK; see compiler-0243-20261127.json",
+  "changes": [
+    "ProcessControl.start returns Live; pure reference extracts the exact ID saved by application sequencing. HostProcessControl returns CommandHandle, while controlled fixture selects Token.",
+    "Saved Job and JobEvent declarations, Memory resources and runtime approvals are unchanged. No collector, manager wrapper or additional Host action is selected.",
+    "Existing controlled fixture is migrated to Live/reference with explicit bounded-effect acknowledgements. Its unchanged functional/resource assertions are retained; only the outer observer deadline changes from 300 to 1800 seconds for known slow runtime (#120)."
+  ],
+  "full_check": {
+    "exit": 0,
+    "elapsed_seconds": 62.37969140400014,
+    "resources": {
+      "memory.max": "4294967296",
+      "memory.peak": "3224969216",
+      "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+      "cpu.max": "400000 100000",
+      "pids.max": "256"
+    },
+    "source_count": 438,
+    "diagnostics": 0,
+    "optimization_level": "O2",
+    "cache": "off"
+  },
+  "snapshot": {
+    "root": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-n_6j2ktk",
+    "tree": "e34f8132d6556621712ecdb325d01848c32df26b",
+    "evidence": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-n_6j2ktk/compiler-evidence",
+    "overlay": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-n_6j2ktk/compiler-compose.json",
+    "source_count": 438,
+    "source_manifest_sha256": "129664d27321267173f7e46d517bc31406f9a847f9a83af002df0dbc3126bbac"
+  },
+  "architecture": {
+    "status": "passed",
+    "modules": 438,
+    "imports": 3271,
+    "identity_leaves": 48
+  },
+  "controller": {
+    "status": "original-driver-failed-old-fixture-tool-count",
+    "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-process-controller-95oxpc36",
+    "probe": "tests/native_process_controller_probe.py",
+    "qualification": "Original assertion tools==5 is wrong for five commands plus one job_output observation. Native operations reached exact-input/raw-byte and saved-output assertions; final abort is at the old fixture check. Original driver is failed, not relabelled passed. Corrected final-source case will run separately.",
+    "driver_exit": 1,
+    "native_exit": 3,
+    "stdout": "[PROCESS] {\"arguments\":[\"utf8\"],\"operation\":\"start\",\"program\":\"controlled\"}\n[PROCESS] {\"handle\":\"fixture-handle\",\"job\":\"native-0-job-0\",\"operation\":\"reconnect\"}\n[PROCESS] {\"handle\":\"fixture-handle\",\"job\":\"native-0-job-0\",\"max_bytes\":4096.0,\"operation\":\"read\"}\n[PROCESS] {\"handle\":\"fixture-handle\",\"job\":\"native-0-job-0\",\"operation\":\"reconnect\"}\n[PROCESS] {\"handle\":\"fixture-handle\",\"input\":\"\u9e48\u9e55 caf\u00e9\\n\",\"job\":\"native-0-job-0\",\"operation\":\"write\"}\n[PROCESS] {\"handle\":\"fixture-handle\",\"job\":\"native-0-job-0\",\"operation\":\"reconnect\"}\n[PROCESS] {\"handle\":\"fixture-handle\",\"job\":\"native-0-job-0\",\"operation\":\"close_stdin\"}\n[PROCESS] {\"handle\":\"fixture-handle\",\"job\":\"native-0-job-0\",\"operation\":\"reconnect\"}\n[PROCESS] {\"handle\":\"fixture-handle\",\"job\":\"native-0-job-0\",\"operation\":\"stop\"}\nPASS process controller exact input and observed bytes\n",
+    "stderr": "error[analysis::ExecutionAborted]: durable completion changed\n --> /workspace/src/app/main.es:93:103\n  |     if final.pending != \"\" || final.ledger.tools != 5 || attempts.list(session.id, true).len() != 0 { abort(\"durable completion changed\"); }\n  |                                                                                                       ^ durable completion changed\n",
+    "resources": {
+      "memory.max": "4294967296",
+      "memory.peak": "608460800",
+      "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+      "cpu.max": "400000 100000",
+      "pids.max": "256"
+    },
+    "trace_outcome": {
+      "failure": {
+        "diagnostic": {
+          "code": "Analysis(ExecutionAborted)",
+          "message": "durable completion changed",
+          "phase": "analysis",
+          "severity": "error"
+        },
+        "kind": "execution_fault"
+      },
+      "kind": "failed"
+    },
+    "local_work_settled": true,
+    "paired_successful_host_requests": 221,
+    "action_counts": {
+      "Memory.read": 119,
+      "Memory.write": 92,
+      "Console.stdout_write": 10
+    },
+    "retained_state_inspection": {
+      "tools": 6,
+      "pending": "",
+      "attempt_phases": [
+        "completed",
+        "completed",
+        "completed",
+        "completed",
+        "completed"
+      ],
+      "saved_output_events": 2,
+      "saved_job_phase": "stopped"
+    }
+  },
+  "capture": {
+    "status": "unselected-ordinary-check-failed-before-runtime",
+    "metadata": "candidates/native-output-capture-ioc-0243.json",
+    "upstream": "https://github.com/etas-project/etas-frontend/issues/103",
+    "qualification": "The original full consumer requirement remains unaccepted; the minimal positive compiler diagnostic is not capture acceptance."
+  },
+  "remaining": "Configuration JSON #121, final production process/transfer/recovery lifetimes, continuous capture, shipping startup migration, actual provider operation and default native cutover remain incomplete.",
+  "real_provider_requests": 0,
+  "negative_matrix_added": false,
+  "canonical_contract_cleanup": {
+    "source_commit": "b0b430d440e6504b30c4344a4cefa7e31d80ae4c",
+    "snapshot": {
+      "root": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-oe669ca4",
+      "tree": "051596256b2dc22680aea589050aeea3cbecc54e",
+      "evidence": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-oe669ca4/compiler-evidence",
+      "overlay": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-oe669ca4/compiler-compose.json",
+      "source_count": 438,
+      "source_manifest_sha256": "f5ac001e79c7ec5645cd1c16de1dfe03adb1227e53fa68e55af40f3f1efae3be"
+    },
+    "full_check": {
+      "exit": 0,
+      "elapsed_seconds": 61.958495070000026,
+      "resources": {
+        "memory.max": "4294967296",
+        "memory.peak": "3222097920",
+        "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+        "cpu.max": "400000 100000",
+        "pids.max": "256"
+      }
+    },
+    "changes": "Domain process Job/JobEvent names re-export the preserved native.processes nominal contracts, as conversation types already do; four identical-field conversion helpers and duplicate view records are removed.",
+    "architecture": {
+      "modules": 438,
+      "imports": 3271,
+      "identity_leaves": 48,
+      "status": "passed"
+    },
+    "qualification": "Full source and identity-fingerprint checks only; the controlled runtime case uses the preceding Live/reference snapshot."
+  },
+  "checkpoint_utc": "2026-11-27T03:30:53.939880+00:00",
+  "corrected_controller": {
+    "status": "running-at-checkpoint",
+    "snapshot": {
+      "root": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-_2gr6_z0",
+      "tree": "48bf4ca2f5f7820629d286e56cb31b28fbec3609",
+      "evidence": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-_2gr6_z0/compiler-evidence",
+      "overlay": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-_2gr6_z0/compiler-compose.json",
+      "source_count": 438,
+      "source_manifest_sha256": "f5ac001e79c7ec5645cd1c16de1dfe03adb1227e53fa68e55af40f3f1efae3be"
+    },
+    "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-process-controller-_25xi_hu",
+    "probe": "tests/native_process_controller_probe.py",
+    "qualification": "Corrected six-tool ledger expectation and final canonical process contracts; no runtime pass is claimed yet. Product source manifest is identical to the passed final full check."
+  }
+}
