@@ -30,8 +30,7 @@ flow bundle_error(bundle: Bundle) -> string {
 public flow encode(bundle: Bundle) -> Result<string, string> {
     let error = bundle_error(bundle);
     if error != "" { return Err(error); }
-    var fields = ["nomo-session-bundle-v1", bundle.session_id, bundle.save_id];
-    @limits([Iterations(32)]) for body in bundle.bodies { fields = fields.push(body); }
+    let fields = ["nomo-session-bundle-v1", bundle.session_id, bundle.save_id].extend(bundle.bodies);
     // Public checked Message.cast performs typed HostValue/JsonValue conversion;
     // these helpers issue no Host request and never attach a Session configuration.
     let json = match encode_json(fields, "bundle checked encoding failed", "bundle JSON encoding failed") { Ok(value) => value, Err(error) => { return Err(error); } };
@@ -44,12 +43,7 @@ public flow decode(json: string) -> Result<Bundle, string> {
     let fields = match string_fields(json, "bundle JSON invalid", "bundle must contain only strings") { Ok(value) => value, Err(error) => { return Err(error); } };
     if fields.len() < 3 || fields.len() > 35 { return Err("bundle field count invalid"); }
     if fields[0] != "nomo-session-bundle-v1" { return Err("unsupported bundle format"); }
-    var bodies: Array<string> = [];
-    var index: usize = 3;
-    @limits([Iterations(32)]) while index < fields.len() {
-        bodies = bodies.push(fields[index]);
-        index = index + 1;
-    }
+    let bodies = fields.iter().skip(3).collect();
     let bundle = Bundle { format = 1, session_id = fields[1], save_id = fields[2], bodies };
     let error = bundle_error(bundle);
     if error != "" { return Err(error); }

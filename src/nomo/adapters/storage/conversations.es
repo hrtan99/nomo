@@ -1,7 +1,7 @@
 module nomo.adapters.storage.conversations;
 
 import std.memory.{MemoryEntry, MemoryCursor};
-import std.text.{from_i64, from_usize, char_count, get_char_slice, split_once, strip_prefix, parse_i64};
+import std.text.{from_i64, from_usize, char_count, get_char_slice, split_once, strip_prefix, parse_i64, TextBuilder};
 import nomo.domain.serialization.json.encode;
 import nomo.domain.conversation.messages.ChatMessage;
 import nomo.application.conversation.session_context.SessionContext;
@@ -184,15 +184,15 @@ public flow read_message(id: string, index: i64) -> ChatMessage ![Memory, Error<
         return ChatMessage { id = from_i64(index), role = "system", name = "archive_interrupted",
             text = "This archive record is incomplete. No completed outcome is available; inspect retained state before proceeding." };
     }
-    var text = "";
+    var text = TextBuilder.new();
     var part: usize = 0;
     @limits([Iterations(2147483647)]) while part < event.chunks {
-        text = text + match Data.Chunks.get(event_key + ":" + from_usize(part)) {
+        text.append(match Data.Chunks.get(event_key + ":" + from_usize(part)) {
             Some(value) => value, None() => abort("native archive content chunk is missing"),
-        };
+        });
         part = part + 1;
     }
-    return ChatMessage { id = from_i64(index), role = event.role, name = event.name, text };
+    return ChatMessage { id = from_i64(index), role = event.role, name = event.name, text = text.build() };
 }
 
 public flow reserve_result(id: string, role: string, name: string, call: i64) -> i64

@@ -11,16 +11,12 @@ type Line = { text: string, terminated: bool };
 // through the established ASCII encoder, preserving the distinction from LF.
 flow lines(value: string) -> Array<Line> {
     let parts = split(value, "\n");
-    var output: Array<Line> = []; var index: usize = 0;
-    @limits([Iterations(1048577)]) while index < parts.len() {
-        if index + 1 < parts.len() {
-            output = output.push(Line { text = parts[index], terminated = true });
-        } else if parts[index] != "" {
-            output = output.push(Line { text = parts[index], terminated = false });
-        }
-        index = index + 1;
-    }
-    return output;
+    return parts.iter().enumerate().filter_map(item => {
+        let (index, text) = item;
+        return if index + 1 < parts.len() || text != "" {
+            Some(Line { text, terminated = index + 1 < parts.len() })
+        } else { None() };
+    }).collect();
 }
 
 flow same(left: Line, right: Line) -> bool {

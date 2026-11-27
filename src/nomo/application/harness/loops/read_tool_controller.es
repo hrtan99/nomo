@@ -76,7 +76,7 @@ flow run_policy<P ~ ChildLoopPolicy, D ~ ToolActionDecoder>(policy: P, decoder: 
         tools = tools + 1;
         perform HarnessProgress.write("CHILD STAGE tool");
         var files = action.files;
-        if action.operation == "search" && files[0] == "*" { @limits([Iterations(256)]) for name in allowed { files = files.push(name); } }
+        if action.operation == "search" && files[0] == "*" { files = files.extend(allowed); }
         var result = if action.operation == "read" { display(perform ReadTools.read(files[0])) } else { display(perform ReadTools.search(files, action.literal)) };
         if shape.legacy_text {
             if len(result.text) > outcome_bytes() { result = outcome("refused", "tool result exceeds 2097176 display characters", result.scanned); }

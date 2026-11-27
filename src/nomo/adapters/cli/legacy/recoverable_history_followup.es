@@ -55,7 +55,8 @@ flow more(input: WorkRequest, prior_request: string, previous: Previous, convers
     var request = work.request; var history: Array<HistoryWork> = [];
     match facts.first { Some(value) => { history = history.push(historical(value)); } None() => (), }
     history = history.push(historical(latest));
-    @limits([Iterations(48)]) for value in facts.additional { history = history.push(historical(value)); latest = value; }
+    history = history.extend(facts.additional.iter().map(value => historical(value)).collect());
+    latest = match facts.additional.iter().last() { Some(value) => value, None() => latest };
     let extra = match load_extra(binding) { Ok(value) => value, Err(error) => { return refused(error); } };
     match extra { Some(value) => { request = value.value.current.core.request; } None() => (), }
     let prior = PriorWork { request, summary = latest.summary, summary_source = latest.summary_source, selection = latest.selection, check = latest.check, exit_code = latest.exit_code, output = latest.output, history };

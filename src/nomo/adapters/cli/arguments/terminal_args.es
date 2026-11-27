@@ -43,7 +43,7 @@ public flow parse(args: Array<string>) -> Result<Config, string> {
     var once = ""; var supplied_once = false; var latest = false; var supplied_parent = false; var seen: Array<string> = []; var index: usize = 1;
     @limits([Iterations(8)]) while index < args.len() {
         let flag = args[index]; index = index + 1;
-        @limits([Iterations(8)]) for previous in seen { if previous == flag { return Err("duplicate terminal option"); } }
+        if seen.iter().any(previous => previous == flag) { return Err("duplicate terminal option"); }
         seen = seen.push(flag);
         if flag == "--latest" {
             if mode != "continue" { return Err("latest parent selection requires terminal continue"); }

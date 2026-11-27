@@ -1,3 +1,33 @@
+# Default Etas entry and standard-library cleanup, 2026-11-28
+
+`scripts/nomo` now starts the Etas application; `nomo-native` forwards to the same
+launcher. The shipping Python project controller/model loop/tool catalogue/Git
+adapter and their Etas action bridge are removed. Historical SQL/journal/process
+producers required by migration probes are isolated under tests/fixtures/legacy_project;
+old format inspection tools and the one-time read-only SQLite source adapter remain.
+The Docker client transport remains infrastructure Python. No automatic old-state
+conversion is performed. NOMO_STATE_DIR selects a parent with a native subdirectory;
+NOMO_NATIVE_STATE selects the exact native directory.
+
+The entry switch is explicitly requested by the user. It does not close the full
+thirteen-item goal or upstream #103/#106/#125, add PTY, prove fresh-Host live process
+reconnection or finish bounded-session migration. Those limitations remain described
+below; earlier statements that the default is Python describe prior revisions.
+
+The standard-library sweep replaces manual UTF-8/control scanning with char properties
+and iterator predicates, nested duplicate searches with unique/Map, hand-built array
+copy/transforms with iterator/extend operations, and 4 KiB chunk assembly with TextBuilder.
+All 463 selected modules pass ordinary cache-off checking with zero diagnostics.
+Eight positive standard-library regressions pass, including pre-generated 1 MiB text.
+The original native worker recovery probe passes through the new default entry;
+the final working checkout also restores all 22 retained events (4,444 bytes)
+exactly against SQLite chunks, with no model or command replay. Historical source
+backup and the 11 existing SLOC counter assertions pass. [Exact scope and evidence](examples/native-project/stdlib-entry-cleanup-20261128.json).
+
+No stored nominal data layout changes. The retired project-request-only filesystem
+Region is removed together with its unused bridge and manifest; all remaining stored
+identity shapes remain checked.
+
 # Native Etas migration — in progress
 
 The shipping `scripts/nomo` entry still uses the existing Python project controller. The opt-in `native_project` flow is the migration implementation, not a completed replacement.

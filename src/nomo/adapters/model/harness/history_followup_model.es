@@ -41,7 +41,7 @@ impl HistoryStages ~ WorkStages {
 impl HistoryStages ~ WorkModelStages {
     flow read(self, value: ReadContext) -> string ![] {
         var earlier: Array<ReadWork> = [];
-        @limits([Iterations(50)]) for item in self.prior_work.history { earlier = earlier.push(ReadWork { id = item.id, selection = item.selection }); }
+        earlier = earlier.extend(self.prior_work.history.iter().map(item => ReadWork { id = item.id, selection = item.selection }).collect());
         let history = ReadPriorWork { request = self.prior_work.request, summary = self.prior_work.summary, summary_source = self.prior_work.summary_source, selection = self.prior_work.selection, check = self.prior_work.check, history = earlier };
         let input = bounded_history(ReadInput { current = value, previous_request = self.prior_request, previous = self.previous, conversation = self.conversation, prior_work = history }, "read");
         return if value.phase == "plan" { infer_stage(Stage.ReadPlan, self.wide, self.high_input, readplan_system(), input) } else { infer_stage(Stage.ReadSummary, self.wide, self.high_input, readaggregate_system(), input) };

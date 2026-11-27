@@ -18,7 +18,7 @@ public flow parse(args: Array<string>, saving: bool) -> Result<Options, string> 
     var index: usize = 0;
     @limits([Iterations(4)]) while index < args.len() {
         let flag = args[index];
-        @limits([Iterations(4)]) for prior in seen { if prior == flag { return Err("duplicate checkpoint option"); } }
+        if seen.iter().any(previous => previous == flag) { return Err("duplicate checkpoint option"); }
         seen = seen.push(flag);
         let value = args[index + 1];
         if flag == "--id" { id = value; }

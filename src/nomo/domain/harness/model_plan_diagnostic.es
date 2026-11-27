@@ -5,13 +5,11 @@ import std.text.{char_count as len, len as byte_len, contains, from_usize, lower
 import nomo.domain.mutations.edit_encoding.json;
 
 flow phase_name(value: string) -> string {
-    @limits([Iterations(7)]) for known in ["read-plan", "read-child-action", "read-child-final", "read-aggregate", "edit-plan", "edit-child", "edit-aggregate"] { if value == known { return value; } }
-    return "unknown";
+    return if ["read-plan", "read-child-action", "read-child-final", "read-aggregate", "edit-plan", "edit-child", "edit-aggregate"].iter().any(known => value == known) { value } else { "unknown" };
 }
 
 flow category_name(value: string) -> string {
-    @limits([Iterations(20)]) for known in ["limit", "control", "frame", "json", "shape", "arity", "verb", "task", "target", "replacement", "summary", "proposal", "field", "files", "literal", "result", "answer", "fence", "object", "prose"] { if value == known { return value; } }
-    return "unknown";
+    return if ["limit", "control", "frame", "json", "shape", "arity", "verb", "task", "target", "replacement", "summary", "proposal", "field", "files", "literal", "result", "answer", "fence", "object", "prose"].iter().any(known => value == known) { value } else { "unknown" };
 }
 
 flow limit(maximum: usize) -> usize { return if maximum > 0 && maximum <= edit_response_bytes() { maximum } else { 384 }; }

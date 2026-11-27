@@ -17,9 +17,7 @@ impl ProjectInstructionFiles ~ InstructionFileSource {
     }
     flow entries(self, scope: string) -> Array<string> ![Fs.list<ProjectRoot>, Error<FileError>] {
         let selected = match path<ProjectRoot>(scope) { Ok(value) => value, Err(_) => abort("invalid project instruction path"), };
-        var result: Array<string> = [];
-        for item in list(selected) { result = result.push(relative_name(item)); }
-        return result;
+        return list(selected).iter().map(item => relative_name(item)).collect();
     }
     flow text(self, pathname: string) -> string ![Fs.read<ProjectRoot>, Error<FileError>, Error<ReadLimitError>] { return read_text(pathname); }
 }

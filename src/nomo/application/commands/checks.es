@@ -10,11 +10,11 @@ flow program_path(name: string) -> string {
 
 public flow run() -> CheckOutcome {
     let settings = perform SettingsContext.current();
-    var program = "";
-    var arguments: Array<string> = [];
-    for value in settings.check {
-        if program == "" { program = value; } else { arguments = arguments.push(value); }
-    }
-    if program == "" { return CheckOutcome { configured = false, output = [] }; }
-    return CheckOutcome { configured = true, output = [execute(program_path(program), arguments)] };
+    let command = settings.check.iter().skip_while(value => value == "");
+    return match command.nth(0) {
+        None() => CheckOutcome { configured = false, output = [] },
+        Some(program) => CheckOutcome {
+            configured = true, output = [execute(program_path(program), command.skip(1).collect())]
+        },
+    };
 }

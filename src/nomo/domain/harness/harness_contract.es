@@ -46,12 +46,6 @@ public flow fixed_refusal(text: string) -> bool {
         text == "child step limit exhausted" || text == "invalid child output";
 }
 
-// The accepted whole-input printable helper is capped at 1,026 iterations.
-// Check individual characters here so the larger bounded answers stay checked.
 public flow safe_text(text: string, maximum: usize) -> bool {
-    if maximum > message_bytes() || len(text) == 0 || len(text) > maximum { return false; }
-    @limits([Iterations(1048578)]) for codepoint in std.text.chars(text) { let character = std.text.from_char(codepoint);
-        if !printable(character) { return false; }
-    }
-    return true;
+    return maximum <= message_bytes() && text != "" && len(text) <= maximum && printable(text);
 }

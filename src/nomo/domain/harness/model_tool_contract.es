@@ -37,13 +37,7 @@ flow selected_error(names: Array<string>, allowed: Array<string>) -> string {
     if names.len() > 4 { return "at most four selected files"; }
     let invalid = allowed_error(names);
     if invalid != "" { return invalid; }
-    @limits([Iterations(4)]) for name in names {
-        var permitted = false;
-        @limits([Iterations(256)]) for admitted in allowed {
-            if name == admitted { permitted = true; }
-        }
-        if !permitted { return "selected file is not allowed"; }
-    }
+    if names.iter().any(name => !allowed.iter().any(admitted => name == admitted)) { return "selected file is not allowed"; }
     return "";
 }
 

@@ -15,7 +15,7 @@ public flow parse(args: Array<string>, applying: bool) -> Result<Options, string
     var seen: Array<string> = []; var index: usize = 0;
     @limits([Iterations(5)]) while index < args.len() {
         let flag = args[index];
-        @limits([Iterations(5)]) for previous in seen { if flag == previous { return Err("duplicate edit option"); } }
+        if seen.iter().any(previous => previous == flag) { return Err("duplicate edit option"); }
         seen = seen.push(flag); let value = args[index + 1];
         match flag {
             "--id" => { id = value; }

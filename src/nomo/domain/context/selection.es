@@ -38,18 +38,15 @@ flow protected(event: Event) -> bool {
 }
 
 flow includes(indices: Array<usize>, target: usize) -> bool {
-    @limits([Iterations(32)]) for index in indices { if index == target { return true; } }
-    return false;
+    return indices.iter().any(index => index == target);
 }
 
 // Reproject from the original history so optional trials cannot reorder events.
 flow project(context: Context, indices: Array<usize>) -> Context {
-    var history: Array<Event> = [];
-    var index: usize = 0;
-    @limits([Iterations(32)]) for event in context.history {
-        if includes(indices, index) { history = history.push(event); }
-        index = index + 1;
-    }
+    let history = context.history.iter().enumerate().filter_map(item => {
+        let (index, event) = item;
+        return if includes(indices, index) { Some(event) } else { None() };
+    }).collect();
     return context { history };
 }
 

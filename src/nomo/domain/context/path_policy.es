@@ -8,11 +8,10 @@ public flow valid_path(name: string) -> bool {
     if name == "" || !safe(name, 128) || starts_with(name, "/") { return false; }
     let parts = split(name, "/");
     if parts.len() > 8 { return false; }
-    @limits([Iterations(8)]) for part in parts {
-        if part == "" || part == "." || part == ".." || starts_with(part, " ") || ends_with(part, " ") { return false; }
-        @limits([Iterations(130)]) for codepoint in std.text.chars(part) { let character = std.text.from_char(codepoint);
-            if character != "" && is_ascii(character) && !contains("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._- @+()[]", character) { return false; }
-        }
-    }
-    return true;
+    return parts.iter().all(part => part != "" && part != "." && part != ".." &&
+        !starts_with(part, " ") && !ends_with(part, " ") &&
+        std.text.chars(part).all(codepoint => {
+            let character = std.text.from_char(codepoint);
+            return !is_ascii(character) || contains("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._- @+()[]", character);
+        }));
 }

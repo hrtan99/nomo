@@ -156,7 +156,7 @@ flow selection_frame(value: ToolSelection) -> string {
     if value.operation == "final" { return encoded([value.operation, value.text]); }
     var fields = [value.operation];
     if value.operation == "search" { fields = fields.push(value.literal); }
-    @limits([Iterations(256)]) for path in value.files { fields = fields.push(path); }
+    fields = fields.extend(value.files);
     return encoded(fields);
 }
 

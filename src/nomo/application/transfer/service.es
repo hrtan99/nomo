@@ -91,8 +91,7 @@ public flow load<C ~ ConversationCatalog>(catalog: C, workspace: string, path: s
     ![CopyStorage, ArchiveCodec, ArchiveFiles, TransferDisplay, Memory, Error<StorageError>, Error<MemoryConflict>] {
     let raw = perform ArchiveFiles.read(path);
     let source = perform ArchiveCodec.decode(raw);
-    var total: i64 = 0;
-    for _ in source.events { total = total + 1; }
+    let total: i64 = source.events.iter().fold(0, (count: i64, event: ChatMessage) => count + 1);
     let value = prepare(workspace, source.title, "import", path, perform ArchiveCodec.fingerprint(raw), total);
     seal(value.id, "archive", "imported_source", raw);
     return copy_events(catalog, value.id, source.events, source.summary);

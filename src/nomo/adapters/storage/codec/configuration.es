@@ -15,16 +15,16 @@ flow cast<T>(value: JsonValue, label: string) -> T {
 }
 
 flow field<T>(values: Array<Entry>, name: string, fallback: T) -> T {
-    for entry in values { if entry.key == name { return cast<T>(entry.value, name); } }
-    return fallback;
+    return match values.iter().find(entry => entry.key == name) {
+        Some(entry) => cast<T>(entry.value, name), None() => fallback,
+    };
 }
 
 public flow decode(text: string) -> Settings {
     let root = match parse(text) { Ok(value) => cast<Array<Entry>>(value, "root entries"), Err(_) => abort("TOML decoder returned invalid JSON"), };
-    var values = root;
-    for entry in root {
-        if entry.key == "project" { values = cast<Array<Entry>>(entry.value, "project entries"); break; }
-    }
+    let values = match root.iter().find(entry => entry.key == "project") {
+        Some(entry) => cast<Array<Entry>>(entry.value, "project entries"), None() => root,
+    };
     let base = defaults();
     let settings = Settings { context_window = field(values, "context_window", base.context_window),
         max_output_tokens = field(values, "max_output_tokens", base.max_output_tokens),

@@ -51,9 +51,6 @@ public flow flat_string_frame(raw: string, maximum: usize, exact: bool) -> bool 
 }
 
 public flow hex_digest(value: string) -> bool {
-    if len(value) != 64 { return false; }
-    @limits([Iterations(66)]) for codepoint in std.text.chars(value) { let character = std.text.from_char(codepoint);
-        if character != "" && !contains("0123456789abcdef", character) { return false; }
-    }
-    return true;
+    return byte_len(value) == 64 && std.text.chars(value).all(character =>
+        contains("0123456789abcdef", from_char(character)));
 }

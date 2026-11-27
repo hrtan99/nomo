@@ -1,6 +1,7 @@
 module nomo.domain.sessions.session_state;
 
 import nomo.domain.context.large_context.{event_bytes, history_bytes};
+import std.collections.Map;
 import std.text.char_count as len;
 import nomo.domain.text.text.printable;
 import nomo.core.conversation.{Event, State};
@@ -114,13 +115,11 @@ public flow validate(saved: Snapshot, requested: Request) -> Result<Projection, 
     var tokens: i32 = 0;
     var scan_bytes: i32 = 0;
     var unresolved = saved.lifecycle == "recovery-required";
-    var ids: Array<string> = [];
-    @limits([Iterations(32)]) for operation in saved.operations {
+    var ids: Map<string, usize> = {};
+    for (index, operation) in saved.operations.iter().enumerate() {
         if !identifier(operation.id) { return Err("invalid operation identifier"); }
-        @limits([Iterations(32)]) for id in ids {
-            if id == operation.id { return Err("duplicate operation identifier"); }
-        }
-        ids = ids.push(operation.id);
+        if ids.contains_key(operation.id) { return Err("duplicate operation identifier"); }
+        ids = ids.insert(operation.id, index);
         if operation.status != "completed" && operation.status != "pending" && operation.status != "unknown" {
             return Err("invalid operation status");
         }
@@ -154,17 +153,11 @@ public flow validate(saved: Snapshot, requested: Request) -> Result<Projection, 
             }
         } else {
             if !identifier(reference.operation) { return Err("invalid operation reference"); }
-            var found = false;
-            var index: usize = 0;
-            @limits([Iterations(32)]) for id in ids {
-                if reference.operation == id {
-                    if index < last_operation { return Err("operation references out of order"); }
-                    last_operation = index;
-                    found = true;
-                }
-                index = index + 1;
-            }
-            if !found { return Err("dangling operation reference"); }
+            let index = match ids.get(reference.operation) {
+                Some(value) => value, None() => { return Err("dangling operation reference"); }
+            };
+            if index < last_operation { return Err("operation references out of order"); }
+            last_operation = index;
             if reference.phase == "request" {
                 if event.role != "model" { return Err("contradictory request reference"); }
             } else {

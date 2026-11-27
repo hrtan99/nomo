@@ -18,7 +18,7 @@ public flow parse(args: Array<string>, continuing: bool) -> Result<Options, stri
     var seen: Array<string> = []; var index: usize = 0;
     @limits([Iterations(5)]) while index < args.len() {
         let flag = args[index];
-        @limits([Iterations(5)]) for prior in seen { if flag == prior { return Err("duplicate successor option"); } }
+        if seen.iter().any(previous => previous == flag) { return Err("duplicate successor option"); }
         seen = seen.push(flag);
         let value = args[index + 1];
         if flag == "--id" { id = value; }

@@ -29,7 +29,8 @@ public flow parse(args: Array<string>) -> Options ![Error<IndexError>, Error<Bud
         if option == "--high-input" { continue; }
         if option == "--check" {
             var command: Array<string> = match inline { Some(value) => [value], None() => [] };
-            @limits([Iterations(2147483647)]) while index < args.len() { command = command.push(args[index]); index = index + 1; }
+            command = command.extend(args.iter().skip(index).collect());
+            index = args.len();
             if command.len() == 0 { abort("--check requires a command"); }
             check = Some(command); continue;
         }

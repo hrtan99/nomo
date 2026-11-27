@@ -7,10 +7,9 @@ import nomo.application.execution.ports.AttemptRepository;
 import nomo.application.conversation.ports.{ConversationReader, ConversationWriter, ResultPublication};
 
 public flow turn_available<R ~ AttemptRepository>(repository: R, session: string) -> unit ![Memory, Error<StorageError>, Error<BudgetExceeded>] {
-    for value in repository.list(session, true) {
-        if value.kind == "coding" || value.kind == "summary" {
-            abort("inference has no recorded completion: " + value.id + "; inspect /runs, then /resolve-run ID NOTE before starting a new turn");
-        }
+    match repository.list(session, true).iter().find(value => value.kind == "coding" || value.kind == "summary") {
+        Some(value) => abort("inference has no recorded completion: " + value.id + "; inspect /runs, then /resolve-run ID NOTE before starting a new turn"),
+        None() => (),
     }
 }
 

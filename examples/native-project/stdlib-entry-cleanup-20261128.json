@@ -1,0 +1,154 @@
+{
+  "status": "passed",
+  "date": "2026-11-28",
+  "base_commit": "85192b26f6297a847abbd14af2587cc60094a28a",
+  "scope": "Default Etas cutover and standard-library cleanup; not full thirteen-item acceptance.",
+  "toolchain": "Official CLI 0.24.13, std 0.9.0; unchanged from compiler-02413-20261128.json.",
+  "source": {
+    "modules": 463,
+    "manifest_sha256": "70257c3415db55979a1dd6f588e386388d26b98587469db8c92824cc4a83ef69",
+    "checked_export": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-config-hash-02413-c5mc4_0e",
+    "changed_modules": [
+      "src/nomo/adapters/cli/arguments/edit_args.es",
+      "src/nomo/adapters/cli/arguments/harness_checkpoint_args.es",
+      "src/nomo/adapters/cli/arguments/harness_edit_args.es",
+      "src/nomo/adapters/cli/arguments/harness_successor_args.es",
+      "src/nomo/adapters/cli/arguments/harness_work_args.es",
+      "src/nomo/adapters/cli/arguments/session_cli_args.es",
+      "src/nomo/adapters/cli/arguments/terminal_args.es",
+      "src/nomo/adapters/cli/arguments/work_chain_selection_args.es",
+      "src/nomo/adapters/cli/legacy/recoverable_history_followup.es",
+      "src/nomo/adapters/cli/legacy/session_lifecycle.es",
+      "src/nomo/adapters/cli/legacy/work_chain_display.es",
+      "src/nomo/adapters/cli/native/commands.es",
+      "src/nomo/adapters/cli/native/options.es",
+      "src/nomo/adapters/filesystem/instructions.es",
+      "src/nomo/adapters/filesystem/legacy/workspace.es",
+      "src/nomo/adapters/model/harness/history_followup_model.es",
+      "src/nomo/adapters/model/legacy/read_tool.es",
+      "src/nomo/adapters/storage/codec/configuration.es",
+      "src/nomo/adapters/storage/conversations.es",
+      "src/nomo/adapters/storage/legacy/chat_history.es",
+      "src/nomo/adapters/storage/legacy/event_history.es",
+      "src/nomo/adapters/storage/legacy/recoverable_chat_store.es",
+      "src/nomo/application/commands/checks.es",
+      "src/nomo/application/execution/service.es",
+      "src/nomo/application/harness/loops/read_tool_controller.es",
+      "src/nomo/application/harness/loops/shared_chat_controller.es",
+      "src/nomo/application/transfer/service.es",
+      "src/nomo/domain/context/path_policy.es",
+      "src/nomo/domain/context/selection.es",
+      "src/nomo/domain/harness/harness_contract.es",
+      "src/nomo/domain/harness/model_plan_diagnostic.es",
+      "src/nomo/domain/harness/model_tool_contract.es",
+      "src/nomo/domain/harness/tool_context.es",
+      "src/nomo/domain/mutations/edit_diff.es",
+      "src/nomo/domain/mutations/edit_encoding.es",
+      "src/nomo/domain/sessions/bundle_codec.es",
+      "src/nomo/domain/sessions/session_display.es",
+      "src/nomo/domain/sessions/session_state.es",
+      "src/nomo/domain/sessions/store_record.es",
+      "src/nomo/domain/text/read_text.es",
+      "src/nomo/domain/text/text.es",
+      "src/nomo/main.es"
+    ]
+  },
+  "check": {
+    "exit": 0,
+    "elapsed_seconds": 39.005191226999955,
+    "resources": {
+      "memory.max": "4294967296",
+      "memory.peak": "2918617088",
+      "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+      "cpu.max": "400000 100000",
+      "pids.max": "256"
+    }
+  },
+  "architecture": "PASS architecture: 463 modules, 3491 imports, 47 identity-only compatibility leaves",
+  "sloc": "product: 21634 SLOC, 25275 raw lines, 485 files",
+  "runtime": {
+    "default_entry": "scripts/nomo -> Etas native_project; nomo-native is an alias.",
+    "removed": [
+      "config/nomo-project-compose.yaml",
+      "scripts/nomo_git.py",
+      "scripts/nomo_history.py",
+      "scripts/nomo_jobs.py",
+      "scripts/nomo_project.py",
+      "scripts/nomo_project_chat.py",
+      "scripts/nomo_project_model.py",
+      "scripts/nomo_project_tools.py",
+      "src/nomo/adapters/cli/project_agent.es",
+      "src/nomo/adapters/model/project_planner.es",
+      "src/nomo/domain/projects/contracts.es",
+      "src/nomo/domain/projects/planner.es",
+      "src/nomo/project/entry.es",
+      "tests/project_native_probe.py",
+      "tests/real_project_workflow_probe.py",
+      "tests/test_nomo_simple_entry.py",
+      "tests/test_project_workflow.py"
+    ],
+    "historical_test_producers": "Only the SQL/journal/PTY format producers needed by existing migration probes remain in tests/fixtures/legacy_project. They are not imported by either launcher.",
+    "remaining_python": [
+      "Docker terminal/container transport, without model/tool/conversation policy.",
+      "Historical bounded-format inspection and one-time SQLite source extraction.",
+      "Compiler/build/test engineering tools."
+    ],
+    "retired_identity": "nomo.project.entry.RequestRoot was only the removed /project-request bridge Region; it had no Memory store. All 47 remaining stored/Region identities pass the unchanged-shape check."
+  },
+  "standard_library": {
+    "text": "std.text.len for UTF-8 byte bounds; chars/all and char.is_control/to_u32 for one Unicode pass; no byte decoding, JSON control table or Message.cast in safe/data_safe.",
+    "matching": "std.text.contains for path characters and hex membership; iterator any/find for exact catalogue/option membership.",
+    "collections": "unique replaces pairwise duplicate scans; Map<string,usize> replaces operation-ID nested lookups; map/filter_map/enumerate/take/skip/extend/fold/sum replace copying/projection/count loops.",
+    "assembly": "TextBuilder replaces manual 4 KiB chunks and repeated archive-prefix concatenation.",
+    "retained_custom_logic": [
+      "Stateful protocol grammar/diagnostics and deterministic escaping of terminal previews: std has no regex character-class or ASCII-only JSON writer/hex encoder.",
+      "Ordered Memory/Fs/Command operations, pagination, accounting and state transitions retain explicit control flow.",
+      "The diff algorithm retains position/newline/preview clipping semantics; only decoded-line projection uses standard iterators."
+    ]
+  },
+  "validation": {
+    "positive_algorithms": {
+      "status": "passed",
+      "checks": 8,
+      "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-stdlib-cleanup-gjdagcmh",
+      "stdout_sha256": "f027e97111bff0fc0fe94bae2b8cf496ab0b06021b162afef8debdf960cc10d6",
+      "generated_data": "1 MiB pre-generated synthetic text; no million-iteration repeat in the fixture. No new negative/boundary matrix."
+    },
+    "default_worker": {
+      "status": "passed",
+      "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-worker-252sjbl7",
+      "command_operations": 16,
+      "model_requests": 0,
+      "scope": "terminal client detach during pending approval, new client approves the same request in the same native Host; live Unicode input/output, EOF and stop; fresh-Host archive restore",
+      "note": "Original complete worker probe ran before the final archive TextBuilder edit; final-history replay below checks that final adapter on the identical retained state."
+    },
+    "final_history": {
+      "status": "passed",
+      "events": 22,
+      "bytes": 4444,
+      "exact_sql_chunks": true,
+      "trace": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-worker-252sjbl7/final-history-traces/run-wBaeuB0T/trace.json",
+      "paired_starts": 140,
+      "model_or_command_requests": 0,
+      "scope": "Final working checkout default entry, including local optional prototypes, restores every complete event exactly from stored chunks."
+    },
+    "legacy_format_backup": {
+      "status": "passed",
+      "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-project-files-migration-5_5ziv00",
+      "note": "Original source backup assertions retained; obsolete format-2 literal aligned with the already selected format-3 writer/reader."
+    },
+    "sloc_counter": "11 original assertions passed; retired runtime inventory updated.",
+    "setup_corrections": [
+      "Fixture entry-module filename and repeat return type corrected before execution.",
+      "Early repeat-based large fixtures were cancelled during setup; no claim is made about safe performance from those runs.",
+      "A pre-generated large input exposed the old JSON-validation single-value limit; final safe no longer serializes its input.",
+      "A repeated literal-match implementation was discarded in favor of a single Unicode pass."
+    ]
+  },
+  "open_limits": [
+    "Full MutationService injection #106 and continuous Task capture #103 remain unselected.",
+    "Independent token controls #125 and in-loop compaction remain unfinished.",
+    "Native child PTY and fresh-Host live process reconnection are not provided.",
+    "Bounded legacy-session migration is unfinished; existing old state is not silently opened or converted."
+  ]
+}

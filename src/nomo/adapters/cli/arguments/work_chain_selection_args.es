@@ -15,7 +15,7 @@ public flow parse(args: Array<string>, command: Command) -> Result<Input, string
     var seen: Array<string> = []; var index: usize = 0;
     @limits([Iterations(4)]) while index < args.len() {
         let flag = args[index];
-        @limits([Iterations(4)]) for previous in seen { if previous == flag { return Err("duplicate discovery selector"); } }
+        if seen.iter().any(previous => previous == flag) { return Err("duplicate discovery selector"); }
         seen = seen.push(flag); index = index + 1;
         if flag == "--latest" {
             if listing { return Err("sessions lists both fixed slots; no latest selector"); }

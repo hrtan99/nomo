@@ -28,7 +28,7 @@ flow completed(request: string, raw_plan: string, selected: Previous, child: Sta
     var records = [Event { role = "user", kind = "request", name = "", text = request },
         Event { role = "main", kind = "plan", name = "", text = raw_plan },
         Event { role = "main", kind = "delegate", name = "child-1", text = selected.task }];
-    @limits([Iterations(18)]) for event in child.events { records = records.push(event); }
+    records = records.extend(child.events);
     records = records.push(Event { role = "main", kind = "consume", name = "child-1", text = selected.result });
     if selected.tool != "" { records = records.push(Event { role = "main", kind = "tool", name = selected.tool, text = selected.outcome }); }
     records = records.push(Event { role = "main", kind = "answer", name = "", text = selected.answer });

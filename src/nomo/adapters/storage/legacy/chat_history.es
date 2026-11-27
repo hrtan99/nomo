@@ -131,7 +131,7 @@ flow save_inner(value: Session, expected: Option<Entry>, records: Array<Event>) 
     if value.invocation.admitted == previous_turns + 1 {
         let batch = match project(records) { Ok(item) => item, Err(problem) => { return Err(problem); } };
         if previous_turns == 0 { first_count = batch.len(); }
-        @limits([Iterations(24)]) for item in batch { events = events.push(item); }
+        events = events.extend(batch);
     } else if records.len() != 0 { return Err("unexpected completed event batch"); }
     let frame = Frame { format = 3, chat = value, first_count, events };
     let problem = frame_error(frame); if problem != "" { return Err(problem); }

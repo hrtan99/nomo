@@ -22,10 +22,7 @@ public flow with_events(saved: Snapshot, events: Array<Event>) -> Snapshot {
 }
 
 public flow pending(saved: Snapshot, save_id: string) -> Record {
-    var descriptors: Array<Event> = [];
-    @limits([Iterations(32)]) for event in saved.history.events {
-        descriptors = descriptors.push(event { text = "" });
-    }
+    let descriptors = saved.history.events.iter().map(event => event { text = "" }).collect();
     return Record { format = 1, phase = "pending", save_id,
         session_key = session_key(saved.session_id, save_id), snapshot = with_events(saved, descriptors) };
 }
@@ -35,8 +32,7 @@ public flow published(row: Record) -> Record {
 }
 
 public flow bundle(saved: Snapshot, save_id: string) -> Bundle {
-    var bodies: Array<string> = [];
-    @limits([Iterations(32)]) for event in saved.history.events { bodies = bodies.push(event.text); }
+    let bodies = saved.history.events.iter().map(event => event.text).collect();
     return Bundle { format = 1, session_id = saved.session_id, save_id, bodies };
 }
 

@@ -1,7 +1,7 @@
 module nomo.domain.sessions.session_display;
 
 import nomo.domain.serialization.json.encode as encode_json;
-import std.text.{char_count as len, len as byte_len, char_get, concat, from_char, is_ascii};
+import std.text.{char_count as len, len as byte_len, char_get, TextBuilder, from_char, is_ascii};
 import std.bytes.len as byte_count;
 import std.codec.text.utf8_encode;
 import nomo.domain.sessions.session_state.{Projection, Request, validate};
@@ -72,15 +72,13 @@ public flow ascii_json_with(json: string, encoded_maximum: usize, maximum: usize
     // check; rescanning every byte duplicated the codec and made MiB previews
     // interpreter-bound.
     if is_ascii(json) { if byte_len(json) > maximum { return Err(display_error); } return Ok(json); }
-    var pieces: Array<string> = []; var chunk = ""; var size: usize = 0;
+    var output = TextBuilder.new(); var size: usize = 0;
     // The largest caller accepts 16 Mi scalar inputs; keep its established
     // iteration envelope even when smaller callers select tighter byte bounds.
     @limits([Iterations(134217730)]) for codepoint in std.text.chars(json) { let character = std.text.from_char(codepoint);
         let fragment = escaped(character); size = size + len(fragment);
         if size > maximum { return Err(display_error); }
-        chunk = chunk + fragment;
-        if len(chunk) >= 4096 { pieces = pieces.push(chunk); chunk = ""; }
+        output.append(fragment);
     }
-    if chunk != "" { pieces = pieces.push(chunk); }
-    return Ok(concat(pieces));
+    return Ok(output.build());
 }

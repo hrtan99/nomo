@@ -16,7 +16,7 @@ public flow render(row: Record, journal: Option<Journal>) -> Result<Array<string
     let caps = [row.maximum, row.available, row.remaining, row.reserved]; var index: usize = 0;
     let keys = ["steps", "calls", "generation", "native_tokens", "read_tools", "scan", "edit_reads", "edit_read_bytes", "atomic", "atomic_bytes"];
     @limits([Iterations(4)]) while index < 4 {
-        var text: Array<string> = []; @limits([Iterations(10)]) for number in values(caps[index]) { text = text.push(from_i32(number)); }
+        let text = values(caps[index]).iter().map(number => from_i32(number)).collect();
         let encoded = match object(keys, text) { Ok(value) => value, Err(error) => { return Err(error); } };
         lines = lines.push(labels[index] + encoded); index = index + 1;
     }
@@ -30,8 +30,8 @@ public flow render(row: Record, journal: Option<Journal>) -> Result<Array<string
         }
         None() => { lines = lines.push("JOURNAL missing; missing journal is not proof that no edit occurred."); }
     }
-    match row.work { Some(value) => { let shown = match work_lines(value) { Ok(item) => item, Err(error) => { return Err(error); } }; @limits([Iterations(7)]) for line in shown { lines = lines.push(line); } } None() => (), }
-    var size: usize = 0; @limits([Iterations(16)]) for line in lines { size = size + len(line) + 1; }
+    match row.work { Some(value) => { let shown = match work_lines(value) { Ok(item) => item, Err(error) => { return Err(error); } }; lines = lines.extend(shown); } None() => (), }
+    let size = lines.iter().map(line => len(line) + 1).sum();
     if size > 262144 { return Err("chain display exceeds 262144 ASCII bytes"); }
     return Ok(lines);
 }

@@ -55,8 +55,7 @@ public flow parse_recorded(args: Array<string>, trailer: usize, reject_empty: bo
     let digest = if has_check { args[end - 1] } else { "" };
     if has_check && reject_empty && digest == "" { return Err("invalid check reference"); }
     let limit = if has_check { end - 2 } else { end };
-    var selected: Array<string> = []; var index: usize = 0;
-    @limits([Iterations(32)]) while index < limit { selected = selected.push(args[index]); index = index + 1; }
+    let selected = args.iter().take(limit).collect();
     let input = match parse_unicode(selected) { Ok(value) => value, Err(error) => { return Err(error); } };
     return Ok(RecordedWork { input, has_check, digest });
 }

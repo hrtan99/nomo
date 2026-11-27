@@ -193,7 +193,7 @@ public flow search_files(names: Array<string>, literal: string) -> Outcome ![Fs.
     if names.len() > 0 && names[0] == "*" {
         if names.len() > 257 { return outcome("refused", "search file count exceeds scope", 0); }
         var selected: Array<string> = []; var i: usize = 1;
-        @limits([Iterations(256)]) while i < names.len() { selected = selected.push(names[i]); i = i + 1; }
+        selected = selected.extend(names.iter().skip(i).collect());
         return search_with(selected, literal, 4194304);
     }
     return search_with(names, literal, 16384);

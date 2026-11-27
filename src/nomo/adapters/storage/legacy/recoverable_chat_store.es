@@ -273,7 +273,7 @@ public flow record_work_from(before: MemoryEntry<string, Frame>, id: string, rec
     let batch = match work_batch(timeline_records, policy) { Ok(value) => value, Err(error) => { return Err(error); } };
     let marker = match encode("Recorded completed work; selected facts follow.", policy) { Ok(value) => value.value, Err(error) => { return Err(error); } };
     let previous = before.value.events; var ordered = previous.events.push(Event { role = "system", kind = "work-boundary", name = id, text = marker });
-    @limits([Iterations(24)]) for item in batch.events { ordered = ordered.push(item); }
+    ordered = ordered.extend(batch.events);
     let events = previous { format = 2, events = ordered };
     let frame = before.value { events };
     return match write(frame, Some(before), policy, binding) { Ok(_) => Ok(true), Err(error) => Err(error) };

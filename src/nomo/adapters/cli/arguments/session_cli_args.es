@@ -37,9 +37,7 @@ public flow parse(args: Array<string>) -> Result<Options, string> {
         let flag = args[index];
         if flag != "--session" && flag != "--save" && flag != "--binding" &&
             flag != "--input" && flag != "--steps" && flag != "--budget" { return Err("unknown option"); }
-        @limits([Iterations(6)]) for previous in seen {
-            if previous == flag { return Err("duplicate option"); }
-        }
+        if seen.iter().any(previous => previous == flag) { return Err("duplicate option"); }
         seen = seen.push(flag);
         if index + 1 >= args.len() { return Err("missing option value"); }
         let value = args[index + 1];

@@ -11,12 +11,8 @@ flow argv(raw: string) -> Argv {
     let parsed = match parse(raw) { Ok(value) => value, Err(_) => abort("use a JSON argv array, for example [\"/usr/bin/git\",\"status\"]"), };
     let decoded: Option<Message<Array<string>>> = Message.new(parsed).cast<Array<string>>();
     let values = match decoded { Some(value) => value.body, None() => abort("command argv must be a JSON array of strings"), };
-    var program = "";
-    var first = true;
-    var arguments: Array<string> = [];
-    for value in values {
-        if first { program = value; first = false; } else { arguments = arguments.push(value); }
-    }
+    let program = match values.iter().nth(0) { Some(value) => value, None() => "" };
+    let arguments = values.iter().skip(1).collect();
     if program == "" { abort("provide a command program"); }
     return Argv { program, arguments };
 }

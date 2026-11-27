@@ -47,7 +47,7 @@ public flow append(turn: i32, input: Array<Event>, policy: Policy) -> Result<Mem
     let previous_turn = match before { Some(entry) => { prior = entry.value.events; entry.value.turns } None() => 0 };
     let first_count = match before { Some(entry) => entry.value.first_count, None() => clean.events.len() };
     if turn != previous_turn + 1 || turn > 2 { return Err("event batch order differs; no retry"); }
-    @limits([Iterations(24)]) for item in clean.events { prior = prior.push(item); }
+    prior = prior.extend(clean.events);
     let next = History { format = 1, turns = turn, first_count, events = prior };
     let error = invalid(next); if error != "" { return Err(error); }
     let condition: WriteCondition = match before { Some(entry) => WriteCondition.Match(entry.version), None() => Missing };

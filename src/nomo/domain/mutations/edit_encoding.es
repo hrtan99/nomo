@@ -1,7 +1,8 @@
 module nomo.domain.mutations.edit_encoding;
 
-import std.text.{char_get, concat, from_char, is_ascii, join, len as byte_len};
+import std.text.{char_get, concat, from_char, is_ascii, join, len as byte_len, TextBuilder};
 import std.bytes.len as byte_count;
+import std.collections.unique;
 import std.codec.text.utf8_encode;
 import std.crypto.sha256;
 import nomo.domain.context.large_context.{file_bytes, edit_json_bytes};
@@ -62,16 +63,15 @@ flow quoted(value: string) -> Result<string, string> {
         if byte_len(encoded) > edit_json_bytes() { return Err("edit JSON output exceeds bound"); }
         return Ok(encoded);
     }
-    var pieces: Array<string> = []; var chunk = ""; var size: usize = 1;
+    var output = TextBuilder.new(); var size: usize = 1;
     @limits([Iterations(1048578)]) for codepoint in std.text.chars(value) { let character = std.text.from_char(codepoint);
         if character != "" {
             let escaped = match scalar(character) { Ok(item) => item, Err(error) => { return Err(error); } };
             size = size + byte_len(escaped); if size > edit_json_bytes() - 2 { return Err("edit JSON output exceeds bound"); }
-            chunk = chunk + escaped;
-            if byte_len(chunk) >= 4096 { pieces = pieces.push(chunk); chunk = ""; }
+            output.append(escaped);
         }
     }
-    return Ok("\"" + concat(pieces) + chunk + "\"");
+    return Ok("\"" + output.build() + "\"");
 }
 
 public flow json(values: Array<string>) -> Result<string, string> {
@@ -88,10 +88,9 @@ public flow json(values: Array<string>) -> Result<string, string> {
 
 public flow object(keys: Array<string>, values: Array<string>) -> Result<string, string> {
     if keys.len() != values.len() || keys.len() > 16 { return Err("edit JSON key/value count invalid"); }
-    var fields: Array<string> = []; var size: usize = 2; var index: usize = 0; var seen: Array<string> = [];
+    if unique(keys).len() != keys.len() { return Err("duplicate edit JSON key"); }
+    var fields: Array<string> = []; var size: usize = 2; var index: usize = 0;
     @limits([Iterations(16)]) while index < keys.len() {
-        @limits([Iterations(16)]) for prior in seen { if prior == keys[index] { return Err("duplicate edit JSON key"); } }
-        seen = seen.push(keys[index]);
         let key = match quoted(keys[index]) { Ok(item) => item, Err(error) => { return Err(error); } };
         let value = match quoted(values[index]) { Ok(item) => item, Err(error) => { return Err(error); } };
         let field = key + ":" + value;
@@ -105,7 +104,5 @@ public flow object(keys: Array<string>, values: Array<string>) -> Result<string,
 
 public flow digest(text: string) -> Result<string, string> {
     let data = sha256(utf8_encode(text));
-    var parts: Array<string> = []; var index: usize = 0;
-    @limits([Iterations(32)]) while index < 32 { parts = parts.push(byte_hex(data[index])); index = index + 1; }
-    return Ok(concat(parts));
+    return Ok(concat(data.iter().map(value => byte_hex(value)).collect()));
 }

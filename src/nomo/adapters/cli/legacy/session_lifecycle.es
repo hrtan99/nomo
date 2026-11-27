@@ -32,7 +32,7 @@ flow bindings(identity: Identity) -> Array<string> {
     return ["--id", identity.id, "--workspace", identity.workspace, "--allow", allowed];
 }
 flow next(entry: string, args: Array<string>) -> unit {
-    var values = [entry]; @limits([Iterations(10)]) for value in args { values = values.push(value); }
+    let values = [entry].extend(args);
     display("NEXT", values);
 }
 flow successor_args(value: Request) -> Array<string> {
