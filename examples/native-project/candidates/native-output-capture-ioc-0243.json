@@ -1,0 +1,209 @@
+{
+  "date": "2026-11-27",
+  "status": "unselected-candidate-normal-check-failed",
+  "baseline": "accf3d8d97cf764f8229065add2f76c16f5126ea",
+  "patch": "examples/native-project/candidates/native-output-capture-ioc-0243.patch",
+  "patch_sha256": "d9ab90d405e3eadd41679b86dfb17a68a8bc2c0f13540d012b740f141335b06a",
+  "snapshot": {
+    "root": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-jx9bov8z",
+    "tree": "d9f4360309ab10bd548838f40792d0f09f3cbd54",
+    "evidence": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-jx9bov8z/compiler-evidence",
+    "overlay": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-jx9bov8z/compiler-compose.json",
+    "source_count": 442,
+    "source_manifest_sha256": "90d67f49929e0f5f2c9aeaf9276e2cea8167279ba6e92a50825756542271a438"
+  },
+  "full_check": {
+    "exit": 1,
+    "elapsed_seconds": 54.66548852400001,
+    "resources": {
+      "memory.max": "4294967296",
+      "memory.peak": "3175927808",
+      "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+      "cpu.max": "400000 100000",
+      "pids.max": "256"
+    }
+  },
+  "diagnostics": [
+    {
+      "path": "/workspace/src/nomo/application/processes/capture.es",
+      "diagnostics": [
+        {
+          "code": "effect::IncompleteEffectFacts",
+          "help": null,
+          "labels": [
+            {
+              "message": "external call effect selector specialization failed: checked latent flow summary is missing for parameter `read`",
+              "span": {
+                "end": 1960,
+                "source": 234,
+                "start": 1901
+              },
+              "style": "Primary"
+            }
+          ],
+          "message": "external call effect selector specialization failed: checked latent flow summary is missing for parameter `read`",
+          "notes": [],
+          "phase": "EffectCheck",
+          "primary": {
+            "label": "external call effect selector specialization failed: checked latent flow summary is missing for parameter `read`",
+            "span": {
+              "end": 1960,
+              "endColumn": 96,
+              "endLine": 38,
+              "source": 234,
+              "start": 1901,
+              "startColumn": 37,
+              "startLine": 38
+            }
+          },
+          "severity": "error",
+          "suggestions": []
+        },
+        {
+          "code": "effect::IncompleteEffectFacts",
+          "help": null,
+          "labels": [
+            {
+              "message": "external call effect selector specialization failed: invalid callable environment: captured callable has no checked free-parameter binding for Native(SymbolId(17494))",
+              "span": {
+                "end": 2189,
+                "source": 234,
+                "start": 1610
+              },
+              "style": "Primary"
+            }
+          ],
+          "message": "external call effect selector specialization failed: invalid callable environment: captured callable has no checked free-parameter binding for Native(SymbolId(17494))",
+          "notes": [],
+          "phase": "EffectCheck",
+          "primary": {
+            "label": "external call effect selector specialization failed: invalid callable environment: captured callable has no checked free-parameter binding for Native(SymbolId(17494))",
+            "span": {
+              "end": 2189,
+              "endColumn": 8,
+              "endLine": 45,
+              "source": 234,
+              "start": 1610,
+              "startColumn": 12,
+              "startLine": 33
+            }
+          },
+          "severity": "error",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "path": "/workspace/src/nomo/application/processes/handlers.es",
+      "diagnostics": [
+        {
+          "code": "effect::EscapedEffect",
+          "help": null,
+          "labels": [
+            {
+              "message": "requested action ProcessCapture.register is not handled by a scoped or default handler and is outside the declared effect row",
+              "span": {
+                "end": 2176,
+                "source": 236,
+                "start": 491
+              },
+              "style": "Primary"
+            }
+          ],
+          "message": "requested action ProcessCapture.register is not handled by a scoped or default handler and is outside the declared effect row",
+          "notes": [],
+          "phase": "EffectCheck",
+          "primary": {
+            "label": "requested action ProcessCapture.register is not handled by a scoped or default handler and is outside the declared effect row",
+            "span": {
+              "end": 2176,
+              "endColumn": 2,
+              "endLine": 20,
+              "source": 236,
+              "start": 491,
+              "startColumn": 8,
+              "startLine": 10
+            }
+          },
+          "severity": "error",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "path": "/workspace/src/nomo/application/processes/service.es",
+      "diagnostics": [
+        {
+          "code": "effect::EffectOutsideDeclaredRow",
+          "help": null,
+          "labels": [
+            {
+              "message": "inferred effect ProcessCapture.register escapes the declared effect row",
+              "span": {
+                "end": 4324,
+                "source": 238,
+                "start": 3078
+              },
+              "style": "Primary"
+            }
+          ],
+          "message": "inferred effect ProcessCapture.register escapes the declared effect row",
+          "notes": [],
+          "phase": "EffectCheck",
+          "primary": {
+            "label": "inferred effect ProcessCapture.register escapes the declared effect row",
+            "span": {
+              "end": 4324,
+              "endColumn": 2,
+              "endLine": 67,
+              "source": 238,
+              "start": 3078,
+              "startColumn": 8,
+              "startLine": 52
+            }
+          },
+          "severity": "error",
+          "suggestions": []
+        },
+        {
+          "code": "effect::EscapedEffect",
+          "help": null,
+          "labels": [
+            {
+              "message": "requested action ProcessCapture.register is not handled by a scoped or default handler and is outside the declared effect row",
+              "span": {
+                "end": 4324,
+                "source": 238,
+                "start": 3078
+              },
+              "style": "Primary"
+            }
+          ],
+          "message": "requested action ProcessCapture.register is not handled by a scoped or default handler and is outside the declared effect row",
+          "notes": [],
+          "phase": "EffectCheck",
+          "primary": {
+            "label": "requested action ProcessCapture.register is not handled by a scoped or default handler and is outside the declared effect row",
+            "span": {
+              "end": 4324,
+              "endColumn": 2,
+              "endLine": 67,
+              "source": 238,
+              "start": 3078,
+              "startColumn": 8,
+              "startLine": 52
+            }
+          },
+          "severity": "error",
+          "suggestions": []
+        }
+      ]
+    }
+  ],
+  "upstream": "https://github.com/etas-project/etas-frontend/issues/103",
+  "scope": "Migrates the retained original capture task/append-head/cursor/quit-cancellation pattern onto current application ports. The normal check fails before runtime. No capture/window/cancellation/fresh-process/interrupted-read acceptance is claimed.",
+  "oracle": "Original 2555904-byte payload, 20-second idle capture interval, exact bytes, quit cancellation and fresh-process 17-byte prefix retained. Only prompt-observation timeout (90 to 600 seconds for this probe), pinned ETS1 observer and optional capture-read approval audit are adapted.",
+  "qualification": "The final candidate adds migration of the controlled fixture after the checked snapshot; that fixture change is not counted as checked here. The existing-source Task and parameterized-effect observations are reproduced independently, without asserting one shared root cause. Existing selected product is restored; this patch is not the default or an accepted collector. Patch rebased mechanically after the independently selected Live/reference split; the normal-check source snapshot remains the exact earlier tree. No failed generic capture pattern was replaced.",
+  "candidate_tree": "060ae11d99fba854fb1fbf1eb974b5d89ac81b41",
+  "initial_baseline": "61b807ab3407d9a0fac517fcf1fc96edd960b439"
+}

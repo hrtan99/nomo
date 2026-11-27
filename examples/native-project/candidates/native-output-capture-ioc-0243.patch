@@ -1,0 +1,551 @@
+diff --git a/etas.toml b/etas.toml
+index d8ed642..02ccc56 100644
+--- a/etas.toml
++++ b/etas.toml
+@@ -975,7 +975,7 @@ allow = ["/usr/bin/git", "/usr/bin/python3", "/bin/sh", "/bin/cp", "/bin/mkdir",
+ isolation = "trusted-unconfined"
+ [runtime.profiles.nomo-native.policy]
+ mode = "local-static"
+-rules = ["console=allow", "memory=allow", "agentic=allow", "model=allow", "tool=allow", "approval=allow", "command=approval", "filesystem:Fs.read=allow", "filesystem:Fs.list=allow", "filesystem:Fs.stat=allow", "filesystem:Fs.atomic_replace=approval"]
++rules = ["console=allow", "memory=allow", "agentic=allow", "model=allow", "tool=allow", "approval=allow", "command:Command.read=allow", "command=approval", "filesystem:Fs.read=allow", "filesystem:Fs.list=allow", "filesystem:Fs.stat=allow", "filesystem:Fs.atomic_replace=approval"]
+ [runtime.profiles.nomo-native.approval]
+ mode = "prompt"
+ 
+diff --git a/src/nomo/adapters/storage/capture.es b/src/nomo/adapters/storage/capture.es
+new file mode 100644
+index 0000000..c134aa0
+--- /dev/null
++++ b/src/nomo/adapters/storage/capture.es
+@@ -0,0 +1,32 @@
++module nomo.adapters.storage.capture;
++
++import std.text.from_i64;
++import nomo.domain.process.capture.{CaptureHead, CaptureCursor};
++import nomo.domain.process.jobs.JobEvent;
++import nomo.application.processes.capture_ports.CaptureArchive;
++
++alias Schema = MemoryRegion<{ Heads: Store<string, CaptureHead>, Chunks: Store<string, JobEvent>, Cursors: Store<string, CaptureCursor> }>;
++let Captured = std.memory.region<Schema>(stable_id = "nomo-process-capture-v1", store = "process-capture");
++
++public type NativeCapture = {};
++impl NativeCapture ~ CaptureArchive {
++    flow head(self, job: string) -> Option<CaptureHead> ![Memory, Error<StorageError>] { return Captured.Heads.get(job); }
++    flow begin(self, job: string) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>] {
++        Captured.Heads.put(job, CaptureHead { events = 0, phase = "output" });
++    }
++    flow append(self, job: string, index: i64, value: JobEvent) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>] {
++        Captured.Chunks.insert(job + ":" + from_i64(index), value);
++        Captured.Heads.put(job, CaptureHead { events = index + 1, phase = value.phase });
++    }
++    flow chunk(self, job: string, index: i64) -> JobEvent ![Memory, Error<StorageError>] {
++        return match Captured.Chunks.get(job + ":" + from_i64(index)) {
++            Some(value) => value, None() => abort("captured process event is missing"),
++        };
++    }
++    flow cursor(self, job: string) -> CaptureCursor ![Memory, Error<StorageError>] {
++        return match Captured.Cursors.get(job) {
++            Some(value) => value, None() => CaptureCursor { event = 0, stdout = 0, stderr = 0 },
++        };
++    }
++    flow advance(self, job: string, value: CaptureCursor) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>] { Captured.Cursors.put(job, value); }
++}
+diff --git a/src/nomo/application/processes/capture.es b/src/nomo/application/processes/capture.es
+new file mode 100644
+index 0000000..ae0600f
+--- /dev/null
++++ b/src/nomo/application/processes/capture.es
+@@ -0,0 +1,85 @@
++module nomo.application.processes.capture;
++
++import std.bytes.empty;
++import std.codec.text.{utf8_decode, Replace};
++import std.task.{run as task_run, start, try_join};
++import std.task.scheduler.SchedulerHandle;
++import nomo.application.processes.ports.{ProcessControl, JobRepository};
++import nomo.application.processes.capture_ports.{ProcessCapture, CaptureArchive};
++import nomo.domain.process.capture.{CaptureHead, CaptureCursor};
++import nomo.domain.process.jobs.{Job, JobEvent};
++import nomo.domain.process.observations.observed;
++
++public flow collect<Live, C ~ ProcessControl<Live>, J ~ JobRepository, R ~ CaptureArchive>(control: C, jobs: J, archive: R, job: Job, process: Live) -> i32
++    ![Memory, Command.read<DefaultCommandSandbox>, Error<StorageError>, Error<MemoryConflict>, Error<BudgetExceeded>] {
++    var index: i64 = 0;
++    @limits([Iterations(2147483647)]) while true {
++        let result = observed(job.id, -1, control.read(process, 65536));
++        archive.append(job.id, index, result);
++        index = index + 1;
++        if result.phase != "output" {
++            jobs.save(job { phase = result.phase });
++            return 0;
++        }
++    }
++    return 0;
++}
++
++type SessionClosed = { status: i32 };
++
++// The UI's typed scope outcome cancels and settles all owned collectors.
++public flow scope<Live, C ~ ProcessControl<Live>, J ~ JobRepository, R ~ CaptureArchive, effect E>(control: C, jobs: J, archive: R, body: () -> i32 ![ProcessCapture<Live>, E]) -> i32
++    ![Async, E, Memory, Command.read<DefaultCommandSandbox>, Error<StorageError>, Error<MemoryConflict>, Error<BudgetExceeded>] {
++    return task_run((scheduler: SchedulerHandle) => {
++        let ended = try_join<i32, SessionClosed>([() => {
++            let status = handle body() with {
++                ProcessCapture<Live>.register(job, process) => {
++                    archive.begin(job.id);
++                    let collector = start(() => collect(control, jobs, archive, job, process));
++                    ()
++                }
++            };
++            return perform Error<SessionClosed>.raise(SessionClosed { status });
++        }]);
++        return match ended { Err(value) => value.status, Ok(_) => 0 };
++    });
++}
++
++flow part(value: bytes, offset: usize, maximum: usize) -> bytes ![Error<IndexError>] {
++    let count = if maximum < value.length - offset { maximum } else { value.length - offset };
++    return value[offset, offset + count);
++}
++
++flow display(value: bytes) -> string {
++    return match utf8_decode(value, Replace) { Ok(text) => text, Err(_) => abort("process output conversion failed"), };
++}
++
++public flow next<R ~ CaptureArchive>(archive: R, job: string, call: i64, maximum: usize, head: CaptureHead) -> JobEvent {
++    if maximum == 0 { abort("max_bytes must be positive"); }
++    let cursor = archive.cursor(job);
++    if cursor.event >= head.events {
++        let phase = if head.phase == "output" { "no_saved_output" } else { head.phase };
++        let exit_code = if head.events > 0 && phase == "exited" { archive.chunk(job, head.events - 1).exit_code } else { None() };
++        return JobEvent { job, call, phase, exit_code, stdout = "", stderr = "", stdout_bytes = empty(), stderr_bytes = empty() };
++    }
++    let original = archive.chunk(job, cursor.event);
++    let stdout = part(original.stdout_bytes, cursor.stdout, maximum);
++    let stderr = part(original.stderr_bytes, cursor.stderr, maximum);
++    let out = cursor.stdout + stdout.length;
++    let err = cursor.stderr + stderr.length;
++    let complete = out == original.stdout_bytes.length && err == original.stderr_bytes.length;
++    archive.advance(job, if complete { CaptureCursor { event = cursor.event + 1, stdout = 0, stderr = 0 } }
++        else { CaptureCursor { event = cursor.event, stdout = out, stderr = err } });
++    return original { call, phase = if complete { original.phase } else { "output" }, exit_code = if complete { original.exit_code } else { None() },
++        stdout = display(stdout), stderr = display(stderr), stdout_bytes = stdout, stderr_bytes = stderr };
++}
++
++public flow snapshot<R ~ CaptureArchive>(archive: R, job: string, head: CaptureHead) -> Array<JobEvent> {
++    var result: Array<JobEvent> = [];
++    var index: i64 = 0;
++    @limits([Iterations(2147483647)]) while index < head.events {
++        result = result.push(archive.chunk(job, index));
++        index = index + 1;
++    }
++    return result;
++}
+diff --git a/src/nomo/application/processes/capture_ports.es b/src/nomo/application/processes/capture_ports.es
+new file mode 100644
+index 0000000..9367708
+--- /dev/null
++++ b/src/nomo/application/processes/capture_ports.es
+@@ -0,0 +1,15 @@
++module nomo.application.processes.capture_ports;
++
++import nomo.domain.process.capture.{CaptureHead, CaptureCursor};
++import nomo.domain.process.jobs.{Job, JobEvent};
++
++public effect ProcessCapture<Live> { action register(job: Job, process: Live) -> unit; }
++
++public spec CaptureArchive {
++    flow head(self, job: string) -> Option<CaptureHead> ![Memory, Error<StorageError>];
++    flow begin(self, job: string) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>];
++    flow append(self, job: string, index: i64, value: JobEvent) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>];
++    flow chunk(self, job: string, index: i64) -> JobEvent ![Memory, Error<StorageError>];
++    flow cursor(self, job: string) -> CaptureCursor ![Memory, Error<StorageError>];
++    flow advance(self, job: string, value: CaptureCursor) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>];
++}
+diff --git a/src/nomo/application/processes/handlers.es b/src/nomo/application/processes/handlers.es
+index be145bf..863e6ce 100644
+--- a/src/nomo/application/processes/handlers.es
++++ b/src/nomo/application/processes/handlers.es
+@@ -2,18 +2,19 @@ module nomo.application.processes.handlers;
+ 
+ import nomo.application.processes.service;
+ import std.io.IOError;
++import nomo.application.processes.capture_ports.{ProcessCapture, CaptureArchive};
+ import nomo.application.processes.ports.{ProcessOperations, ProcessControl, JobRepository, OutputArchive, ProcessPreviewSink};
+ import nomo.application.conversation.ports.{ConversationReader, ConversationWriter, ResultPublication};
+ import nomo.application.execution.ports.AttemptRepository;
+ 
+-public flow bindings<H ~ ConversationReader + ConversationWriter + ResultPublication, A ~ AttemptRepository, J ~ JobRepository, O ~ ProcessPreviewSink, Live, C ~ ProcessControl<Live>, R ~ OutputArchive>(history: H, attempts: A, control: C, jobs: J, archive: R, preview: O) -> ![ProcessOperations => Memory, Console, Command.start<DefaultCommandSandbox>, Command.reconnect<DefaultCommandSandbox>, Command.read<DefaultCommandSandbox>, Command.write<DefaultCommandSandbox>, Command.stop<DefaultCommandSandbox>, Error<StorageError>, Error<MemoryConflict>, Error<IOError>, Error<BudgetExceeded>] ![] {
++public flow bindings<H ~ ConversationReader + ConversationWriter + ResultPublication, A ~ AttemptRepository, J ~ JobRepository, O ~ ProcessPreviewSink, Live, C ~ ProcessControl<Live>, R ~ OutputArchive, S ~ CaptureArchive>(history: H, attempts: A, control: C, jobs: J, archive: R, captured: S, preview: O) -> ![ProcessOperations => ProcessCapture<Live>, Memory, Console, Command.start<DefaultCommandSandbox>, Command.reconnect<DefaultCommandSandbox>, Command.read<DefaultCommandSandbox>, Command.write<DefaultCommandSandbox>, Command.stop<DefaultCommandSandbox>, Error<StorageError>, Error<MemoryConflict>, Error<IOError>, Error<IndexError>, Error<BudgetExceeded>] ![] {
+     return handler {
+         ProcessOperations.start(session, program, arguments) => service.start(control, jobs, preview, attempts, history, history, history, session, program, arguments);
+-        ProcessOperations.read(session, job, max_bytes) => service.read(control, jobs, archive, preview, attempts, history, history, history, session, job, max_bytes);
++        ProcessOperations.read(session, job, max_bytes) => service.read(control, jobs, archive, captured, preview, attempts, history, history, history, session, job, max_bytes);
+         ProcessOperations.write(session, job, input) => service.write(control, jobs, preview, attempts, history, history, history, session, job, input);
+         ProcessOperations.close_input(session, job) => service.close_input(control, jobs, preview, attempts, history, history, history, session, job);
+         ProcessOperations.stop(session, job) => service.stop(control, jobs, archive, preview, attempts, history, history, history, session, job);
+         ProcessOperations.list(session) => service.list(jobs, session);
+-        ProcessOperations.output(session, job) => service.output(jobs, archive, history, history, session, job);
++        ProcessOperations.output(session, job) => service.output(jobs, archive, captured, history, history, session, job);
+     };
+ }
+diff --git a/src/nomo/application/processes/service.es b/src/nomo/application/processes/service.es
+index 267fefb..6229d45 100644
+--- a/src/nomo/application/processes/service.es
++++ b/src/nomo/application/processes/service.es
+@@ -3,6 +3,8 @@ module nomo.application.processes.service;
+ import std.codec.text.utf8_encode;
+ import std.text.from_i64;
+ import std.io.IOError;
++import nomo.application.processes.capture;
++import nomo.application.processes.capture_ports.{ProcessCapture, CaptureArchive};
+ import nomo.domain.serialization.json.encode;
+ import nomo.domain.execution.attempt.Attempt;
+ import nomo.domain.process.jobs.{Job, JobEvent, StartRequest, JobRequest, ReadRequest, WriteRequest, InputResult};
+@@ -48,7 +50,7 @@ flow event<J ~ JobRepository, O ~ OutputArchive>(jobs: J, archive: O, job: Job,
+ }
+ 
+ public flow start<Live, C ~ ProcessControl<Live>, J ~ JobRepository, V ~ ProcessPreviewSink, A ~ AttemptRepository, W ~ ConversationWriter, P ~ ResultPublication, H ~ ConversationReader>(control: C, jobs: J, preview_sink: V, attempts: A, writer: W, publication: P, history: H, session: string, program: string, arguments: Array<string>) -> Job
+-    ![Memory, Console, Command.start<DefaultCommandSandbox>, Error<StorageError>, Error<MemoryConflict>, Error<IOError>, Error<BudgetExceeded>] {
++    ![ProcessCapture<Live>, Memory, Console, Command.start<DefaultCommandSandbox>, Error<StorageError>, Error<MemoryConflict>, Error<IOError>, Error<BudgetExceeded>] {
+     let request = StartRequest { operation = "start", program, arguments };
+     let attempt = prepare(attempts, writer, session, "start_job", request);
+     let job = Job { id = attempt.session + "-job-" + from_i64(attempt.input_event), session = attempt.session,
+@@ -59,15 +61,24 @@ public flow start<Live, C ~ ProcessControl<Live>, J ~ JobRepository, V ~ Process
+     let process = control.start(root, program, arguments);
+     let result = job { program, arguments, handle = control.reference(process), phase = "started" };
+     jobs.save(result);
++    perform ProcessCapture<Live>.register(result, process);
+     complete(attempts, publication, history, attempt, result);
+     return result;
+ }
+ 
+-public flow read<Live, C ~ ProcessControl<Live>, J ~ JobRepository, O ~ OutputArchive, V ~ ProcessPreviewSink, A ~ AttemptRepository, W ~ ConversationWriter, P ~ ResultPublication, H ~ ConversationReader>(control: C, jobs: J, archive: O, preview_sink: V, attempts: A, writer: W, publication: P, history: H, session: string, job: string, max_bytes: usize) -> JobEvent
+-    ![Memory, Console, Command.reconnect<DefaultCommandSandbox>, Command.read<DefaultCommandSandbox>, Error<StorageError>, Error<MemoryConflict>, Error<IOError>, Error<BudgetExceeded>] {
++public flow read<Live, C ~ ProcessControl<Live>, J ~ JobRepository, O ~ OutputArchive, R ~ CaptureArchive, V ~ ProcessPreviewSink, A ~ AttemptRepository, W ~ ConversationWriter, P ~ ResultPublication, H ~ ConversationReader>(control: C, jobs: J, archive: O, captured: R, preview_sink: V, attempts: A, writer: W, publication: P, history: H, session: string, job: string, max_bytes: usize) -> JobEvent
++    ![Memory, Console, Command.reconnect<DefaultCommandSandbox>, Command.read<DefaultCommandSandbox>, Error<IndexError>, Error<StorageError>, Error<MemoryConflict>, Error<IOError>, Error<BudgetExceeded>] {
+     let selected = owned(jobs, session, job);
+     let request = ReadRequest { operation = "read", job, handle = selected.handle, max_bytes };
+     let attempt = prepare(attempts, writer, session, "read_job", request);
++    match captured.head(job) {
++        Some(head) => {
++            let result = capture.next(captured, job, attempt.input_event, max_bytes, head);
++            complete(attempts, publication, history, attempt, result);
++            return result;
++        }
++        None() => (),
++    }
+     let process = attach(control, preview_sink, selected);
+     preview(preview_sink, request);
+     let result = event(jobs, archive, selected, attempt.input_event, control.read(process, max_bytes));
+@@ -115,10 +126,18 @@ public flow stop<Live, C ~ ProcessControl<Live>, J ~ JobRepository, O ~ OutputAr
+ 
+ public flow list<J ~ JobRepository>(jobs: J, session: string) -> Array<Job> ![Memory, Error<StorageError>, Error<BudgetExceeded>] { return jobs.list(session); }
+ 
+-public flow output<J ~ JobRepository, O ~ OutputArchive, W ~ ConversationWriter, H ~ ConversationReader>(jobs: J, archive: O, writer: W, history: H, session: string, job: string) -> Array<JobEvent>
++public flow output<J ~ JobRepository, O ~ OutputArchive, R ~ CaptureArchive, W ~ ConversationWriter, H ~ ConversationReader>(jobs: J, archive: O, captured: R, writer: W, history: H, session: string, job: string) -> Array<JobEvent>
+     ![Memory, Error<StorageError>, Error<MemoryConflict>, Error<BudgetExceeded>] {
+     let selected = owned(jobs, session, job);
+     let call = writer.append(session, "observation_call", "job_output", history_text(job), -1);
++    match captured.head(job) {
++        Some(head) => {
++            let result = capture.snapshot(captured, job, head);
++            writer.append(session, "tool", "job_output", history_text(result), call);
++            return result;
++        }
++        None() => (),
++    }
+     var result: Array<JobEvent> = [];
+     for item in history.messages(selected.session, 0) {
+         if item.role != "tool_call" || item.name != "command" { continue; }
+diff --git a/src/nomo/bootstrap/main.es b/src/nomo/bootstrap/main.es
+index 9c830d6..0c4e557 100644
+--- a/src/nomo/bootstrap/main.es
++++ b/src/nomo/bootstrap/main.es
+@@ -7,6 +7,8 @@ import nomo.application.commands.handlers as command;
+ import nomo.application.workspace.handlers as workspace;
+ import nomo.adapters.filesystem.project_files.ProjectFiles;
+ import nomo.application.processes.handlers as processes;
++import nomo.application.processes.capture;
++import nomo.adapters.storage.capture.NativeCapture;
+ import nomo.application.transfer.handlers as transfer;
+ import nomo.application.projects.handlers as projects;
+ import nomo.application.mutations.handlers as mutations;
+@@ -35,10 +37,12 @@ import std.fs.{ReadLimitError, IOError as FileError};
+ import std.io.IOError;
+ 
+ public flow run(args: Array<string>) -> i32
+-    ![Agentic, Memory, Console, Command.run<DefaultCommandSandbox>, Command.start<DefaultCommandSandbox>, Command.reconnect<DefaultCommandSandbox>, Command.read<DefaultCommandSandbox>, Command.write<DefaultCommandSandbox>, Command.stop<DefaultCommandSandbox>, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Fs.stat<ProjectRoot>, Fs.atomic_replace<ProjectRoot>, Fs.atomic_replace<LaunchRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>, Error<IOError>, Error<IndexError>, Error<BudgetExceeded>] {
++    ![Async, Agentic, Memory, Console, Command.run<DefaultCommandSandbox>, Command.start<DefaultCommandSandbox>, Command.reconnect<DefaultCommandSandbox>, Command.read<DefaultCommandSandbox>, Command.write<DefaultCommandSandbox>, Command.stop<DefaultCommandSandbox>, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Fs.stat<ProjectRoot>, Fs.atomic_replace<ProjectRoot>, Fs.atomic_replace<LaunchRoot>, Error<StorageError>, Error<MemoryConflict>, Error<FileError>, Error<ReadLimitError>, Error<IOError>, Error<IndexError>, Error<BudgetExceeded>] {
+     let history = NativeHistory {};
+     let attempts = NativeAttempts {};
+     let jobs = NativeJobs {};
++    let control = HostProcessControl {};
++    let captured = NativeCapture {};
+     let guidance = ProjectInstructionFiles {};
+     let output = ConsoleLines {};
+     let application = entry.application<NativeHistory, NativeAttempts, ConsoleConversationPicker, ConfiguredConversation<NativeHistory, NativeAttempts>>() with {
+@@ -48,15 +52,17 @@ public flow run(args: Array<string>) -> i32
+         conversation: ConfiguredConversation<NativeHistory, NativeAttempts> => conversation.create(history, attempts, guidance, jobs, output);
+     };
+     // Runtime handlers interpret requests using the same selected dependencies.
+-    return handle (
++    return capture.scope(control, jobs, captured, () => {
++        return handle (
+         handle (
+             handle (
+                 handle (
+                     handle (
+-                        handle application.run(args) with processes.bindings(history, attempts, HostProcessControl {}, jobs, NativeOutputArchive {}, output)
++                        handle application.run(args) with processes.bindings(history, attempts, control, jobs, NativeOutputArchive {}, captured, output)
+                     ) with transfer.operations(history, attempts, ProjectArchives {}, JsonArchiveEncoding {}, TerminalTransfer {})
+                 ) with projects.operations(NativeRecentProjects {}, NativeProjectLaunch {}, TerminalProjects {})
+             ) with mutations.operations(ProjectMutationFiles {}, NativeChangeJournals {}, history, output)
+         ) with workspace.bindings(history, ProjectFiles {}, guidance)
+     ) with command.bindings(history, attempts, HostCommandRunner {}, ConsoleCommandPreview {});
++    });
+ }
+diff --git a/src/nomo/domain/process/capture.es b/src/nomo/domain/process/capture.es
+new file mode 100644
+index 0000000..cf06b78
+--- /dev/null
++++ b/src/nomo/domain/process/capture.es
+@@ -0,0 +1,4 @@
++module nomo.domain.process.capture;
++
++public type CaptureHead = { events: i64, phase: string };
++public type CaptureCursor = { event: i64, stdout: usize, stderr: usize };
+diff --git a/tests/fixtures/native_process_controller/src/app/main.es b/tests/fixtures/native_process_controller/src/app/main.es
+index fa3d017..0c5640d 100644
+--- a/tests/fixtures/native_process_controller/src/app/main.es
++++ b/tests/fixtures/native_process_controller/src/app/main.es
+@@ -9,6 +9,8 @@ import nomo.domain.process.jobs.{Job, JobEvent};
+ import nomo.domain.process.observations.ProcessEvent;
+ import nomo.application.processes.ports.{ProcessControl, JobRepository, OutputArchive, ProcessPreviewSink};
+ import nomo.application.processes.service;
++import nomo.application.processes.capture_ports.ProcessCapture;
++import nomo.adapters.storage.capture.NativeCapture;
+ import nomo.adapters.storage.conversations.NativeHistory;
+ import nomo.adapters.storage.attempts.NativeAttempts;
+ import nomo.application.conversation.ports.{ConversationCatalog, ConversationReader};
+@@ -74,9 +76,9 @@ public flow main(args: Array<string>) -> i32 ![Memory, Console, Command.start<De
+     let history = NativeHistory {}; let attempts = NativeAttempts {};
+     let jobs = Jobs {}; let archive = Outputs {}; let control = ControlledProcess {}; let preview = Preview {};
+     let session = history.create("process-controller", "Controlled process observations");
+-    let job = service.start(control, jobs, preview, attempts, history, history, history, session.id, "controlled", ["utf8"]);
++    let job = service.start(control, jobs, preview, attempts, history, history, history, session.id, "controlled", ["utf8"]) with { ProcessCapture<Token>.register(job, process) => (); };
+     if job.phase != "started" || job.handle != "fixture-handle" { abort("start observation changed"); }
+-    let output = service.read(control, jobs, archive, preview, attempts, history, history, history, session.id, job.id, 4096);
++    let output = service.read(control, jobs, archive, NativeCapture {}, preview, attempts, history, history, history, session.id, job.id, 4096);
+     if output.phase != "output" || output.stdout != "鹈鹕 café\n" || output.stdout_bytes != utf8_encode(output.stdout) || output.stderr_bytes != utf8_encode("stderr\n") { abort("observed bytes changed"); }
+     let still_started = match jobs.load(job.id) { Some(value) => value, None() => abort("saved job missing"), };
+     if still_started.phase != "started" { abort("output invented a terminal phase"); }
+@@ -85,7 +87,7 @@ public flow main(args: Array<string>) -> i32 ![Memory, Console, Command.start<De
+     let stopped = service.stop(control, jobs, archive, preview, attempts, history, history, history, session.id, job.id);
+     if written.status != "completed" || closed.status != "completed" || stopped.phase != "stopped" { abort("process completion changed"); }
+     println("PASS process controller exact input and observed bytes");
+-    let saved = service.output(jobs, archive, history, history, session.id, job.id);
++    let saved = service.output(jobs, archive, NativeCapture {}, history, history, session.id, job.id);
+     if saved.len() != 2 || saved[0] != output || saved[1] != stopped { abort("saved output order changed"); }
+     let listed = service.list(jobs, session.id);
+     if listed.len() != 1 || listed[0].phase != "stopped" { abort("saved job phase changed"); }
+diff --git a/tests/native_capture_probe.py b/tests/native_capture_probe.py
+new file mode 100644
+index 0000000..b015232
+--- /dev/null
++++ b/tests/native_capture_probe.py
+@@ -0,0 +1,86 @@
++"""Real native capture beyond the Host buffer while the terminal is idle.
++
++Python supplies a synthetic producer and inspects its fixture SQLite archive;
++the Etas product starts, drains, persists and cancels the actual process reads.
++"""
++from pathlib import Path
++import hashlib
++import json
++import os
++import sqlite3
++import tempfile
++import time
++
++from native_worker_probe import Client, ROOT
++from native_recovery_probe import audit
++from native_memory_value import value
++
++PAYLOAD = ('鹈鹕 café\n' * 4096).encode() * 48
++PROGRAM = "import sys,time\nblock=('鹈鹕 café\\n'*4096).encode()\nfor _ in range(48):\n sys.stdout.buffer.write(block); sys.stdout.buffer.flush(); time.sleep(0.02)\nsys.stdin.readline()"
++ARGV = ['-u', '-c', PROGRAM]
++
++
++def captured(database, job):
++    with sqlite3.connect(f'file:{database}?mode=ro', uri=True) as connection:
++        heads = connection.execute("SELECT region,key_json,value_json FROM memory_entries WHERE path LIKE '%Heads%'").fetchall()
++        match = next(((region, value(json.loads(body))) for region, key, body in heads if value(json.loads(key)) == job), None)
++        if match is None:
++            return b'', 0
++        region, head = match
++        chunks = connection.execute("SELECT key_json,value_json FROM memory_entries WHERE region=? AND path LIKE '%Chunks%'", (region,)).fetchall()
++    selected = {int(value(json.loads(key)).rsplit(':', 1)[1]): value(json.loads(body)) for key, body in chunks
++                if value(json.loads(key)).startswith(job + ':')}
++    return b''.join(bytes(selected[index]['stdout_bytes']) for index in range(head['events'])), head['events']
++
++
++def main():
++    evidence = Path(tempfile.mkdtemp(prefix='nomo-native-capture-')).resolve()
++    project = evidence / 'project'
++    project.mkdir(mode=0o700)
++    environment = dict(os.environ, MINIMAX_API_KEY='unused-no-model', NOMO_NATIVE_STATE=str(evidence / 'state'),
++                       NOMO_NATIVE_TRACE_ROOT=str(evidence / 'traces'))
++    command = [str(ROOT / 'scripts/nomo-native'), str(project)]
++
++    def approve(output):
++        preview = json.loads(next(line.split('[PROCESS] ', 1)[1] for line in reversed(output.decode().splitlines()) if '[PROCESS] ' in line))
++        assert preview == {'operation': 'start', 'program': '/usr/bin/python3', 'arguments': ARGV}, preview
++
++    print('EVIDENCE ' + str(evidence), flush=True)
++    first = Client(command, environment, evidence, 'first', approver=approve, prompt_timeout=600)
++    started = first.send('/spawn ' + json.dumps(['/usr/bin/python3', *ARGV]))
++    job = json.loads(next(line.split('[JOB    ] ', 1)[1] for line in started.splitlines() if '[JOB    ] ' in line))['id']
++    database = evidence / 'state/conversations.sqlite3'
++    deadline = time.monotonic() + 20
++    output, count = captured(database, job)
++    while len(output) < len(PAYLOAD) and time.monotonic() < deadline:
++        time.sleep(0.1)
++        output, count = captured(database, job)
++    # No /poll, input or model request has run during the capture interval.
++    first.leave()
++    assert output == PAYLOAD, (len(output), len(PAYLOAD), count)
++    trace_path = Path(next(line.split('[TRACE  ] ', 1)[1] for line in first.output.decode().splitlines() if '[TRACE  ] ' in line)) / 'trace.json'
++    trace = json.loads(trace_path.read_text())
++    assert trace['outcome']['kind'] == 'completed' and not audit(trace['events'], allow_capture_reads=True)
++    reads = [item for item in trace['events'] if item['kind'] == 'host_request_started' and item.get('qualified_action') == 'Command.read']
++    assert len(reads) > 1 and first.approvals == 1
++    assert any(item['kind'] == 'task_cancellation_requested' for item in trace['events'])
++    assert not any(item.get('qualified_action', '').startswith('Agentic.') for item in trace['events'])
++    # A fresh Host reads a bounded prefix of the durable archive. It does not
++    # reconnect an old handle or infer that the old producer is still alive.
++    restored = Client(command, environment, evidence, 'restored', approver=approve, prompt_timeout=600)
++    result = restored.send('/poll ' + job + ' 17')
++    event = json.loads(next(line.split('[JOB    ] ', 1)[1] for line in result.splitlines() if '[JOB    ] ' in line))
++    assert bytes(event['stdout_bytes']) == PAYLOAD[:17] and event['phase'] == 'output', event
++    restored.leave()
++    assert restored.approvals == 0
++    result = {'status': 'passed', 'scope': 'actual native entry captures more than the Host buffer while the prompt waits; ordinary quit cancels a blocked reader; fresh Host consumes a bounded saved-byte prefix',
++              'bytes': len(output), 'sha256': hashlib.sha256(output).hexdigest(), 'captured_events': count,
++              'native_read_requests': len(reads), 'start_approvals': first.approvals,
++              'restored_approvals': restored.approvals, 'model_http_requests': 0,
++              'approval_audit': [], 'trace': str(trace_path)}
++    (evidence / 'functional.json').write_text(json.dumps(result, indent=2) + '\n')
++    print('PASS native continuous capture: ' + str(evidence), flush=True)
++
++
++if __name__ == '__main__':
++    main()
+diff --git a/tests/native_memory_value.py b/tests/native_memory_value.py
+new file mode 100644
+index 0000000..98eb5c3
+--- /dev/null
++++ b/tests/native_memory_value.py
+@@ -0,0 +1,61 @@
++"""Read this fixture's ETS1 values using the pinned std.memory.binary layout.
++
++Test observation only; Nomo continues to use the official typed Memory codec.
++"""
++from io import BytesIO
++
++
++class Reader:
++    def __init__(self, data):
++        self.input = BytesIO(data)
++
++    def integer(self, width=8, signed=False):
++        data = self.input.read(width)
++        assert len(data) == width
++        return int.from_bytes(data, 'little', signed=signed)
++
++    def blob(self):
++        length = self.integer()
++        data = self.input.read(length)
++        assert len(data) == length
++        return data
++
++    def text(self):
++        return self.blob().decode()
++
++    def value(self):
++        tag = self.integer(1)
++        if tag == 0:
++            return None
++        if tag == 1:
++            return bool(self.integer(1))
++        if 16 <= tag <= 21 or 24 <= tag <= 29:
++            width = self.integer(1) if tag in (21, 29) else 1 << (tag % 8)
++            return self.integer(width, signed=tag < 24)
++        if tag == 48:
++            return self.text()
++        if tag == 49:
++            return self.blob()
++        if 64 <= tag <= 71:
++            return [self.value() for _ in range(self.integer())]
++        if tag == 80:
++            return {self.text(): self.value() for _ in range(self.integer())}
++        if tag == 81:
++            self.text()
++            return self.value()
++        if tag == 82:
++            self.text()
++            name = self.text()
++            return {'name': name, 'fields': [self.value() for _ in range(self.integer())]}
++        raise AssertionError(f'unexpected fixture storage tag: {tag}')
++
++
++def value(raw):
++    assert raw['kind'] == 'bytes'
++    reader = Reader(bytes(raw['value']))
++    header = reader.input.read(5)
++    assert header[:4] == b'ETS\x01' and header[4] in (0, 1)
++    reader.text()  # checked schema identity, retained by the native runtime
++    result = reader.value()
++    assert reader.input.read() == b''
++    return result
+diff --git a/tests/native_recovery_probe.py b/tests/native_recovery_probe.py
+index f30afc2..612eba7 100644
+--- a/tests/native_recovery_probe.py
++++ b/tests/native_recovery_probe.py
+@@ -50,11 +50,13 @@ def terminal(command, environment, turns, project, interrupt=False, approve=appr
+     return code, output.decode(), approvals, stopped
+ 
+ 
+-def audit(events):
++def audit(events, allow_capture_reads=False):
+     approval, failures = None, []
+     for event in events:
+         if event['kind'] == 'host_request_started' and event.get('qualified_action') == 'Approval.request':
+             approval = event
++        elif allow_capture_reads and event['kind'] == 'host_request_started' and event.get('qualified_action') == 'Command.read':
++            continue
+         elif event['kind'] == 'host_request_started' and (event.get('qualified_action', '').startswith('Command.') or event.get('qualified_action') == 'Fs.atomic_replace'):
+             if approval is None or event['authority']['approval_count'] != approval['authority']['approval_count'] + 1:
+                 failures.append({'request': event['id'], 'action': event['qualified_action'],
+diff --git a/tests/native_worker_probe.py b/tests/native_worker_probe.py
+index 67c68fb..0eb85d9 100644
+--- a/tests/native_worker_probe.py
++++ b/tests/native_worker_probe.py
+@@ -25,7 +25,8 @@ def execution_pid(worker):
+ 
+ 
+ class Client:
+-    def __init__(self, command, environment, evidence, name, approver=None, prompts=(b'nomo> ',)):
++    def __init__(self, command, environment, evidence, name, approver=None, prompts=(b'nomo> ',), prompt_timeout=90):
++        self.prompt_timeout = prompt_timeout
+         self.master, slave = pty.openpty()
+         self.process = subprocess.Popen(command, cwd=ROOT, env=environment, stdin=slave, stdout=slave, stderr=slave)
+         os.close(slave)
+@@ -50,7 +51,7 @@ class Client:
+ 
+     def collect(self, prompt, approve=True, marker=None):
+         start, approvals = len(self.output), 0
+-        deadline = time.monotonic() + 90
++        deadline = time.monotonic() + (self.prompt_timeout if prompt else 90)
+         while time.monotonic() < deadline:
+             readable, _, _ = select.select([self.master], [], [], 0.2)
+             if readable:
