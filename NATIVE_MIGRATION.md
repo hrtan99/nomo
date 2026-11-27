@@ -2,6 +2,20 @@
 
 The shipping `scripts/nomo` entry still uses the existing Python project controller. The opt-in `native_project` flow is the migration implementation, not a completed replacement.
 
+## Configuration ports and migrated cache acceptance, 2026-11-28
+
+The configuration/instruction boundary now has current-graph functional acceptance on official 0.24.13/std 0.9.0. ConfigurationLoader consumes the existing source, codec, converter, cache and conversation-reader roles; bootstrap selects implementations. Settings/defaults and context calculations remain domain rules. Instruction policy retains root-to-leaf order and receives its filesystem operations through the application contract. No stored type, Region, configured check argv or inactive timeout behavior changes.
+
+Three redundant digest conversions are removed: the standard Digest is already a bytes alias. Configuration/archive fingerprints return the standard SHA-256 directly, and the edit digest keeps its existing Result/hex protocol without the representation cast or impossible length branch. Configuration discovery uses iterator.any for the existing .nomo.toml scan. The exact 468-module package passes ordinary cache-off checking with zero diagnostics in 40.220 s, peak 3,111,456,768 bytes under normal 4 GiB/4 CPU/256 PID, no OOM. Architecture retains 3,508 imports and 48 identities; physical-v4 inclusive Core is 23,225 under the existing user waiver.
+
+The existing controlled loader/cache scenario passes with real fixture SQLite and no filesystem, command or model action; a separate real rooted loader reads two synthetic guide files in the original order. The existing production configuration scenario passes five local synthetic model requests, exact TOML/jq input and configured discovery/check, summary, fresh-process cache reuse, edited configuration/defaults and all native approval audits. The original ordinary edit-entry scenario also passes exact preview, both confirmations, durable intent, actual write, successful check and worker cleanup; both preview hashes match independent SHA-256 computation.
+
+A retained actual 0.13.5 configuration database has a populated cache. The production migration preserves all 49 rows across nine populated store paths and restores 17 complete events; the original database hash stays unchanged. A new 0.24.13 process then reuses the original digest/result-event link, with 50 paired successful requests and zero conversion commands, model or approval requests. Original cache and saved event/chunk values stay exact, as does the source TOML.
+
+The existing controlled transfer consumer also passes application fork and sealed-source import resumption with real SQLite and the actual codec/hash. Its initial check stops before execution because the old fixture entry omits Error<BudgetExceeded>; adding that required declaration makes the same original assertions pass. This accepts controlled sequencing and the hash consumer, not actual archive filesystem operations or project switching.
+
+These observations accept the configuration/instruction criteria in DIP-11 and this consumer of interpreter #121; they do not establish a compiler-only fix, accept every #121 reproduction, or complete the thirteen-item goal. Full native cutover and the other recorded capability gates remain open. [Exact source, runtime and old-cache evidence](examples/native-project/configuration-ports-02413-20261128.json).
+
 ## Official 0.24.13 and inference overload, 2026-11-28
 
 The default toolchain selects official CLI e3ea414 (0.24.13), its exact official lock graph and matching std 0.9.0 SDK. All fifteen specifications match that same revision's Git blobs. Standard release compilation takes 17m26s with one Cargo job and a 6 GiB build allowance, peak 5,338,001,408 bytes, no OOM. The prior binary/SDK remain unchanged through independent-prefix acceptance and are retained under `etas-02412-release/accepted-before-02413` before global installation. The checked and global prefixes have the same binary and standard artifact; their actual per-prefix manifests are retained separately.
