@@ -1,5 +1,7 @@
 module nomo.adapters.cli.legacy.recoverable_history_followup;
 
+import nomo.adapters.storage.work_persistence.ContinuousPersistence;
+
 import nomo.domain.sessions.work_fact_events.{summary_source, selection};
 import nomo.adapters.storage.legacy.recoverable_work_facts.snapshot as work_snapshot;
 import nomo.domain.sessions.facts.{WorkFacts, CheckOutput};
@@ -18,45 +20,25 @@ import nomo.adapters.storage.legacy.recoverable_work_store.load as inspect_first
 import nomo.domain.sessions.event_text_codec.decode;
 import nomo.harness.harness_tool_chat_contract.Previous;
 import nomo.adapters.cli.legacy.harness_work_entry.simple_refused as refused;
-import nomo.domain.work.protocol.Summary;
 import nomo.session.recoverable_chat_store.Frame as ChatFrame;
 import nomo.adapters.storage.legacy.recoverable_chat_store.{load as load_chat, conversation as restore_conversation};
-import nomo.domain.sessions.recoverable_followup_store.Ticket as WorkTicket;
-import nomo.adapters.storage.legacy.recoverable_followup_store.{admit, claim, finish as finish_work, abandon as abandon_followup, load as load_followup};
+import nomo.adapters.storage.legacy.recoverable_followup_store.{admit, claim, abandon as abandon_followup, load as load_followup};
 import nomo.domain.sessions.continuous_work.Stored;
-import nomo.adapters.storage.legacy.continuous_work.{load as load_extra, admit as admit_extra, edit_intent, edit_complete, finish as finish_extra, abandon as abandon_extra, abandon_check as abandon_extra_check};
+import nomo.adapters.storage.legacy.continuous_work.{load as load_extra, admit as admit_extra, abandon as abandon_extra, abandon_check as abandon_extra_check};
 import nomo.domain.sessions.redaction.Policy;
 import nomo.adapters.storage.legacy.recoverable_followup_check_store.{plan as plan_check, load as load_followup_check, abandon as abandon_followup_check};
 import nomo.domain.sessions.edit_operation_store.Ticket as EditTicket;
-import nomo.adapters.storage.legacy.history_followup_edit_store.{available, begin, complete};
+import nomo.adapters.storage.legacy.history_followup_edit_store.{available, complete};
 import nomo.core.conversation.Event;
-import nomo.session.edit_operation.Binding;
 import nomo.application.work.controller.execute;
 import nomo.adapters.cli.legacy.edit_coordinator.TerminalPreview;
 import nomo.adapters.filesystem.work_editor.NativeWorkEditor;
 import nomo.adapters.storage.work_timeline.EventWorkTimeline;
 import nomo.adapters.cli.legacy.terminal_work_output.TerminalWorkOutput;
-import nomo.application.work.ports.{WorkPersistence, Run};
+import nomo.application.work.ports.Run;
+import nomo.adapters.storage.work_persistence.RecoverableFollowupPersistence as FollowupPersistence;
 import nomo.tools.workspace.ReadOnlyRoot;
 import nomo.tools.edit_file.EditableRoot;
-
-type FollowupPersistence = { ticket: WorkTicket, redaction: Policy, binding: string };
-impl FollowupPersistence ~ WorkPersistence<EditTicket, bool> {
-    flow begin(self, selected: Binding) -> Result<EditTicket, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
-        match claim(self.ticket, self.redaction, self.binding) { Ok(_) => (), Err(error) => { return Err(error); } }
-        return begin(selected);
-    }
-    flow complete(self, ticket: EditTicket) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] { return complete(ticket); }
-    flow finish(self, edited: bool, summary: Summary, records: Array<Event>) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] { return finish_work(self.ticket, summary.answer, summary.state, records, self.redaction, self.binding); }
-}
-type ContinuousPersistence = { ticket: Stored, redaction: Policy };
-impl ContinuousPersistence ~ WorkPersistence<Stored, Stored> {
-    flow begin(self, selected: Binding) -> Result<Stored, string> ![Memory, Error<StorageError>, Error<IndexError>] { return edit_intent(self.ticket, selected); }
-    flow complete(self, ticket: Stored) -> Result<Stored, string> ![Memory, Error<StorageError>, Error<IndexError>] { return edit_complete(ticket); }
-    flow finish(self, edited: Stored, summary: Summary, records: Array<Event>) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
-        return match finish_extra(edited, summary.answer, if summary.model_generated { "model" } else { "system" }, summary.state, records, self.redaction) { Ok(_) => Ok(true), Err(error) => Err(error) };
-    }
-}
 
 flow historical(value: WorkFacts) -> HistoryWork {
     return HistoryWork { id = value.id, summary = value.summary, summary_source = value.summary_source, selection = value.selection, check = value.check, exit_code = value.exit_code };

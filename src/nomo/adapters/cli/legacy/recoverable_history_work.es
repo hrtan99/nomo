@@ -6,13 +6,11 @@ import std.effects.Fs;
 import nomo.adapters.cli.arguments.harness_work_args.{parse_recorded, application};
 import nomo.adapters.model.harness.history_work_model.HistoryStages;
 import nomo.adapters.cli.legacy.harness_work_entry.simple_refused as refused;
-import nomo.domain.work.protocol.Summary;
 import nomo.session.event_policy.PolicyRoot;
 import nomo.adapters.storage.legacy.event_policy.load as load_policy;
 import nomo.adapters.storage.legacy.chat_history.load as load_legacy;
 import nomo.adapters.storage.legacy.recoverable_chat_store.{load as load_chat, conversation as restore_conversation};
-import nomo.domain.sessions.recoverable_work_store.Ticket as WorkTicket;
-import nomo.adapters.storage.legacy.recoverable_work_store.{admit, claim, finish as finish_work, abandon as abandon_work, load as load_work};
+import nomo.adapters.storage.legacy.recoverable_work_store.{admit, claim, abandon as abandon_work, load as load_work};
 import nomo.adapters.storage.legacy.recoverable_check_store.{plan as plan_check, load as load_check};
 import nomo.adapters.storage.legacy.history_work_guard.inspect as inspect_legacy_work;
 import nomo.adapters.storage.legacy.history_check_guard.inspect as inspect_legacy_check;
@@ -20,31 +18,17 @@ import nomo.adapters.storage.legacy.history_followup_guard.inspect as inspect_fo
 import nomo.adapters.storage.legacy.history_followup_check_guard.inspect as inspect_followup_check;
 import nomo.adapters.storage.legacy.history_followup_edit_store.available as followup_edit_available;
 import nomo.domain.sessions.edit_operation_store.Ticket as EditTicket;
-import nomo.adapters.storage.legacy.edit_operation_store.{available, begin, complete};
-import nomo.core.conversation.Event;
-import nomo.session.edit_operation.Binding;
-import nomo.domain.sessions.redaction.Policy;
+import nomo.adapters.storage.legacy.edit_operation_store.{available, complete};
 import nomo.adapters.storage.legacy.check_lifecycle.FirstCheck;
 import nomo.application.work.controller.execute;
 import nomo.adapters.cli.legacy.edit_coordinator.TerminalPreview;
 import nomo.adapters.filesystem.work_editor.NativeWorkEditor;
 import nomo.adapters.storage.work_timeline.EventWorkTimeline;
 import nomo.adapters.cli.legacy.terminal_work_output.TerminalWorkOutput;
-import nomo.application.work.ports.{WorkPersistence, Run};
+import nomo.application.work.ports.Run;
+import nomo.adapters.storage.work_persistence.RecoverableFirstPersistence as FirstPersistence;
 import nomo.tools.workspace.ReadOnlyRoot;
 import nomo.tools.edit_file.EditableRoot;
-
-type FirstPersistence = { ticket: WorkTicket, redaction: Policy, binding: string };
-impl FirstPersistence ~ WorkPersistence<EditTicket, bool> {
-    flow begin(self, selected: Binding) -> Result<EditTicket, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
-        match claim(self.ticket, self.redaction, self.binding) { Ok(_) => (), Err(error) => { return Err(error); } }
-        return begin(selected);
-    }
-    flow complete(self, ticket: EditTicket) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] { return complete(ticket); }
-    flow finish(self, edited: bool, summary: Summary, records: Array<Event>) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
-        return finish_work(self.ticket, summary.answer, summary.state, records, self.redaction, self.binding);
-    }
-}
 
 public flow run(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.read<PolicyRoot>, Fs.read<ReadOnlyRoot>, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<ConsoleError>, Error<FileError>, Error<BudgetExceeded>] {
     if args.len() < 2 || args[args.len() - 2] != "--policy-binding" { return refused("event work requires a policy binding"); }

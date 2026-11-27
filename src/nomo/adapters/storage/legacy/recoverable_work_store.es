@@ -12,7 +12,7 @@ import nomo.domain.sessions.recoverable_events.{empty as empty_events, invalid a
 import nomo.session.recoverable_chat_store.Frame as ChatFrame;
 import nomo.adapters.storage.legacy.recoverable_chat_store.matches_version as chat_matches_version;
 import nomo.session.history_work_guard.{Record, Budget};
-import nomo.adapters.storage.legacy.history_work_guard.invalid as invalid_work;
+import nomo.domain.sessions.history_work_guard.invalid as invalid_work;
 import nomo.harness.harness_work_contract.Ledger;
 import nomo.session.recoverable_work_store.{Frame, Runs};
 import nomo.domain.sessions.recoverable_work_store.Ticket;

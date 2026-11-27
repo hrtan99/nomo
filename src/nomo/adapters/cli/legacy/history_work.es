@@ -5,40 +5,23 @@ import std.fs.IOError as FileError;
 import std.effects.Fs;
 import nomo.application.work.controller.execute;
 import nomo.adapters.cli.legacy.edit_coordinator.TerminalPreview;
-import nomo.application.work.ports.{WorkPersistence, Run};
-import nomo.domain.work.protocol.Summary;
+import nomo.application.work.ports.Run;
+import nomo.adapters.storage.work_persistence.FirstPersistence;
 import nomo.adapters.filesystem.legacy_work_editor.LegacyWorkEditor;
 import nomo.adapters.storage.legacy_work_timeline.LegacyWorkTimeline;
 import nomo.adapters.cli.legacy_work_output.LegacyWorkOutput;
 import nomo.adapters.cli.arguments.harness_work_args.{parse_recorded, application};
-import nomo.core.conversation.Event;
 import nomo.adapters.model.harness.history_work_model.HistoryStages;
 import nomo.adapters.storage.legacy.chat_history.load as load_chat;
-import nomo.session.edit_operation.Binding;
 import nomo.adapters.storage.legacy.edit_operation_store.FirstEditJournal;
 import nomo.domain.sessions.edit_operation_store.Ticket as EditTicket;
-import nomo.domain.sessions.history_work_guard.Ticket as WorkTicket;
-import nomo.adapters.storage.legacy.history_work_guard.{admit, claim, finish};
+import nomo.adapters.storage.legacy.history_work_guard.{admit, claim};
 import nomo.adapters.storage.legacy.history_check_guard.plan as plan_check;
 import nomo.domain.sessions.redaction.Policy;
 import nomo.tools.workspace.ReadOnlyRoot;
 import nomo.tools.edit_file.EditableRoot;
 
 flow refused(error: string) -> i32 { println("REFUSED " + error); return 1; }
-
-type FirstPersistence = { ticket: WorkTicket, journal: FirstEditJournal };
-impl FirstPersistence ~ WorkPersistence<EditTicket, bool> {
-    flow begin(self, selected: Binding) -> Result<EditTicket, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
-        match claim(self.ticket) { Ok(_) => (), Err(error) => { return Err(error); } }
-        return self.journal.begin(selected);
-    }
-    flow complete(self, ticket: EditTicket) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
-        return self.journal.complete(ticket);
-    }
-    flow finish(self, edited: bool, summary: Summary, records: Array<Event>) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
-        return finish(self.ticket, summary.answer, summary.state);
-    }
-}
 
 // Current roots and current approval are supplied by this invocation. Saved
 // history is only model input, never proof of a current root or consent.
