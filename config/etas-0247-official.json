@@ -1,0 +1,63 @@
+{
+  "selector": "latest0247",
+  "version": "0.24.7",
+  "source_overrides": [],
+  "repositories": {
+    "cli": {
+      "repository": "etas",
+      "revision": "f677c3299e5a311040adb7d2dce1823ad3f1fe0a",
+      "tree": "ac045ffa6e17571b73bc6f8d748eb262b3d37c77",
+      "packages": [
+        "etas_cli",
+        "etas_driver",
+        "etas_package",
+        "etas_tests"
+      ]
+    },
+    "core": {
+      "repository": "etas-core",
+      "revision": "e0be95b0f5b2ad0f52cb92ca23e88d00cce5ea9f",
+      "tree": "c1f83ef6dabd7134e99ca34b9105a0d413aaf1ed",
+      "packages": [
+        "etas_builtin",
+        "etas_cache",
+        "etas_code",
+        "etas_core",
+        "etas_host",
+        "etas_memory_derive",
+        "etas_package_metadata",
+        "etas_std",
+        "etas_utils"
+      ]
+    },
+    "frontend": {
+      "repository": "etas-frontend",
+      "revision": "ab7deebc99d7b021b4089e568f8a9c9a0cb23f66",
+      "tree": "d189819c91a446c8b9567700ce23bf324d64c0b9",
+      "packages": [
+        "etas_effects",
+        "etas_frontend",
+        "etas_hir",
+        "etas_hir_analysis",
+        "etas_syntax",
+        "etas_syntax_derive",
+        "etas_types"
+      ]
+    },
+    "interpreter": {
+      "repository": "etas-interpreter",
+      "revision": "cd60e6b55625b7b01110885eaf7271aaf02f6f3b",
+      "tree": "a69f484ee6669041f09cd6fee0488bd5286e6129",
+      "packages": [
+        "etas_interpreter"
+      ]
+    }
+  },
+  "cache_root": "etas-0247-release",
+  "build_target": "etas-0230/target",
+  "source": "Official CLI 0.24.7 at f677c32 and its exact official lock graph, standard Cargo release profile. Build uses existing target with 6 GiB/one Cargo job; normal source/runtime remain 4 GiB.",
+  "installed_sdk": true,
+  "build_profile": "release",
+  "cargo_lock_sha256": "243b5695dcf41a347c5c1ff35a512502e9f799cfce7fbac79fcafd48a130b7d0",
+  "verified_seed_binary_sha256": "259e8da6a235fa8bb3f05bc3c9a41f2ce4f3c017bffaed2c7072c5a13ccabd5c"
+}

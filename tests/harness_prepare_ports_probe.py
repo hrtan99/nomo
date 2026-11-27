@@ -1,6 +1,7 @@
 """Existing production WorkModelStages preparation; synthetic HTTP, real read only."""
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+import argparse
 import json
 import subprocess
 import tempfile
@@ -67,7 +68,7 @@ class Model(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
 
-def main():
+def main(binary, graph):
     evidence = Path(tempfile.mkdtemp(prefix='nomo-harness-ports-0246-')).resolve()
     package, observed, reads = (evidence / name for name in ('package', 'observed', 'reads'))
     for folder in (package, observed, reads):
@@ -119,13 +120,14 @@ flow = "production_stages"
                     {'type': 'bind', 'source': str(observed), 'target': '/fixture-evidence'},
                     {'type': 'bind', 'source': str(reads), 'target': '/fixture-read', 'read_only': True}]}}}))
     command = ['docker', 'compose', '--project-name', 'nomo-harness-ports', '--env-file', '/dev/null']
-    for path in ('compose.yaml', 'config/etas-0246-official-compose.yaml', 'config/etas-runtime-cache-compose.yaml', str(overlay)):
+    for path in ('compose.yaml', f'config/etas-{graph}-official-compose.yaml', 'config/etas-runtime-cache-compose.yaml', str(overlay)):
         command += ['--file', str(ROOT / path)]
     inside = '''import json,pathlib,subprocess,time
-t=time.monotonic();p=subprocess.run(['/home/nomo/.cargo/bin/etas','--no-config','--cache','off','run','/workspace','--flow','production_stages','--allow-effects','--trace-out','/fixture-evidence/production.trace.json'],capture_output=True,text=True)
+t=time.monotonic();p=subprocess.run([__BINARY__,'--no-config','--cache','off','run','/workspace','--flow','production_stages','--allow-effects','--trace-out','/fixture-evidence/production.trace.json'],capture_output=True,text=True)
 r={'exit':p.returncode,'elapsed_seconds':time.monotonic()-t,'stdout':p.stdout,'stderr':p.stderr,'resources':{k:(pathlib.Path('/sys/fs/cgroup')/k).read_text().strip() for k in ['memory.max','memory.peak','memory.events','cpu.max','pids.max']}}
-pathlib.Path('/fixture-evidence/result.json').write_text(json.dumps(r,indent=2)+'\\n');print(json.dumps(r))'''
+pathlib.Path('/fixture-evidence/result.json').write_text(json.dumps(r,indent=2)+'\\n');print(json.dumps(r))'''.replace('__BINARY__', repr(binary))
     command += ['run', '--rm', '--no-deps', '--pull', 'never', '--tty=false', 'dev', 'python3', '-c', inside]
+    (evidence / 'command.json').write_text(json.dumps(command, indent=2) + '\n')
     print('EVIDENCE ' + str(evidence), flush=True)
     try:
         run = subprocess.run(command, cwd=ROOT, capture_output=True, text=True)
@@ -158,4 +160,8 @@ pathlib.Path('/fixture-evidence/result.json').write_text(json.dumps(r,indent=2)+
 
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--binary', default='/home/nomo/.cargo/bin/etas')
+    parser.add_argument('--graph', default='0247', help='official graph label, e.g. 0247')
+    args = parser.parse_args()
+    main(args.binary, args.graph)

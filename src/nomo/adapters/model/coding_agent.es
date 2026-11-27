@@ -21,8 +21,8 @@ public import nomo.domain.conversation.messages.ChatMessage;
 public import nomo.domain.conversation.turn.{Answer, Turn};
 
 @tools([start_job, read_job, write_job, close_job_input, stop_job, list_jobs, job_output, git_status, git_diff, git_log, git_branches, git_init, git_branch, git_switch, git_commit, read_file, replace_file, edit_file, list_directory, stat_file, search_files, find_files, search_project, project_instructions, run_command, run_command_input, check_project, apply_changes, create_file, write_file, make_directory, delete_path, move_path, undo_changes, rollback_changes, list_changes, reconcile_changes])
-// ContextTokens is the run-owned cumulative input/output allowance, not the
-// provider's per-request context window. Keep enough room for the tool loop.
+// Tokens bounds cumulative input/output. Official 0.24.7 also uses it as the
+// provider output cap; ContextTokens cannot raise this inner budget (#125).
 @limits([Tokens(131072), ContextTokens(536870912)])
 public agent NativeCoding = {};
 

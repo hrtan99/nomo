@@ -54,7 +54,7 @@ def migrate(source, destination, source_format):
         {'type': 'bind', 'source': str(evidence), 'target': '/migration-evidence'}]}},
         'volumes': {'cargo-cache': {'external': True}}}))
     command = ['docker', 'compose', '--project-name', 'nomo-native-migrate', '--env-file', '/dev/null']
-    for name in ('compose.yaml', 'config/etas-0246-official-compose.yaml',
+    for name in ('compose.yaml', 'config/etas-0247-official-compose.yaml',
                  'config/local-tryout-compose.yaml', 'config/etas-runtime-cache-compose.yaml',
                  'config/nomo-native-launch-compose.yaml', str(overlay)):
         command += ['--file', str(ROOT / name)]
