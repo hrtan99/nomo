@@ -2,6 +2,15 @@
 
 The shipping `scripts/nomo` entry still uses the existing Python project controller. The opt-in `native_project` flow is the migration implementation, not a completed replacement.
 
+
+## Official 0.24.4 and old-state migration, 2026-11-27
+
+CLI b1e9c5f and its exact official core/frontend/interpreter revisions are built with the standard release profile; the previous 0.24.3 CLI/SDK are preserved. Installed SDK compiler 0.21.4/body 99/metadata 78 is paired with the new binary. Full normal O2/cache-off checking passes all 457 modules with zero diagnostics in 56.45 seconds under the regular 4 GiB/4 CPU/256 PID profile. The original controlled summary/coding/SQLite consumer also passes unchanged expectations: 107 paired successful Host requests, completed/settled trace, no model/command request. Its Host-event interval is 72.89 seconds versus the prior scenario's 368.03 seconds; the current/older transitive packages have 39/35 files, so this is an observed scenario comparison rather than an isolated compiler benchmark.
+
+An actual pre-refactor 0.13.5 fixture retains its original database SHA-256 and 17 complete history events. Running its copied state on 0.24.4 fails at the first recent-project read with `StorageError.schema_mismatch`: the stored codec/schema binding differs. The original file hash remains unchanged, and no Command/model/approval action is performed. This does not establish whether later conversation reads would succeed: startup stops first. Retaining stored nominal declarations alone does not qualify wire-codec compatibility. An explicit migration is still required; no persisted binding is cleared and an empty current store is not presented as restored data. [Exact toolchain, consumer and old-state result](examples/native-project/compiler-0244-20261127.json).
+
+The unchanged positive configuration/cache consumer also fails on 0.24.4 at standard `std.json.parse`, with `MissingCheckedFact` and an unmaterialized applied type. Its physical-guidance continuation does not run. This is a follow-up to [interpreter #121](https://github.com/etas-project/etas-interpreter/issues/121), separate from the old codec binding and with no parser replacement or extra negative case.
+
 ## Edit confirmation boundary, 2026-11-27
 
 The legacy Work controller now receives file operations and confirmation through separate application-owned roles. Filesystem adapters no longer import the terminal coordinator. Preview construction and its presenter/consent interfaces belong to application/edit; pure diff rendering belongs to domain/mutations. Existing native and application confirmation gates and the original intent-before-file / completion-after-file order are preserved. The CLI still selects the concrete legacy implementations.

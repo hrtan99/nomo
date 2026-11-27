@@ -19,7 +19,7 @@ def main():
                        NOMO_NATIVE_WORKSPACE=str(project), NOMO_NATIVE_STATE=str(state),
                        NOMO_NATIVE_EVIDENCE=str(traces))
     command = ['docker', 'compose', '--env-file', '/dev/null']
-    for name in ('compose.yaml', 'config/etas-0243-official-compose.yaml',
+    for name in ('compose.yaml', 'config/etas-0244-official-compose.yaml',
                  'config/local-tryout-compose.yaml', 'config/etas-runtime-cache-compose.yaml',
                  'config/nomo-native-compose.yaml'):
         command += ['--file', str(ROOT / name)]
