@@ -1,3 +1,5 @@
+Reported upstream: https://github.com/etas-project/etas-interpreter/issues/123
+
 ## Observed integration failure
 
 On the unmodified official CLI 0.24.6 locked graph, the existing full Nomo native batch/undo consumer passes normal source checking, successfully applies a batch in its first model turn, then fails in its second model turn:

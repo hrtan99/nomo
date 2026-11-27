@@ -237,7 +237,9 @@
       "native_authority_audit": []
     },
     "business_rows": 0,
-    "qualification": "Existing actual 197-row 0.13.5 batch/undo source and nine native snapshot references. Snapshot copy matches source, including nanosecond mtimes. Standard parse still fails before business Memory access. Full all-row and fresh-history assertions are unexecuted; original source unchanged. No old 49-row retry or new negative matrix."
+    "qualification": "Existing actual 197-row 0.13.5 batch/undo source and nine native snapshot references. Snapshot copy matches source, including nanosecond mtimes. Standard parse still fails before business Memory access. Full all-row and fresh-history assertions are unexecuted; original source unchanged. No old 49-row retry or new negative matrix.",
+    "upstream_issue": "https://github.com/etas-project/etas-interpreter/issues/121",
+    "upstream_comment": "https://github.com/etas-project/etas-interpreter/issues/121#issuecomment-7216460566"
   },
   "model_tool_case": {
     "status": "failed-not-relabelled-by-terminal-continuation",
@@ -279,7 +281,8 @@
     "observed_http_requests": 3,
     "driver_exit": 1,
     "upstream_report": "examples/repros/model-tool-handlers-0246/UPSTREAM_ISSUE.md",
-    "qualification": "First model turn applies the original batch; the second model tool undo escapes the installed outer ChangeOperations handler. Exact cause and regression status are unproven. No further model/forward action is repeated."
+    "qualification": "First model turn applies the original batch; the second model tool undo escapes the installed outer ChangeOperations handler. Exact cause and regression status are unproven. No further model/forward action is repeated.",
+    "upstream_issue": "https://github.com/etas-project/etas-interpreter/issues/123"
   },
   "explicit_terminal_undo": {
     "result": {
