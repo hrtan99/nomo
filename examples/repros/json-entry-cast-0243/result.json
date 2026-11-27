@@ -1,0 +1,18 @@
+{
+  "exit": 3,
+  "stdout": "",
+  "stderr": "",
+  "elapsed_seconds": 1.5485804170000392,
+  "outcome": {
+    "failure": {
+      "diagnostic": {
+        "code": "Analysis(MissingCheckedFact)",
+        "message": "generic method has no prepared implementation witness",
+        "phase": "analysis",
+        "severity": "error"
+      },
+      "kind": "execution_fault"
+    },
+    "kind": "failed"
+  }
+}
