@@ -2,7 +2,21 @@
 
 The shipping `scripts/nomo` entry still uses the existing Python project controller. The opt-in `native_project` flow is the migration implementation, not a completed replacement.
 
-## Current compiler and source fixes: 0.24.2, 2026-11-27
+## Current compiler: 0.24.3, 2026-11-27
+
+The selected official CLI is **0.24.3** at `dd5768dc871b99fb4cc06c4532c772e257d2f64b`, with locked core `377875e8afb201a782e054b313fe7e529bcaa485`, frontend `bfe255314bc142fdd79a7c5d3d7f0cc77988574e` and interpreter `5dfc2a121efb326107d461e08e66b31499db143b`. The standard release build took 10m 12s using the existing cache/target, with two Cargo jobs and an 8 GiB limit for that build container only. Application checking and runtime remain at 4 GiB. Source/tree/lock/registry and matching SDK verification passed (SDK compiler 0.21.3, body 98, metadata 78). Previous CLI and SDK bytes are preserved. No compiler patch, source override or custom Rust flags were used.
+
+The unchanged 441-module application source passes the complete O2/cache-off check with zero diagnostics in 69.74 s, peak 3,312,017,408 bytes and no max/OOM/OOM-kill event. Architecture checks pass for 3,303 imports and 48 compatibility leaves. The original independent JSON conversion reproduction passes, and native production entry preparation reaches its first prompt and Host operations. See the scoped upstream follow-ups for [interpreter #119](https://github.com/etas-project/etas-interpreter/issues/119#issuecomment-7207022235) and [frontend #102](https://github.com/etas-project/etas-frontend/issues/102#issuecomment-7207154694).
+
+That first production run then exposed a Nomo configuration omission: its model-enabled profiles did not allow the `agentic` boundary. The 19 existing model-enabled profiles now declare `agentic=allow`, following the official positive agent fixtures. Existing tool/filesystem/command approval rules remain in force. The corrected production scenario dispatches to its local synthetic model; full persistence acceptance is recorded separately below.
+
+The original production persistence scenario also passes on the exact 441-source package after that policy fix: read `note.txt`, review and approve the native mutation, write `before new`, publish a saved summary, exit, start a fresh process, and continue from the original request, complete tool history and summary. All existing assertions remain unchanged; five model requests go only to the local synthetic server. Both process traces complete with settled work. The first process has 636 paired Host requests; the restored process has 296. This qualifies the opt-in read/edit/summary/fresh-process path. It does not accept the shipping startup migration, Git/check and required process/capture lifetimes, real provider operation, or default cutover.
+
+The controlled SQLite conversation completes summary publication followed by coding publication, with 107 paired successful Host requests, settled work, empty stderr and no OOM. Its original outer driver expired at 300 seconds; the same invocation continued and was collected through Docker logs without reexecution. All original functional, trace and resource assertions were then evaluated unchanged and passed. The observer deadline is now 600 seconds for future runs. This is a functional pass with an explicit original driver timeout, rather than a claim that the old 300-second driver passed.
+
+Performance remains a limitation: the conversation's Host span is 368.03 s, while the 107 Host actions together account for about 60 ms (largest 2.2 ms). Gaps between requests have median 1.52 s, p95 11.94 s and maximum 22.57 s. These measurements do not establish whether application or runtime work causes the delay; the diagnostic is reported as [etas-interpreter #120](https://github.com/etas-project/etas-interpreter/issues/120). No real model endpoint or credentials were used and no negative matrix was added. Exact identities, observations and acceptance scope are in the [0.24.3 receipt](examples/native-project/compiler-0243-20261127.json). The shipping Python project entry remains selected; full native cutover is not accepted.
+
+## Previous compiler and source fixes: 0.24.2, 2026-11-27
 
 The selected official CLI is **0.24.2** at `e692939c4c22fab5260cfc8ffbcac4ea9e139f93`, with locked core `44a25f003d996dd89230295f111e617c0a2a3783`, frontend `c0c87cf3acdcfd2cfdd77d13e6bd3a905bc55fd7` and interpreter `420c6ca133de802d1deb4fffaf755f35b988318f`. The standard Cargo release build took 25m 02s using the existing cache/target. Only that build container temporarily used 6 GiB; application checks and runtime retain 4 GiB. Official source/tree/lock/registry and matching SDK receipt verification passed (SDK compiler 0.21.2, body schema 97, metadata schema 78). No compiler patches, source overrides or custom Rust flags were used. Earlier binaries and SDKs are preserved.
 
@@ -137,7 +151,7 @@ An independent valid cancellation case uses no escaped-backslash literal: `race`
 
 ## Launch the native entry
 
-With the existing Docker image and official 0.13.5 toolchain installed, set `MINIMAX_API_KEY` in your shell and run:
+With the existing Docker image and official 0.24.3 toolchain installed, set `MINIMAX_API_KEY` in your shell and run:
 
 ```sh
 ./scripts/nomo-native ~/Projects/nomo-test
@@ -147,7 +161,7 @@ With the existing Docker image and official 0.13.5 toolchain installed, set `MIN
 ./scripts/nomo-native ~/Projects/nomo-test --once 'List the project files.'
 ```
 
-The project defaults to the invoking directory when omitted. Install the configuration codec once with `./scripts/nomo-native-tools.sh`. A fresh toolchain installation uses `./scripts/etas-0131-official-container.sh prepare` followed by `build`.
+The project defaults to the invoking directory when omitted. Install the configuration codec once with `./scripts/nomo-native-tools.sh`. A fresh toolchain installation uses `./scripts/etas-0243-official-container.sh prepare` followed by `build`. The build command selects the dedicated 8 GiB/two-job compiler overlay; normal application runs retain 4 GiB.
 
 Press **Ctrl+P, then Ctrl+Q** to detach the terminal while keeping the Etas worker and its live jobs. Run the same project command without startup options to reconnect. Retained terminal bytes are replayed before live output; replayed prompts do not grant approval and the transport never generates task/consent input. Startup options apply when creating an execution endpoint; use native `/new` or `/resume` after reconnecting to an existing endpoint. `/quit` shuts down the endpoint and its Host; it is not detach. Noninteractive `--once` waits for its real result even with stdin closed. One terminal client can attach to each project/state endpoint at a time.
 

@@ -1,0 +1,293 @@
+{
+  "date": "2026-11-27",
+  "status": "official-0243-native-persistence-passed-cutover-not-accepted",
+  "compiler": {
+    "selector": "latest0243",
+    "version": "0.24.3",
+    "source_overrides": [],
+    "repositories": {
+      "cli": {
+        "repository": "etas",
+        "revision": "dd5768dc871b99fb4cc06c4532c772e257d2f64b",
+        "tree": "c1e2376a9c8c51cd5f6f1e872283fa122fce4ae4",
+        "packages": [
+          "etas_cli",
+          "etas_driver",
+          "etas_package",
+          "etas_tests"
+        ]
+      },
+      "core": {
+        "repository": "etas-core",
+        "revision": "377875e8afb201a782e054b313fe7e529bcaa485",
+        "tree": "eaa8b11e54a6d35c6f6cc4b66755f61635fce4f2",
+        "packages": [
+          "etas_builtin",
+          "etas_cache",
+          "etas_code",
+          "etas_core",
+          "etas_host",
+          "etas_memory_derive",
+          "etas_package_metadata",
+          "etas_std",
+          "etas_utils"
+        ]
+      },
+      "frontend": {
+        "repository": "etas-frontend",
+        "revision": "bfe255314bc142fdd79a7c5d3d7f0cc77988574e",
+        "tree": "f5c01f50ebb2dc1ec4411a63fc519342b5413f7c",
+        "packages": [
+          "etas_effects",
+          "etas_frontend",
+          "etas_hir",
+          "etas_hir_analysis",
+          "etas_syntax",
+          "etas_syntax_derive",
+          "etas_types"
+        ]
+      },
+      "interpreter": {
+        "repository": "etas-interpreter",
+        "revision": "5dfc2a121efb326107d461e08e66b31499db143b",
+        "tree": "4b417dae3f07348385c598f1deaefea826ea26db",
+        "packages": [
+          "etas_interpreter"
+        ]
+      }
+    },
+    "cache_root": "etas-0243-release",
+    "build_target": "etas-0230/target",
+    "source": "Official CLI 0.24.3 at dd5768d, standard Cargo release profile and exact locked graph; matching SDK. Existing cache/target reused. Only the build container uses 8 GiB and 2 Cargo jobs; application checks and runtime retain 4 GiB.",
+    "cargo_lock_sha256": "c46ccb9ea5b5bf3389a78722be3791304306b5c10314ac190bcfeb505f8eb66b",
+    "verified_seed_binary_sha256": "a172dd7a35541f91ebaa0fb4462f462fe76374bc8d3ffa6f2237a87e76d7d8f2",
+    "installed_sdk": true,
+    "build_profile": "release"
+  },
+  "installed": {
+    "lock_sha256": "c46ccb9ea5b5bf3389a78722be3791304306b5c10314ac190bcfeb505f8eb66b",
+    "method": "adopted-independently-verified-0243-build",
+    "path": "/home/nomo/.cargo/bin/etas",
+    "sdk": {
+      "abi": {
+        "artifact_hash": "blake3:d8d154d5d1d2820c9b26bb62c6a5ebb74d138accaa930a363f15f7de5be135e2",
+        "body_schema": 98,
+        "compiler_version": "0.21.3",
+        "effect_analysis_hash": "blake3:d7303ac692da2899f89cbdda7c919aa00fad1731e3a4eae8c164b3383d80bdab",
+        "interpreter_layout_hash": "blake3:76c403d86067c09f6d96f3ddbc1f1069e9be7b41a6f6fac4107f6d18fc8e82a2",
+        "metadata_schema": 78,
+        "native_binding_abi": "blake3:c2620b315312e5c96f43d67f9160dd81048b8a030de13347e29442d9e30231e3",
+        "schema": 3,
+        "std_contract": "phase1|etas.std.text.contract.v1|etas.std.text.primitive-abi.v1|etas.std.text.source.v1|unicode:17.0.0:7c74aebf116629b6:etas.std.text.unicode.v1|usize:64",
+        "target": "aarch64-unknown-linux-gnu",
+        "toolchain_id": "etas-0.8.1-aarch64-unknown-linux-gnu-c2620b315312"
+      },
+      "manifest_path": "/home/nomo/.cargo/lib/etas/etas-0.8.1-aarch64-unknown-linux-gnu-c2620b315312/std/manifest.json",
+      "manifest_sha256": "162e6d99f2081200e5a13ab371ecde834b58df8a8fe006bd17536500fe38877f",
+      "receipt": "etas-std-install-v2\n000000000000000018ebc0fa3299d279-701-aarch64-unknown-linux-gnu\nblake3:a8be1dfc16abe4ca1ae2857d3768cdd30acd9961067d120fd4262464a805d017\n"
+    },
+    "sha256": "a172dd7a35541f91ebaa0fb4462f462fe76374bc8d3ffa6f2237a87e76d7d8f2",
+    "version": "etas 0.24.3\n"
+  },
+  "build": {
+    "profile": "standard Cargo release",
+    "elapsed_seconds": 612,
+    "resources": {
+      "memory.max": "8589934592",
+      "memory.peak": "8027627520",
+      "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+      "cpu.max": "400000 100000",
+      "pids.max": "256"
+    },
+    "cargo_jobs": 2,
+    "cache_volume": "nomo-cargo-0230-20261126-f904fa0",
+    "build_resource_scope": "8 GiB/2 Cargo jobs for the build container only; application validation and runtime remain 4 GiB",
+    "prior_release_cli_and_sdk_preserved": true,
+    "source_overrides": [],
+    "custom_rustflags": false,
+    "permanent_build_overlay": "config/etas-0243-build-compose.yaml",
+    "compose_resource_selection_verified": {
+      "normal_application_memory_bytes": 4294967296,
+      "normal_application_cargo_jobs": 1,
+      "compiler_build_memory_bytes": 8589934592,
+      "compiler_build_cargo_jobs": 2
+    }
+  },
+  "application_changes": {
+    "etas_source_changes": false,
+    "agentic_policy": "Declare agentic=allow in the 19 existing model-enabled profiles, following the official positive agent fixtures. Existing tool/filesystem/command approvals remain.",
+    "observer_timeout": "The unchanged conversation invocation finished after its original outer 300-second observer expired. It was collected via Docker logs and the original assertions were evaluated unchanged. Future observer deadline is 600 seconds; no application work was repeated."
+  },
+  "full_source_check": {
+    "exit": 0,
+    "elapsed_seconds": 69.73761986600005,
+    "resources": {
+      "memory.max": "4294967296",
+      "memory.peak": "3312017408",
+      "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+      "cpu.max": "400000 100000",
+      "pids.max": "256"
+    },
+    "source_count": 441,
+    "diagnostics": 0,
+    "command": "etas --no-config --cache off check --format json --all /workspace",
+    "optimization": "O2",
+    "source_manifest_sha256": "fb62269e9dfdd8803319bcc1ce9e54aaf1f46e5cceb47e3ef97e6818d96a6929",
+    "source_manifest_hash_method": "SHA256 of compact, sorted JSON object mapping source path to file SHA256"
+  },
+  "architecture": {
+    "status": "passed",
+    "review_package_modules": 441,
+    "imports": 3303,
+    "identity_only_compatibility_leaves": 48,
+    "stored_nominal_and_region_identities_changed": false
+  },
+  "syntax": {
+    "status": "passed",
+    "python_files": 21,
+    "shell_files": 5
+  },
+  "original_json_reproduction": {
+    "exit": 0,
+    "elapsed_seconds": 1.7023067510000374,
+    "stdout": "{\"count\":7.0,\"text\":\"synthetic\"}\n",
+    "stderr": "",
+    "trace_outcome": {
+      "kind": "completed"
+    },
+    "local_work_settled": true,
+    "host_requests": 1,
+    "resources": {
+      "memory.max": "4294967296",
+      "memory.peak": "376524800",
+      "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0"
+    }
+  },
+  "controlled_conversation": {
+    "exit": 0,
+    "stdout": "PORT settings\nPORT context 1\nOUTPUT [CONTEXT] Summarizing; complete original history stays saved.\nPORT context 1\nPORT summary dispatching\nPORT context 2\nPORT coding dispatching\nOUTPUT Completed deterministic turn\nPASS deterministic conversation with compaction\n",
+    "stderr": "",
+    "resources": {
+      "memory.max": "4294967296",
+      "memory.peak": "588115968",
+      "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+      "cpu.max": "400000 100000",
+      "pids.max": "256"
+    },
+    "status": "passed",
+    "source_count": 35,
+    "paired_host_requests": 107,
+    "host_actions": {
+      "Memory.read": 68,
+      "Memory.write": 30,
+      "Console.stdout_write": 9
+    },
+    "qualification": "One summary followed by one coding result through application effects. Real SQLite history, reservations and attempts; no native model, filesystem, command or approval action. This is not full production-composition acceptance.",
+    "driver_status": "original 300-second observer deadline exceeded",
+    "collection": "same existing invocation collected through Docker logs; original functional/trace/resource assertions executed unchanged after collection",
+    "execution_status": "passed",
+    "host_wall_span_seconds": 368.031954
+  },
+  "production_before_policy_fix": {
+    "status": "application-policy-refusal",
+    "outcome": {
+      "failure": {
+        "diagnostic": {
+          "code": "Analysis(UnhandledRuntimeError)",
+          "message": "agent policy denied request: local static policy has no allow rule for agentic boundary",
+          "phase": "analysis",
+          "severity": "error"
+        },
+        "kind": "execution_fault"
+      },
+      "kind": "failed"
+    },
+    "local_work_settled": true,
+    "host_requests": 81,
+    "local_model_requests": 0,
+    "source_count": 441
+  },
+  "upstream": {
+    "json_pass_followup": "https://github.com/etas-project/etas-interpreter/issues/119#issuecomment-7207022235",
+    "type_graph_followup": "https://github.com/etas-project/etas-frontend/issues/102#issuecomment-7207154694",
+    "performance_diagnostic": "https://github.com/etas-project/etas-interpreter/issues/120"
+  },
+  "acceptance": {
+    "full_source_check": true,
+    "original_json_conversion": true,
+    "controlled_sqlite_conversation_functional_assertions": true,
+    "original_300_second_driver": false,
+    "full_production_persistence": true,
+    "default_entry_cutover": false,
+    "real_model_calls": 0,
+    "new_negative_matrix": false
+  },
+  "performance": {
+    "controlled_conversation_host_span_seconds": 368.031954,
+    "host_operations": 107,
+    "host_duration_total_seconds": 0.0601,
+    "host_duration_max_seconds": 0.0022,
+    "gap_p50_seconds": 1.52,
+    "gap_p95_seconds": 11.944,
+    "gap_max_seconds": 22.565,
+    "root_cause": "not established; request gaps do not distinguish application from runtime work"
+  },
+  "production_persistence": {
+    "status": "passed",
+    "scenario": "tests/native_project_probe.py --scenario persist",
+    "review_tree": "195fcce90d3c33a3b4cefc1ba6b95315d5b1075c",
+    "source_count": 441,
+    "optional_local_prototypes_included": false,
+    "local_synthetic_model_requests": 5,
+    "real_model_requests": 0,
+    "synthetic_note_after": "before new\n",
+    "first_process": {
+      "outcome": {
+        "kind": "completed"
+      },
+      "local_work_settled": true,
+      "host_started": 636,
+      "host_finished": 636,
+      "all_host_requests_succeeded": true,
+      "host_actions": {
+        "Agentic.step": 4,
+        "Approval.request": 4,
+        "Command.run": 3,
+        "Console.stdin_read_line": 5,
+        "Console.stdout_write": 33,
+        "Fs.atomic_replace": 1,
+        "Fs.list": 7,
+        "Fs.read": 3,
+        "Memory.read": 167,
+        "Memory.write": 90,
+        "Policy.evaluate": 319
+      },
+      "host_duration_seconds": 0.281194,
+      "host_span_seconds": 1138.530116
+    },
+    "restored_process": {
+      "outcome": {
+        "kind": "completed"
+      },
+      "local_work_settled": true,
+      "host_started": 296,
+      "host_finished": 296,
+      "all_host_requests_succeeded": true,
+      "host_actions": {
+        "Agentic.step": 1,
+        "Console.stdin_read_line": 4,
+        "Console.stdout_write": 27,
+        "Fs.list": 2,
+        "Memory.read": 96,
+        "Memory.write": 17,
+        "Policy.evaluate": 149
+      },
+      "host_duration_seconds": 0.055604,
+      "host_span_seconds": 291.297947
+    },
+    "assertion_scope": "Original existing scenario assertions unchanged: full-preview native approvals, applied edit, one coding turn and one compaction, two tools and no pending operation; fresh process receives original request, applied tool history and saved summary; complete read tool archive remains in history; 5 local model requests; native atomic-replace approval and completed first trace.",
+    "resource_scope": "Existing runtime profile remains at 4 GiB. The PTY scenario does not capture cgroup counters, so no per-run max/OOM counter claim is made.",
+    "terminal_sha256": "fcea67ead0a84f47938e7ab71d18bf730b1d9899bacfb63b09dcbd59fd52b739",
+    "restored_stdout_sha256": "eeae869ae65ee1604f86dbe9dbb879247f8dd699767507abcd32fbcf62e0234c"
+  }
+}
