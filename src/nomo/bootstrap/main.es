@@ -44,25 +44,22 @@ public flow run(args: Array<string>) -> i32
     let jobs = NativeJobs {};
     let guidance = ProjectInstructionFiles {};
     let output = ConsoleLines {};
-    let application = entry.application<NativeHistory, NativeAttempts, ConsoleConversationPicker, ConfiguredConversation<NativeHistory, NativeAttempts>, ConsoleTerminalInput>() with {
-        history: NativeHistory => history;
-        attempts: NativeAttempts => attempts;
-        picker: ConsoleConversationPicker => ConsoleConversationPicker {};
-        input: ConsoleTerminalInput => ConsoleTerminalInput {};
-        conversation: ConfiguredConversation<NativeHistory, NativeAttempts> => conversation.create(history, attempts, guidance, jobs, output);
+    let application = entry.TerminalApplication<NativeHistory, NativeAttempts, ConsoleConversationPicker, ConfiguredConversation<NativeHistory, NativeAttempts>, ConsoleTerminalInput> {
+        history,
+        attempts,
+        picker = ConsoleConversationPicker {},
+        input = ConsoleTerminalInput {},
+        conversation = conversation.create(history, attempts, guidance, jobs, output),
     };
-    // Runtime handlers interpret requests using the same selected dependencies.
-    return handle (
-        handle (
-            handle (
-                handle (
-                    handle (
-                        handle (
-                            handle application.run(parse(args)) with processes.bindings(history, attempts, HostProcessControl {}, jobs, NativeOutputArchive {}, output)
-                        ) with transfer.operations(history, attempts, ProjectArchives {}, JsonArchiveEncoding {}, TerminalTransfer {})
-                    ) with projects.operations(NativeRecentProjects {}, NativeProjectLaunch {}, TerminalProjects {})
-                ) with mutations.operations(ProjectMutationFiles {}, NativeChangeJournals {}, history, output)
-            ) with workspace.bindings(history, ProjectFiles {}, guidance)
-        ) with command.bindings(history, attempts, HostCommandRunner {}, ConsoleCommandPreview {})
-    ) with terminal_handlers.output(ConsoleTerminalDisplay {});
+    // Bind factories in their original outer-to-inner order before composing.
+    let terminal = terminal_handlers.output(ConsoleTerminalDisplay {});
+    let commands = command.bindings(history, attempts, HostCommandRunner {}, ConsoleCommandPreview {});
+    let observations = workspace.bindings(history, ProjectFiles {}, guidance);
+    let changes = mutations.operations(ProjectMutationFiles {}, NativeChangeJournals {}, history, output);
+    let folders = projects.operations(NativeRecentProjects {}, NativeProjectLaunch {}, TerminalProjects {});
+    let archives = transfer.operations(history, attempts, ProjectArchives {}, JsonArchiveEncoding {}, TerminalTransfer {});
+    let jobs_handler = processes.bindings(history, attempts, HostProcessControl {}, jobs, NativeOutputArchive {}, output);
+    return ((((((application.run(parse(args)) with jobs_handler)
+        with archives) with folders) with changes)
+        with observations) with commands) with terminal;
 }

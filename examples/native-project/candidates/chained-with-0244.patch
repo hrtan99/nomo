@@ -1,0 +1,19 @@
+diff --git a/src/nomo/bootstrap/main.es b/src/nomo/bootstrap/main.es
+index eba3f04..63ee2f4 100644
+--- a/src/nomo/bootstrap/main.es
++++ b/src/nomo/bootstrap/main.es
+@@ -59,7 +59,11 @@ public flow run(args: Array<string>) -> i32
+     let folders = projects.operations(NativeRecentProjects {}, NativeProjectLaunch {}, TerminalProjects {});
+     let archives = transfer.operations(history, attempts, ProjectArchives {}, JsonArchiveEncoding {}, TerminalTransfer {});
+     let jobs_handler = processes.bindings(history, attempts, HostProcessControl {}, jobs, NativeOutputArchive {}, output);
+-    return ((((((application.run(parse(args)) with jobs_handler)
+-        with archives) with folders) with changes)
+-        with observations) with commands) with terminal;
++    return application.run(parse(args)) with jobs_handler
++        with archives
++        with folders
++        with changes
++        with observations
++        with commands
++        with terminal;
+ }

@@ -82,17 +82,3 @@ impl Conversation<
         };
     }
 }
-
-public flow create<
-    History ~ ConversationReader + ConversationWriter + GenerationReservation + ResultPublication,
-    Attempts ~ AttemptRepository,
-    Instructions ~ InstructionReader,
-    Jobs ~ SavedJobsReader,
-    Coding ~ CodingModel,
-    Summary ~ SummaryModel,
-    Projection ~ ContextProjection,
-    Configuration ~ ConversationConfiguration,
-    Output ~ ConversationOutputSink
->() -> Conversation<History, Attempts, Instructions, Jobs, Coding, Summary, Projection, Configuration, Output> {
-    return Conversation<History, Attempts, Instructions, Jobs, Coding, Summary, Projection, Configuration, Output> {};
-}

@@ -1,0 +1,211 @@
+{
+  "date": "2026-11-27",
+  "status": "passed-direct-construction-and-explicit-handler-scopes",
+  "compiler_receipt": "examples/native-project/compiler-0244-20261127.json",
+  "snapshot": {
+    "root": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-handler-composition-0244-j95awqf7",
+    "tree": "30c1bc8bd80635330c6bcc17f39703b8afe7410d",
+    "evidence": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-handler-composition-0244-j95awqf7/compiler-evidence",
+    "overlay": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-handler-composition-0244-j95awqf7/compiler-compose.json",
+    "source_count": 457,
+    "source_manifest_sha256": "4a7111aee1a538dd7d708a034f934d552ddf5ce70c4e2dd1f15a4cc3ee4a0c2e"
+  },
+  "changes": [
+    "Delete application conversation create and terminal application wrappers that only construct the same type.",
+    "Bootstrap uses direct concrete constructor fields, retaining the existing consumer-owned injected types without another wrapper.",
+    "Bind all seven Handler factories in their original outer-to-inner order, then apply explicit grouped scopes in the original inner-to-outer order."
+  ],
+  "source_delta": {
+    "files": 4,
+    "insertions": 27,
+    "deletions": 55
+  },
+  "full_check": {
+    "exit": 0,
+    "elapsed_seconds": 71.06197369899999,
+    "resources": {
+      "memory.max": "4294967296",
+      "memory.peak": "3191709696",
+      "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+      "cpu.max": "400000 100000",
+      "pids.max": "256"
+    }
+  },
+  "diagnostics": 0,
+  "architecture": {
+    "status": "passed",
+    "modules": 457,
+    "imports": 3388,
+    "preserved_identities": 48
+  },
+  "existing_composition_case": {
+    "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-composition-jfjkubcx",
+    "result": {
+      "status": "passed",
+      "host_requests": 64,
+      "model_requests": 0,
+      "commands": [
+        "/projects",
+        "/edits",
+        "/copies",
+        "/jobs",
+        "/status",
+        "/quit"
+      ],
+      "scope": "Construction and readonly project/mutation/copy/job dispatch; does not accept live process operations, transfers or default cutover."
+    },
+    "trace_sha256": "f6cb5016f1c7df374ebe0f1f89922fde39c864230bbda7cc8da02dcced64d121",
+    "outcome": {
+      "kind": "completed"
+    },
+    "local_work_settled": true,
+    "paired_successful_host_requests": 64,
+    "host_actions": {
+      "Console.stdin_read_line": 6,
+      "Console.stdout_write": 11,
+      "Memory.read": 11,
+      "Memory.write": 4,
+      "Policy.evaluate": 32
+    }
+  },
+  "initial_rejections": [
+    {
+      "snapshot": {
+        "root": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-handler-composition-0244-2hdu5naq",
+        "tree": "e46fae90fc00080f51479293e5c1a934be5b8917",
+        "evidence": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-handler-composition-0244-2hdu5naq/compiler-evidence",
+        "overlay": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-handler-composition-0244-2hdu5naq/compiler-compose.json",
+        "source_count": 457,
+        "source_manifest_sha256": "23f6a5057930a7ca2322303836bb44beb2ca4502c58a3c4c1c63220bf17ed684"
+      },
+      "check": {
+        "exit": 1,
+        "elapsed_seconds": 2.7217095430000002,
+        "resources": {
+          "memory.max": "4294967296",
+          "memory.peak": "633085952",
+          "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+          "cpu.max": "400000 100000",
+          "pids.max": "256"
+        }
+      },
+      "diagnostics": [
+        {
+          "path": "/workspace/src/nomo/bootstrap/conversation.es",
+          "items": [
+            {
+              "code": "type::Mismatch",
+              "message": "type does not match the expected type: `{}` is not assignable to `nomo.application.conversation.service.Conversation<H, A, nomo.adapters.filesystem.instructions.ProjectInstructionFiles, nomo.adapters.storage.processes.NativeJobs, nomo.adapters.model.native.NativeCodingModel, nomo.adapters.model.native.NativeSummaryModel, nomo.adapters.model.context_projection.RollingContext, nomo.application.configuration.service.ConfigurationLoader<H, nomo.adapters.filesystem.configuration.file.ProjectConfigurationFile, nomo.adapters.filesystem.configuration.codec.JsonConfigurationCodec, nomo.adapters.filesystem.configuration.converter.TaploConfigurationConverter, nomo.adapters.storage.configuration_cache.NativeConfigurationCache>, nomo.adapters.cli.output.ConsoleLines>`",
+              "line": 17
+            }
+          ]
+        },
+        {
+          "path": "/workspace/src/nomo/bootstrap/main.es",
+          "items": [
+            {
+              "code": "type::Mismatch",
+              "message": "type does not match the expected type: `{}` is not assignable to `nomo.application.conversation.terminal.TerminalApplication<nomo.adapters.storage.conversations.NativeHistory, nomo.adapters.storage.attempts.NativeAttempts, nomo.adapters.cli.conversation_picker.ConsoleConversationPicker, nomo.application.conversation.service.Conversation<nomo.adapters.storage.conversations.NativeHistory, nomo.adapters.storage.attempts.NativeAttempts, nomo.adapters.filesystem.instructions.ProjectInstructionFiles, nomo.adapters.storage.processes.NativeJobs, nomo.adapters.model.native.NativeCodingModel, nomo.adapters.model.native.NativeSummaryModel, nomo.adapters.model.context_projection.RollingContext, nomo.application.configuration.service.ConfigurationLoader<nomo.adapters.storage.conversations.NativeHistory, nomo.adapters.filesystem.configuration.file.ProjectConfigurationFile, nomo.adapters.filesystem.configuration.codec.JsonConfigurationCodec, nomo.adapters.filesystem.configuration.converter.TaploConfigurationConverter, nomo.adapters.storage.configuration_cache.NativeConfigurationCache>, nomo.adapters.cli.output.ConsoleLines>, nomo.adapters.cli.conversation.ConsoleTerminalInput>`",
+              "line": 47
+            },
+            {
+              "code": "type::NonCallableCallee",
+              "message": "callee is not callable",
+              "line": 62
+            },
+            {
+              "code": "type::NonCallableCallee",
+              "message": "callee is not callable",
+              "line": 62
+            },
+            {
+              "code": "type::NonCallableCallee",
+              "message": "callee is not callable",
+              "line": 62
+            },
+            {
+              "code": "type::NonCallableCallee",
+              "message": "callee is not callable",
+              "line": 62
+            },
+            {
+              "code": "type::NonCallableCallee",
+              "message": "callee is not callable",
+              "line": 62
+            },
+            {
+              "code": "type::NonCallableCallee",
+              "message": "callee is not callable",
+              "line": 62
+            },
+            {
+              "code": "type::TypeMismatch",
+              "message": "handle expects a handler value",
+              "line": 62
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "snapshot": {
+        "root": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-handler-composition-0244-1v3jopyr",
+        "tree": "2589e53c749a306aa6ce1e18bd804e984eec0f43",
+        "evidence": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-handler-composition-0244-1v3jopyr/compiler-evidence",
+        "overlay": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-handler-composition-0244-1v3jopyr/compiler-compose.json",
+        "source_count": 457,
+        "source_manifest_sha256": "26dcd63a93033f6294014a5008710fe16ef1911a0d0cc2f203806e092e03ddf9"
+      },
+      "check": {
+        "exit": 1,
+        "elapsed_seconds": 2.542383043000001,
+        "resources": {
+          "memory.max": "4294967296",
+          "memory.peak": "563642368",
+          "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+          "cpu.max": "400000 100000",
+          "pids.max": "256"
+        }
+      },
+      "diagnostics": [
+        {
+          "path": "/workspace/src/nomo/bootstrap/main.es",
+          "items": [
+            {
+              "code": "type::TypeMismatch",
+              "message": "handle expects a handler value",
+              "line": 66
+            },
+            {
+              "code": "type::TypeMismatch",
+              "message": "handle expects a handler value",
+              "line": 65
+            },
+            {
+              "code": "type::TypeMismatch",
+              "message": "handle expects a handler value",
+              "line": 64
+            },
+            {
+              "code": "type::TypeMismatch",
+              "message": "handle expects a handler value",
+              "line": 63
+            },
+            {
+              "code": "type::TypeMismatch",
+              "message": "handle expects a handler value",
+              "line": 62
+            },
+            {
+              "code": "type::TypeMismatch",
+              "message": "handle expects a handler value",
+              "line": 62
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "upstream_chain_issue": "https://github.com/etas-project/etas-frontend/issues/104",
+  "qualification": "Original project/edit/copy/job/status/quit root-composition scenario; no expected output, assertions or actions removed. Zero model requests. This does not qualify mutation writes, process actions, continuous capture, legacy-data migration, full startup parity or default native cutover. Documented ~> composition was rejected in the first package alongside the empty-constructor errors; only the separate chained-with rejection is reported as #104. Explicit grouping and direct fields are selected, with no custom Handler interpreter."
+}

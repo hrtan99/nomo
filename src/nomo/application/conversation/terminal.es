@@ -232,13 +232,3 @@ impl TerminalApplication<
         return 0;
     }
 }
-
-public flow application<
-    History ~ ConversationReader + ConversationWriter + ConversationCatalog + ResultPublication,
-    Attempts ~ AttemptRepository,
-    Picker ~ ConversationPicker,
-    Conversation ~ ConversationService,
-    Input ~ TerminalInput
->() -> TerminalApplication<History, Attempts, Picker, Conversation, Input> {
-    return TerminalApplication<History, Attempts, Picker, Conversation, Input> {};
-}
