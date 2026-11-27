@@ -9,7 +9,7 @@ import nomo.adapters.storage.codec.archive.{json, decode, fingerprint};
 import nomo.application.transfer.service;
 import nomo.application.transfer.effects.{CopyStorage, ArchiveCodec, ArchiveFiles, TransferDisplay};
 
-public flow main(args: Array<string>) -> i32 ![Memory, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>, Error<IndexError>] {
+public flow main(args: Array<string>) -> i32 ![Memory, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>, Error<IndexError>, Error<BudgetExceeded>] {
     let history = NativeHistory {};
     let source = history.create("transfer-controller", "Original conversation");
     history.append(source.id, "user", "", "original objective", -1);
