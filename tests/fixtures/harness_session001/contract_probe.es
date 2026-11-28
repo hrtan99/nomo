@@ -1,14 +1,22 @@
 module app.contract_probe;
 
 import std.io.println;
-import std.text.{char_count as len, split};
-import nomo.domain.text.text.printable;
+import std.text.char_count as len;
+import std.text.split;
+import nomo.domain.text.text_printable as printable;
 import nomo.core.conversation.Event;
 import nomo.harness.harness_tool_contract.Ledger;
-import nomo.harness.harness_tool_chat_contract.{Invocation, Previous};
-import nomo.domain.harness.harness_tool_chat_contract.{Completed, TurnResult};
-import nomo.session.harness_checkpoint.{Identity};
-import nomo.domain.sessions.harness_checkpoint.{Checkpoint, identity_error, validate, encode, decode, from_turn};
+import nomo.harness.harness_tool_chat_contract.Invocation;
+import nomo.harness.harness_tool_chat_contract.Previous;
+import nomo.domain.harness.chat.Completed;
+import nomo.domain.harness.chat.TurnResult;
+import nomo.session.harness_checkpoint.Identity;
+import nomo.domain.sessions.checkpoints.Checkpoint;
+import nomo.domain.sessions.checkpoints.identity_error;
+import nomo.domain.sessions.checkpoints.checkpoint_validate as validate;
+import nomo.domain.sessions.checkpoints.checkpoint_encode as encode;
+import nomo.domain.sessions.checkpoints.checkpoint_decode as decode;
+import nomo.domain.sessions.checkpoints.checkpoint_from_turn as from_turn;
 
 type Check = { label: string, mode: string, saved: Checkpoint, requested: Identity,
     turn: TurnResult, raw: string, accepted: bool, expected: Checkpoint };

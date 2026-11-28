@@ -2,15 +2,29 @@ module app.contract_probe;
 
 import std.io.println;
 import std.text.char_count as len;
-import nomo.core.conversation.{Event, State};
-import nomo.domain.conversation.state.{add};
-import nomo.domain.harness.model_tool_contract.{Session};
-import nomo.domain.harness.tool_context.Context as ChildContext;
-import nomo.domain.harness.model_tool_contract.context_error as child_context_error;
-import nomo.harness.harness_tool_contract.{Ledger};
-import nomo.domain.harness.harness_tool_contract.{Observed, inspect};
-import nomo.harness.harness_tool_chat_contract.{Previous, Invocation};
-import nomo.domain.harness.harness_tool_chat_contract.{Context, empty, seed, prior_error, context_error, invocation_error, admission_error, combine, inspect_turn, default_maximum, fresh_invocation, turn_error};
+import nomo.core.conversation.Event;
+import nomo.core.conversation.State;
+import nomo.domain.conversation.add;
+import nomo.domain.harness.loop.Session;
+import nomo.domain.harness.loop.Context as ChildContext;
+import nomo.domain.harness.loop.context_error as child_context_error;
+import nomo.harness.harness_tool_contract.Ledger;
+import nomo.domain.harness.read.Observed;
+import nomo.domain.harness.read.read_inspect as inspect;
+import nomo.harness.harness_tool_chat_contract.Previous;
+import nomo.harness.harness_tool_chat_contract.Invocation;
+import nomo.domain.harness.chat.Context;
+import nomo.domain.harness.chat.empty;
+import nomo.domain.harness.chat.seed;
+import nomo.domain.harness.chat.chat_prior_error as prior_error;
+import nomo.domain.harness.chat.chat_context_error as context_error;
+import nomo.domain.harness.chat.invocation_error;
+import nomo.domain.harness.chat.admission_error;
+import nomo.domain.harness.chat.combine;
+import nomo.domain.harness.chat.chat_inspect_turn as inspect_turn;
+import nomo.domain.harness.chat.default_maximum;
+import nomo.domain.harness.chat.fresh_invocation;
+import nomo.domain.harness.chat.chat_turn_error as turn_error;
 
 type Check = { label: string, mode: string, ledger: Ledger, usage: Ledger, maximum: Ledger, invocation: Invocation,
     prior: Previous, context: Context, child: Session, legacy: Session, status: i32, allowed: Array<string>,

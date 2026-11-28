@@ -4,20 +4,29 @@ import std.io.println;
 import std.text.split;
 import std.codec.text.utf8_encode;
 import std.bytes.len as bytes_len;
-import std.json.{parse, JsonValue};
+import std.json.parse;
+import std.json.JsonValue;
 import std.agent.message.Message;
-import nomo.domain.text.read_text.{safe, bounded};
-import nomo.adapters.cli.arguments.read_cli.{parse_args, parse_line};
-import nomo.domain.harness.read_protocol.{decode_plan, decode_work_plan, decode_child, compact_frame, answer};
+import nomo.domain.text.safe;
+import nomo.domain.text.bounded;
+import nomo.adapters.cli.input.read_cli_parse_args as parse_args;
+import nomo.adapters.cli.input.read_cli_parse_line as parse_line;
+import nomo.domain.harness.read.unicode_read_decode_plan as decode_plan;
+import nomo.domain.harness.read.decode_work_plan;
+import nomo.domain.harness.read.decode_child;
+import nomo.domain.harness.read.compact_frame;
+import nomo.domain.harness.read.answer;
 
-import nomo.domain.context.read_contract.outcome;
-import nomo.domain.context.read_display.display;
-import nomo.application.context.effects.tools_read_contract.ReadTools;
-import nomo.domain.harness.model_tool_contract.{Session, default_limits};
-import nomo.bootstrap.harness.read.run_loop_controller;
-import nomo.domain.harness.harness_tool_contract.fresh;
-import nomo.adapters.model.harness.read_model_tools.run_context;
-import nomo.application.harness.effects.harness_legacy_string_stages.{LegacyStringStages, LegacyChildModel};
+import nomo.domain.workspace.outcome;
+import nomo.domain.workspace.read_display_display as display;
+import nomo.application.workspace.ports.ReadTools;
+import nomo.domain.harness.loop.Session;
+import nomo.domain.harness.loop.default_limits;
+import nomo.bootstrap.harness.read_run_loop_controller as run_loop_controller;
+import nomo.domain.harness.read.read_fresh as fresh;
+import nomo.bootstrap.harness.unicode_read_run_context as run_context;
+import nomo.application.harness.ports.LegacyStringStages;
+import nomo.application.harness.ports.LegacyChildModel;
 
 flow integration() -> bool {
     let result = run_context("请总结文件", ["sample.txt"], fresh(), "fixture-", true, false, false, false) with {

@@ -1,9 +1,14 @@
 module app.chat_history_probe;
 
 import std.io.println;
-import nomo.session.chat_session_contract.{Session};
-import nomo.domain.sessions.chat_session_contract.{fresh, invalid, begin, complete};
-import nomo.adapters.storage.legacy.chat_history.{load, save, save_completed};
+import nomo.session.chat_session_contract.Session;
+import nomo.domain.sessions.chat.fresh;
+import nomo.domain.sessions.chat.chat_session_contract_invalid as invalid;
+import nomo.domain.sessions.chat.begin;
+import nomo.domain.sessions.chat.complete;
+import nomo.adapters.storage.chat.chat_history_load as load;
+import nomo.adapters.storage.chat.save;
+import nomo.adapters.storage.chat.save_completed;
 import nomo.core.conversation.Event;
 import app.chat_session_contract_probe.outcome;
 

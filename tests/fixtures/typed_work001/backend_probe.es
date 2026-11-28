@@ -3,12 +3,14 @@ module app.typed_backend_probe;
 import std.io.println;
 import std.bytes.len as byte_count;
 import std.codec.text.utf8_encode;
-import nomo.domain.harness.harness_work_contract.{Context, Evidence};
-import nomo.domain.harness.harness_edit_contract.Context as EditContext;
+import nomo.domain.harness.work.Context;
+import nomo.domain.harness.work.Evidence;
+import nomo.domain.harness.edit.Context as EditContext;
 import nomo.harness.harness_tool_contract.Ledger as ReadLedger;
-import nomo.domain.harness.typed_edit_contract.{input_error, project_context};
-import nomo.domain.mutations.edit_contribution.Contribution;
-import nomo.domain.mutations.edit_encoding.json;
+import nomo.domain.harness.typed_work.input_error;
+import nomo.domain.harness.typed_work.project_context;
+import nomo.domain.editing.Contribution;
+import nomo.domain.wire.json;
 
 // Dedicated qualification cap. The accepted production pilot has a larger cap.
 @limits([Tokens(2048), ContextTokens(65536)])

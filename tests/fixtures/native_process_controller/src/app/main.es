@@ -1,17 +1,24 @@
 module app.main;
 
-import std.io.{println, IOError};
+import std.io.println;
+import std.io.IOError;
 import std.codec.text.utf8_encode;
-import std.fs.{WorkspacePath, path};
+import std.fs.WorkspacePath;
+import std.fs.path;
 import std.text.from_i64;
 import nomo.native.workspace.ProjectRoot;
-import nomo.domain.process.jobs.{Job, JobEvent};
-import nomo.domain.process.observations.ProcessEvent;
-import nomo.application.processes.ports.{ProcessControl, JobRepository, OutputArchive, ProcessPreviewSink};
-import nomo.application.processes.service;
+import nomo.native.processes.Job;
+import nomo.native.processes.JobEvent;
+import nomo.domain.processes.ProcessEvent;
+import nomo.application.execution.ports.ProcessControl;
+import nomo.application.execution.ports.JobRepository;
+import nomo.application.execution.ports.OutputArchive;
+import nomo.application.execution.ports.ProcessPreviewSink;
+import nomo.application.execution.jobs as service;
 import nomo.adapters.storage.conversations.NativeHistory;
-import nomo.adapters.storage.attempts.NativeAttempts;
-import nomo.application.conversation.ports.{ConversationCatalog, ConversationReader};
+import nomo.adapters.storage.journals.NativeAttempts;
+import nomo.application.conversation.ports.ConversationCatalog;
+import nomo.application.conversation.ports.ConversationReader;
 import nomo.application.execution.ports.AttemptRepository;
 
 alias Schema = MemoryRegion<{ Jobs: Store<string, Job>, Outputs: Store<string, JobEvent> }>;

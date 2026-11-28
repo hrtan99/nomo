@@ -1,6 +1,9 @@
 module app.main;
 
-import std.io.{eprintln, print, println, read_line};
+import std.io.eprintln;
+import std.io.print;
+import std.io.println;
+import std.io.read_line;
 
 spec LineTerminal: trace = +Console;
 

@@ -5,9 +5,14 @@ import std.text.split;
 import std.json.parse;
 import std.agent.message.Message;
 import nomo.core.conversation.Event;
-import nomo.domain.harness.tool_context.Context;
-import nomo.domain.context.preflight.{Measurement, Refusal, measure_context, measure_text};
-import nomo.domain.context.selection.{EventPolicy, SelectionRefusal, select};
+import nomo.domain.harness.loop.Context;
+import nomo.domain.context.Measurement;
+import nomo.domain.context.Refusal;
+import nomo.domain.context.measure_context;
+import nomo.domain.context.measure_text;
+import nomo.domain.context.EventPolicy;
+import nomo.domain.context.SelectionRefusal;
+import nomo.domain.context.select;
 
 type Check = { label: string, passed: bool };
 flow slash() -> string { return std.text.from_char('\\'); }

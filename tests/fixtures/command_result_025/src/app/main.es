@@ -1,5 +1,6 @@
 module app.main;
-import std.host.command.{command, run};
+import std.host.command.command;
+import std.host.command.run;
 import std.codec.text.utf8_encode;
 import std.io.println;
 

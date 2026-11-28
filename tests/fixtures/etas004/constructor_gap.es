@@ -1,6 +1,7 @@
 module etas004.constructor_gap;
 
-import std.fs.{Region, WorkspacePath};
+import std.fs.Region;
+import std.fs.WorkspacePath;
 
 type FixtureRoot;
 impl FixtureRoot ~ Region;

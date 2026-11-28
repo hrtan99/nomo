@@ -2,13 +2,18 @@ module app.context_caller_probe;
 
 import std.io.println;
 import std.agent.message.Message;
-import std.json.{JsonValue, stringify};
-import nomo.core.conversation.{Event, State};
-import nomo.domain.harness.model_tool_contract.{Session, Limits, context_error};
-import nomo.domain.harness.tool_context.Context;
-import nomo.domain.context.preflight.{Refusal, measure_context};
-import nomo.domain.harness.model_tool_contract.{LoopTurn};
-import nomo.adapters.model.legacy.model_tool.{run_loop};
+import std.json.JsonValue;
+import std.json.stringify;
+import nomo.core.conversation.Event;
+import nomo.core.conversation.State;
+import nomo.domain.harness.loop.Session;
+import nomo.domain.harness.loop.Limits;
+import nomo.domain.harness.loop.context_error;
+import nomo.domain.harness.loop.Context;
+import nomo.domain.context.Refusal;
+import nomo.domain.context.measure_context;
+import nomo.domain.harness.loop.LoopTurn;
+import nomo.bootstrap.harness.model_tool_run_loop as run_loop;
 
 // These reports are observation values, not a claim that JsonValue measures
 // arbitrary typed numeric Prompt.data inputs. Full typed equality is checked

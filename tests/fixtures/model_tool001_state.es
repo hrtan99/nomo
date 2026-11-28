@@ -1,15 +1,30 @@
 module nomo.model_tool_test;
 
 import std.io.println;
-import std.text.{split, char_count as len};
-import std.json.{JsonValue, stringify};
+import std.text.split;
+import std.text.char_count as len;
+import std.json.JsonValue;
+import std.json.stringify;
 import std.agent.message.Message;
-import nomo.core.conversation.{State, Event};
-import nomo.domain.conversation.state.{fresh, add, stop};
-import nomo.domain.harness.model_tool_contract.{Action, Session, Limits, fresh_loop, default_limits, decode_reply, question_error, context_error, budget_error, charge_action};
-import nomo.domain.harness.tool_context.{Context, allowed_error};
-import nomo.adapters.model.legacy.model_tool.run_loop;
-import nomo.domain.context.path_policy.valid_path;
+import nomo.core.conversation.State;
+import nomo.core.conversation.Event;
+import nomo.domain.conversation.fresh;
+import nomo.domain.conversation.add;
+import nomo.domain.conversation.stop;
+import nomo.domain.harness.loop.Action;
+import nomo.domain.harness.loop.Session;
+import nomo.domain.harness.loop.Limits;
+import nomo.domain.harness.loop.fresh_loop;
+import nomo.domain.harness.loop.default_limits;
+import nomo.domain.harness.loop.decode_reply;
+import nomo.domain.harness.loop.question_error;
+import nomo.domain.harness.loop.context_error;
+import nomo.domain.harness.loop.budget_error;
+import nomo.domain.harness.loop.charge_action;
+import nomo.domain.harness.loop.Context;
+import nomo.domain.harness.loop.allowed_error;
+import nomo.bootstrap.harness.model_tool_run_loop as run_loop;
+import nomo.domain.workspace.valid_path;
 
 flow emit_action(value: Action) -> unit {
     let message = Message.new(value);

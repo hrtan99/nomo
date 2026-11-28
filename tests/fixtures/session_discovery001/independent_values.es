@@ -1,24 +1,55 @@
 module app.contract_probe;
 
-import nomo.domain.mutations.edit_contract.Selector as EditSelector;
-import nomo.domain.sessions.work_chain_usecase.{WorkRequest, ContinueRequest, TurnRequest};
+import nomo.domain.editing.Selector as EditSelector;
+import nomo.domain.sessions.chain.WorkRequest;
+import nomo.domain.sessions.chain.ContinueRequest;
+import nomo.domain.sessions.chain.TurnRequest;
 
 import std.io.println;
-import std.text.{char_count as len, split};
-import nomo.session.work_chain.{Record, Caps};
-import nomo.domain.sessions.work_chain.{initial, successor, validate, linked, publish_partial, confirm, maximum, turn_caps, zero, summary_reservation, values, reserve, policy, caps_error, fingerprint};
+import std.text.char_count as len;
+import std.text.split;
+import nomo.session.work_chain.Record;
+import nomo.session.work_chain.Caps;
+import nomo.domain.sessions.chain.initial;
+import nomo.domain.sessions.chain.successor;
+import nomo.domain.sessions.chain.work_chain_validate as validate;
+import nomo.domain.sessions.chain.linked;
+import nomo.domain.sessions.chain.publish_partial;
+import nomo.domain.sessions.chain.confirm;
+import nomo.domain.sessions.chain.maximum;
+import nomo.domain.sessions.chain.turn_caps;
+import nomo.domain.sessions.chain.zero;
+import nomo.domain.sessions.chain.summary_reservation;
+import nomo.domain.sessions.chain.values;
+import nomo.domain.sessions.chain.reserve;
+import nomo.domain.sessions.chain.policy;
+import nomo.domain.sessions.chain.caps_error;
+import nomo.domain.sessions.chain.fingerprint;
 import nomo.session.work_record.Record as WorkRecord;
-import nomo.domain.sessions.work_record.partial;
-import nomo.domain.mutations.edit_contract.prepare_original;
-import nomo.domain.mutations.edit_binding.bind;
-import nomo.domain.harness.harness_work_contract.Evidence;
+import nomo.domain.sessions.work.partial;
+import nomo.domain.editing.prepare_original;
+import nomo.domain.editing.bind;
+import nomo.domain.harness.work.Evidence;
 import nomo.harness.harness_tool_contract.Ledger;
 
 
-import nomo.domain.sessions.work_chain_selection.{Snapshot, ObservedRow, ObservedJournal, Selector, select as choose, validate as selection_error, eligible, journal_phase, consistent};
-import nomo.domain.sessions.work_chain_journal_contract.CapturedJournal as Journal;
-import nomo.adapters.cli.arguments.work_chain_selection_args.{Command, parse as selection_args};
-import nomo.adapters.cli.arguments.terminal_args.{parse as startup, parse_once, bind_parent, work_request, show_selector};
+import nomo.domain.sessions.chain.Snapshot;
+import nomo.domain.sessions.chain.ObservedRow;
+import nomo.domain.sessions.chain.ObservedJournal;
+import nomo.domain.sessions.chain.Selector;
+import nomo.domain.sessions.chain.select as choose;
+import nomo.domain.sessions.chain.work_chain_selection_validate as selection_error;
+import nomo.domain.sessions.chain.eligible;
+import nomo.domain.sessions.chain.journal_phase;
+import nomo.domain.sessions.chain.consistent;
+import nomo.domain.sessions.chain.CapturedJournal as Journal;
+import nomo.adapters.cli.chain_input.Command;
+import nomo.adapters.cli.chain_input.work_chain_selection_args_parse as selection_args;
+import nomo.adapters.cli.session_input.terminal_args_parse as startup;
+import nomo.adapters.cli.session_input.parse_once;
+import nomo.adapters.cli.session_input.bind_parent;
+import nomo.adapters.cli.session_input.work_request;
+import nomo.adapters.cli.session_input.show_selector;
 
 type Check = { label: string, passed: bool };
 flow admitted() -> Result<Record, string> { return initial("root-op", "owned", "target.txt", "update target from context", ["context.txt"], turn_caps()); }

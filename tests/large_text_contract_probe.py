@@ -11,12 +11,19 @@ ROOT = Path(__file__).resolve().parent.parent
 SOURCE = r'''module app.probe;
 import std.io.println;
 import nomo.core.json.encode;
-import nomo.model.read_protocol.{question_error, decode_plan, decode_work_plan, decode_child, answer};
-import nomo.harness.harness_edit_contract.{decode_work_plan as edit_plan, decode_work_edit};
+import nomo.model.read_protocol.question_error;
+import nomo.model.read_protocol.decode_plan;
+import nomo.model.read_protocol.decode_work_plan;
+import nomo.model.read_protocol.decode_child;
+import nomo.model.read_protocol.answer;
+import nomo.harness.harness_edit_contract.decode_work_plan as edit_plan;
+import nomo.harness.harness_edit_contract.decode_work_edit;
 import nomo.harness.harness_tool_chat_contract.Previous;
 import nomo.harness.read_tool_chat_contract.prior_error;
-import nomo.session.event_text_codec.{encode_prefix, decode};
-import nomo.session.recoverable_events.{work_batch, invalid};
+import nomo.session.event_text_codec.encode_prefix;
+import nomo.session.event_text_codec.decode;
+import nomo.session.recoverable_events.work_batch;
+import nomo.session.recoverable_events.invalid;
 import nomo.session.redaction.Policy;
 import nomo.core.conversation.Event;
 

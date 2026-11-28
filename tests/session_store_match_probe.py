@@ -37,7 +37,9 @@ profile = "fixture"
 def source(imports, expression):
     return '''module app.main;
 import std.io.println;
-import std.memory.{version, prepare_put, operation_ref};
+import std.memory.version;
+import std.memory.prepare_put;
+import std.memory.operation_ref;
 ''' + imports + '''
 alias Schema = MemoryRegion<{ Items: Store<string, string> }>;
 let Region = std.memory.region<Schema>(stable_id = "match-probe", store = "synthetic");

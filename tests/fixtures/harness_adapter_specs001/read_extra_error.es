@@ -1,7 +1,9 @@
 module app.callable_negative;
-import nomo.domain.harness.harness_tool_contract.Context as ReadContext;
-import nomo.domain.harness.harness_work_contract.Context as WorkContext;
-import nomo.domain.harness.work_chain_context.ParentFacts;
-import nomo.domain.harness.legacy_stage_contracts.{ReadMainStage, EditTextStage, ChainEditStage};
+import nomo.domain.harness.read.ReadContext;
+import nomo.domain.harness.work.Context as WorkContext;
+import nomo.domain.sessions.chain.ParentFacts;
+import nomo.application.harness.ports.ReadMainStage;
+import nomo.application.harness.ports.EditTextStage;
+import nomo.application.harness.ports.ChainEditStage;
 flow bad(context: ReadContext) -> string ![Error<string>] ~ ReadMainStage { if context.request != "" { perform Error<string>.raise("intentional outside-bound error"); } return "unused"; }
 public flow observe(args: Array<string>) -> i32 { return 0; }

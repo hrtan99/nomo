@@ -26,15 +26,23 @@ CASES = [
 ]
 
 SOURCE = '''module app.main;
-import std.io.{println, read_all};
-import std.text.{char_count as len, from_i32};
+import std.io.println;
+import std.io.read_all;
+import std.text.char_count as len;
+import std.text.from_i32;
 import std.collections.len as count;
 import std.json.parse;
 import std.agent.message.Message;
-import nomo.core.conversation.{State, Event, fresh};
+import nomo.core.conversation.State;
+import nomo.core.conversation.Event;
+import nomo.core.conversation.fresh;
 import nomo.agent.loop.turn;
-import nomo.session.stub_snapshot.{snapshot, caps};
-import nomo.session.session_state.{Projection, Request, Snapshot, validate};
+import nomo.session.stub_snapshot.snapshot;
+import nomo.session.stub_snapshot.caps;
+import nomo.session.session_state.Projection;
+import nomo.session.session_state.Request;
+import nomo.session.session_state.Snapshot;
+import nomo.session.session_state.validate;
 import nomo.session.session_display.display;
 
 flow project(state: State, maximum: i32, budget: i32, expected_lifecycle: string) -> Projection {

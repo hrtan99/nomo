@@ -1,13 +1,28 @@
 module app.contract_probe;
 
 import std.io.println;
-import std.text.{char_count as len, split};
-import nomo.domain.text.text.printable;
-import nomo.adapters.cli.arguments.terminal_args.{Config, LineCommand, parse, parse_once, line, work_request, show_selector};
-import nomo.domain.mutations.edit_contract.Selector;
+import std.text.char_count as len;
+import std.text.split;
+import nomo.domain.text.text_printable as printable;
+import nomo.adapters.cli.session_input.Config;
+import nomo.adapters.cli.session_input.LineCommand;
+import nomo.adapters.cli.session_input.terminal_args_parse as parse;
+import nomo.adapters.cli.session_input.parse_once;
+import nomo.adapters.cli.session_input.line;
+import nomo.adapters.cli.session_input.work_request;
+import nomo.adapters.cli.session_input.show_selector;
+import nomo.domain.editing.Selector;
 import nomo.session.work_chain.Caps;
-import nomo.domain.sessions.work_chain_usecase.{WorkRequest, ContinueRequest, TurnRequest};
-import nomo.adapters.cli.display.terminal_session.{State, fresh, turn, work_error, after_turn, state_line, request_line};
+import nomo.domain.sessions.chain.WorkRequest;
+import nomo.domain.sessions.chain.ContinueRequest;
+import nomo.domain.sessions.chain.TurnRequest;
+import nomo.application.conversation.interactive.State;
+import nomo.application.conversation.interactive.fresh;
+import nomo.application.conversation.interactive.turn;
+import nomo.application.conversation.interactive.work_error;
+import nomo.application.conversation.interactive.after_turn;
+import nomo.adapters.cli.terminal.state_line;
+import nomo.adapters.cli.terminal.request_line;
 
 type Check = { label: string, passed: bool };
 flow slash() -> string { return std.text.from_char('\\'); }

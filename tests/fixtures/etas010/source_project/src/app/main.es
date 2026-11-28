@@ -1,8 +1,15 @@
 module app.main;
 
-import std.fs.{IOError, Region, WorkspacePath, path, read_bytes};
+import std.fs.IOError;
+import std.fs.Region;
+import std.fs.WorkspacePath;
+import std.fs.path;
+import std.fs.read_bytes;
 import std.effects.Fs;
-import std.host.command.{command, run, with_env, with_stdin};
+import std.host.command.command;
+import std.host.command.run;
+import std.host.command.with_env;
+import std.host.command.with_stdin;
 import std.runtime.checkpoint;
 import std.runtime.error.IndexError;
 import std.io.println;

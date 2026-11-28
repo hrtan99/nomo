@@ -3,11 +3,18 @@ module app.recoverable_chat_probe;
 import std.io.println;
 import nomo.core.conversation.Event;
 import nomo.harness.harness_tool_contract.Ledger;
-import nomo.harness.harness_tool_chat_contract.{Invocation, Previous};
-import nomo.domain.harness.harness_tool_chat_contract.{Completed, TurnResult};
-import nomo.domain.sessions.redaction.Policy;
-import nomo.adapters.storage.legacy.recoverable_chat_store.{create, load, reserve, finish, conversation, record_work};
-import nomo.domain.sessions.event_text_codec.decode;
+import nomo.harness.harness_tool_chat_contract.Invocation;
+import nomo.harness.harness_tool_chat_contract.Previous;
+import nomo.domain.harness.chat.Completed;
+import nomo.domain.harness.chat.TurnResult;
+import nomo.domain.sessions.event_codec.Policy;
+import nomo.adapters.storage.chat.create;
+import nomo.adapters.storage.chat.recoverable_chat_store_load as load;
+import nomo.adapters.storage.chat.reserve;
+import nomo.adapters.storage.chat.finish;
+import nomo.adapters.storage.chat.conversation;
+import nomo.adapters.storage.chat.record_work;
+import nomo.domain.sessions.event_codec.event_text_codec_decode as decode;
 
 flow result(turn: i32, request: string, answer: string, maximum: Ledger) -> TurnResult {
     let prior = Previous { task = "Read config", result = answer, tool = "read", outcome = "complete: port=4321", answer = answer };

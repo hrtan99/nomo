@@ -124,11 +124,18 @@ def main():
         cases.append(('atomic_args_' + str(index), f'match parse_continue({render(arguments)}) {{ {test} }};'))
     source = '''module app.main;
 import std.io.println;
-import nomo.core.conversation.{State, Event};
-import nomo.session.session_state.{Snapshot, Request, Caps, Ledger, Operation, Reference};
-import nomo.session.continuation_state.{plan, continuing};
+import nomo.core.conversation.State;
+import nomo.core.conversation.Event;
+import nomo.session.session_state.Snapshot;
+import nomo.session.session_state.Request;
+import nomo.session.session_state.Caps;
+import nomo.session.session_state.Ledger;
+import nomo.session.session_state.Operation;
+import nomo.session.session_state.Reference;
+import nomo.session.continuation_state.plan;
+import nomo.session.continuation_state.continuing;
 import nomo.session.stub_snapshot.successor;
-import nomo.adapters.cli.arguments.continuation_args.parse_continue;
+import nomo.adapters.cli.session_input.parse_continue;
 '''
     for index, (label, body) in enumerate(cases):
         source += f'flow case_{index}() -> i32 {{ {body} return 0; }}\n'

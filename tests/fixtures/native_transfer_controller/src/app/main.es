@@ -1,13 +1,33 @@
 module app.main;
 
-import std.io.{println, IOError};
-import nomo.adapters.storage.conversations.{NativeHistory, copy_status, copy_jobs, prepare_copy, ensure_copy_session, advance_copy, copy_event, sealed_copy_source, copy_summary, copy_record_complete, copy_job};
-import nomo.application.conversation.ports.{ConversationReader, ConversationWriter, ConversationCatalog};
-import nomo.domain.conversation.messages.ChatMessage;
-import nomo.domain.transfer.archive.{ArchiveDocument, PortableArchive, PortableInfo};
-import nomo.adapters.storage.codec.archive.{json, decode, fingerprint};
+import std.io.println;
+import std.io.IOError;
+import nomo.adapters.storage.conversations.NativeHistory;
+import nomo.adapters.storage.conversations.copy_status;
+import nomo.adapters.storage.conversations.copy_jobs;
+import nomo.adapters.storage.conversations.prepare_copy;
+import nomo.adapters.storage.conversations.ensure_copy_session;
+import nomo.adapters.storage.conversations.advance_copy;
+import nomo.adapters.storage.conversations.copy_event;
+import nomo.adapters.storage.conversations.sealed_copy_source;
+import nomo.adapters.storage.conversations.copy_summary;
+import nomo.adapters.storage.conversations.copy_record_complete;
+import nomo.adapters.storage.conversations.copy_job;
+import nomo.application.conversation.ports.ConversationReader;
+import nomo.application.conversation.ports.ConversationWriter;
+import nomo.application.conversation.ports.ConversationCatalog;
+import nomo.domain.conversation.ChatMessage;
+import nomo.domain.archives.ArchiveDocument;
+import nomo.domain.archives.PortableArchive;
+import nomo.domain.archives.PortableInfo;
+import nomo.adapters.codec.json;
+import nomo.adapters.codec.archive_decode as decode;
+import nomo.adapters.codec.archive_fingerprint as fingerprint;
 import nomo.application.transfer.service;
-import nomo.application.transfer.effects.{CopyStorage, ArchiveCodec, ArchiveFiles, TransferDisplay};
+import nomo.application.transfer.ports.CopyStorage;
+import nomo.application.transfer.ports.ArchiveCodec;
+import nomo.application.transfer.ports.ArchiveFiles;
+import nomo.application.transfer.ports.TransferDisplay;
 
 public flow main(args: Array<string>) -> i32 ![Memory, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>, Error<IndexError>, Error<BudgetExceeded>] {
     let history = NativeHistory {};

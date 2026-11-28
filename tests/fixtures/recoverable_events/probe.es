@@ -2,9 +2,11 @@ module app.recoverable_events_probe;
 
 import std.io.println;
 import nomo.core.conversation.Event;
-import nomo.domain.sessions.redaction.Policy;
-import nomo.session.recoverable_events.{Frame};
-import nomo.domain.sessions.recoverable_events.{empty, invalid, append};
+import nomo.domain.sessions.event_codec.Policy;
+import nomo.session.recoverable_events.Frame;
+import nomo.domain.sessions.chat.empty;
+import nomo.domain.sessions.chat.recoverable_events_invalid as invalid;
+import nomo.domain.sessions.chat.append;
 
 public flow recoverable_events_probe(args: Array<string>) -> i32 {
     if args != [] { abort("unexpected args"); }

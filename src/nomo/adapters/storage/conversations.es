@@ -1,19 +1,21 @@
 module nomo.adapters.storage.conversations;
 
-import std.memory.{MemoryEntry, MemoryCursor};
-import std.text.{from_i64, from_usize, char_count, get_char_slice, split_once, strip_prefix, parse_i64, TextBuilder};
-import nomo.domain.serialization.json.encode;
-import nomo.domain.conversation.messages.ChatMessage;
-import nomo.application.conversation.session_context.SessionContext;
-import nomo.domain.conversation.history.PendingRequest;
-import nomo.domain.transfer.copy.CopyJob;
-import nomo.domain.conversation.session.{Ledger, Session};
-import nomo.native.history.Event;
-import nomo.application.conversation.ports.{ConversationReader, ConversationWriter, ConversationCatalog, GenerationReservation, ResultPublication};
-
-import nomo.application.mutations.ports.MutationHistoryStore;
+import nomo.application.conversation.ports.{
+    ConversationCatalog,
+    ConversationReader,
+    ConversationWriter,
+    GenerationReservation,
+    ResultPublication
+};
+import nomo.application.editing.ports.MutationHistoryStore;
+import nomo.application.scope.SessionContext;
 import nomo.application.transfer.ports.CopyRepository;
+import nomo.domain.conversation.{ChatMessage, PendingRequest};
+import nomo.domain.wire.encode;
+import nomo.native.history.{CopyJob, Event, Ledger, Session};
 import std.json.JsonValue;
+import std.memory.{MemoryCursor, MemoryEntry};
+import std.text.{TextBuilder, char_count, from_i64, from_usize, get_char_slice, parse_i64, split_once, strip_prefix};
 
 alias Schema = MemoryRegion<{
     Counters: Store<string, i64>,
@@ -22,10 +24,12 @@ alias Schema = MemoryRegion<{
     Events: Store<string, Event>,
     Chunks: Store<string, string>,
 }>;
-public let Data = std.memory.region<Schema>(stable_id = "nomo-native-conversations-v1", store = "native-conversations");
-alias CopySchema = MemoryRegion<{ Jobs: Store<string, CopyJob> }>;
-public let Copies = std.memory.region<CopySchema>(stable_id = "nomo-native-conversation-copies-v1", store = "native-conversation-copies");
 
+public let Data = std.memory.region<Schema>(stable_id = "nomo-native-conversations-v1", store = "native-conversations");
+
+alias CopySchema = MemoryRegion<{ Jobs: Store<string, CopyJob> }>;
+
+public let Copies = std.memory.region<CopySchema>(stable_id = "nomo-native-conversation-copies-v1", store = "native-conversation-copies");
 
 public type NativeHistory = {};
 
@@ -52,7 +56,9 @@ flow entry(id: string) -> MemoryEntry<string, Session> {
         Some(value) => value, None() => abort("native session not found: " + id),
     };
 }
+
 flow key(id: string, index: i64) -> string { return id + ":" + from_i64(index); }
+
 flow allocate() -> string {
     let counter = Data.Counters.get_entry("session");
     let number = match counter { Some(value) => value.value, None() => 0 };

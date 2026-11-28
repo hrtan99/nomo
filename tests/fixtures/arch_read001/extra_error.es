@@ -1,7 +1,9 @@
 module app.callable_negative;
 
 import std.fs.Region;
-import nomo.domain.context.read_contract.{Outcome, outcome, NomoRead};
+import nomo.domain.workspace.Outcome;
+import nomo.domain.workspace.outcome;
+import nomo.application.workspace.ports.NomoRead;
 
 type FixtureRoot;
 impl FixtureRoot ~ Region;

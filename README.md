@@ -106,6 +106,16 @@ Their old Python entry/recovery scripts have been removed; existing data files r
 See [migration evidence and remaining work](NATIVE_MIGRATION.md).
 The default switch does not mean all thirteen architecture tasks are accepted.
 
+Source modules now follow capability boundaries within `domain`, `application`,
+`adapters` and `bootstrap`: Harness controllers occupy five files, CLI families
+seventeen, model adapters seven, and assembly three. The first consolidation has
+163 files in 27 subdirectories, including ten existing owner prototypes and 49
+identity-only compatibility files. Those identities remain until their explicit
+storage/root migration is accepted; the conditional final layout is 115 files.
+The extra first-stage file preserves `ArchivedJob`: a real old-writer/new-reader
+check rejected its planned move with `schema_mismatch`.
+See the [consolidation receipt](examples/native-project/file-consolidation-20261128.json).
+
 ## Development
 
 Docker with Compose, Git and Python 3.11+ are needed for the local Docker-terminal
@@ -121,6 +131,7 @@ removed. Etas owns current history persistence and recovery. Historical format p
 ./scripts/etas-02413-official-container.sh build
 ./scripts/etas-02413-official-container.sh verify
 python3 -B scripts/check-architecture.py
+python3 -B tests/file_consolidation_probe.py
 python3 -B tests/native_worker_probe.py
 ```
 

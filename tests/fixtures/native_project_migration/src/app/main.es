@@ -1,14 +1,16 @@
 module app.main;
 
-import std.io.{println, IOError};
+import std.io.println;
+import std.io.IOError;
 import std.effects.Fs;
-import std.fs.{IOError as FileError, ReadLimitError};
+import std.fs.IOError as FileError;
+import std.fs.ReadLimitError;
 import app.source.FixtureSource;
 import nomo.application.migration.ports.MigrationRoot;
-import nomo.application.migration.project_state.migrate;
-import nomo.adapters.storage.native_migration.NativeStateWriter;
+import nomo.application.transfer.migration.project_state_migrate as migrate;
+import nomo.adapters.storage.migration.NativeStateWriter;
 import nomo.adapters.storage.conversations.NativeHistory;
-import nomo.domain.serialization.json.encode;
+import nomo.domain.wire.encode;
 
 public flow main(args: Array<string>) -> i32
     ![Fs.read<MigrationRoot>, Memory, Console, Error<FileError>, Error<ReadLimitError>, Error<IndexError>, Error<StorageError>, Error<MemoryConflict>, Error<BudgetExceeded>, Error<IOError>] {

@@ -1,10 +1,19 @@
 module nomo.harness_model_probe;
 
-import std.io.{read_all, println};
+import std.io.read_all;
+import std.io.println;
 import std.text.from_usize;
-import std.json.{JsonValue, parse};
+import std.json.JsonValue;
+import std.json.parse;
 import std.agent.message.Message;
-import nomo.domain.harness.harness_model_contract.{Context, Ledger, fresh, bounded, decode_plan, context_error, charge_call, charge_boundary};
+import nomo.domain.harness.read.TextContext as Context;
+import nomo.domain.harness.read.Ledger;
+import nomo.domain.harness.read.text_fresh as fresh;
+import nomo.domain.harness.read.bounded;
+import nomo.domain.harness.read.text_decode_plan as decode_plan;
+import nomo.domain.harness.read.text_context_error as context_error;
+import nomo.domain.harness.read.charge_call;
+import nomo.domain.harness.read.charge_boundary;
 
 
 type Check = { label: string, mode: string, text: string, maximum: usize, context: Context,

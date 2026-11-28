@@ -1,25 +1,85 @@
 module nomo.application.transfer.service;
 
+import nomo.application.conversation.ports.{ConversationCatalog, ConversationReader, ResultPublication};
+import nomo.application.execution.attempts.{begin, complete_attempt, dispatching, returned};
+import nomo.application.execution.ports.AttemptRepository;
+import nomo.application.transfer.ports.{
+    ArchiveCodec,
+    ArchiveEncoding,
+    ArchiveFiles,
+    ArchiveWorkspace,
+    CopyRepository,
+    CopyStorage,
+    TransferDisplay,
+    TransferOperations,
+    TransferRenderer
+};
+import nomo.domain.archives.{
+    ArchiveDocument,
+    ExportMetadata,
+    ExportOutcome,
+    ExportPreview,
+    PortableArchive,
+    PortableInfo
+};
+import nomo.domain.conversation.ChatMessage;
+import nomo.native.history.{CopyJob, Session};
+import nomo.native.workspace.ProjectRoot;
 import std.codec.text.utf8_encode;
 import std.crypto.constant_time_eq;
+import std.effects.Fs;
+import std.fs.{IOError as fs_IOError, ReadLimitError};
+import std.io.IOError;
 import std.text.from_i64;
-import nomo.domain.transfer.copy.CopyJob;
-import nomo.domain.conversation.session.Session;
-import nomo.domain.conversation.messages.ChatMessage;
-import nomo.domain.transfer.archive.{ArchiveDocument, PortableInfo, PortableArchive, ExportMetadata, ExportPreview, ExportOutcome};
-import nomo.application.transfer.effects.{CopyStorage, ArchiveCodec, ArchiveFiles, TransferDisplay};
-import nomo.application.conversation.ports.{ConversationReader, ConversationCatalog, ResultPublication};
-import nomo.application.execution.ports.AttemptRepository;
-import nomo.application.execution.service.{begin, dispatching, returned, complete_attempt};
+
+flow bindings<C ~ CopyRepository, F ~ ArchiveWorkspace, E ~ ArchiveEncoding, D ~ TransferRenderer>(copies: C, files: F, codec: E, display: D) -> ![CopyStorage, ArchiveFiles, ArchiveCodec, TransferDisplay => Memory, Console, Fs.read<ProjectRoot>, Fs.atomic_replace<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<fs_IOError>, Error<ReadLimitError>, Error<IOError>, Error<BudgetExceeded>] ![] {
+    return handler {
+        CopyStorage.lookup(id) => copies.lookup(id);
+        CopyStorage.list(workspace) => copies.list(workspace);
+        CopyStorage.prepare(workspace, title, kind, source, digest, total) => copies.prepare(workspace, title, kind, source, digest, total);
+        CopyStorage.ensure_session(id) => copies.ensure_session(id);
+        CopyStorage.advance(id, cursor, phase) => copies.advance(id, cursor, phase);
+        CopyStorage.event(id, index, role, name, text) => copies.event(id, index, role, name, text);
+        CopyStorage.sealed(id) => copies.sealed(id);
+        CopyStorage.summary(id, slot) => copies.summary(id, slot);
+        CopyStorage.complete(id, index) => copies.complete(id, index);
+        ArchiveFiles.target(path) => files.target(path);
+        ArchiveFiles.read(path) => files.read(path);
+        ArchiveFiles.replace(target, text) => files.replace(target, text);
+        ArchiveCodec.encode(value) => codec.encode(value);
+        ArchiveCodec.decode(raw) => codec.decode(raw);
+        ArchiveCodec.fingerprint(raw) => codec.fingerprint(raw);
+        TransferDisplay.progress(id, copied, total) => display.progress(id, copied, total);
+        TransferDisplay.preview(value) => display.preview(value);
+        TransferDisplay.exported(path) => display.exported(path);
+    };
+}
+
+public flow operations<H ~ ConversationReader + ConversationCatalog + ResultPublication + CopyRepository, A ~ AttemptRepository, F ~ ArchiveWorkspace, E ~ ArchiveEncoding, D ~ TransferRenderer>(history: H, attempts: A, files: F, codec: E, display: D) -> ![TransferOperations => Memory, Console, Fs.read<ProjectRoot>, Fs.atomic_replace<ProjectRoot>, Error<StorageError>, Error<MemoryConflict>, Error<fs_IOError>, Error<ReadLimitError>, Error<IOError>, Error<BudgetExceeded>] ![] {
+    let io = bindings(history, files, codec, display);
+    return handler {
+        TransferOperations.save(session, path) => handle save(history, attempts, history, session, path) with io;
+        TransferOperations.load(workspace, path) => handle load(history, workspace, path) with io;
+        TransferOperations.resume_import(workspace, id) => handle resume_import(history, history, workspace, id) with io;
+        TransferOperations.fork(id, through) => handle fork(history, history, id, through) with io;
+        TransferOperations.resume_fork(workspace, id) => handle resume_fork(history, history, workspace, id) with io;
+        TransferOperations.discard(workspace, id) => handle discard(workspace, id) with io;
+        TransferOperations.status(id) => handle perform CopyStorage.lookup(id) with io;
+        TransferOperations.copies(workspace) => handle perform CopyStorage.list(workspace) with io;
+        TransferOperations.job(id) => handle job(id) with io;
+    };
+}
 
 public flow job(id: string) -> CopyJob ![CopyStorage] {
     return match perform CopyStorage.lookup(id) { Some(value) => value, None() => abort("conversation copy not found"), };
 }
+
 flow prepare(workspace: string, title: string, kind: string, source: string, digest: bytes, total: i64) -> CopyJob {
     let value = perform CopyStorage.prepare(workspace, title, kind, source, digest, total);
     perform CopyStorage.ensure_session(value.id);
     return value;
 }
+
 flow seal(id: string, role: string, name: string, text: string) -> unit {
     let value = job(id);
     if value.phase != "staging" { abort("conversation copy source is already sealed"); }
@@ -27,6 +87,7 @@ flow seal(id: string, role: string, name: string, text: string) -> unit {
     perform CopyStorage.event(id, 0, role, name, text);
     perform CopyStorage.advance(id, 0, "copying");
 }
+
 public flow copy_events<C ~ ConversationCatalog>(catalog: C, id: string, events: Array<ChatMessage>, summary: string) -> Session
     ![CopyStorage, TransferDisplay, Memory, Error<StorageError>, Error<MemoryConflict>] {
     let value = job(id);
@@ -52,12 +113,14 @@ public flow copy_events<C ~ ConversationCatalog>(catalog: C, id: string, events:
     perform CopyStorage.advance(id, value.total, "ready");
     return catalog.select(value.workspace, id);
 }
+
 public flow discard(workspace: string, id: string) -> unit ![CopyStorage] {
     let value = job(id);
     if value.workspace != workspace { abort("conversation copy belongs to another workspace"); }
     if value.phase == "ready" { abort("completed conversations are retained; this command discards unfinished copies only"); }
     perform CopyStorage.advance(id, value.cursor, "discarded");
 }
+
 public flow resume_fork<R ~ ConversationReader, C ~ ConversationCatalog>(history: R, catalog: C, workspace: string, id: string) -> Session
     ![CopyStorage, TransferDisplay, Memory, Error<StorageError>, Error<MemoryConflict>, Error<BudgetExceeded>] {
     let value = job(id);
@@ -80,6 +143,7 @@ public flow resume_fork<R ~ ConversationReader, C ~ ConversationCatalog>(history
     }
     return copy_events(catalog, id, events, summary);
 }
+
 public flow fork<R ~ ConversationReader, C ~ ConversationCatalog>(history: R, catalog: C, id: string, through: i64) -> Session
     ![CopyStorage, TransferDisplay, Memory, Error<StorageError>, Error<MemoryConflict>, Error<BudgetExceeded>] {
     let source = history.load(id);
@@ -87,6 +151,7 @@ public flow fork<R ~ ConversationReader, C ~ ConversationCatalog>(history: R, ca
     let value = prepare(source.workspace, source.title + " (fork)", "fork", id, utf8_encode(""), through + 1);
     return resume_fork(history, catalog, source.workspace, value.id);
 }
+
 public flow load<C ~ ConversationCatalog>(catalog: C, workspace: string, path: string) -> Session
     ![CopyStorage, ArchiveCodec, ArchiveFiles, TransferDisplay, Memory, Error<StorageError>, Error<MemoryConflict>] {
     let raw = perform ArchiveFiles.read(path);
@@ -96,6 +161,7 @@ public flow load<C ~ ConversationCatalog>(catalog: C, workspace: string, path: s
     seal(value.id, "archive", "imported_source", raw);
     return copy_events(catalog, value.id, source.events, source.summary);
 }
+
 public flow resume_import<R ~ ConversationReader, C ~ ConversationCatalog>(history: R, catalog: C, workspace: string, id: string) -> Session
     ![CopyStorage, ArchiveCodec, ArchiveFiles, TransferDisplay, Memory, Error<StorageError>, Error<MemoryConflict>, Error<BudgetExceeded>] {
     let value = job(id);
@@ -112,6 +178,7 @@ public flow resume_import<R ~ ConversationReader, C ~ ConversationCatalog>(histo
     let source = perform ArchiveCodec.decode(raw);
     return copy_events(catalog, id, source.events, source.summary);
 }
+
 public flow save<R ~ ConversationReader, A ~ AttemptRepository, P ~ ResultPublication>(history: R, attempts: A, publication: P, session: string, pathname: string) -> unit
     ![CopyStorage, ArchiveCodec, ArchiveFiles, TransferDisplay, Memory, Error<StorageError>, Error<MemoryConflict>, Error<BudgetExceeded>] {
     let selected = history.load(session);

@@ -7,19 +7,27 @@ import std.fs.IOError as FileError;
 import std.effects.Fs;
 import nomo.tools.workspace.ReadOnlyRoot;
 import nomo.tools.edit_file.EditableRoot;
-import nomo.adapters.cli.legacy.terminal_entry.run as terminal;
-import nomo.adapters.cli.legacy.terminal_entry.run_once as terminal_once;
-import nomo.adapters.cli.legacy.terminal_entry.{run_with_operations, run_once_with_operations};
-import nomo.domain.sessions.work_chain_usecase.{WorkRequest, ContinueRequest, TurnRequest, WorkOutcome, WorkStop, CapturedShow};
-import nomo.application.sessions.effects.session_work_chain_usecase.{TerminalWork, TerminalRead};
-import nomo.application.sessions.work_chain_usecase.{work};
-import nomo.domain.sessions.work_chain.{turn_caps, initial};
-import nomo.domain.mutations.edit_contract.Selector;
-import nomo.domain.mutations.edit_encoding.json;
+import nomo.adapters.cli.terminal.run as terminal;
+import nomo.adapters.cli.terminal.run_once as terminal_once;
+import nomo.adapters.cli.terminal.run_with_operations;
+import nomo.adapters.cli.terminal.run_once_with_operations;
+import nomo.domain.sessions.chain.WorkRequest;
+import nomo.domain.sessions.chain.ContinueRequest;
+import nomo.domain.sessions.chain.TurnRequest;
+import nomo.domain.sessions.chain.WorkOutcome;
+import nomo.domain.sessions.chain.WorkStop;
+import nomo.domain.sessions.chain.CapturedShow;
+import nomo.application.sessions.ports.TerminalWork;
+import nomo.application.sessions.ports.TerminalRead;
+import nomo.application.sessions.chain.work;
+import nomo.domain.sessions.chain.turn_caps;
+import nomo.domain.sessions.chain.initial;
+import nomo.domain.editing.Selector;
+import nomo.domain.wire.json;
 import nomo.harness.harness_work_contract.Ledger;
 import nomo.harness.harness_tool_contract.Ledger as ReadLedger;
-import nomo.domain.harness.harness_edit_contract.fresh as edit_fresh;
-import nomo.adapters.cli.legacy.work_chain_entry.present_outcome;
+import nomo.domain.harness.edit.fresh as edit_fresh;
+import nomo.adapters.cli.chains.present_outcome;
 
 // Calls the actual entry without replacing its controller or Console actions.
 // The broad row acknowledges the entry's existing static contract; the test

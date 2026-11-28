@@ -1,11 +1,16 @@
 module app.main;
 
-import std.io.{println, read_all};
-import std.text.{char_count as len, from_usize};
+import std.io.println;
+import std.io.read_all;
+import std.text.char_count as len;
+import std.text.from_usize;
 import std.json.parse;
 import std.agent.message.Message;
-import nomo.adapters.cli.arguments.cli_request.{Request, LineCommand, parse_args, parse_line};
-import nomo.domain.text.text.printable;
+import nomo.adapters.cli.input.Request;
+import nomo.adapters.cli.input.LineCommand;
+import nomo.adapters.cli.input.cli_request_parse_args as parse_args;
+import nomo.adapters.cli.input.cli_request_parse_line as parse_line;
+import nomo.domain.text.text_printable as printable;
 
 type Case = { label: string, mode: string, args: Array<string>, raw: string,
     accepted: bool, kind: string, session_id: string, once_supplied: bool,

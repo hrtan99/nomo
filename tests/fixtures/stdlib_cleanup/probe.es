@@ -1,12 +1,17 @@
 module app.main;
 
 import std.io.println;
-import nomo.domain.text.read_text.{safe, data_safe, within};
-import nomo.domain.text.text.hex_digest;
-import nomo.domain.harness.tool_context.{Context, candidate_error};
-import nomo.domain.context.selection.{EventPolicy, select};
-import nomo.domain.mutations.edit_encoding.{json, digest};
-import nomo.domain.sessions.session_display.ascii_json_with;
+import nomo.domain.text.safe;
+import nomo.domain.text.data_safe;
+import nomo.domain.text.within;
+import nomo.domain.text.hex_digest;
+import nomo.domain.harness.loop.Context;
+import nomo.domain.harness.loop.candidate_error;
+import nomo.domain.context.EventPolicy;
+import nomo.domain.context.select;
+import nomo.domain.wire.json;
+import nomo.domain.wire.digest;
+import nomo.domain.wire.ascii_json_with;
 import nomo.core.conversation.Event;
 
 flow check(label: string, value: bool) -> unit {

@@ -1,23 +1,36 @@
 module app.contract_probe;
 
 import std.io.println;
-import std.text.{split, char_count as len};
+import std.text.split;
+import std.text.char_count as len;
 import std.bytes.len as byte_count;
 import std.codec.text.utf8_encode;
-import std.json.{JsonValue, parse, stringify};
+import std.json.JsonValue;
+import std.json.parse;
+import std.json.stringify;
 import std.agent.message.Message;
 import nomo.session.edit_operation.Binding;
-import nomo.session.work_record.{Record};
-import nomo.domain.sessions.work_record.{Captured, partial, confirm, validate, admit, same_record};
+import nomo.session.work_record.Record;
+import nomo.domain.sessions.work.Captured;
+import nomo.domain.sessions.work.partial;
+import nomo.domain.sessions.work.confirm;
+import nomo.domain.sessions.work.validate;
+import nomo.domain.sessions.work.admit;
+import nomo.domain.sessions.work.same_record;
 import nomo.harness.harness_tool_contract.Ledger as ReadLedger;
-import nomo.domain.harness.harness_work_contract.Evidence;
-import nomo.domain.harness.harness_edit_contract.Context;
-import nomo.domain.mutations.edit_contract.{Prepared, Selector, Confirmed, prepare_original};
-import nomo.domain.mutations.edit_binding.bind;
-import nomo.domain.mutations.edit_proposal.{Request, Proposal};
-import nomo.domain.harness.edit_context.{context, completed_context};
-import nomo.domain.harness.edit_context.context as leaf_context;
-import nomo.domain.harness.edit_context.completed_context as leaf_completed_context;
+import nomo.domain.harness.work.Evidence;
+import nomo.domain.harness.edit.Context;
+import nomo.domain.editing.Prepared;
+import nomo.domain.editing.Selector;
+import nomo.domain.editing.Confirmed;
+import nomo.domain.editing.prepare_original;
+import nomo.domain.editing.bind;
+import nomo.domain.editing.Request;
+import nomo.domain.editing.Proposal;
+import nomo.domain.harness.edit.context;
+import nomo.domain.harness.edit.completed_context;
+import nomo.domain.harness.edit.context as leaf_context;
+import nomo.domain.harness.edit.completed_context as leaf_completed_context;
 
 type Check = { label: string, passed: bool };
 flow slash() -> string { return std.text.from_char('\\'); }

@@ -6,11 +6,13 @@ import std.fs.IOError as FileError;
 import std.effects.Fs;
 import std.bytes.len as byte_count;
 import std.codec.text.utf8_encode;
-import std.json.{JsonValue, stringify};
+import std.json.JsonValue;
+import std.json.stringify;
 import std.agent.message.Message;
-import nomo.adapters.cli.arguments.harness_work_args.parse;
-import nomo.adapters.cli.legacy.harness_work_entry.{prepare_work, ledger};
-import nomo.domain.mutations.edit_proposal.validate;
+import nomo.adapters.cli.edit_input.harness_work_args_parse as parse;
+import nomo.adapters.cli.harness.prepare_work;
+import nomo.adapters.cli.console.ledger;
+import nomo.domain.editing.validate;
 import nomo.tools.workspace.ReadOnlyRoot;
 import nomo.tools.edit_file.EditableRoot;
 

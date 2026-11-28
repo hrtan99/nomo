@@ -2,16 +2,25 @@ module app.recoverable_work_probe;
 
 import std.io.println;
 import nomo.core.conversation.Event;
-import nomo.domain.sessions.redaction.Policy;
+import nomo.domain.sessions.event_codec.Policy;
 import nomo.harness.harness_tool_contract.Ledger as ReadLedger;
 import nomo.harness.harness_edit_contract.Ledger as EditLedger;
 import nomo.harness.harness_work_contract.Ledger as WorkLedger;
-import nomo.harness.harness_tool_chat_contract.{Invocation, Previous};
-import nomo.domain.harness.harness_tool_chat_contract.{Completed, TurnResult};
-import nomo.adapters.storage.legacy.recoverable_chat_store.{create as create_chat, load as load_chat, reserve as reserve_chat, finish as finish_chat};
-import nomo.adapters.storage.legacy.recoverable_work_store.{admit, claim, finish, load};
-import nomo.domain.sessions.event_text_codec.decode;
-import std.text.{len as byte_len, starts_with};
+import nomo.harness.harness_tool_chat_contract.Invocation;
+import nomo.harness.harness_tool_chat_contract.Previous;
+import nomo.domain.harness.chat.Completed;
+import nomo.domain.harness.chat.TurnResult;
+import nomo.adapters.storage.chat.create as create_chat;
+import nomo.adapters.storage.chat.recoverable_chat_store_load as load_chat;
+import nomo.adapters.storage.chat.reserve as reserve_chat;
+import nomo.adapters.storage.chat.finish as finish_chat;
+import nomo.adapters.storage.work_admission.recoverable_work_store_admit as admit;
+import nomo.adapters.storage.work_admission.recoverable_work_store_claim as claim;
+import nomo.adapters.storage.work_admission.recoverable_work_store_finish as finish;
+import nomo.adapters.storage.work_admission.recoverable_work_store_load as load;
+import nomo.domain.sessions.event_codec.event_text_codec_decode as decode;
+import std.text.len as byte_len;
+import std.text.starts_with;
 
 flow chat_result(maximum: ReadLedger) -> TurnResult {
     let prior = Previous { task = "Read context", result = "blue", tool = "read", outcome = "complete: blue", answer = "blue" };

@@ -188,7 +188,8 @@ class Probe:
         source = project / 'src/app/main.es'
         source.write_text('''module app.main;
 import std.io.println;
-import std.host.command.{command, run};
+import std.host.command.command;
+import std.host.command.run;
 flow main(args: Array<string>) -> i32 ![Console, Error<IOError>, Command.run<DefaultCommandSandbox>] {
     let result = run(command("/bin/echo", ["COMMAND_MARKER"]), DefaultCommandSandbox);
     println("FOLLOWING_MARKER");

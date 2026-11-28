@@ -143,8 +143,8 @@ def source_facts():
     overlay = (ROOT/'config/local-tryout-model-compose.yaml').read_text()
     assert 'http://host.docker.internal:18095/v1' in overlay
     paths = ['etas.toml', 'etas.lock', 'scripts/local-tryout.sh', 'scripts/terminal-transport.py',
-             'src/nomo/adapters/cli/arguments/terminal_args.es', 'src/nomo/adapters/cli/legacy/terminal_entry.es',
-             'src/nomo/adapters/cli/legacy/work_chain_entry.es', 'config/local-tryout-model-compose.yaml']
+             'src/nomo/adapters/cli/session_input.es', 'src/nomo/adapters/cli/terminal.es',
+             'src/nomo/adapters/cli/chains.es', 'config/local-tryout-model-compose.yaml']
     return dict(model=original['model']['model'], HTTP_attempts_per_native_request=1,
                 endpoint='http://host.docker.internal:18095/v1', approval=dict(TTY='prompt', nonTTY='deny'),
                 hashes={name:hashlib.sha256((ROOT/name).read_bytes()).hexdigest() for name in paths},

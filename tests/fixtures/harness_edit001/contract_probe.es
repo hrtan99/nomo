@@ -4,13 +4,21 @@ import std.io.println;
 import std.text.split;
 import std.bytes.len as byte_count;
 import std.codec.text.utf8_encode;
-import std.json.{JsonValue, parse, stringify};
+import std.json.JsonValue;
+import std.json.parse;
+import std.json.stringify;
 import std.agent.message.Message;
-import nomo.adapters.cli.arguments.harness_edit_args.Input;
-import nomo.adapters.cli.arguments.harness_edit_args.parse as parse_args;
-import nomo.domain.harness.harness_edit_contract.{Context, fresh, bump, ledger_error, context_error, decode_edit, decode_plan};
+import nomo.adapters.cli.edit_input.Input;
+import nomo.adapters.cli.edit_input.harness_edit_args_parse as parse_args;
+import nomo.domain.harness.edit.Context;
+import nomo.domain.harness.edit.fresh;
+import nomo.domain.harness.edit.bump;
+import nomo.domain.harness.edit.ledger_error;
+import nomo.domain.harness.edit.context_error;
+import nomo.domain.harness.edit.decode_edit;
+import nomo.domain.harness.edit.decode_plan;
 
-import nomo.harness.harness_edit_contract.{Ledger};
+import nomo.harness.harness_edit_contract.Ledger;
 
 type Check = { label: string, passed: bool };
 flow slash() -> string { return std.text.from_char('\\'); }

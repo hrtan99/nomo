@@ -1,7 +1,7 @@
 module fixture.setup;
 
 import std.agent.session.Conversation;
-import nomo.domain.sessions.store_record.session_key;
+import nomo.domain.sessions.state.session_key;
 
 // Setup-only namespace provisioning. This flow is never called by save/reload.
 flow main(args: Array<string>) -> bool {

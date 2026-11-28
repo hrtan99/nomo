@@ -4,10 +4,12 @@ import std.io.println;
 import std.text.split;
 import std.bytes.len as byte_count;
 import std.codec.text.utf8_encode;
-import nomo.domain.mutations.edit_contribution.{Contribution, project};
-import nomo.domain.harness.typed_edit_contract.project_context;
-import nomo.domain.harness.harness_work_contract.{Context, Evidence};
-import nomo.domain.harness.harness_edit_contract.Context as EditContext;
+import nomo.domain.editing.Contribution;
+import nomo.domain.editing.project;
+import nomo.domain.harness.typed_work.project_context;
+import nomo.domain.harness.work.Context;
+import nomo.domain.harness.work.Evidence;
+import nomo.domain.harness.edit.Context as EditContext;
 import nomo.harness.harness_tool_contract.Ledger as ReadLedger;
 
 type Check = { label: string, passed: bool };

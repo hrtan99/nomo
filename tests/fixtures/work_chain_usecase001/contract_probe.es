@@ -1,16 +1,25 @@
 module app.usecase_probe;
 
 import std.io.println;
-import nomo.domain.mutations.edit_contract.Selector;
-import nomo.session.work_chain.{Caps};
-import nomo.domain.sessions.work_chain.{turn_caps, values};
-import nomo.domain.sessions.work_chain_usecase.{WorkRequest, ContinueRequest, TurnRequest, WorkOutcome, WorkStop};
-import nomo.application.sessions.effects.session_work_chain_usecase.{TerminalWork, TerminalRead};
-import nomo.application.sessions.work_chain_usecase.{request_error, dispatch, read_selected, read_latest};
-import nomo.harness.harness_work_contract.{Ledger};
-import nomo.domain.harness.harness_work_contract.{fresh};
+import nomo.domain.editing.Selector;
+import nomo.session.work_chain.Caps;
+import nomo.domain.sessions.chain.turn_caps;
+import nomo.domain.sessions.chain.values;
+import nomo.domain.sessions.chain.WorkRequest;
+import nomo.domain.sessions.chain.ContinueRequest;
+import nomo.domain.sessions.chain.TurnRequest;
+import nomo.domain.sessions.chain.WorkOutcome;
+import nomo.domain.sessions.chain.WorkStop;
+import nomo.application.sessions.ports.TerminalWork;
+import nomo.application.sessions.ports.TerminalRead;
+import nomo.application.sessions.chain.request_error;
+import nomo.application.sessions.chain.dispatch;
+import nomo.application.sessions.chain.read_selected;
+import nomo.application.sessions.chain.read_latest;
+import nomo.harness.harness_work_contract.Ledger;
+import nomo.domain.harness.work.fresh;
 import nomo.harness.harness_tool_contract.Ledger as ReadLedger;
-import nomo.domain.harness.harness_edit_contract.fresh as edit_fresh;
+import nomo.domain.harness.edit.fresh as edit_fresh;
 
 type Check = { label: string, passed: bool };
 flow checks() -> Array<Check> { return __CHECKS__; }

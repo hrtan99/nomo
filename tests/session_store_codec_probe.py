@@ -16,10 +16,14 @@ GRAPH = Path(os.environ.get('SESSION_STORE_GRAPH', '/validation'))
 MARKER = 'nomo-session-bundle-v1'
 
 SOURCE = '''module app.main;
-import std.io.{read_all, println};
-import std.json.{parse, stringify};
+import std.io.read_all;
+import std.io.println;
+import std.json.parse;
+import std.json.stringify;
 import std.agent.message.Message;
-import nomo.session.bundle_codec.{Bundle, encode, decode};
+import nomo.session.bundle_codec.Bundle;
+import nomo.session.bundle_codec.encode;
+import nomo.session.bundle_codec.decode;
 
 public flow pure_probe() -> bool {
     let bodies: Array<string> = [];

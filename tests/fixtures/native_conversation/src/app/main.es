@@ -1,19 +1,27 @@
 module app.main;
 
-import std.io.{println, IOError};
+import std.io.println;
+import std.io.IOError;
 import std.text.from_i64;
 import nomo.adapters.storage.conversations.NativeHistory;
-import nomo.adapters.storage.attempts.NativeAttempts;
-import nomo.application.conversation.ports.{ConversationReader, ConversationWriter, ConversationCatalog, GenerationReservation, ResultPublication};
+import nomo.adapters.storage.journals.NativeAttempts;
+import nomo.application.conversation.ports.ConversationReader;
+import nomo.application.conversation.ports.ConversationWriter;
+import nomo.application.conversation.ports.ConversationCatalog;
+import nomo.application.conversation.ports.GenerationReservation;
+import nomo.application.conversation.ports.ResultPublication;
 import nomo.application.execution.ports.AttemptRepository;
-import nomo.application.conversation.turn.turn;
-import nomo.application.conversation.effects.{ConversationModel, ConversationOutput};
-import nomo.application.context.effects.ConversationContext;
-import nomo.application.context.ports.{ContextProjection};
-import nomo.adapters.model.context_projection.{RollingContext};
-import nomo.domain.context.projection.{project};
-import nomo.domain.configuration.settings.Settings;
-import nomo.domain.conversation.turn.{Turn, Answer, Summary};
+import nomo.application.conversation.session.turn;
+import nomo.application.conversation.ports.ConversationModel;
+import nomo.application.conversation.ports.ConversationOutput;
+import nomo.application.conversation.ports.ConversationContext;
+import nomo.application.conversation.ports.ContextProjection;
+import nomo.adapters.codec.RollingContext;
+import nomo.domain.context.projection_project as project;
+import nomo.domain.settings.Settings;
+import nomo.domain.conversation.ModelTurn as Turn;
+import nomo.domain.conversation.Answer;
+import nomo.domain.conversation.Summary;
 
 flow settings() -> Settings {
     return Settings { context_window = 262144, max_output_tokens = 131072, compact_ratio = 0.001,

@@ -60,12 +60,18 @@ def fixture(image):
                     ' }, chunks = [' + chunks + '] }')
     return '''module app.source;
 import std.effects.Fs;
-import std.fs.{IOError as FileError, ReadLimitError};
+import std.fs.IOError as FileError;
+import std.fs.ReadLimitError;
 import std.bytes.from_array;
-import nomo.application.migration.ports.{ProjectStateSource, MigrationRoot};
-import nomo.domain.migration.project_state.{ProjectImage, ProjectConversation, ProjectEvent, ProjectEdit, ProjectJob};
-import nomo.domain.process.archived_jobs.ArchivedJob;
-import nomo.domain.mutations.models.SavedPath;
+import nomo.application.transfer.ports.ProjectStateSource;
+import nomo.application.migration.ports.MigrationRoot;
+import nomo.domain.archives.ProjectImage;
+import nomo.domain.archives.ProjectConversation;
+import nomo.domain.archives.ProjectEvent;
+import nomo.domain.archives.ProjectEdit;
+import nomo.domain.archives.ProjectJob;
+import nomo.domain.processes.ArchivedJob;
+import nomo.native.mutations.SavedPath;
 public type FixtureSource = {};
 impl FixtureSource ~ ProjectStateSource {
     flow load(self) -> ProjectImage ![Fs.read<MigrationRoot>, Error<FileError>, Error<ReadLimitError>, Error<IndexError>] {

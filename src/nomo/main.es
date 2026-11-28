@@ -1,49 +1,65 @@
 module nomo.main;
 
-import nomo.domain.context.large_context.request_bytes;
+import nomo.adapters.cli.chains.{
+    help as chains_help,
+    recovery_decision_run,
+    run_continue as chains_run_continue,
+    run_inspect,
+    run_new as chains_run_new,
+    run_observed_continue,
+    run_observed_new,
+    run_sessions,
+    user_context_entry_run,
+    work_chain_sessions_run_show
+};
+import nomo.adapters.cli.chat.{
+    read_session_run,
+    read_session_status as chat_read_session_status,
+    recoverable_read_session_run,
+    recoverable_read_session_status
+};
+import nomo.adapters.cli.checkpoints.{
+    harness_checkpoint_entry_run_init,
+    harness_checkpoint_entry_run_show,
+    harness_successor_entry_run_show,
+    run_continue,
+    run_help as checkpoints_run_help,
+    run_new,
+    run_resume,
+    run_save as checkpoints_run_save,
+    session_lifecycle_run_init,
+    session_lifecycle_run_show
+};
+import nomo.adapters.cli.checks.{
+    history_check_run,
+    history_followup_check_run,
+    recoverable_history_check_run,
+    recoverable_history_followup_check_run
+};
+import nomo.adapters.cli.editing.{run_apply, run_help, run_status};
+import nomo.adapters.cli.followup.{abandon as followup_abandon, history_followup_run, recoverable_history_followup_run};
+import nomo.adapters.cli.harness.{
+    harness_chat_run,
+    harness_edit_entry_run,
+    harness_entry_run,
+    harness_model_entry_run,
+    harness_model_tools_chat_run,
+    harness_model_tools_entry_run,
+    harness_work_entry_run,
+    read_model_tools_chat_run,
+    read_model_tools_entry_run
+};
+import nomo.adapters.cli.input.load;
+import nomo.adapters.cli.model.{run_model, run_model_tools, run_tools};
+import nomo.adapters.cli.state.demo;
+import nomo.adapters.cli.terminal.{help as terminal_help_2, run, run_once};
+import nomo.adapters.cli.work.{abandon, history_work_run, recoverable_history_work_run, run_save, run_show};
+import nomo.bootstrap.harness.{reject, turn};
+import nomo.bootstrap.main.{main_run, native_migration_run, project};
+import nomo.domain.conversation.{EntryMode, fresh};
+import nomo.domain.limits.request_bytes;
 import std.io.{println, read_line};
-import std.text.{trim, char_count as len};
-import nomo.adapters.cli.arguments.config.load;
-import nomo.bootstrap.harness.stub.{turn, reject};
-import nomo.domain.conversation.state.fresh;
-import nomo.adapters.cli.legacy.model_entry.run_model;
-import nomo.adapters.cli.legacy.tool_agent.run_tools;
-import nomo.adapters.cli.legacy.session_demo.demo;
-import nomo.adapters.cli.legacy.model_tool_entry.run_model_tools;
-import nomo.adapters.cli.legacy.harness_entry.run as run_harness;
-import nomo.adapters.cli.legacy.harness_chat.run as run_harness_chat;
-import nomo.adapters.cli.legacy.harness_model_entry.run as run_harness_model;
-import nomo.adapters.cli.legacy.harness_model_tools_entry.run as run_harness_model_tools;
-import nomo.adapters.cli.legacy.read_model_tools_entry.run as run_read_model_tools;
-import nomo.adapters.cli.legacy.harness_model_tools_chat.run as run_harness_model_tools_chat;
-import nomo.adapters.cli.legacy.read_model_tools_chat.run as run_read_model_tools_chat;
-import nomo.adapters.cli.legacy.read_session.{run as run_read_session, status as read_session_status_run};
-import nomo.adapters.cli.legacy.recoverable_read_session.{run as run_recoverable_read_session, status as run_recoverable_read_status};
-import nomo.adapters.cli.legacy.history_work.run as run_history_work;
-import nomo.adapters.cli.legacy.recoverable_history_work.{run as run_recoverable_history_work, abandon as abandon_recoverable_work};
-import nomo.adapters.cli.legacy.recoverable_history_followup.{run as run_recoverable_history_followup, abandon as abandon_recoverable_followup};
-import nomo.adapters.cli.legacy.recoverable_history_followup_check.run as run_recoverable_history_followup_check;
-import nomo.adapters.cli.legacy.recoverable_history_check.run as run_recoverable_history_check;
-import nomo.adapters.cli.legacy.history_followup.run as run_history_followup;
-import nomo.adapters.cli.legacy.history_followup_check.run as run_history_followup_check;
-import nomo.adapters.cli.legacy.history_check.run as run_history_check;
-import nomo.adapters.cli.legacy.recovery_decision.run as run_recovery_decision;
-import nomo.adapters.cli.legacy.harness_checkpoint_entry.{run_init as checkpoint_init, run_save as checkpoint_save, run_show as checkpoint_show};
-import nomo.adapters.cli.legacy.harness_successor_entry.{run_continue as checkpoint_continue, run_show as successor_show};
-import nomo.adapters.cli.legacy.session_lifecycle.{run_help as lifecycle_help, run_init as lifecycle_init, run_new as lifecycle_new, run_resume as lifecycle_resume, run_show as lifecycle_show};
-import nomo.adapters.cli.legacy.edit_entry.{run_apply as edit_apply_run, run_status as edit_status_run, run_help as edit_help_run};
-import nomo.adapters.cli.legacy.harness_edit_entry.run as harness_edit_run;
-import nomo.adapters.cli.legacy.harness_work_entry.run as harness_work_run;
-import nomo.adapters.cli.legacy.work_session_entry.{run_save as work_save_run, run_show as work_show_run};
-import nomo.adapters.cli.legacy.work_chain_entry.{run_new as chain_new_run, run_continue as chain_continue_run, run_inspect as chain_inspect_run, run_observed_new as chain_observed_new_run, run_observed_continue as chain_observed_continue_run};
-import nomo.adapters.cli.legacy.work_chain_help.help as chain_help_run;
-import nomo.adapters.cli.legacy.terminal_entry.{run as terminal_run, run_once as terminal_once_run};
-import nomo.adapters.cli.legacy.terminal_help.help as terminal_help_run;
-import nomo.adapters.cli.legacy.work_chain_sessions.{run_sessions as chain_sessions_run, run_show as chain_show_run};
-import nomo.adapters.cli.legacy.user_context_entry.run as user_context_new_run;
-import nomo.bootstrap.main.run as native_project_run;
-import nomo.domain.conversation.start.EntryMode;
-import nomo.bootstrap.native_migration.{run as native_migration_run, project as project_migration_run};
+import std.text.{char_count, trim};
 
 // The runtime returns i32 as data; every command uses this same OS-failure boundary.
 flow completed(status: i32, message: string) -> i32 {
@@ -51,161 +67,173 @@ flow completed(status: i32, message: string) -> i32 {
     return status;
 }
 
-flow native_project(args: Array<string>) -> i32 { return completed(native_project_run(args, EntryMode.Interactive), "Nomo native project stopped"); }
-flow native_attach(args: Array<string>) -> i32 { return completed(native_project_run(args, EntryMode.Attach), "Nomo native startup selection stopped"); }
+flow native_project(args: Array<string>) -> i32 { return completed(main_run(args, EntryMode.Interactive), "Nomo native project stopped"); }
+
+flow native_attach(args: Array<string>) -> i32 { return completed(main_run(args, EntryMode.Attach), "Nomo native startup selection stopped"); }
+
 flow native_state_migrate(args: Array<string>) -> i32 { return completed(native_migration_run(args), "Nomo native state migration stopped"); }
-flow project_state_migrate(args: Array<string>) -> i32 { return completed(project_migration_run(args), "Nomo project state migration stopped"); }
+
+flow project_state_migrate(args: Array<string>) -> i32 { return completed(project(args), "Nomo project state migration stopped"); }
 
 flow terminal(args: Array<string>) -> i32 {
-    return completed(terminal_run(args), "Nomo terminal stopped; inspect current journal and work state");
+    return completed(run(args), "Nomo terminal stopped; inspect current journal and work state");
 }
+
 flow terminal_once(args: Array<string>) -> i32 {
-    return completed(terminal_once_run(args), "Nomo one-shot terminal stopped; inspect current journal and work state");
+    return completed(run_once(args), "Nomo one-shot terminal stopped; inspect current journal and work state");
 }
+
 flow terminal_help(args: Array<string>) -> i32 {
-    return completed(terminal_help_run(args), "Nomo terminal help refused; see REFUSED output");
+    return completed(terminal_help_2(args), "Nomo terminal help refused; see REFUSED output");
 }
 
 flow work_save(args: Array<string>) -> i32 {
-    return completed(work_save_run(args), "Nomo work save refused; see completed edit and work record status output");
+    return completed(run_save(args), "Nomo work save refused; see completed edit and work record status output");
 }
+
 flow work_show(args: Array<string>) -> i32 {
-    return completed(work_show_run(args), "Nomo work show refused; see REFUSED output");
+    return completed(run_show(args), "Nomo work show refused; see REFUSED output");
 }
 
 flow harness_work(args: Array<string>) -> i32 {
-    return completed(harness_work_run(args), "Nomo read/edit work refused; see REFUSED or recorded completed output");
+    return completed(harness_work_entry_run(args), "Nomo read/edit work refused; see REFUSED or recorded completed output");
 }
 
 flow harness_edit(args: Array<string>) -> i32 {
-    return completed(harness_edit_run(args), "Nomo model edit refused; see REFUSED or recorded completed output");
+    return completed(harness_edit_entry_run(args), "Nomo model edit refused; see REFUSED or recorded completed output");
 }
 
 flow edit_apply(args: Array<string>) -> i32 {
-    return completed(edit_apply_run(args), "Nomo edit apply refused; see REFUSED output");
+    return completed(run_apply(args), "Nomo edit apply refused; see REFUSED output");
 }
+
 flow edit_status(args: Array<string>) -> i32 {
-    return completed(edit_status_run(args), "Nomo edit status refused; see REFUSED output");
+    return completed(run_status(args), "Nomo edit status refused; see REFUSED output");
 }
+
 flow edit_help(args: Array<string>) -> i32 {
-    return completed(edit_help_run(args), "Nomo edit help refused; see REFUSED output");
+    return completed(run_help(args), "Nomo edit help refused; see REFUSED output");
 }
 
 flow help(args: Array<string>) -> i32 {
-    return completed(lifecycle_help(args), "Nomo session help refused; see REFUSED output");
+    return completed(checkpoints_run_help(args), "Nomo session help refused; see REFUSED output");
 }
+
 flow init(args: Array<string>) -> i32 {
-    return completed(lifecycle_init(args), "Nomo session init refused; see REFUSED output");
+    return completed(session_lifecycle_run_init(args), "Nomo session init refused; see REFUSED output");
 }
+
 flow new(args: Array<string>) -> i32 {
-    return completed(lifecycle_new(args), "Nomo session new refused; see REFUSED output");
+    return completed(run_new(args), "Nomo session new refused; see REFUSED output");
 }
+
 flow resume(args: Array<string>) -> i32 {
-    return completed(lifecycle_resume(args), "Nomo session resume refused; see REFUSED output");
+    return completed(run_resume(args), "Nomo session resume refused; see REFUSED output");
 }
+
 flow show(args: Array<string>) -> i32 {
-    return completed(lifecycle_show(args), "Nomo session show refused; see REFUSED output");
+    return completed(session_lifecycle_run_show(args), "Nomo session show refused; see REFUSED output");
 }
 
 flow harness_checkpoint_continue(args: Array<string>) -> i32 {
-    return completed(checkpoint_continue(args), "Nomo Harness checkpoint continue refused; see REFUSED output");
+    return completed(run_continue(args), "Nomo Harness checkpoint continue refused; see REFUSED output");
 }
 
 flow harness_successor_show(args: Array<string>) -> i32 {
-    return completed(successor_show(args), "Nomo Harness successor show refused; see REFUSED output");
+    return completed(harness_successor_entry_run_show(args), "Nomo Harness successor show refused; see REFUSED output");
 }
 
 flow harness_checkpoint_init(args: Array<string>) -> i32 {
-    return completed(checkpoint_init(args), "Nomo Harness checkpoint init refused; see REFUSED output");
+    return completed(harness_checkpoint_entry_run_init(args), "Nomo Harness checkpoint init refused; see REFUSED output");
 }
 
 flow harness_checkpoint_save(args: Array<string>) -> i32 {
-    return completed(checkpoint_save(args), "Nomo Harness checkpoint save refused; see REFUSED output");
+    return completed(checkpoints_run_save(args), "Nomo Harness checkpoint save refused; see REFUSED output");
 }
 
 flow harness_checkpoint_show(args: Array<string>) -> i32 {
-    return completed(checkpoint_show(args), "Nomo Harness checkpoint show refused; see REFUSED output");
+    return completed(harness_checkpoint_entry_run_show(args), "Nomo Harness checkpoint show refused; see REFUSED output");
 }
 
 flow harness_model_tools_chat(args: Array<string>) -> i32 {
-    return completed(run_harness_model_tools_chat(args), "Nomo model/tool harness chat refused; see REFUSED or STOP output");
+    return completed(harness_model_tools_chat_run(args), "Nomo model/tool harness chat refused; see REFUSED or STOP output");
 }
 
 flow read_session_status(args: Array<string>) -> i32 {
-    return completed(read_session_status_run(args), "Nomo read session status refused");
+    return completed(chat_read_session_status(args), "Nomo read session status refused");
 }
 
 flow recovery_decision(args: Array<string>) -> i32 {
-    return completed(run_recovery_decision(args), "Nomo recovery decision stopped; inspect recorded status");
+    return completed(recovery_decision_run(args), "Nomo recovery decision stopped; inspect recorded status");
 }
 
 flow history_check(args: Array<string>) -> i32 {
-    return completed(run_history_check(args), "Nomo history check stopped; inspect recorded status");
+    return completed(history_check_run(args), "Nomo history check stopped; inspect recorded status");
 }
 
 flow history_work(args: Array<string>) -> i32 {
-    return completed(run_history_work(args), "Nomo history work stopped; inspect recorded edit status");
+    return completed(history_work_run(args), "Nomo history work stopped; inspect recorded edit status");
 }
 
 flow recoverable_work_abandon(args: Array<string>) -> i32 {
-    return completed(abandon_recoverable_work(args), "Nomo recovery decision refused");
+    return completed(abandon(args), "Nomo recovery decision refused");
 }
 
 flow recoverable_history_work(args: Array<string>) -> i32 {
-    return completed(run_recoverable_history_work(args), "Nomo event work stopped; inspect recorded edit status");
+    return completed(recoverable_history_work_run(args), "Nomo event work stopped; inspect recorded edit status");
 }
 
 flow recoverable_followup_abandon(args: Array<string>) -> i32 {
-    return completed(abandon_recoverable_followup(args), "Nomo recovery decision refused");
+    return completed(followup_abandon(args), "Nomo recovery decision refused");
 }
 
 flow recoverable_history_followup(args: Array<string>) -> i32 {
-    return completed(run_recoverable_history_followup(args), "Nomo event followup stopped; inspect recorded edit status");
+    return completed(recoverable_history_followup_run(args), "Nomo event followup stopped; inspect recorded edit status");
 }
 
 flow recoverable_history_followup_check(args: Array<string>) -> i32 {
-    return completed(run_recoverable_history_followup_check(args), "Nomo event followup check stopped; inspect recorded status");
+    return completed(recoverable_history_followup_check_run(args), "Nomo event followup check stopped; inspect recorded status");
 }
 
 flow recoverable_history_check(args: Array<string>) -> i32 {
-    return completed(run_recoverable_history_check(args), "Nomo event check stopped; inspect recorded status");
+    return completed(recoverable_history_check_run(args), "Nomo event check stopped; inspect recorded status");
 }
 
 flow read_session(args: Array<string>) -> i32 {
-    return completed(run_read_session(args), "Nomo read session stopped; inspect the saved reservation");
+    return completed(read_session_run(args), "Nomo read session stopped; inspect the saved reservation");
 }
 
 flow recoverable_read_session(args: Array<string>) -> i32 {
-    return completed(run_recoverable_read_session(args), "Nomo recoverable read session stopped; inspect recorded state");
+    return completed(recoverable_read_session_run(args), "Nomo recoverable read session stopped; inspect recorded state");
 }
 
 flow recoverable_read_status(args: Array<string>) -> i32 {
-    return completed(run_recoverable_read_status(args), "Nomo recoverable read status refused");
+    return completed(recoverable_read_session_status(args), "Nomo recoverable read status refused");
 }
 
 flow read_model_tools_chat(args: Array<string>) -> i32 {
-    return completed(run_read_model_tools_chat(args), "Nomo read chat refused; see REFUSED or STOP output");
+    return completed(read_model_tools_chat_run(args), "Nomo read chat refused; see REFUSED or STOP output");
 }
 
 flow read_model_tools(args: Array<string>) -> i32 {
-    return completed(run_read_model_tools(args), "Nomo read request refused; see REFUSED output");
+    return completed(read_model_tools_entry_run(args), "Nomo read request refused; see REFUSED output");
 }
 
 flow harness_model_tools(args: Array<string>) -> i32 {
-    return completed(run_harness_model_tools(args), "Nomo model/tool harness refused; see REFUSED output");
+    return completed(harness_model_tools_entry_run(args), "Nomo model/tool harness refused; see REFUSED output");
 }
 
 flow harness_model(args: Array<string>) -> i32 {
-    return completed(run_harness_model(args), "Nomo model harness refused; see REFUSED output");
+    return completed(harness_model_entry_run(args), "Nomo model harness refused; see REFUSED output");
 }
 
 flow harness_chat(args: Array<string>) -> i32 {
-    return completed(run_harness_chat(args), "Nomo harness chat refused; see REFUSED or STOP output");
+    return completed(harness_chat_run(args), "Nomo harness chat refused; see REFUSED or STOP output");
 }
 
 // Preserve the established opt-in wrapper's nonzero-result -> OS failure route.
 flow harness(args: Array<string>) -> i32 {
-    return completed(run_harness(args), "Nomo harness request refused; see REFUSED output");
+    return completed(harness_entry_run(args), "Nomo harness request refused; see REFUSED output");
 }
 
 flow model_tools(args: Array<string>) -> i32 {
@@ -257,7 +285,7 @@ flow main(args: Array<string>) -> i32 {
         let input = read_line();
         if input == "" { println("bye: EOF"); return 0; }
         lines = lines + 1;
-        if len(input) > request_bytes() { let outcome = reject(state, "input exceeds 65536 characters"); state = outcome.state; }
+        if char_count(input) > request_bytes() { let outcome = reject(state, "input exceeds 65536 characters"); state = outcome.state; }
         else {
             let command = trim(input);
             if command == "/exit" { println("bye: exit"); return 0; }
@@ -271,24 +299,28 @@ flow main(args: Array<string>) -> i32 {
     abort("Nomo line limit exhausted");
 }
 
-flow chain_new(args: Array<string>) -> i32 { return completed(chain_new_run(args), "Nomo v2 chain new refused; see admission/journal status"); }
-flow chain_user_context_new(args: Array<string>) -> i32 { return completed(user_context_new_run(args), "Nomo user-context work stopped; inspect admission/journal status"); }
-flow chain_continue(args: Array<string>) -> i32 { return completed(chain_continue_run(args), "Nomo v2 continuation refused; see admission/journal status"); }
-flow chain_show(args: Array<string>) -> i32 { return completed(chain_show_run(args), "Nomo v2 show refused; see REFUSED"); }
+flow chain_new(args: Array<string>) -> i32 { return completed(chains_run_new(args), "Nomo v2 chain new refused; see admission/journal status"); }
 
-flow chain_help(args: Array<string>) -> i32 { return completed(chain_help_run(args), "Nomo chain help refused; see REFUSED"); }
+flow chain_user_context_new(args: Array<string>) -> i32 { return completed(user_context_entry_run(args), "Nomo user-context work stopped; inspect admission/journal status"); }
 
-flow chain_inspect(args: Array<string>) -> i32 { return completed(chain_inspect_run(args), "Nomo fixture read-plan inspection stopped; no retry or edit"); }
+flow chain_continue(args: Array<string>) -> i32 { return completed(chains_run_continue(args), "Nomo v2 continuation refused; see admission/journal status"); }
 
-flow chain_observe_new(args: Array<string>) -> i32 { return completed(chain_observed_new_run(args), "Nomo observed fixture new refused; preserve state, no retry"); }
-flow chain_observe_continue(args: Array<string>) -> i32 { return completed(chain_observed_continue_run(args), "Nomo observed fixture continuation refused; preserve state, no retry"); }
+flow chain_show(args: Array<string>) -> i32 { return completed(work_chain_sessions_run_show(args), "Nomo v2 show refused; see REFUSED"); }
 
-flow chain_sessions(args: Array<string>) -> i32 { return completed(chain_sessions_run(args), "Nomo session discovery refused; see REFUSED"); }
+flow chain_help(args: Array<string>) -> i32 { return completed(chains_help(args), "Nomo chain help refused; see REFUSED"); }
+
+flow chain_inspect(args: Array<string>) -> i32 { return completed(run_inspect(args), "Nomo fixture read-plan inspection stopped; no retry or edit"); }
+
+flow chain_observe_new(args: Array<string>) -> i32 { return completed(run_observed_new(args), "Nomo observed fixture new refused; preserve state, no retry"); }
+
+flow chain_observe_continue(args: Array<string>) -> i32 { return completed(run_observed_continue(args), "Nomo observed fixture continuation refused; preserve state, no retry"); }
+
+flow chain_sessions(args: Array<string>) -> i32 { return completed(run_sessions(args), "Nomo session discovery refused; see REFUSED"); }
 
 flow history_followup(args: Array<string>) -> i32 {
-    return completed(run_history_followup(args), "Nomo followup stopped; inspect recorded status");
+    return completed(history_followup_run(args), "Nomo followup stopped; inspect recorded status");
 }
 
 flow history_followup_check(args: Array<string>) -> i32 {
-    return completed(run_history_followup_check(args), "Nomo followup check stopped; inspect recorded status");
+    return completed(history_followup_check_run(args), "Nomo followup check stopped; inspect recorded status");
 }

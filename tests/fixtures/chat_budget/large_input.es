@@ -1,13 +1,16 @@
 module app.large_input;
 
 import std.io.println;
-import nomo.core.conversation.{Event};
-import nomo.domain.conversation.state.{capacity_error, fresh};
-import nomo.domain.harness.tool_context.Context;
-import nomo.domain.context.preflight.{Refusal, measure_context};
-import nomo.domain.context.selection.{EventPolicy, select};
-import nomo.domain.sessions.chat_session_contract.fresh_events;
-import nomo.adapters.model.harness.natural_work_chat.run;
+import nomo.core.conversation.Event;
+import nomo.domain.conversation.capacity_error;
+import nomo.domain.conversation.fresh;
+import nomo.domain.harness.loop.Context;
+import nomo.domain.context.Refusal;
+import nomo.domain.context.measure_context;
+import nomo.domain.context.EventPolicy;
+import nomo.domain.context.select;
+import nomo.domain.sessions.chat.fresh_events;
+import nomo.bootstrap.work.run;
 
 public flow probe(args: Array<string>) -> i32 {
     var text = "0123456789abcdef0123456789abcdef";

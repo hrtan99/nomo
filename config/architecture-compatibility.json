@@ -720,6 +720,46 @@
         "Snapshot": "2a144cb66a84abbf9c70e28101cfdedd679df74d08aa7d7f662ee127c8297953"
       },
       "regions": []
+    },
+    "nomo.application.migration.ports": {
+      "path": "src/nomo/application/migration/ports.es",
+      "declarations": [
+        "type MigrationRoot",
+        "impl MigrationRoot"
+      ],
+      "reason": "Stage A preserves the exact Host filesystem Region identity while moving migration contracts to the consuming transfer module.",
+      "shapes": {
+        "MigrationRoot": "13ddae35139f7906fef70344f9227fd52e304869a9e8dab529dd2b7e09098902"
+      },
+      "regions": [
+        "MigrationRoot"
+      ]
+    },
+    "nomo.domain.process.archived_jobs": {
+      "path": "src/nomo/domain/process/archived_jobs.es",
+      "declarations": [
+        "type ArchivedJob"
+      ],
+      "reason": "Actual old-writer/new-reader SQLite validation rejects its planned nominal move with schema_mismatch. Retain the defining identity until explicit Stage B migration.",
+      "shapes": {
+        "ArchivedJob": "b7af2017b505a73231311438d8f433bf08d68707f076bd5f5422d26832b507c5"
+      }
     }
+  },
+  "assembly_bindings": {
+    "nomo.bootstrap.harness": [
+      "PublicStages ~ ReadStages",
+      "PrivateStages ~ ReadStages",
+      "HistoryStages ~ ReadStages"
+    ],
+    "nomo.bootstrap.work": [
+      "WorkStages ~ ReadStages",
+      "FollowupStages ~ ReadStages",
+      "HistoryFollowupStages ~ ports_WorkStages",
+      "HistoryFollowupStages ~ WorkModelStages",
+      "HistoryWorkStages ~ ports_WorkStages",
+      "HistoryWorkStages ~ WorkModelStages",
+      "NaturalStages ~ ReadStages"
+    ]
   }
 }

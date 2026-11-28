@@ -1,16 +1,27 @@
 module app.contract_probe;
 
 import std.io.println;
-import std.text.{char_count as len, split};
-import nomo.domain.text.text.printable;
+import std.text.char_count as len;
+import std.text.split;
+import nomo.domain.text.text_printable as printable;
 import nomo.core.conversation.Event;
 import nomo.harness.harness_tool_contract.Ledger;
-import nomo.harness.harness_tool_chat_contract.{Invocation, Previous};
-import nomo.domain.harness.harness_tool_chat_contract.{Completed, TurnResult, Context, turn_error, context_error};
-import nomo.session.harness_checkpoint.{Identity};
-import nomo.domain.sessions.harness_checkpoint.{Checkpoint};
-import nomo.domain.sessions.harness_successor.{Successor, restore, validate, encode, decode, from_turn};
-import nomo.adapters.cli.arguments.harness_successor_args.parse;
+import nomo.harness.harness_tool_chat_contract.Invocation;
+import nomo.harness.harness_tool_chat_contract.Previous;
+import nomo.domain.harness.chat.Completed;
+import nomo.domain.harness.chat.TurnResult;
+import nomo.domain.harness.chat.Context;
+import nomo.domain.harness.chat.chat_turn_error as turn_error;
+import nomo.domain.harness.chat.chat_context_error as context_error;
+import nomo.session.harness_checkpoint.Identity;
+import nomo.domain.sessions.checkpoints.Checkpoint;
+import nomo.domain.sessions.checkpoints.Successor;
+import nomo.domain.sessions.checkpoints.restore;
+import nomo.domain.sessions.checkpoints.successor_validate as validate;
+import nomo.domain.sessions.checkpoints.successor_encode as encode;
+import nomo.domain.sessions.checkpoints.successor_decode as decode;
+import nomo.domain.sessions.checkpoints.successor_from_turn as from_turn;
+import nomo.adapters.cli.checkpoint_input.harness_successor_args_parse as parse;
 
 type Check = { label: string, mode: string, saved: Successor, requested: Identity, predecessor: Identity,
     raw: string, accepted: bool, status: i32, resolved: bool, present: bool, mutation: string,

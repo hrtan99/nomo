@@ -3,7 +3,10 @@ module app.contract_probe;
 import std.io.println;
 import std.text.split;
 import nomo.session.harness_checkpoint.Identity;
-import nomo.adapters.cli.arguments.session_lifecycle_args.{Request, parse, help_lines, topic_lines};
+import nomo.adapters.cli.checkpoint_input.Request;
+import nomo.adapters.cli.checkpoint_input.session_lifecycle_args_parse as parse;
+import nomo.adapters.cli.checkpoint_input.help_lines;
+import nomo.adapters.cli.checkpoint_input.topic_lines;
 
 type Check = { label: string, action: string, args: Array<string>, accepted: bool, expected: Request, error: string };
 flow slash() -> string { return std.text.from_char('\\'); }

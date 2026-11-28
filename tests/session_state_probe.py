@@ -235,9 +235,18 @@ def cases():
 
 IMPORTS = '''module nomo.session_fixture;
 import std.io.println;
-import std.text.{char_count as len, contains};
-import nomo.core.conversation.{Event, State};
-import nomo.session.session_state.{Caps, Ledger, Operation, Reference, Snapshot, Request, Projection, validate};
+import std.text.char_count as len;
+import std.text.contains;
+import nomo.core.conversation.Event;
+import nomo.core.conversation.State;
+import nomo.session.session_state.Caps;
+import nomo.session.session_state.Ledger;
+import nomo.session.session_state.Operation;
+import nomo.session.session_state.Reference;
+import nomo.session.session_state.Snapshot;
+import nomo.session.session_state.Request;
+import nomo.session.session_state.Projection;
+import nomo.session.session_state.validate;
 '''
 
 

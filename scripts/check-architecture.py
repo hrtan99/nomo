@@ -55,7 +55,8 @@ def imports(source):
 
 
 def main():
-    compatibility = json.loads((ROOT / 'config/architecture-compatibility.json').read_text())['modules']
+    policy = json.loads((ROOT / 'config/architecture-compatibility.json').read_text())
+    compatibility = policy['modules']
     modules = {}
     errors = []
     for path in sorted((ROOT / 'src').rglob('*.es')):
@@ -89,8 +90,12 @@ def main():
     graph = {name: set() for name in modules}
     for name, (path, source, items, definitions) in modules.items():
         layer = name.split('.')[1]
-        if layer == 'bootstrap' and any(item.group() == 'impl' for item in items):
-            errors.append(f'{path.relative_to(ROOT)}: concrete impl belongs in adapters')
+        if layer == 'bootstrap':
+            allowed = policy.get('assembly_bindings', {}).get(name, [])
+            for match in re.finditer(r'(?m)^impl\s+([^;{\n]+)', source):
+                binding = ' '.join(match[1].split())
+                if binding not in allowed:
+                    errors.append(f'{path.relative_to(ROOT)}: concrete impl belongs in adapters: {binding}')
         if layer == 'domain' and (any(definition['kind'] in ('agent', 'tool', 'effect') for definition in definitions.values()) or
                                   any(item.group() == 'perform' for item in items)):
             errors.append(f'{path.relative_to(ROOT)}: domain must contain passive data and pure rules')

@@ -2,7 +2,10 @@ module app.help_probe;
 
 import std.io.println;
 import std.text.split;
-import nomo.adapters.cli.legacy.work_chain_help.{argument, help, show_hint, continue_hint};
+import nomo.adapters.cli.chains.argument;
+import nomo.adapters.cli.chains.help;
+import nomo.adapters.cli.chains.show_hint;
+import nomo.adapters.cli.chains.continue_hint;
 
 type Check = { label: string, input: string, accepted: bool, expected: string };
 flow slash() -> string { return std.text.from_char('\\'); }

@@ -1,8 +1,9 @@
 module nomo.model_test;
 
-import nomo.core.conversation.{Event};
-import nomo.domain.conversation.state.{fresh, add};
-import nomo.adapters.model.legacy.provider.model_turn;
+import nomo.core.conversation.Event;
+import nomo.domain.conversation.fresh;
+import nomo.domain.conversation.add;
+import nomo.bootstrap.harness.model_turn;
 
 flow main(args: Array<string>) -> i32 {
     var state = fresh();

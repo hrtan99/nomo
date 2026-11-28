@@ -1,6 +1,7 @@
 module app.main;
 
-import std.io.{println, read_line};
+import std.io.println;
+import std.io.read_line;
 import std.runtime.checkpoint;
 
 spec CheckpointSession: trace = +Console;

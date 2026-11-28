@@ -2,14 +2,16 @@ module app.output_probe;
 
 import std.io.println;
 import std.text.split;
-import nomo.core.conversation.{Event, State};
-import nomo.domain.harness.conversation_events.{Turn};
-import nomo.application.harness.loops.conversation_events.{emit, failure};
-import nomo.application.harness.loops.stub_loop_controller.turn_controller;
-import nomo.bootstrap.harness.stub.turn as production_turn;
-import nomo.adapters.cli.legacy.console_events.publish;
-import nomo.application.harness.effects.model_conversation_output.ConversationOutput;
-import nomo.domain.mutations.edit_encoding.json;
+import nomo.core.conversation.Event;
+import nomo.core.conversation.State;
+import nomo.domain.conversation.TextTurn as Turn;
+import nomo.application.harness.text.emit;
+import nomo.application.harness.text.failure;
+import nomo.application.harness.text.turn_controller;
+import nomo.bootstrap.harness.turn as production_turn;
+import nomo.adapters.cli.console.publish;
+import nomo.application.harness.ports.ConversationOutput;
+import nomo.domain.wire.json;
 
 flow slash() -> string { return std.text.from_char('\\'); }
 flow collect(event: Event) -> unit {

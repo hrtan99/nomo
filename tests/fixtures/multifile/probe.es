@@ -1,17 +1,19 @@
 module app.multifile;
 
 import std.io.println;
-import nomo.adapters.filesystem.legacy.workspace.search_files;
-import nomo.domain.harness.tool_context.allowed_error;
-import nomo.domain.harness.read_protocol.decode_child;
-import nomo.session.harness_checkpoint.{Identity};
-import nomo.domain.sessions.harness_checkpoint.{identity_error};
-import nomo.adapters.cli.arguments.harness_work_args.{parse_unicode, parse as parse_legacy};
-import nomo.domain.harness.harness_work_contract.{Evidence, evidence_error};
+import nomo.adapters.filesystem.workspace.search_files;
+import nomo.domain.harness.loop.allowed_error;
+import nomo.domain.harness.read.decode_child;
+import nomo.session.harness_checkpoint.Identity;
+import nomo.domain.sessions.checkpoints.identity_error;
+import nomo.adapters.cli.edit_input.parse_unicode;
+import nomo.adapters.cli.edit_input.harness_work_args_parse as parse_legacy;
+import nomo.domain.harness.work.Evidence;
+import nomo.domain.harness.work.evidence_error;
 import nomo.harness.harness_tool_contract.Ledger;
-import nomo.domain.mutations.edit_contract.prepare_original;
-import nomo.domain.mutations.edit_binding.bind;
-import nomo.domain.sessions.work_record.partial;
+import nomo.domain.editing.prepare_original;
+import nomo.domain.editing.bind;
+import nomo.domain.sessions.work.partial;
 
 flow search_probe(args: Array<string>) -> i32 {
     let allowed = ["a.txt", "b.txt", "c.txt", "d.txt"];
