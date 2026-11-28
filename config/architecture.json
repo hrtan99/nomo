@@ -1,0 +1,28 @@
+{
+  "format": 2,
+  "layers": [
+    "domain",
+    "application",
+    "adapters",
+    "bootstrap"
+  ],
+  "root_modules": [
+    "nomo.main"
+  ],
+  "assembly_bindings": {
+    "nomo.bootstrap.harness": [
+      "PublicStages ~ ReadStages",
+      "PrivateStages ~ ReadStages",
+      "HistoryStages ~ ReadStages"
+    ],
+    "nomo.bootstrap.work": [
+      "WorkStages ~ ReadStages",
+      "FollowupStages ~ ReadStages",
+      "HistoryFollowupStages ~ ports_WorkStages",
+      "HistoryFollowupStages ~ WorkModelStages",
+      "HistoryWorkStages ~ ports_WorkStages",
+      "HistoryWorkStages ~ WorkModelStages",
+      "NaturalStages ~ ReadStages"
+    ]
+  }
+}

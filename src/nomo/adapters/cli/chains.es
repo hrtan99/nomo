@@ -1,11 +1,6 @@
 module nomo.adapters.cli.chains;
 
-import nomo.adapters.cli.chain_input.{
-    Command as chain_input_Command,
-    WorkChainArgsInput,
-    work_chain_args_parse,
-    work_chain_selection_args_parse
-};
+import nomo.adapters.cli.chain_input.{Command as chain_input_Command, WorkChainArgsInput, work_chain_args_parse, work_chain_selection_args_parse};
 import nomo.adapters.cli.console.display;
 import nomo.adapters.cli.edit_input.{Input, Work, edit_args_parse};
 import nomo.adapters.cli.editing.{confirm_current, render as editing_render};
@@ -38,15 +33,17 @@ import nomo.adapters.storage.chains.{
     work_chain_store_inspect
 };
 import nomo.application.editing.ports.Approval as ports_Approval;
+import nomo.application.resources.{EditableRoot, ReadOnlyRoot};
 import nomo.application.sessions.chain.{request_error, selected_error, work};
 import nomo.domain.editing.{Confirmed, Selector, bind, selector_error};
 import nomo.domain.harness.loop.allowed_error;
-import nomo.domain.harness.work.fresh;
+import nomo.domain.harness.work.{WorkLedger, fresh};
 import nomo.domain.sessions.chain.{
     CapturedJournal,
     CapturedShow,
     ContinueRequest,
     ParentFacts,
+    Record,
     Selector as chain_Selector,
     TurnRequest,
     WorkOutcome,
@@ -64,10 +61,6 @@ import nomo.domain.sessions.chain.{
 import nomo.domain.sessions.work.{Pending, admit, partial, validate};
 import nomo.domain.text.text_printable;
 import nomo.domain.wire.{json, object};
-import nomo.harness.harness_work_contract.Ledger;
-import nomo.session.work_chain.Record;
-import nomo.tools.edit_file.EditableRoot;
-import nomo.tools.workspace.ReadOnlyRoot;
 import std.effects.Fs;
 import std.fs.IOError as fs_IOError;
 import std.io.{IOError, println, read_line};
@@ -358,7 +351,7 @@ public enum DetailedWorkOutcome {
     UserContextStopped(WorkStop)
 }
 
-flow stopped(state: Ledger, error: string) -> DetailedWorkOutcome {
+flow stopped(state: WorkLedger, error: string) -> DetailedWorkOutcome {
     return DetailedWorkOutcome.Stopped(WorkStop {
         state,
         error

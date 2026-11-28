@@ -2,25 +2,14 @@ module nomo.adapters.cli.model;
 
 import nomo.adapters.cli.input.{cli_request_parse_line, load_for, read_cli_parse_line};
 import nomo.adapters.filesystem.workspace.{list_directory, read_legacy, search_legacy};
-import nomo.bootstrap.harness.{
-    emit,
-    failure,
-    harness_tool_chat_run_turn,
-    model_tool_run_loop,
-    model_turn,
-    read_tool_chat_run_turn,
-    reject
-};
-import nomo.core.conversation.State;
-import nomo.domain.conversation.{TextTurn, capacity_error, charge, fresh, stop as conversation_stop};
-import nomo.domain.harness.chat.{admission_error, extended_admission_error, extended_invocation, fresh_invocation};
-import nomo.domain.harness.loop.{Limits, allowed_error, fresh_loop, question_error as loop_question_error};
+import nomo.bootstrap.harness.{emit, failure, harness_tool_chat_run_turn, model_tool_run_loop, model_turn, read_tool_chat_run_turn, reject};
+import nomo.domain.conversation.{State, TextTurn, capacity_error, charge, fresh, stop as conversation_stop};
+import nomo.domain.harness.chat.{Invocation, admission_error, extended_admission_error, extended_invocation, fresh_invocation};
+import nomo.domain.harness.loop.{Limits, ReadLedger, allowed_error, fresh_loop, question_error as loop_question_error};
 import nomo.domain.harness.read.{question_error, read_fresh};
 import nomo.domain.limits.request_bytes;
 import nomo.domain.text.{input_error, text_printable, within};
 import nomo.domain.workspace.{Outcome, outcome as workspace_outcome, read_contract_display};
-import nomo.harness.harness_tool_chat_contract.Invocation;
-import nomo.harness.harness_tool_contract.Ledger;
 import std.io.{println, read_line};
 import std.text.{char_count, ends_with, from_i32, len, split, starts_with, trim};
 
@@ -182,11 +171,11 @@ flow help(unicode: bool) -> unit {
     println("Read size is checked after reading. One serial depth-one child per turn; fresh in-memory only. No resume, writes, commands, recursion or live setup. Host aborts may leave reservations unresolved.");
 }
 
-flow displayed_maximum(unicode: bool, maximum: Ledger) -> Ledger {
+flow displayed_maximum(unicode: bool, maximum: ReadLedger) -> ReadLedger {
     return if unicode {
         maximum
     } else {
-        Ledger {
+        ReadLedger {
             steps = 14,
             calls = 8,
             tokens = 16384,
@@ -196,7 +185,7 @@ flow displayed_maximum(unicode: bool, maximum: Ledger) -> Ledger {
     };
 }
 
-flow ledger(prefix: string, state: Ledger, maximum: Ledger) -> unit {
+flow ledger(prefix: string, state: ReadLedger, maximum: ReadLedger) -> unit {
     println(
         prefix + "LEDGER steps=" + from_i32(state.steps) + "/" + from_i32(maximum.steps) + " calls="
             + from_i32(state.calls) + "/" + from_i32(maximum.calls) + " tokens=" + from_i32(state.tokens)

@@ -5,7 +5,7 @@ import std.fs.IOError as FileError;
 import std.effects.Fs;
 import std.runtime.error.IndexError;
 import std.io.IOError as ConsoleError;
-import nomo.tools.edit_file.EditableRoot;
+import nomo.application.resources.EditableRoot;
 import nomo.adapters.filesystem.editing.read_original;
 import nomo.adapters.filesystem.editing.prepare;
 import nomo.adapters.filesystem.editing.apply;

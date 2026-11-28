@@ -14,12 +14,16 @@ import nomo.application.sessions.chain.{
     observe as chain_observe
 };
 import nomo.application.sessions.ports.{DiscoveryAuthority, SessionObservation, Target};
-import nomo.domain.editing.selector_error;
+import nomo.domain.editing.{Binding, selector_error};
 import nomo.domain.sessions.chain.{
+    Caps,
     CapturedJournal,
+    EditJournalRecord,
     ObservationPass,
     ObservedJournal,
     ObservedRow,
+    Record,
+    RecoveryDecision,
     Selector,
     Snapshot,
     confirm,
@@ -32,16 +36,11 @@ import nomo.domain.sessions.chain.{
     successor,
     work_chain_validate
 };
-import nomo.session.edit_operation.Binding;
-import nomo.session.recovery_decision.{Decision, Decisions};
-import nomo.session.work_chain.{Caps, Record as work_chain_Record};
-import nomo.session.work_chain_journal.{Journal, Record};
-import nomo.session.work_chain_store.Chain;
-import nomo.session.work_record.Record as work_record_Record;
+import nomo.domain.sessions.work.StoredWorkRecord;
 import std.memory.{MemoryEntry, MemoryVersion, Missing, WriteCondition};
 
-flow recovery_decision_read(target: string) -> Option<MemoryEntry<string, Decision>> {
-    return Decisions.Rows.get_entry(target);
+flow recovery_decision_read(target: string) -> Option<MemoryEntry<string, RecoveryDecision>> {
+    return RecoveryDecisions.Rows.get_entry(target);
 }
 
 flow validate_target(target: string, id: string) -> string {
@@ -101,7 +100,7 @@ flow validate_target(target: string, id: string) -> string {
     return "";
 }
 
-public flow get(target: string) -> Result<Option<Decision>, string> {
+public flow get(target: string) -> Result<Option<RecoveryDecision>, string> {
     if target != "work" && target != "check" && target != "followup" && target != "followup-check" {
         return Err("unknown recovery target");
     }
@@ -141,14 +140,14 @@ public flow abandon(target: string, id: string) -> Result<MemoryVersion, string>
     if recovery_decision_read(target) != None() {
         return Err("recovery decision already recorded; no retry");
     }
-    let item = Decision {
+    let item = RecoveryDecision {
         format = 1,
         id,
         target,
         choice = "abandon"
     };
-    return commit_native<Decision>(
-        Decisions.Rows,
+    return commit_native<RecoveryDecision>(
+        RecoveryDecisions.Rows,
         Target {
             store = ["Rows"],
             region = "nomo-recovery-decision-v1",
@@ -168,15 +167,15 @@ flow work_chain_journal_key(turn: i32) -> string {
     };
 }
 
-flow work_chain_journal_read(turn: i32) -> Option<MemoryEntry<string, Record>> {
-    return Journal.Rows.get_entry(work_chain_journal_key(turn));
+flow work_chain_journal_read(turn: i32) -> Option<MemoryEntry<string, EditJournalRecord>> {
+    return ChainJournal.Rows.get_entry(work_chain_journal_key(turn));
 }
 
-flow invalid(row: Record) -> string {
+flow invalid(row: EditJournalRecord) -> string {
     return chain_invalid(captured(row));
 }
 
-public flow captured(row: Record) -> CapturedJournal {
+public flow captured(row: EditJournalRecord) -> CapturedJournal {
     return CapturedJournal {
         format = row.format,
         chain = row.chain,
@@ -186,7 +185,10 @@ public flow captured(row: Record) -> CapturedJournal {
     };
 }
 
-flow work_chain_journal_write(row: Record, condition: WriteCondition) -> Result<MemoryVersion, string> ![
+flow work_chain_journal_write(row: EditJournalRecord, condition: WriteCondition) -> Result<
+    MemoryVersion,
+    string
+> ![
     Memory,
     Error<StorageError>,
     Error<IndexError>,
@@ -197,8 +199,8 @@ flow work_chain_journal_write(row: Record, condition: WriteCondition) -> Result<
         return Err(error);
     }
     let selected = work_chain_journal_key(row.turn);
-    return commit_native<Record>(
-        Journal.Rows,
+    return commit_native<EditJournalRecord>(
+        ChainJournal.Rows,
         Target {
             store = ["Rows"],
             region = "nomo-work-chain-edit-v2",
@@ -227,7 +229,7 @@ public flow begin(chain: string, turn: i32, binding: Binding) -> Result<WorkChai
     Error<IndexError>,
     Error<BudgetExceeded>
 ] {
-    let row = Record {
+    let row = EditJournalRecord {
         format = 2,
         chain,
         turn,
@@ -296,7 +298,7 @@ public flow work_chain_journal_complete(ticket: WorkChainJournalTicket) -> Resul
 }
 
 public flow work_chain_journal_inspect(chain: string, turn: i32, id: string, workspace: string, path: string) -> Result<
-    Option<Record>,
+    Option<EditJournalRecord>,
     string
 > {
     let error = selector_error(id, workspace, path);
@@ -334,7 +336,7 @@ public flow work_chain_journal_inspect(chain: string, turn: i32, id: string, wor
 }
 
 // Fixed-slot read only; storage errors remain native errors, never empty results.
-public flow observe(turn: i32) -> Result<Option<MemoryEntry<string, Record>>, string> {
+public flow observe(turn: i32) -> Result<Option<MemoryEntry<string, EditJournalRecord>>, string> {
     if turn != 1 && turn != 2 {
         return Err("v2 edit journal permits only two turns");
     }
@@ -349,11 +351,11 @@ flow work_chain_store_key(turn: i32) -> string {
     };
 }
 
-flow work_chain_store_read(turn: i32) -> Option<MemoryEntry<string, work_chain_Record>> {
-    return Chain.Rows.get_entry(work_chain_store_key(turn));
+flow work_chain_store_read(turn: i32) -> Option<MemoryEntry<string, Record>> {
+    return Chains.Rows.get_entry(work_chain_store_key(turn));
 }
 
-flow journal_error(row: work_chain_Record) -> string {
+flow journal_error(row: Record) -> string {
     let journal = match work_chain_journal_inspect(row.chain, row.turn, row.id, row.workspace, row.path) {
         Ok(value) => value,
         Err(error) => {
@@ -369,7 +371,7 @@ flow journal_error(row: work_chain_Record) -> string {
 
 // The first fixed turn row is also the global owner/root admission. It is
 // never removed or adopted under another root ID in this private store.
-flow work_chain_store_write(row: work_chain_Record, condition: WriteCondition) -> Result<
+flow work_chain_store_write(row: Record, condition: WriteCondition) -> Result<
     MemoryVersion,
     string
 > ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
@@ -378,8 +380,8 @@ flow work_chain_store_write(row: work_chain_Record, condition: WriteCondition) -
         return Err(error);
     }
     let selected = work_chain_store_key(row.turn);
-    return commit_native<work_chain_Record>(
-        Chain.Rows,
+    return commit_native<Record>(
+        Chains.Rows,
         Target {
             store = ["Rows"],
             region = "nomo-work-chain-v2",
@@ -431,7 +433,7 @@ public flow read_parent_access(id: string, workspace: string, path: string) -> P
 }
 
 public flow read_parent(id: string, workspace: string, path: string) -> Result<
-    MemoryEntry<string, work_chain_Record>,
+    MemoryEntry<string, Record>,
     string
 > {
     return match read_parent_access(id, workspace, path) {
@@ -441,7 +443,7 @@ public flow read_parent(id: string, workspace: string, path: string) -> Result<
     };
 }
 
-flow parent_error(ticket: WorkChainStoreTicket, row: work_chain_Record) -> string {
+flow parent_error(ticket: WorkChainStoreTicket, row: Record) -> string {
     if row.turn == 1 {
         if ticket.parent != None() {
             return "v2 root ticket unexpectedly has a parent";
@@ -586,7 +588,7 @@ public flow admit_continue(
     request: string,
     allowed: Array<string>,
     policy: Caps,
-    expected_parent: MemoryEntry<string, work_chain_Record>
+    expected_parent: MemoryEntry<string, Record>
 ) -> Result<WorkChainStoreTicket, string> ![
     Memory,
     Error<StorageError>,
@@ -641,7 +643,7 @@ public flow admit_continue(
     return Ok(ticket);
 }
 
-public flow publish_partial(ticket: WorkChainStoreTicket, work: work_record_Record) -> Result<
+public flow publish_partial(ticket: WorkChainStoreTicket, work: StoredWorkRecord) -> Result<
     WorkChainStoreTicket,
     string
 > ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
@@ -725,7 +727,7 @@ public flow work_chain_store_complete(ticket: WorkChainStoreTicket, summary: str
 // Validate the complete two-slot graph and journals before returning captured
 // data. Missing work never establishes that an edit did not occur.
 public flow work_chain_store_inspect(id: string, workspace: string, path: string) -> Result<
-    Option<work_chain_Record>,
+    Option<Record>,
     string
 > {
     let error = selector_error(id, workspace, path);
@@ -881,7 +883,7 @@ flow capture_adapter(pass: ObservationPass) -> Result<Snapshot, string> ![
     return observed_snapshot();
 }
 
-flow inspect_adapter(id: string, workspace: string, path: string) -> Result<Option<work_chain_Record>, string> ![
+flow inspect_adapter(id: string, workspace: string, path: string) -> Result<Option<Record>, string> ![
     Memory,
     Error<StorageError>,
     Error<IndexError>,
@@ -942,18 +944,42 @@ public flow latest_parent(workspace: string, path: string) -> Result<string, str
 }
 
 public type WorkChainJournalTicket = {
-    row: Record,
+    row: EditJournalRecord,
     version: MemoryVersion
 };
 
 public type WorkChainStoreTicket = {
-    row: work_chain_Record,
+    row: Record,
     version: MemoryVersion,
-    parent: Option<MemoryEntry<string, work_chain_Record>>
+    parent: Option<MemoryEntry<string, Record>>
 };
 
 public enum ParentAccess {
-    Found(MemoryEntry<string, work_chain_Record>),
+    Found(MemoryEntry<string, Record>),
     Refused(string),
     UserContext
 }
+
+alias RecoveryDecisionsSchema = MemoryRegion<{
+    Rows: Store<string, RecoveryDecision>
+}>;
+
+public let RecoveryDecisions = std.memory.region<RecoveryDecisionsSchema>(
+    stable_id = "nomo-recovery-decision-v1",
+    store = "recovery-decision"
+);
+
+alias ChainJournalSchema = MemoryRegion<{
+    Rows: Store<string, EditJournalRecord>
+}>;
+
+public let ChainJournal = std.memory.region<ChainJournalSchema>(
+    stable_id = "nomo-work-chain-edit-v2",
+    store = "work-chain-edit"
+);
+
+alias ChainsSchema = MemoryRegion<{
+    Rows: Store<string, Record>
+}>;
+
+public let Chains = std.memory.region<ChainsSchema>(stable_id = "nomo-work-chain-v2", store = "work-chain");

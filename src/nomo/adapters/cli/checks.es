@@ -6,12 +6,11 @@ import nomo.adapters.storage.checks.{history_check_guard_finish, history_check_g
 import nomo.adapters.storage.followup_checks.{history_followup_check_guard_finish, history_followup_check_guard_start};
 import nomo.adapters.storage.session_records.event_policy_load;
 import nomo.adapters.storage.work_admission.continuous_work_load;
+import nomo.application.resources.PolicyRoot;
 import nomo.application.sessions.ports.CheckLifecycle;
 import nomo.domain.sessions.event_codec.Policy;
-import nomo.domain.sessions.work.CheckResult;
+import nomo.domain.sessions.work.{CheckOutputRecord, CheckResult};
 import nomo.domain.wire.{ascii_json, encode};
-import nomo.session.check_output.Record;
-import nomo.session.event_policy.PolicyRoot;
 import std.effects.Fs;
 import std.fs.IOError as fs_IOError;
 import std.io.{IOError, println, read_line};
@@ -19,7 +18,7 @@ import std.json.parse;
 
 // JSON string escapes make line controls and invisible Unicode safe to print,
 // and let a reader reconstruct the stored streams without guessing markers.
-public flow render(value: Record) -> Result<string, string> {
+public flow render(value: CheckOutputRecord) -> Result<string, string> {
     let json = match encode(value, "check output conversion refused", "check output encoding refused") {
         Ok(value) => value,
         Err(error) => {
@@ -113,7 +112,7 @@ public flow save_check_output(args: Array<string>, slot: string) -> i32 ![
         println("REFUSED invalid output field count");
         return 1;
     }
-    let value = Record {
+    let value = CheckOutputRecord {
         format = 1,
         slot,
         id = args[1],

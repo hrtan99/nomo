@@ -5,19 +5,15 @@ import nomo.application.editing.ports.Ticket as ports_Ticket;
 import nomo.application.sessions.admission.{available, begin, complete, edit_operations_inspect};
 import nomo.application.sessions.persistence.commit_once;
 import nomo.application.sessions.ports.{CasRows, EditJournal, Submission, Target};
-import nomo.domain.editing.{Selector, same_binding, same_record, selector_error};
-import nomo.domain.sessions.work.{confirm, same_record as work_same_record, validate};
-import nomo.session.edit_operation.{Binding, Record};
-import nomo.session.edit_operation_store.{Followups, Operations};
-import nomo.session.work_record.Record as work_record_Record;
-import nomo.session.work_record_store.Work;
+import nomo.domain.editing.{Binding, EditOperation, Selector, same_binding, same_record, selector_error};
+import nomo.domain.sessions.work.{StoredWorkRecord, confirm, same_record as work_same_record, validate};
 import std.memory.{MemoryEntry, MemoryVersion, Missing, WriteCondition};
 
 public type FirstEditJournal = {};
 
 public type FollowupEditJournal = {};
 
-impl FirstEditJournal ~ CasRows<Record> {
+impl FirstEditJournal ~ CasRows<EditOperation> {
     flow target(self) -> Target ![] {
         return Target {
             store = ["Rows"],
@@ -27,15 +23,18 @@ impl FirstEditJournal ~ CasRows<Record> {
         };
     }
 
-    flow submit(self, value: Record, condition: WriteCondition) -> Submission ![Memory, Error<StorageError>] {
-        return submit_native(Operations.Rows, "operation", value, condition);
+    flow submit(self, value: EditOperation, condition: WriteCondition) -> Submission ![
+        Memory,
+        Error<StorageError>
+    ] {
+        return submit_native(EditOperations.Rows, "operation", value, condition);
     }
 
-    flow read(self) -> Result<Option<MemoryEntry<string, Record>>, string> {
-        return Ok(Operations.Rows.get_entry("operation"));
+    flow read(self) -> Result<Option<MemoryEntry<string, EditOperation>>, string> {
+        return Ok(EditOperations.Rows.get_entry("operation"));
     }
 
-    flow same(self, left: Record, right: Record) -> bool ![] {
+    flow same(self, left: EditOperation, right: EditOperation) -> bool ![] {
         return same_record(left, right);
     }
 }
@@ -63,12 +62,12 @@ impl FirstEditJournal ~ EditJournal {
         return complete(self, ticket);
     }
 
-    flow inspect(self, selector: Selector) -> Result<Option<Record>, string> {
+    flow inspect(self, selector: Selector) -> Result<Option<EditOperation>, string> {
         return edit_operations_inspect(self, selector);
     }
 }
 
-impl FollowupEditJournal ~ CasRows<Record> {
+impl FollowupEditJournal ~ CasRows<EditOperation> {
     flow target(self) -> Target ![] {
         return Target {
             store = ["Rows"],
@@ -78,15 +77,18 @@ impl FollowupEditJournal ~ CasRows<Record> {
         };
     }
 
-    flow submit(self, value: Record, condition: WriteCondition) -> Submission ![Memory, Error<StorageError>] {
-        return submit_native(Followups.Rows, "operation", value, condition);
+    flow submit(self, value: EditOperation, condition: WriteCondition) -> Submission ![
+        Memory,
+        Error<StorageError>
+    ] {
+        return submit_native(FollowupEditOperations.Rows, "operation", value, condition);
     }
 
-    flow read(self) -> Result<Option<MemoryEntry<string, Record>>, string> {
-        return Ok(Followups.Rows.get_entry("operation"));
+    flow read(self) -> Result<Option<MemoryEntry<string, EditOperation>>, string> {
+        return Ok(FollowupEditOperations.Rows.get_entry("operation"));
     }
 
-    flow same(self, left: Record, right: Record) -> bool ![] {
+    flow same(self, left: EditOperation, right: EditOperation) -> bool ![] {
         return same_record(left, right);
     }
 }
@@ -114,7 +116,7 @@ impl FollowupEditJournal ~ EditJournal {
         return complete(self, ticket);
     }
 
-    flow inspect(self, selector: Selector) -> Result<Option<Record>, string> {
+    flow inspect(self, selector: Selector) -> Result<Option<EditOperation>, string> {
         return edit_operations_inspect(self, selector);
     }
 }
@@ -145,7 +147,7 @@ public flow edit_operation_store_complete(ticket: ports_Ticket) -> Result<bool, 
 }
 
 public flow edit_operation_store_inspect(id: string, workspace: string, path: string) -> Result<
-    Option<Record>,
+    Option<EditOperation>,
     string
 > {
     let journal = FirstEditJournal {};
@@ -182,7 +184,7 @@ public flow history_followup_edit_store_complete(ticket: ports_Ticket) -> Result
 }
 
 public flow history_followup_edit_store_inspect(id: string, workspace: string, path: string) -> Result<
-    Option<Record>,
+    Option<EditOperation>,
     string
 > {
     let journal = FollowupEditJournal {};
@@ -197,8 +199,8 @@ flow key(id: string) -> string {
     return "work:" + id;
 }
 
-flow read(id: string) -> Option<MemoryEntry<string, work_record_Record>> {
-    return Work.Rows.get_entry(key(id));
+flow read(id: string) -> Option<MemoryEntry<string, StoredWorkRecord>> {
+    return WorkRecords.Rows.get_entry(key(id));
 }
 
 public flow work_record_store_available(id: string, workspace: string, path: string) -> Result<bool, string> {
@@ -216,7 +218,7 @@ type RecordRows = {
     name: string
 };
 
-impl RecordRows ~ CasRows<work_record_Record> {
+impl RecordRows ~ CasRows<StoredWorkRecord> {
     flow target(self) -> Target ![] {
         return Target {
             store = ["Rows"],
@@ -226,23 +228,23 @@ impl RecordRows ~ CasRows<work_record_Record> {
         };
     }
 
-    flow submit(self, value: work_record_Record, condition: WriteCondition) -> Submission ![
+    flow submit(self, value: StoredWorkRecord, condition: WriteCondition) -> Submission ![
         Memory,
         Error<StorageError>
     ] {
-        return submit_native(Work.Rows, self.name, value, condition);
+        return submit_native(WorkRecords.Rows, self.name, value, condition);
     }
 
-    flow read(self) -> Result<Option<MemoryEntry<string, work_record_Record>>, string> {
-        return Ok(Work.Rows.get_entry(self.name));
+    flow read(self) -> Result<Option<MemoryEntry<string, StoredWorkRecord>>, string> {
+        return Ok(WorkRecords.Rows.get_entry(self.name));
     }
 
-    flow same(self, left: work_record_Record, right: work_record_Record) -> bool ![] {
+    flow same(self, left: StoredWorkRecord, right: StoredWorkRecord) -> bool ![] {
         return work_same_record(left, right);
     }
 }
 
-flow write(row: work_record_Record, condition: WriteCondition) -> Result<MemoryVersion, string> ![
+flow write(row: StoredWorkRecord, condition: WriteCondition) -> Result<MemoryVersion, string> ![
     Memory,
     Error<StorageError>,
     Error<IndexError>,
@@ -255,12 +257,12 @@ flow write(row: work_record_Record, condition: WriteCondition) -> Result<MemoryV
         }
     }
     let selected = key(row.binding.id);
-    return commit_once<work_record_Record, RecordRows>(RecordRows {
+    return commit_once<StoredWorkRecord, RecordRows>(RecordRows {
         name = selected
     }, row, condition, None());
 }
 
-public flow publish(row: work_record_Record) -> Result<Ticket, string> ![
+public flow publish(row: StoredWorkRecord) -> Result<Ticket, string> ![
     Memory,
     Error<StorageError>,
     Error<IndexError>,
@@ -320,7 +322,7 @@ public flow work_record_store_complete(ticket: Ticket, summary: string) -> Resul
 
 // Logical read-only: captured facts never authorize replay or assert current File state.
 public flow work_record_store_inspect(id: string, workspace: string, path: string) -> Result<
-    Option<work_record_Record>,
+    Option<StoredWorkRecord>,
     string
 > {
     let error = selector_error(id, workspace, path);
@@ -371,6 +373,29 @@ public flow work_record_store_inspect(id: string, workspace: string, path: strin
 }
 
 public type Ticket = {
-    row: work_record_Record,
+    row: StoredWorkRecord,
     version: MemoryVersion
 };
+
+alias EditOperationsSchema = MemoryRegion<{
+    Rows: Store<string, EditOperation>
+}>;
+
+public let EditOperations = std.memory.region<EditOperationsSchema>(
+    stable_id = "nomo-edit-operation-v1",
+    store = "edit-operation"
+);
+
+public let FollowupEditOperations = std.memory.region<EditOperationsSchema>(
+    stable_id = "nomo-edit-followup-v1",
+    store = "edit-followup"
+);
+
+alias WorkRecordsSchema = MemoryRegion<{
+    Rows: Store<string, StoredWorkRecord>
+}>;
+
+public let WorkRecords = std.memory.region<WorkRecordsSchema>(
+    stable_id = "nomo-work-record-v1",
+    store = "work-record"
+);

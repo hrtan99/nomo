@@ -2,8 +2,8 @@ module app.output_probe;
 
 import std.io.println;
 import std.text.split;
-import nomo.core.conversation.Event;
-import nomo.core.conversation.State;
+import nomo.domain.conversation.Event;
+import nomo.domain.conversation.State;
 import nomo.domain.conversation.TextTurn as Turn;
 import nomo.application.harness.text.emit;
 import nomo.application.harness.text.failure;

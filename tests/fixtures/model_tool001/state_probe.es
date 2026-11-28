@@ -1,7 +1,7 @@
 module nomo.model_tool_probe;
 
-import nomo.core.conversation.Event;
-import nomo.core.conversation.State;
+import nomo.domain.conversation.Event;
+import nomo.domain.conversation.State;
 import nomo.domain.harness.loop.Session;
 import nomo.domain.harness.loop.Limits;
 import nomo.bootstrap.harness.model_tool_run_loop as run_loop;

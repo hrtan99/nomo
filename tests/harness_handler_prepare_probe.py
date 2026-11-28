@@ -117,12 +117,12 @@ connect_timeout_ms = 2000
 [runtime.profiles.{PROFILE}.model.retry]
 attempts = 1
 delay_ms = 0
-[runtime.profiles.{PROFILE}.filesystem.regions."nomo.tools.workspace.ReadOnlyRoot"]
+[runtime.profiles.{PROFILE}.filesystem.regions."nomo.application.resources.ReadOnlyRoot"]
 root = "{MOUNT}/context"
 read = true
 write = false
 delete = false
-[runtime.profiles.{PROFILE}.filesystem.regions."nomo.tools.edit_file.EditableRoot"]
+[runtime.profiles.{PROFILE}.filesystem.regions."nomo.application.resources.EditableRoot"]
 root = "{MOUNT}/original"
 read = true
 write = false
@@ -233,8 +233,8 @@ def controls(root, folder, record):
     memory = profile.get('memory'); assert memory is None or memory == 'None' or (isinstance(memory, dict) and memory.get('kind') in ('none', 'disabled'))
     assert profile['session']['kind'] == 'none' and not profile.get('tools')
     regions = {value['identity']: value for value in profile['filesystem_regions']}
-    assert set(regions) == {'nomo.tools.workspace.ReadOnlyRoot', 'nomo.tools.edit_file.EditableRoot'}
-    for identity, leaf in [('nomo.tools.workspace.ReadOnlyRoot', 'context'), ('nomo.tools.edit_file.EditableRoot', 'original')]:
+    assert set(regions) == {'nomo.application.resources.ReadOnlyRoot', 'nomo.application.resources.EditableRoot'}
+    for identity, leaf in [('nomo.application.resources.ReadOnlyRoot', 'context'), ('nomo.application.resources.EditableRoot', 'original')]:
         region = regions[identity]
         assert region['root'] == str(MOUNT / leaf) and region['read'] is True and region['write'] is False and not region.get('delete')
     assert profile['adapter_transport_endpoints'] == [dict(host='127.0.0.1', port=PORT, scheme='http')]
@@ -400,9 +400,9 @@ def expected_pending(item, cases):
 def filesystem_observation(record, trace):
     item = record['case']; frozen = record['readonly_fixture_snapshot']
     bindings = {
-        'context': dict(region='nomo.tools.workspace.ReadOnlyRoot', root=str(MOUNT / 'context'), path=item['allowed'][0],
+        'context': dict(region='nomo.application.resources.ReadOnlyRoot', root=str(MOUNT / 'context'), path=item['allowed'][0],
                         declared_mounted_path=str(MOUNT / 'context' / item['allowed'][0]), **frozen['context/context.txt']),
-        'original': dict(region='nomo.tools.edit_file.EditableRoot', root=str(MOUNT / 'original'), path=item['path'],
+        'original': dict(region='nomo.application.resources.EditableRoot', root=str(MOUNT / 'original'), path=item['path'],
                          declared_mounted_path=str(MOUNT / 'original' / item['path']), **frozen['original/note.txt']),
     }
     finished = {event['id']: event for event in trace.get('events', []) if event['kind'] == 'host_request_finished'}

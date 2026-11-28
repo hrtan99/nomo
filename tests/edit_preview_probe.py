@@ -118,7 +118,7 @@ def sources():
 
 def denied_output():
     before, after = 'head\n前😀 old\nend\n', 'head\n前😀 新😀\nend\n'
-    selected = dict(id='preview-denied', workspace='preview-fixture', region='nomo.tools.edit_file.EditableRoot', path='docs/说明.txt')
+    selected = dict(id='preview-denied', workspace='preview-fixture', region='nomo.application.resources.EditableRoot', path='docs/说明.txt')
     canonical = ascii_json(['nomo-edit-request-v1', *selected.values(), before, 'old', '新😀', after])
     digest = lambda value: hashlib.sha256(value.encode()).hexdigest()
     request_digest = digest(canonical)
@@ -157,7 +157,7 @@ def main():
 [runtime.profiles.fixture.memory]
 backend = "sqlite"
 path = "/tmp/edit-preview001.sqlite3"
-[runtime.profiles.fixture.filesystem.regions."nomo.tools.edit_file.EditableRoot"]
+[runtime.profiles.fixture.filesystem.regions."nomo.application.resources.EditableRoot"]
 root = "/tmp"
 read = true
 write = true

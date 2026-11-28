@@ -6,9 +6,8 @@ import nomo.domain.editing.{Contribution, Proposal, project};
 import nomo.domain.harness.read.ReadContext;
 import nomo.domain.harness.typed_work.{Delegation, input_error};
 import nomo.domain.harness.work.Context;
-import nomo.domain.sessions.chain.{Input, ParentFacts, combined as chain_combined, parent_facts as chain_parent_facts};
+import nomo.domain.sessions.chain.{Input, ParentFacts, Record, combined as chain_combined, parent_facts as chain_parent_facts};
 import nomo.domain.wire.encode;
-import nomo.session.work_chain.Record;
 
 @limits([Tokens(2048), ContextTokens(8192)])
 agent HarnessWorkModelReadPlan = {};

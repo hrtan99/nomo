@@ -19,13 +19,13 @@ import nomo.application.harness.ports.{
 };
 import nomo.application.harness.text.{emit, failure};
 import nomo.application.workspace.ports.ReadTools;
-import nomo.core.conversation.{Event, State};
 import nomo.domain.context.{EventPolicy, SelectionRefusal, select};
-import nomo.domain.conversation.{add, capacity_error, charge, stop};
+import nomo.domain.conversation.{Event, State, add, capacity_error, charge, stop};
 import nomo.domain.harness.loop.{
     Context,
     Limits,
     LoopTurn,
+    ReadLedger,
     Session,
     Shape,
     allowed_error,
@@ -76,7 +76,6 @@ import nomo.domain.limits.{
 };
 import nomo.domain.text.{bounded, safe};
 import nomo.domain.workspace.{Outcome, outcome, read_display_display};
-import nomo.harness.harness_tool_contract.Ledger;
 import std.text.{char_count, contains, from_i32, from_usize};
 
 public type BoundedChild = {
@@ -624,7 +623,7 @@ public flow run_output<
     };
 }
 
-flow read_controller_failed(state: Ledger, error: string, resolved: bool) -> Result<Report, Failure> {
+flow read_controller_failed(state: ReadLedger, error: string, resolved: bool) -> Result<Report, Failure> {
     return Err(Failure {
         state,
         error,
@@ -640,7 +639,7 @@ public flow run_context_policy<
     policy: P,
     request: string,
     allowed: Array<string>,
-    initial: Ledger,
+    initial: ReadLedger,
     prefix: string,
     require_tool: bool,
     inspect_plan: bool,
@@ -808,7 +807,7 @@ public flow run_context_policy<
 
 public flow stage(
     phase: string,
-    state: Ledger,
+    state: ReadLedger,
     prefix: string,
     expanded: bool,
     wide: bool,
@@ -932,7 +931,7 @@ impl UnicodeContext ~ ReadContextValidation {
 }
 
 impl UnicodeContext ~ ReadContextBudget {
-    flow reserve(self, value: Ledger, call: bool) -> Result<Ledger, string> ![] {
+    flow reserve(self, value: ReadLedger, call: bool) -> Result<ReadLedger, string> ![] {
         return if self.high_input {
             high_input_bump(value, call)
         } else {
@@ -948,7 +947,7 @@ impl UnicodeContext ~ ReadContextBudget {
         };
     }
 
-    flow settle_child(self, value: Ledger, child: Session) -> Result<Ledger, string> ![] {
+    flow settle_child(self, value: ReadLedger, child: Session) -> Result<ReadLedger, string> ![] {
         return if self.high_input {
             high_input_settle(value, child)
         } else {
@@ -960,8 +959,8 @@ impl UnicodeContext ~ ReadContextBudget {
         };
     }
 
-    flow allowance(self) -> Ledger ![] {
-        return Ledger {
+    flow allowance(self) -> ReadLedger ![] {
+        return ReadLedger {
             steps = 5,
             calls = 3,
             tokens = if self.high_input {
@@ -988,7 +987,7 @@ impl UnicodeContext ~ ReadContextBudget {
 }
 
 impl UnicodeContext ~ ReadContextProgress {
-    flow progress(self, phase: string, state: Ledger, prefix: string) -> Array<string> ![] {
+    flow progress(self, phase: string, state: ReadLedger, prefix: string) -> Array<string> ![] {
         return stage(
             phase,
             state,
@@ -1059,16 +1058,16 @@ impl AsciiContext ~ ReadContextValidation {
 }
 
 impl AsciiContext ~ ReadContextBudget {
-    flow reserve(self, value: Ledger, call: bool) -> Result<Ledger, string> ![] {
+    flow reserve(self, value: ReadLedger, call: bool) -> Result<ReadLedger, string> ![] {
         return bump(value, call);
     }
 
-    flow settle_child(self, value: Ledger, child: Session) -> Result<Ledger, string> ![] {
+    flow settle_child(self, value: ReadLedger, child: Session) -> Result<ReadLedger, string> ![] {
         return settle(value, child);
     }
 
-    flow allowance(self) -> Ledger ![] {
-        return Ledger {
+    flow allowance(self) -> ReadLedger ![] {
+        return ReadLedger {
             steps = 5,
             calls = 3,
             tokens = 6144,
@@ -1079,7 +1078,7 @@ impl AsciiContext ~ ReadContextBudget {
 }
 
 impl AsciiContext ~ ReadContextProgress {
-    flow progress(self, phase: string, state: Ledger, prefix: string) -> Array<string> ![] {
+    flow progress(self, phase: string, state: ReadLedger, prefix: string) -> Array<string> ![] {
         return stage(phase, state, prefix, false, false, false, 4096);
     }
 }

@@ -30,7 +30,7 @@ import nomo.domain.harness.loop.response_error;
 import nomo.domain.harness.loop.response_text;
 import nomo.domain.editing.Request;
 import nomo.domain.editing.propose;
-import nomo.session.work_chain.Record;
+import nomo.domain.sessions.chain.Record;
 import nomo.domain.sessions.chain.initial;
 import nomo.domain.sessions.chain.publish_partial;
 import nomo.domain.sessions.chain.confirm;
@@ -38,12 +38,12 @@ import nomo.domain.sessions.chain.successor;
 import nomo.domain.sessions.chain.work_chain_validate as validate;
 import nomo.domain.sessions.chain.turn_caps;
 import nomo.domain.sessions.chain.summary_reservation;
-import nomo.session.work_chain_journal.Record as Journal;
+import nomo.domain.sessions.chain.EditJournalRecord;
 import nomo.domain.sessions.work.partial;
 import nomo.domain.editing.prepare_original;
 import nomo.domain.editing.bind;
 import nomo.domain.harness.work.Evidence;
-import nomo.harness.harness_tool_contract.Ledger as ReadLedger;
+import nomo.domain.harness.loop.ReadLedger;
 import nomo.adapters.cli.chains.render;
 
 type Check = { label: string, passed: bool };
@@ -131,7 +131,7 @@ flow post_atomic_failure(summary: string) -> bool {
         ledger = ReadLedger { steps = 7, calls = 4, tokens = 8192, tools = 1, scan = 4096 } };
     let work = match partial(binding, evidence, "replace selected text", prepared) { Ok(value) => value, Err(_) => { return false; } };
     let pending = match publish_partial(row, work) { Ok(value) => value, Err(_) => { return false; } };
-    let journal = Journal { format = 2, chain = "root-op", turn = 1, phase = "completed", binding = binding };
+    let journal = EditJournalRecord { format = 2, chain = "root-op", turn = 1, phase = "completed", binding = binding };
     if work_summary_error(summary) == "" || validate(pending) != "" || pending.phase != "summary-unconfirmed" || pending.reserved != summary_reservation() { return false; }
     match confirm(pending, summary) { Ok(_) => { return false; } Err(_) => (), }
     match successor(pending, "opaque-version", "child-op", "update target from context", ["context.txt"], turn_caps()) { Ok(_) => { return false; } Err(_) => (), }

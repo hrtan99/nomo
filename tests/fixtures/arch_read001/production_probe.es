@@ -1,7 +1,7 @@
 module app.production_probe;
 
 import nomo.domain.workspace.Outcome;
-import nomo.tools.workspace.ReadOnlyRoot;
+import nomo.application.resources.ReadOnlyRoot;
 import nomo.adapters.filesystem.workspace.read_file;
 import nomo.adapters.filesystem.workspace.search_files;
 import nomo.domain.harness.loop.Limits;

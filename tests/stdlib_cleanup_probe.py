@@ -58,7 +58,7 @@ boundary_policy = "stdlib-cleanup"
 [runtime.profiles.fixture.policy]
 mode = "local-static"
 rules = ["console=allow", "filesystem:Fs.read=allow"]
-[runtime.profiles.fixture.filesystem.regions."nomo.tools.workspace.ReadOnlyRoot"]
+[runtime.profiles.fixture.filesystem.regions."nomo.application.resources.ReadOnlyRoot"]
 root = "/search-fixture"
 read = true
 write = false

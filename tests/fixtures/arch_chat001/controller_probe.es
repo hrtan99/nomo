@@ -4,22 +4,22 @@ import std.io.println;
 import std.io.IOError as ConsoleError;
 import std.fs.IOError as FileError;
 import std.effects.Fs;
-import nomo.tools.workspace.ReadOnlyRoot;
+import nomo.application.resources.ReadOnlyRoot;
 import std.text.char_count as len;
 import std.text.split;
-import nomo.core.conversation.Event;
-import nomo.core.conversation.State;
+import nomo.domain.conversation.Event;
+import nomo.domain.conversation.State;
 import nomo.domain.harness.loop.Session;
 import nomo.domain.harness.loop.LoopTurn;
 import nomo.domain.harness.loop.Context as ChildContext;
 import nomo.domain.harness.loop.context_error as child_context_error;
-import nomo.harness.harness_tool_contract.Ledger;
+import nomo.domain.harness.loop.ReadLedger;
 import nomo.domain.harness.read.Observed;
 import nomo.domain.harness.read.numbers as canonical_numbers;
 import nomo.domain.harness.read.numbers as legacy_numbers;
 import nomo.bootstrap.harness.ascii_read_child_turn as child_turn;
-import nomo.harness.harness_tool_chat_contract.Previous;
-import nomo.harness.harness_tool_chat_contract.Invocation;
+import nomo.domain.harness.chat.Previous;
+import nomo.domain.harness.chat.Invocation;
 import nomo.domain.harness.chat.Context;
 import nomo.domain.harness.chat.Completed;
 import nomo.domain.harness.chat.TurnResult;
@@ -39,9 +39,9 @@ import nomo.adapters.cli.checkpoints.harness_successor_entry_run_show as success
 
 // This exact shape/helper is copied from the unchanged original pure fixture.
 // Only its original zero_call_child_context_proven Check is embedded below.
-type OriginalCheck = { label: string, mode: string, ledger: Ledger, usage: Ledger, maximum: Ledger, invocation: Invocation,
+type OriginalCheck = { label: string, mode: string, ledger: ReadLedger, usage: ReadLedger, maximum: ReadLedger, invocation: Invocation,
     prior: Previous, context: Context, child: Session, legacy: Session, status: i32, allowed: Array<string>,
-    accepted: bool, expected_ledger: Ledger, expected_observed: Observed };
+    accepted: bool, expected_ledger: ReadLedger, expected_observed: Observed };
 type Vector = { label: string, request: string, allowed: Array<string>, before: Invocation, plan: Context,
     aggregate: Context, task: string, selected: State, child: LoopTurn, raw_plan: string, answer: string,
     expected: TurnResult };
@@ -94,7 +94,7 @@ flow exercise(item: Vector, invocation: Invocation) -> TurnResult {
     return actual;
 }
 public flow numbers_probe(args: Array<string>) -> bool {
-    let value = Ledger { steps = 12, calls = 7, tokens = 14336, tools = 1, scan = 4096 };
+    let value = ReadLedger { steps = 12, calls = 7, tokens = 14336, tools = 1, scan = 4096 };
     let expected = "steps=12 calls=7 tokens=14336 tools=1 scan=4096";
     return canonical_numbers(value) == expected && legacy_numbers(value) == expected;
 }

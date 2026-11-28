@@ -2,22 +2,16 @@ module nomo.application.conversation.ports;
 
 import nomo.application.editing.ports.ChangeOperations;
 import nomo.application.execution.ports.{CommandOperations, ProcessOperations};
+import nomo.application.resources.ProjectRoot;
 import nomo.application.workspace.ports.WorkspaceObservations;
-import nomo.domain.changes.ChangeOutcome;
+import nomo.domain.archives.CopyJob;
+import nomo.domain.attempts.Attempt;
+import nomo.domain.changes.{ChangeOutcome, Journal};
 import nomo.domain.commands.{CheckOutcome, Command as commands_Command, CommandOutput};
-import nomo.domain.conversation.{Answer, ChatMessage, ModelTurn, Summary};
-import nomo.domain.processes.{
-    ArchivedJob as processes_ArchivedJob,
-    ArchivedOutput as processes_ArchivedOutput,
-    InputResult
-};
+import nomo.domain.conversation.{Answer, ChatMessage, ModelTurn, SavedSession, Summary};
+import nomo.domain.processes.{ArchivedJob as processes_ArchivedJob, ArchivedOutput as processes_ArchivedOutput, InputResult, Job, JobEvent};
 import nomo.domain.settings.{ConfigurationStatus, Settings};
 import nomo.domain.workspace.FileContent;
-import nomo.native.history.{CopyJob, Session};
-import nomo.native.lifecycle.Attempt;
-import nomo.native.mutations.Journal;
-import nomo.native.processes.{Job, JobEvent};
-import nomo.native.workspace.ProjectRoot;
 import std.effects.Fs;
 import std.fs.{IOError as fs_IOError, ReadLimitError};
 import std.io.IOError;
@@ -77,11 +71,11 @@ public spec SummaryModel {
 }
 
 public spec ConversationPicker {
-    flow choose(self, sessions: Array<Session>) -> Option<string> ![Console, Error<IOError>];
+    flow choose(self, sessions: Array<SavedSession>) -> Option<string> ![Console, Error<IOError>];
 }
 
 public spec ConversationReader {
-    flow load(self, id: string) -> Session ![Memory, Error<StorageError>];
+    flow load(self, id: string) -> SavedSession ![Memory, Error<StorageError>];
     flow message(self, id: string, index: i64) -> ChatMessage ![
         Memory,
         Error<StorageError>,
@@ -105,19 +99,19 @@ public spec ConversationWriter {
 
 public spec ConversationCatalog {
     flow rename(self, id: string, title: string) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>];
-    flow create(self, workspace: string, title: string) -> Session ![
+    flow create(self, workspace: string, title: string) -> SavedSession ![
         Memory,
         Error<StorageError>,
         Error<MemoryConflict>
     ];
     flow selected(self, workspace: string) -> Option<string> ![Memory, Error<StorageError>];
-    flow select(self, workspace: string, id: string) -> Session ![Memory, Error<StorageError>];
-    flow sessions(self, workspace: string) -> Array<Session> ![
+    flow select(self, workspace: string, id: string) -> SavedSession ![Memory, Error<StorageError>];
+    flow sessions(self, workspace: string) -> Array<SavedSession> ![
         Memory,
         Error<StorageError>,
         Error<BudgetExceeded>
     ];
-    flow all_sessions(self) -> Array<Session> ![Memory, Error<StorageError>, Error<BudgetExceeded>];
+    flow all_sessions(self) -> Array<SavedSession> ![Memory, Error<StorageError>, Error<BudgetExceeded>];
 }
 
 public spec GenerationReservation {
@@ -244,13 +238,13 @@ public enum TerminalEvent {
     Help,
     Welcome,
     Project(string),
-    SessionHeader(Session),
+    SessionHeader(SavedSession),
     CopyState(CopyJob),
     Pending(string),
     UnresolvedAttempt(Attempt),
     History(ChatMessage),
     MoreHistory(i64),
-    Status(Session),
+    Status(SavedSession),
     Git(CommandOutput),
     CommandResult(CommandOutput),
     ProcessJob(Job),

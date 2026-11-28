@@ -83,7 +83,7 @@ def manifest(item, directory, fixture_root):
         assert profiles[PROFILES[phase]]["memory"] == {"backend": "sqlite", "path": "file:" + str(target) + "?mode=rw"}
     assert profiles[PROFILES["save"]]["model"]["base_url"] == "http://127.0.0.1:" + str(chat.PORT) + "/v1"
     assert profiles[PROFILES["save"]]["model"]["retry"] == {"attempts": 1, "delay_ms": 0}
-    assert profiles[PROFILES["save"]]["filesystem"]["regions"] == {"nomo.tools.workspace.ReadOnlyRoot": {
+    assert profiles[PROFILES["save"]]["filesystem"]["regions"] == {"nomo.application.resources.ReadOnlyRoot": {
         "root": str(fixture_root / item["variant"]), "read": True, "write": False}}
     return text
 

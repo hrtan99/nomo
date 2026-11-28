@@ -2,8 +2,8 @@ module app.provider_stage_probe;
 
 import std.io.println;
 import std.text.split;
-import nomo.core.conversation.Event;
-import nomo.core.conversation.State;
+import nomo.domain.conversation.Event;
+import nomo.domain.conversation.State;
 import nomo.domain.conversation.TextTurn as Turn;
 import nomo.application.harness.text.model_turn_controller;
 import nomo.application.harness.ports.Context as LegacyContext;

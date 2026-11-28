@@ -2,10 +2,10 @@ module app.contract_probe;
 
 import std.io.println;
 import std.text.char_count as len;
-import nomo.core.conversation.Event;
-import nomo.core.conversation.State;
+import nomo.domain.conversation.Event;
+import nomo.domain.conversation.State;
 import nomo.domain.harness.loop.Session;
-import nomo.harness.harness_tool_contract.Ledger;
+import nomo.domain.harness.loop.ReadLedger;
 import nomo.domain.harness.read.ReadContext as Context;
 import nomo.domain.harness.read.Observed;
 import nomo.domain.harness.read.read_fresh as fresh;
@@ -14,8 +14,8 @@ import nomo.domain.harness.read.settle;
 import nomo.domain.harness.read.read_inspect as inspect;
 import nomo.domain.harness.read.read_context_error as context_error;
 
-type Check = { label: string, mode: string, ledger: Ledger, child: Session, status: i32, context: Context,
-    accepted: bool, expected_ledger: Ledger, expected_observed: Observed };
+type Check = { label: string, mode: string, ledger: ReadLedger, child: Session, status: i32, context: Context,
+    accepted: bool, expected_ledger: ReadLedger, expected_observed: Observed };
 
 flow event(role: string, kind: string, name: string, text: string) -> Event {
     return Event { role = role, kind = kind, name = name, text = text };

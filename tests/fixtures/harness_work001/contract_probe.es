@@ -11,8 +11,8 @@ import std.agent.message.Message;
 import nomo.adapters.cli.edit_input.Input;
 import nomo.adapters.cli.edit_input.Work;
 import nomo.adapters.cli.edit_input.harness_work_args_parse as parse_args;
-import nomo.harness.harness_tool_contract.Ledger as ReadLedger;
-import nomo.harness.harness_edit_contract.Ledger as EditLedger;
+import nomo.domain.harness.loop.ReadLedger;
+import nomo.domain.harness.edit.EditLedger;
 import nomo.domain.harness.edit.Context as EditContext;
 import nomo.domain.harness.work.Evidence;
 import nomo.domain.harness.work.Context;
@@ -23,7 +23,7 @@ import nomo.domain.harness.work.native_tokens;
 import nomo.domain.harness.work.evidence_error;
 import nomo.domain.harness.work.finish_evidence;
 import nomo.domain.harness.work.context_error;
-import nomo.harness.harness_work_contract.Ledger;
+import nomo.domain.harness.work.WorkLedger;
 
 type Check = { label: string, passed: bool };
 flow slash() -> string { return std.text.from_char('\\'); }
@@ -46,7 +46,7 @@ flow roundtrip(value: Context) -> bool {
 flow arguments(args: Array<string>, expected: Work, denied: bool) -> bool {
     return match parse_args(args) { Ok(value) => !denied && value == expected, Err(_) => denied };
 }
-flow blocked(state: Ledger) -> bool { return match bump_edit(state, true) { Ok(_) => false, Err(_) => true }; }
+flow blocked(state: WorkLedger) -> bool { return match bump_edit(state, true) { Ok(_) => false, Err(_) => true }; }
 flow unused() -> bool {
     let state = fresh();
     return ledger_error(state) == "" && state.read.steps == 0 && state.read.calls == 0 && state.read.tokens == 0 &&
@@ -54,7 +54,7 @@ flow unused() -> bool {
         native_tokens(state) == 0 && blocked(state);
 }
 flow normal_ledger(read: ReadLedger) -> bool {
-    let initial = fresh(); var state = Ledger { read = read, edit = initial.edit }; var step: usize = 0;
+    let initial = fresh(); var state = WorkLedger { read = read, edit = initial.edit }; var step: usize = 0;
     if ledger_error(state) != "" || native_tokens(state) != 32768 { return false; }
     for call in [true, false, true, false, false, true] limit Iterations(6) {
         state = match bump_edit(state, call) { Ok(value) => value, Err(_) => { return false; } };

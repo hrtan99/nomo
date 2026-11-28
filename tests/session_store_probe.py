@@ -75,37 +75,7 @@ def fixture_source(mode, supplied=None):
     s[1]['session_id'] = '__SESSION_ID__'
     # Typed metadata is synthetic; bodies arrive as lossless JSON through codec.
     expressions = render(s).replace('"__SESSION_ID__"', 'id')
-    return '''module app.main;
-import std.io.println;
-import std.collections.len as count;
-import std.text.char_count as len;
-import std.json.JsonValue;
-import std.json.stringify;
-import std.json.parse;
-import nomo.core.conversation.Event;
-import nomo.core.conversation.State;
-import nomo.session.session_state.Caps;
-import nomo.session.session_state.Ledger;
-import nomo.session.session_state.Operation;
-import nomo.session.session_state.Reference;
-import nomo.session.session_state.Snapshot;
-import nomo.session.session_state.Request;
-import nomo.session.session_state.Projection;
-import nomo.session.store_record.with_events;
-import nomo.session.store_record.session_key;
-import nomo.session.bundle_codec.decode;
-import nomo.session.bundle_codec.encode;
-import nomo.session.session_store.save;
-import nomo.session.session_store.reload;
-import nomo.session.store_record.pending;
-import nomo.session.store_record.published;
-import nomo.session.store_record.Record;
-import nomo.session.metadata_store.write;
-import nomo.session.history_store.append;
-import std.memory.Missing;
-
-flow fixture(id: string, json: string) -> Snapshot {
-    let original = ''' + expressions + ''';
+    return 'module app.main;\nimport std.io.println;\nimport std.collections.len as count;\nimport std.text.char_count as len;\nimport std.json.JsonValue;\nimport std.json.stringify;\nimport std.json.parse;\nimport nomo.domain.conversation.Event;\nimport nomo.domain.conversation.State;\nimport nomo.domain.sessions.state.Caps;\nimport nomo.domain.sessions.state.Ledger;\nimport nomo.domain.sessions.state.Operation;\nimport nomo.domain.sessions.state.Reference;\nimport nomo.domain.sessions.state.Snapshot;\nimport nomo.domain.sessions.state.Request;\nimport nomo.domain.sessions.state.Projection;\nimport nomo.domain.sessions.state.with_events;\nimport nomo.domain.sessions.state.session_key;\nimport nomo.session.bundle_codec.decode;\nimport nomo.session.bundle_codec.encode;\nimport nomo.session.session_store.save;\nimport nomo.session.session_store.reload;\nimport nomo.domain.sessions.state.pending;\nimport nomo.domain.sessions.state.published;\nimport nomo.domain.sessions.state.MetadataRecord;\nimport nomo.adapters.storage.session_records.write;\nimport nomo.session.history_store.append;\nimport std.memory.Missing;\n\nflow fixture(id: string, json: string) -> Snapshot {\n    let original = ' + expressions + ''';
     let body = match decode(json) { Ok(value) => value, Err(_) => { abort("bad fixture input"); } };
     if count(body.bodies) != count(original.history.events) { abort("bad fixture count"); }
     var events: Array<Event> = [];

@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 import subprocess
 
-from nomo_migration import digest, native_packet, project_packet, native_snapshots
+from nomo_migration import digest, native_packet, project_packet, native_snapshots, relocated_packet, write_relocation_packet
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -20,21 +20,46 @@ def migrate(source, destination, source_format):
     incoming, state, evidence = (destination / name for name in ('input', 'state', 'trace'))
     for directory in (incoming, state, evidence):
         directory.mkdir(mode=0o700)
+    overlay = destination / 'compose.json'
+    overlay.write_text(json.dumps({'services': {'dev': {'volumes': [
+        {'type': 'bind', 'source': str(incoming), 'target': '/migration', 'read_only': source_format != 'native-02413'},
+        {'type': 'bind', 'source': str(state), 'target': '/migration-target'},
+        {'type': 'bind', 'source': str(evidence), 'target': '/migration-evidence'}]}},
+        'volumes': {'cargo-cache': {'external': True}}}))
+    command = ['docker', 'compose', '--project-name', 'nomo-native-migrate', '--env-file', '/dev/null']
+    for name in ('compose.yaml', 'config/etas-02413-official-compose.yaml',
+                 'config/local-tryout-compose.yaml', 'config/etas-runtime-cache-compose.yaml',
+                 'config/nomo-native-launch-compose.yaml', str(overlay)):
+        command += ['--file', str(ROOT / name)]
+    command += ['run', '--rm', '--no-deps', '--pull', 'never', '--tty=false', 'dev',
+                '/home/nomo/.cargo/bin/etas', '--no-config', '--quiet', '--cache', 'off', 'run']
+    environment = dict(os.environ, NOMO_NATIVE_UID=str(os.getuid()), NOMO_NATIVE_GID=str(os.getgid()))
+    def run_export():
+        return subprocess.run(command + ['/migration/exporter', '--allow-effects',
+                              '--trace-out', '/migration-evidence/export.trace.json'], cwd=ROOT,
+                              env=environment, stdin=subprocess.DEVNULL, capture_output=True, text=True)
     before = digest(source)
-    image = (native_packet(source, incoming / 'legacy-source.sqlite3') if source_format == 'native-0135' else
-             project_packet(source, incoming / 'legacy-source.sqlite3', state))
+    retained = None
+    if source_format == 'native-02413':
+        image, retained = relocated_packet(ROOT, source, incoming, state, evidence, run_export)
+    else:
+        image = (native_packet(source, incoming / 'legacy-source.sqlite3') if source_format == 'native-0135' else
+                 project_packet(source, incoming / 'legacy-source.sqlite3', state))
     snapshots = native_snapshots(source, image, state) if source_format == 'native-0135' else None
     project_backup = (json.loads((incoming / 'project-files.json').read_text())
                       if source_format == 'project' else None)
-    count = (len(image['rows']) if source_format == 'native-0135' else
+    count = (len(image['rows']) if source_format in ('native-0135', 'native-02413') else
              sum(1 + len(conversation['events']) for conversation in image['conversations']) + len(image['edits']) + len(image['jobs']))
     snapshot = incoming / 'snapshot.json'
-    snapshot.write_text(json.dumps(image, ensure_ascii=False, separators=(',', ':')) + '\n')
-    snapshot.chmod(0o600)
+    if source_format == 'native-02413':
+        write_relocation_packet(incoming, image)
+    else:
+        snapshot.write_text(json.dumps(image, ensure_ascii=False, separators=(',', ':')) + '\n')
+        snapshot.chmod(0o600)
     receipt = {'status': 'incomplete', 'source_database_sha256': before,
                'source_snapshot_sha256': image['source_sha256'], 'source_format': source_format, 'rows': count,
                'source': str(source), 'state': str(state),
-               'snapshots': snapshots,
+               'snapshots': snapshots, 'retained_directories': retained,
                'project_files_backup': project_backup,
                'project_edit_import': ({'status': 'incomplete', 'edits': project_backup['prepared_edits'],
                                         'unowned_edits': project_backup['unowned_edits']}
@@ -42,7 +67,10 @@ def migrate(source, destination, source_format):
                'project_job_import': ({'status': 'incomplete', 'jobs': project_backup['prepared_jobs'],
                                        'ownership': 'workspace', 'live_handles': False}
                                       if source_format == 'project' else None),
-               'scope': ('Native format-3 records only. Original receipts/CAS namespaces remain in the source backup; '
+               'scope': ('Native 0.24.13 typed records, counters, reservations and unknown outcomes copied exactly. '
+                         'Historical root/binding/version strings are retained; fresh writes create actual destination versions. '
+                         'Old receipts remain in the immutable backup. No old approval or live process is reinstated.'
+                         if source_format == 'native-02413' else 'Native format-3 records only. Original receipts/CAS namespaces remain in the source backup; '
                          'fresh SDK writes establish new destination versions.' if source_format == 'native-0135' else
                          'Shipping project database only: original session IDs, full source archives, summary fences '
                          'and catalogue selection. Source event IDs map to native local positions; original IDs, '
@@ -57,21 +85,11 @@ def migrate(source, destination, source_format):
                         ' No command, model, recovery or live-handle replay.'}
     manifest = destination / 'migration.json'
     manifest.write_text(json.dumps(receipt, indent=2) + '\n')
-    overlay = destination / 'compose.json'
-    overlay.write_text(json.dumps({'services': {'dev': {'volumes': [
-        {'type': 'bind', 'source': str(incoming), 'target': '/migration', 'read_only': True},
-        {'type': 'bind', 'source': str(state), 'target': '/migration-target'},
-        {'type': 'bind', 'source': str(evidence), 'target': '/migration-evidence'}]}},
-        'volumes': {'cargo-cache': {'external': True}}}))
-    command = ['docker', 'compose', '--project-name', 'nomo-native-migrate', '--env-file', '/dev/null']
-    for name in ('compose.yaml', 'config/etas-02413-official-compose.yaml',
-                 'config/local-tryout-compose.yaml', 'config/etas-runtime-cache-compose.yaml',
-                 'config/nomo-native-launch-compose.yaml', str(overlay)):
-        command += ['--file', str(ROOT / name)]
-    command += ['run', '--rm', '--no-deps', '--pull', 'never', '--tty=false', 'dev',
-                '/home/nomo/.cargo/bin/etas', '--no-config', '--cache', 'off', 'run', '/workspace',
-                '--flow', 'native_state_migrate' if source_format == 'native-0135' else 'project_state_migrate', '--profile', 'nomo-native-migrate', '--allow-effects',
-                '--trace-out', '/migration-evidence/trace.json']
+    if source_format == 'native-02413':
+        command += ['/migration/importer', '--allow-effects', '--trace-out', '/migration-evidence/trace.json']
+    else:
+        command += ['/workspace', '--flow', 'native_state_migrate' if source_format == 'native-0135' else 'project_state_migrate',
+                    '--profile', 'nomo-native-migrate', '--allow-effects', '--trace-out', '/migration-evidence/trace.json']
     print('[MIGRATE] Prepared ' + str(count) + ' source rows; destination ' + str(destination), flush=True)
     environment = dict(os.environ, NOMO_NATIVE_UID=str(os.getuid()), NOMO_NATIVE_GID=str(os.getgid()))
     result = subprocess.run(command, cwd=ROOT, env=environment, stdin=subprocess.DEVNULL, capture_output=True, text=True)
@@ -92,7 +110,7 @@ def migrate(source, destination, source_format):
         print(result.stderr or result.stdout, end='')
         print('[MIGRATE] Incomplete destination retained at ' + str(destination))
     else:
-        label = 'Native state' if source_format == 'native-0135' else 'Conversation history, catalogue, owned edit journals and workspace job archives'
+        label = 'Native state' if source_format in ('native-0135', 'native-02413') else 'Conversation history, catalogue, owned edit journals and workspace job archives'
         print('[MIGRATE] ' + label + ' completed. Original source retained; launch with NOMO_NATIVE_STATE=' + str(state))
         if project_backup and project_backup['files']:
             print('[MIGRATE] Original Python edit/job files are backed up in ' + str(incoming) +
@@ -102,7 +120,7 @@ def migrate(source, destination, source_format):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--from', dest='source_format', choices=('native-0135', 'project'), default='native-0135',
+    parser.add_argument('--from', dest='source_format', choices=('native-0135', 'native-02413', 'project'), default='native-0135',
                         help='source format; stop old Nomo and finish/stop its background jobs before migration')
     parser.add_argument('source', type=Path, help='old conversations.sqlite3 or shipping project.sqlite3')
     parser.add_argument('destination', type=Path, help='new directory; it must not already exist')

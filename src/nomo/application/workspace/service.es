@@ -3,6 +3,7 @@ module nomo.application.workspace.service;
 import nomo.application.conversation.ports.{ConversationConfiguration, ConversationReader, ConversationWriter};
 import nomo.application.execution.commands.execute_readonly;
 import nomo.application.execution.ports.CommandOperations;
+import nomo.application.resources.{LaunchRoot, ProjectRoot};
 import nomo.application.scope.{SessionContext, SettingsContext};
 import nomo.application.workspace.ports.{
     ConfigurationCacheStore,
@@ -20,7 +21,7 @@ import nomo.application.workspace.ports.{
     WorkspaceObservations
 };
 import nomo.domain.commands.CommandOutput;
-import nomo.domain.settings.{Settings, defaults};
+import nomo.domain.settings.{CachedConfiguration, Settings, defaults};
 import nomo.domain.wire.encode;
 import nomo.domain.workspace.{
     FileContent,
@@ -36,9 +37,6 @@ import nomo.domain.workspace.{
     remembered,
     saved
 };
-import nomo.native.configuration.Cached;
-import nomo.native.projects.LaunchRoot;
-import nomo.native.workspace.ProjectRoot;
 import std.crypto.constant_time_eq;
 import std.effects.Fs;
 import std.fs.{IOError as fs_IOError, ReadLimitError, WorkspacePath, path as fs_path, relative_name};
@@ -109,11 +107,14 @@ impl ConfigurationLoader<
             abort("configuration entry conversion failed: " + converted.output.stderr);
         }
         let settings = self.codec.decode_json(converted.output.stdout);
-        self.cache.remember(workspace, Cached {
-            digest,
-            session,
-            result_event = converted.result_event
-        });
+        self.cache.remember(
+            workspace,
+            CachedConfiguration {
+                digest,
+                session,
+                result_event = converted.result_event
+            }
+        );
         return settings;
     }
 }

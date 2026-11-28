@@ -9,15 +9,15 @@ import std.json.JsonValue;
 import std.json.parse;
 import std.json.stringify;
 import std.agent.message.Message;
-import nomo.session.edit_operation.Binding;
-import nomo.session.work_record.Record;
+import nomo.domain.editing.Binding;
+import nomo.domain.sessions.work.StoredWorkRecord;
 import nomo.domain.sessions.work.Captured;
 import nomo.domain.sessions.work.partial;
 import nomo.domain.sessions.work.confirm;
 import nomo.domain.sessions.work.validate;
 import nomo.domain.sessions.work.admit;
 import nomo.domain.sessions.work.same_record;
-import nomo.harness.harness_tool_contract.Ledger as ReadLedger;
+import nomo.domain.harness.loop.ReadLedger;
 import nomo.domain.harness.work.Evidence;
 import nomo.domain.editing.prepare_original;
 import nomo.domain.editing.bind;
@@ -61,7 +61,7 @@ flow roundtrip(binding: Binding, evidence: Evidence, task: string, before: strin
     return match confirm(complete, summary) { Ok(_) => false, Err(_) => true };
 }
 flow body(binding: Binding, phase: string, format: i32, raw: string, accepted: bool) -> bool {
-    let row = Record { format = format, phase = phase, binding = binding, body = raw };
+    let row = StoredWorkRecord { format = format, phase = phase, binding = binding, body = raw };
     return match validate(row) { Ok(_) => accepted, Err(_) => !accepted };
 }
 flow fields(binding: Binding, phase: string, format: i32, values: Array<string>, accepted: bool) -> bool {
@@ -79,7 +79,7 @@ flow padding(binding: Binding, values: Array<string>, total: usize, accepted: bo
 }
 flow summary(binding: Binding, values: Array<string>, text: string, accepted: bool) -> bool {
     let raw = encoded(values); if raw == "" { return false; }
-    let row = Record { format = 1, phase = "summary-unconfirmed", binding = binding, body = raw };
+    let row = StoredWorkRecord { format = 1, phase = "summary-unconfirmed", binding = binding, body = raw };
     return match confirm(row, text) {
         Ok(_) => accepted, Err(_) => !accepted };
 }

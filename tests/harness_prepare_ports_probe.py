@@ -101,7 +101,7 @@ typed_output_encoding = "output-tool"
 [runtime.profiles.local.model.retry]
 attempts = 1
 delay_ms = 0
-[runtime.profiles.local.filesystem.regions."nomo.tools.workspace.ReadOnlyRoot"]
+[runtime.profiles.local.filesystem.regions."nomo.application.resources.ReadOnlyRoot"]
 root = "/fixture-read"
 read = true
 write = false

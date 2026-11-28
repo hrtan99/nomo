@@ -2,9 +2,8 @@ module nomo.adapters.storage.journals;
 
 import nomo.application.editing.ports.ChangeJournalStore;
 import nomo.application.execution.ports.AttemptRepository;
-import nomo.domain.attempts.unresolved as attempts_unresolved;
-import nomo.native.lifecycle.Attempt;
-import nomo.native.mutations.{Data as mutations_Data, Journal, Step};
+import nomo.domain.attempts.{Attempt, unresolved as attempts_unresolved};
+import nomo.domain.changes.{Journal, Step};
 import std.memory.MemoryCursor;
 import std.text.from_i64;
 
@@ -110,19 +109,19 @@ public type NativeChangeJournals = {};
 
 impl NativeChangeJournals ~ ChangeJournalStore {
     flow lookup(self, id: string) -> Option<Journal> ![Memory, Error<StorageError>] {
-        return mutations_Data.Journals.get(id);
+        return FileJournals.Journals.get(id);
     }
 
     flow insert(self, value: Journal) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>] {
-        mutations_Data.Journals.insert(value.id, value);
+        FileJournals.Journals.insert(value.id, value);
     }
 
     flow save(self, value: Journal) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>] {
-        mutations_Data.Journals.put(value.id, value);
+        FileJournals.Journals.put(value.id, value);
     }
 
     flow step(self, key: string) -> Option<Step> ![Memory, Error<StorageError>] {
-        return mutations_Data.Steps.get(key);
+        return FileJournals.Steps.get(key);
     }
 
     flow save_step(self, key: string, value: Step) -> unit ![
@@ -130,14 +129,14 @@ impl NativeChangeJournals ~ ChangeJournalStore {
         Error<StorageError>,
         Error<MemoryConflict>
     ] {
-        mutations_Data.Steps.put(key, value);
+        FileJournals.Steps.put(key, value);
     }
 
     flow list(self, session: string) -> Array<Journal> ![Memory, Error<StorageError>, Error<BudgetExceeded>] {
         var result: Array<Journal> = [];
         var cursor: Option<MemoryCursor> = None();
         @limits([Iterations(2147483647)]) while true {
-            let page = mutations_Data.Journals.page(cursor, 100);
+            let page = FileJournals.Journals.page(cursor, 100);
             result = result.extend(
                 page.entries.iter()
                     .filter(item => item.value.session == session)
@@ -155,3 +154,13 @@ impl NativeChangeJournals ~ ChangeJournalStore {
         return result;
     }
 }
+
+alias FileJournalsSchema = MemoryRegion<{
+    Journals: Store<string, Journal>,
+    Steps: Store<string, Step>
+}>;
+
+public let FileJournals = std.memory.region<FileJournalsSchema>(
+    stable_id = "nomo-native-file-journals-v1",
+    store = "native-file-journals"
+);

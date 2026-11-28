@@ -4,13 +4,13 @@ import std.io.println;
 import nomo.adapters.filesystem.workspace.search_files;
 import nomo.domain.harness.loop.allowed_error;
 import nomo.domain.harness.read.decode_child;
-import nomo.session.harness_checkpoint.Identity;
+import nomo.domain.sessions.checkpoints.Identity;
 import nomo.domain.sessions.checkpoints.identity_error;
 import nomo.adapters.cli.edit_input.parse_unicode;
 import nomo.adapters.cli.edit_input.harness_work_args_parse as parse_legacy;
 import nomo.domain.harness.work.Evidence;
 import nomo.domain.harness.work.evidence_error;
-import nomo.harness.harness_tool_contract.Ledger;
+import nomo.domain.harness.loop.ReadLedger;
 import nomo.domain.editing.prepare_original;
 import nomo.domain.editing.bind;
 import nomo.domain.sessions.work.partial;
@@ -45,7 +45,7 @@ flow search_probe(args: Array<string>) -> i32 {
     if identity_error(old) != "" || identity_error(newer) == "" { abort("legacy identity compatibility"); }
     let evidence = Evidence { request = "task", task = "search", operation = "search", files = allowed, literal = "needle",
         outcome = "complete: d.txt:1<LF>", result = "found", summary = "found", allowed = allowed,
-        ledger = Ledger { steps = 7, calls = 4, tokens = 8192, tools = 1, scan = 4096 } };
+        ledger = ReadLedger { steps = 7, calls = 4, tokens = 8192, tools = 1, scan = 4096 } };
     if evidence_error(evidence) != "" { abort("four-file evidence refused"); }
     let prepared = match prepare_original("note.txt", "before old\n", "old", "new") { Ok(item) => item, Err(_) => abort("edit setup") };
     let binding = match bind("edit", "workspace", "note.txt", prepared) { Ok(item) => item, Err(_) => abort("binding setup") };

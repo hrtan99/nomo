@@ -20,21 +20,19 @@ import nomo.adapters.storage.session_records.event_policy_load;
 import nomo.adapters.storage.status.{LegacySessionStatusReader, RecoverableSessionStatusReader};
 import nomo.adapters.storage.work_admission.inspect;
 import nomo.adapters.storage.work_history.{LegacyWorkFacts, snapshot as work_history_snapshot};
+import nomo.application.resources.{PolicyRoot, ReadOnlyRoot};
 import nomo.application.sessions.chat.{finish, open, reserve_loaded};
 import nomo.application.sessions.ports.Entry;
 import nomo.bootstrap.harness.{read_tool_chat_run_private_turn, run_with_history};
 import nomo.bootstrap.work.{run, run_after_followup, run_turn};
-import nomo.core.conversation.Event;
+import nomo.domain.conversation.Event;
+import nomo.domain.editing.EditOperation;
 import nomo.domain.harness.loop.candidate_error;
 import nomo.domain.harness.read.question_error;
 import nomo.domain.sessions.chat.policy as chat_policy;
-import nomo.domain.sessions.work.BudgetFacts;
+import nomo.domain.sessions.work.{BudgetFacts, ContinuousEntry};
 import nomo.domain.text.within;
 import nomo.domain.wire.ascii_json_with;
-import nomo.session.continuous_work.Entry as continuous_work_Entry;
-import nomo.session.edit_operation.Record;
-import nomo.session.event_policy.PolicyRoot;
-import nomo.tools.workspace.ReadOnlyRoot;
 import std.agent.message.Message;
 import std.effects.Fs;
 import std.fs.IOError as fs_IOError;
@@ -563,7 +561,7 @@ public flow recoverable_read_session_run(args: Array<string>) -> i32 ![
     return 0;
 }
 
-flow edit_phase(result: Result<Option<Record>, string>) -> string {
+flow edit_phase(result: Result<Option<EditOperation>, string>) -> string {
     return match result {
         Ok(Some(item)) => item.phase,
         Ok(None()) => "none",
@@ -641,7 +639,7 @@ public type View = {
     followup_check_stderr_truncated: bool,
     followup_check_stdout_omitted: bool,
     followup_check_stderr_omitted: bool,
-    additional_work: Array<continuous_work_Entry>
+    additional_work: Array<ContinuousEntry>
 };
 
 public flow recoverable_read_session_status(args: Array<string>) -> i32 ![
@@ -713,7 +711,7 @@ public flow recoverable_read_session_status(args: Array<string>) -> i32 ![
     let followup = snapshot.followup;
     let followup_check = snapshot.followup_check;
     let extra = snapshot.additional;
-    var additional: Array<continuous_work_Entry> = [];
+    var additional: Array<ContinuousEntry> = [];
     match extra {
         Some(item) => {
             additional = item.value.history.push(item.value.current);

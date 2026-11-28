@@ -12,7 +12,7 @@ import nomo.adapters.cli.session_input.line;
 import nomo.adapters.cli.session_input.work_request;
 import nomo.adapters.cli.session_input.show_selector;
 import nomo.domain.editing.Selector;
-import nomo.session.work_chain.Caps;
+import nomo.domain.sessions.chain.Caps;
 import nomo.domain.sessions.chain.WorkRequest;
 import nomo.domain.sessions.chain.ContinueRequest;
 import nomo.domain.sessions.chain.TurnRequest;

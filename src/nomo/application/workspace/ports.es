@@ -1,11 +1,9 @@
 module nomo.application.workspace.ports;
 
 import nomo.application.execution.ports.CommandOperations;
-import nomo.domain.settings.Settings;
+import nomo.application.resources.{LaunchRoot, ProjectRoot};
+import nomo.domain.settings.{CachedConfiguration, Settings};
 import nomo.domain.workspace.{FileContent, LaunchRequest, MatchLine, Outcome, PathInfo, ProjectInstruction};
-import nomo.native.configuration.Cached;
-import nomo.native.projects.LaunchRoot;
-import nomo.native.workspace.ProjectRoot;
 import std.effects.Fs;
 import std.fs.{IOError as fs_IOError, ReadLimitError, Region};
 import std.io.IOError;
@@ -50,8 +48,8 @@ public spec TomlConverter {
 }
 
 public spec ConfigurationCacheStore {
-    flow lookup(self, workspace: string) -> Option<Cached> ![Memory, Error<StorageError>];
-    flow remember(self, workspace: string, value: Cached) -> unit ![
+    flow lookup(self, workspace: string) -> Option<CachedConfiguration> ![Memory, Error<StorageError>];
+    flow remember(self, workspace: string, value: CachedConfiguration) -> unit ![
         Memory,
         Error<StorageError>,
         Error<MemoryConflict>

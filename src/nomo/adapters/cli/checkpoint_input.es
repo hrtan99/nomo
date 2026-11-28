@@ -1,8 +1,7 @@
 module nomo.adapters.cli.checkpoint_input;
 
 import nomo.domain.harness.loop.question_error;
-import nomo.domain.sessions.checkpoints.identity_error;
-import nomo.session.harness_checkpoint.Identity;
+import nomo.domain.sessions.checkpoints.{Identity, identity_error};
 import std.text.{char_count, split};
 
 public type HarnessCheckpointArgsOptions = {

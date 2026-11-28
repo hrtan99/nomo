@@ -2,10 +2,14 @@ module nomo.adapters.storage.chat;
 
 import nomo.adapters.storage.session_records.{append_metadata, commit_native, commit_receipt, event_history_load};
 import nomo.application.sessions.ports.{ChatRepository, Entry, Target};
-import nomo.core.conversation.Event;
-import nomo.domain.harness.chat.{Completed, TurnResult};
+import nomo.domain.conversation.Event;
+import nomo.domain.harness.chat.{Completed, Previous, TurnResult};
 import nomo.domain.limits.timeline_inline_bytes;
 import nomo.domain.sessions.chat.{
+    ChatEvidence,
+    ChatHistoryFrame,
+    ChatSession,
+    RecoverableChatFrame,
     append_encoded,
     begin,
     chat_session_contract_invalid,
@@ -20,6 +24,7 @@ import nomo.domain.sessions.chat.{
     work_batch
 };
 import nomo.domain.sessions.event_codec.{
+    EventFrame,
     Policy,
     encode_prefix,
     event_text_codec_decode,
@@ -29,11 +34,6 @@ import nomo.domain.sessions.event_codec.{
 };
 import nomo.domain.sessions.work.invalid_values;
 import nomo.domain.text.hex_digest;
-import nomo.harness.harness_tool_chat_contract.Previous;
-import nomo.session.chat_history.{Frame as chat_history_Frame, Frames, Legacy};
-import nomo.session.chat_session_contract.Session;
-import nomo.session.recoverable_chat_store.{Evidence, EvidenceFrames, Frame, Frames as recoverable_chat_store_Frames};
-import nomo.session.recoverable_events.Frame as recoverable_events_Frame;
 import std.memory.{MemoryEntry, MemoryVersion, Missing, WriteCondition};
 import std.text.{from_i32, len};
 
@@ -146,7 +146,7 @@ impl LegacyChatRepository ~ ChatRepository<Entry> {
     }
 }
 
-public alias RecoverableTicket = MemoryEntry<string, Frame>;
+public alias RecoverableTicket = MemoryEntry<string, RecoverableChatFrame>;
 
 public type RecoverableChatRepository = {
     redaction: Policy,
@@ -215,12 +215,12 @@ impl RecoverableChatRepository ~ ChatRepository<RecoverableTicket> {
     }
 }
 
-flow legacy() -> Option<MemoryEntry<string, Session>> {
-    return Legacy.Rows.get_entry("latest");
+flow legacy() -> Option<MemoryEntry<string, ChatSession>> {
+    return LegacyChats.Rows.get_entry("latest");
 }
 
-flow framed() -> Option<MemoryEntry<string, chat_history_Frame>> {
-    return Frames.Rows.get_entry("latest");
+flow framed() -> Option<MemoryEntry<string, ChatHistoryFrame>> {
+    return ChatHistories.Rows.get_entry("latest");
 }
 
 flow safe_role(value: string) -> bool {
@@ -238,7 +238,7 @@ flow safe_name(value: string) -> bool {
     return value == "" || value == "child-1" || value == "read" || value == "search";
 }
 
-flow chat_history_frame_error(frame: chat_history_Frame) -> string {
+flow chat_history_frame_error(frame: ChatHistoryFrame) -> string {
     if frame.format != 3 || (
         frame.chat.format != 3 && frame.chat.format != 6 && frame.chat.format != 8
             && frame.chat.format != 10 && frame.chat.format != 12
@@ -375,7 +375,7 @@ public flow chat_history_load() -> Result<Option<Entry>, string> {
     }
 }
 
-flow transition(before: Option<Entry>, next: Session) -> string {
+flow transition(before: Option<Entry>, next: ChatSession) -> string {
     let prior = match before {
         None() => {
             if next != fresh() {
@@ -459,7 +459,7 @@ flow project(input: Array<Event>) -> Result<Array<Event>, string> {
     return Ok(output);
 }
 
-flow save_inner(value: Session, expected: Option<Entry>, records: Array<Event>) -> Result<
+flow save_inner(value: ChatSession, expected: Option<Entry>, records: Array<Event>) -> Result<
     MemoryVersion,
     string
 > ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
@@ -505,7 +505,7 @@ flow save_inner(value: Session, expected: Option<Entry>, records: Array<Event>) 
             }
         }
         let version = match commit_receipt(
-            Legacy.Rows,
+            LegacyChats.Rows,
             Target {
                 store = ["Rows"],
                 region = "nomo-chat-history-v1",
@@ -565,7 +565,7 @@ flow save_inner(value: Session, expected: Option<Entry>, records: Array<Event>) 
     } else if records.len() != 0 {
         return Err("unexpected completed event batch");
     }
-    let frame = chat_history_Frame {
+    let frame = ChatHistoryFrame {
         format = 3,
         chat = value,
         first_count,
@@ -576,7 +576,7 @@ flow save_inner(value: Session, expected: Option<Entry>, records: Array<Event>) 
         return Err(problem);
     }
     let version = match commit_receipt(
-        Frames.Rows,
+        ChatHistories.Rows,
         Target {
             store = ["Rows"],
             region = "nomo-chat-history-v3",
@@ -612,7 +612,7 @@ flow save_inner(value: Session, expected: Option<Entry>, records: Array<Event>) 
     return Ok(version);
 }
 
-public flow save(value: Session, expected: Option<Entry>) -> Result<MemoryVersion, string> ![
+public flow save(value: ChatSession, expected: Option<Entry>) -> Result<MemoryVersion, string> ![
     Memory,
     Error<StorageError>,
     Error<IndexError>,
@@ -621,7 +621,7 @@ public flow save(value: Session, expected: Option<Entry>) -> Result<MemoryVersio
     return save_inner(value, expected, []);
 }
 
-public flow save_completed(value: Session, expected: Option<Entry>, records: Array<Event>) -> Result<
+public flow save_completed(value: ChatSession, expected: Option<Entry>, records: Array<Event>) -> Result<
     MemoryVersion,
     string
 > ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
@@ -669,7 +669,10 @@ flow work_omitted() -> string {
 // main/tool event is restored from the per-turn evidence row instead. Compact
 // every outgoing frame so sessions written by earlier versions are repaired on
 // their next reserve/finish without changing the durable schema or CAS head.
-flow compact_context_duplicates(value: Frame, policy: Policy, binding: string) -> Result<Frame, string> ![
+flow compact_context_duplicates(value: RecoverableChatFrame, policy: Policy, binding: string) -> Result<
+    RecoverableChatFrame,
+    string
+> ![
     Memory,
     Error<StorageError>,
     Error<IndexError>,
@@ -728,7 +731,7 @@ flow compact_context_duplicates(value: Frame, policy: Policy, binding: string) -
     });
 }
 
-flow evidence_error(value: Evidence, policy: Policy, binding: string) -> string {
+flow evidence_error(value: ChatEvidence, policy: Policy, binding: string) -> string {
     let bound = binding_error(binding);
     if bound != "" {
         return bound;
@@ -752,7 +755,7 @@ public flow load_evidence(turn: i32, policy: Policy, binding: string) -> Result<
         return Err("invalid recoverable chat evidence turn");
     }
     let key = from_i32(turn);
-    let entry = EvidenceFrames.Rows.get_entry(key);
+    let entry = ChatEvidenceRows.Rows.get_entry(key);
     return match entry {
         None() => Ok(None()),
         Some(item) => {
@@ -777,7 +780,7 @@ public flow load_evidence(turn: i32, policy: Policy, binding: string) -> Result<
 // canonical selection separately, so replace only its exact projected copies
 // with explicit references. Earlier turns and non-selected work/check events
 // stay in their original order, including their positions around the references.
-public flow conversation(frame: recoverable_events_Frame, latest: Previous, policy: Policy, binding: string) -> Result<
+public flow conversation(frame: EventFrame, latest: Previous, policy: Policy, binding: string) -> Result<
     Array<Event>,
     string
 > ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
@@ -858,7 +861,7 @@ flow archive_evidence(turn: i32, outcome: string, policy: Policy, binding: strin
             return Err(error);
         }
     };
-    let value = Evidence {
+    let value = ChatEvidence {
         format = 1,
         policy_binding = binding,
         turn,
@@ -869,7 +872,7 @@ flow archive_evidence(turn: i32, outcome: string, policy: Policy, binding: strin
         return Err(problem);
     }
     let key = from_i32(turn);
-    match EvidenceFrames.Rows.get_entry(key) {
+    match ChatEvidenceRows.Rows.get_entry(key) {
         Some(item) => {
             if item.key != key {
                 return Err("recoverable chat evidence changed; no retry");
@@ -888,13 +891,13 @@ flow archive_evidence(turn: i32, outcome: string, policy: Policy, binding: strin
         key,
         label = "recoverable chat evidence"
     };
-    return match commit_native(EvidenceFrames.Rows, target, value, Missing) {
+    return match commit_native(ChatEvidenceRows.Rows, target, value, Missing) {
         Ok(_) => Ok(true),
         Err(error) => Err(error)
     };
 }
 
-flow recoverable_chat_store_frame_error(value: Frame, policy: Policy, binding: string) -> string {
+flow recoverable_chat_store_frame_error(value: RecoverableChatFrame, policy: Policy, binding: string) -> string {
     let bound = binding_error(binding);
     if bound != "" {
         return bound;
@@ -949,7 +952,7 @@ flow recoverable_chat_store_frame_error(value: Frame, policy: Policy, binding: s
 // identity, ledger, redaction and aggregate bounds without reparsing every
 // encoded event before it is stored. load() remains the trust boundary
 // and performs the full canonical frame_error validation.
-flow constructed_frame_error(value: Frame, policy: Policy, binding: string) -> string {
+flow constructed_frame_error(value: RecoverableChatFrame, policy: Policy, binding: string) -> string {
     let bound = binding_error(binding);
     if bound != "" {
         return bound;
@@ -992,7 +995,7 @@ flow constructed_frame_error(value: Frame, policy: Policy, binding: string) -> s
 }
 
 public flow recoverable_chat_store_load(policy: Policy, binding: string) -> Result<
-    Option<MemoryEntry<string, Frame>>,
+    Option<MemoryEntry<string, RecoverableChatFrame>>,
     string
 > ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     let problem = policy_error(policy);
@@ -1003,7 +1006,7 @@ public flow recoverable_chat_store_load(policy: Policy, binding: string) -> Resu
     if invalid != "" {
         return Err(invalid);
     }
-    let entry = recoverable_chat_store_Frames.Rows.get_entry("latest");
+    let entry = RecoverableChats.Rows.get_entry("latest");
     return match entry {
         Some(item) => {
             if item.key != "latest" {
@@ -1019,8 +1022,13 @@ public flow recoverable_chat_store_load(policy: Policy, binding: string) -> Resu
     };
 }
 
-flow write(value: Frame, expected: Option<MemoryEntry<string, Frame>>, policy: Policy, binding: string) -> Result<
-    MemoryEntry<string, Frame>,
+flow write(
+    value: RecoverableChatFrame,
+    expected: Option<MemoryEntry<string, RecoverableChatFrame>>,
+    policy: Policy,
+    binding: string
+) -> Result<
+    MemoryEntry<string, RecoverableChatFrame>,
     string
 > ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     let compact = match compact_context_duplicates(value, policy, binding) {
@@ -1046,7 +1054,7 @@ flow write(value: Frame, expected: Option<MemoryEntry<string, Frame>>, policy: P
         key = "latest",
         label = "recoverable chat"
     };
-    let version = match commit_native(recoverable_chat_store_Frames.Rows, target, desired, condition) {
+    let version = match commit_native(RecoverableChats.Rows, target, desired, condition) {
         Ok(item) => item,
         Err(problem) => {
             return Err(problem);
@@ -1070,7 +1078,7 @@ flow write(value: Frame, expected: Option<MemoryEntry<string, Frame>>, policy: P
 }
 
 public flow matches_version(expected: MemoryVersion) -> Result<bool, string> ![Memory, Error<StorageError>] {
-    return match recoverable_chat_store_Frames.Rows.get_entry("latest") {
+    return match RecoverableChats.Rows.get_entry("latest") {
         Some(item) => Ok(
             item.key == "latest"
                 && item.version.opaque == expected.opaque
@@ -1080,11 +1088,11 @@ public flow matches_version(expected: MemoryVersion) -> Result<bool, string> ![M
 }
 
 public flow create(policy: Policy, binding: string, high_input: bool) -> Result<
-    MemoryEntry<string, Frame>,
+    MemoryEntry<string, RecoverableChatFrame>,
     string
 > ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     return write(
-        Frame {
+        RecoverableChatFrame {
             format = 1,
             encoding = "json-string-v1",
             policy_binding = binding,
@@ -1101,8 +1109,13 @@ public flow create(policy: Policy, binding: string, high_input: bool) -> Result<
     );
 }
 
-public flow reserve(expected: MemoryEntry<string, Frame>, request: string, policy: Policy, binding: string) -> Result<
-    MemoryEntry<string, Frame>,
+public flow reserve(
+    expected: MemoryEntry<string, RecoverableChatFrame>,
+    request: string,
+    policy: Policy,
+    binding: string
+) -> Result<
+    MemoryEntry<string, RecoverableChatFrame>,
     string
 > ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     let error = recoverable_chat_store_frame_error(expected.value, policy, binding);
@@ -1192,7 +1205,7 @@ public flow reserve(expected: MemoryEntry<string, Frame>, request: string, polic
         )
     };
     return write(
-        Frame {
+        RecoverableChatFrame {
             format = 1,
             encoding = "json-string-v1",
             policy_binding = binding,
@@ -1205,8 +1218,13 @@ public flow reserve(expected: MemoryEntry<string, Frame>, request: string, polic
     );
 }
 
-public flow finish(expected: MemoryEntry<string, Frame>, result: TurnResult, policy: Policy, binding: string) -> Result<
-    MemoryEntry<string, Frame>,
+public flow finish(
+    expected: MemoryEntry<string, RecoverableChatFrame>,
+    result: TurnResult,
+    policy: Policy,
+    binding: string
+) -> Result<
+    MemoryEntry<string, RecoverableChatFrame>,
     string
 > ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     let error = recoverable_chat_store_frame_error(expected.value, policy, binding);
@@ -1266,7 +1284,7 @@ public flow finish(expected: MemoryEntry<string, Frame>, result: TurnResult, pol
         }
     };
     return write(
-        Frame {
+        RecoverableChatFrame {
             format = 1,
             encoding = "json-string-v1",
             policy_binding = binding,
@@ -1283,7 +1301,7 @@ public flow finish(expected: MemoryEntry<string, Frame>, result: TurnResult, pol
 // Callers which already crossed the load() trust boundary retain that exact CAS
 // entry through their work transaction instead of inflating the chat again.
 public flow record_work_from(
-    before: MemoryEntry<string, Frame>,
+    before: MemoryEntry<string, RecoverableChatFrame>,
     id: string,
     records: Array<Event>,
     policy: Policy,
@@ -1439,3 +1457,39 @@ public flow record_check(
         Err(error) => Err(error)
     };
 }
+
+alias LegacyChatsSchema = MemoryRegion<{
+    Rows: Store<string, ChatSession>
+}>;
+
+alias ChatHistoriesSchema = MemoryRegion<{
+    Rows: Store<string, ChatHistoryFrame>
+}>;
+
+public let LegacyChats = std.memory.region<LegacyChatsSchema>(
+    stable_id = "nomo-chat-history-v1",
+    store = "chat-history"
+);
+
+public let ChatHistories = std.memory.region<ChatHistoriesSchema>(
+    stable_id = "nomo-chat-history-v3",
+    store = "chat-history-v3"
+);
+
+alias RecoverableChatsSchema = MemoryRegion<{
+    Rows: Store<string, RecoverableChatFrame>
+}>;
+
+public let RecoverableChats = std.memory.region<RecoverableChatsSchema>(
+    stable_id = "nomo-recoverable-chat-v1",
+    store = "recoverable-chat"
+);
+
+alias ChatEvidenceRowsSchema = MemoryRegion<{
+    Rows: Store<string, ChatEvidence>
+}>;
+
+public let ChatEvidenceRows = std.memory.region<ChatEvidenceRowsSchema>(
+    stable_id = "nomo-recoverable-chat-evidence-v1",
+    store = "recoverable-chat-evidence"
+);

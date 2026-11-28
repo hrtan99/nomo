@@ -1,22 +1,15 @@
 module nomo.adapters.filesystem.editing;
 
 import nomo.adapters.filesystem.workspace.read_text;
-import nomo.application.editing.ports.{
-    EditApplier,
-    MutationFileAccess,
-    OriginalReadFunction,
-    OriginalReader,
-    WorkEditor
-};
+import nomo.application.editing.ports.{EditApplier, MutationFileAccess, OriginalReadFunction, OriginalReader, WorkEditor};
 import nomo.application.execution.commands.execute_step;
 import nomo.application.execution.ports.CommandOperations;
+import nomo.application.resources.{EditableRoot, ProjectRoot};
 import nomo.application.scope.SessionContext;
 import nomo.domain.changes.parent;
 import nomo.domain.editing.{Prepared, prepare_original_legacy, text_bytes, validate};
 import nomo.domain.limits.{file_bytes, file_metadata_bytes};
 import nomo.domain.workspace.valid_path;
-import nomo.native.workspace.ProjectRoot;
-import nomo.tools.edit_file.EditableRoot;
 import std.agent.message.Message;
 import std.bytes.len;
 import std.codec.text.{Strict, utf8_decode, utf8_encode};

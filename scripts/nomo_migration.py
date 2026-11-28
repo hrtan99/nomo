@@ -233,3 +233,81 @@ def project_packet(source, archive, state):
     (archive.parent / 'project-files.json').write_text(json.dumps(manifest, indent=2) + '\n')
     return {'format': 'nomo-project-state-3', 'source_sha256': digest(archive),
             'projects': projects, 'conversations': conversations, 'edits': edits, 'jobs': jobs}
+
+
+def relocation_manifest(package, database, source_root=False):
+    region = ('\n[runtime.profiles.local.filesystem.regions."nomo.application.resources.MigrationRoot"]\n'
+              'root="/migration"\nread=true\nwrite=false\n') if source_root else ''
+    (package / '.etas').mkdir(exist_ok=True)
+    (package / 'etas.toml').write_text(
+        '[package]\nname="nomo"\nversion="0.1.0"\nedition="2026"\n'
+        '[source]\nroot="src"\n[runtime]\ndefault_profile="local"\n'
+        '[runtime.profiles.local.memory]\nbackend="sqlite"\npath="' + database + '"\n' + region +
+        '[runtime.profiles.local.policy]\nmode="local-static"\n'
+        'rules=["memory=allow","console=allow","filesystem:Fs.read=allow"]\n'
+        '[runtime.profiles.local.approval]\nmode="deny"\n'
+        '[[bin]]\nname="nomo-state-relocation"\nmodule="app.main"\nflow="main"\n')
+
+
+def relocation_package(root, destination, entry, historical=False):
+    """Explicit one-time data tool; historical types never enter the main program."""
+    frozen = root / 'tests/fixtures/state_relocation'
+    shutil.copytree(root / 'src', destination / 'src')
+    if historical:
+        shutil.copytree(frozen / 'old/src', destination / 'src', dirs_exist_ok=True)
+    (destination / 'src/app').mkdir(exist_ok=True)
+    shutil.copyfile(frozen / entry, destination / 'src/app/main.es')
+    relocation_manifest(destination, '/migration/legacy-reader.sqlite3' if historical else
+                        '/migration-target/conversations.sqlite3', source_root=not historical)
+
+
+def relocated_packet(root, source, incoming, state, evidence, run_export):
+    """Read original typed rows, cast directly, then encode with the new codec.
+
+    Neither JSON floating-point conversion nor SQL schema/receipt rewriting is
+    used. Original versions and approvals remain historical data, not authority.
+    """
+    archive = incoming / 'legacy-source.sqlite3'
+    backup(source, archive)
+    backup(archive, incoming / 'legacy-reader.sqlite3')
+    stores = json.loads((root / 'tests/fixtures/state_relocation/stores.json').read_text())
+    known = {(st['region'], tuple(st['path'])) for st in stores}
+    with sqlite3.connect(archive.as_uri() + '?mode=ro', uri=True) as db:
+        present = {(region, tuple(json.loads(path))) for region, path in db.execute('SELECT region,path FROM memory_stores')}
+        if present - known:
+            raise ValueError('unrecognized native store; source retained without migration: ' + repr(present - known))
+        count, = db.execute('SELECT count(*) FROM memory_entries').fetchone()
+    relocation_package(root, incoming / 'exporter', 'export.es', historical=True)
+    relocation_package(root, incoming / 'importer', 'import.es')
+    result = run_export()
+    (evidence / 'export.stdout').write_text(result.stdout)
+    (evidence / 'export.stderr').write_text(result.stderr)
+    if result.returncode:
+        raise RuntimeError('old typed state export failed; retained destination: ' + str(incoming.parent))
+    rows = [json.loads(line) for line in result.stdout.splitlines() if line.strip()]
+    if len(rows) != count:
+        raise RuntimeError('state export row count differs from the complete source image')
+    retained = []
+    for name in ('edits', 'jobs'):
+        original = source.parent / name
+        if original.exists():
+            _retain_tree(original, state, name)
+            retained.append(name)
+    return {'format': 'nomo-state-relocation-02413-v1', 'source_sha256': digest(archive), 'rows': rows}, retained
+
+
+def write_relocation_packet(incoming, image):
+    """Retain official codec bytes; the JSON manifest contains only references."""
+    directory = incoming / 'rows'
+    directory.mkdir(mode=0o700)
+    rows = []
+    for index, row in enumerate(image['rows']):
+        relative = 'rows/' + str(index) + '.ets'
+        target = incoming / relative
+        target.write_bytes(bytes(map(int, row['value'])))
+        target.chmod(0o600)
+        rows.append(dict(row, value=relative))
+    packet = dict(image, rows=rows)
+    snapshot = incoming / 'snapshot.json'
+    snapshot.write_text(json.dumps(packet, ensure_ascii=False, separators=(',', ':')) + '\n')
+    snapshot.chmod(0o600)

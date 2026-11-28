@@ -28,18 +28,17 @@ import nomo.adapters.process.jobs.{
 import nomo.application.conversation.ports.CodingModel;
 import nomo.application.editing.ports.ChangeOperations;
 import nomo.application.execution.ports.{CommandOperations, ProcessOperations};
+import nomo.application.resources.ProjectRoot;
 import nomo.application.scope.{SessionContext, SettingsContext};
 import nomo.application.workspace.ports.WorkspaceObservations;
 import nomo.application.workspace.service.{find_files as service_find_files, search_project as service_search_project};
-import nomo.domain.changes.{Change, ChangeOutcome, FileChange, FileOutcome};
+import nomo.domain.changes.{Change, ChangeOutcome, FileChange, FileOutcome, Journal};
 import nomo.domain.commands.CommandOutput;
-import nomo.domain.conversation.{Answer, ChatMessage, ModelTurn};
+import nomo.domain.conversation.{Answer, ModelTurn};
 import nomo.domain.workspace.{FileContent, MatchLine, PathInfo, ProjectInstruction};
-import nomo.native.mutations.Journal;
-import nomo.native.workspace.ProjectRoot;
 import std.effects.Fs;
-import std.fs.{IOError as fs_IOError, ReadLimitError};
-import std.io.IOError;
+import std.fs.{IOError, ReadLimitError};
+import std.io.IOError as io_IOError;
 
 @tools(
     [
@@ -112,9 +111,9 @@ impl NativeCoding {
         Fs.atomic_replace<ProjectRoot>,
         Error<StorageError>,
         Error<MemoryConflict>,
-        Error<fs_IOError>,
-        Error<ReadLimitError>,
         Error<IOError>,
+        Error<ReadLimitError>,
+        Error<io_IOError>,
         Error<BudgetExceeded>
     ] {
         return perform infer<Answer>(
@@ -146,9 +145,9 @@ impl NativeCodingModel ~ CodingModel {
         Fs.atomic_replace<ProjectRoot>,
         Error<StorageError>,
         Error<MemoryConflict>,
-        Error<fs_IOError>,
-        Error<ReadLimitError>,
         Error<IOError>,
+        Error<ReadLimitError>,
+        Error<io_IOError>,
         Error<BudgetExceeded>
     ] {
         return handle (NativeCoding {}).run(input) with {
@@ -203,7 +202,7 @@ public tool find_files(pathname: string, glob: string, depth: i32) -> CommandOut
     Console,
     Error<StorageError>,
     Error<MemoryConflict>,
-    Error<IOError>
+    Error<io_IOError>
 ] {
     return service_find_files(pathname, glob, depth);
 }
@@ -219,7 +218,7 @@ public tool search_project(pathname: string, pattern: string, regex: bool) -> Co
     Console,
     Error<StorageError>,
     Error<MemoryConflict>,
-    Error<IOError>
+    Error<io_IOError>
 ] {
     return service_search_project(pathname, pattern, regex);
 }
@@ -241,9 +240,9 @@ public tool replace_file(change: FileChange) -> FileOutcome
     Fs.atomic_replace<ProjectRoot>,
     Error<StorageError>,
     Error<MemoryConflict>,
-    Error<fs_IOError>,
+    Error<IOError>,
     Error<ReadLimitError>,
-    Error<IOError>
+    Error<io_IOError>
 ]
 ~ ScopedReplace {
     return perform ChangeOperations.replace(perform SessionContext.current(), change);
@@ -262,9 +261,9 @@ public tool edit_file(pathname: string, target: string, replacement: string) -> 
     Fs.atomic_replace<ProjectRoot>,
     Error<StorageError>,
     Error<MemoryConflict>,
-    Error<fs_IOError>,
+    Error<IOError>,
     Error<ReadLimitError>,
-    Error<IOError>
+    Error<io_IOError>
 ]
 ~ ScopedReplace {
     return from_literal(pathname, target, replacement);

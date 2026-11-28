@@ -9,7 +9,7 @@ import nomo.domain.harness.loop.Action;
 import nomo.domain.harness.loop.decode_reply;
 import nomo.domain.harness.loop.Context as ToolContext;
 import nomo.domain.harness.read.ReadContext;
-import nomo.harness.harness_tool_contract.Ledger as ReadLedger;
+import nomo.domain.harness.loop.ReadLedger;
 import nomo.domain.harness.edit.Context as EditContext;
 import nomo.domain.harness.work.Context;
 import nomo.domain.harness.work.Evidence;

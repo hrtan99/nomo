@@ -37,17 +37,12 @@ import nomo.application.harness.work.{
     prepare_unicode as work_prepare_unicode,
     prepare_with as work_prepare_with
 };
-import nomo.bootstrap.harness.{
-    ascii_read_run,
-    ascii_read_work_child_turn,
-    chain_child_turn,
-    harness_run,
-    run_text,
-    unicode_read_run
-};
+import nomo.application.resources.{EditableRoot, ReadOnlyRoot};
+import nomo.bootstrap.harness.{ascii_read_run, ascii_read_work_child_turn, chain_child_turn, harness_run, run_text, unicode_read_run};
 import nomo.domain.editing.{Confirmed, Selector, prepare_original_legacy};
 import nomo.domain.harness.delegation.{Job, Outcome};
 import nomo.domain.harness.edit.{
+    EditLedger,
     bump,
     completed_context,
     context as edit_context,
@@ -58,14 +53,10 @@ import nomo.domain.harness.edit.{
     text_error
 };
 import nomo.domain.harness.read.{read_fresh, text_fresh};
-import nomo.domain.harness.work.fresh as work_fresh;
+import nomo.domain.harness.work.{WorkLedger, fresh as work_fresh};
 import nomo.domain.sessions.chain.ParentFacts;
 import nomo.domain.sessions.work.{Completed, Failure, Pending, Summary};
 import nomo.domain.text.within;
-import nomo.harness.harness_edit_contract.Ledger;
-import nomo.harness.harness_work_contract.Ledger as harness_work_contract_Ledger;
-import nomo.tools.edit_file.EditableRoot;
-import nomo.tools.workspace.ReadOnlyRoot;
 import std.effects.Fs;
 import std.fs.IOError as fs_IOError;
 import std.io.{IOError, println, read_line};
@@ -175,7 +166,7 @@ public flow harness_chat_run(args: Array<string>) -> i32 {
     return 1;
 }
 
-flow ledger(state: Ledger) -> unit {
+flow ledger(state: EditLedger) -> unit {
     println(
         "LEDGER steps=" + from_i32(state.steps) + "/6 calls=" + from_i32(state.calls) + "/3 token_allowance="
             + from_i32(state.tokens) + "/38912 boundaries=" + from_i32(state.boundaries)
@@ -184,13 +175,13 @@ flow ledger(state: Ledger) -> unit {
     );
 }
 
-flow harness_edit_entry_refused(state: Ledger, error: string) -> i32 {
+flow harness_edit_entry_refused(state: EditLedger, error: string) -> i32 {
     println("REFUSED " + error);
     ledger(state);
     return 1;
 }
 
-flow harness_edit_entry_stage(phase: string, state: Ledger) -> unit {
+flow harness_edit_entry_stage(phase: string, state: EditLedger) -> unit {
     println(
         "STAGE " + phase + " child-1 steps=" + from_i32(state.steps) + " calls=" + from_i32(state.calls)
             + " token_allowance=" + from_i32(state.tokens) + " remaining_calls=" + from_i32(3 - state.calls)
@@ -531,21 +522,21 @@ public flow harness_model_tools_entry_run(args: Array<string>) -> i32 {
     return ascii_read_run(request.once, split(extracted.allowed, ","));
 }
 
-public flow chain_ledger(state: harness_work_contract_Ledger) -> unit {
+public flow chain_ledger(state: WorkLedger) -> unit {
     println(
         historical_ledger_text(state)
             + "; per-turn configured allowances are not measured usage; bounded v2 continuation requires a fresh durable claim and current confirmation"
     );
 }
 
-public flow user_context_ledger(state: harness_work_contract_Ledger) -> unit {
+public flow user_context_ledger(state: WorkLedger) -> unit {
     println(
         historical_ledger_text(state)
             + "; per-turn configured allowances are not measured usage; user-context work cannot continue or resume"
     );
 }
 
-flow chain_stage(name: string, state: harness_work_contract_Ledger, user_context: bool) -> unit {
+flow chain_stage(name: string, state: WorkLedger, user_context: bool) -> unit {
     println("STAGE " + name);
     if user_context {
         user_context_ledger(state);
@@ -554,13 +545,13 @@ flow chain_stage(name: string, state: harness_work_contract_Ledger, user_context
     }
 }
 
-public flow harness_work_entry_refused(state: harness_work_contract_Ledger, error: string) -> i32 {
+public flow harness_work_entry_refused(state: WorkLedger, error: string) -> i32 {
     println("REFUSED " + error);
     console_ledger(state);
     return 1;
 }
 
-flow harness_work_entry_stage(name: string, state: harness_work_contract_Ledger) -> unit {
+flow harness_work_entry_stage(name: string, state: WorkLedger) -> unit {
     println("STAGE " + name);
     console_ledger(state);
 }
@@ -576,7 +567,7 @@ flow harness_work_entry_help() -> unit {
 public flow prepare_with<effect E>(
     input: Work,
     original_error: (string) -> string ![],
-    stage_log: (string, harness_work_contract_Ledger) -> unit ![E],
+    stage_log: (string, WorkLedger) -> unit ![E],
     chain_read: bool,
     inspect_plan: bool,
     inspect_all: bool
@@ -599,7 +590,7 @@ public flow prepare_with<effect E>(
 public flow prepare_unicode<effect E>(
     input: Work,
     original_error: (string) -> string ![],
-    stage_log: (string, harness_work_contract_Ledger) -> unit ![E]
+    stage_log: (string, WorkLedger) -> unit ![E]
 ) -> Result<Pending, Failure> ![
     Console,
     LegacyStringStages,
@@ -622,7 +613,7 @@ public flow prepare_unicode<effect E>(
 public flow prepare_expanded_unicode<effect E>(
     input: Work,
     original_error: (string) -> string ![],
-    stage_log: (string, harness_work_contract_Ledger) -> unit ![E],
+    stage_log: (string, WorkLedger) -> unit ![E],
     wide: bool
 ) -> Result<Pending, Failure> ![
     Console,
@@ -643,7 +634,7 @@ public flow prepare_expanded_unicode<effect E>(
     };
 }
 
-public flow expanded_stage(name: string, state: harness_work_contract_Ledger, wide: bool) -> unit {
+public flow expanded_stage(name: string, state: WorkLedger, wide: bool) -> unit {
     println("STAGE " + name);
     expanded_ledger(state, wide);
 }
@@ -651,7 +642,7 @@ public flow expanded_stage(name: string, state: harness_work_contract_Ledger, wi
 public flow prepare<effect E>(
     input: Work,
     original_error: (string) -> string ![],
-    stage_log: (string, harness_work_contract_Ledger) -> unit ![E],
+    stage_log: (string, WorkLedger) -> unit ![E],
     chain_read: bool,
     inspect_plan: bool,
     inspect_all: bool
@@ -673,9 +664,9 @@ public flow prepare<effect E>(
 
 public flow prepare_work(input: Work) -> Result<Pending, Failure> {
     let original: (string) -> string ![] = (value: string) => "";
-    let log: (string, harness_work_contract_Ledger) -> unit ![Error<IOError>] = (
+    let log: (string, WorkLedger) -> unit ![Error<IOError>] = (
         name: string,
-        state: harness_work_contract_Ledger
+        state: WorkLedger
     ) => harness_work_entry_stage(name, state);
     return prepare<![Error<IOError>]>(input, original, log, false, false, false) with {
         LegacyStringStages.main(value) => read_main(value);
@@ -702,9 +693,9 @@ flow prepare_chain_mode(
         },
         None() => ""
     };
-    let log: (string, harness_work_contract_Ledger) -> unit ![Error<IOError>] = (
+    let log: (string, WorkLedger) -> unit ![Error<IOError>] = (
         name: string,
-        state: harness_work_contract_Ledger
+        state: WorkLedger
     ) => chain_stage(name, state, user_context);
     return prepare<![Error<IOError>]>(input, original, log, true, inspect_plan, inspect_all) with {
         LegacyStringStages.main(value) => read_main(value);
@@ -751,7 +742,7 @@ public flow finish_edit(pending: Pending, outcome: Confirmed) -> Result<Complete
 
 public flow finish_summary<effect E>(
     completed: Completed,
-    stage_log: (string, harness_work_contract_Ledger) -> unit ![E],
+    stage_log: (string, WorkLedger) -> unit ![E],
     work: bool,
     inspect_all: bool
 ) -> Result<Summary, Failure> ![Console, LegacyEditStages, Error<IOError>, Error<IndexError>, E] {
@@ -764,7 +755,7 @@ public flow finish_summary<effect E>(
 
 public flow finish_history_summary<effect E>(
     completed: Completed,
-    stage_log: (string, harness_work_contract_Ledger) -> unit ![E]
+    stage_log: (string, WorkLedger) -> unit ![E]
 ) -> Result<Summary, Failure> ![Console, LegacyEditStages, Error<IOError>, Error<IndexError>, E] {
     return work_finish_history_summary(completed) with {
         HarnessWorkStage.write(name, state) => stage_log(name, state);
@@ -774,9 +765,9 @@ public flow finish_history_summary<effect E>(
 }
 
 public flow summarize(completed: Completed) -> Result<Summary, Failure> {
-    let log: (string, harness_work_contract_Ledger) -> unit ![Error<IOError>] = (
+    let log: (string, WorkLedger) -> unit ![Error<IOError>] = (
         name: string,
-        state: harness_work_contract_Ledger
+        state: WorkLedger
     ) => harness_work_entry_stage(name, state);
     return finish_summary<![Error<IOError>]>(completed, log, false, false) with {
         LegacyEditStages.plan(value) => edit_plan(value);
@@ -791,9 +782,9 @@ flow summarize_chain_mode(
     inspect_all: bool,
     user_context: bool
 ) -> Result<Summary, Failure> {
-    let log: (string, harness_work_contract_Ledger) -> unit ![Error<IOError>] = (
+    let log: (string, WorkLedger) -> unit ![Error<IOError>] = (
         name: string,
-        state: harness_work_contract_Ledger
+        state: WorkLedger
     ) => chain_stage(name, state, user_context);
     return finish_summary<![Error<IOError>]>(completed, log, true, inspect_all) with {
         LegacyEditStages.plan(value) => work_plan(value, parent);

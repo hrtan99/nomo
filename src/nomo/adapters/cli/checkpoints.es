@@ -18,17 +18,10 @@ import nomo.adapters.storage.checkpoints.{
     harness_successor_store_reload,
     initialize
 };
+import nomo.application.resources.ReadOnlyRoot;
 import nomo.bootstrap.harness.harness_tool_chat_run_turn;
 import nomo.domain.harness.chat.fresh_invocation;
-import nomo.domain.sessions.checkpoints.{
-    checkpoint_encode,
-    checkpoint_from_turn,
-    restore,
-    successor_encode,
-    successor_from_turn
-};
-import nomo.session.harness_checkpoint.Identity;
-import nomo.tools.workspace.ReadOnlyRoot;
+import nomo.domain.sessions.checkpoints.{Identity, checkpoint_encode, checkpoint_from_turn, restore, successor_encode, successor_from_turn};
 import std.agent.message.Message;
 import std.effects.Fs;
 import std.fs.IOError as fs_IOError;

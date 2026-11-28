@@ -7,7 +7,7 @@ import std.collections.unique;
 import std.core.Index;
 import std.crypto.sha256;
 import std.json.{JsonValue, parse, stringify};
-import std.text.{TextBuilder, char_count, char_get, concat, from_char, is_ascii, join, len as text_len};
+import std.text.{TextBuilder, char_count, char_get, concat, from_char, is_ascii, join, len};
 
 // All callers produce a nibble by division/modulo of a byte or Unicode scalar.
 flow nibble<I ~ Index>(value: I) -> string {
@@ -67,7 +67,7 @@ public flow json_scalar_width(value: char) -> usize {
 }
 
 flow quoted(value: string) -> Result<string, string> {
-    if text_len(value) > file_bytes() {
+    if len(value) > file_bytes() {
         return Err("edit JSON field exceeds bound");
     }
     // The standard serializer handles the overwhelmingly common ASCII file
@@ -80,7 +80,7 @@ flow quoted(value: string) -> Result<string, string> {
                 return Err(error);
             }
         };
-        if text_len(encoded) > edit_json_bytes() {
+        if len(encoded) > edit_json_bytes() {
             return Err("edit JSON output exceeds bound");
         }
         return Ok(encoded);
@@ -89,7 +89,7 @@ flow quoted(value: string) -> Result<string, string> {
     var size: usize = 1;
     @limits([Iterations(1048578)]) for codepoint in std.text.chars(value) {
         let escaped = scalar(codepoint, true);
-        size = size + text_len(escaped);
+        size = size + len(escaped);
         if size > edit_json_bytes() - 2 {
             return Err("edit JSON output exceeds bound");
         }
@@ -111,7 +111,7 @@ public flow json(values: Array<string>) -> Result<string, string> {
                 return Err(error);
             }
         };
-        size = size + text_len(encoded) + if fields.len() == 0 {
+        size = size + len(encoded) + if fields.len() == 0 {
             0
         } else {
             1
@@ -148,7 +148,7 @@ public flow object(keys: Array<string>, values: Array<string>) -> Result<string,
             }
         };
         let field = key + ":" + value;
-        size = size + text_len(field) + if fields.len() == 0 {
+        size = size + len(field) + if fields.len() == 0 {
             0
         } else {
             1
@@ -235,7 +235,7 @@ public flow ascii_json_with(
     encoded_error: string,
     display_error: string
 ) -> Result<string, string> {
-    if char_count(json) > encoded_maximum || text_len(json) > encoded_maximum {
+    if char_count(json) > encoded_maximum || len(json) > encoded_maximum {
         return Err(encoded_error);
     }
     // stringify() already escapes every ASCII control in its compact output,
@@ -243,7 +243,7 @@ public flow ascii_json_with(
     // check; rescanning every byte duplicated the codec and made MiB previews
     // interpreter-bound.
     if is_ascii(json) {
-        if text_len(json) > maximum {
+        if len(json) > maximum {
             return Err(display_error);
         }
         return Ok(json);

@@ -1,6 +1,6 @@
 module app.event_history_probe;
 import std.io.println;
-import nomo.core.conversation.Event;
+import nomo.domain.conversation.Event;
 import nomo.domain.sessions.event_codec.Policy;
 import nomo.adapters.storage.session_records.event_history_append as append;
 import nomo.adapters.storage.session_records.event_history_load as load;

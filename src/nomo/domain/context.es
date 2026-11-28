@@ -1,7 +1,6 @@
 module nomo.domain.context;
 
-import nomo.core.conversation.Event;
-import nomo.domain.conversation.ModelTurn;
+import nomo.domain.conversation.{Event, ModelTurn};
 import nomo.domain.harness.loop.{Context, bounded_context_error};
 import nomo.domain.limits.{context_bytes, message_bytes};
 import nomo.domain.settings.{as_number, effective_window, estimated_tokens};

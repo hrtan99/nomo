@@ -1,7 +1,7 @@
 module app.chat_history_probe;
 
 import std.io.println;
-import nomo.session.chat_session_contract.Session;
+import nomo.domain.sessions.chat.ChatSession;
 import nomo.domain.sessions.chat.fresh;
 import nomo.domain.sessions.chat.chat_session_contract_invalid as invalid;
 import nomo.domain.sessions.chat.begin;
@@ -9,7 +9,7 @@ import nomo.domain.sessions.chat.complete;
 import nomo.adapters.storage.chat.chat_history_load as load;
 import nomo.adapters.storage.chat.save;
 import nomo.adapters.storage.chat.save_completed;
-import nomo.core.conversation.Event;
+import nomo.domain.conversation.Event;
 import app.chat_session_contract_probe.outcome;
 
 public flow chat_history_probe(args: Array<string>) -> i32 ![Console, Memory, Error<StorageError>, Error<IndexError>, Error<IOError>] {
@@ -66,7 +66,7 @@ public flow chat_history_probe(args: Array<string>) -> i32 ![Console, Memory, Er
     }
     if args[0] == "invalid" {
         let origin = fresh();
-        let wrong = Session { format = 9, phase = origin.phase, invocation = origin.invocation, last_request = "", pending = "" };
+        let wrong = ChatSession { format = 9, phase = origin.phase, invocation = origin.invocation, last_request = "", pending = "" };
         if invalid(wrong) == "" { abort("unknown format accepted"); }
         match save(wrong, None()) { Ok(_) => abort("invalid row saved"), Err(_) => (), }
         println("INVALID_REFUSED"); return 0;

@@ -1,7 +1,5 @@
 module nomo.domain.attempts;
 
-import nomo.native.lifecycle.Attempt;
-
 public enum Transition {
     Dispatch,
     Return,
@@ -36,3 +34,15 @@ public flow next_phase(value: Attempt, step: Transition, result_complete: bool) 
         Transition.CloseUnknown => "closed_unknown"
     };
 }
+
+public type Attempt = {
+    id: string,
+    session: string,
+    kind: string,
+    label: string,
+    phase: string,
+    input_event: i64,
+    through: i64,
+    result_event: i64,
+    recovery_event: i64
+};

@@ -1,12 +1,11 @@
 module nomo.domain.sessions.event_codec;
 
-import nomo.core.conversation.Event;
-import nomo.domain.harness.chat.chat_policy_prior_error;
+import nomo.domain.conversation.Event;
+import nomo.domain.harness.chat.{Previous, chat_policy_prior_error};
 import nomo.domain.harness.read.question_error;
 import nomo.domain.limits.{event_bytes, history_bytes, message_bytes, outcome_bytes};
 import nomo.domain.text.{data_safe, flat_string_frame, safe, text_printable};
 import nomo.domain.wire.{encode, string_fields};
-import nomo.harness.harness_tool_chat_contract.Previous;
 import std.agent.message.Message;
 import std.json.parse;
 import std.text.{char_count, concat, contains, count, get_byte_slice, is_ascii, is_char_boundary, len, replace};
@@ -227,11 +226,13 @@ flow excerpt(clean: string) -> string {
         }
         tail = tail + 1;
     }
-    return concat([
-        get_byte_slice(clean, [0, head)).unwrap(),
-        "\n[... output omitted ...]\n",
-        get_byte_slice(clean, [tail, size)).unwrap()
-    ]);
+    return concat(
+        [
+            get_byte_slice(clean, [0, head)).unwrap(),
+            "\n[... output omitted ...]\n",
+            get_byte_slice(clean, [tail, size)).unwrap()
+        ]
+    );
 }
 
 // The caller must provide known sensitive literals through a trusted private
@@ -405,3 +406,22 @@ public flow events(value: Array<Event>, policy: Policy) -> Result<Events, string
         replacements
     });
 }
+
+// Only a trusted caller's known literals are redacted. No policy or literal is
+// stored here. This isolated store is not yet linked atomically to chat turns.
+public type History = {
+    format: i32,
+    turns: i32,
+    first_count: usize,
+    events: Array<Event>
+};
+
+// A pure, bounded projection. This does not persist events or grant authority.
+// Exact known-literal filtering is not comprehensive secret detection; callers
+// must supply an appropriate trusted policy before using any persisted form.
+public type EventFrame = {
+    format: i32,
+    turns: i32,
+    first_count: usize,
+    events: Array<Event>
+};

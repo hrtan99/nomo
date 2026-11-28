@@ -7,12 +7,7 @@ import nomo.adapters.cli.harness.{finish_edit, harness_work_entry_refused, prepa
 import nomo.adapters.filesystem.editing.{LegacyWorkEditor, NativeWorkEditor};
 import nomo.adapters.storage.chat.{chat_history_load, conversation as chat_conversation, recoverable_chat_store_load};
 import nomo.adapters.storage.check_lifecycle.FirstCheck;
-import nomo.adapters.storage.checks.{
-    history_check_guard_plan,
-    inspect as checks_inspect,
-    load,
-    recoverable_check_store_plan
-};
+import nomo.adapters.storage.checks.{history_check_guard_plan, inspect as checks_inspect, load, recoverable_check_store_plan};
 import nomo.adapters.storage.edits.{
     FirstEditJournal,
     edit_operation_store_available,
@@ -39,14 +34,12 @@ import nomo.adapters.storage.work_admission.{
 import nomo.adapters.storage.work_history.{EventWorkTimeline, LegacyWorkTimeline};
 import nomo.application.editing.ports.{Approval as ports_Approval, Run, Ticket};
 import nomo.application.editing.workflow.work_controller_execute;
+import nomo.application.resources.{EditableRoot, PolicyRoot, ReadOnlyRoot};
 import nomo.bootstrap.work.HistoryWorkStages;
 import nomo.domain.editing.{bind, same_binding};
 import nomo.domain.harness.work.fresh;
 import nomo.domain.sessions.event_codec.Policy;
 import nomo.domain.sessions.work.{admit, partial};
-import nomo.session.event_policy.PolicyRoot;
-import nomo.tools.edit_file.EditableRoot;
-import nomo.tools.workspace.ReadOnlyRoot;
 import std.effects.Fs;
 import std.fs.IOError as fs_IOError;
 import std.io.{IOError, println};

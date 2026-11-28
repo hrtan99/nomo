@@ -1,5 +1,6 @@
 module nomo.adapters.filesystem.workspace;
 
+import nomo.application.resources.{LaunchRoot, ProjectRoot, ReadOnlyRoot};
 import nomo.application.transfer.ports.ArchiveWorkspace;
 import nomo.application.workspace.ports.{
     ConfigurationFile,
@@ -19,25 +20,13 @@ import nomo.domain.harness.loop.candidate_error;
 import nomo.domain.limits.{file_bytes, message_bytes};
 import nomo.domain.text.search_literal;
 import nomo.domain.wire.encode;
-import nomo.domain.workspace.{
-    DiscoveredFileInfo,
-    Discovery,
-    LaunchRequest,
-    Outcome,
-    PathInfo,
-    ProjectInstruction,
-    outcome,
-    valid_path
-};
-import nomo.native.projects.LaunchRoot;
-import nomo.native.workspace.ProjectRoot;
-import nomo.tools.workspace.ReadOnlyRoot;
+import nomo.domain.workspace.{DiscoveredFileInfo, Discovery, LaunchRequest, Outcome, PathInfo, ProjectInstruction, outcome, valid_path};
 import std.agent.message.Message;
 import std.bytes.len;
 import std.codec.text.{Strict, utf8_decode, utf8_encode};
 import std.effects.Fs;
 import std.fs.{
-    IOError as fs_IOError,
+    IOError,
     ListLimitError,
     ReadLimitError,
     WorkspacePath,
@@ -50,7 +39,7 @@ import std.fs.{
     root as fs_root,
     stat
 };
-import std.io.{IOError, println};
+import std.io.{IOError as io_IOError, println};
 import std.text.{TextBuilder, char_count, contains, count, from_usize, split, split_iter, starts_with};
 
 public type ProjectArchives = {};
@@ -65,7 +54,7 @@ impl ProjectArchives ~ ArchiveWorkspace {
 
     flow read(self, pathname: string) -> string ![
         Fs.read<ProjectRoot>,
-        Error<fs_IOError>,
+        Error<IOError>,
         Error<ReadLimitError>
     ] {
         let location = match fs_path<ProjectRoot>(pathname) {
@@ -80,7 +69,7 @@ impl ProjectArchives ~ ArchiveWorkspace {
 
     flow replace(self, target: WorkspacePath<ProjectRoot>, text: string) -> unit ![
         Fs.atomic_replace<ProjectRoot>,
-        Error<fs_IOError>
+        Error<IOError>
     ] {
         atomic_replace(target, utf8_encode(text));
     }
@@ -92,7 +81,7 @@ impl ProjectConfigurationFile ~ ConfigurationFile {
     flow read(self) -> Option<string> ![
         Fs.read<ProjectRoot>,
         Fs.list<ProjectRoot>,
-        Error<fs_IOError>,
+        Error<IOError>,
         Error<ReadLimitError>
     ] {
         let root = match fs_path<ProjectRoot>(".") {
@@ -130,7 +119,7 @@ impl ProjectInstructionFiles ~ InstructionFileSource {
         return relative_name(selected);
     }
 
-    flow entries(self, scope: string) -> Array<string> ![Fs.list<ProjectRoot>, Error<fs_IOError>] {
+    flow entries(self, scope: string) -> Array<string> ![Fs.list<ProjectRoot>, Error<IOError>] {
         let selected = match fs_path<ProjectRoot>(scope) {
             Ok(value) => value,
             Err(_) => abort("invalid project instruction path"),
@@ -140,7 +129,7 @@ impl ProjectInstructionFiles ~ InstructionFileSource {
 
     flow text(self, pathname: string) -> string ![
         Fs.read<ProjectRoot>,
-        Error<fs_IOError>,
+        Error<IOError>,
         Error<ReadLimitError>
     ] {
         return read_text(pathname);
@@ -151,7 +140,7 @@ impl ProjectInstructionFiles ~ InstructionReader {
     flow read(self, pathname: string) -> Array<ProjectInstruction> ![
         Fs.read<ProjectRoot>,
         Fs.list<ProjectRoot>,
-        Error<fs_IOError>,
+        Error<IOError>,
         Error<ReadLimitError>
     ] {
         return load(pathname) with {
@@ -165,7 +154,7 @@ impl ProjectInstructionFiles ~ InstructionReader {
 public type NativeProjectLaunch = {};
 
 impl NativeProjectLaunch ~ ProjectLaunchControl {
-    flow publish(self, request: LaunchRequest) -> unit ![Fs.atomic_replace<LaunchRoot>, Error<fs_IOError>] {
+    flow publish(self, request: LaunchRequest) -> unit ![Fs.atomic_replace<LaunchRoot>, Error<IOError>] {
         let target = match fs_path<LaunchRoot>("next-project") {
             Ok(value) => value,
             Err(_) => abort("native launch control is unavailable"),
@@ -254,7 +243,7 @@ impl MultiFiles ~ LiteralSearcher<ReadOnlyRoot> {
 }
 
 flow target(name: string) -> WorkspacePath<ReadOnlyRoot> {
-    let checked: Result<WorkspacePath<ReadOnlyRoot>, fs_IOError> = fs_path<ReadOnlyRoot>(name);
+    let checked: Result<WorkspacePath<ReadOnlyRoot>, IOError> = fs_path<ReadOnlyRoot>(name);
     return match checked {
         Ok(value) => value,
         Err(_) => abort("read-only path construction refused"),
@@ -278,8 +267,8 @@ public flow discover(page: usize) -> Result<Discovery, string> ![
     Console,
     Fs.list<ReadOnlyRoot>,
     Fs.stat<ReadOnlyRoot>,
-    Error<fs_IOError>,
     Error<IOError>,
+    Error<io_IOError>,
     Error<IndexError>,
     Error<BudgetExceeded>
 ] {
@@ -386,7 +375,7 @@ public flow selection(raw: string) -> Result<Discovery, string> {
 // The Host enforces the byte cap while reading; overflow never returns a prefix.
 flow read_bounded(name: string, bound: usize) -> Outcome ![
     Fs.read<ReadOnlyRoot>,
-    Error<fs_IOError>,
+    Error<IOError>,
     Error<IndexError>,
     Error<BudgetExceeded>
 ] {
@@ -428,7 +417,7 @@ flow read_bounded(name: string, bound: usize) -> Outcome ![
 
 public flow read_file(name: string) -> Outcome ![
     Fs.read<ReadOnlyRoot>,
-    Error<fs_IOError>,
+    Error<IOError>,
     Error<IndexError>,
     Error<BudgetExceeded>
 ] ~ NomoRead<ReadOnlyRoot> {
@@ -437,7 +426,7 @@ public flow read_file(name: string) -> Outcome ![
 
 public flow read_legacy(name: string) -> Outcome ![
     Fs.read<ReadOnlyRoot>,
-    Error<fs_IOError>,
+    Error<IOError>,
     Error<IndexError>,
     Error<BudgetExceeded>
 ] ~ NomoRead<ReadOnlyRoot> {
@@ -466,7 +455,7 @@ public flow list_directory(name: string) -> Outcome {
 // A Host overflow check may probe one additional byte, never return a prefix.
 flow search_with(names: Array<string>, literal: string, maximum: usize) -> Outcome ![
     Fs.read<ReadOnlyRoot>,
-    Error<fs_IOError>,
+    Error<IOError>,
     Error<IndexError>,
     Error<BudgetExceeded>
 ] {
@@ -576,7 +565,7 @@ flow search_with(names: Array<string>, literal: string, maximum: usize) -> Outco
 
 public flow search_files(names: Array<string>, literal: string) -> Outcome ![
     Fs.read<ReadOnlyRoot>,
-    Error<fs_IOError>,
+    Error<IOError>,
     Error<IndexError>,
     Error<BudgetExceeded>
 ] ~ NomoSearch<ReadOnlyRoot> {
@@ -594,7 +583,7 @@ public flow search_files(names: Array<string>, literal: string) -> Outcome ![
 
 public flow search_wide(names: Array<string>, literal: string) -> Outcome ![
     Fs.read<ReadOnlyRoot>,
-    Error<fs_IOError>,
+    Error<IOError>,
     Error<IndexError>,
     Error<BudgetExceeded>
 ] ~ NomoSearch<ReadOnlyRoot> {
@@ -603,7 +592,7 @@ public flow search_wide(names: Array<string>, literal: string) -> Outcome ![
 
 public flow search_legacy(names: Array<string>, literal: string) -> Outcome ![
     Fs.read<ReadOnlyRoot>,
-    Error<fs_IOError>,
+    Error<IOError>,
     Error<IndexError>,
     Error<BudgetExceeded>
 ] ~ NomoSearch<ReadOnlyRoot> {
@@ -640,20 +629,20 @@ flow info(pathname: WorkspacePath<ProjectRoot>) -> PathInfo {
 public type ProjectFiles = {};
 
 impl ProjectFiles ~ ProjectFileSource {
-    flow text(self, path: string) -> string ![Fs.read<ProjectRoot>, Error<fs_IOError>, Error<ReadLimitError>] {
+    flow text(self, path: string) -> string ![Fs.read<ProjectRoot>, Error<IOError>, Error<ReadLimitError>] {
         return read_text(path);
     }
 
     flow entries(self, path: string) -> Array<PathInfo> ![
         Fs.list<ProjectRoot>,
         Fs.stat<ProjectRoot>,
-        Error<fs_IOError>,
+        Error<IOError>,
         Error<BudgetExceeded>
     ] {
         return list(location(path)).iter().map_collect(item => info(item));
     }
 
-    flow metadata(self, path: string) -> PathInfo ![Fs.stat<ProjectRoot>, Error<fs_IOError>] {
+    flow metadata(self, path: string) -> PathInfo ![Fs.stat<ProjectRoot>, Error<IOError>] {
         return info(location(path));
     }
 }

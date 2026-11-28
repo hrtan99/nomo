@@ -1,8 +1,10 @@
 module nomo.domain.sessions.work;
 
-import nomo.core.conversation.Event;
+import nomo.domain.conversation.Event;
 import nomo.domain.editing.{
+    Binding,
     Confirmed,
+    EditOperation,
     Prepared,
     Selector,
     bind,
@@ -11,24 +13,15 @@ import nomo.domain.editing.{
     same_binding,
     selector_error
 };
-import nomo.domain.harness.edit.{history_summary_error, text_error};
+import nomo.domain.harness.edit.{EditLedger, history_summary_error, text_error};
+import nomo.domain.harness.loop.ReadLedger;
 import nomo.domain.harness.read.question_error;
-import nomo.domain.harness.work.{Context, Evidence, evidence_error, ledger_error, native_budget, native_tokens};
+import nomo.domain.harness.work.{Context, Evidence, WorkLedger, evidence_error, ledger_error, native_budget, native_tokens};
 import nomo.domain.limits.{compatible_scan_i32, context_bytes, history_bytes, message_frame_bytes};
-import nomo.domain.sessions.chat.recoverable_events_invalid;
-import nomo.domain.sessions.event_codec.{Policy, event_text_codec_decode, redact_text};
+import nomo.domain.sessions.chat.{RecoverableChatFrame, recoverable_events_invalid};
+import nomo.domain.sessions.event_codec.{EventFrame, Policy, event_text_codec_decode, redact_text};
 import nomo.domain.text.{flat_string_frame, hex_digest};
 import nomo.domain.wire.{encode as wire_encode, string_fields};
-import nomo.harness.harness_edit_contract.Ledger as harness_edit_contract_Ledger;
-import nomo.harness.harness_tool_contract.Ledger as harness_tool_contract_Ledger;
-import nomo.harness.harness_work_contract.Ledger;
-import nomo.session.continuous_work.Entry;
-import nomo.session.edit_operation.Binding;
-import nomo.session.history_followup_guard.{Budget, Record};
-import nomo.session.history_work_guard.{Budget as history_work_guard_Budget, Record as history_work_guard_Record};
-import nomo.session.recoverable_chat_store.Frame;
-import nomo.session.recoverable_events.Frame as recoverable_events_Frame;
-import nomo.session.work_record.Record as work_record_Record;
 import std.memory.MemoryEntry;
 import std.text.{char_count, concat, from_char, from_i32, from_usize, get_char_slice, join, len, parse_i32};
 
@@ -131,8 +124,8 @@ public type Facts = {
     generation: i32
 };
 
-public flow historical_followup_full() -> Budget {
-    return Budget {
+public flow historical_followup_full() -> FollowupBudget {
+    return FollowupBudget {
         steps = 13,
         calls = 7,
         generation = 47104,
@@ -140,8 +133,8 @@ public flow historical_followup_full() -> Budget {
     };
 }
 
-public flow historical_followup_zero() -> Budget {
-    return Budget {
+public flow historical_followup_zero() -> FollowupBudget {
+    return FollowupBudget {
         steps = 0,
         calls = 0,
         generation = 0,
@@ -149,7 +142,7 @@ public flow historical_followup_zero() -> Budget {
     };
 }
 
-public flow historical_followup_invalid(row: Record) -> string {
+public flow historical_followup_invalid(row: FollowupRecord) -> string {
     if row.format != 1 || (row.phase != "running" && row.phase != "complete") {
         return "invalid followup phase";
     }
@@ -186,8 +179,8 @@ public flow historical_followup_invalid(row: Record) -> string {
     return "";
 }
 
-public flow historical_work_full() -> history_work_guard_Budget {
-    return history_work_guard_Budget {
+public flow historical_work_full() -> WorkBudget {
+    return WorkBudget {
         steps = 13,
         calls = 7,
         generation = 47104,
@@ -195,8 +188,8 @@ public flow historical_work_full() -> history_work_guard_Budget {
     };
 }
 
-public flow historical_work_zero() -> history_work_guard_Budget {
-    return history_work_guard_Budget {
+public flow historical_work_zero() -> WorkBudget {
+    return WorkBudget {
         steps = 0,
         calls = 0,
         generation = 0,
@@ -271,7 +264,7 @@ flow expected_scan(format: i32, value: i32) -> bool {
     };
 }
 
-public flow historical_work_invalid(value: history_work_guard_Record) -> string {
+public flow historical_work_invalid(value: WorkRecord) -> string {
     if (value.format < 1 || value.format > 10) || (
         value.phase != "running" && value.phase != "complete"
             && value.phase != "abandoned"
@@ -293,7 +286,7 @@ public flow historical_work_invalid(value: history_work_guard_Record) -> string 
         let expected = if value.format == 1 {
             historical_work_full()
         } else {
-            history_work_guard_Budget {
+            WorkBudget {
                 steps = 13,
                 calls = 7,
                 generation = generation(value.format),
@@ -329,8 +322,8 @@ public flow historical_work_invalid(value: history_work_guard_Record) -> string 
     return "";
 }
 
-public flow recoverable_work_state_full(wide: bool) -> history_work_guard_Budget {
-    return history_work_guard_Budget {
+public flow recoverable_work_state_full(wide: bool) -> WorkBudget {
+    return WorkBudget {
         steps = 13,
         calls = 7,
         generation = if wide {
@@ -346,9 +339,9 @@ public flow recoverable_work_state_full(wide: bool) -> history_work_guard_Budget
     };
 }
 
-public flow full_mode(wide: bool, high_input: bool) -> history_work_guard_Budget {
+public flow full_mode(wide: bool, high_input: bool) -> WorkBudget {
     return if high_input {
-        history_work_guard_Budget {
+        WorkBudget {
             steps = 13,
             calls = 7,
             generation = 917504,
@@ -359,8 +352,8 @@ public flow full_mode(wide: bool, high_input: bool) -> history_work_guard_Budget
     };
 }
 
-public flow recoverable_work_state_zero() -> history_work_guard_Budget {
-    return history_work_guard_Budget {
+public flow recoverable_work_state_zero() -> WorkBudget {
+    return WorkBudget {
         steps = 0,
         calls = 0,
         generation = 0,
@@ -375,8 +368,8 @@ public flow running_record(
     request: string,
     history_version: string,
     wide: bool
-) -> history_work_guard_Record {
-    return history_work_guard_Record {
+) -> WorkRecord {
+    return WorkRecord {
         format = if wide {
             8
         } else {
@@ -402,8 +395,8 @@ public flow running_record_mode(
     history_version: string,
     wide: bool,
     high_input: bool
-) -> history_work_guard_Record {
-    return history_work_guard_Record {
+) -> WorkRecord {
+    return WorkRecord {
         format = if high_input {
             10
         } else {
@@ -425,7 +418,7 @@ public flow running_record_mode(
     };
 }
 
-public flow completed_record(old: history_work_guard_Record, summary: string, spent: Ledger) -> history_work_guard_Record {
+public flow completed_record(old: WorkRecord, summary: string, spent: WorkLedger) -> WorkRecord {
     return old {
         phase = "complete",
         reserved = recoverable_work_state_zero(),
@@ -434,8 +427,8 @@ public flow completed_record(old: history_work_guard_Record, summary: string, sp
     };
 }
 
-public flow abandoned_record(old: history_work_guard_Record, id: string, label: string) -> Result<
-    history_work_guard_Record,
+public flow abandoned_record(old: WorkRecord, id: string, label: string) -> Result<
+    WorkRecord,
     string
 > {
     if old.id != id || old.phase != "running" {
@@ -446,7 +439,10 @@ public flow abandoned_record(old: history_work_guard_Record, id: string, label: 
     });
 }
 
-public flow admission_chat_error(current: MemoryEntry<string, Frame>, expected: MemoryEntry<string, Frame>) -> string {
+public flow admission_chat_error(
+    current: MemoryEntry<string, RecoverableChatFrame>,
+    expected: MemoryEntry<string, RecoverableChatFrame>
+) -> string {
     if current != expected || expected.value.chat.invocation.admitted < 1
         || expected.value.chat.phase == "running" || expected.value.chat.pending != "" {
         return "completed unchanged recoverable chat required";
@@ -455,9 +451,9 @@ public flow admission_chat_error(current: MemoryEntry<string, Frame>, expected: 
 }
 
 public flow claim_chat_error(
-    current: MemoryEntry<string, Frame>,
-    expected: MemoryEntry<string, Frame>,
-    work: history_work_guard_Record,
+    current: MemoryEntry<string, RecoverableChatFrame>,
+    expected: MemoryEntry<string, RecoverableChatFrame>,
+    work: WorkRecord,
     label: string
 ) -> string {
     if current != expected || work.history_version != current.version.opaque || work.phase != "running" {
@@ -466,7 +462,7 @@ public flow claim_chat_error(
     return "";
 }
 
-public flow work_data_error(work: history_work_guard_Record, events: recoverable_events_Frame, policy: Policy) -> string {
+public flow work_data_error(work: WorkRecord, events: EventFrame, policy: Policy) -> string {
     let work_error = historical_work_invalid(work);
     if work_error != "" {
         return work_error;
@@ -639,7 +635,7 @@ public flow evidence(events: Array<Event>, policy: Policy) -> Result<Option<stri
 }
 
 // Older or incomplete records may lack attributable events; never guess their origin.
-public flow summary_source(frame: recoverable_events_Frame, summary: string, policy: Policy) -> Result<
+public flow summary_source(frame: EventFrame, summary: string, policy: Policy) -> Result<
     string,
     string
 > {
@@ -678,7 +674,7 @@ public type WorkUsage = {
     generation: i32
 };
 
-public flow settled_usage(value: Ledger) -> WorkUsage {
+public flow settled_usage(value: WorkLedger) -> WorkUsage {
     return WorkUsage {
         calls = value.read.calls + value.edit.calls,
         generation = value.read.tokens + value.edit.tokens
@@ -717,7 +713,7 @@ public flow abandoned_fact(id: string) -> WorkFacts {
 }
 
 // Pure projections of captured historical records; no storage, file or model calls.
-public flow extra_fact(item: Entry, policy: Policy) -> Result<WorkFacts, string> {
+public flow extra_fact(item: ContinuousEntry, policy: Policy) -> Result<WorkFacts, string> {
     if item.result.phase == "abandoned" && (item.check.phase == "none" || item.check.phase == "planned") {
         return Ok(abandoned_fact(item.core.id));
     }
@@ -863,8 +859,8 @@ public flow check_values(
 }
 
 public flow completed_fact(
-    work: history_work_guard_Record,
-    events: recoverable_events_Frame,
+    work: WorkRecord,
+    events: EventFrame,
     check: Option<CheckFacts>,
     policy: Policy,
     label: string
@@ -926,13 +922,13 @@ public type Captured = {
     before: string,
     after: string,
     summary: string,
-    ledger: Ledger
+    ledger: WorkLedger
 };
 
-flow stage(confirmed: bool, read: harness_tool_contract_Ledger) -> Ledger {
-    return Ledger {
+flow stage(confirmed: bool, read: ReadLedger) -> WorkLedger {
+    return WorkLedger {
         read,
-        edit = harness_edit_contract_Ledger {
+        edit = EditLedger {
             steps = if confirmed {
                 6
             } else {
@@ -999,7 +995,7 @@ flow decode(body: string) -> Result<Array<string>, string> {
     return Ok(fields);
 }
 
-flow outer_error(row: work_record_Record) -> string {
+flow outer_error(row: StoredWorkRecord) -> string {
     let encoded = match wire_encode(row, "work row conversion refused", "work row serialization refused") {
         Ok(value) => value,
         Err(error) => {
@@ -1097,7 +1093,7 @@ flow fields(value: Captured, phase: string) -> Array<string> {
     ];
 }
 
-flow encode(value: Captured, phase: string) -> Result<work_record_Record, string> {
+flow encode(value: Captured, phase: string) -> Result<StoredWorkRecord, string> {
     if value.evidence.allowed.len() > 2 || value.evidence.files.len() > 2 {
         return Err("legacy work record supports at most two files");
     }
@@ -1115,7 +1111,7 @@ flow encode(value: Captured, phase: string) -> Result<work_record_Record, string
     if !framed(body) {
         return Err("work record encoded bounds exceeded");
     }
-    let row = work_record_Record {
+    let row = StoredWorkRecord {
         format = 1,
         phase,
         binding = value.binding,
@@ -1128,7 +1124,7 @@ flow encode(value: Captured, phase: string) -> Result<work_record_Record, string
     return Ok(row);
 }
 
-public flow validate(row: work_record_Record) -> Result<Captured, string> {
+public flow validate(row: StoredWorkRecord) -> Result<Captured, string> {
     if row.format != 1 || (row.phase != "summary-unconfirmed" && row.phase != "summary-confirmed") {
         return Err("unsupported work record format or phase");
     }
@@ -1173,7 +1169,7 @@ public flow validate(row: work_record_Record) -> Result<Captured, string> {
     if data[17] != "" {
         selected = selected.push(data[17]);
     }
-    let read = harness_tool_contract_Ledger {
+    let read = ReadLedger {
         steps = 7,
         calls = 4,
         tokens = 8192,
@@ -1235,7 +1231,7 @@ public flow validate(row: work_record_Record) -> Result<Captured, string> {
 // A predicted valid binding is admission data, never completion authority.
 // Only the caller's matched typed Confirmed result permits publication.
 public flow partial(binding: Binding, evidence: Evidence, task: string, prepared: Prepared) -> Result<
-    work_record_Record,
+    StoredWorkRecord,
     string
 > {
     let invalid = binding_error(binding);
@@ -1285,7 +1281,7 @@ public flow partial(binding: Binding, evidence: Evidence, task: string, prepared
     return Ok(row);
 }
 
-public flow confirm(row: work_record_Record, summary: string) -> Result<work_record_Record, string> {
+public flow confirm(row: StoredWorkRecord, summary: string) -> Result<StoredWorkRecord, string> {
     let captured = match validate(row) {
         Ok(value) => value,
         Err(error) => {
@@ -1321,7 +1317,7 @@ public flow confirm(row: work_record_Record, summary: string) -> Result<work_rec
 // This hypothetical summary supplies the maximum escape expansion, including
 // second escaping in the complete row. Capacity admission grants no completion
 // authority and does not require the hypothetical text to be a valid summary.
-public flow admit(row: work_record_Record) -> Result<bool, string> {
+public flow admit(row: StoredWorkRecord) -> Result<bool, string> {
     let captured = match validate(row) {
         Ok(value) => value,
         Err(error) => {
@@ -1344,12 +1340,12 @@ public flow admit(row: work_record_Record) -> Result<bool, string> {
     };
 }
 
-public flow same_record(left: work_record_Record, right: work_record_Record) -> bool {
+public flow same_record(left: StoredWorkRecord, right: StoredWorkRecord) -> bool {
     return left == right;
 }
 
 public type Failure = {
-    state: Ledger,
+    state: WorkLedger,
     error: string
 };
 
@@ -1359,18 +1355,180 @@ public type Pending = {
     evidence: Evidence,
     request: string,
     task: string,
-    state: Ledger,
+    state: WorkLedger,
     high_input: bool
 };
 
 public type Completed = {
     context: Context,
-    state: Ledger,
+    state: WorkLedger,
     high_input: bool
 };
 
 public type Summary = {
     answer: string,
-    state: Ledger,
+    state: WorkLedger,
     model_generated: bool
+};
+
+// Output is untrusted diagnostic text, never authority or evidence that a
+// command may run again. Records bind to an independently completed check.
+public type CheckOutputRecord = {
+    format: i32,
+    slot: string,
+    id: string,
+    digest: string,
+    stdout: string,
+    stderr: string,
+    stdout_truncated: bool,
+    stderr_truncated: bool
+};
+
+public type CheckFrame = {
+    format: i32,
+    policy_binding: string,
+    work_history: string,
+    workspace: string,
+    path: string,
+    check: CheckRecord,
+    stdout: string,
+    stderr: string,
+    stdout_truncated: bool,
+    stderr_truncated: bool
+};
+
+// All additional rounds share one append-only history and one current slot.
+// Each current edit/check transition is durable before its external effect.
+public type ContinuousCore = {
+    id: string,
+    request: string
+};
+
+public type ContinuousEdit = {
+    phase: string,
+    binding: Option<Binding>
+};
+
+public type ContinuousResult = {
+    phase: string,
+    summary: string,
+    source: string,
+    calls: i32,
+    generation: i32,
+    events: Array<Event>
+};
+
+public type ContinuousCheck = {
+    phase: string,
+    digest: string,
+    outcome: string,
+    exit_code: string,
+    stdout: string,
+    stderr: string,
+    stdout_truncated: bool,
+    stderr_truncated: bool
+};
+
+public type ContinuousEntry = {
+    core: ContinuousCore,
+    edit: ContinuousEdit,
+    result: ContinuousResult,
+    check: ContinuousCheck
+};
+
+public type ContinuousBook = {
+    binding: string,
+    history: Array<ContinuousEntry>,
+    current: ContinuousEntry
+};
+
+public type CheckRecord = {
+    format: i32,
+    phase: string,
+    id: string,
+    digest: string,
+    outcome: string,
+    exit_code: string
+};
+
+// One additional work attempt, with separate reserved budget and fresh grants.
+// The predecessor is untrusted recorded context, not a current root witness.
+public type FollowupBudget = {
+    steps: i32,
+    calls: i32,
+    generation: i32,
+    native_tokens: i32
+};
+
+public type FollowupParent = {
+    work: WorkRecord,
+    edit: EditOperation,
+    check: Option<CheckRecord>
+};
+
+public type FollowupRecord = {
+    format: i32,
+    phase: string,
+    id: string,
+    workspace: string,
+    path: string,
+    request: string,
+    history_version: string,
+    parent: FollowupParent,
+    reserved: FollowupBudget,
+    settled: Option<WorkLedger>,
+    summary: string
+};
+
+// This record prevents a second dispatched work request for this session.
+// It is not a File receipt, root identity, user approval, or Host witness.
+public type WorkBudget = {
+    steps: i32,
+    calls: i32,
+    generation: i32,
+    native_tokens: i32
+};
+
+public type WorkRecord = {
+    format: i32,
+    phase: string,
+    id: string,
+    workspace: string,
+    path: string,
+    request: string,
+    history_version: string,
+    reserved: WorkBudget,
+    settled: Option<WorkLedger>,
+    summary: string
+};
+
+// One separately reserved followup slot linked to the current event-chat version.
+// The work row and its bounded event batch commit together. Edit intent remains
+// a separate durable boundary; if any boundary is uncertain, callers must
+// retain the reservation and refuse replay rather than infer an outcome.
+public type RecoverableFollowupFrame = {
+    format: i32,
+    policy_binding: string,
+    parent_work_version: string,
+    parent_check_version: string,
+    work: WorkRecord,
+    events: EventFrame
+};
+
+// One separately reserved work slot linked to the current event-chat version.
+// The work row and its bounded event batch commit together. Edit intent remains
+// a separate durable boundary; if any boundary is uncertain, callers must
+// retain the reservation and refuse replay rather than infer an outcome.
+public type RecoverableWorkFrame = {
+    format: i32,
+    policy_binding: string,
+    work: WorkRecord,
+    events: EventFrame
+};
+
+public type StoredWorkRecord = {
+    format: i32,
+    phase: string,
+    binding: Binding,
+    body: string
 };

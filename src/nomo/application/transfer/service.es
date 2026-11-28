@@ -3,6 +3,7 @@ module nomo.application.transfer.service;
 import nomo.application.conversation.ports.{ConversationCatalog, ConversationReader, ResultPublication};
 import nomo.application.execution.attempts.{begin, complete_attempt, dispatching, returned};
 import nomo.application.execution.ports.AttemptRepository;
+import nomo.application.resources.ProjectRoot;
 import nomo.application.transfer.ports.{
     ArchiveCodec,
     ArchiveEncoding,
@@ -14,17 +15,8 @@ import nomo.application.transfer.ports.{
     TransferOperations,
     TransferRenderer
 };
-import nomo.domain.archives.{
-    ArchiveDocument,
-    ExportMetadata,
-    ExportOutcome,
-    ExportPreview,
-    PortableArchive,
-    PortableInfo
-};
-import nomo.domain.conversation.ChatMessage;
-import nomo.native.history.{CopyJob, Session};
-import nomo.native.workspace.ProjectRoot;
+import nomo.domain.archives.{ArchiveDocument, CopyJob, ExportMetadata, ExportOutcome, ExportPreview, PortableArchive, PortableInfo};
+import nomo.domain.conversation.{ChatMessage, SavedSession};
 import std.codec.text.utf8_encode;
 import std.crypto.constant_time_eq;
 import std.effects.Fs;
@@ -147,7 +139,7 @@ public flow copy_events<C ~ ConversationCatalog>(
     id: string,
     events: Array<ChatMessage>,
     summary: string
-) -> Session
+) -> SavedSession
 ![CopyStorage, TransferDisplay, Memory, Error<StorageError>, Error<MemoryConflict>] {
     let value = job(id);
     if value.phase == "ready" {
@@ -195,7 +187,7 @@ public flow resume_fork<R ~ ConversationReader, C ~ ConversationCatalog>(
     catalog: C,
     workspace: string,
     id: string
-) -> Session
+) -> SavedSession
 ![CopyStorage, TransferDisplay, Memory, Error<StorageError>, Error<MemoryConflict>, Error<BudgetExceeded>] {
     let value = job(id);
     if value.workspace != workspace || value.kind != "fork" {
@@ -236,7 +228,7 @@ public flow fork<R ~ ConversationReader, C ~ ConversationCatalog>(
     catalog: C,
     id: string,
     through: i64
-) -> Session
+) -> SavedSession
 ![CopyStorage, TransferDisplay, Memory, Error<StorageError>, Error<MemoryConflict>, Error<BudgetExceeded>] {
     let source = history.load(id);
     if through < -1 || through >= source.next_event {
@@ -246,7 +238,7 @@ public flow fork<R ~ ConversationReader, C ~ ConversationCatalog>(
     return resume_fork(history, catalog, source.workspace, value.id);
 }
 
-public flow load<C ~ ConversationCatalog>(catalog: C, workspace: string, path: string) -> Session
+public flow load<C ~ ConversationCatalog>(catalog: C, workspace: string, path: string) -> SavedSession
 ![
     CopyStorage,
     ArchiveCodec,
@@ -269,7 +261,7 @@ public flow resume_import<R ~ ConversationReader, C ~ ConversationCatalog>(
     catalog: C,
     workspace: string,
     id: string
-) -> Session
+) -> SavedSession
 ![
     CopyStorage,
     ArchiveCodec,

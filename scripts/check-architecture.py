@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""Check Nomo layer dependencies and identity-only compatibility modules."""
-import hashlib
+"""Check Nomo module ownership, import resolution and layer dependencies."""
 import json
 from pathlib import Path
 import re
@@ -28,21 +27,6 @@ def declarations(source):
     return items, result
 
 
-def shape(source, kind, name):
-    items, definitions = declarations(source)
-    start = definitions[name]['index']
-    depth = 0
-    for end in range(start, len(items)):
-        value = items[end].group()
-        depth += (value in ('{', '(', '[')) - (value in ('}', ')', ']'))
-        if depth == 0 and value == ';':
-            break
-        if kind == 'enum' and value == '}' and depth == 0:
-            break
-    value = '\0'.join(item.group() for item in items[start:end + 1])
-    return hashlib.sha256(value.encode()).hexdigest()
-
-
 def imports(source):
     for match in re.finditer(r'(?m)^(public )?import ([\w.]+)(?:\.\{([^}]+)\})?(?: as (\w+))?;', source):
         public, path, group, alias = match.groups()
@@ -55,8 +39,7 @@ def imports(source):
 
 
 def main():
-    policy = json.loads((ROOT / 'config/architecture-compatibility.json').read_text())
-    compatibility = policy['modules']
+    policy = json.loads((ROOT / 'config/architecture.json').read_text())
     modules = {}
     errors = []
     for path in sorted((ROOT / 'src').rglob('*.es')):
@@ -71,9 +54,6 @@ def main():
         modules[module] = (path, source, items, definitions)
     exports = {name: {symbol for symbol, definition in values[3].items() if definition['public']}
                for name, values in modules.items()}
-    for name, contract in compatibility.items():
-        if name not in modules and not contract.get('optional', False):
-            errors.append(f'{contract["path"]}: preserved compatibility module is missing')
     for _ in modules:
         changed = False
         for name, (_, source, _, _) in modules.items():
@@ -99,9 +79,10 @@ def main():
         if layer == 'domain' and (any(definition['kind'] in ('agent', 'tool', 'effect') for definition in definitions.values()) or
                                   any(item.group() == 'perform' for item in items)):
             errors.append(f'{path.relative_to(ROOT)}: domain must contain passive data and pure rules')
-        if layer not in ('domain', 'application', 'adapters', 'bootstrap') and name != 'nomo.main':
-            if name not in compatibility:
-                errors.append(f'{path.relative_to(ROOT)}: legacy module is not an identity-only compatibility leaf')
+        if layer not in policy['layers'] and name not in policy['root_modules']:
+            errors.append(f'{path.relative_to(ROOT)}: source must belong to an architecture layer')
+        if layer == 'domain' and any(item.group() == 'MemoryRegion' for item in items):
+            errors.append(f'{path.relative_to(ROOT)}: concrete storage schema belongs in adapters')
         for target, _, _ in imports(source):
             if not target.startswith('nomo.'):
                 continue
@@ -116,24 +97,6 @@ def main():
             forbidden = ('nomo.application.', 'nomo.adapters.', 'nomo.bootstrap.') if layer == 'domain' else ('nomo.adapters.', 'nomo.bootstrap.') if layer == 'application' else ()
             if owner.startswith(forbidden):
                 errors.append(f'{path.relative_to(ROOT)}: {layer} must not import {owner}')
-            if layer in ('domain', 'application') and owner in compatibility:
-                definition = modules[owner][3].get(symbol)
-                if definition is None or definition['kind'] not in ('type', 'alias', 'enum'):
-                    errors.append(f'{path.relative_to(ROOT)}: compatibility import must name passive data: {target}')
-        if name in compatibility:
-            for symbol, definition in definitions.items():
-                if definition['kind'] not in ('type', 'alias', 'enum', 'let'):
-                    errors.append(f'{path.relative_to(ROOT)}: executable code remains in compatibility leaf: {symbol}')
-            for symbol, expected in compatibility[name].get('shapes', {}).items():
-                if symbol not in definitions or shape(source, definitions[symbol]['kind'], symbol) != expected:
-                    errors.append(f'{path.relative_to(ROOT)}: preserved declaration changed: {symbol}')
-            words = [item.group() for item in items]
-            for symbol in compatibility[name].get('regions', []):
-                marker = ['impl', symbol, '~', 'Region', ';']
-                if not any(words[index:index + len(marker)] == marker for index in range(len(words))):
-                    errors.append(f'{path.relative_to(ROOT)}: preserved Region implementation is missing: {symbol}')
-            if re.search(r'(?m)^impl[^;{]+\{', source):
-                errors.append(f'{path.relative_to(ROOT)}: concrete methods belong outside compatibility leaves')
     colors = {}
     stack = []
     def visit(name):
@@ -153,8 +116,7 @@ def main():
     if errors:
         print('\n'.join(errors), file=sys.stderr)
         return 1
-    leaves = sum(name in modules for name in compatibility)
-    print(f'PASS architecture: {len(modules)} modules, {edges} imports, {leaves} identity-only compatibility leaves')
+    print(f'PASS architecture: {len(modules)} modules, {edges} imports; all modules belong to current layers')
     return 0
 
 

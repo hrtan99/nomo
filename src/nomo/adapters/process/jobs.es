@@ -1,10 +1,9 @@
 module nomo.adapters.process.jobs;
 
 import nomo.application.execution.ports.{ProcessControl, ProcessOperations};
+import nomo.application.resources.ProjectRoot;
 import nomo.application.scope.SessionContext;
-import nomo.domain.processes.{ArchivedJob, ArchivedOutput, InputResult, ProcessEvent};
-import nomo.native.processes.{Job, JobEvent};
-import nomo.native.workspace.ProjectRoot;
+import nomo.domain.processes.{ArchivedJob, ArchivedOutput, InputResult, Job, JobEvent, ProcessEvent};
 import std.fs.{WorkspacePath, path};
 import std.host.command.{Command as command_Command, CommandEvent, CommandHandle, reconnect, start};
 

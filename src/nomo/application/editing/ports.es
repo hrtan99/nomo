@@ -2,20 +2,14 @@ module nomo.application.editing.ports;
 
 import nomo.application.execution.ports.CommandOperations;
 import nomo.application.harness.ports.{DiagnosticOutput, HarnessProgress};
+import nomo.application.resources.{EditableRoot, ProjectRoot, ReadOnlyRoot};
 import nomo.application.scope.SessionContext;
-import nomo.core.conversation.Event;
-import nomo.domain.changes.{Change, ChangeOutcome, FileChange, FileOutcome};
-import nomo.domain.conversation.{ChatMessage, PendingRequest};
-import nomo.domain.editing.{Confirmed, Prepared, Selector};
+import nomo.domain.changes.{Change, ChangeOutcome, FileChange, FileOutcome, Journal, Step};
+import nomo.domain.conversation.{ChatMessage, Event, PendingRequest, SavedSession};
+import nomo.domain.editing.{Binding, Confirmed, Prepared, Selector};
+import nomo.domain.harness.work.WorkLedger;
 import nomo.domain.sessions.event_codec.Policy;
 import nomo.domain.sessions.work.{Completed, Failure, Pending, Summary, WorkRequest};
-import nomo.harness.harness_work_contract.Ledger;
-import nomo.native.history.Session;
-import nomo.native.mutations.{Journal, Step};
-import nomo.native.workspace.ProjectRoot;
-import nomo.session.edit_operation.Binding;
-import nomo.tools.edit_file.EditableRoot;
-import nomo.tools.workspace.ReadOnlyRoot;
 import std.effects.Fs;
 import std.fs.{IOError as fs_IOError, ReadLimitError, Region};
 import std.io.IOError;
@@ -98,7 +92,7 @@ public effect ChangeJournal {
 public effect MutationHistory {
     action record(role: string, name: string, value: JsonValue, call: i64) -> i64;
     action finish(name: string, call: i64, value: JsonValue) -> unit;
-    action session(id: string) -> Session;
+    action session(id: string) -> SavedSession;
     action pending(id: string) -> Option<PendingRequest>;
     action message(id: string, index: i64) -> ChatMessage;
     action published(id: string, call: i64, name: string) -> bool;
@@ -186,9 +180,9 @@ public spec WorkOutputSink {
     flow progress(self, line: string) -> unit ![Error<IOError>];
     flow diagnostic(self, line: string) -> unit ![Error<IOError>];
     flow recorded(self, selected: Selector) -> unit ![Error<IOError>, Error<IndexError>];
-    flow ledger(self, state: Ledger, wide: bool, high_input: bool) -> unit ![Error<IOError>];
+    flow ledger(self, state: WorkLedger, wide: bool, high_input: bool) -> unit ![Error<IOError>];
     flow refused(self, error: string) -> i32 ![Error<IOError>];
-    flow completed(self, answer: string, saved: string, state: Ledger, wide: bool, high_input: bool) -> i32 ![
+    flow completed(self, answer: string, saved: string, state: WorkLedger, wide: bool, high_input: bool) -> i32 ![
         Error<IOError>,
         Error<IndexError>
     ];

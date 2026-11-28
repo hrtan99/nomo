@@ -1,9 +1,9 @@
 module app.recoverable_events_probe;
 
 import std.io.println;
-import nomo.core.conversation.Event;
+import nomo.domain.conversation.Event;
 import nomo.domain.sessions.event_codec.Policy;
-import nomo.session.recoverable_events.Frame;
+import nomo.domain.sessions.event_codec.EventFrame;
 import nomo.domain.sessions.chat.empty;
 import nomo.domain.sessions.chat.recoverable_events_invalid as invalid;
 import nomo.domain.sessions.chat.append;

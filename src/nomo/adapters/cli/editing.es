@@ -4,23 +4,14 @@ import nomo.adapters.cli.console.{display, recorded};
 import nomo.adapters.cli.edit_input.edit_args_parse;
 import nomo.adapters.filesystem.editing.{LegacyWorkEditor, prepare};
 import nomo.adapters.storage.edits.{FirstEditJournal, edit_operation_store_available, edit_operation_store_inspect};
-import nomo.application.editing.ports.{
-    Approval as ports_Approval,
-    CurrentEditConsent,
-    Preview,
-    PreviewPresenter,
-    WorkConfirmation,
-    WorkOutputSink
-};
-import nomo.application.editing.workflow.{build_preview, confirm_using, execute_execute};
+import nomo.application.editing.ports.{Approval as ports_Approval, CurrentEditConsent, Preview, PreviewPresenter, WorkConfirmation, WorkOutputSink};
+import nomo.application.editing.workflow.{confirm_using, execute_execute};
 import nomo.application.harness.work.historical_ledger_text;
-import nomo.domain.editing.{Confirmed, Prepared, Selector};
-import nomo.domain.sessions.work.validate;
+import nomo.application.resources.EditableRoot;
+import nomo.domain.editing.{Binding, Confirmed, EditOperation, Prepared, Selector};
+import nomo.domain.harness.work.WorkLedger;
+import nomo.domain.sessions.work.{StoredWorkRecord, validate};
 import nomo.domain.wire.object;
-import nomo.harness.harness_work_contract.Ledger;
-import nomo.session.edit_operation.{Binding, Record};
-import nomo.session.work_record.Record as work_record_Record;
-import nomo.tools.edit_file.EditableRoot;
 import std.effects.Fs;
 import std.fs.IOError as fs_IOError;
 import std.io.{IOError, println, read_line};
@@ -107,7 +98,7 @@ public flow execute(selector: Selector, prepared: Prepared) -> Result<Confirmed,
     );
 }
 
-let REGION = "nomo.tools.edit_file.EditableRoot";
+let REGION = "nomo.application.resources.EditableRoot";
 
 flow refused(error: string) -> i32 {
     println("REFUSED " + error);
@@ -176,7 +167,7 @@ public flow run_apply(args: Array<string>) -> i32 ![
     };
 }
 
-flow status_record(value: Record) -> Result<string, string> {
+flow status_record(value: EditOperation) -> Result<string, string> {
     let selected = value.binding;
     return object(
         [
@@ -244,7 +235,7 @@ public flow run_status(args: Array<string>) -> i32 {
     return 0;
 }
 
-public flow render(row: work_record_Record) -> Result<Array<string>, string> {
+public flow render(row: StoredWorkRecord) -> Result<Array<string>, string> {
     let value = match validate(row) {
         Ok(item) => item,
         Err(error) => {
@@ -395,7 +386,7 @@ impl LegacyWorkOutput ~ WorkOutputSink {
         recorded(selected);
     }
 
-    flow ledger(self, state: Ledger, wide: bool, high_input: bool) -> unit ![Error<IOError>] {
+    flow ledger(self, state: WorkLedger, wide: bool, high_input: bool) -> unit ![Error<IOError>] {
         println(
             historical_ledger_text(state)
                 + "; configured allowances are not measured usage; no persisted Model history or mutating resume"
@@ -407,7 +398,7 @@ impl LegacyWorkOutput ~ WorkOutputSink {
         return 1;
     }
 
-    flow completed(self, answer: string, saved: string, state: Ledger, wide: bool, high_input: bool) -> i32 ![
+    flow completed(self, answer: string, saved: string, state: WorkLedger, wide: bool, high_input: bool) -> i32 ![
         Error<IOError>,
         Error<IndexError>
     ] {

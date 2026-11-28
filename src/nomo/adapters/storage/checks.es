@@ -11,24 +11,12 @@ import nomo.adapters.storage.work_admission.{
 };
 import nomo.application.sessions.admission.{history_check_store_finish, history_check_store_inspect, plan, start};
 import nomo.application.sessions.persistence.commit_once;
-import nomo.application.sessions.ports.{
-    CasRows,
-    CheckAccess,
-    HistoricalWorkTicket,
-    HistoryCheckRows,
-    Submission,
-    Target
-};
+import nomo.application.sessions.ports.{CasRows, CheckAccess, HistoricalWorkTicket, HistoryCheckRows, Submission, Target};
 import nomo.domain.sessions.event_codec.{Policy, encode_prefix, event_text_codec_decode};
-import nomo.domain.sessions.work.invalid_values;
-import nomo.session.check_store.Frame;
-import nomo.session.history_check_store.Record as history_check_store_Record;
-import nomo.session.history_first_check_rows.Checks;
-import nomo.session.history_work_guard.Record;
-import nomo.session.recoverable_check_store.Checks as recoverable_check_store_Checks;
+import nomo.domain.sessions.work.{CheckFrame, CheckRecord, WorkRecord, invalid_values};
 import std.memory.{MemoryEntry, MemoryVersion, Missing, WriteCondition};
 
-public flow check_store_invalid(value: Frame, policy: Policy, binding: string) -> string {
+public flow check_store_invalid(value: CheckFrame, policy: Policy, binding: string) -> string {
     if value.format != 1 || value.policy_binding != binding || value.work_history == ""
         || value.workspace == "" || value.path == "" {
         return "invalid recoverable check binding";
@@ -59,11 +47,11 @@ public flow check_store_invalid(value: Frame, policy: Policy, binding: string) -
 }
 
 public flow load_rows<A ~ CheckAccess>(
-    row: Option<MemoryEntry<string, Frame>>,
+    row: Option<MemoryEntry<string, CheckFrame>>,
     access: A,
     policy: Policy,
     binding: string
-) -> Result<Option<MemoryEntry<string, Frame>>, string> {
+) -> Result<Option<MemoryEntry<string, CheckFrame>>, string> {
     let work = match access.work() {
         Ok(Some(item)) => item,
         Ok(None()) => {
@@ -102,10 +90,10 @@ public flow load_rows<A ~ CheckAccess>(
     return Ok(row);
 }
 
-public flow write_rows<R ~ CasRows<Frame>>(
+public flow write_rows<R ~ CasRows<CheckFrame>>(
     rows: R,
-    value: Frame,
-    expected: Option<MemoryEntry<string, Frame>>,
+    value: CheckFrame,
+    expected: Option<MemoryEntry<string, CheckFrame>>,
     policy: Policy,
     binding: string
 ) -> Result<MemoryVersion, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
@@ -130,12 +118,12 @@ public flow write_rows<R ~ CasRows<Frame>>(
         Some(item) => Some(item.version),
         None() => None()
     };
-    return commit_once<Frame, R>(rows, value, condition, previous);
+    return commit_once<CheckFrame, R>(rows, value, condition, previous);
 }
 
-public flow plan_rows<R ~ CasRows<Frame>>(
+public flow plan_rows<R ~ CasRows<CheckFrame>>(
     rows: R,
-    work: Record,
+    work: WorkRecord,
     digest: string,
     policy: Policy,
     binding: string
@@ -149,7 +137,7 @@ public flow plan_rows<R ~ CasRows<Frame>>(
             return Err(error);
         }
     }
-    let record = history_check_store_Record {
+    let record = CheckRecord {
         format = 1,
         phase = "planned",
         id = work.id,
@@ -157,7 +145,7 @@ public flow plan_rows<R ~ CasRows<Frame>>(
         outcome = "",
         exit_code = ""
     };
-    let frame = Frame {
+    let frame = CheckFrame {
         format = 1,
         policy_binding = binding,
         work_history = work.history_version,
@@ -175,7 +163,7 @@ public flow plan_rows<R ~ CasRows<Frame>>(
     }
 }
 
-public flow start_rows<R ~ CasRows<Frame>, A ~ CheckAccess>(
+public flow start_rows<R ~ CasRows<CheckFrame>, A ~ CheckAccess>(
     rows: R,
     access: A,
     id: string,
@@ -206,7 +194,7 @@ public flow start_rows<R ~ CasRows<Frame>, A ~ CheckAccess>(
     if edit != "" {
         return Err(edit);
     }
-    let record = history_check_store_Record {
+    let record = CheckRecord {
         format = 1,
         phase = "running",
         id,
@@ -229,7 +217,7 @@ public flow start_rows<R ~ CasRows<Frame>, A ~ CheckAccess>(
     }
 }
 
-public flow finish_rows<R ~ CasRows<Frame>>(
+public flow finish_rows<R ~ CasRows<CheckFrame>>(
     rows: R,
     id: string,
     digest: string,
@@ -264,7 +252,7 @@ public flow finish_rows<R ~ CasRows<Frame>>(
             return Err(error);
         }
     };
-    let record = history_check_store_Record {
+    let record = CheckRecord {
         format = 1,
         phase = "complete",
         id,
@@ -287,7 +275,7 @@ public flow finish_rows<R ~ CasRows<Frame>>(
     }
 }
 
-public flow abandon_rows<R ~ CasRows<Frame>>(rows: R, id: string, policy: Policy, binding: string) -> Result<
+public flow abandon_rows<R ~ CasRows<CheckFrame>>(rows: R, id: string, policy: Policy, binding: string) -> Result<
     bool,
     string
 > ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
@@ -315,7 +303,7 @@ public flow abandon_rows<R ~ CasRows<Frame>>(rows: R, id: string, policy: Policy
     };
 }
 
-public flow history_check_guard_invalid(value: history_check_store_Record) -> string {
+public flow history_check_guard_invalid(value: CheckRecord) -> string {
     return invalid_values(
         value.format,
         value.phase,
@@ -355,23 +343,23 @@ public flow history_check_guard_finish(id: string, digest: string, outcome: stri
     return history_check_store_finish(FirstCheckRows {}, id, digest, outcome, exit_code);
 }
 
-public flow inspect() -> Result<Option<history_check_store_Record>, string> {
+public flow inspect() -> Result<Option<CheckRecord>, string> {
     return history_check_store_inspect(FirstCheckRows {});
 }
 
 public type FirstCheckRows = {};
 
 impl FirstCheckRows ~ HistoryCheckRows {
-    flow read(self) -> Option<MemoryEntry<string, history_check_store_Record>> {
-        return Checks.Rows.get_entry("check");
+    flow read(self) -> Option<MemoryEntry<string, CheckRecord>> {
+        return HistoryChecks.Rows.get_entry("check");
     }
 
-    flow write(self, row: history_check_store_Record, condition: WriteCondition) -> Result<
+    flow write(self, row: CheckRecord, condition: WriteCondition) -> Result<
         MemoryVersion,
         string
     > ![Memory, Error<StorageError>, Error<IndexError>] {
-        return commit_native<history_check_store_Record>(
-            Checks.Rows,
+        return commit_native<CheckRecord>(
+            HistoryChecks.Rows,
             Target {
                 store = ["Rows"],
                 region = "nomo-history-check-v1",
@@ -423,7 +411,7 @@ public type FirstCheckAdapter = {
     binding: string
 };
 
-impl FirstCheckAdapter ~ CasRows<Frame> {
+impl FirstCheckAdapter ~ CasRows<CheckFrame> {
     flow target(self) -> Target ![] {
         return Target {
             store = ["Rows"],
@@ -433,21 +421,24 @@ impl FirstCheckAdapter ~ CasRows<Frame> {
         };
     }
 
-    flow submit(self, value: Frame, condition: WriteCondition) -> Submission ![Memory, Error<StorageError>] {
-        return submit_native(recoverable_check_store_Checks.Rows, "check", value, condition);
+    flow submit(self, value: CheckFrame, condition: WriteCondition) -> Submission ![
+        Memory,
+        Error<StorageError>
+    ] {
+        return submit_native(RecoverableChecks.Rows, "check", value, condition);
     }
 
-    flow read(self) -> Result<Option<MemoryEntry<string, Frame>>, string> {
+    flow read(self) -> Result<Option<MemoryEntry<string, CheckFrame>>, string> {
         return load(self.redaction, self.binding);
     }
 
-    flow same(self, left: Frame, right: Frame) -> bool ![] {
+    flow same(self, left: CheckFrame, right: CheckFrame) -> bool ![] {
         return left == right;
     }
 }
 
 impl FirstCheckAdapter ~ CheckAccess {
-    flow work(self) -> Result<Option<Record>, string> {
+    flow work(self) -> Result<Option<WorkRecord>, string> {
         return match recoverable_work_store_load(self.redaction, self.binding) {
             Ok(Some(item)) => Ok(Some(item.value.work)),
             Ok(None()) => Ok(None()),
@@ -470,14 +461,14 @@ impl FirstCheckAdapter ~ CheckAccess {
     }
 }
 
-public flow load(policy: Policy, binding: string) -> Result<Option<MemoryEntry<string, Frame>>, string> ![
+public flow load(policy: Policy, binding: string) -> Result<Option<MemoryEntry<string, CheckFrame>>, string> ![
     Memory,
     Error<StorageError>,
     Error<IndexError>,
     Error<BudgetExceeded>
 ] {
     return load_rows(
-        recoverable_check_store_Checks.Rows.get_entry("check"),
+        RecoverableChecks.Rows.get_entry("check"),
         FirstCheckAdapter {
             redaction = policy,
             binding
@@ -558,3 +549,21 @@ public flow abandon(id: string, policy: Policy, binding: string) -> Result<bool,
     };
     return abandon_rows(rows, id, policy, binding);
 }
+
+alias HistoryChecksSchema = MemoryRegion<{
+    Rows: Store<string, CheckRecord>
+}>;
+
+public let HistoryChecks = std.memory.region<HistoryChecksSchema>(
+    stable_id = "nomo-history-check-v1",
+    store = "history-check"
+);
+
+alias RecoverableChecksSchema = MemoryRegion<{
+    Rows: Store<string, CheckFrame>
+}>;
+
+public let RecoverableChecks = std.memory.region<RecoverableChecksSchema>(
+    stable_id = "nomo-recoverable-check-v1",
+    store = "recoverable-check"
+);

@@ -1,0 +1,475 @@
+[
+  {
+    "old": "nomo.native.configuration.Data",
+    "current": "nomo.adapters.storage.workspace.ConfigurationCache",
+    "field": "Parsed",
+    "old_type": "nomo.native.configuration.Cached",
+    "type": "nomo.domain.settings.CachedConfiguration",
+    "region": "nomo-native-configuration-v1",
+    "path": [
+      "Parsed"
+    ]
+  },
+  {
+    "old": "nomo.native.mutations.Data",
+    "current": "nomo.adapters.storage.journals.FileJournals",
+    "field": "Journals",
+    "old_type": "nomo.native.mutations.Journal",
+    "type": "nomo.domain.changes.Journal",
+    "region": "nomo-native-file-journals-v1",
+    "path": [
+      "Journals"
+    ]
+  },
+  {
+    "old": "nomo.native.mutations.Data",
+    "current": "nomo.adapters.storage.journals.FileJournals",
+    "field": "Steps",
+    "old_type": "nomo.native.mutations.Step",
+    "type": "nomo.domain.changes.Step",
+    "region": "nomo-native-file-journals-v1",
+    "path": [
+      "Steps"
+    ]
+  },
+  {
+    "old": "nomo.native.processes.Data",
+    "current": "nomo.adapters.storage.jobs.ProcessJobs",
+    "field": "Jobs",
+    "old_type": "nomo.native.processes.Job",
+    "type": "nomo.domain.processes.Job",
+    "region": "nomo-native-processes-v1",
+    "path": [
+      "Jobs"
+    ]
+  },
+  {
+    "old": "nomo.native.processes.Data",
+    "current": "nomo.adapters.storage.jobs.ProcessJobs",
+    "field": "Outputs",
+    "old_type": "nomo.native.processes.JobEvent",
+    "type": "nomo.domain.processes.JobEvent",
+    "region": "nomo-native-processes-v1",
+    "path": [
+      "Outputs"
+    ]
+  },
+  {
+    "old": "nomo.native.projects.Data",
+    "current": "nomo.adapters.storage.workspace.Projects",
+    "field": "Recent",
+    "old_type": "Array<string>",
+    "type": "Array<string>",
+    "region": "nomo-native-projects-v1",
+    "path": [
+      "Recent"
+    ]
+  },
+  {
+    "old": "nomo.session.chat_history.Legacy",
+    "current": "nomo.adapters.storage.chat.LegacyChats",
+    "field": "Rows",
+    "old_type": "nomo.session.chat_session_contract.Session",
+    "type": "nomo.domain.sessions.chat.ChatSession",
+    "region": "nomo-chat-history-v1",
+    "path": [
+      "Rows"
+    ]
+  },
+  {
+    "old": "nomo.session.chat_history.Frames",
+    "current": "nomo.adapters.storage.chat.ChatHistories",
+    "field": "Rows",
+    "old_type": "nomo.session.chat_history.Frame",
+    "type": "nomo.domain.sessions.chat.ChatHistoryFrame",
+    "region": "nomo-chat-history-v3",
+    "path": [
+      "Rows"
+    ]
+  },
+  {
+    "old": "nomo.session.check_output.Outputs",
+    "current": "nomo.adapters.storage.check_lifecycle.CheckOutputs",
+    "field": "Rows",
+    "old_type": "nomo.session.check_output.Record",
+    "type": "nomo.domain.sessions.work.CheckOutputRecord",
+    "region": "nomo-check-output-v1",
+    "path": [
+      "Rows"
+    ]
+  },
+  {
+    "old": "nomo.session.demo_claim.Demo",
+    "current": "nomo.adapters.storage.session_records.DemoClaims",
+    "field": "Claims",
+    "old_type": "nomo.session.demo_claim.Claim",
+    "type": "nomo.domain.sessions.state.DemoClaim",
+    "region": "nomo-session-demo-v1",
+    "path": [
+      "Claims"
+    ]
+  },
+  {
+    "old": "nomo.session.continuous_work.Books",
+    "current": "nomo.adapters.storage.work_admission.ContinuousBooks",
+    "field": "Rows",
+    "old_type": "nomo.session.continuous_work.Book",
+    "type": "nomo.domain.sessions.work.ContinuousBook",
+    "region": "nomo-continuous-work-v1",
+    "path": [
+      "Rows"
+    ]
+  },
+  {
+    "old": "nomo.session.edit_operation_store.Operations",
+    "current": "nomo.adapters.storage.edits.EditOperations",
+    "field": "Rows",
+    "old_type": "nomo.session.edit_operation.Record",
+    "type": "nomo.domain.editing.EditOperation",
+    "region": "nomo-edit-operation-v1",
+    "path": [
+      "Rows"
+    ]
+  },
+  {
+    "old": "nomo.session.edit_operation_store.Followups",
+    "current": "nomo.adapters.storage.edits.FollowupEditOperations",
+    "field": "Rows",
+    "old_type": "nomo.session.edit_operation.Record",
+    "type": "nomo.domain.editing.EditOperation",
+    "region": "nomo-edit-followup-v1",
+    "path": [
+      "Rows"
+    ]
+  },
+  {
+    "old": "nomo.session.event_history.EventStore",
+    "current": "nomo.adapters.storage.session_records.EventHistory",
+    "field": "Rows",
+    "old_type": "nomo.session.event_history.History",
+    "type": "nomo.domain.sessions.event_codec.History",
+    "region": "nomo-event-history-v1",
+    "path": [
+      "Rows"
+    ]
+  },
+  {
+    "old": "nomo.session.harness_checkpoint_store.Checkpoints",
+    "current": "nomo.adapters.storage.checkpoints.Checkpoints",
+    "field": "Rows",
+    "old_type": "nomo.session.harness_checkpoint_store.Record",
+    "type": "nomo.domain.sessions.checkpoints.CheckpointRecord",
+    "region": "nomo-harness-checkpoint-v1",
+    "path": [
+      "Rows"
+    ]
+  },
+  {
+    "old": "nomo.session.harness_successor_store.Successors",
+    "current": "nomo.adapters.storage.checkpoints.Successors",
+    "field": "Rows",
+    "old_type": "nomo.session.harness_successor_store.Record",
+    "type": "nomo.domain.sessions.checkpoints.SuccessorRecord",
+    "region": "nomo-harness-successor-v1",
+    "path": [
+      "Rows"
+    ]
+  },
+  {
+    "old": "nomo.session.history_first_check_rows.Checks",
+    "current": "nomo.adapters.storage.checks.HistoryChecks",
+    "field": "Rows",
+    "old_type": "nomo.session.history_check_store.Record",
+    "type": "nomo.domain.sessions.work.CheckRecord",
+    "region": "nomo-history-check-v1",
+    "path": [
+      "Rows"
+    ]
+  },
+  {
+    "old": "nomo.session.history_followup_check_guard.Checks",
+    "current": "nomo.adapters.storage.followup_checks.FollowupChecks",
+    "field": "Rows",
+    "old_type": "nomo.session.history_check_store.Record",
+    "type": "nomo.domain.sessions.work.CheckRecord",
+    "region": "nomo-followup-check-v1",
+    "path": [
+      "Rows"
+    ]
+  },
+  {
+    "old": "nomo.session.history_work_guard.Runs",
+    "current": "nomo.adapters.storage.work_admission.HistoryWorkRuns",
+    "field": "Rows",
+    "old_type": "nomo.session.history_work_guard.Record",
+    "type": "nomo.domain.sessions.work.WorkRecord",
+    "region": "nomo-history-work-v1",
+    "path": [
+      "Rows"
+    ]
+  },
+  {
+    "old": "nomo.session.history_followup_guard.Runs",
+    "current": "nomo.adapters.storage.followup.FollowupRuns",
+    "field": "Rows",
+    "old_type": "nomo.session.history_followup_guard.Record",
+    "type": "nomo.domain.sessions.work.FollowupRecord",
+    "region": "nomo-history-followup-v1",
+    "path": [
+      "Rows"
+    ]
+  },
+  {
+    "old": "nomo.session.recoverable_check_store.Checks",
+    "current": "nomo.adapters.storage.checks.RecoverableChecks",
+    "field": "Rows",
+    "old_type": "nomo.session.check_store.Frame",
+    "type": "nomo.domain.sessions.work.CheckFrame",
+    "region": "nomo-recoverable-check-v1",
+    "path": [
+      "Rows"
+    ]
+  },
+  {
+    "old": "nomo.session.recoverable_chat_store.Frames",
+    "current": "nomo.adapters.storage.chat.RecoverableChats",
+    "field": "Rows",
+    "old_type": "nomo.session.recoverable_chat_store.Frame",
+    "type": "nomo.domain.sessions.chat.RecoverableChatFrame",
+    "region": "nomo-recoverable-chat-v1",
+    "path": [
+      "Rows"
+    ]
+  },
+  {
+    "old": "nomo.session.recoverable_chat_store.EvidenceFrames",
+    "current": "nomo.adapters.storage.chat.ChatEvidenceRows",
+    "field": "Rows",
+    "old_type": "nomo.session.recoverable_chat_store.Evidence",
+    "type": "nomo.domain.sessions.chat.ChatEvidence",
+    "region": "nomo-recoverable-chat-evidence-v1",
+    "path": [
+      "Rows"
+    ]
+  },
+  {
+    "old": "nomo.session.recoverable_followup_check_store.Checks",
+    "current": "nomo.adapters.storage.followup_checks.RecoverableFollowupChecks",
+    "field": "Rows",
+    "old_type": "nomo.session.check_store.Frame",
+    "type": "nomo.domain.sessions.work.CheckFrame",
+    "region": "nomo-recoverable-followup-check-v1",
+    "path": [
+      "Rows"
+    ]
+  },
+  {
+    "old": "nomo.session.recoverable_followup_store.Runs",
+    "current": "nomo.adapters.storage.followup.RecoverableFollowups",
+    "field": "Rows",
+    "old_type": "nomo.session.recoverable_followup_store.Frame",
+    "type": "nomo.domain.sessions.work.RecoverableFollowupFrame",
+    "region": "nomo-recoverable-followup-v1",
+    "path": [
+      "Rows"
+    ]
+  },
+  {
+    "old": "nomo.session.recoverable_work_store.Runs",
+    "current": "nomo.adapters.storage.work_admission.RecoverableWorks",
+    "field": "Rows",
+    "old_type": "nomo.session.recoverable_work_store.Frame",
+    "type": "nomo.domain.sessions.work.RecoverableWorkFrame",
+    "region": "nomo-recoverable-work-v1",
+    "path": [
+      "Rows"
+    ]
+  },
+  {
+    "old": "nomo.session.recovery_decision.Decisions",
+    "current": "nomo.adapters.storage.chains.RecoveryDecisions",
+    "field": "Rows",
+    "old_type": "nomo.session.recovery_decision.Decision",
+    "type": "nomo.domain.sessions.chain.RecoveryDecision",
+    "region": "nomo-recovery-decision-v1",
+    "path": [
+      "Rows"
+    ]
+  },
+  {
+    "old": "nomo.session.metadata_store.Metadata",
+    "current": "nomo.adapters.storage.session_records.SessionMetadata",
+    "field": "Rows",
+    "old_type": "nomo.session.store_record.Record",
+    "type": "nomo.domain.sessions.state.MetadataRecord",
+    "region": "nomo-session-store-v1",
+    "path": [
+      "Rows"
+    ]
+  },
+  {
+    "old": "nomo.session.work_chain_journal.Journal",
+    "current": "nomo.adapters.storage.chains.ChainJournal",
+    "field": "Rows",
+    "old_type": "nomo.session.work_chain_journal.Record",
+    "type": "nomo.domain.sessions.chain.EditJournalRecord",
+    "region": "nomo-work-chain-edit-v2",
+    "path": [
+      "Rows"
+    ]
+  },
+  {
+    "old": "nomo.session.work_chain_store.Chain",
+    "current": "nomo.adapters.storage.chains.Chains",
+    "field": "Rows",
+    "old_type": "nomo.session.work_chain.Record",
+    "type": "nomo.domain.sessions.chain.Record",
+    "region": "nomo-work-chain-v2",
+    "path": [
+      "Rows"
+    ]
+  },
+  {
+    "old": "nomo.session.work_record_store.Work",
+    "current": "nomo.adapters.storage.edits.WorkRecords",
+    "field": "Rows",
+    "old_type": "nomo.session.work_record.Record",
+    "type": "nomo.domain.sessions.work.StoredWorkRecord",
+    "region": "nomo-work-record-v1",
+    "path": [
+      "Rows"
+    ]
+  },
+  {
+    "old": "nomo.adapters.storage.conversations.Data",
+    "current": "nomo.adapters.storage.conversations.Data",
+    "field": "Counters",
+    "old_type": "i64",
+    "type": "i64",
+    "region": "nomo-native-conversations-v1",
+    "path": [
+      "Counters"
+    ]
+  },
+  {
+    "old": "nomo.adapters.storage.conversations.Data",
+    "current": "nomo.adapters.storage.conversations.Data",
+    "field": "Selected",
+    "old_type": "string",
+    "type": "string",
+    "region": "nomo-native-conversations-v1",
+    "path": [
+      "Selected"
+    ]
+  },
+  {
+    "old": "nomo.adapters.storage.conversations.Data",
+    "current": "nomo.adapters.storage.conversations.Data",
+    "field": "Sessions",
+    "old_type": "nomo.native.history.Session",
+    "type": "nomo.domain.conversation.SavedSession",
+    "region": "nomo-native-conversations-v1",
+    "path": [
+      "Sessions"
+    ]
+  },
+  {
+    "old": "nomo.adapters.storage.conversations.Data",
+    "current": "nomo.adapters.storage.conversations.Data",
+    "field": "Events",
+    "old_type": "nomo.native.history.Event",
+    "type": "nomo.domain.conversation.StoredEvent",
+    "region": "nomo-native-conversations-v1",
+    "path": [
+      "Events"
+    ]
+  },
+  {
+    "old": "nomo.adapters.storage.conversations.Data",
+    "current": "nomo.adapters.storage.conversations.Data",
+    "field": "Chunks",
+    "old_type": "string",
+    "type": "string",
+    "region": "nomo-native-conversations-v1",
+    "path": [
+      "Chunks"
+    ]
+  },
+  {
+    "old": "nomo.adapters.storage.conversations.Copies",
+    "current": "nomo.adapters.storage.conversations.Copies",
+    "field": "Jobs",
+    "old_type": "nomo.native.history.CopyJob",
+    "type": "nomo.domain.archives.CopyJob",
+    "region": "nomo-native-conversation-copies-v1",
+    "path": [
+      "Jobs"
+    ]
+  },
+  {
+    "old": "nomo.adapters.storage.jobs.ArchivedJobs",
+    "current": "nomo.adapters.storage.jobs.ArchivedJobs",
+    "field": "Jobs",
+    "old_type": "nomo.domain.process.archived_jobs.ArchivedJob",
+    "type": "nomo.domain.processes.ArchivedJob",
+    "region": "nomo-native-project-jobs-v1",
+    "path": [
+      "Jobs"
+    ]
+  },
+  {
+    "old": "nomo.adapters.storage.jobs.ArchivedJobs",
+    "current": "nomo.adapters.storage.jobs.ArchivedJobs",
+    "field": "Parts",
+    "old_type": "bytes",
+    "type": "bytes",
+    "region": "nomo-native-project-jobs-v1",
+    "path": [
+      "Parts"
+    ]
+  },
+  {
+    "old": "nomo.adapters.storage.journals.Data",
+    "current": "nomo.adapters.storage.journals.Data",
+    "field": "Counter",
+    "old_type": "i64",
+    "type": "i64",
+    "region": "nomo-native-attempts-v1",
+    "path": [
+      "Counter"
+    ]
+  },
+  {
+    "old": "nomo.adapters.storage.journals.Data",
+    "current": "nomo.adapters.storage.journals.Data",
+    "field": "Attempts",
+    "old_type": "nomo.native.lifecycle.Attempt",
+    "type": "nomo.domain.attempts.Attempt",
+    "region": "nomo-native-attempts-v1",
+    "path": [
+      "Attempts"
+    ]
+  },
+  {
+    "old": "nomo.session.user_context_chain_v4_journal.Journal",
+    "current": "nomo.adapters.storage.legacy.user_context_chain_v4_journal.UserContextJournal",
+    "field": "Rows",
+    "old_type": "nomo.session.user_context_chain_v4_journal.Record",
+    "type": "nomo.domain.sessions.user_context_chain_v4.JournalRecord",
+    "region": "nomo-user-context-edit-v4",
+    "path": [
+      "Rows"
+    ]
+  },
+  {
+    "old": "nomo.session.user_context_chain_v4_store.Chain",
+    "current": "nomo.adapters.storage.legacy.user_context_chain_v4_store.UserContextChain",
+    "field": "Rows",
+    "old_type": "nomo.session.user_context_chain_v4.Record",
+    "type": "nomo.domain.sessions.user_context_chain_v4.Record",
+    "region": "nomo-user-context-chain-v4",
+    "path": [
+      "Rows"
+    ]
+  }
+]

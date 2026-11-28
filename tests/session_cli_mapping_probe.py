@@ -25,107 +25,12 @@ CASES = [
     ('oversize-input', 'x' * 1025, 3, 16, 0, 2, False, None, 'active'),
 ]
 
-SOURCE = '''module app.main;
-import std.io.println;
-import std.io.read_all;
-import std.text.char_count as len;
-import std.text.from_i32;
-import std.collections.len as count;
-import std.json.parse;
-import std.agent.message.Message;
-import nomo.core.conversation.State;
-import nomo.core.conversation.Event;
-import nomo.core.conversation.fresh;
-import nomo.agent.loop.turn;
-import nomo.session.stub_snapshot.snapshot;
-import nomo.session.stub_snapshot.caps;
-import nomo.session.session_state.Projection;
-import nomo.session.session_state.Request;
-import nomo.session.session_state.Snapshot;
-import nomo.session.session_state.validate;
-import nomo.session.session_display.display;
-
-flow project(state: State, maximum: i32, budget: i32, expected_lifecycle: string) -> Projection {
-    let saved = match snapshot(state, "fixture-session", "independent-binding", maximum, budget) {
-        Ok(value) => value, Err(_) => { abort("mapping refused valid fixture"); }
-    };
-    if saved.history != state || saved.generation != 0 || saved.mode != "stub" ||
-        saved.original_caps != caps(maximum, budget) || saved.current_caps != caps(maximum, budget) {
-        abort("mapping changed actual state or caps");
-    }
-    if saved.lifecycle != expected_lifecycle {
-        abort("mapping lifecycle disagrees with fixture");
-    }
-    let request = Request { session_id = "fixture-session", mode = "stub", binding = "independent-binding", caps = caps(maximum, budget) };
-    return match validate(saved, request) { Ok(value) => value, Err(_) => { abort("mapped validation refused"); } };
-}
-
-public flow mapping_pure() -> bool {
-    return match snapshot(fresh(), "id", "binding", 3, 16) { Ok(_) => true, Err(_) => false };
-}
-public flow display_pure() -> bool {
-    return match display(project(fresh(), 3, 16, "active")) { Ok(_) => true, Err(_) => false };
-}
-flow observed(label: string, raw: string, maximum: i32, budget: i32, expected_lifecycle: string) -> unit {
-    let original = turn(raw, maximum, budget, fresh());
-    let projection = project(original.state, maximum, budget, expected_lifecycle);
-    let before = projection;
-    let output = match display(projection) { Ok(value) => value, Err(_) => { abort("display refused valid projection"); } };
-    if projection != before { abort("display mutated projection"); }
-    println("MAPPED " + label + " " + from_i32(original.status) + " " + output);
-}
-flow refuses(state: State, maximum: i32, budget: i32) -> bool {
-    return match snapshot(state, "id", "binding", maximum, budget) { Err(_) => true, Ok(_) => false };
-}
-flow with_disposition(value: Projection, disposition: string) -> Projection {
-    return Projection { session_id = value.session_id, generation = value.generation, mode = value.mode,
-        binding = value.binding, disposition = disposition, history = value.history, references = value.references,
-        operations = value.operations, original_caps = value.original_caps, caps = value.caps, ledger = value.ledger };
-}
-public flow main(args: Array<string>) -> i32 {
-    let empty = fresh();
-    if !refuses(empty, 0, 16) || !refuses(empty, 3, 17) { abort("invalid caps accepted"); }
-    let orphan = State { events = [Event { role = "tool", kind = "complete", name = "echo", text = "x" }], characters = 5, spent = 1, stopped = false };
-    if !refuses(orphan, 3, 16) { abort("orphan tool accepted"); }
-    let mismatch = State { events = [Event { role = "model", kind = "request", name = "echo", text = "x" },
-        Event { role = "tool", kind = "complete", name = "other", text = "x" }], characters = 11, spent = 2, stopped = false };
-    if !refuses(mismatch, 3, 16) { abort("mismatched tool accepted"); }
-    println("PASS direct mapping refusals");
-    let stopped_request = State { events = [Event { role = "model", kind = "request", name = "echo", text = "x" }],
-        characters = 5, spent = 1, stopped = true };
-    let stopped_pending = project(stopped_request, 3, 16, "recovery-required");
-    if stopped_pending.disposition != "recovery-required" { abort("pending lifecycle lost precedence over stopped"); }
-    println("PASS pending lifecycle precedence");
-    let first = match snapshot(fresh(), "fixture-session", "independent-binding", 3, 16) { Ok(value) => value, Err(_) => { abort("empty mapping refused"); } };
-    let recovering = Snapshot { format = first.format, session_id = first.session_id, generation = first.generation,
-        mode = first.mode, binding = first.binding, lifecycle = "recovery-required", history = first.history,
-        references = first.references, operations = first.operations, original_caps = first.original_caps,
-        current_caps = first.current_caps, ledger = first.ledger };
-    let request = Request { session_id = first.session_id, mode = first.mode, binding = first.binding, caps = first.current_caps };
-    let recovered = match validate(recovering, request) { Ok(value) => value, Err(_) => { abort("recovery projection refused"); } };
-    match display(recovered) { Ok(value) => { println("RECOVERY " + value); }, Err(_) => { abort("explicit recovery display refused"); } }
-    match display(with_disposition(recovered, "invalid")) { Err(_) => { println("PASS invalid display disposition"); }, Ok(_) => { abort("invalid disposition accepted"); } }
-    __TURN_CASES__
-    let parsed = match parse(read_all()) { Ok(value) => value, Err(_) => { abort("invalid display fixture JSON"); } };
-    let message = Message.new(parsed);
-    let conversion: Option<Message<Array<string>>> = message.cast<Array<string>>();
-    let bodies = match conversion { Some(value) => value.body, None() => { abort("invalid display fixture shape"); } };
-    for body in bodies limit Iterations(16) {
-        let state = State { events = [Event { role = "user", kind = "input", name = "", text = body }],
-            characters = len(body), spent = 0, stopped = true };
-        let projection = project(state, 3, 16, "stopped");
-        let output = match display(projection) { Ok(value) => value, Err(_) => { abort("Unicode display refused"); } };
-        if projection.history.events[0].text != body { abort("Unicode display changed stored body"); }
-        println("DISPLAY " + output);
-    }
-    return 0;
-}
-'''
+SOURCE = 'module app.main;\nimport std.io.println;\nimport std.io.read_all;\nimport std.text.char_count as len;\nimport std.text.from_i32;\nimport std.collections.len as count;\nimport std.json.parse;\nimport std.agent.message.Message;\nimport nomo.domain.conversation.State;\nimport nomo.domain.conversation.Event;\nimport nomo.domain.conversation.fresh;\nimport nomo.agent.loop.turn;\nimport nomo.session.stub_snapshot.snapshot;\nimport nomo.session.stub_snapshot.caps;\nimport nomo.domain.sessions.state.Projection;\nimport nomo.domain.sessions.state.Request;\nimport nomo.domain.sessions.state.Snapshot;\nimport nomo.domain.sessions.state.validate;\nimport nomo.session.session_display.display;\n\nflow project(state: State, maximum: i32, budget: i32, expected_lifecycle: string) -> Projection {\n    let saved = match snapshot(state, "fixture-session", "independent-binding", maximum, budget) {\n        Ok(value) => value, Err(_) => { abort("mapping refused valid fixture"); }\n    };\n    if saved.history != state || saved.generation != 0 || saved.mode != "stub" ||\n        saved.original_caps != caps(maximum, budget) || saved.current_caps != caps(maximum, budget) {\n        abort("mapping changed actual state or caps");\n    }\n    if saved.lifecycle != expected_lifecycle {\n        abort("mapping lifecycle disagrees with fixture");\n    }\n    let request = Request { session_id = "fixture-session", mode = "stub", binding = "independent-binding", caps = caps(maximum, budget) };\n    return match validate(saved, request) { Ok(value) => value, Err(_) => { abort("mapped validation refused"); } };\n}\n\npublic flow mapping_pure() -> bool {\n    return match snapshot(fresh(), "id", "binding", 3, 16) { Ok(_) => true, Err(_) => false };\n}\npublic flow display_pure() -> bool {\n    return match display(project(fresh(), 3, 16, "active")) { Ok(_) => true, Err(_) => false };\n}\nflow observed(label: string, raw: string, maximum: i32, budget: i32, expected_lifecycle: string) -> unit {\n    let original = turn(raw, maximum, budget, fresh());\n    let projection = project(original.state, maximum, budget, expected_lifecycle);\n    let before = projection;\n    let output = match display(projection) { Ok(value) => value, Err(_) => { abort("display refused valid projection"); } };\n    if projection != before { abort("display mutated projection"); }\n    println("MAPPED " + label + " " + from_i32(original.status) + " " + output);\n}\nflow refuses(state: State, maximum: i32, budget: i32) -> bool {\n    return match snapshot(state, "id", "binding", maximum, budget) { Err(_) => true, Ok(_) => false };\n}\nflow with_disposition(value: Projection, disposition: string) -> Projection {\n    return Projection { session_id = value.session_id, generation = value.generation, mode = value.mode,\n        binding = value.binding, disposition = disposition, history = value.history, references = value.references,\n        operations = value.operations, original_caps = value.original_caps, caps = value.caps, ledger = value.ledger };\n}\npublic flow main(args: Array<string>) -> i32 {\n    let empty = fresh();\n    if !refuses(empty, 0, 16) || !refuses(empty, 3, 17) { abort("invalid caps accepted"); }\n    let orphan = State { events = [Event { role = "tool", kind = "complete", name = "echo", text = "x" }], characters = 5, spent = 1, stopped = false };\n    if !refuses(orphan, 3, 16) { abort("orphan tool accepted"); }\n    let mismatch = State { events = [Event { role = "model", kind = "request", name = "echo", text = "x" },\n        Event { role = "tool", kind = "complete", name = "other", text = "x" }], characters = 11, spent = 2, stopped = false };\n    if !refuses(mismatch, 3, 16) { abort("mismatched tool accepted"); }\n    println("PASS direct mapping refusals");\n    let stopped_request = State { events = [Event { role = "model", kind = "request", name = "echo", text = "x" }],\n        characters = 5, spent = 1, stopped = true };\n    let stopped_pending = project(stopped_request, 3, 16, "recovery-required");\n    if stopped_pending.disposition != "recovery-required" { abort("pending lifecycle lost precedence over stopped"); }\n    println("PASS pending lifecycle precedence");\n    let first = match snapshot(fresh(), "fixture-session", "independent-binding", 3, 16) { Ok(value) => value, Err(_) => { abort("empty mapping refused"); } };\n    let recovering = Snapshot { format = first.format, session_id = first.session_id, generation = first.generation,\n        mode = first.mode, binding = first.binding, lifecycle = "recovery-required", history = first.history,\n        references = first.references, operations = first.operations, original_caps = first.original_caps,\n        current_caps = first.current_caps, ledger = first.ledger };\n    let request = Request { session_id = first.session_id, mode = first.mode, binding = first.binding, caps = first.current_caps };\n    let recovered = match validate(recovering, request) { Ok(value) => value, Err(_) => { abort("recovery projection refused"); } };\n    match display(recovered) { Ok(value) => { println("RECOVERY " + value); }, Err(_) => { abort("explicit recovery display refused"); } }\n    match display(with_disposition(recovered, "invalid")) { Err(_) => { println("PASS invalid display disposition"); }, Ok(_) => { abort("invalid disposition accepted"); } }\n    __TURN_CASES__\n    let parsed = match parse(read_all()) { Ok(value) => value, Err(_) => { abort("invalid display fixture JSON"); } };\n    let message = Message.new(parsed);\n    let conversion: Option<Message<Array<string>>> = message.cast<Array<string>>();\n    let bodies = match conversion { Some(value) => value.body, None() => { abort("invalid display fixture shape"); } };\n    for body in bodies limit Iterations(16) {\n        let state = State { events = [Event { role = "user", kind = "input", name = "", text = body }],\n            characters = len(body), spent = 0, stopped = true };\n        let projection = project(state, 3, 16, "stopped");\n        let output = match display(projection) { Ok(value) => value, Err(_) => { abort("Unicode display refused"); } };\n        if projection.history.events[0].text != body { abort("Unicode display changed stored body"); }\n        println("DISPLAY " + output);\n    }\n    return 0;\n}\n'
 
 
 def main():
     assert digest(CLI) == json.loads((GRAPH / 'binary.json').read_text())['sha256']
-    protected = {name: digest(ROOT / name) for name in ['etas.toml', 'etas.lock', 'src/nomo/agent/loop.es', 'src/nomo/session/session_state.es']}
+    protected = {name: digest(ROOT / name) for name in ['etas.toml', 'etas.lock', 'src/nomo/agent/loop.es', 'src/nomo/domain/sessions/state.es']}
     project = Path(tempfile.mkdtemp(prefix='session-cli-mapping-', dir=EVIDENCE))
     print('EVIDENCE ' + str(project), flush=True)
     target = project / 'src/nomo'

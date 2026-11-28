@@ -20,7 +20,7 @@ profile = "fixture"
 default_profile = "fixture"
 [runtime.profiles.fixture]
 boundary_policy = "bounded-product-fixture"
-[runtime.profiles.fixture.filesystem.regions."nomo.tools.workspace.ReadOnlyRoot"]
+[runtime.profiles.fixture.filesystem.regions."nomo.application.resources.ReadOnlyRoot"]
 root = "fixture"
 read = true
 write = false
@@ -81,7 +81,7 @@ def main():
   checked=command('fixture-check',['--format','json','check','--all',project]);assert checked.returncode==0
   for name in ('empty','missing'):
    p=command(name+'-effects',['--format','json','effects',project,'--flow','nomo_bounded_probe_'+name]);assert p.returncode==0
-   values=json.loads(p.stdout)['items'];assert len(values)==1 and 'Fs.read[nomo.tools.workspace.ReadOnlyRoot]' in values[0]['requested_actions']
+   values=json.loads(p.stdout)['items'];assert len(values)==1 and 'Fs.read[nomo.application.resources.ReadOnlyRoot]' in values[0]['requested_actions']
    assert 'ReadLimitError' not in values[0]['escaping_effects']
    if name=='empty':assert 'std.fs.IOError' in values[0]['escaping_effects']
    if name=='missing':assert 'std.fs.IOError' not in values[0]['escaping_effects']

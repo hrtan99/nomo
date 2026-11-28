@@ -1,11 +1,9 @@
 module nomo.domain.harness.edit;
 
-import nomo.domain.editing.{Confirmed, EditText, Selector, binding_error, selector_error, text_bytes};
+import nomo.domain.editing.{Binding, Confirmed, EditText, Selector, binding_error, selector_error, text_bytes};
 import nomo.domain.harness.loop.response_error;
 import nomo.domain.limits.{context_bytes, edit_response_bytes, message_bytes, message_frame_bytes};
 import nomo.domain.wire.{FieldError, decode_fields, digest, encode};
-import nomo.harness.harness_edit_contract.Ledger;
-import nomo.session.edit_operation.Binding;
 import std.agent.message.Message;
 import std.json.{JsonValue, stringify};
 import std.text.{char_count, len, trim};
@@ -85,8 +83,8 @@ public type Context = {
     completed: bool
 };
 
-public flow fresh() -> Ledger {
-    return Ledger {
+public flow fresh() -> EditLedger {
+    return EditLedger {
         steps = 0,
         calls = 0,
         tokens = 0,
@@ -97,7 +95,7 @@ public flow fresh() -> Ledger {
 
 // Conservative allowances are charged before attempts, independently of usage.
 // The fixed three-call reservation includes final aggregation from the start.
-flow error_mode(state: Ledger, wide: bool, large: bool) -> string {
+flow error_mode(state: EditLedger, wide: bool, large: bool) -> string {
     if state.steps < 0 || state.steps > 6 || state.calls < 0 || state.calls > 3 || state.tokens < 0
         || state.tokens > if large {
         143360
@@ -163,19 +161,19 @@ flow error_mode(state: Ledger, wide: bool, large: bool) -> string {
     return "";
 }
 
-public flow ledger_error(state: Ledger) -> string {
+public flow ledger_error(state: EditLedger) -> string {
     return error_mode(state, false, false);
 }
 
-public flow wide_error(state: Ledger) -> string {
+public flow wide_error(state: EditLedger) -> string {
     return error_mode(state, true, false);
 }
 
-public flow large_error(state: Ledger) -> string {
+public flow large_error(state: EditLedger) -> string {
     return error_mode(state, true, true);
 }
 
-public flow bump_mode(state: Ledger, call: bool, wide: bool, large: bool) -> Result<Ledger, string> {
+public flow bump_mode(state: EditLedger, call: bool, wide: bool, large: bool) -> Result<EditLedger, string> {
     let invalid = error_mode(state, wide, large);
     if invalid != "" {
         return Err(invalid);
@@ -217,7 +215,7 @@ public flow bump_mode(state: Ledger, call: bool, wide: bool, large: bool) -> Res
         _ => 65536
     };
     return Ok(
-        Ledger {
+        EditLedger {
             steps = state.steps + 1,
             calls = state.calls + if call {
                 1
@@ -243,7 +241,7 @@ public flow bump_mode(state: Ledger, call: bool, wide: bool, large: bool) -> Res
     );
 }
 
-public flow bump(state: Ledger, call: bool) -> Result<Ledger, string> {
+public flow bump(state: EditLedger, call: bool) -> Result<EditLedger, string> {
     return bump_mode(state, call, false, false);
 }
 
@@ -522,7 +520,7 @@ public flow context_error(context: Context) -> string {
         let binding = Binding {
             id = context.id,
             workspace = context.workspace,
-            region = "nomo.tools.edit_file.EditableRoot",
+            region = "nomo.application.resources.EditableRoot",
             path = context.path,
             request_digest = context.request_digest,
             before_digest = context.before_digest,
@@ -561,3 +559,11 @@ public flow context_error(context: Context) -> string {
     }
     return "";
 }
+
+public type EditLedger = {
+    steps: i32,
+    calls: i32,
+    tokens: i32,
+    native_tokens: i32,
+    boundaries: i32
+};

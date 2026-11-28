@@ -1,7 +1,7 @@
 module nomo.adapters.model.summary;
 
-import nomo.adapters.codec.{RollingContext, input as codec_input};
-import nomo.application.conversation.ports.{ContextProjection, SummaryModel};
+import nomo.adapters.codec.input as codec_input;
+import nomo.application.conversation.ports.SummaryModel;
 import nomo.domain.conversation.{ModelTurn, Summary};
 
 @limits([Tokens(32768), ContextTokens(1048576)])

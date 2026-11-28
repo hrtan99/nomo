@@ -2,8 +2,7 @@ module nomo.application.execution.attempts;
 
 import nomo.application.conversation.ports.{ConversationReader, ConversationWriter, ResultPublication};
 import nomo.application.execution.ports.AttemptRepository;
-import nomo.domain.attempts.{Transition, next_phase};
-import nomo.native.lifecycle.Attempt;
+import nomo.domain.attempts.{Attempt, Transition, next_phase};
 import std.text.from_i64;
 
 public flow turn_available<R ~ AttemptRepository>(repository: R, session: string) -> unit ![

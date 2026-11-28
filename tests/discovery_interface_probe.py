@@ -71,7 +71,7 @@ def audit_effects(report):
         row=one(name);assert expected <= row['requested_actions'] and expected <= row['escaping_effects'] and not row['default_actions'],name
     row=one('exercise');assert {capture,inspect,parent} <= row['requested_actions'] and not {capture,inspect,parent}&row['escaping_effects']
     assert row['default_actions']=={'Console.stdout_write'} and not any(x.startswith(('Memory.','Fs.','Model.','Agentic.','Approval.','Command.')) for x in row['requested_actions'])
-    memory={'Memory.read[nomo.session.work_chain_journal.Journal.Rows]','Memory.read[nomo.session.work_chain_store.Chain.Rows]'}
+    memory={'Memory.read[nomo.adapters.storage.chains.ChainJournal.Rows]','Memory.read[nomo.adapters.storage.chains.Chains.Rows]'}
     for name,required in [('discover',{capture,inspect}),('latest_parent',{capture,parent}),('run_sessions',{capture,inspect}),('run_show',{capture,inspect})]:
         row=one(name,True);assert required <= row['requested_actions'] and not required&row['escaping_effects'] and memory <= row['requested_actions'],name
         assert not any(x.startswith('Memory.write') for x in row['requested_actions']),name

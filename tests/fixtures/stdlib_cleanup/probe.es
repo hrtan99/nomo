@@ -12,22 +12,23 @@ import nomo.domain.context.select;
 import nomo.domain.wire.json;
 import nomo.domain.wire.digest;
 import nomo.domain.wire.ascii_json_with;
-import nomo.core.conversation.Event;
-import nomo.core.conversation.State;
+import nomo.domain.conversation.Event;
+import nomo.domain.conversation.State;
 import nomo.adapters.filesystem.workspace.{search_files, search_wide};
 import nomo.adapters.cli.console.ConsoleConversationPicker;
 import nomo.application.conversation.ports.ConversationPicker;
 import nomo.adapters.model.continuation.target;
 import nomo.domain.harness.delegation.next;
 import nomo.domain.harness.work.Evidence;
-import nomo.harness.harness_tool_contract.Ledger;
+import nomo.domain.harness.loop.ReadLedger;
 import nomo.domain.editing.{render, prepare_original, bind};
 import nomo.domain.sessions.work.{partial, admit};
 import nomo.domain.sessions.state.{snapshot, validate, caps, Request as SessionRequest};
 import nomo.domain.sessions.event_codec.{Policy, encode_prefix, event_text_codec_decode, probe_excerpt};
 import nomo.domain.wire.json_scalar_width;
-import nomo.native.history.{Session, Ledger as NativeLedger};
-import nomo.tools.workspace.ReadOnlyRoot;
+import nomo.domain.conversation.SavedSession;
+import nomo.domain.conversation.ConversationLedger;
+import nomo.application.resources.ReadOnlyRoot;
 import std.effects.Fs;
 import std.fs.IOError as FileError;
 import std.io.IOError;
@@ -335,7 +336,7 @@ public flow picker(args: Array<string>) -> i32 ![
     Error<IndexError>,
     Error<BudgetExceeded>
 ] {
-    let first = Session {
+    let first = SavedSession {
         id = "one",
         workspace = "/fixture",
         title = "First",
@@ -344,7 +345,7 @@ public flow picker(args: Array<string>) -> i32 ![
         summary_event = -1,
         summary_through = -1,
         pending = "",
-        ledger = NativeLedger {
+        ledger = ConversationLedger {
             turns = 0,
             compactions = 0,
             tools = 0,
@@ -385,7 +386,7 @@ public flow admission(args: Array<string>) -> i32 ![
         result = "Seen: complete: blue",
         summary = "Use the context result",
         allowed = ["context.txt"],
-        ledger = Ledger {
+        ledger = ReadLedger {
             steps = 7,
             calls = 4,
             tokens = 8192,

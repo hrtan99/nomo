@@ -2,6 +2,7 @@ module nomo.domain.harness.work;
 
 import nomo.domain.harness.edit.{
     Context as edit_Context,
+    EditLedger,
     bump_mode,
     context_error as edit_context_error,
     fresh as edit_fresh,
@@ -9,7 +10,7 @@ import nomo.domain.harness.edit.{
     ledger_error as edit_ledger_error,
     wide_error
 };
-import nomo.domain.harness.loop.{Session, allowed_error};
+import nomo.domain.harness.loop.{ReadLedger, Session, allowed_error};
 import nomo.domain.harness.read.{
     decode_child,
     high_input_bump,
@@ -25,8 +26,6 @@ import nomo.domain.harness.read.{
 import nomo.domain.limits.{child_answer_bytes, compatible_scan_i32, context_bytes, message_bytes, outcome_bytes};
 import nomo.domain.text.bounded;
 import nomo.domain.wire.{encode, json};
-import nomo.harness.harness_tool_contract.Ledger;
-import nomo.harness.harness_work_contract.Ledger as harness_work_contract_Ledger;
 import std.text.{len, starts_with};
 
 public type Evidence = {
@@ -39,7 +38,7 @@ public type Evidence = {
     result: string,
     summary: string,
     allowed: Array<string>,
-    ledger: Ledger
+    ledger: ReadLedger
 };
 
 public type Context = {
@@ -64,8 +63,8 @@ public type WorkParameters = {
 public spec WorkBudgetPolicy {
     flow maximum(self) -> WorkMaximum ![];
     flow parameters(self) -> WorkParameters ![];
-    flow reserve_edit(self, state: harness_work_contract_Ledger, call: bool) -> Result<
-        harness_work_contract_Ledger,
+    flow reserve_edit(self, state: WorkLedger, call: bool) -> Result<
+        WorkLedger,
         string
     > ![];
 }
@@ -97,8 +96,8 @@ impl HistoricalWorkBudget ~ WorkBudgetPolicy {
         };
     }
 
-    flow reserve_edit(self, state: harness_work_contract_Ledger, call: bool) -> Result<
-        harness_work_contract_Ledger,
+    flow reserve_edit(self, state: WorkLedger, call: bool) -> Result<
+        WorkLedger,
         string
     > ![] {
         return bump_selected(state, call, false, false);
@@ -124,8 +123,8 @@ impl ExpandedWorkBudget ~ WorkBudgetPolicy {
         };
     }
 
-    flow reserve_edit(self, state: harness_work_contract_Ledger, call: bool) -> Result<
-        harness_work_contract_Ledger,
+    flow reserve_edit(self, state: WorkLedger, call: bool) -> Result<
+        WorkLedger,
         string
     > ![] {
         return bump_selected(state, call, false, false);
@@ -151,8 +150,8 @@ impl LargeWorkBudget ~ WorkBudgetPolicy {
         };
     }
 
-    flow reserve_edit(self, state: harness_work_contract_Ledger, call: bool) -> Result<
-        harness_work_contract_Ledger,
+    flow reserve_edit(self, state: WorkLedger, call: bool) -> Result<
+        WorkLedger,
         string
     > ![] {
         return bump_selected(state, call, true, true);
@@ -178,22 +177,22 @@ impl HighInputWorkBudget ~ WorkBudgetPolicy {
         };
     }
 
-    flow reserve_edit(self, state: harness_work_contract_Ledger, call: bool) -> Result<
-        harness_work_contract_Ledger,
+    flow reserve_edit(self, state: WorkLedger, call: bool) -> Result<
+        WorkLedger,
         string
     > ![] {
         return bump_selected(state, call, true, false);
     }
 }
 
-public flow fresh() -> harness_work_contract_Ledger {
-    return harness_work_contract_Ledger {
+public flow fresh() -> WorkLedger {
+    return WorkLedger {
         read = read_fresh(),
         edit = edit_fresh()
     };
 }
 
-flow read_complete(value: Ledger) -> bool {
+flow read_complete(value: ReadLedger) -> bool {
     return value.steps == 7 && value.calls == 4 && (
         value.tokens == 8192 || value.tokens == 12288
             || value.tokens == 16384 || value.tokens == 20480 || value.tokens == 143360
@@ -205,7 +204,7 @@ flow read_complete(value: Ledger) -> bool {
     );
 }
 
-flow selected_edit_error(state: harness_work_contract_Ledger) -> string {
+flow selected_edit_error(state: WorkLedger) -> string {
     if state.read.tokens == 143360 && wide_error(state.edit) != "" {
         return large_error(state.edit);
     }
@@ -218,7 +217,7 @@ flow selected_edit_error(state: harness_work_contract_Ledger) -> string {
 }
 
 // Historical ledger allowance; it is not the interpreter total-token cap.
-public flow native_tokens(state: harness_work_contract_Ledger) -> i32 {
+public flow native_tokens(state: WorkLedger) -> i32 {
     if (work_error(state.read) != "" && high_input_error(state.read) != "")
         || selected_edit_error(state) != "" {
         return 0;
@@ -227,7 +226,7 @@ public flow native_tokens(state: harness_work_contract_Ledger) -> i32 {
 }
 
 // New event-work stages reserve interpreter-enforced total-token maxima.
-public flow native_budget(state: harness_work_contract_Ledger) -> i32 {
+public flow native_budget(state: WorkLedger) -> i32 {
     if state.read.tokens == 131072 || state.read.tokens == 393216 || state.read.tokens == 524288 {
         return (state.read.calls + state.edit.calls) * 1048576;
     }
@@ -249,7 +248,7 @@ public flow native_budget(state: harness_work_contract_Ledger) -> i32 {
     });
 }
 
-public flow ledger_error(state: harness_work_contract_Ledger) -> string {
+public flow ledger_error(state: WorkLedger) -> string {
     let read = work_error(state.read);
     if read != "" {
         let high = high_input_error(state.read);
@@ -283,8 +282,8 @@ public flow ledger_error(state: harness_work_contract_Ledger) -> string {
 
 // Both reservations are created once, before any Model/File work. The read
 // ledger remains in this value while the existing edit ledger advances.
-flow bump_selected(state: harness_work_contract_Ledger, call: bool, wide: bool, large: bool) -> Result<
-    harness_work_contract_Ledger,
+flow bump_selected(state: WorkLedger, call: bool, wide: bool, large: bool) -> Result<
+    WorkLedger,
     string
 > {
     let invalid = ledger_error(state);
@@ -307,8 +306,8 @@ flow bump_selected(state: harness_work_contract_Ledger, call: bool, wide: bool, 
 
 // Compatibility selection for a settled historical ledger. Current preparation
 // receives its policy before any work and never infers it from running counters.
-public flow bump_edit(state: harness_work_contract_Ledger, call: bool) -> Result<
-    harness_work_contract_Ledger,
+public flow bump_edit(state: WorkLedger, call: bool) -> Result<
+    WorkLedger,
     string
 > {
     if state.read.tokens == 143360 {
@@ -322,8 +321,8 @@ public flow bump_edit(state: harness_work_contract_Ledger, call: bool) -> Result
     return policy.reserve_edit(state, call);
 }
 
-public flow bump_edit_mode(state: harness_work_contract_Ledger, call: bool, high_input: bool) -> Result<
-    harness_work_contract_Ledger,
+public flow bump_edit_mode(state: WorkLedger, call: bool, high_input: bool) -> Result<
+    WorkLedger,
     string
 > {
     if high_input {
@@ -433,7 +432,7 @@ public flow collect(
             return Err(error);
         }
     };
-    let reserved = Ledger {
+    let reserved = ReadLedger {
         steps = 2,
         calls = 1,
         tokens = if high_input {
@@ -551,3 +550,8 @@ public flow context_error(value: Context) -> string {
     }
     return "";
 }
+
+public type WorkLedger = {
+    read: ReadLedger,
+    edit: EditLedger
+};

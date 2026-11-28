@@ -64,7 +64,7 @@ connect_timeout_ms = 2000
 attempts = 1
 delay_ms = 0
 
-[runtime.profiles.gateway-qwen-readonly.filesystem.regions."nomo.tools.workspace.ReadOnlyRoot"]
+[runtime.profiles.gateway-qwen-readonly.filesystem.regions."nomo.application.resources.ReadOnlyRoot"]
 root = "/model-tool-fixture"
 read = true
 write = false
@@ -153,7 +153,7 @@ connect_timeout_ms = 2000
 attempts = 1
 delay_ms = 0
 
-[runtime.profiles.harness-checkpoint-save.filesystem.regions."nomo.tools.workspace.ReadOnlyRoot"]
+[runtime.profiles.harness-checkpoint-save.filesystem.regions."nomo.application.resources.ReadOnlyRoot"]
 root = "/model-tool-fixture"
 read = true
 write = false
@@ -221,7 +221,7 @@ boundary_policy = "nomo-owned-edit"
 [runtime.profiles.edit-apply.memory]
 backend = "sqlite"
 path = "edit.sqlite3"
-[runtime.profiles.edit-apply.filesystem.regions."nomo.tools.edit_file.EditableRoot"]
+[runtime.profiles.edit-apply.filesystem.regions."nomo.application.resources.EditableRoot"]
 root = "/edit-fixture"
 read = true
 write = true
@@ -279,7 +279,7 @@ connect_timeout_ms = 2000
 [runtime.profiles.harness-edit.model.retry]
 attempts = 1
 delay_ms = 0
-[runtime.profiles.harness-edit.filesystem.regions."nomo.tools.edit_file.EditableRoot"]
+[runtime.profiles.harness-edit.filesystem.regions."nomo.application.resources.EditableRoot"]
 root = "/edit-fixture"
 read = true
 write = true
@@ -314,12 +314,12 @@ connect_timeout_ms = 2000
 [runtime.profiles.harness-work.model.retry]
 attempts = 1
 delay_ms = 0
-[runtime.profiles.harness-work.filesystem.regions."nomo.tools.workspace.ReadOnlyRoot"]
+[runtime.profiles.harness-work.filesystem.regions."nomo.application.resources.ReadOnlyRoot"]
 root = "/work-context"
 read = true
 write = false
 delete = false
-[runtime.profiles.harness-work.filesystem.regions."nomo.tools.edit_file.EditableRoot"]
+[runtime.profiles.harness-work.filesystem.regions."nomo.application.resources.EditableRoot"]
 root = "/edit-fixture"
 read = true
 write = true
@@ -354,12 +354,12 @@ connect_timeout_ms = 2000
 [runtime.profiles.harness-work-save.model.retry]
 attempts = 1
 delay_ms = 0
-[runtime.profiles.harness-work-save.filesystem.regions."nomo.tools.workspace.ReadOnlyRoot"]
+[runtime.profiles.harness-work-save.filesystem.regions."nomo.application.resources.ReadOnlyRoot"]
 root = "/work-context"
 read = true
 write = false
 delete = false
-[runtime.profiles.harness-work-save.filesystem.regions."nomo.tools.edit_file.EditableRoot"]
+[runtime.profiles.harness-work-save.filesystem.regions."nomo.application.resources.EditableRoot"]
 root = "/edit-fixture"
 read = true
 write = true
@@ -412,12 +412,12 @@ connect_timeout_ms = 2000
 [runtime.profiles.work-chain.model.retry]
 attempts = 1
 delay_ms = 0
-[runtime.profiles.work-chain.filesystem.regions."nomo.tools.workspace.ReadOnlyRoot"]
+[runtime.profiles.work-chain.filesystem.regions."nomo.application.resources.ReadOnlyRoot"]
 root = "/work-context"
 read = true
 write = false
 delete = false
-[runtime.profiles.work-chain.filesystem.regions."nomo.tools.edit_file.EditableRoot"]
+[runtime.profiles.work-chain.filesystem.regions."nomo.application.resources.EditableRoot"]
 root = "/edit-fixture"
 read = true
 write = true
@@ -509,12 +509,12 @@ connect_timeout_ms = 2000
 [runtime.profiles.work-chain-once.model.retry]
 attempts = 1
 delay_ms = 0
-[runtime.profiles.work-chain-once.filesystem.regions."nomo.tools.workspace.ReadOnlyRoot"]
+[runtime.profiles.work-chain-once.filesystem.regions."nomo.application.resources.ReadOnlyRoot"]
 root = "/work-context"
 read = true
 write = false
 delete = false
-[runtime.profiles.work-chain-once.filesystem.regions."nomo.tools.edit_file.EditableRoot"]
+[runtime.profiles.work-chain-once.filesystem.regions."nomo.application.resources.EditableRoot"]
 root = "/edit-fixture"
 read = true
 write = true
@@ -555,7 +555,7 @@ connect_timeout_ms = 2000
 attempts = 1
 delay_ms = 0
 
-[runtime.profiles.gateway-minimax-readonly.filesystem.regions."nomo.tools.workspace.ReadOnlyRoot"]
+[runtime.profiles.gateway-minimax-readonly.filesystem.regions."nomo.application.resources.ReadOnlyRoot"]
 root = "/model-tool-fixture"
 read = true
 write = false
@@ -586,7 +586,7 @@ connect_timeout_ms = 2000
 [runtime.profiles.harness-minimax-edit.model.retry]
 attempts = 1
 delay_ms = 0
-[runtime.profiles.harness-minimax-edit.filesystem.regions."nomo.tools.edit_file.EditableRoot"]
+[runtime.profiles.harness-minimax-edit.filesystem.regions."nomo.application.resources.EditableRoot"]
 root = "/edit-fixture"
 read = true
 write = true
@@ -617,12 +617,12 @@ connect_timeout_ms = 2000
 [runtime.profiles.harness-minimax-work.model.retry]
 attempts = 1
 delay_ms = 0
-[runtime.profiles.harness-minimax-work.filesystem.regions."nomo.tools.workspace.ReadOnlyRoot"]
+[runtime.profiles.harness-minimax-work.filesystem.regions."nomo.application.resources.ReadOnlyRoot"]
 root = "/work-context"
 read = true
 write = false
 delete = false
-[runtime.profiles.harness-minimax-work.filesystem.regions."nomo.tools.edit_file.EditableRoot"]
+[runtime.profiles.harness-minimax-work.filesystem.regions."nomo.application.resources.EditableRoot"]
 root = "/edit-fixture"
 read = true
 write = true
@@ -651,7 +651,7 @@ connect_timeout_ms = 2000
 [runtime.profiles.nomo-read-session-new.model.retry]
 attempts = 1
 delay_ms = 0
-[runtime.profiles.nomo-read-session-new.filesystem.regions."nomo.tools.workspace.ReadOnlyRoot"]
+[runtime.profiles.nomo-read-session-new.filesystem.regions."nomo.application.resources.ReadOnlyRoot"]
 root = "/model-tool-fixture"
 read = true
 write = false
@@ -679,7 +679,7 @@ connect_timeout_ms = 2000
 [runtime.profiles.nomo-read-session-existing.model.retry]
 attempts = 1
 delay_ms = 0
-[runtime.profiles.nomo-read-session-existing.filesystem.regions."nomo.tools.workspace.ReadOnlyRoot"]
+[runtime.profiles.nomo-read-session-existing.filesystem.regions."nomo.application.resources.ReadOnlyRoot"]
 root = "/model-tool-fixture"
 read = true
 write = false
@@ -731,12 +731,12 @@ connect_timeout_ms = 2000
 [runtime.profiles.nomo-history-work.model.retry]
 attempts = 1
 delay_ms = 0
-[runtime.profiles.nomo-history-work.filesystem.regions."nomo.tools.workspace.ReadOnlyRoot"]
+[runtime.profiles.nomo-history-work.filesystem.regions."nomo.application.resources.ReadOnlyRoot"]
 root = "/work-context"
 read = true
 write = false
 delete = false
-[runtime.profiles.nomo-history-work.filesystem.regions."nomo.tools.edit_file.EditableRoot"]
+[runtime.profiles.nomo-history-work.filesystem.regions."nomo.application.resources.EditableRoot"]
 root = "/edit-fixture"
 read = true
 write = true
@@ -790,7 +790,7 @@ connect_timeout_ms = 2000
 [runtime.profiles.nomo-read-events-new.model.retry]
 attempts = 1
 delay_ms = 0
-[runtime.profiles.nomo-read-events-new.filesystem.regions."nomo.tools.workspace.ReadOnlyRoot"]
+[runtime.profiles.nomo-read-events-new.filesystem.regions."nomo.application.resources.ReadOnlyRoot"]
 root = "/model-tool-fixture"
 read = true
 write = false
@@ -800,7 +800,7 @@ rules = ["console=allow", "memory=allow", "agentic=allow", "model=allow", "files
 [runtime.profiles.nomo-read-events-new.approval]
 mode = "deny"
 
-[runtime.profiles.nomo-read-events-new.filesystem.regions."nomo.session.event_policy.PolicyRoot"]
+[runtime.profiles.nomo-read-events-new.filesystem.regions."nomo.application.resources.PolicyRoot"]
 root = "/tmp/nomo-event-policy"
 read = true
 write = false
@@ -823,7 +823,7 @@ connect_timeout_ms = 2000
 [runtime.profiles.nomo-read-events-existing.model.retry]
 attempts = 1
 delay_ms = 0
-[runtime.profiles.nomo-read-events-existing.filesystem.regions."nomo.tools.workspace.ReadOnlyRoot"]
+[runtime.profiles.nomo-read-events-existing.filesystem.regions."nomo.application.resources.ReadOnlyRoot"]
 root = "/model-tool-fixture"
 read = true
 write = false
@@ -833,7 +833,7 @@ rules = ["console=allow", "memory=allow", "agentic=allow", "model=allow", "files
 [runtime.profiles.nomo-read-events-existing.approval]
 mode = "deny"
 
-[runtime.profiles.nomo-read-events-existing.filesystem.regions."nomo.session.event_policy.PolicyRoot"]
+[runtime.profiles.nomo-read-events-existing.filesystem.regions."nomo.application.resources.PolicyRoot"]
 root = "/tmp/nomo-event-policy"
 read = true
 write = false
@@ -849,7 +849,7 @@ rules = ["console=allow", "memory=allow", "filesystem:Fs.read=allow"]
 [runtime.profiles.nomo-read-events-status.approval]
 mode = "deny"
 
-[runtime.profiles.nomo-read-events-status.filesystem.regions."nomo.session.event_policy.PolicyRoot"]
+[runtime.profiles.nomo-read-events-status.filesystem.regions."nomo.application.resources.PolicyRoot"]
 root = "/tmp/nomo-event-policy"
 read = true
 write = false
@@ -885,12 +885,12 @@ connect_timeout_ms = 2000
 [runtime.profiles.nomo-history-events-work.model.retry]
 attempts = 1
 delay_ms = 0
-[runtime.profiles.nomo-history-events-work.filesystem.regions."nomo.tools.workspace.ReadOnlyRoot"]
+[runtime.profiles.nomo-history-events-work.filesystem.regions."nomo.application.resources.ReadOnlyRoot"]
 root = "/work-context"
 read = true
 write = false
 delete = false
-[runtime.profiles.nomo-history-events-work.filesystem.regions."nomo.tools.edit_file.EditableRoot"]
+[runtime.profiles.nomo-history-events-work.filesystem.regions."nomo.application.resources.EditableRoot"]
 root = "/edit-fixture"
 read = true
 write = true
@@ -902,7 +902,7 @@ rules = ["console=allow", "memory=allow", "agentic=allow", "model=allow", "appro
 mode = "prompt"
 
 
-[runtime.profiles.nomo-history-events-work.filesystem.regions."nomo.session.event_policy.PolicyRoot"]
+[runtime.profiles.nomo-history-events-work.filesystem.regions."nomo.application.resources.PolicyRoot"]
 root = "/tmp/nomo-event-policy"
 read = true
 write = false
@@ -931,11 +931,11 @@ connect_timeout_ms = 10000
 [runtime.profiles.nomo-native.model.retry]
 attempts = 1
 delay_ms = 0
-[runtime.profiles.nomo-native.filesystem.regions."nomo.native.workspace.ProjectRoot"]
+[runtime.profiles.nomo-native.filesystem.regions."nomo.application.resources.ProjectRoot"]
 root = "/project"
 read = true
 write = true
-[runtime.profiles.nomo-native.filesystem.regions."nomo.native.projects.LaunchRoot"]
+[runtime.profiles.nomo-native.filesystem.regions."nomo.application.resources.LaunchRoot"]
 root = "/native-launch"
 read = false
 write = true
@@ -957,7 +957,7 @@ profile = "nomo-native"
 [runtime.profiles.nomo-native-migrate.memory]
 backend = "sqlite"
 path = "/migration-target/conversations.sqlite3"
-[runtime.profiles.nomo-native-migrate.filesystem.regions."nomo.application.migration.ports.MigrationRoot"]
+[runtime.profiles.nomo-native-migrate.filesystem.regions."nomo.application.resources.MigrationRoot"]
 root = "/migration"
 read = true
 write = false

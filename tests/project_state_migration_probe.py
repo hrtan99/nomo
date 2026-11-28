@@ -64,14 +64,14 @@ import std.fs.IOError as FileError;
 import std.fs.ReadLimitError;
 import std.bytes.from_array;
 import nomo.application.transfer.ports.ProjectStateSource;
-import nomo.application.migration.ports.MigrationRoot;
+import nomo.application.resources.MigrationRoot;
 import nomo.domain.archives.ProjectImage;
 import nomo.domain.archives.ProjectConversation;
 import nomo.domain.archives.ProjectEvent;
 import nomo.domain.archives.ProjectEdit;
 import nomo.domain.archives.ProjectJob;
 import nomo.domain.processes.ArchivedJob;
-import nomo.native.mutations.SavedPath;
+import nomo.domain.changes.SavedPath;
 public type FixtureSource = {};
 impl FixtureSource ~ ProjectStateSource {
     flow load(self) -> ProjectImage ![Fs.read<MigrationRoot>, Error<FileError>, Error<ReadLimitError>, Error<IndexError>] {
@@ -318,7 +318,7 @@ path = "/state/conversations.sqlite3"
 [runtime.profiles.local.policy]
 mode = "local-static"
 rules = ["console=allow", "memory=allow", "filesystem:Fs.read=allow"]
-[runtime.profiles.local.filesystem.regions."nomo.application.migration.ports.MigrationRoot"]
+[runtime.profiles.local.filesystem.regions."nomo.application.resources.MigrationRoot"]
 root = "/migration"
 read = true
 write = false

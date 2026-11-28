@@ -68,7 +68,7 @@ def main():
     identity = json.loads((GRAPH / 'host-faults-identity.json').read_text())
     assert digest(HARNESS) == identity['fixture_binary_sha256']
     assert digest(CLI) == json.loads((GRAPH / 'binary.json').read_text())['sha256']
-    protected = ['etas.toml', 'etas.lock', 'src/nomo/main.es', 'src/nomo/adapters/cli/input.es', 'src/nomo/session/session_state.es']
+    protected = ['etas.toml', 'etas.lock', 'src/nomo/main.es', 'src/nomo/adapters/cli/input.es', 'src/nomo/domain/sessions/state.es']
     original = {name: digest(ROOT / name) for name in protected}
     project = Path(tempfile.mkdtemp(prefix='session-cli-cases-', dir=EVIDENCE))
     print('EVIDENCE ' + str(project), flush=True)
@@ -298,12 +298,7 @@ flow = "run_session"
         try:
             # Deliberate test-only dependency substitution, not a natural input
             # counterexample or any change to repository product behavior.
-            display_source.write_text('''module nomo.session.session_display;
-import nomo.session.session_state.Projection;
-public flow display(value: Projection) -> Result<string, string> {
-    return Err("injected presentation failure");
-}
-''')
+            display_source.write_text('module nomo.session.session_display;\nimport nomo.domain.sessions.state.Projection;\npublic flow display(value: Projection) -> Result<string, string> {\n    return Err("injected presentation failure");\n}\n')
             arguments = cli_args('save', session='presentation-failure', text='hello')
             failed = run(database, arguments)
             assert failed['diagnostics'] == [] and 'SAVED ' not in failed['stdout'] and 'REFUSED ' not in failed['stdout'], failed

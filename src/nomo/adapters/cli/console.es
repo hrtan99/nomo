@@ -2,36 +2,22 @@ module nomo.adapters.cli.console;
 
 import nomo.adapters.cli.input.command;
 import nomo.adapters.codec.json as codec_json;
-import nomo.application.conversation.ports.{
-    ConversationOutputSink,
-    ConversationPicker,
-    TerminalDisplay,
-    TerminalEvent,
-    TerminalInput
-};
+import nomo.application.conversation.ports.{ConversationOutputSink, ConversationPicker, TerminalDisplay, TerminalEvent, TerminalInput};
 import nomo.application.editing.ports.{MutationOutputSink, WorkOutputSink};
 import nomo.application.execution.commands.preview_text;
 import nomo.application.execution.ports.{CommandPreviewSink, ProcessPreviewSink};
-import nomo.application.harness.ports.{
-    ConsoleEventSink,
-    ConsoleProgressWriter,
-    ConversationSink,
-    DiagnosticSink,
-    ProgressSink
-};
+import nomo.application.harness.ports.{ConsoleEventSink, ConsoleProgressWriter, ConversationSink, DiagnosticSink, ProgressSink};
 import nomo.application.harness.work.{expanded_ledger_text, historical_ledger_text};
 import nomo.application.transfer.ports.TransferRenderer;
 import nomo.application.workspace.ports.ProjectRenderer;
-import nomo.core.conversation.Event;
 import nomo.domain.archives.ExportPreview;
 import nomo.domain.commands.{Command as commands_Command, CommandRequest};
+import nomo.domain.conversation.{Event, SavedSession};
 import nomo.domain.editing.Selector;
-import nomo.domain.harness.edit.{completed_context, context};
-import nomo.domain.harness.read.Ledger as read_Ledger;
+import nomo.domain.harness.loop.ReadLedger;
+import nomo.domain.harness.read.Ledger;
+import nomo.domain.harness.work.WorkLedger;
 import nomo.domain.wire.{encode, json as wire_json};
-import nomo.harness.harness_tool_contract.Ledger as harness_tool_contract_Ledger;
-import nomo.harness.harness_work_contract.Ledger;
-import nomo.native.history.Session;
 import std.io.{IOError, print, println, read_line};
 import std.text.{from_i32, from_i64, from_usize, parse_usize, trim};
 
@@ -222,7 +208,7 @@ impl ConsoleTerminalDisplay ~ TerminalDisplay {
 public type ConsoleConversationPicker = {};
 
 impl ConsoleConversationPicker ~ ConversationPicker {
-    flow choose(self, sessions: Array<Session>) -> Option<string> ![Console, Error<IOError>] {
+    flow choose(self, sessions: Array<SavedSession>) -> Option<string> ![Console, Error<IOError>] {
         for (index, item) in sessions.iter().enumerate() {
             println("[SESSION] " + from_usize(index + 1) + " · " + item.id + " · " + item.title);
             println("          " + item.workspace);
@@ -364,7 +350,7 @@ public flow display(prefix: string, text: string) -> unit {
     }
 }
 
-public flow ledger(state: Ledger) -> unit {
+public flow ledger(state: WorkLedger) -> unit {
     println(
         historical_ledger_text(state)
             + "; configured allowances are not measured usage; no persisted Model history or mutating resume"
@@ -376,11 +362,11 @@ public flow simple_refused(error: string) -> i32 {
     return 1;
 }
 
-public flow expanded_ledger(state: Ledger, wide: bool) -> unit {
+public flow expanded_ledger(state: WorkLedger, wide: bool) -> unit {
     println(expanded_ledger_text(state, wide, false));
 }
 
-public flow expanded_ledger_mode(state: Ledger, wide: bool, high_input: bool) -> unit {
+public flow expanded_ledger_mode(state: WorkLedger, wide: bool, high_input: bool) -> unit {
     println(expanded_ledger_text(state, wide, high_input));
 }
 
@@ -399,7 +385,7 @@ impl TerminalWorkOutput ~ WorkOutputSink {
         recorded(selected);
     }
 
-    flow ledger(self, state: Ledger, wide: bool, high_input: bool) -> unit ![Error<IOError>] {
+    flow ledger(self, state: WorkLedger, wide: bool, high_input: bool) -> unit ![Error<IOError>] {
         expanded_ledger_mode(state, wide, high_input);
     }
 
@@ -407,7 +393,7 @@ impl TerminalWorkOutput ~ WorkOutputSink {
         return simple_refused(error);
     }
 
-    flow completed(self, answer: string, saved: string, state: Ledger, wide: bool, high_input: bool) -> i32 ![
+    flow completed(self, answer: string, saved: string, state: WorkLedger, wide: bool, high_input: bool) -> i32 ![
         Error<IOError>,
         Error<IndexError>
     ] {
@@ -475,12 +461,12 @@ impl TerminalTransfer ~ TransferRenderer {
     }
 }
 
-flow numbers(state: read_Ledger) -> string {
+flow numbers(state: Ledger) -> string {
     return "steps=" + from_i32(state.steps) + " calls=" + from_i32(state.calls) + " tokens="
         + from_i32(state.tokens);
 }
 
-public flow precharged(phase: string, state: read_Ledger) -> unit {
+public flow precharged(phase: string, state: Ledger) -> unit {
     println(
         "STAGE " + phase + " child-1 " + numbers(state) + " reserved_steps=" + from_i32(5 - state.steps)
             + " reserved_calls=" + from_i32(3 - state.calls) + " reserved_tokens="
@@ -488,20 +474,20 @@ public flow precharged(phase: string, state: read_Ledger) -> unit {
     );
 }
 
-public flow settled(state: read_Ledger) -> unit {
+public flow settled(state: Ledger) -> unit {
     println(
         "LEDGER steps=" + from_i32(state.steps) + "/5 calls=" + from_i32(state.calls) + "/3 tokens="
             + from_i32(state.tokens) + "/6144 reserved_steps=0 reserved_calls=0 reserved_tokens=0"
     );
 }
 
-public flow text_delegation_refused(state: read_Ledger, error: string) -> i32 {
+public flow text_delegation_refused(state: Ledger, error: string) -> i32 {
     println("REFUSED " + error);
     settled(state);
     return 1;
 }
 
-public flow ascii_read_finished(state: harness_tool_contract_Ledger) -> unit {
+public flow ascii_read_finished(state: ReadLedger) -> unit {
     println(
         "LEDGER steps=" + from_i32(state.steps) + "/7 calls=" + from_i32(state.calls) + "/4 tokens="
             + from_i32(state.tokens) + "/8192 tools=" + from_i32(state.tools) + "/1 scan="
@@ -510,13 +496,13 @@ public flow ascii_read_finished(state: harness_tool_contract_Ledger) -> unit {
     );
 }
 
-public flow ascii_read_refused(state: harness_tool_contract_Ledger, error: string) -> i32 {
+public flow ascii_read_refused(state: ReadLedger, error: string) -> i32 {
     println("REFUSED " + error);
     ascii_read_finished(state);
     return 1;
 }
 
-public flow unicode_read_finished(state: harness_tool_contract_Ledger) -> unit {
+public flow unicode_read_finished(state: ReadLedger) -> unit {
     println(
         "LEDGER steps=" + from_i32(state.steps) + "/7 calls=" + from_i32(state.calls) + "/4 tokens="
             + from_i32(state.tokens) + "/8192 tools=" + from_i32(state.tools) + "/1 scan="
@@ -525,7 +511,7 @@ public flow unicode_read_finished(state: harness_tool_contract_Ledger) -> unit {
     );
 }
 
-public flow unicode_read_refused(state: harness_tool_contract_Ledger, error: string) -> i32 {
+public flow unicode_read_refused(state: ReadLedger, error: string) -> i32 {
     println("REFUSED " + error);
     unicode_read_finished(state);
     return 1;

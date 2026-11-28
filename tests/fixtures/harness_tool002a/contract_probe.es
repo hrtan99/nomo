@@ -2,17 +2,17 @@ module app.contract_probe;
 
 import std.io.println;
 import std.text.char_count as len;
-import nomo.core.conversation.Event;
-import nomo.core.conversation.State;
+import nomo.domain.conversation.Event;
+import nomo.domain.conversation.State;
 import nomo.domain.conversation.add;
 import nomo.domain.harness.loop.Session;
 import nomo.domain.harness.loop.Context as ChildContext;
 import nomo.domain.harness.loop.context_error as child_context_error;
-import nomo.harness.harness_tool_contract.Ledger;
+import nomo.domain.harness.loop.ReadLedger;
 import nomo.domain.harness.read.Observed;
 import nomo.domain.harness.read.read_inspect as inspect;
-import nomo.harness.harness_tool_chat_contract.Previous;
-import nomo.harness.harness_tool_chat_contract.Invocation;
+import nomo.domain.harness.chat.Previous;
+import nomo.domain.harness.chat.Invocation;
 import nomo.domain.harness.chat.Context;
 import nomo.domain.harness.chat.empty;
 import nomo.domain.harness.chat.seed;
@@ -26,9 +26,9 @@ import nomo.domain.harness.chat.default_maximum;
 import nomo.domain.harness.chat.fresh_invocation;
 import nomo.domain.harness.chat.chat_turn_error as turn_error;
 
-type Check = { label: string, mode: string, ledger: Ledger, usage: Ledger, maximum: Ledger, invocation: Invocation,
+type Check = { label: string, mode: string, ledger: ReadLedger, usage: ReadLedger, maximum: ReadLedger, invocation: Invocation,
     prior: Previous, context: Context, child: Session, legacy: Session, status: i32, allowed: Array<string>,
-    accepted: bool, expected_ledger: Ledger, expected_observed: Observed };
+    accepted: bool, expected_ledger: ReadLedger, expected_observed: Observed };
 
 flow event(role: string, kind: string, name: string, text: string) -> Event {
     return Event { role = role, kind = kind, name = name, text = text };
@@ -48,7 +48,7 @@ flow checks() -> Array<Check> { return __CHECKS__; }
 
 flow evaluate(item: Check) -> bool {
     if item.mode == "defaults" {
-        let zero = Ledger { steps = 0, calls = 0, tokens = 0, tools = 0, scan = 0 };
+        let zero = ReadLedger { steps = 0, calls = 0, tokens = 0, tools = 0, scan = 0 };
         return default_maximum() == item.maximum && fresh_invocation() ==
             Invocation { usage = zero, maximum = item.maximum, admitted = 0, prior = empty() };
     }

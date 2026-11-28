@@ -1,14 +1,13 @@
 module nomo.application.harness.ports;
 
-import nomo.core.conversation.{Event, State};
+import nomo.application.resources.ReadOnlyRoot;
+import nomo.domain.conversation.{Event, State};
 import nomo.domain.harness.chat.Context as chat_Context;
 import nomo.domain.harness.edit.Context as edit_Context;
-import nomo.domain.harness.loop.{Action, Context as loop_Context, LoopTurn, Session, Shape};
-import nomo.domain.harness.read.{Ledger as TextLedger, Observed, ReadContext, TextContext};
+import nomo.domain.harness.loop.{Action, Context as loop_Context, LoopTurn, ReadLedger, Session, Shape};
+import nomo.domain.harness.read.{Ledger, Observed, ReadContext, TextContext};
 import nomo.domain.harness.work.Context as work_Context;
 import nomo.domain.sessions.chain.ParentFacts;
-import nomo.harness.harness_tool_contract.Ledger;
-import nomo.tools.workspace.ReadOnlyRoot;
 import std.effects.Fs;
 import std.fs.{IOError as fs_IOError, Region};
 import std.io.IOError;
@@ -149,11 +148,11 @@ public type Report = {
     status: i32,
     observed: Observed,
     answer: string,
-    ledger: Ledger
+    ledger: ReadLedger
 };
 
 public type Failure = {
-    state: Ledger,
+    state: ReadLedger,
     error: string,
     resolved: bool
 };
@@ -172,13 +171,13 @@ public spec ReadContextValidation {
 }
 
 public spec ReadContextBudget {
-    flow reserve(self, value: Ledger, call: bool) -> Result<Ledger, string> ![];
-    flow settle_child(self, value: Ledger, child: Session) -> Result<Ledger, string> ![];
-    flow allowance(self) -> Ledger ![];
+    flow reserve(self, value: ReadLedger, call: bool) -> Result<ReadLedger, string> ![];
+    flow settle_child(self, value: ReadLedger, child: Session) -> Result<ReadLedger, string> ![];
+    flow allowance(self) -> ReadLedger ![];
 }
 
 public spec ReadContextProgress {
-    flow progress(self, phase: string, state: Ledger, prefix: string) -> Array<string> ![];
+    flow progress(self, phase: string, state: ReadLedger, prefix: string) -> Array<string> ![];
 }
 
 public spec WorkModelStages {
@@ -221,8 +220,8 @@ public effect TextDelegationStages {
 }
 
 public effect TextDelegationOutput {
-    action precharged(phase: string, state: TextLedger) -> unit;
-    action settled(state: TextLedger) -> unit;
-    action refused(state: TextLedger, error: string) -> i32;
+    action precharged(phase: string, state: Ledger) -> unit;
+    action settled(state: Ledger) -> unit;
+    action refused(state: Ledger, error: string) -> i32;
     action line(text: string) -> unit;
 }

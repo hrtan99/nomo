@@ -16,8 +16,8 @@ shutil.copytree(root, project, ignore=shutil.ignore_patterns('.git', '.etas', 't
 (project / '.etas').mkdir()
 (project / 'src/app').mkdir()
 fixture = (root / 'tests/fixtures/chat_budget/large_input.es').read_text()
-fixture = fixture.replace('import nomo.session.chat_session_contract.fresh_events;',
-                          'import nomo.session.chat_session_contract.fresh_high_input_events;')
+fixture = fixture.replace('import nomo.domain.sessions.chat.fresh_events;',
+                          'import nomo.domain.sessions.chat.fresh_high_input_events;')
 fixture = fixture.replace('fresh_events().invocation', 'fresh_high_input_events().invocation')
 (project / 'src/app/large_input.es').write_text(fixture)
 entry = project / 'src/nomo/main.es'
@@ -75,7 +75,7 @@ try:
     end = value.index('[runtime.profiles.nomo-read-events-new.model.timeout]', start)
     model = value[start:end].replace('https://api.minimax.cn/v1', 'http://host.docker.internal:%d/v1' % server.server_port)
     value = value[:start] + model.replace('allow_private = false', 'allow_private = true') + value[end:]
-    value = value.replace('[runtime.profiles.nomo-read-events-new.filesystem.regions."nomo.session.event_policy.PolicyRoot"]\nroot = "/tmp/nomo-event-policy"\nread = true\nwrite = false\n', '')
+    value = value.replace('[runtime.profiles.nomo-read-events-new.filesystem.regions."nomo.application.resources.PolicyRoot"]\nroot = "/tmp/nomo-event-policy"\nread = true\nwrite = false\n', '')
     manifest.write_text(value)
     override = out / 'compose.yaml'
     override.write_text('''services:

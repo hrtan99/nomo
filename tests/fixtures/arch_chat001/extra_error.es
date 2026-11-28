@@ -1,7 +1,7 @@
 module app.callable_negative;
 
 import std.fs.Region;
-import nomo.core.conversation.State;
+import nomo.domain.conversation.State;
 import nomo.domain.harness.loop.LoopTurn;
 import nomo.domain.harness.loop.fresh_loop;
 import nomo.application.harness.ports.ChatChildStage;

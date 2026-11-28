@@ -1,22 +1,21 @@
 module nomo.domain.sessions.checkpoints;
 
-import nomo.core.conversation.{Event, State};
+import nomo.domain.conversation.{Event, State};
 import nomo.domain.harness.chat.{
     Context,
+    Invocation,
+    Previous,
     TurnResult,
     chat_context_error,
     chat_inspect_turn,
     chat_prior_error,
     chat_turn_error
 };
-import nomo.domain.harness.loop.{Context as loop_Context, Session, allowed_error, context_error};
+import nomo.domain.harness.loop.{Context as loop_Context, ReadLedger, Session, allowed_error, context_error};
 import nomo.domain.harness.read.{bounded, read_inspect, same, text_decode_plan};
 import nomo.domain.limits.{context_bytes, history_bytes, message_bytes, message_frame_bytes};
 import nomo.domain.text.text_printable;
 import nomo.domain.wire.{encode, string_fields};
-import nomo.harness.harness_tool_chat_contract.{Invocation, Previous};
-import nomo.harness.harness_tool_contract.Ledger;
-import nomo.session.harness_checkpoint.Identity;
 import std.text.{char_count, from_char, from_i32, from_usize, is_ascii, len, parse_i32, trim};
 
 public type Checkpoint = {
@@ -29,8 +28,8 @@ public type Checkpoint = {
     outcome: string,
     answer: string,
     records: Array<Event>,
-    usage: Ledger,
-    maximum: Ledger,
+    usage: ReadLedger,
+    maximum: ReadLedger,
     admitted: i32,
     lifecycle: string,
     resolved: bool
@@ -84,7 +83,7 @@ public flow checkpoint_validate(saved: Checkpoint, requested: Identity) -> Resul
         child_count = 7;
         record_count = 13;
     }
-    let exact = Ledger {
+    let exact = ReadLedger {
         steps = 5 + tools * 2,
         calls = 3 + tools,
         tokens = (3 + tools) * 2048,
@@ -95,7 +94,7 @@ public flow checkpoint_validate(saved: Checkpoint, requested: Identity) -> Resul
         return Err("checkpoint completed usage mismatch");
     }
     let maximum = saved.maximum;
-    let original_maximum = Ledger {
+    let original_maximum = ReadLedger {
         steps = 14,
         calls = 8,
         tokens = 16384,
@@ -320,7 +319,7 @@ flow number(raw: string, maximum: i32, label: string) -> Result<i32, string> {
     return Ok(value);
 }
 
-public flow read_ledger(fields: Array<string>, offset: usize, label: string) -> Result<Ledger, string> {
+public flow read_ledger(fields: Array<string>, offset: usize, label: string) -> Result<ReadLedger, string> {
     let limits: Array<i32> = [14, 8, 16384, 2, 8192];
     var values: Array<i32> = [];
     var index: usize = 0;
@@ -335,7 +334,7 @@ public flow read_ledger(fields: Array<string>, offset: usize, label: string) -> 
         index = index + 1;
     }
     return Ok(
-        Ledger {
+        ReadLedger {
             steps = values[0],
             calls = values[1],
             tokens = values[2],
@@ -550,8 +549,8 @@ public type Successor = {
     outcome: string,
     answer: string,
     records: Array<Event>,
-    usage: Ledger,
-    maximum: Ledger,
+    usage: ReadLedger,
+    maximum: ReadLedger,
     admitted: i32,
     lifecycle: string,
     resolved: bool
@@ -642,7 +641,7 @@ public flow successor_validate(saved: Successor, requested: Identity, predecesso
         record_count = 18;
     }
     let before = restored.usage;
-    let exact = Ledger {
+    let exact = ReadLedger {
         steps = before.steps + 5 + tools * 2,
         calls = before.calls + 3 + tools,
         tokens = before.tokens + (3 + tools) * 2048,
@@ -998,3 +997,32 @@ public flow successor_decode(raw: string) -> Result<Successor, string> {
     };
     return successor_validate(saved, identity, predecessor.identity);
 }
+
+public type Identity = {
+    id: string,
+    workspace: string,
+    allowed: Array<string>
+};
+
+public type CheckpointRecord = {
+    format: i32,
+    phase: string,
+    identity: Identity,
+    body: string
+};
+
+public type SuccessorRecord = {
+    format: i32,
+    phase: string,
+    predecessor: Identity,
+    successor: Identity,
+    predecessor_version: string,
+    predecessor_body: string,
+    request: string,
+    body: string,
+    usage: ReadLedger,
+    maximum: ReadLedger,
+    reserved: ReadLedger,
+    admitted: i32,
+    resolved: bool
+};

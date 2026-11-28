@@ -2,9 +2,9 @@ module nomo.adapters.process.commands;
 
 import nomo.application.execution.commands.{checks_run, commands_requests_execute, execute_input, git_execute};
 import nomo.application.execution.ports.{CommandOperations, CommandRunner};
+import nomo.application.resources.ProjectRoot;
 import nomo.application.scope.{SessionContext, SettingsContext};
 import nomo.domain.commands.{CheckOutcome, CommandOutput, CommandRequest, GitRequest};
-import nomo.native.workspace.ProjectRoot;
 import std.codec.text.{Replace, utf8_decode, utf8_encode};
 import std.fs.path;
 import std.host.command.{Command as command_Command, run};

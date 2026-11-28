@@ -2,7 +2,7 @@ module nomo.tool_test;
 
 import nomo.domain.conversation.fresh;
 import nomo.domain.conversation.add;
-import nomo.core.conversation.Event;
+import nomo.domain.conversation.Event;
 import nomo.adapters.cli.model.tool_turn;
 import nomo.adapters.cli.model.fresh_tools;
 import nomo.adapters.cli.model.Session;

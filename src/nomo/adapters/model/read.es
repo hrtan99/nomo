@@ -2,12 +2,11 @@ module nomo.adapters.model.read;
 
 import nomo.adapters.codec.input as codec_input;
 import nomo.application.harness.ports.{ChatMainStage, ReadMainStage};
-import nomo.domain.harness.chat.{Context, SelectedBudget, select};
+import nomo.domain.harness.chat.{Context, Invocation, SelectedBudget, select};
 import nomo.domain.harness.loop.Limits;
 import nomo.domain.harness.read.ReadContext;
 import nomo.domain.harness.typed_work.{Answer, Delegation};
 import nomo.domain.wire.encode;
-import nomo.harness.harness_tool_chat_contract.Invocation;
 import std.io.println;
 
 @limits([Tokens(2048)])

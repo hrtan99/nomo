@@ -13,8 +13,8 @@ import nomo.adapters.cli.edit_input.harness_work_args_parse as parse;
 import nomo.adapters.cli.harness.prepare_work;
 import nomo.adapters.cli.console.ledger;
 import nomo.domain.editing.validate;
-import nomo.tools.workspace.ReadOnlyRoot;
-import nomo.tools.edit_file.EditableRoot;
+import nomo.application.resources.ReadOnlyRoot;
+import nomo.application.resources.EditableRoot;
 
 // Production composition only: no source Model handler, admission, execution,
 // summary or synthetic completion. The input supplies no file contents.

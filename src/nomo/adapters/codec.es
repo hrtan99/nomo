@@ -8,14 +8,7 @@ import nomo.domain.archives.{ArchiveDocument, Imported, LegacyArchive, PortableA
 import nomo.domain.context.should_compact;
 import nomo.domain.conversation.{ChatMessage, ModelTurn};
 import nomo.domain.harness.edit.history_bound;
-import nomo.domain.sessions.checkpoints.{
-    Checkpoint,
-    Successor,
-    checkpoint_decode,
-    checkpoint_encode,
-    successor_decode,
-    successor_encode
-};
+import nomo.domain.sessions.checkpoints.{Checkpoint, Successor, checkpoint_decode, checkpoint_encode, successor_decode, successor_encode};
 import nomo.domain.settings.{Settings, defaults, validate};
 import nomo.domain.wire.encode;
 import std.agent.message.Message;

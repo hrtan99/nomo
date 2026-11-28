@@ -11,36 +11,25 @@ import nomo.adapters.storage.followup.{
 };
 import nomo.adapters.storage.session_records.{commit_native, submit_native};
 import nomo.application.sessions.admission.{history_check_store_finish, history_check_store_inspect, plan, start};
-import nomo.application.sessions.ports.{
-    CasRows,
-    CheckAccess,
-    HistoricalFollowupTicket,
-    HistoryCheckRows,
-    Submission,
-    Target
-};
+import nomo.application.sessions.ports.{CasRows, CheckAccess, HistoricalFollowupTicket, HistoryCheckRows, Submission, Target};
 import nomo.domain.sessions.event_codec.Policy;
-import nomo.session.check_store.Frame;
-import nomo.session.history_check_store.Record;
-import nomo.session.history_followup_check_guard.Checks;
-import nomo.session.history_work_guard.Record as history_work_guard_Record;
-import nomo.session.recoverable_followup_check_store.Checks as recoverable_followup_check_store_Checks;
+import nomo.domain.sessions.work.{CheckFrame, CheckRecord, WorkRecord};
 import std.memory.{MemoryEntry, MemoryVersion, WriteCondition};
 
 type FollowupCheckRows = {};
 
 impl FollowupCheckRows ~ HistoryCheckRows {
-    flow read(self) -> Option<MemoryEntry<string, Record>> {
-        return Checks.Rows.get_entry("check");
+    flow read(self) -> Option<MemoryEntry<string, CheckRecord>> {
+        return FollowupChecks.Rows.get_entry("check");
     }
 
-    flow write(self, row: Record, condition: WriteCondition) -> Result<MemoryVersion, string> ![
+    flow write(self, row: CheckRecord, condition: WriteCondition) -> Result<MemoryVersion, string> ![
         Memory,
         Error<StorageError>,
         Error<IndexError>
     ] {
-        return commit_native<Record>(
-            Checks.Rows,
+        return commit_native<CheckRecord>(
+            FollowupChecks.Rows,
             Target {
                 store = ["Rows"],
                 region = "nomo-followup-check-v1",
@@ -115,7 +104,7 @@ public flow history_followup_check_guard_finish(
     return history_check_store_finish(FollowupCheckRows {}, id, digest, outcome, exit_code);
 }
 
-public flow inspect() -> Result<Option<Record>, string> {
+public flow inspect() -> Result<Option<CheckRecord>, string> {
     return history_check_store_inspect(FollowupCheckRows {});
 }
 
@@ -124,7 +113,7 @@ public type FollowupCheckAdapter = {
     binding: string
 };
 
-impl FollowupCheckAdapter ~ CasRows<Frame> {
+impl FollowupCheckAdapter ~ CasRows<CheckFrame> {
     flow target(self) -> Target ![] {
         return Target {
             store = ["Rows"],
@@ -134,21 +123,24 @@ impl FollowupCheckAdapter ~ CasRows<Frame> {
         };
     }
 
-    flow submit(self, value: Frame, condition: WriteCondition) -> Submission ![Memory, Error<StorageError>] {
-        return submit_native(recoverable_followup_check_store_Checks.Rows, "check", value, condition);
+    flow submit(self, value: CheckFrame, condition: WriteCondition) -> Submission ![
+        Memory,
+        Error<StorageError>
+    ] {
+        return submit_native(RecoverableFollowupChecks.Rows, "check", value, condition);
     }
 
-    flow read(self) -> Result<Option<MemoryEntry<string, Frame>>, string> {
+    flow read(self) -> Result<Option<MemoryEntry<string, CheckFrame>>, string> {
         return load(self.redaction, self.binding);
     }
 
-    flow same(self, left: Frame, right: Frame) -> bool ![] {
+    flow same(self, left: CheckFrame, right: CheckFrame) -> bool ![] {
         return left == right;
     }
 }
 
 impl FollowupCheckAdapter ~ CheckAccess {
-    flow work(self) -> Result<Option<history_work_guard_Record>, string> {
+    flow work(self) -> Result<Option<WorkRecord>, string> {
         return match followup_load(self.redaction, self.binding) {
             Ok(Some(item)) => Ok(Some(item.value.work)),
             Ok(None()) => Ok(None()),
@@ -171,14 +163,14 @@ impl FollowupCheckAdapter ~ CheckAccess {
     }
 }
 
-public flow load(policy: Policy, binding: string) -> Result<Option<MemoryEntry<string, Frame>>, string> ![
+public flow load(policy: Policy, binding: string) -> Result<Option<MemoryEntry<string, CheckFrame>>, string> ![
     Memory,
     Error<StorageError>,
     Error<IndexError>,
     Error<BudgetExceeded>
 ] {
     return load_rows(
-        recoverable_followup_check_store_Checks.Rows.get_entry("check"),
+        RecoverableFollowupChecks.Rows.get_entry("check"),
         FollowupCheckAdapter {
             redaction = policy,
             binding
@@ -263,3 +255,21 @@ public flow abandon(id: string, policy: Policy, binding: string) -> Result<bool,
     };
     return abandon_rows(rows, id, policy, binding);
 }
+
+alias FollowupChecksSchema = MemoryRegion<{
+    Rows: Store<string, CheckRecord>
+}>;
+
+public let FollowupChecks = std.memory.region<FollowupChecksSchema>(
+    stable_id = "nomo-followup-check-v1",
+    store = "followup-check"
+);
+
+alias RecoverableFollowupChecksSchema = MemoryRegion<{
+    Rows: Store<string, CheckFrame>
+}>;
+
+public let RecoverableFollowupChecks = std.memory.region<RecoverableFollowupChecksSchema>(
+    stable_id = "nomo-recoverable-followup-check-v1",
+    store = "recoverable-followup-check"
+);

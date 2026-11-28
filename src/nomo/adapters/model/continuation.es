@@ -1,7 +1,7 @@
 module nomo.adapters.model.continuation;
 
 import nomo.adapters.model.read.MainMode;
-import nomo.core.conversation.Event;
+import nomo.domain.conversation.Event;
 import nomo.domain.harness.chat.Context;
 import nomo.domain.harness.read.decode_work_plan;
 import nomo.domain.sessions.work.WorkFacts;

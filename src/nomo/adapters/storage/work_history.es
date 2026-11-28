@@ -11,16 +11,12 @@ import nomo.adapters.storage.edits.{
 };
 import nomo.adapters.storage.followup.{inspect as followup_inspect, load as followup_load};
 import nomo.adapters.storage.followup_checks.inspect as followup_checks_inspect;
-import nomo.adapters.storage.work_admission.{
-    chat_available,
-    continuous_work_load,
-    inspect,
-    recoverable_work_store_load
-};
+import nomo.adapters.storage.work_admission.{chat_available, continuous_work_load, inspect, recoverable_work_store_load};
 import nomo.application.editing.ports.WorkTimeline;
 import nomo.application.sessions.ports.WorkFactsReader;
-import nomo.core.conversation.Event;
+import nomo.domain.conversation.Event;
 import nomo.domain.editing.Confirmed;
+import nomo.domain.sessions.chat.RecoverableChatFrame;
 import nomo.domain.sessions.event_codec.Policy;
 import nomo.domain.sessions.work.{
     CheckOutput,
@@ -36,7 +32,6 @@ import nomo.domain.sessions.work.{
     settled_usage,
     stored_fact
 };
-import nomo.session.recoverable_chat_store.Frame;
 import std.memory.MemoryEntry;
 
 public type LegacyWorkFacts = {};
@@ -518,7 +513,7 @@ impl LegacyWorkTimeline ~ WorkTimeline {
 }
 
 public type EventWorkTimeline = {
-    chat: MemoryEntry<string, Frame>
+    chat: MemoryEntry<string, RecoverableChatFrame>
 };
 
 impl EventWorkTimeline ~ WorkTimeline {

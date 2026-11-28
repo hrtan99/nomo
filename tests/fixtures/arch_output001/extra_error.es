@@ -1,6 +1,6 @@
 module app.callable_negative;
 
-import nomo.core.conversation.Event;
+import nomo.domain.conversation.Event;
 import nomo.application.harness.ports.ConsoleEventSink;
 
 flow bad(event: Event) -> unit ![Error<string>] ~ ConsoleEventSink {

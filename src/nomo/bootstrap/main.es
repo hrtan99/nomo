@@ -13,13 +13,7 @@ import nomo.adapters.cli.input.options_parse;
 import nomo.adapters.codec.{JsonArchiveEncoding, JsonConfigurationCodec, RollingContext};
 import nomo.adapters.filesystem.editing.ProjectMutationFiles;
 import nomo.adapters.filesystem.migration.{LegacyNativePacket, ProjectStatePacket};
-import nomo.adapters.filesystem.workspace.{
-    NativeProjectLaunch,
-    ProjectArchives,
-    ProjectConfigurationFile,
-    ProjectFiles,
-    ProjectInstructionFiles
-};
+import nomo.adapters.filesystem.workspace.{NativeProjectLaunch, ProjectArchives, ProjectConfigurationFile, ProjectFiles, ProjectInstructionFiles};
 import nomo.adapters.model.coding.NativeCodingModel;
 import nomo.adapters.model.summary.NativeSummaryModel;
 import nomo.adapters.process.commands.HostCommandRunner;
@@ -31,33 +25,22 @@ import nomo.adapters.storage.journals.{NativeAttempts, NativeChangeJournals};
 import nomo.adapters.storage.migration.NativeStateWriter;
 import nomo.adapters.storage.workspace.{NativeConfigurationCache, NativeRecentProjects};
 import nomo.application.conversation.interactive.{TerminalApplication, output as interactive_output};
-import nomo.application.conversation.ports.{
-    ConversationReader,
-    ConversationWriter,
-    GenerationReservation,
-    ResultPublication
-};
+import nomo.application.conversation.ports.{ConversationReader, ConversationWriter, GenerationReservation, ResultPublication};
 import nomo.application.conversation.session.Conversation;
 import nomo.application.editing.changes.operations;
 import nomo.application.execution.commands.bindings;
 import nomo.application.execution.jobs.bindings as jobs_bindings;
 import nomo.application.execution.ports.AttemptRepository;
-import nomo.application.migration.ports.MigrationRoot;
+import nomo.application.resources.{LaunchRoot, MigrationRoot, ProjectRoot};
 import nomo.application.transfer.migration.{native_state_migrate, project_state_migrate};
 import nomo.application.transfer.service.operations as service_operations_2;
-import nomo.application.workspace.service.{
-    ConfigurationLoader,
-    bindings as service_bindings,
-    operations as service_operations
-};
+import nomo.application.workspace.service.{ConfigurationLoader, bindings as service_bindings, operations as service_operations};
 import nomo.domain.archives.MigrationReport;
 import nomo.domain.conversation.EntryMode;
 import nomo.domain.wire.encode;
-import nomo.native.projects.LaunchRoot;
-import nomo.native.workspace.ProjectRoot;
 import std.effects.Fs;
-import std.fs.{IOError as fs_IOError, ReadLimitError};
-import std.io.{IOError, println};
+import std.fs.{IOError, ReadLimitError};
+import std.io.{IOError as io_IOError, println};
 
 public alias ConfiguredConfiguration<H ~ ConversationReader> = ConfigurationLoader<
     H,
@@ -132,9 +115,9 @@ public flow main_run(args: Array<string>, mode: EntryMode) -> i32
     Fs.atomic_replace<LaunchRoot>,
     Error<StorageError>,
     Error<MemoryConflict>,
-    Error<fs_IOError>,
-    Error<ReadLimitError>,
     Error<IOError>,
+    Error<ReadLimitError>,
+    Error<io_IOError>,
     Error<IndexError>,
     Error<BudgetExceeded>
 ] {
@@ -193,12 +176,12 @@ public flow native_migration_run(args: Array<string>) -> i32
     Fs.read<MigrationRoot>,
     Memory,
     Console,
-    Error<fs_IOError>,
+    Error<IOError>,
     Error<ReadLimitError>,
     Error<IndexError>,
     Error<StorageError>,
     Error<MemoryConflict>,
-    Error<IOError>
+    Error<io_IOError>
 ] {
     let report = native_state_migrate(LegacyNativePacket {}, NativeStateWriter {});
     return output(report);
@@ -209,19 +192,19 @@ public flow project(args: Array<string>) -> i32
     Fs.read<MigrationRoot>,
     Memory,
     Console,
-    Error<fs_IOError>,
+    Error<IOError>,
     Error<ReadLimitError>,
     Error<IndexError>,
     Error<StorageError>,
     Error<MemoryConflict>,
     Error<BudgetExceeded>,
-    Error<IOError>
+    Error<io_IOError>
 ] {
     let destination = NativeStateWriter {};
     return output(project_state_migrate(ProjectStatePacket {}, destination, destination, NativeHistory {}));
 }
 
-flow output(report: MigrationReport) -> i32 ![Console, Error<IOError>] {
+flow output(report: MigrationReport) -> i32 ![Console, Error<io_IOError>] {
     println(
         "[MIGRATE] "
             + match encode(report, "migration report conversion failed", "migration report encoding failed") {

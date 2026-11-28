@@ -26,7 +26,7 @@ root = "src"
 default_profile = "multifile-test"
 [runtime.profiles.multifile-test]
 boundary_policy = "nomo-tool001a"
-[runtime.profiles.multifile-test.filesystem.regions."nomo.tools.workspace.ReadOnlyRoot"]
+[runtime.profiles.multifile-test.filesystem.regions."nomo.application.resources.ReadOnlyRoot"]
 root = "fixture"
 read = true
 write = false

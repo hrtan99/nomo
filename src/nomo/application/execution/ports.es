@@ -1,10 +1,9 @@
 module nomo.application.execution.ports;
 
+import nomo.application.resources.ProjectRoot;
+import nomo.domain.attempts.Attempt;
 import nomo.domain.commands.{CommandMode, CommandObservation, CommandOutput, CommandRequest};
-import nomo.domain.processes.{ArchivedJob, ArchivedOutput, InputResult, ProcessEvent};
-import nomo.native.lifecycle.Attempt;
-import nomo.native.processes.{Job, JobEvent};
-import nomo.native.workspace.ProjectRoot;
+import nomo.domain.processes.{ArchivedJob, ArchivedOutput, InputResult, Job, JobEvent, ProcessEvent};
 import std.fs.WorkspacePath;
 import std.io.IOError;
 

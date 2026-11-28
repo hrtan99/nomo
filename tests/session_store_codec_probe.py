@@ -125,7 +125,7 @@ def cases():
 
 def main():
     originals = {p: hashlib.sha256((ROOT / p).read_bytes()).hexdigest() for p in [
-        'etas.toml', 'etas.lock', 'src/nomo/session/session_state.es', 'src/nomo/core/text.es',
+        'etas.toml', 'etas.lock', 'src/nomo/domain/sessions/state.es', 'src/nomo/core/text.es',
         'src/nomo/session/bundle_codec.es']}
     project = Path(tempfile.mkdtemp(prefix='session-store-codec-', dir=EVIDENCE))
     print('EVIDENCE ' + str(project), flush=True)

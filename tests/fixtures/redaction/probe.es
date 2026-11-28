@@ -2,8 +2,8 @@ module app.redaction_probe;
 
 import std.io.println;
 import std.text.contains;
-import nomo.core.conversation.Event;
-import nomo.harness.harness_tool_chat_contract.Previous;
+import nomo.domain.conversation.Event;
+import nomo.domain.harness.chat.Previous;
 import nomo.domain.sessions.event_codec.Policy;
 import nomo.domain.sessions.event_codec.policy_error;
 import nomo.domain.sessions.event_codec.redact_text as text;

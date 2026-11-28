@@ -21,12 +21,11 @@ import nomo.application.conversation.ports.{
 import nomo.application.editing.ports.ChangeOperations;
 import nomo.application.execution.attempts.{begin, complete_attempt, dispatching, returned};
 import nomo.application.execution.ports.{ArchivedJobCatalog, AttemptRepository, CommandOperations, ProcessOperations};
+import nomo.application.resources.ProjectRoot;
 import nomo.application.workspace.ports.{InstructionReader, WorkspaceObservations};
 import nomo.domain.context.projection_project;
-import nomo.domain.conversation.{ModelTurn, SessionSelection};
+import nomo.domain.conversation.{ModelTurn, SavedSession, SessionSelection};
 import nomo.domain.settings.{Settings, as_number, effective_window, estimated_tokens, recent_bytes, with_check};
-import nomo.native.history.Session;
-import nomo.native.workspace.ProjectRoot;
 import std.effects.Fs;
 import std.fs.{IOError as fs_IOError, ReadLimitError};
 import std.io.IOError;
@@ -257,7 +256,7 @@ flow existing<R ~ ConversationReader, C ~ ConversationCatalog>(
     workspace: string,
     id: string,
     activate: bool
-) -> Session {
+) -> SavedSession {
     let value = reader.load(id);
     // A foreign project is routed before its files, tools or selection are used.
     if activate && value.workspace == workspace {
@@ -274,7 +273,7 @@ public flow select<R ~ ConversationReader, C ~ ConversationCatalog, P ~ Conversa
     selection: SessionSelection,
     activate: bool,
     all_sessions: bool
-) -> Option<Session> {
+) -> Option<SavedSession> {
     return match selection {
         SessionSelection.Fresh => Some(catalog.create(workspace, "New conversation")),
         SessionSelection.Exact(id) => Some(existing(reader, catalog, workspace, id, activate)),

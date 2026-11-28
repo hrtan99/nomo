@@ -1,22 +1,24 @@
 module nomo.adapters.filesystem.migration;
 
-import nomo.application.migration.ports.MigrationRoot;
-import nomo.application.transfer.ports.{NativeStateSource, ProjectStateSource};
+import nomo.application.resources.MigrationRoot;
+import nomo.application.transfer.ports.{NativeStateSource, ProjectStateSource, RelocatedStateSource};
 import nomo.domain.archives.{
+    CopyJob,
     NativeImage,
     NativeRecord,
     ProjectConversation,
     ProjectEdit,
     ProjectEvent,
     ProjectImage,
-    ProjectJob
+    ProjectJob,
+    RelocatedImage,
+    RelocatedRow
 };
-import nomo.domain.processes.ArchivedJob;
-import nomo.native.configuration.Cached;
-import nomo.native.history.{CopyJob, Event, Ledger, Session};
-import nomo.native.lifecycle.Attempt;
-import nomo.native.mutations.{Journal, Step};
-import nomo.native.processes.{Job, JobEvent};
+import nomo.domain.attempts.Attempt;
+import nomo.domain.changes.{Journal, Step};
+import nomo.domain.conversation.{ConversationLedger, SavedSession, StoredEvent};
+import nomo.domain.processes.{ArchivedJob, Job, JobEvent};
+import nomo.domain.settings.CachedConfiguration;
 import std.agent.message.Message;
 import std.bytes.from_array;
 import std.codec.text.{Strict, utf8_decode};
@@ -177,16 +179,16 @@ type WireOutput = {
     stderr_bytes: Array<u8>
 };
 
-flow session(value: WireSession) -> Session {
+flow session(value: WireSession) -> SavedSession {
     let old = value.ledger;
-    let ledger = Ledger {
+    let ledger = ConversationLedger {
         turns = integer(old.turns),
         compactions = integer(old.compactions),
         tools = integer(old.tools),
         generation_allowance = integer(old.generation_allowance),
         context_bytes = size(old.context_bytes)
     };
-    return Session {
+    return SavedSession {
         id = value.id,
         workspace = value.workspace,
         title = value.title,
@@ -199,8 +201,8 @@ flow session(value: WireSession) -> Session {
     };
 }
 
-flow event(value: NativeMigrationWireEvent) -> Event {
-    return Event {
+flow event(value: NativeMigrationWireEvent) -> StoredEvent {
+    return StoredEvent {
         role = value.role,
         name = value.name,
         call = integer(value.call),
@@ -279,7 +281,7 @@ flow record(row: WireRow) -> NativeRecord ![Error<IndexError>] {
             let value = decode<WireCache>(row.value);
             NativeRecord.Configuration(
                 key,
-                Cached {
+                CachedConfiguration {
                     digest = from_array(value.digest),
                     session = value.session,
                     result_event = integer(value.result_event)
@@ -409,4 +411,54 @@ impl ProjectStatePacket ~ ProjectStateSource {
             ).collect()
         };
     }
+}
+
+public type RelocatedStatePacket = {};
+
+impl RelocatedStatePacket ~ RelocatedStateSource {
+    flow load(self) -> RelocatedImage ![
+        Fs.read<MigrationRoot>,
+        Error<fs_IOError>,
+        Error<ReadLimitError>,
+        Error<IndexError>
+    ] {
+        let packet = read<RelocatedPacket>();
+        if packet.format != "nomo-state-relocation-02413-v1" {
+            abort("unsupported relocated state packet");
+        }
+        let rows = packet.rows.iter().map(row => relocated_row(row)).collect();
+        return RelocatedImage {
+            format = packet.format,
+            source_sha256 = packet.source_sha256,
+            rows
+        };
+    }
+}
+
+// Only row names/keys pass through JSON; typed storage payloads remain binary.
+type RelocatedRowFile = {
+    store: string,
+    key: string,
+    value: string
+};
+type RelocatedPacket = {
+    format: string,
+    source_sha256: string,
+    rows: Array<RelocatedRowFile>
+};
+
+flow relocated_row(row: RelocatedRowFile) -> RelocatedRow ![
+    Fs.read<MigrationRoot>,
+    Error<fs_IOError>,
+    Error<ReadLimitError>
+] {
+    let file = match path<MigrationRoot>(row.value) {
+        Ok(value) => value,
+        Err(_) => abort("invalid relocation row path")
+    };
+    return RelocatedRow {
+        store = row.store,
+        key = row.key,
+        value = read_bytes_limited(file, 1048576)
+    };
 }

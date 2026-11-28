@@ -8,6 +8,7 @@ import nomo.domain.sessions.chain.{
     CapturedShow,
     ObservationPass,
     ObservedRow,
+    Record,
     Selector,
     Snapshot,
     TurnRequest,
@@ -19,7 +20,6 @@ import nomo.domain.sessions.chain.{
     select,
     work_chain_selection_validate
 };
-import nomo.session.work_chain.Record;
 
 // These contracts bound actual native adapters. Observations are copied values,
 // never native receipts, versions or write authority.

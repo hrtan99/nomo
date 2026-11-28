@@ -1,14 +1,25 @@
 module nomo.domain.conversation;
 
-import nomo.core.conversation.{Event, State};
+import nomo.domain.attempts.Attempt;
 import nomo.domain.limits.history_bytes;
-import nomo.domain.processes.ArchivedJob;
+import nomo.domain.processes.{ArchivedJob, Job};
 import nomo.domain.settings.Settings;
 import nomo.domain.workspace.ProjectInstruction;
-import nomo.native.history.{Ledger, Session};
-import nomo.native.lifecycle.Attempt;
-import nomo.native.processes.Job;
 import std.text.char_count;
+
+public type Event = {
+    role: string,
+    kind: string,
+    name: string,
+    text: string
+};
+
+public type State = {
+    events: Array<Event>,
+    characters: usize,
+    spent: i32,
+    stopped: bool
+};
 
 public type PendingRequest = {
     call: i64,
@@ -183,4 +194,32 @@ public type ModelTurn = {
 public type TextTurn = {
     state: State,
     status: i32
+};
+
+public type ConversationLedger = {
+    turns: i64,
+    compactions: i64,
+    tools: i64,
+    generation_allowance: i64,
+    context_bytes: usize
+};
+
+public type SavedSession = {
+    id: string,
+    workspace: string,
+    title: string,
+    next_event: i64,
+    first_user: i64,
+    summary_event: i64,
+    summary_through: i64,
+    pending: string,
+    ledger: ConversationLedger
+};
+
+public type StoredEvent = {
+    role: string,
+    name: string,
+    call: i64,
+    chunks: usize,
+    complete: bool
 };

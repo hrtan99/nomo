@@ -4,16 +4,16 @@ import std.io.println;
 import std.text.char_count as len;
 import std.text.split;
 import nomo.domain.text.text_printable as printable;
-import nomo.core.conversation.Event;
-import nomo.harness.harness_tool_contract.Ledger;
-import nomo.harness.harness_tool_chat_contract.Invocation;
-import nomo.harness.harness_tool_chat_contract.Previous;
+import nomo.domain.conversation.Event;
+import nomo.domain.harness.loop.ReadLedger;
+import nomo.domain.harness.chat.Invocation;
+import nomo.domain.harness.chat.Previous;
 import nomo.domain.harness.chat.Completed;
 import nomo.domain.harness.chat.TurnResult;
 import nomo.domain.harness.chat.Context;
 import nomo.domain.harness.chat.chat_turn_error as turn_error;
 import nomo.domain.harness.chat.chat_context_error as context_error;
-import nomo.session.harness_checkpoint.Identity;
+import nomo.domain.sessions.checkpoints.Identity;
 import nomo.domain.sessions.checkpoints.Checkpoint;
 import nomo.domain.sessions.checkpoints.Successor;
 import nomo.domain.sessions.checkpoints.restore;
@@ -42,7 +42,7 @@ flow receipt(item: Check) -> TurnResult {
     if item.mutation == "prior" { prior = previous(saved.predecessor); }
     if item.mutation == "admitted" { admitted = 1; }
     if item.mutation == "usage" { usage = saved.predecessor.usage; }
-    if item.mutation == "maximum" { maximum = Ledger { steps = 13, calls = 8, tokens = 16384, tools = 2, scan = 8192 }; }
+    if item.mutation == "maximum" { maximum = ReadLedger { steps = 13, calls = 8, tokens = 16384, tools = 2, scan = 8192 }; }
     let state = Invocation { usage = usage, maximum = maximum, admitted = admitted, prior = prior };
     let completed = Completed { request = saved.request, task = saved.task, result = saved.result,
         tool = saved.tool, outcome = saved.outcome, answer = saved.answer, records = saved.records };

@@ -22,7 +22,7 @@ from normal_graph_identity import verify_cli
 from native_memory_value import value as memory_value
 
 ROOT = Path(__file__).resolve().parent.parent
-REGION = 'nomo.tools.edit_file.EditableRoot'
+REGION = 'nomo.application.resources.EditableRoot'
 PROMPT = b'CONFIRM Apply this exact preview? [y/N]'
 MODE_WARNING = b'WARNING File permissions, including executable bits, may change during this edit.\n'
 POLICY_ENV = ['ETAS_HOST_POLICY','ETAS_HOST_POLICY_RULES','ETAS_HOST_POLICY_URL','ETAS_HOST_POLICY_TOKEN',

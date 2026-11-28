@@ -5,8 +5,8 @@ import std.text.from_i32;
 import std.io.IOError as ConsoleError;
 import std.fs.IOError as FileError;
 import std.effects.Fs;
-import nomo.tools.workspace.ReadOnlyRoot;
-import nomo.tools.edit_file.EditableRoot;
+import nomo.application.resources.ReadOnlyRoot;
+import nomo.application.resources.EditableRoot;
 import nomo.adapters.cli.terminal.run as terminal;
 import nomo.adapters.cli.terminal.run_once as terminal_once;
 import nomo.adapters.cli.terminal.run_with_operations;
@@ -24,8 +24,8 @@ import nomo.domain.sessions.chain.turn_caps;
 import nomo.domain.sessions.chain.initial;
 import nomo.domain.editing.Selector;
 import nomo.domain.wire.json;
-import nomo.harness.harness_work_contract.Ledger;
-import nomo.harness.harness_tool_contract.Ledger as ReadLedger;
+import nomo.domain.harness.work.WorkLedger;
+import nomo.domain.harness.loop.ReadLedger;
 import nomo.domain.harness.edit.fresh as edit_fresh;
 import nomo.adapters.cli.chains.present_outcome;
 
@@ -50,7 +50,7 @@ flow encoded(fields: Array<string>) -> string {
     return match json(fields) { Ok(value) => value, Err(error) => abort(error), };
 }
 flow stopped_value() -> WorkOutcome {
-    let state = Ledger { read = ReadLedger { steps = 2, calls = 1, tokens = 2048, tools = 0, scan = 0 }, edit = edit_fresh() };
+    let state = WorkLedger { read = ReadLedger { steps = 2, calls = 1, tokens = 2048, tools = 0, scan = 0 }, edit = edit_fresh() };
     return WorkOutcome.Stopped(WorkStop { state = state, error = "v2 work-chain commit unknown; admission retained, no retry" });
 }
 flow fake_work(mode: string, request: TurnRequest) -> WorkOutcome {

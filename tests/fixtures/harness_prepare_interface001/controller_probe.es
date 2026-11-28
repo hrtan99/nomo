@@ -2,8 +2,8 @@ module app.prepare_interface_probe;
 
 import std.io.println;
 import std.text.char_count as len;
-import nomo.core.conversation.Event;
-import nomo.core.conversation.State;
+import nomo.domain.conversation.Event;
+import nomo.domain.conversation.State;
 import nomo.domain.conversation.add;
 import nomo.domain.conversation.fresh as empty_history;
 import nomo.domain.harness.loop.Session;
@@ -11,18 +11,18 @@ import nomo.domain.harness.loop.LoopTurn;
 import nomo.domain.sessions.work.WorkRequest;
 import nomo.application.harness.ports.WorkModelStages;
 import nomo.application.harness.work.prepare_legacy;
-import nomo.harness.harness_tool_chat_contract.Previous;
+import nomo.domain.harness.chat.Previous;
 import nomo.bootstrap.work.HistoryWorkStages as HistoryStages;
 import nomo.application.harness.ports.HarnessProgress;
 import nomo.application.harness.ports.DiagnosticOutput;
 import nomo.domain.harness.read.ReadContext;
-import nomo.harness.harness_tool_contract.Ledger as ReadLedger;
+import nomo.domain.harness.loop.ReadLedger;
 import nomo.domain.harness.edit.Context as EditContext;
 
-import nomo.harness.harness_edit_contract.Ledger as EditLedger;
+import nomo.domain.harness.edit.EditLedger;
 import nomo.domain.harness.work.Context as WorkContext;
 import nomo.domain.harness.work.Evidence;
-import nomo.harness.harness_work_contract.Ledger;
+import nomo.domain.harness.work.WorkLedger;
 import nomo.application.harness.ports.LegacyStringStages;
 import nomo.application.harness.ports.LegacyEditStages;
 import nomo.application.editing.ports.EditOriginal;
@@ -70,11 +70,11 @@ flow expected_pending() -> Pending {
     let prepared = Prepared { request = Request { path = "dir/file.txt", original = "old\n", target = "old", replacement = "blue" },
         proposal = Proposal { path = "dir/file.txt", before = "old\n", after = "blue\n" } };
     return Pending { selected = selected, prepared = prepared, evidence = evidence(), request = "Q", task = "edit T",
-        state = Ledger { read = read_ledger(), edit = edit_ledger(4, 2, 36864, 98304, 2) }, high_input = false };
+        state = WorkLedger { read = read_ledger(), edit = edit_ledger(4, 2, 36864, 98304, 2) }, high_input = false };
 }
 flow run_case(label: string, mode: string, chain: bool) -> Result<Pending, Failure> {
     let original = (value: string) => if mode == "mismatch" && value != "confirmed-parent" { "current original differs from confirmed parent result" } else { "" };
-    let log = (name: string, state: Ledger) => {
+    let log = (name: string, state: WorkLedger) => {
         if state.read != read_ledger() { abort("read ledger changed before edit stage"); }
         let expected = if name == "edit-plan" { edit_ledger(1, 1, 4096, 32768, 0) } else { edit_ledger(3, 2, 36864, 98304, 1) };
         if state.edit != expected { abort("edit stage was not precharged"); }
@@ -121,7 +121,7 @@ flow verify(label: string, mode: string, chain: bool, expected: string, read: Re
     let result = run_case(label, mode, chain);
     let passed = match result {
         Ok(value) => expected == "" && value == expected_pending(),
-        Err(failure) => expected != "" && failure.error == expected && failure.state == Ledger { read = read, edit = edit },
+        Err(failure) => expected != "" && failure.error == expected && failure.state == WorkLedger { read = read, edit = edit },
     };
     if !passed { println("FAIL " + label); abort("prepare interface case failed"); }
     println("PASS " + label);

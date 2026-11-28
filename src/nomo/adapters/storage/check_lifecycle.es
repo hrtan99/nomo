@@ -1,12 +1,6 @@
 module nomo.adapters.storage.check_lifecycle;
 
-import nomo.adapters.storage.checks.{
-    abandon,
-    inspect,
-    load as checks_load,
-    recoverable_check_store_finish,
-    recoverable_check_store_start
-};
+import nomo.adapters.storage.checks.{abandon, inspect, load as checks_load, recoverable_check_store_finish, recoverable_check_store_start};
 import nomo.adapters.storage.followup_checks.{
     abandon as followup_checks_abandon,
     inspect as followup_checks_inspect,
@@ -19,9 +13,7 @@ import nomo.adapters.storage.work_admission.{abandon_check, finish_check, start_
 import nomo.application.sessions.ports.{CheckFactsReader, CheckLifecycle, Target};
 import nomo.domain.limits.message_frame_bytes;
 import nomo.domain.sessions.event_codec.{Policy, event_text_codec_decode};
-import nomo.domain.sessions.work.{CheckFacts, CheckOutput, CheckResult};
-import nomo.session.check_output.{Outputs, Record};
-import nomo.session.check_store.Frame;
+import nomo.domain.sessions.work.{CheckFacts, CheckFrame, CheckOutput, CheckOutputRecord, CheckResult};
 import std.memory.Missing;
 import std.text.char_count;
 
@@ -85,7 +77,7 @@ flow captured(
     });
 }
 
-flow frame_facts(frame: Frame, policy: Policy) -> Result<Option<CheckFacts>, string> {
+flow frame_facts(frame: CheckFrame, policy: Policy) -> Result<Option<CheckFacts>, string> {
     let check = frame.check;
     return match captured(
         check.id,
@@ -271,7 +263,7 @@ flow check_binding(slot: string, id: string, digest: string) -> string {
     return "";
 }
 
-public flow save(value: Record) -> Result<bool, string> ![
+public flow save(value: CheckOutputRecord) -> Result<bool, string> ![
     Memory,
     Error<StorageError>,
     Error<IndexError>,
@@ -285,11 +277,11 @@ public flow save(value: Record) -> Result<bool, string> ![
     if problem != "" {
         return Err(problem);
     }
-    if Outputs.Rows.get_entry(value.slot) != None() {
+    if CheckOutputs.Rows.get_entry(value.slot) != None() {
         return Err("check output already recorded");
     }
-    match commit_native<Record>(
-        Outputs.Rows,
+    match commit_native<CheckOutputRecord>(
+        CheckOutputs.Rows,
         Target {
             store = ["Rows"],
             region = "nomo-check-output-v1",
@@ -304,12 +296,12 @@ public flow save(value: Record) -> Result<bool, string> ![
     }
 }
 
-public flow load(slot: string, id: string, digest: string) -> Result<Option<Record>, string> {
+public flow load(slot: string, id: string, digest: string) -> Result<Option<CheckOutputRecord>, string> {
     let problem = check_binding(slot, id, digest);
     if problem != "" {
         return Err(problem);
     }
-    let saved = Outputs.Rows.get_entry(slot);
+    let saved = CheckOutputs.Rows.get_entry(slot);
     match saved {
         None() => {
             return Ok(None());
@@ -321,10 +313,19 @@ public flow load(slot: string, id: string, digest: string) -> Result<Option<Reco
                 || char_count(value.stderr) > message_frame_bytes() {
                 return Err("check output record differs");
             }
-            if Outputs.Rows.get_entry(slot) != saved {
+            if CheckOutputs.Rows.get_entry(slot) != saved {
                 return Err("check output changed during read");
             }
             return Ok(Some(value));
         }
     }
 }
+
+alias CheckOutputsSchema = MemoryRegion<{
+    Rows: Store<string, CheckOutputRecord>
+}>;
+
+public let CheckOutputs = std.memory.region<CheckOutputsSchema>(
+    stable_id = "nomo-check-output-v1",
+    store = "check-output"
+);

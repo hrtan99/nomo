@@ -1,13 +1,13 @@
 module app.recoverable_work_probe;
 
 import std.io.println;
-import nomo.core.conversation.Event;
+import nomo.domain.conversation.Event;
 import nomo.domain.sessions.event_codec.Policy;
-import nomo.harness.harness_tool_contract.Ledger as ReadLedger;
-import nomo.harness.harness_edit_contract.Ledger as EditLedger;
-import nomo.harness.harness_work_contract.Ledger as WorkLedger;
-import nomo.harness.harness_tool_chat_contract.Invocation;
-import nomo.harness.harness_tool_chat_contract.Previous;
+import nomo.domain.harness.loop.ReadLedger;
+import nomo.domain.harness.edit.EditLedger;
+import nomo.domain.harness.work.WorkLedger;
+import nomo.domain.harness.chat.Invocation;
+import nomo.domain.harness.chat.Previous;
 import nomo.domain.harness.chat.Completed;
 import nomo.domain.harness.chat.TurnResult;
 import nomo.adapters.storage.chat.create as create_chat;

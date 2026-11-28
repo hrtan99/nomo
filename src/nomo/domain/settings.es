@@ -105,3 +105,9 @@ public flow status(settings: Settings) -> ConfigurationStatus {
         command_timeout_active = false
     };
 }
+
+public type CachedConfiguration = {
+    digest: bytes,
+    session: string,
+    result_event: i64
+};

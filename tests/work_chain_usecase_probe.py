@@ -256,7 +256,7 @@ def output_proof(text,spec):
     if spec.get('read_failed'):transport.require(lines[-4:-1]==['REFUSED bounded read refused','NEXT help (run from the project root):','./scripts/local-tryout.sh help'],'Read failure/footer differs')
     if spec.get('captured'):
         captured=[json.loads(line[6:]) for line in lines if line.startswith('CHAIN {')]
-        transport.require(captured==[dict(format='2',phase='admitted',chain='root-op',id='root-op',turn='1',workspace='owned',region='nomo.tools.edit_file.EditableRoot',path='target.txt',parent_id='',parent_version='',parent_digest='',request='captured only')],'Captured row presentation differs')
+        transport.require(captured==[dict(format='2',phase='admitted',chain='root-op',id='root-op',turn='1',workspace='owned',region='nomo.application.resources.EditableRoot',path='target.txt',parent_id='',parent_version='',parent_digest='',request='captured only')],'Captured row presentation differs')
         for label,values in [('ALLOWANCE ',[26,14,94208,393216,2,8192,6,12288,2,4096]),('AVAILABLE ',COUNTERS),('REMAINING ',COUNTERS),('RESERVATION ',COUNTERS)]:
             transport.require([json.loads(line[len(label):]) for line in lines if line.startswith(label)]==[dict(zip(CAP_KEYS,map(str,values)))],'Captured complete Caps differ')
         transport.require(lines.count('JOURNAL missing; missing journal is not proof that no edit occurred.')==1,'Captured journal qualification differs')

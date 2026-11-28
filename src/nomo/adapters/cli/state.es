@@ -1,22 +1,14 @@
 module nomo.adapters.cli.state;
 
 import nomo.adapters.cli.session_input.{ContinueOptions, Options, parse_continue, session_cli_args_parse};
-import nomo.adapters.storage.session_records.{
-    empty,
-    history_store_load,
-    publish,
-    publish_snapshot,
-    read,
-    read_claim,
-    reload,
-    save,
-    write_claim
-};
+import nomo.adapters.storage.session_records.{empty, history_store_load, publish, publish_snapshot, read, read_claim, reload, save, write_claim};
 import nomo.bootstrap.harness.turn;
 import nomo.domain.conversation.fresh;
 import nomo.domain.sessions.state.{
+    DemoClaim,
     Projection,
     Request,
+    Snapshot,
     caps,
     continuing,
     plan,
@@ -27,8 +19,6 @@ import nomo.domain.sessions.state.{
     validate
 };
 import nomo.domain.wire.{ascii_json, encode};
-import nomo.session.demo_claim.Claim;
-import nomo.session.session_state.Snapshot;
 import std.agent.session.Conversation;
 import std.io.println;
 import std.memory.{Missing, WriteCondition};
@@ -269,8 +259,8 @@ public flow run_continue(options: ContinueOptions) -> i32 ![
     return 0;
 }
 
-flow claim(options: Options, phase: string) -> Claim {
-    return Claim {
+flow claim(options: Options, phase: string) -> DemoClaim {
+    return DemoClaim {
         format = 1,
         phase,
         session_id = options.session_id,
@@ -328,7 +318,7 @@ flow initialize(options: Options) -> Result<bool, string> ![Memory, Error<Storag
     return Ok(true);
 }
 
-flow owned(options: Options) -> Result<Claim, string> {
+flow owned(options: Options) -> Result<DemoClaim, string> {
     let entry = match read_claim() {
         Some(value) => value,
         None() => {

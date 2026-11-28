@@ -1,23 +1,8 @@
 module nomo.application.harness.text;
 
-import nomo.application.harness.ports.{
-    Context,
-    ConversationOutput,
-    ModelText,
-    TextDelegationOutput,
-    TextDelegationStages
-};
-import nomo.core.conversation.{Event, State};
-import nomo.domain.conversation.{TextTurn, add, capacity_error, charge, stop};
-import nomo.domain.harness.delegation.{
-    ChildResult,
-    ChildTask,
-    child_error as delegation_child_error,
-    dispatch,
-    fixed_refusal,
-    next,
-    safe_text
-};
+import nomo.application.harness.ports.{Context, ConversationOutput, ModelText, TextDelegationOutput, TextDelegationStages};
+import nomo.domain.conversation.{Event, State, TextTurn, add, capacity_error, charge, stop};
+import nomo.domain.harness.delegation.{ChildResult, ChildTask, child_error as delegation_child_error, dispatch, fixed_refusal, next, safe_text};
 import nomo.domain.harness.read.{
     ChildTask as read_ChildTask,
     TextContext,

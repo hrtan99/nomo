@@ -2,7 +2,7 @@ module app.contract_probe;
 
 import std.io.println;
 import std.text.split;
-import nomo.session.harness_checkpoint.Identity;
+import nomo.domain.sessions.checkpoints.Identity;
 import nomo.adapters.cli.checkpoint_input.Request;
 import nomo.adapters.cli.checkpoint_input.session_lifecycle_args_parse as parse;
 import nomo.adapters.cli.checkpoint_input.help_lines;

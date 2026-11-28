@@ -1,7 +1,7 @@
 module app.large_input;
 
 import std.io.println;
-import nomo.core.conversation.Event;
+import nomo.domain.conversation.Event;
 import nomo.domain.conversation.capacity_error;
 import nomo.domain.conversation.fresh;
 import nomo.domain.harness.loop.Context;

@@ -1,16 +1,18 @@
 module nomo.application.transfer.migration;
 
 import nomo.application.conversation.ports.ResultPublication;
-import nomo.application.migration.ports.MigrationRoot;
+import nomo.application.resources.MigrationRoot;
 import nomo.application.transfer.ports.{
     HistoricalEvents,
     NativeStateDestination,
     NativeStateSource,
-    ProjectStateSource
+    ProjectStateSource,
+    RelocatedStateDestination,
+    RelocatedStateSource
 };
 import nomo.domain.archives.{MigrationReport, NativeRecord, ProjectEdit, ProjectEvent, edit_phases};
-import nomo.native.history.{Ledger, Session};
-import nomo.native.mutations.{Journal, Step};
+import nomo.domain.changes.{Journal, Step};
+import nomo.domain.conversation.{ConversationLedger, SavedSession};
 import std.effects.Fs;
 import std.fs.{IOError as fs_IOError, ReadLimitError};
 import std.text.{from_i64, from_usize, parse_i64, strip_prefix};
@@ -114,7 +116,7 @@ public flow project_state_migrate<
     var selected: Array<string> = [];
     var projects = image.projects;
     for old in image.conversations {
-        let ledger = Ledger {
+        let ledger = ConversationLedger {
             turns = 0,
             compactions = 0,
             tools = 0,
@@ -124,7 +126,7 @@ public flow project_state_migrate<
         destination.insert(
             NativeRecord.Session(
                 old.id,
-                Session {
+                SavedSession {
                     id = old.id,
                     workspace = old.workspace,
                     title = old.title,
@@ -193,5 +195,30 @@ public flow project_state_migrate<
     return MigrationReport {
         source_sha256 = image.source_sha256,
         rows
+    };
+}
+
+// Historical binding/version strings remain historical observations. New
+// Memory writes establish new versions; no side effect or approval is replayed.
+public flow relocated_state_migrate<S ~ RelocatedStateSource, D ~ RelocatedStateDestination>(
+    source: S,
+    destination: D
+) -> MigrationReport
+![
+    Fs.read<MigrationRoot>,
+    Memory,
+    Error<fs_IOError>,
+    Error<ReadLimitError>,
+    Error<IndexError>,
+    Error<StorageError>,
+    Error<MemoryConflict>
+] {
+    let image = source.load();
+    for row in image.rows {
+        destination.insert(row);
+    }
+    return MigrationReport {
+        source_sha256 = image.source_sha256,
+        rows = image.rows.len()
     };
 }

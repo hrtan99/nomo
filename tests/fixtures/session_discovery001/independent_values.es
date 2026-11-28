@@ -8,8 +8,8 @@ import nomo.domain.sessions.chain.TurnRequest;
 import std.io.println;
 import std.text.char_count as len;
 import std.text.split;
-import nomo.session.work_chain.Record;
-import nomo.session.work_chain.Caps;
+import nomo.domain.sessions.chain.Record;
+import nomo.domain.sessions.chain.Caps;
 import nomo.domain.sessions.chain.initial;
 import nomo.domain.sessions.chain.successor;
 import nomo.domain.sessions.chain.work_chain_validate as validate;
@@ -25,12 +25,12 @@ import nomo.domain.sessions.chain.reserve;
 import nomo.domain.sessions.chain.policy;
 import nomo.domain.sessions.chain.caps_error;
 import nomo.domain.sessions.chain.fingerprint;
-import nomo.session.work_record.Record as WorkRecord;
+import nomo.domain.sessions.work.StoredWorkRecord;
 import nomo.domain.sessions.work.partial;
 import nomo.domain.editing.prepare_original;
 import nomo.domain.editing.bind;
 import nomo.domain.harness.work.Evidence;
-import nomo.harness.harness_tool_contract.Ledger;
+import nomo.domain.harness.loop.ReadLedger;
 
 
 import nomo.domain.sessions.chain.Snapshot;
@@ -53,12 +53,12 @@ import nomo.adapters.cli.session_input.show_selector;
 
 type Check = { label: string, passed: bool };
 flow admitted() -> Result<Record, string> { return initial("root-op", "owned", "target.txt", "update target from context", ["context.txt"], turn_caps()); }
-flow work(id: string, before: string, target: string, replacement: string) -> Result<WorkRecord, string> {
+flow work(id: string, before: string, target: string, replacement: string) -> Result<StoredWorkRecord, string> {
     let prepared = match prepare_original("target.txt", before, target, replacement) { Ok(value) => value, Err(error) => { return Err(error); } };
     let binding = match bind(id, "owned", "target.txt", prepared) { Ok(value) => value, Err(error) => { return Err(error); } };
     let evidence = Evidence { request = "update target from context", task = "Read context.txt", operation = "read", files = ["context.txt"],
         literal = "", outcome = "complete: blue", result = "Seen: complete: blue", summary = "Use the context result", allowed = ["context.txt"],
-        ledger = Ledger { steps = 7, calls = 4, tokens = 8192, tools = 1, scan = 4096 } };
+        ledger = ReadLedger { steps = 7, calls = 4, tokens = 8192, tools = 1, scan = 4096 } };
     return partial(binding, evidence, "replace selected text", prepared);
 }
 flow first(completed: bool) -> Result<Record, string> {

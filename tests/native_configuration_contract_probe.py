@@ -36,7 +36,7 @@ path = "/state/history.sqlite3"
 [runtime.profiles.local.policy]
 mode = "local-static"
 rules = ["memory=allow", "console=allow", "filesystem:Fs.read=allow", "filesystem:Fs.list=allow"]
-[runtime.profiles.local.filesystem.regions."nomo.native.workspace.ProjectRoot"]
+[runtime.profiles.local.filesystem.regions."nomo.application.resources.ProjectRoot"]
 root = "/guidance"
 read = true
 write = false

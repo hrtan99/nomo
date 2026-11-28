@@ -12,10 +12,13 @@ import nomo.application.execution.ports.{
     ProcessOperations,
     ProcessPreviewSink
 };
+import nomo.domain.attempts.Attempt;
 import nomo.domain.processes.{
     ArchivedJob,
     ArchivedOutput,
     InputResult,
+    Job,
+    JobEvent,
     JobRequest,
     ProcessEvent,
     ReadRequest,
@@ -25,8 +28,6 @@ import nomo.domain.processes.{
     recorded_phase
 };
 import nomo.domain.wire.encode;
-import nomo.native.lifecycle.Attempt;
-import nomo.native.processes.{Job, JobEvent};
 import std.bytes.from_array;
 import std.codec.text.utf8_encode;
 import std.io.IOError;

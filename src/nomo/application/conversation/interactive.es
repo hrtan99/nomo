@@ -18,20 +18,18 @@ import nomo.application.editing.ports.ChangeOperations;
 import nomo.application.execution.attempts.resolve;
 import nomo.application.execution.commands.{checks_run, commands_requests_execute, git_execute};
 import nomo.application.execution.ports.{AttemptRepository, CommandOperations, ProcessOperations};
+import nomo.application.resources.{LaunchRoot, ProjectRoot};
 import nomo.application.scope.{SessionContext, SettingsContext};
 import nomo.application.transfer.ports.TransferOperations;
 import nomo.application.workspace.ports.{ProjectOperations, WorkspaceObservations};
 import nomo.application.workspace.service.{find_files, search_project};
 import nomo.domain.commands.{Command as commands_Command, GitRequest, ProcessRequest};
-import nomo.domain.conversation.{EntryMode, Options, SessionSelection, forwarded, offline};
+import nomo.domain.conversation.{EntryMode, Options, SavedSession, SessionSelection, forwarded, offline};
 import nomo.domain.settings.{Settings, status};
 import nomo.domain.workspace.LaunchRequest;
-import nomo.native.history.Session;
-import nomo.native.projects.LaunchRoot;
-import nomo.native.workspace.ProjectRoot;
 import std.effects.Fs;
-import std.fs.{IOError as fs_IOError, ReadLimitError};
-import std.io.IOError;
+import std.fs.{IOError, ReadLimitError};
+import std.io.IOError as io_IOError;
 import std.text.contains;
 
 // Pure control state only: no admission, durable fact, approval or work authority.
@@ -156,7 +154,7 @@ flow navigation_command<C ~ ConversationService>(
     perform TerminalOutput.show(TerminalEvent.Discovery(result));
 }
 
-flow show<A ~ AttemptRepository>(attempts: A, value: Session) -> unit {
+flow show<A ~ AttemptRepository>(attempts: A, value: SavedSession) -> unit {
     perform TerminalOutput.show(TerminalEvent.SessionHeader(value));
     match perform TransferOperations.status(value.id) {
         Some(job) => {
@@ -260,9 +258,9 @@ impl TerminalApplication<
         Fs.atomic_replace<LaunchRoot>,
         Error<StorageError>,
         Error<MemoryConflict>,
-        Error<fs_IOError>,
-        Error<ReadLimitError>,
         Error<IOError>,
+        Error<ReadLimitError>,
+        Error<io_IOError>,
         Error<IndexError>,
         Error<BudgetExceeded>
     ] {
@@ -555,7 +553,7 @@ impl TerminalApplication<
     }
 }
 
-public flow output<D ~ TerminalDisplay>(display: D) -> ![TerminalOutput => Console, Error<IOError>] ![] {
+public flow output<D ~ TerminalDisplay>(display: D) -> ![TerminalOutput => Console, Error<io_IOError>] ![] {
     return handler {
         TerminalOutput.show(event) => display.show(event);
     };

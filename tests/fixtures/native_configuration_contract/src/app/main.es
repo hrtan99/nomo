@@ -6,7 +6,7 @@ import std.effects.Fs;
 import nomo.application.execution.ports.CommandOperations;
 import std.fs.ReadLimitError;
 import std.fs.IOError as FileError;
-import nomo.native.workspace.ProjectRoot;
+import nomo.application.resources.ProjectRoot;
 import nomo.application.workspace.ports.InstructionReader;
 import nomo.domain.wire.encode;
 import nomo.adapters.storage.conversations.NativeHistory;
@@ -23,11 +23,11 @@ import nomo.application.workspace.ports.InstructionFiles;
 import nomo.application.workspace.service.load as load_guidance;
 import nomo.application.workspace.ports.ConfigurationOutput;
 import nomo.application.workspace.ports.Converted;
-import nomo.native.configuration.Cached as CacheReference;
+import nomo.domain.settings.CachedConfiguration;
 import nomo.domain.settings.Settings;
 import nomo.domain.workspace.ProjectInstruction;
 
-alias Schema = MemoryRegion<{ Entries: Store<string, CacheReference> }>;
+alias Schema = MemoryRegion<{ Entries: Store<string, CachedConfiguration> }>;
 let Cache = std.memory.region<Schema>(stable_id = "nomo-configuration-contract-fixture-v1", store = "configuration-fixture");
 
 flow observed(history: NativeHistory, session: string, name: string, text: string) -> Converted {
@@ -58,11 +58,11 @@ impl FixtureConversion ~ TomlConverter {
 
 type FixtureCache = { session: string };
 impl FixtureCache ~ ConfigurationCacheStore {
-    flow lookup(self, workspace: string) -> Option<CacheReference> {
+    flow lookup(self, workspace: string) -> Option<CachedConfiguration> {
         if workspace != "configuration-workspace" { abort("cache workspace changed"); }
         return Cache.Entries.get(workspace);
     }
-    flow remember(self, workspace: string, value: CacheReference) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>] {
+    flow remember(self, workspace: string, value: CachedConfiguration) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>] {
         if value.session != self.session || value.result_event != 1 { abort("cache result linkage changed"); }
         Cache.Entries.put(workspace, value);
     }

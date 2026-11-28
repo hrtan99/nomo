@@ -1,31 +1,15 @@
 module nomo.adapters.cli.terminal;
 
-import nomo.adapters.cli.chains.{
-    execute_application_detailed,
-    inspect_application,
-    present_detailed_outcome,
-    present_show,
-    project_outcome
-};
-import nomo.adapters.cli.session_input.{
-    Config,
-    LineCommand,
-    bind_parent,
-    line,
-    parse_once,
-    show_selector,
-    terminal_args_parse,
-    work_request
-};
+import nomo.adapters.cli.chains.{execute_application_detailed, inspect_application, present_detailed_outcome, present_show, project_outcome};
+import nomo.adapters.cli.session_input.{Config, LineCommand, bind_parent, line, parse_once, show_selector, terminal_args_parse, work_request};
 import nomo.adapters.storage.chains.latest_parent;
 import nomo.application.conversation.interactive.{State, after_turn, fresh, turn, work_error};
+import nomo.application.resources.{EditableRoot, ReadOnlyRoot};
 import nomo.application.sessions.chain.{dispatch, latest_error, read_latest, read_selected};
 import nomo.application.sessions.ports.{TerminalRead, TerminalWork};
 import nomo.domain.limits.request_bytes;
 import nomo.domain.sessions.chain.{WorkOutcome, turn_caps, values};
 import nomo.domain.wire.{json, object};
-import nomo.tools.edit_file.EditableRoot;
-import nomo.tools.workspace.ReadOnlyRoot;
 import std.effects.Fs;
 import std.fs.IOError as fs_IOError;
 import std.io.{IOError, println, read_line};

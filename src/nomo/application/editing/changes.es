@@ -13,6 +13,7 @@ import nomo.application.editing.ports.{
     MutationOutputSink
 };
 import nomo.application.execution.ports.CommandOperations;
+import nomo.application.resources.ProjectRoot;
 import nomo.application.scope.SessionContext;
 import nomo.domain.changes.{
     Change,
@@ -20,7 +21,10 @@ import nomo.domain.changes.{
     FileChange,
     FileOutcome,
     FilePreview,
+    Journal,
     PlanRequest,
+    SavedPath,
+    Step,
     below_root,
     completed_phase,
     content_change,
@@ -33,12 +37,10 @@ import nomo.domain.changes.{
 };
 import nomo.domain.conversation.{ChatMessage, PendingRequest};
 import nomo.domain.wire.encode;
-import nomo.native.mutations.{Journal, SavedPath, Step};
-import nomo.native.workspace.ProjectRoot;
 import std.agent.message.Message;
 import std.effects.Fs;
-import std.fs.{IOError as fs_IOError, ReadLimitError};
-import std.io.IOError;
+import std.fs.{IOError, ReadLimitError};
+import std.io.IOError as io_IOError;
 import std.json.{JsonValue, parse};
 import std.text.{from_i64, from_usize, split};
 
@@ -62,9 +64,9 @@ flow bindings<
     Fs.atomic_replace<ProjectRoot>,
     Error<StorageError>,
     Error<MemoryConflict>,
-    Error<fs_IOError>,
-    Error<ReadLimitError>,
     Error<IOError>,
+    Error<ReadLimitError>,
+    Error<io_IOError>,
     Error<BudgetExceeded>
 ] ![] {
     return handler {
@@ -117,9 +119,9 @@ public flow mutations_handlers_execute<
     Fs.atomic_replace<ProjectRoot>,
     Error<StorageError>,
     Error<MemoryConflict>,
-    Error<fs_IOError>,
-    Error<ReadLimitError>,
     Error<IOError>,
+    Error<ReadLimitError>,
+    Error<io_IOError>,
     Error<BudgetExceeded>
 ] {
     return handle (
@@ -151,9 +153,9 @@ public flow replace<
     Fs.atomic_replace<ProjectRoot>,
     Error<StorageError>,
     Error<MemoryConflict>,
-    Error<fs_IOError>,
-    Error<ReadLimitError>,
     Error<IOError>,
+    Error<ReadLimitError>,
+    Error<io_IOError>,
     Error<BudgetExceeded>
 ] {
     return handle (replace_file(change) with bindings(files, journals, history, output)) with {
@@ -178,9 +180,9 @@ public flow mutations_handlers_list<
     Fs.atomic_replace<ProjectRoot>,
     Error<StorageError>,
     Error<MemoryConflict>,
-    Error<fs_IOError>,
-    Error<ReadLimitError>,
     Error<IOError>,
+    Error<ReadLimitError>,
+    Error<io_IOError>,
     Error<BudgetExceeded>
 ] {
     return handle (mutations_service_list(observing) with bindings(files, journals, history, output)) with {
@@ -204,9 +206,9 @@ public flow operations<
     Fs.atomic_replace<ProjectRoot>,
     Error<StorageError>,
     Error<MemoryConflict>,
-    Error<fs_IOError>,
-    Error<ReadLimitError>,
     Error<IOError>,
+    Error<ReadLimitError>,
+    Error<io_IOError>,
     Error<BudgetExceeded>
 ] ![] {
     return handler {

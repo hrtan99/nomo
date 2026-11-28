@@ -1,10 +1,10 @@
 module app.recoverable_chat_probe;
 
 import std.io.println;
-import nomo.core.conversation.Event;
-import nomo.harness.harness_tool_contract.Ledger;
-import nomo.harness.harness_tool_chat_contract.Invocation;
-import nomo.harness.harness_tool_chat_contract.Previous;
+import nomo.domain.conversation.Event;
+import nomo.domain.harness.loop.ReadLedger;
+import nomo.domain.harness.chat.Invocation;
+import nomo.domain.harness.chat.Previous;
 import nomo.domain.harness.chat.Completed;
 import nomo.domain.harness.chat.TurnResult;
 import nomo.domain.sessions.event_codec.Policy;
@@ -16,9 +16,9 @@ import nomo.adapters.storage.chat.conversation;
 import nomo.adapters.storage.chat.record_work;
 import nomo.domain.sessions.event_codec.event_text_codec_decode as decode;
 
-flow result(turn: i32, request: string, answer: string, maximum: Ledger) -> TurnResult {
+flow result(turn: i32, request: string, answer: string, maximum: ReadLedger) -> TurnResult {
     let prior = Previous { task = "Read config", result = answer, tool = "read", outcome = "complete: port=4321", answer = answer };
-    let used = Ledger { steps = turn * 7, calls = turn * 4, tokens = turn * 270336, tools = turn, scan = turn * 4194560 };
+    let used = ReadLedger { steps = turn * 7, calls = turn * 4, tokens = turn * 270336, tools = turn, scan = turn * 4194560 };
     let state = Invocation { usage = used, maximum = maximum, admitted = turn, prior = prior };
     let records = [Event { role = "user", kind = "request", name = "", text = request },
         Event { role = "tool", kind = "result", name = "read", text = "complete: port=4321\nCHECK_OK\r\nliteral <LF>\tend utf8=港 \"quoted\" \\ back VERY_SECRET_123" },
@@ -34,10 +34,10 @@ flow large(label: string) -> string {
     return "complete: " + label + " " + block;
 }
 
-flow large_result(turn: i32, request: string, label: string, maximum: Ledger) -> TurnResult {
+flow large_result(turn: i32, request: string, label: string, maximum: ReadLedger) -> TurnResult {
     let outcome = large(label); let answer = "captured " + label;
     let prior = Previous { task = "Read large evidence", result = answer, tool = "read", outcome = outcome, answer = answer };
-    let used = Ledger { steps = turn * 7, calls = turn * 4, tokens = turn * 270336, tools = turn, scan = turn * 4194560 };
+    let used = ReadLedger { steps = turn * 7, calls = turn * 4, tokens = turn * 270336, tools = turn, scan = turn * 4194560 };
     let state = Invocation { usage = used, maximum = maximum, admitted = turn, prior = prior };
     var records = [Event { role = "user", kind = "request", name = "", text = request },
         Event { role = "main", kind = "tool", name = "read", text = outcome },

@@ -233,21 +233,7 @@ def cases():
     return result
 
 
-IMPORTS = '''module nomo.session_fixture;
-import std.io.println;
-import std.text.char_count as len;
-import std.text.contains;
-import nomo.core.conversation.Event;
-import nomo.core.conversation.State;
-import nomo.session.session_state.Caps;
-import nomo.session.session_state.Ledger;
-import nomo.session.session_state.Operation;
-import nomo.session.session_state.Reference;
-import nomo.session.session_state.Snapshot;
-import nomo.session.session_state.Request;
-import nomo.session.session_state.Projection;
-import nomo.session.session_state.validate;
-'''
+IMPORTS = 'module nomo.session_fixture;\nimport std.io.println;\nimport std.text.char_count as len;\nimport std.text.contains;\nimport nomo.domain.conversation.Event;\nimport nomo.domain.conversation.State;\nimport nomo.domain.sessions.state.Caps;\nimport nomo.domain.sessions.state.Ledger;\nimport nomo.domain.sessions.state.Operation;\nimport nomo.domain.sessions.state.Reference;\nimport nomo.domain.sessions.state.Snapshot;\nimport nomo.domain.sessions.state.Request;\nimport nomo.domain.sessions.state.Projection;\nimport nomo.domain.sessions.state.validate;\n'
 
 
 def fixture(all_cases):

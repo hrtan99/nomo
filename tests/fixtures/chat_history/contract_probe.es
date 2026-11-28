@@ -1,13 +1,13 @@
 module app.chat_session_contract_probe;
 
 import std.io.println;
-import nomo.harness.harness_tool_chat_contract.Invocation;
-import nomo.harness.harness_tool_chat_contract.Previous;
+import nomo.domain.harness.chat.Invocation;
+import nomo.domain.harness.chat.Previous;
 import nomo.domain.harness.chat.Completed;
 import nomo.domain.harness.chat.TurnResult;
 import nomo.domain.harness.chat.default_maximum;
-import nomo.harness.harness_tool_contract.Ledger;
-import nomo.session.chat_session_contract.Session;
+import nomo.domain.harness.loop.ReadLedger;
+import nomo.domain.sessions.chat.ChatSession;
 import nomo.domain.sessions.chat.fresh;
 import nomo.domain.sessions.chat.chat_session_contract_invalid as invalid;
 import nomo.domain.sessions.chat.begin;
@@ -15,7 +15,7 @@ import nomo.domain.sessions.chat.complete;
 
 public flow outcome(turns: i32, request: string, answer: string) -> TurnResult {
     let prior = Previous { task = "Answer the question", result = answer, tool = "", outcome = "", answer = answer };
-    let used = Ledger { steps = turns * 5, calls = turns * 3, tokens = turns * 6144, tools = 0, scan = 0 };
+    let used = ReadLedger { steps = turns * 5, calls = turns * 3, tokens = turns * 6144, tools = 0, scan = 0 };
     let state = Invocation { usage = used, maximum = default_maximum(), admitted = turns, prior = prior };
     let done = Completed { request = request, task = prior.task, result = prior.result, tool = prior.tool,
         outcome = prior.outcome, answer = prior.answer, records = [] };

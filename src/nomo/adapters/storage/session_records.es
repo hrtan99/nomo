@@ -1,20 +1,17 @@
 module nomo.adapters.storage.session_records;
 
+import nomo.application.resources.PolicyRoot;
 import nomo.application.sessions.persistence.committed_version;
 import nomo.application.sessions.ports.{Submission, Target};
-import nomo.core.conversation.Event;
+import nomo.domain.conversation.Event;
 import nomo.domain.limits.event_bytes;
-import nomo.domain.sessions.event_codec.{
-    Bundle,
-    Policy,
-    bundle_codec_decode,
-    bundle_codec_encode,
-    events,
-    policy_error
-};
+import nomo.domain.sessions.event_codec.{Bundle, History, Policy, bundle_codec_decode, bundle_codec_encode, events, policy_error};
 import nomo.domain.sessions.state.{
+    DemoClaim,
+    MetadataRecord,
     Projection,
     Request,
+    Snapshot,
     bundle,
     pending,
     published,
@@ -24,16 +21,10 @@ import nomo.domain.sessions.state.{
     validate
 };
 import nomo.domain.text.{data_safe, safe};
-import nomo.session.demo_claim.{Claim, Demo};
-import nomo.session.event_history.{EventStore, History};
-import nomo.session.event_policy.PolicyRoot;
-import nomo.session.metadata_store.Metadata;
-import nomo.session.session_state.Snapshot;
-import nomo.session.store_record.Record;
 import std.agent.message.Message;
 import std.agent.session.{SessionHistoryPage, history_page};
 import std.codec.text.{Strict, utf8_decode};
-import std.fs.{IOError as fs_IOError, ReadLimitError, WorkspacePath, path, read_bytes_limited};
+import std.fs.{IOError, ReadLimitError, WorkspacePath, path, read_bytes_limited};
 import std.json.{parse, stringify};
 import std.memory.{MemoryEntry, MemoryVersion, Missing, StorageData, WriteCondition};
 
@@ -86,17 +77,17 @@ public flow commit_receipt<Row ~ StorageData>(
     return committed_version(target, submit_native(store, target.key, value, condition));
 }
 
-public flow read_claim() -> Option<MemoryEntry<string, Claim>> {
-    return Demo.Claims.get_entry("single-demo");
+public flow read_claim() -> Option<MemoryEntry<string, DemoClaim>> {
+    return DemoClaims.Claims.get_entry("single-demo");
 }
 
 // Exact durable receipt and committed-version readback; no retry or reconciliation.
-public flow write_claim(value: Claim, condition: WriteCondition) -> Result<MemoryVersion, string> ![
+public flow write_claim(value: DemoClaim, condition: WriteCondition) -> Result<MemoryVersion, string> ![
     Memory,
     Error<StorageError>
 ] {
-    return commit_native<Claim>(
-        Demo.Claims,
+    return commit_native<DemoClaim>(
+        DemoClaims.Claims,
         Target {
             store = ["Claims"],
             region = "nomo-session-demo-v1",
@@ -109,7 +100,7 @@ public flow write_claim(value: Claim, condition: WriteCondition) -> Result<Memor
 }
 
 flow read_raw() -> Option<MemoryEntry<string, History>> {
-    return EventStore.Rows.get_entry("events");
+    return EventHistory.Rows.get_entry("events");
 }
 
 flow invalid(value: History) -> string {
@@ -202,7 +193,7 @@ public flow event_history_append(turn: i32, input: Array<Event>, policy: Policy)
         None() => Missing
     };
     let version = match commit_receipt(
-        EventStore.Rows,
+        EventHistory.Rows,
         Target {
             store = ["Rows"],
             region = "nomo-event-history-v1",
@@ -284,7 +275,7 @@ public flow append_metadata(turn: i32, input: Array<Event>) -> Result<MemoryVers
 // The caller supplies a private read-only policy directory for every process.
 // This exact-literal list is not comprehensive secret detection or authority.
 public flow event_policy_load() -> Result<Policy, string> {
-    let selected: Result<WorkspacePath<PolicyRoot>, fs_IOError> = path<PolicyRoot>("policy.json");
+    let selected: Result<WorkspacePath<PolicyRoot>, IOError> = path<PolicyRoot>("policy.json");
     let location = match selected {
         Ok(item) => item,
         Err(_) => {
@@ -384,13 +375,13 @@ public flow history_store_load(key: string) -> Result<Bundle, string> {
     return bundle_codec_decode(encoded);
 }
 
-public flow read(id: string) -> Option<MemoryEntry<string, Record>> {
-    return Metadata.Rows.get_entry(id);
+public flow read(id: string) -> Option<MemoryEntry<string, MetadataRecord>> {
+    return SessionMetadata.Rows.get_entry(id);
 }
 
 // Transition only against the observed/confirmed version, then verify the receipt's
 // committed version and exact row. Unknown/refused writes return without retry.
-public flow publish(row: Record, expected: MemoryVersion) -> Result<MemoryVersion, string> ![
+public flow publish(row: MetadataRecord, expected: MemoryVersion) -> Result<MemoryVersion, string> ![
     Memory,
     Error<StorageError>
 ] {
@@ -414,12 +405,12 @@ public flow publish(row: Record, expected: MemoryVersion) -> Result<MemoryVersio
 }
 
 // A confirmed Memory mutation is not proof of Session content or effect completion.
-public flow write(row: Record, condition: WriteCondition) -> Result<MemoryVersion, string> ![
+public flow write(row: MetadataRecord, condition: WriteCondition) -> Result<MemoryVersion, string> ![
     Memory,
     Error<StorageError>
 ] {
-    return commit_receipt<Record>(
-        Metadata.Rows,
+    return commit_receipt<MetadataRecord>(
+        SessionMetadata.Rows,
         Target {
             store = ["Rows"],
             region = "nomo-session-store-v1",
@@ -436,7 +427,7 @@ public flow write(row: Record, condition: WriteCondition) -> Result<MemoryVersio
 public flow publish_snapshot(
     saved: Snapshot,
     save_id: string,
-    expected: Record,
+    expected: MetadataRecord,
     version: MemoryVersion,
     continuation: bool
 ) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
@@ -597,3 +588,30 @@ public flow reload(requested: Request, save_id: string) -> Result<Projection, st
     }
     return validate(saved, requested);
 }
+
+alias DemoClaimsSchema = MemoryRegion<{
+    Claims: Store<string, DemoClaim>
+}>;
+
+public let DemoClaims = std.memory.region<DemoClaimsSchema>(
+    stable_id = "nomo-session-demo-v1",
+    store = "session-demo"
+);
+
+alias EventHistorySchema = MemoryRegion<{
+    Rows: Store<string, History>
+}>;
+
+public let EventHistory = std.memory.region<EventHistorySchema>(
+    stable_id = "nomo-event-history-v1",
+    store = "event-history"
+);
+
+alias SessionMetadataSchema = MemoryRegion<{
+    Rows: Store<string, MetadataRecord>
+}>;
+
+public let SessionMetadata = std.memory.region<SessionMetadataSchema>(
+    stable_id = "nomo-session-store-v1",
+    store = "session"
+);

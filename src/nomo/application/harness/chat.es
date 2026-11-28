@@ -1,12 +1,14 @@
 module nomo.application.harness.chat;
 
 import nomo.application.harness.ports.{ConversationOutput, HarnessProgress, LegacyChatStages};
-import nomo.core.conversation.{Event, State};
+import nomo.domain.conversation.{Event, State};
 import nomo.domain.harness.chat.{
     ChatBudgetPolicy,
     Completed,
     Context,
+    Invocation,
     LocalTurn,
+    Previous,
     SelectedBudget,
     TurnResult,
     chat_context_error,
@@ -18,22 +20,13 @@ import nomo.domain.harness.chat.{
     seed,
     select
 };
-import nomo.domain.harness.loop.{allowed_error, candidate_error, question_error as loop_question_error};
-import nomo.domain.harness.read.{
-    bounded as read_bounded,
-    decode_work_plan,
-    numbers,
-    question_error,
-    read_fresh,
-    text_decode_plan
-};
+import nomo.domain.harness.loop.{ReadLedger, allowed_error, candidate_error, question_error as loop_question_error};
+import nomo.domain.harness.read.{bounded as read_bounded, decode_work_plan, numbers, question_error, read_fresh, text_decode_plan};
 import nomo.domain.limits.{child_answer_bytes, message_bytes};
 import nomo.domain.text.bounded;
-import nomo.harness.harness_tool_chat_contract.{Invocation, Previous};
-import nomo.harness.harness_tool_contract.Ledger;
 import std.text.from_i32;
 
-flow refused(usage: Ledger, error: string, resolved: bool) -> LocalTurn {
+flow refused(usage: ReadLedger, error: string, resolved: bool) -> LocalTurn {
     perform HarnessProgress.write("REFUSED " + error);
     if !resolved {
         perform HarnessProgress.write("RESERVATION child-1 unresolved=true; returned child metadata refused");
@@ -104,8 +97,8 @@ flow completed(request: string, raw_plan: string, selected: Previous, child: Sta
     };
 }
 
-flow total(before: Ledger, local: Ledger) -> Ledger {
-    return Ledger {
+flow total(before: ReadLedger, local: ReadLedger) -> ReadLedger {
+    return ReadLedger {
         steps = before.steps + local.steps,
         calls = before.calls + local.calls,
         tokens = before.tokens + local.tokens,
@@ -114,7 +107,7 @@ flow total(before: Ledger, local: Ledger) -> Ledger {
     };
 }
 
-flow stage<P ~ ChatBudgetPolicy>(policy: P, turn: i32, phase: string, before: Ledger, local: Ledger) -> unit {
+flow stage<P ~ ChatBudgetPolicy>(policy: P, turn: i32, phase: string, before: ReadLedger, local: ReadLedger) -> unit {
     let pending = policy.pending(phase);
     perform HarnessProgress.write(
         "TURN " + from_i32(turn) + " STAGE " + phase + " " + numbers(total(before, local))
@@ -138,7 +131,7 @@ flow execute<P ~ ChatBudgetPolicy>(
     request: string,
     allowed: Array<string>,
     prior: Previous,
-    before: Ledger,
+    before: ReadLedger,
     turn: i32
 ) -> LocalTurn {
     let unicode = policy.unicode_protocol();

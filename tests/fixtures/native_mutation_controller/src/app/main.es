@@ -25,8 +25,8 @@ import nomo.application.editing.changes.undo_changes;
 import nomo.application.editing.changes.rollback_changes;
 import nomo.domain.changes.Change;
 import nomo.domain.changes.ChangeOutcome;
-import nomo.native.mutations.Journal;
-import nomo.native.mutations.Step;
+import nomo.domain.changes.Journal;
+import nomo.domain.changes.Step;
 
 type FileState = { exists: bool, text: string };
 alias Schema = MemoryRegion<{ Files: Store<string, FileState>, Flags: Store<string, bool> }>;

@@ -1,4 +1,4 @@
-"""Old persisted ArchivedJob identity and the original three-call text route."""
+"""Migrate the old ArchivedJob identity and retain the original three-call text route."""
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 import importlib.util
@@ -7,6 +7,9 @@ import shutil
 import subprocess
 import tempfile
 import threading
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+from nomo_migration import relocation_package
 
 from native_sources import copy_sources
 
@@ -37,8 +40,8 @@ class Model(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
 
-def manifest(package, model_url):
-    (package / '.etas').mkdir()
+def manifest(package, model_url, database="jobs.sqlite3"):
+    (package / '.etas').mkdir(exist_ok=True)
     (package / 'etas.toml').write_text(f'''[package]
 name = "file-consolidation"
 version = "0.1.0"
@@ -49,7 +52,11 @@ root = "src"
 default_profile = "local"
 [runtime.profiles.local.memory]
 backend = "sqlite"
-path = "/consolidation/jobs.sqlite3"
+path = "/consolidation/{database}"
+[runtime.profiles.local.filesystem.regions."nomo.application.resources.MigrationRoot"]
+root = "/consolidation/input"
+read = true
+write = false
 [runtime.profiles.local.model]
 adapter = "omlx-openai"
 model = "synthetic-local-only"
@@ -62,7 +69,7 @@ attempts = 1
 delay_ms = 0
 [runtime.profiles.local.policy]
 mode = "local-static"
-rules = ["memory=allow", "console=allow", "agentic=allow", "model=allow"]
+rules = ["memory=allow", "console=allow", "agentic=allow", "model=allow", "filesystem:Fs.read=allow"]
 [runtime.profiles.local.approval]
 mode = "deny"
 [[bin]]
@@ -83,8 +90,14 @@ def main():
     shutil.copytree(FIXTURES / 'old', old / 'src')
     sources = copy_sources(ROOT, current, FIXTURES / 'read.es')
     sources.update(copy_sources(ROOT, text, FIXTURES / 'text.es'))
-    for package in (old, current, text):
-        manifest(package, url)
+    exporter, importer = evidence / 'exporter', evidence / 'importer'
+    relocation_package(ROOT, exporter, 'export.es', historical=True)
+    relocation_package(ROOT, importer, 'import.es')
+    for package in (old, current, text, exporter, importer):
+        database = ('reader.sqlite3' if package == exporter else 'jobs.sqlite3' if package == old else 'new.sqlite3')
+        manifest(package, url, database)
+    (evidence / 'input').mkdir(mode=0o777)
+    (evidence / 'input').chmod(0o777)
     overlay = evidence / 'compose.json'
     overlay.write_text(json.dumps({'services': {'dev': {
         'network_mode': 'bridge',
@@ -96,13 +109,22 @@ def main():
                  'config/etas-runtime-cache-compose.yaml', str(overlay)):
         command += ['--file', str(ROOT / name)]
     inside = '''import json,pathlib,subprocess,sqlite3
+import sys
+sys.path.insert(0,'/workspace/scripts')
+from nomo_migration import write_relocation_packet
 out=pathlib.Path('/consolidation');results={}
-for name in ['old','current','text']:
- if name=='current':
-  with sqlite3.connect(out/'jobs.sqlite3') as db:before=db.execute('select region,path,key_json,value_json from memory_entries order by region,path,key_json').fetchall()
+for name in ['old','exporter','importer','current','text']:
+ if name=='exporter':
+  with sqlite3.connect(out/'jobs.sqlite3') as db:
+   before=db.execute('select region,path,key_json,value_json from memory_entries order by region,path,key_json').fetchall()
+   with sqlite3.connect(out/'reader.sqlite3') as reader:db.backup(reader)
  p=subprocess.run(['/home/nomo/.cargo/bin/etas','--no-config','--quiet','--cache','off','run',str(out/name),'--allow-effects','--trace-out',str(out/(name+'.trace.json'))],capture_output=True,text=True)
  results[name]={'exit':p.returncode,'stdout':p.stdout,'stderr':p.stderr}
  if p.returncode:break
+ if name=='exporter':
+  rows=[json.loads(line) for line in p.stdout.splitlines() if line.strip()]
+  assert len(rows)==2
+  write_relocation_packet(out/'input', {'format':'nomo-state-relocation-02413-v1','source_sha256':'synthetic-owned-source','rows':rows})
  if name=='current':
   with sqlite3.connect(out/'jobs.sqlite3') as db:after=db.execute('select region,path,key_json,value_json from memory_entries order by region,path,key_json').fetchall()
   results['persisted_rows_unchanged']=before==after
@@ -115,7 +137,7 @@ for name in ['old','current','text']:
         (evidence / 'container.stderr').write_text(result.stderr)
         assert result.returncode == 0, result.stderr
         observed = json.loads((evidence / 'results.json').read_text())
-        for name in ('old', 'current', 'text'):
+        for name in ('old', 'exporter', 'importer', 'current', 'text'):
             assert observed[name]['exit'] == 0 and not observed[name]['stderr'], observed
         assert observed['persisted_rows_unchanged'] is True
         assert observed['current']['stdout'] == 'PASS prior ArchivedJob and exact raw output\n'
@@ -127,7 +149,7 @@ for name in ['old','current','text']:
                                    cases.context('aggregate', task='work:alpha', result='child:work:alpha|alpha')]
         record = {'status': 'passed', 'evidence': str(evidence), 'model_http_calls': len(server.contexts),
                   'exact_original_text_output': True, 'charged_steps': 5, 'charged_calls': 3,
-                  'generation_allowance': 6144, 'old_archived_job_read': True,
+                  'generation_allowance': 6144, 'old_archived_job_read': True, 'explicit_old_reader_new_writer': True,
                   'stored_rows_unchanged': True, 'sources': sources}
         (evidence / 'result.json').write_text(json.dumps(record, indent=2) + '\n')
         print('PASS old stored nominal and original charged text route: ' + str(evidence))

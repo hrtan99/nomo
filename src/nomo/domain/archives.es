@@ -1,28 +1,26 @@
 module nomo.domain.archives;
 
-import nomo.domain.conversation.ChatMessage;
-import nomo.domain.processes.ArchivedJob as processes_ArchivedJob;
-import nomo.native.configuration.Cached;
-import nomo.native.history.{CopyJob, Event as history_Event, Session as history_Session};
-import nomo.native.lifecycle.Attempt as lifecycle_Attempt;
-import nomo.native.mutations.{Journal as mutations_Journal, SavedPath, Step as mutations_Step};
-import nomo.native.processes.{Job as processes_Job, JobEvent};
+import nomo.domain.attempts.Attempt as attempts_Attempt;
+import nomo.domain.changes.{Journal as changes_Journal, SavedPath, Step as changes_Step};
+import nomo.domain.conversation.{ChatMessage, SavedSession, StoredEvent};
+import nomo.domain.processes.{ArchivedJob as processes_ArchivedJob, Job as processes_Job, JobEvent};
+import nomo.domain.settings.CachedConfiguration;
 import std.json.JsonValue;
 
 // Stored facts, including incomplete records, are copied without executing them.
 public enum NativeRecord {
     Counter(string, i64),
     Selected(string, string),
-    Session(string, history_Session),
-    Event(string, history_Event),
+    Session(string, SavedSession),
+    Event(string, StoredEvent),
     Chunk(string, string),
     Copy(string, CopyJob),
     AttemptCounter(string, i64),
-    Attempt(string, lifecycle_Attempt),
-    Configuration(string, Cached),
+    Attempt(string, attempts_Attempt),
+    Configuration(string, CachedConfiguration),
     Projects(string, Array<string>),
-    Journal(string, mutations_Journal),
-    Step(string, mutations_Step),
+    Journal(string, changes_Journal),
+    Step(string, changes_Step),
     Job(string, processes_Job),
     Output(string, JobEvent),
     ArchivedJob(string, processes_ArchivedJob),
@@ -147,8 +145,8 @@ public type ExportOutcome = {
 
 public type ExportMetadata = {
     format: string,
-    conversation: history_Session,
-    attempts: Array<lifecycle_Attempt>,
+    conversation: SavedSession,
+    attempts: Array<attempts_Attempt>,
     copies: Array<CopyJob>
 };
 
@@ -163,3 +161,29 @@ public enum ArchiveDocument {
     Conversation(PortableArchive),
     Outcome(ExportOutcome)
 }
+
+public type CopyJob = {
+    id: string,
+    workspace: string,
+    title: string,
+    kind: string,
+    source: string,
+    digest: bytes,
+    total: i64,
+    cursor: i64,
+    phase: string
+};
+
+// Encoded by the destination type's official codec after a checked direct
+// old-to-new payload conversion. Integers never pass through JSON's f64.
+public type RelocatedRow = {
+    store: string,
+    key: string,
+    value: bytes
+};
+
+public type RelocatedImage = {
+    format: string,
+    source_sha256: string,
+    rows: Array<RelocatedRow>
+};

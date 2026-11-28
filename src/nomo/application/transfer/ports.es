@@ -1,17 +1,26 @@
 module nomo.application.transfer.ports;
 
-import nomo.application.migration.ports.MigrationRoot;
-import nomo.domain.archives.{ArchiveDocument, ExportPreview, Imported, NativeImage, NativeRecord, ProjectImage};
-import nomo.native.history.{CopyJob, Session};
-import nomo.native.workspace.ProjectRoot;
+import nomo.application.resources.{MigrationRoot, ProjectRoot};
+import nomo.domain.archives.{
+    ArchiveDocument,
+    CopyJob,
+    ExportPreview,
+    Imported,
+    NativeImage,
+    NativeRecord,
+    ProjectImage,
+    RelocatedImage,
+    RelocatedRow
+};
+import nomo.domain.conversation.SavedSession;
 import std.effects.Fs;
-import std.fs.{IOError as fs_IOError, ReadLimitError, WorkspacePath};
-import std.io.IOError;
+import std.fs.{IOError, ReadLimitError, WorkspacePath};
+import std.io.IOError as io_IOError;
 
 public spec NativeStateSource {
     flow load(self) -> NativeImage ![
         Fs.read<MigrationRoot>,
-        Error<fs_IOError>,
+        Error<IOError>,
         Error<ReadLimitError>,
         Error<IndexError>
     ];
@@ -24,7 +33,7 @@ public spec NativeStateDestination {
 public spec ProjectStateSource {
     flow load(self) -> ProjectImage ![
         Fs.read<MigrationRoot>,
-        Error<fs_IOError>,
+        Error<IOError>,
         Error<ReadLimitError>,
         Error<IndexError>
     ];
@@ -67,10 +76,10 @@ public effect TransferDisplay {
 
 public effect TransferOperations {
     action save(session: string, path: string) -> unit;
-    action load(workspace: string, path: string) -> Session;
-    action resume_import(workspace: string, id: string) -> Session;
-    action fork(session: string, through: i64) -> Session;
-    action resume_fork(workspace: string, id: string) -> Session;
+    action load(workspace: string, path: string) -> SavedSession;
+    action resume_import(workspace: string, id: string) -> SavedSession;
+    action fork(session: string, through: i64) -> SavedSession;
+    action resume_fork(workspace: string, id: string) -> SavedSession;
     action discard(workspace: string, id: string) -> unit;
     action status(id: string) -> Option<CopyJob>;
     action copies(workspace: string) -> Array<CopyJob>;
@@ -108,10 +117,10 @@ public spec CopyRepository {
 
 public spec ArchiveWorkspace {
     flow target(self, path: string) -> WorkspacePath<ProjectRoot> ![];
-    flow read(self, path: string) -> string ![Fs.read<ProjectRoot>, Error<fs_IOError>, Error<ReadLimitError>];
+    flow read(self, path: string) -> string ![Fs.read<ProjectRoot>, Error<IOError>, Error<ReadLimitError>];
     flow replace(self, target: WorkspacePath<ProjectRoot>, text: string) -> unit ![
         Fs.atomic_replace<ProjectRoot>,
-        Error<fs_IOError>
+        Error<IOError>
     ];
 }
 
@@ -122,7 +131,20 @@ public spec ArchiveEncoding {
 }
 
 public spec TransferRenderer {
-    flow progress(self, id: string, copied: i64, total: i64) -> unit ![Console, Error<IOError>];
-    flow preview(self, value: ExportPreview) -> unit ![Console, Error<IOError>];
-    flow exported(self, path: string) -> unit ![Console, Error<IOError>];
+    flow progress(self, id: string, copied: i64, total: i64) -> unit ![Console, Error<io_IOError>];
+    flow preview(self, value: ExportPreview) -> unit ![Console, Error<io_IOError>];
+    flow exported(self, path: string) -> unit ![Console, Error<io_IOError>];
+}
+
+public spec RelocatedStateSource {
+    flow load(self) -> RelocatedImage ![
+        Fs.read<MigrationRoot>,
+        Error<IOError>,
+        Error<ReadLimitError>,
+        Error<IndexError>
+    ];
+}
+
+public spec RelocatedStateDestination {
+    flow insert(self, row: RelocatedRow) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>];
 }

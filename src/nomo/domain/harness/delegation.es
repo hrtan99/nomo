@@ -1,6 +1,6 @@
 module nomo.domain.harness.delegation;
 
-import nomo.core.conversation.Event;
+import nomo.domain.conversation.Event;
 import nomo.domain.limits.{context_bytes, message_bytes};
 import nomo.domain.text.{input_error, text_printable};
 import std.text.{char_count, split, starts_with, trim};

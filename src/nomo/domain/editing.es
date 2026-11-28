@@ -4,10 +4,9 @@ import nomo.domain.limits.{file_bytes, message_bytes};
 import nomo.domain.text.{hex_digest, text_printable};
 import nomo.domain.wire.{digest, json, json_scalar_width};
 import nomo.domain.workspace.valid_path;
-import nomo.session.edit_operation.{Binding, Record};
 import std.text.{
-    TextError,
     TextBuilder,
+    TextError,
     char_count,
     char_get,
     concat,
@@ -25,7 +24,7 @@ import std.text.{
     trim
 };
 
-let REGION = "nomo.tools.edit_file.EditableRoot";
+let REGION = "nomo.application.resources.EditableRoot";
 
 public flow bind(id: string, workspace: string, path: string, value: Prepared) -> Result<Binding, string> {
     let invalid_selector = selector_error(id, workspace, path);
@@ -630,7 +629,7 @@ public flow binding_error(value: Binding) -> string {
     if invalid != "" {
         return invalid;
     }
-    if value.region != "nomo.tools.edit_file.EditableRoot" {
+    if value.region != "nomo.application.resources.EditableRoot" {
         return "edit region binding mismatch";
     }
     if !hex_digest(value.request_digest) || !hex_digest(value.before_digest)
@@ -646,7 +645,7 @@ public flow binding_error(value: Binding) -> string {
     return "";
 }
 
-public flow record_error(value: Record) -> string {
+public flow record_error(value: EditOperation) -> string {
     if value.format != 1 || (value.phase != "intent" && value.phase != "completed") {
         return "invalid edit operation format or phase";
     }
@@ -660,7 +659,25 @@ public flow same_binding(left: Binding, right: Binding) -> bool {
         && left.before_bytes == right.before_bytes && left.after_bytes == right.after_bytes;
 }
 
-public flow same_record(left: Record, right: Record) -> bool {
+public flow same_record(left: EditOperation, right: EditOperation) -> bool {
     return left.format == right.format && left.phase == right.phase
         && same_binding(left.binding, right.binding);
 }
+
+public type Binding = {
+    id: string,
+    workspace: string,
+    region: string,
+    path: string,
+    request_digest: string,
+    before_digest: string,
+    after_digest: string,
+    before_bytes: usize,
+    after_bytes: usize
+};
+
+public type EditOperation = {
+    format: i32,
+    phase: string,
+    binding: Binding
+};

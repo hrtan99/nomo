@@ -376,7 +376,7 @@ def audit_effects(report):
     assert main['escaping_effects'] == set(), 'native ChatMain callable escaping row'
     assert has_agent(main['requested_actions'], 'nomo.harness.harness_tool_chat.ChatMain'), 'actual ChatMain Agent identity'
     assert has_agent(main['default_actions'], 'nomo.harness.harness_tool_chat.ChatMain'), 'native ChatMain default action'
-    fs = 'Fs.read[nomo.tools.workspace.ReadOnlyRoot]'
+    fs = 'Fs.read[nomo.application.resources.ReadOnlyRoot]'
     child = selected('production_child')
     assert fs in child['requested_actions'] and fs in child['default_actions'] and 'Console.stdout_write' in child['default_actions'], 'child concrete read/Console adapter'
     assert any(has_agent(child['requested_actions'], 'nomo.agent.model_tool.' + owner) for owner in ['ToolModel', 'ReadFirst', 'ReadFinal']), 'child native Agent identity'

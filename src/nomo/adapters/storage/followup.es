@@ -18,20 +18,19 @@ import nomo.application.sessions.admission.{
     history_followup_inspect,
     parent as admission_parent
 };
-import nomo.application.sessions.ports.{
-    CasRows,
-    Entry,
-    FollowupPredecessors,
-    HistoricalFollowupTicket,
-    PriorChatReader,
-    Submission,
-    Target
-};
-import nomo.core.conversation.Event;
-import nomo.domain.sessions.chat.{empty, work_batch};
+import nomo.application.sessions.ports.{CasRows, Entry, FollowupPredecessors, HistoricalFollowupTicket, PriorChatReader, Submission, Target};
+import nomo.domain.conversation.Event;
+import nomo.domain.editing.{Binding, EditOperation};
+import nomo.domain.harness.work.WorkLedger;
+import nomo.domain.sessions.chat.{RecoverableChatFrame, empty, work_batch};
 import nomo.domain.sessions.event_codec.Policy;
 import nomo.domain.sessions.work.{
+    CheckRecord,
+    FollowupParent,
+    FollowupRecord,
+    RecoverableFollowupFrame,
     Summary,
+    WorkRecord,
     abandoned_record,
     admission_chat_error,
     claim_chat_error,
@@ -39,18 +38,11 @@ import nomo.domain.sessions.work.{
     running_record_mode,
     work_data_error
 };
-import nomo.harness.harness_work_contract.Ledger;
-import nomo.session.edit_operation.{Binding, Record as edit_operation_Record};
-import nomo.session.history_check_store.Record as history_check_store_Record;
-import nomo.session.history_followup_guard.{Parent, Record, Runs};
-import nomo.session.history_work_guard.Record as history_work_guard_Record;
-import nomo.session.recoverable_chat_store.Frame as recoverable_chat_store_Frame;
-import nomo.session.recoverable_followup_store.{Frame, Runs as recoverable_followup_store_Runs};
 import std.memory.{MemoryEntry, MemoryVersion, Missing, WriteCondition};
 
 public type NativeHistoryFollowup = {};
 
-impl NativeHistoryFollowup ~ CasRows<Record> {
+impl NativeHistoryFollowup ~ CasRows<FollowupRecord> {
     flow target(self) -> Target ![] {
         return Target {
             store = ["Rows"],
@@ -60,15 +52,18 @@ impl NativeHistoryFollowup ~ CasRows<Record> {
         };
     }
 
-    flow submit(self, value: Record, condition: WriteCondition) -> Submission ![Memory, Error<StorageError>] {
-        return submit_native(Runs.Rows, "followup", value, condition);
+    flow submit(self, value: FollowupRecord, condition: WriteCondition) -> Submission ![
+        Memory,
+        Error<StorageError>
+    ] {
+        return submit_native(FollowupRuns.Rows, "followup", value, condition);
     }
 
-    flow read(self) -> Result<Option<MemoryEntry<string, Record>>, string> {
-        return Ok(Runs.Rows.get_entry("followup"));
+    flow read(self) -> Result<Option<MemoryEntry<string, FollowupRecord>>, string> {
+        return Ok(FollowupRuns.Rows.get_entry("followup"));
     }
 
-    flow same(self, left: Record, right: Record) -> bool ![] {
+    flow same(self, left: FollowupRecord, right: FollowupRecord) -> bool ![] {
         return left == right;
     }
 }
@@ -80,23 +75,23 @@ impl NativeHistoryFollowup ~ PriorChatReader {
 }
 
 impl NativeHistoryFollowup ~ FollowupPredecessors {
-    flow work(self) -> Result<Option<history_work_guard_Record>, string> {
+    flow work(self) -> Result<Option<WorkRecord>, string> {
         return work_admission_inspect();
     }
 
     flow edit(self, id: string, workspace: string, path: string) -> Result<
-        Option<edit_operation_Record>,
+        Option<EditOperation>,
         string
     > {
         return edit_operation_store_inspect(id, workspace, path);
     }
 
-    flow check(self) -> Result<Option<history_check_store_Record>, string> {
+    flow check(self) -> Result<Option<CheckRecord>, string> {
         return checks_inspect();
     }
 }
 
-public flow parent() -> Result<Parent, string> {
+public flow parent() -> Result<FollowupParent, string> {
     return admission_parent(NativeHistoryFollowup {});
 }
 
@@ -119,25 +114,28 @@ public flow historical_followup_claim(ticket: HistoricalFollowupTicket) -> Resul
     return history_followup_claim(NativeHistoryFollowup {}, ticket);
 }
 
-public flow historical_followup_finish(ticket: HistoricalFollowupTicket, summary: string, spent: Ledger) -> Result<
+public flow historical_followup_finish(ticket: HistoricalFollowupTicket, summary: string, spent: WorkLedger) -> Result<
     bool,
     string
 > ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     return history_followup_finish(NativeHistoryFollowup {}, ticket, summary, spent);
 }
 
-public flow inspect() -> Result<Option<Record>, string> {
+public flow inspect() -> Result<Option<FollowupRecord>, string> {
     return history_followup_inspect(NativeHistoryFollowup {});
 }
 
-flow frame_error(value: Frame, policy: Policy, binding: string) -> string {
+flow frame_error(value: RecoverableFollowupFrame, policy: Policy, binding: string) -> string {
     if value.format != 1 || value.policy_binding != binding || value.parent_work_version == "" {
         return "invalid recoverable followup format or policy binding";
     }
     return work_data_error(value.work, value.events, policy);
 }
 
-public flow load(policy: Policy, binding: string) -> Result<Option<MemoryEntry<string, Frame>>, string> ![
+public flow load(policy: Policy, binding: string) -> Result<
+    Option<MemoryEntry<string, RecoverableFollowupFrame>>,
+    string
+> ![
     Memory,
     Error<StorageError>,
     Error<IndexError>,
@@ -154,7 +152,7 @@ public flow load(policy: Policy, binding: string) -> Result<Option<MemoryEntry<s
             return Err(error);
         }
     }
-    let row = recoverable_followup_store_Runs.Rows.get_entry("followup");
+    let row = RecoverableFollowups.Rows.get_entry("followup");
     return match row {
         Some(item) => {
             if item.key != "followup" {
@@ -219,7 +217,12 @@ public flow load(policy: Policy, binding: string) -> Result<Option<MemoryEntry<s
     };
 }
 
-flow write(value: Frame, expected: Option<MemoryEntry<string, Frame>>, policy: Policy, binding: string) -> Result<
+flow write(
+    value: RecoverableFollowupFrame,
+    expected: Option<MemoryEntry<string, RecoverableFollowupFrame>>,
+    policy: Policy,
+    binding: string
+) -> Result<
     MemoryVersion,
     string
 > ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
@@ -249,7 +252,7 @@ flow write(value: Frame, expected: Option<MemoryEntry<string, Frame>>, policy: P
         key = "followup",
         label = "recoverable followup"
     };
-    let version = match commit_native(recoverable_followup_store_Runs.Rows, target, desired, condition) {
+    let version = match commit_native(RecoverableFollowups.Rows, target, desired, condition) {
         Ok(item) => item,
         Err(problem) => {
             return Err(problem);
@@ -271,7 +274,7 @@ public flow recoverable_followup_store_admit(
     workspace: string,
     path: string,
     request: string,
-    chat: MemoryEntry<string, recoverable_chat_store_Frame>,
+    chat: MemoryEntry<string, RecoverableChatFrame>,
     policy: Policy,
     binding: string
 ) -> Result<Ticket, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
@@ -345,7 +348,7 @@ public flow recoverable_followup_store_admit(
         },
         None() => ""
     };
-    let frame = Frame {
+    let frame = RecoverableFollowupFrame {
         format = 1,
         policy_binding = binding,
         parent_work_version = parent_work.version.opaque,
@@ -395,7 +398,7 @@ public flow recoverable_followup_store_claim(ticket: Ticket, policy: Policy, bin
 public flow recoverable_followup_store_finish(
     ticket: Ticket,
     summary: string,
-    spent: Ledger,
+    spent: WorkLedger,
     records: Array<Event>,
     policy: Policy,
     binding: string
@@ -552,7 +555,25 @@ impl RecoverableFollowupPersistence ~ WorkPersistence<ports_Ticket, bool> {
 }
 
 public type Ticket = {
-    frame: Frame,
+    frame: RecoverableFollowupFrame,
     version: MemoryVersion,
-    chat: MemoryEntry<string, recoverable_chat_store_Frame>
+    chat: MemoryEntry<string, RecoverableChatFrame>
 };
+
+alias FollowupRunsSchema = MemoryRegion<{
+    Rows: Store<string, FollowupRecord>
+}>;
+
+public let FollowupRuns = std.memory.region<FollowupRunsSchema>(
+    stable_id = "nomo-history-followup-v1",
+    store = "history-followup"
+);
+
+alias RecoverableFollowupsSchema = MemoryRegion<{
+    Rows: Store<string, RecoverableFollowupFrame>
+}>;
+
+public let RecoverableFollowups = std.memory.region<RecoverableFollowupsSchema>(
+    stable_id = "nomo-recoverable-followup-v1",
+    store = "recoverable-followup"
+);

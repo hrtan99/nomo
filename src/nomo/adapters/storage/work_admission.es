@@ -11,37 +11,33 @@ import nomo.application.sessions.admission.{
     history_work_finish,
     history_work_inspect
 };
-import nomo.application.sessions.ports.{
-    CasRows,
-    Entry as ports_Entry,
-    HistoricalWorkTicket,
-    PriorChatReader,
-    Submission,
-    Target
-};
-import nomo.core.conversation.Event;
-import nomo.domain.harness.work.{ledger_error, native_budget};
+import nomo.application.sessions.ports.{CasRows, Entry, HistoricalWorkTicket, PriorChatReader, Submission, Target};
+import nomo.domain.conversation.Event;
+import nomo.domain.editing.Binding;
+import nomo.domain.harness.work.{WorkLedger, ledger_error, native_budget};
 import nomo.domain.limits.compatible_scan_i32;
-import nomo.domain.sessions.chat.{empty, work_batch};
+import nomo.domain.sessions.chat.{RecoverableChatFrame, empty, work_batch};
 import nomo.domain.sessions.event_codec.{Policy, encode_prefix, redact_text};
 import nomo.domain.sessions.work.{
+    ContinuousBook,
+    ContinuousCheck,
+    ContinuousCore,
+    ContinuousEdit,
+    ContinuousEntry,
+    ContinuousResult,
+    RecoverableWorkFrame,
     Summary,
+    WorkRecord,
     abandoned_record,
     admission_chat_error,
     completed_record,
     running_record_mode,
     work_data_error
 };
-import nomo.harness.harness_work_contract.Ledger;
-import nomo.session.continuous_work.{Book, Books, Check, Core, Edit, Entry, ResultData};
-import nomo.session.edit_operation.Binding;
-import nomo.session.history_work_guard.{Record, Runs};
-import nomo.session.recoverable_chat_store.Frame as recoverable_chat_store_Frame;
-import nomo.session.recoverable_work_store.{Frame, Runs as recoverable_work_store_Runs};
 import std.memory.{MemoryEntry, MemoryVersion, Missing, WriteCondition};
 
 public flow continuous_work_load(binding: string) -> Result<Option<Stored>, string> {
-    let row = Books.Rows.get_entry("latest");
+    let row = ContinuousBooks.Rows.get_entry("latest");
     match row {
         Some(item) => {
             if item.key != "latest" || item.value.binding != binding {
@@ -60,7 +56,7 @@ public flow continuous_work_load(binding: string) -> Result<Option<Stored>, stri
     };
 }
 
-flow continuous_work_write(book: Book, previous: Option<Stored>) -> Result<Stored, string> ![
+flow continuous_work_write(book: ContinuousBook, previous: Option<Stored>) -> Result<Stored, string> ![
     Memory,
     Error<StorageError>,
     Error<IndexError>
@@ -75,7 +71,7 @@ flow continuous_work_write(book: Book, previous: Option<Stored>) -> Result<Store
         key = "latest",
         label = "continuous work"
     };
-    let version = match commit_native(Books.Rows, target, book, condition) {
+    let version = match commit_native(ContinuousBooks.Rows, target, book, condition) {
         Ok(value) => value,
         Err(error) => {
             return Err(error);
@@ -96,7 +92,7 @@ flow continuous_work_write(book: Book, previous: Option<Stored>) -> Result<Store
     });
 }
 
-flow put(previous: Stored, item: Entry) -> Result<Stored, string> ![
+flow put(previous: Stored, item: ContinuousEntry) -> Result<Stored, string> ![
     Memory,
     Error<StorageError>,
     Error<IndexError>
@@ -123,7 +119,7 @@ public flow continuous_work_admit(
             return Err(error);
         }
     };
-    var history: Array<Entry> = [];
+    var history: Array<ContinuousEntry> = [];
     match previous {
         Some(item) => {
             let last = item.value.current;
@@ -167,16 +163,16 @@ public flow continuous_work_admit(
             return Err(error);
         }
     };
-    let item = Entry {
-        core = Core {
+    let item = ContinuousEntry {
+        core = ContinuousCore {
             id,
             request = clean
         },
-        edit = Edit {
+        edit = ContinuousEdit {
             phase = "none",
             binding = None()
         },
-        result = ResultData {
+        result = ContinuousResult {
             phase = "running",
             summary = "",
             source = if high_input {
@@ -192,7 +188,7 @@ public flow continuous_work_admit(
             generation = 0,
             events = []
         },
-        check = Check {
+        check = ContinuousCheck {
             phase = if digest == "" {
                 "none"
             } else {
@@ -207,7 +203,7 @@ public flow continuous_work_admit(
             stderr_truncated = false
         }
     };
-    return continuous_work_write(Book {
+    return continuous_work_write(ContinuousBook {
         binding,
         history,
         current = item
@@ -224,7 +220,7 @@ public flow edit_intent(ticket: Stored, binding: Binding) -> Result<Stored, stri
         return Err("work edit changed");
     }
     return put(ticket, item {
-        edit = Edit {
+        edit = ContinuousEdit {
             phase = "intent",
             binding = Some(binding)
         }
@@ -251,7 +247,7 @@ public flow continuous_work_finish(
     ticket: Stored,
     summary: string,
     source: string,
-    spent: Ledger,
+    spent: WorkLedger,
     records: Array<Event>,
     policy: Policy
 ) -> Result<Stored, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
@@ -320,7 +316,7 @@ public flow continuous_work_finish(
             return Err(error);
         }
     };
-    let result = ResultData {
+    let result = ContinuousResult {
         phase = "complete",
         summary = cleaned,
         source = if item.result.source == "high-input-v2" {
@@ -373,7 +369,7 @@ public flow start_check(binding: string, id: string, digest: string) -> Result<S
         || item.check.digest != digest {
         return Err("planned check missing");
     }
-    let check = Check {
+    let check = ContinuousCheck {
         phase = "running",
         digest,
         outcome = "",
@@ -422,7 +418,7 @@ public flow finish_check(
             return Err(error);
         }
     };
-    let check = Check {
+    let check = ContinuousCheck {
         phase = "complete",
         digest,
         outcome,
@@ -494,7 +490,7 @@ public flow abandon_check(binding: string, id: string) -> Result<bool, string> !
 
 public type NativeHistoryWork = {};
 
-impl NativeHistoryWork ~ CasRows<Record> {
+impl NativeHistoryWork ~ CasRows<WorkRecord> {
     flow target(self) -> Target ![] {
         return Target {
             store = ["Rows"],
@@ -504,21 +500,24 @@ impl NativeHistoryWork ~ CasRows<Record> {
         };
     }
 
-    flow submit(self, value: Record, condition: WriteCondition) -> Submission ![Memory, Error<StorageError>] {
-        return submit_native(Runs.Rows, "work", value, condition);
+    flow submit(self, value: WorkRecord, condition: WriteCondition) -> Submission ![
+        Memory,
+        Error<StorageError>
+    ] {
+        return submit_native(HistoryWorkRuns.Rows, "work", value, condition);
     }
 
-    flow read(self) -> Result<Option<MemoryEntry<string, Record>>, string> {
-        return Ok(Runs.Rows.get_entry("work"));
+    flow read(self) -> Result<Option<MemoryEntry<string, WorkRecord>>, string> {
+        return Ok(HistoryWorkRuns.Rows.get_entry("work"));
     }
 
-    flow same(self, left: Record, right: Record) -> bool ![] {
+    flow same(self, left: WorkRecord, right: WorkRecord) -> bool ![] {
         return left == right;
     }
 }
 
 impl NativeHistoryWork ~ PriorChatReader {
-    flow load(self) -> Result<Option<ports_Entry>, string> {
+    flow load(self) -> Result<Option<Entry>, string> {
         return chat_history_load();
     }
 }
@@ -528,7 +527,7 @@ public flow historical_work_admit(
     workspace: string,
     path: string,
     request: string,
-    history: ports_Entry
+    history: Entry
 ) -> Result<HistoricalWorkTicket, string> ![
     Memory,
     Error<StorageError>,
@@ -542,7 +541,7 @@ public flow historical_work_claim(ticket: HistoricalWorkTicket) -> Result<bool, 
     return history_work_claim(NativeHistoryWork {}, ticket);
 }
 
-public flow historical_work_finish(ticket: HistoricalWorkTicket, summary: string, spent: Ledger) -> Result<
+public flow historical_work_finish(ticket: HistoricalWorkTicket, summary: string, spent: WorkLedger) -> Result<
     bool,
     string
 > ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
@@ -553,11 +552,11 @@ public flow chat_available() -> Result<bool, string> {
     return admission_chat_available(NativeHistoryWork {});
 }
 
-public flow inspect() -> Result<Option<Record>, string> {
+public flow inspect() -> Result<Option<WorkRecord>, string> {
     return history_work_inspect(NativeHistoryWork {});
 }
 
-flow frame_error(value: Frame, policy: Policy, binding: string) -> string {
+flow frame_error(value: RecoverableWorkFrame, policy: Policy, binding: string) -> string {
     if value.format != 1 || value.policy_binding != binding {
         return "invalid recoverable work format or policy binding";
     }
@@ -565,10 +564,10 @@ flow frame_error(value: Frame, policy: Policy, binding: string) -> string {
 }
 
 public flow recoverable_work_store_load(policy: Policy, binding: string) -> Result<
-    Option<MemoryEntry<string, Frame>>,
+    Option<MemoryEntry<string, RecoverableWorkFrame>>,
     string
 > ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
-    let row = recoverable_work_store_Runs.Rows.get_entry("work");
+    let row = RecoverableWorks.Rows.get_entry("work");
     return match row {
         Some(item) => {
             if item.key != "work" {
@@ -585,11 +584,11 @@ public flow recoverable_work_store_load(policy: Policy, binding: string) -> Resu
 }
 
 flow recoverable_work_store_write(
-    value: Frame,
-    expected: Option<MemoryEntry<string, Frame>>,
+    value: RecoverableWorkFrame,
+    expected: Option<MemoryEntry<string, RecoverableWorkFrame>>,
     policy: Policy,
     binding: string
-) -> Result<MemoryEntry<string, Frame>, string> ![
+) -> Result<MemoryEntry<string, RecoverableWorkFrame>, string> ![
     Memory,
     Error<StorageError>,
     Error<IndexError>,
@@ -612,7 +611,7 @@ flow recoverable_work_store_write(
         key = "work",
         label = "recoverable work"
     };
-    let version = match commit_native(recoverable_work_store_Runs.Rows, target, desired, condition) {
+    let version = match commit_native(RecoverableWorks.Rows, target, desired, condition) {
         Ok(item) => item,
         Err(problem) => {
             return Err(problem);
@@ -640,7 +639,7 @@ public flow recoverable_work_store_admit(
     workspace: string,
     path: string,
     request: string,
-    chat: MemoryEntry<string, recoverable_chat_store_Frame>,
+    chat: MemoryEntry<string, RecoverableChatFrame>,
     policy: Policy,
     binding: string
 ) -> Result<Ticket, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
@@ -676,7 +675,7 @@ public flow recoverable_work_store_admit(
         wide,
         chat.value.chat.format == 18 || chat.value.chat.format == 19
     );
-    let frame = Frame {
+    let frame = RecoverableWorkFrame {
         format = 1,
         policy_binding = binding,
         work = row,
@@ -695,7 +694,10 @@ public flow recoverable_work_store_admit(
     });
 }
 
-flow claimed(ticket: Ticket, policy: Policy, binding: string) -> Result<MemoryEntry<string, Frame>, string> ![
+flow claimed(ticket: Ticket, policy: Policy, binding: string) -> Result<
+    MemoryEntry<string, RecoverableWorkFrame>,
+    string
+> ![
     Memory,
     Error<StorageError>,
     Error<IndexError>,
@@ -738,7 +740,7 @@ public flow recoverable_work_store_claim(ticket: Ticket, policy: Policy, binding
 public flow recoverable_work_store_finish(
     ticket: Ticket,
     summary: string,
-    spent: Ledger,
+    spent: WorkLedger,
     records: Array<Event>,
     policy: Policy,
     binding: string
@@ -756,7 +758,7 @@ public flow recoverable_work_store_finish(
         }
     };
     let row = completed_record(ticket.frame.work, summary, spent);
-    let frame = Frame {
+    let frame = RecoverableWorkFrame {
         format = 1,
         policy_binding = binding,
         work = row,
@@ -931,12 +933,39 @@ impl ContinuousPersistence ~ WorkPersistence<Stored, Stored> {
 
 public type Stored = {
     key: string,
-    value: Book,
+    value: ContinuousBook,
     version: MemoryVersion
 };
 
 public type Ticket = {
-    frame: Frame,
+    frame: RecoverableWorkFrame,
     version: MemoryVersion,
-    chat: MemoryEntry<string, recoverable_chat_store_Frame>
+    chat: MemoryEntry<string, RecoverableChatFrame>
 };
+
+alias ContinuousBooksSchema = MemoryRegion<{
+    Rows: Store<string, ContinuousBook>
+}>;
+
+public let ContinuousBooks = std.memory.region<ContinuousBooksSchema>(
+    stable_id = "nomo-continuous-work-v1",
+    store = "continuous-work"
+);
+
+alias HistoryWorkRunsSchema = MemoryRegion<{
+    Rows: Store<string, WorkRecord>
+}>;
+
+public let HistoryWorkRuns = std.memory.region<HistoryWorkRunsSchema>(
+    stable_id = "nomo-history-work-v1",
+    store = "history-work"
+);
+
+alias RecoverableWorksSchema = MemoryRegion<{
+    Rows: Store<string, RecoverableWorkFrame>
+}>;
+
+public let RecoverableWorks = std.memory.region<RecoverableWorksSchema>(
+    stable_id = "nomo-recoverable-work-v1",
+    store = "recoverable-work"
+);

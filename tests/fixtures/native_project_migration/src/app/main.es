@@ -6,7 +6,7 @@ import std.effects.Fs;
 import std.fs.IOError as FileError;
 import std.fs.ReadLimitError;
 import app.source.FixtureSource;
-import nomo.application.migration.ports.MigrationRoot;
+import nomo.application.resources.MigrationRoot;
 import nomo.application.transfer.migration.project_state_migrate as migrate;
 import nomo.adapters.storage.migration.NativeStateWriter;
 import nomo.adapters.storage.conversations.NativeHistory;

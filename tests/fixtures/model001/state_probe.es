@@ -1,6 +1,6 @@
 module nomo.model_test;
 
-import nomo.core.conversation.Event;
+import nomo.domain.conversation.Event;
 import nomo.domain.conversation.fresh;
 import nomo.domain.conversation.add;
 import nomo.bootstrap.harness.model_turn;

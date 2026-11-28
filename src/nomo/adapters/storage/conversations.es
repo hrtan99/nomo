@@ -1,18 +1,12 @@
 module nomo.adapters.storage.conversations;
 
-import nomo.application.conversation.ports.{
-    ConversationCatalog,
-    ConversationReader,
-    ConversationWriter,
-    GenerationReservation,
-    ResultPublication
-};
+import nomo.application.conversation.ports.{ConversationCatalog, ConversationReader, ConversationWriter, GenerationReservation, ResultPublication};
 import nomo.application.editing.ports.MutationHistoryStore;
 import nomo.application.scope.SessionContext;
 import nomo.application.transfer.ports.CopyRepository;
-import nomo.domain.conversation.{ChatMessage, PendingRequest};
+import nomo.domain.archives.CopyJob;
+import nomo.domain.conversation.{ChatMessage, ConversationLedger, PendingRequest, SavedSession, StoredEvent};
 import nomo.domain.wire.encode;
-import nomo.native.history.{CopyJob, Event, Ledger, Session};
 import std.json.JsonValue;
 import std.memory.{MemoryCursor, MemoryEntry};
 import std.text.{TextBuilder, char_count, from_i64, from_usize, get_char_slice, parse_i64, split_once, strip_prefix};
@@ -21,8 +15,8 @@ alias Schema = MemoryRegion<
     {
         Counters: Store<string, i64>,
         Selected: Store<string, string>,
-        Sessions: Store<string, Session>,
-        Events: Store<string, Event>,
+        Sessions: Store<string, SavedSession>,
+        Events: Store<string, StoredEvent>,
         Chunks: Store<string, string>,
     }
 >;
@@ -105,7 +99,7 @@ impl NativeHistory ~ ResultPublication {
     }
 }
 
-flow entry(id: string) -> MemoryEntry<string, Session> {
+flow entry(id: string) -> MemoryEntry<string, SavedSession> {
     return match Data.Sessions.get_entry(id) {
         Some(value) => value,
         None() => abort("native session not found: " + id),
@@ -133,8 +127,8 @@ flow allocate() -> string {
     return "native-" + from_i64(number);
 }
 
-flow empty_session(id: string, workspace: string, title: string) -> Session {
-    return Session {
+flow empty_session(id: string, workspace: string, title: string) -> SavedSession {
+    return SavedSession {
         id,
         workspace,
         title,
@@ -143,7 +137,7 @@ flow empty_session(id: string, workspace: string, title: string) -> Session {
         summary_event = -1,
         summary_through = -1,
         pending = "",
-        ledger = Ledger {
+        ledger = ConversationLedger {
             turns = 0,
             compactions = 0,
             tools = 0,
@@ -154,7 +148,7 @@ flow empty_session(id: string, workspace: string, title: string) -> Session {
 }
 
 impl NativeHistory ~ ConversationReader {
-    flow load(self, id: string) -> Session {
+    flow load(self, id: string) -> SavedSession {
         return entry(id).value;
     }
 
@@ -190,7 +184,7 @@ impl NativeHistory ~ ConversationCatalog {
         rename(id, title);
     }
 
-    flow create(self, workspace: string, title: string) -> Session ![
+    flow create(self, workspace: string, title: string) -> SavedSession ![
         Memory,
         Error<StorageError>,
         Error<MemoryConflict>
@@ -205,7 +199,7 @@ impl NativeHistory ~ ConversationCatalog {
         return Data.Selected.get(workspace);
     }
 
-    flow select(self, workspace: string, id: string) -> Session ![Memory, Error<StorageError>] {
+    flow select(self, workspace: string, id: string) -> SavedSession ![Memory, Error<StorageError>] {
         let value = self.load(id);
         if value.workspace != workspace {
             abort("native session belongs to a different workspace");
@@ -222,17 +216,17 @@ impl NativeHistory ~ ConversationCatalog {
         return value;
     }
 
-    flow sessions(self, workspace: string) -> Array<Session> {
+    flow sessions(self, workspace: string) -> Array<SavedSession> {
         return stored_sessions(Some(workspace));
     }
 
-    flow all_sessions(self) -> Array<Session> {
+    flow all_sessions(self) -> Array<SavedSession> {
         return stored_sessions(None());
     }
 }
 
-flow stored_sessions(workspace: Option<string>) -> Array<Session> {
-    var result: Array<Session> = [];
+flow stored_sessions(workspace: Option<string>) -> Array<SavedSession> {
+    var result: Array<SavedSession> = [];
     var cursor: Option<MemoryCursor> = None();
     @limits([Iterations(2147483647)]) while true {
         let page = Data.Sessions.page(cursor, 100);
@@ -298,7 +292,7 @@ flow reserve_event(id: string, role: string, name: string, call: i64, live: bool
 
 flow write_event(id: string, index: i64, role: string, name: string, text: string, call: i64) -> unit {
     let event_key = key(id, index);
-    Data.Events.put(event_key, Event {
+    Data.Events.put(event_key, StoredEvent {
         role,
         name,
         call,
@@ -322,7 +316,7 @@ flow write_event(id: string, index: i64, role: string, name: string, text: strin
         offset = end;
         parts = parts + 1;
     }
-    Data.Events.put(event_key, Event {
+    Data.Events.put(event_key, StoredEvent {
         role,
         name,
         call,
@@ -389,7 +383,7 @@ public flow read_message(id: string, index: i64) -> ChatMessage ![
 public flow reserve_result(id: string, role: string, name: string, call: i64) -> i64
 ![Memory, Error<StorageError>, Error<MemoryConflict>] {
     let index = reserve_event(id, role, name, call, false);
-    Data.Events.put(key(id, index), Event {
+    Data.Events.put(key(id, index), StoredEvent {
         role,
         name,
         call,

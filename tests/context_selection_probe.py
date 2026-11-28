@@ -88,7 +88,7 @@ def cases():
         invalid(base, ['Task'], 'RequiredTooLarge', size(base) - 1))
     add('no_required_value_fits_zero', invalid(base, ['Task'], 'RequiredTooLarge', 0))
 
-    binding = dict(id='edit-1', workspace='fixture-v1', region='nomo.tools.edit_file.EditableRoot',
+    binding = dict(id='edit-1', workspace='fixture-v1', region='nomo.application.resources.EditableRoot',
                    path='docs/a.txt', request_digest='a' * 64, before_digest='b' * 64,
                    after_digest='c' * 64, before_bytes=4, after_bytes=5)
     binding_text = context([task, event(wire(binding), 'user', 'context', 'binding')])

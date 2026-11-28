@@ -3,7 +3,7 @@ module nomo.domain.text;
 import nomo.domain.limits.{context_bytes, event_bytes, message_bytes};
 import std.agent.message.Message;
 import std.json.{JsonValue, stringify};
-import std.text.{char_count, chars, contains, from_char, is_ascii, len, starts_with, trim};
+import std.text.{char_count, chars, from_char, is_ascii, len, starts_with, trim};
 
 // Read-only conversational text: UTF-8 byte ceilings remain explicit.
 // Reject C0/C1 controls, terminal escape, Unicode line separators and common

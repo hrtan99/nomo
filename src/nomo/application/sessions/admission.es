@@ -11,8 +11,13 @@ import nomo.application.sessions.ports.{
     HistoryCheckRows,
     PriorChatReader
 };
-import nomo.domain.editing.{Selector, binding_error, record_error, same_record, selector_error};
+import nomo.domain.editing.{Binding, EditOperation, Selector, binding_error, record_error, same_record, selector_error};
+import nomo.domain.harness.work.WorkLedger;
 import nomo.domain.sessions.work.{
+    CheckRecord,
+    FollowupParent,
+    FollowupRecord,
+    WorkRecord,
     historical_followup_full,
     historical_followup_invalid,
     historical_followup_zero,
@@ -21,14 +26,9 @@ import nomo.domain.sessions.work.{
     historical_work_zero,
     invalid_values
 };
-import nomo.harness.harness_work_contract.Ledger;
-import nomo.session.edit_operation.{Binding, Record as edit_operation_Record};
-import nomo.session.history_check_store.Record;
-import nomo.session.history_followup_guard.{Parent, Record as history_followup_guard_Record};
-import nomo.session.history_work_guard.Record as history_work_guard_Record;
 import std.memory.{MemoryVersion, Missing, WriteCondition};
 
-flow invalid<R ~ HistoryCheckRows>(rows: R, value: Record) -> string {
+flow invalid<R ~ HistoryCheckRows>(rows: R, value: CheckRecord) -> string {
     return invalid_values(
         value.format,
         value.phase,
@@ -40,7 +40,7 @@ flow invalid<R ~ HistoryCheckRows>(rows: R, value: Record) -> string {
     );
 }
 
-flow save<R ~ HistoryCheckRows>(rows: R, value: Record, condition: WriteCondition) -> Result<
+flow save<R ~ HistoryCheckRows>(rows: R, value: CheckRecord, condition: WriteCondition) -> Result<
     MemoryVersion,
     string
 > {
@@ -55,7 +55,7 @@ public flow plan<R ~ HistoryCheckRows>(rows: R, id: string, digest: string) -> R
     if rows.read() != None() {
         return Err("history-check already planned; no retry");
     }
-    let value = Record {
+    let value = CheckRecord {
         format = 1,
         phase = "planned",
         id,
@@ -107,7 +107,7 @@ flow transition<R ~ HistoryCheckRows>(
             "planned check differs; no retry"
         });
     }
-    let value = Record {
+    let value = CheckRecord {
         format = 1,
         phase = if finishing {
             "complete"
@@ -145,7 +145,7 @@ public flow history_check_store_finish<R ~ HistoryCheckRows>(
     return transition(rows, id, digest, outcome, exit_code, true);
 }
 
-public flow history_check_store_inspect<R ~ HistoryCheckRows>(rows: R) -> Result<Option<Record>, string> {
+public flow history_check_store_inspect<R ~ HistoryCheckRows>(rows: R) -> Result<Option<CheckRecord>, string> {
     let before = rows.read();
     match before {
         None() => Ok(None()),
@@ -178,7 +178,7 @@ public flow history_check_store_inspect<R ~ HistoryCheckRows>(rows: R) -> Result
 }
 
 // Both namespaces share transitions, but each adapter has one fixed native store.
-public flow available<S ~ CasRows<edit_operation_Record>>(rows: S) -> Result<bool, string> {
+public flow available<S ~ CasRows<EditOperation>>(rows: S) -> Result<bool, string> {
     return match rows.read() {
         Ok(None()) => Ok(true),
         Ok(Some(_)) => Err("edit operation slot already consumed; no retry"),
@@ -186,7 +186,7 @@ public flow available<S ~ CasRows<edit_operation_Record>>(rows: S) -> Result<boo
     };
 }
 
-public flow begin<S ~ CasRows<edit_operation_Record>>(rows: S, binding: Binding) -> Result<Ticket, string> {
+public flow begin<S ~ CasRows<EditOperation>>(rows: S, binding: Binding) -> Result<Ticket, string> {
     let invalid = binding_error(binding);
     if invalid != "" {
         return Err(invalid);
@@ -197,12 +197,12 @@ public flow begin<S ~ CasRows<edit_operation_Record>>(rows: S, binding: Binding)
             return Err(error);
         }
     }
-    let row = edit_operation_Record {
+    let row = EditOperation {
         format = 1,
         phase = "intent",
         binding
     };
-    let version = match commit_once<edit_operation_Record, S>(rows, row, Missing, None()) {
+    let version = match commit_once<EditOperation, S>(rows, row, Missing, None()) {
         Ok(value) => value,
         Err(error) => {
             return Err(error);
@@ -214,7 +214,7 @@ public flow begin<S ~ CasRows<edit_operation_Record>>(rows: S, binding: Binding)
     });
 }
 
-public flow complete<S ~ CasRows<edit_operation_Record>>(rows: S, ticket: Ticket) -> Result<bool, string> {
+public flow complete<S ~ CasRows<EditOperation>>(rows: S, ticket: Ticket) -> Result<bool, string> {
     let invalid = binding_error(ticket.binding);
     if invalid != "" {
         return Err(invalid);
@@ -225,7 +225,7 @@ public flow complete<S ~ CasRows<edit_operation_Record>>(rows: S, ticket: Ticket
             return Err("edit intent missing; no retry");
         }
     };
-    let expected = edit_operation_Record {
+    let expected = EditOperation {
         format = 1,
         phase = "intent",
         binding = ticket.binding
@@ -234,12 +234,12 @@ public flow complete<S ~ CasRows<edit_operation_Record>>(rows: S, ticket: Ticket
         || before.version.opaque != ticket.version.opaque {
         return Err("edit intent binding or version changed; no retry");
     }
-    let row = edit_operation_Record {
+    let row = EditOperation {
         format = 1,
         phase = "completed",
         binding = ticket.binding
     };
-    return match commit_once<edit_operation_Record, S>(
+    return match commit_once<EditOperation, S>(
         rows,
         row,
         WriteCondition.Match(before.version),
@@ -251,8 +251,8 @@ public flow complete<S ~ CasRows<edit_operation_Record>>(rows: S, ticket: Ticket
 }
 
 // Status reads never mutate or authorize an edit; completion is historical fact.
-public flow edit_operations_inspect<S ~ CasRows<edit_operation_Record>>(rows: S, selector: Selector) -> Result<
-    Option<edit_operation_Record>,
+public flow edit_operations_inspect<S ~ CasRows<EditOperation>>(rows: S, selector: Selector) -> Result<
+    Option<EditOperation>,
     string
 > {
     let invalid = selector_error(selector.id, selector.workspace, selector.path);
@@ -292,7 +292,7 @@ public flow edit_operations_inspect<S ~ CasRows<edit_operation_Record>>(rows: S,
     return Ok(Some(before.value));
 }
 
-public flow parent<S ~ FollowupPredecessors>(source: S) -> Result<Parent, string> {
+public flow parent<S ~ FollowupPredecessors>(source: S) -> Result<FollowupParent, string> {
     let work = match source.work() {
         Ok(Some(value)) => value,
         _ => {
@@ -325,7 +325,7 @@ public flow parent<S ~ FollowupPredecessors>(source: S) -> Result<Parent, string
         },
         None() => (),
     }
-    return Ok(Parent {
+    return Ok(FollowupParent {
         work,
         edit,
         check
@@ -349,20 +349,20 @@ flow history_followup_history_error<S ~ PriorChatReader>(source: S, history: Ent
     return "";
 }
 
-flow history_followup_write<S ~ CasRows<history_followup_guard_Record>>(
+flow history_followup_write<S ~ CasRows<FollowupRecord>>(
     source: S,
-    row: history_followup_guard_Record,
+    row: FollowupRecord,
     condition: WriteCondition
 ) -> Result<MemoryVersion, string> {
     let error = historical_followup_invalid(row);
     if error != "" {
         return Err(error);
     }
-    return commit_once<history_followup_guard_Record, S>(source, row, condition, None());
+    return commit_once<FollowupRecord, S>(source, row, condition, None());
 }
 
 public flow history_followup_admit<
-    S ~ CasRows<history_followup_guard_Record> + PriorChatReader
+    S ~ CasRows<FollowupRecord> + PriorChatReader
         + FollowupPredecessors
 >(
     source: S,
@@ -396,7 +396,7 @@ public flow history_followup_admit<
             return Err(problem);
         }
     };
-    let row = history_followup_guard_Record {
+    let row = FollowupRecord {
         format = 1,
         phase = "running",
         id,
@@ -423,7 +423,7 @@ public flow history_followup_admit<
 }
 
 public flow history_followup_claim<
-    S ~ CasRows<history_followup_guard_Record> + PriorChatReader
+    S ~ CasRows<FollowupRecord> + PriorChatReader
         + FollowupPredecessors
 >(source: S, ticket: HistoricalFollowupTicket) -> Result<bool, string> {
     let error = historical_followup_invalid(ticket.record);
@@ -463,9 +463,9 @@ public flow history_followup_claim<
 }
 
 public flow history_followup_finish<
-    S ~ CasRows<history_followup_guard_Record> + PriorChatReader
+    S ~ CasRows<FollowupRecord> + PriorChatReader
         + FollowupPredecessors
->(source: S, ticket: HistoricalFollowupTicket, summary: string, spent: Ledger) -> Result<
+>(source: S, ticket: HistoricalFollowupTicket, summary: string, spent: WorkLedger) -> Result<
     bool,
     string
 > ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
@@ -496,9 +496,9 @@ public flow history_followup_finish<
 }
 
 public flow history_followup_inspect<
-    S ~ CasRows<history_followup_guard_Record>
+    S ~ CasRows<FollowupRecord>
         + FollowupPredecessors
->(source: S) -> Result<Option<history_followup_guard_Record>, string> {
+>(source: S) -> Result<Option<FollowupRecord>, string> {
     let before = match source.read() {
         Ok(value) => value,
         Err(error) => {
@@ -552,20 +552,20 @@ flow history_work_history_error<S ~ PriorChatReader>(source: S, history: Entry) 
     return "";
 }
 
-flow history_work_write<S ~ CasRows<history_work_guard_Record>>(
+flow history_work_write<S ~ CasRows<WorkRecord>>(
     rows: S,
-    row: history_work_guard_Record,
+    row: WorkRecord,
     condition: WriteCondition
 ) -> Result<MemoryVersion, string> {
     let error = historical_work_invalid(row);
     if error != "" {
         return Err(error);
     }
-    return commit_once<history_work_guard_Record, S>(rows, row, condition, None());
+    return commit_once<WorkRecord, S>(rows, row, condition, None());
 }
 
 public flow history_work_admit<
-    S ~ CasRows<history_work_guard_Record>
+    S ~ CasRows<WorkRecord>
         + PriorChatReader
 >(
     source: S,
@@ -588,7 +588,7 @@ public flow history_work_admit<
     if error != "" {
         return Err(error);
     }
-    let row = history_work_guard_Record {
+    let row = WorkRecord {
         format = 1,
         phase = "running",
         id,
@@ -614,7 +614,7 @@ public flow history_work_admit<
 }
 
 public flow history_work_claim<
-    S ~ CasRows<history_work_guard_Record>
+    S ~ CasRows<WorkRecord>
         + PriorChatReader
 >(source: S, ticket: HistoricalWorkTicket) -> Result<bool, string> {
     let error = historical_work_invalid(ticket.record);
@@ -644,9 +644,9 @@ public flow history_work_claim<
 }
 
 public flow history_work_finish<
-    S ~ CasRows<history_work_guard_Record>
+    S ~ CasRows<WorkRecord>
         + PriorChatReader
->(source: S, ticket: HistoricalWorkTicket, summary: string, spent: Ledger) -> Result<
+>(source: S, ticket: HistoricalWorkTicket, summary: string, spent: WorkLedger) -> Result<
     bool,
     string
 > {
@@ -676,7 +676,7 @@ public flow history_work_finish<
     return Ok(true);
 }
 
-public flow chat_available<S ~ CasRows<history_work_guard_Record>>(rows: S) -> Result<bool, string> {
+public flow chat_available<S ~ CasRows<WorkRecord>>(rows: S) -> Result<bool, string> {
     return match rows.read() {
         Ok(None()) => Ok(true),
         Ok(Some(_)) => Err("history-work consumes this session; no chat continuation"),
@@ -685,8 +685,8 @@ public flow chat_available<S ~ CasRows<history_work_guard_Record>>(rows: S) -> R
 }
 
 // Status is data only; it is never a current root observation or a grant.
-public flow history_work_inspect<S ~ CasRows<history_work_guard_Record>>(rows: S) -> Result<
-    Option<history_work_guard_Record>,
+public flow history_work_inspect<S ~ CasRows<WorkRecord>>(rows: S) -> Result<
+    Option<WorkRecord>,
     string
 > {
     let before = match rows.read() {

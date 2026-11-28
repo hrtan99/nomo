@@ -2,8 +2,7 @@ module nomo.adapters.cli.chain_input;
 
 import nomo.adapters.cli.edit_input.{Work, harness_work_args_parse};
 import nomo.domain.editing.selector_error;
-import nomo.domain.sessions.chain.{Selector, policy, turn_caps};
-import nomo.session.work_chain.Caps;
+import nomo.domain.sessions.chain.{Caps, Selector, policy, turn_caps};
 
 public type WorkChainArgsInput = {
     work: Work,

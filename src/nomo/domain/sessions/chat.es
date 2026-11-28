@@ -1,7 +1,8 @@
 module nomo.domain.sessions.chat;
 
-import nomo.core.conversation.Event;
+import nomo.domain.conversation.Event;
 import nomo.domain.harness.chat.{
+    Invocation,
     TurnResult,
     chat_policy_prior_error,
     chat_policy_turn_error,
@@ -20,11 +21,8 @@ import nomo.domain.harness.chat.{
 };
 import nomo.domain.harness.read.question_error;
 import nomo.domain.limits.{event_bytes, history_bytes};
-import nomo.domain.sessions.event_codec.{Policy, event_text_codec_encode, policy_error, redact_text};
+import nomo.domain.sessions.event_codec.{EventFrame, Policy, event_text_codec_encode, policy_error, redact_text};
 import nomo.domain.text.{data_safe, safe};
-import nomo.harness.harness_tool_chat_contract.Invocation;
-import nomo.session.chat_session_contract.Session;
-import nomo.session.recoverable_events.Frame;
 import std.text.len;
 
 public type Reservation = {
@@ -124,9 +122,9 @@ public flow policy(format: i32) -> FormatPolicy {
     };
 }
 
-public flow fresh() -> Session {
+public flow fresh() -> ChatSession {
     let invocation = fresh_invocation();
-    return Session {
+    return ChatSession {
         format = 12,
         phase = "ready",
         invocation = invocation {
@@ -137,9 +135,9 @@ public flow fresh() -> Session {
     };
 }
 
-public flow fresh_events() -> Session {
+public flow fresh_events() -> ChatSession {
     let invocation = session_invocation();
-    return Session {
+    return ChatSession {
         format = 16,
         phase = "ready",
         invocation = invocation {
@@ -150,7 +148,7 @@ public flow fresh_events() -> Session {
     };
 }
 
-public flow fresh_high_input_events() -> Session {
+public flow fresh_high_input_events() -> ChatSession {
     let session = fresh_events();
     return session {
         format = 19,
@@ -180,7 +178,7 @@ flow expanded(value: Invocation) -> Invocation {
     };
 }
 
-public flow chat_session_contract_invalid(value: Session) -> string {
+public flow chat_session_contract_invalid(value: ChatSession) -> string {
     if (value.format < 1 || value.format > 19) || (
         value.phase != "ready" && value.phase != "running"
             && value.phase != "complete"
@@ -306,7 +304,7 @@ public flow chat_session_contract_invalid(value: Session) -> string {
 
 // Upgrade only an already completed legacy event session; charge no new turn
 // until begin() reserves it and retain the old cumulative usage and prior.
-public flow extend(value: Session) -> Result<Session, string> {
+public flow extend(value: ChatSession) -> Result<ChatSession, string> {
     let error = chat_session_contract_invalid(value);
     if error != "" {
         return Err(error);
@@ -331,7 +329,7 @@ public flow extend(value: Session) -> Result<Session, string> {
     return Ok(next);
 }
 
-public flow begin(value: Session, request: string) -> Result<Session, string> {
+public flow begin(value: ChatSession, request: string) -> Result<ChatSession, string> {
     let error = chat_session_contract_invalid(value);
     if error != "" {
         return Err(error);
@@ -376,7 +374,7 @@ public flow begin(value: Session, request: string) -> Result<Session, string> {
     return Ok(next);
 }
 
-public flow complete(value: Session, result: TurnResult) -> Result<Session, string> {
+public flow complete(value: ChatSession, result: TurnResult) -> Result<ChatSession, string> {
     let error = chat_session_contract_invalid(value);
     if error != "" {
         return Err(error);
@@ -466,12 +464,12 @@ public flow complete(value: Session, result: TurnResult) -> Result<Session, stri
 }
 
 public type Advance = {
-    frame: Frame,
+    frame: EventFrame,
     replacements: usize
 };
 
-public flow empty() -> Frame {
-    return Frame {
+public flow empty() -> EventFrame {
+    return EventFrame {
         format = 1,
         turns = 0,
         first_count = 0,
@@ -519,7 +517,7 @@ flow metadata_error(item: Event, policy: Policy) -> string {
 // Structural validation for frames whose texts were produced by encode() in
 // the current call. It deliberately avoids parsing and re-encoding every text;
 // persisted frames still cross the full invalid()/decode() boundary on load.
-public flow shape_error(frame: Frame, policy: Policy) -> string {
+public flow shape_error(frame: EventFrame, policy: Policy) -> string {
     let policy_problem = policy_error(policy);
     if policy_problem != "" {
         return policy_problem;
@@ -562,7 +560,7 @@ public flow shape_error(frame: Frame, policy: Policy) -> string {
     return "";
 }
 
-public flow recoverable_events_invalid(frame: Frame, policy: Policy) -> string {
+public flow recoverable_events_invalid(frame: EventFrame, policy: Policy) -> string {
     let policy_problem = policy_error(policy);
     if policy_problem != "" {
         return policy_problem;
@@ -602,7 +600,10 @@ public flow recoverable_events_invalid(frame: Frame, policy: Policy) -> string {
     return "";
 }
 
-public flow append(before: Frame, turn: i32, input: Array<Event>, policy: Policy) -> Result<Advance, string> {
+public flow append(before: EventFrame, turn: i32, input: Array<Event>, policy: Policy) -> Result<
+    Advance,
+    string
+> {
     let error = recoverable_events_invalid(before, policy);
     if error != "" {
         return Err(error);
@@ -664,7 +665,7 @@ public flow append(before: Frame, turn: i32, input: Array<Event>, policy: Policy
 // Callers use this only with values returned by event_text_codec.encode in the
 // same bounded operation. Avoid the otherwise quadratic MiB-scale cycle of
 // safe/redact/JSON decode/encode before durable large-text externalization.
-public flow append_encoded(before: Frame, turn: i32, input: Array<Event>, policy: Policy) -> Result<
+public flow append_encoded(before: EventFrame, turn: i32, input: Array<Event>, policy: Policy) -> Result<
     Advance,
     string
 > {
@@ -707,7 +708,7 @@ public flow append_encoded(before: Frame, turn: i32, input: Array<Event>, policy
 }
 
 // The first and followup work use the same bounded, redacted event batch.
-public flow work_batch(records: Array<Event>, policy: Policy) -> Result<Frame, string> {
+public flow work_batch(records: Array<Event>, policy: Policy) -> Result<EventFrame, string> {
     if records.len() == 0 || records.len() > 24 {
         return Err("invalid work event batch");
     }
@@ -728,3 +729,45 @@ public flow work_batch(records: Array<Event>, policy: Policy) -> Result<Frame, s
         Err(error) => Err(error)
     };
 }
+
+// Versions 1 and 2 are retained for existing sessions. Version 3 atomically stores
+// the same chat checkpoint together with bounded redacted event metadata.
+public type ChatHistoryFrame = {
+    format: i32,
+    chat: ChatSession,
+    first_count: usize,
+    events: Array<Event>
+};
+
+// Persistent conversation data never carries filesystem authority or consent.
+// An in-flight reservation remains unresolved after a restart; it cannot retry.
+public type ChatSession = {
+    format: i32,
+    phase: string,
+    invocation: Invocation,
+    last_request: string,
+    pending: string
+};
+
+// The opt-in read-only path joins the chat reservation and filtered event batch
+// in one CAS record. Each access must supply the same bound trusted policy.
+// Known-literal filtering is not comprehensive secret detection; the record
+// does not establish workspace identity, grant authority, or support work/check.
+public type RecoverableChatFrame = {
+    format: i32,
+    encoding: string,
+    policy_binding: string,
+    chat: ChatSession,
+    events: EventFrame
+};
+
+// A chat frame keeps the latest selected outcome in Invocation.prior. Before a
+// later turn replaces it, archive that outcome under its completed turn. This
+// avoids accumulating repeated large values in the 1 MiB frame while keeping
+// every completed selected result recoverable.
+public type ChatEvidence = {
+    format: i32,
+    policy_binding: string,
+    turn: i32,
+    text: string
+};

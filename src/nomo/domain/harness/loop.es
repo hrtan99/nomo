@@ -1,7 +1,6 @@
 module nomo.domain.harness.loop;
 
-import nomo.core.conversation.{Event, State};
-import nomo.domain.conversation.{charge, fresh};
+import nomo.domain.conversation.{Event, State, charge, fresh};
 import nomo.domain.limits.{context_bytes, edit_response_bytes, message_bytes, message_frame_bytes, outcome_bytes};
 import nomo.domain.text.{context_json_error, search_literal, text_printable};
 import nomo.domain.wire.{FieldError, decode_fields, json, json_scalar_width};
@@ -585,3 +584,11 @@ public flow bounded_context_error(value: Context) -> string {
     }
     return "";
 }
+
+public type ReadLedger = {
+    steps: i32,
+    calls: i32,
+    tokens: i32,
+    tools: i32,
+    scan: i32
+};

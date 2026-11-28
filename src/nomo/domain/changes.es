@@ -1,6 +1,5 @@
 module nomo.domain.changes;
 
-import nomo.native.mutations.{Journal, SavedPath, Step};
 import std.text.{count, replace_n, rsplit_once};
 
 /// create/write/edit/mkdir/delete/move; unused target/text fields are empty.
@@ -87,3 +86,28 @@ public flow literal_after(original: string, target: string, replacement: string)
     }
     return Ok(replace_n(original, target, replacement, 1));
 }
+
+public type Journal = {
+    id: string,
+    session: string,
+    name: string,
+    call: i64,
+    phase: string,
+    steps: i64,
+    message: string,
+    owner_call: i64,
+    owner_name: string
+};
+
+public type SavedPath = {
+    path: string,
+    before_exists: bool,
+    before: string,
+    after_exists: bool,
+    after: string
+};
+
+public type Step = {
+    phase: string,
+    paths: Array<SavedPath>
+};

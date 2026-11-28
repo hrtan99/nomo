@@ -1,15 +1,11 @@
 module nomo.domain.sessions.chain;
 
-import nomo.domain.editing.{Selector as editing_Selector, binding_error, same_binding, selector_error};
+import nomo.domain.editing.{Binding, Selector as editing_Selector, binding_error, same_binding, selector_error};
 import nomo.domain.harness.loop.{allowed_error, question_error};
-import nomo.domain.harness.work.{Context, context_error};
+import nomo.domain.harness.work.{Context, WorkLedger, context_error};
 import nomo.domain.limits.context_bytes;
-import nomo.domain.sessions.work.{confirm as work_confirm, validate};
+import nomo.domain.sessions.work.{StoredWorkRecord, confirm as work_confirm, validate};
 import nomo.domain.wire.{digest, encode};
-import nomo.harness.harness_work_contract.Ledger;
-import nomo.session.edit_operation.Binding;
-import nomo.session.work_chain.{Caps, Record};
-import nomo.session.work_record.Record as work_record_Record;
 import std.agent.message.Message;
 import std.json.{JsonValue, stringify};
 import std.text.{char_count, from_i32, from_usize, len, parse_i32, split};
@@ -301,7 +297,7 @@ public flow work_chain_validate(row: Record) -> string {
     if chain != "" {
         return chain;
     }
-    if row.region != "nomo.tools.edit_file.EditableRoot" {
+    if row.region != "nomo.application.resources.EditableRoot" {
         return "work-chain region binding mismatch";
     }
     let request = question_error(row.request);
@@ -464,7 +460,7 @@ flow initial_format(
         turn = 1,
         id,
         workspace,
-        region = "nomo.tools.edit_file.EditableRoot",
+        region = "nomo.application.resources.EditableRoot",
         path,
         request,
         allowed,
@@ -626,7 +622,7 @@ public flow linked(parent: Record, parent_version: string, child: Record) -> str
     return "";
 }
 
-public flow publish_partial(row: Record, work: work_record_Record) -> Result<Record, string> {
+public flow publish_partial(row: Record, work: StoredWorkRecord) -> Result<Record, string> {
     let invalid = work_chain_validate(row);
     if invalid != "" {
         return Err(invalid);
@@ -944,7 +940,7 @@ public enum TurnRequest {
 }
 
 public type WorkStop = {
-    state: Ledger,
+    state: WorkLedger,
     error: string
 };
 
@@ -956,4 +952,55 @@ public enum WorkOutcome {
 public type CapturedShow = {
     row: Record,
     journal: Option<CapturedJournal>
+};
+
+// A recorded choice does not prove the side-effect outcome, grant authority,
+// release a budget, alter the original record, or authorize a retry.
+public type RecoveryDecision = {
+    format: i32,
+    id: string,
+    target: string,
+    choice: string
+};
+
+public type Caps = {
+    steps: i32,
+    calls: i32,
+    generation: i32,
+    native_tokens: i32,
+    read_tools: i32,
+    scan: i32,
+    edit_reads: i32,
+    edit_read_bytes: i32,
+    atomic: i32,
+    atomic_bytes: i32
+};
+
+public type Record = {
+    format: i32,
+    phase: string,
+    chain: string,
+    turn: i32,
+    id: string,
+    workspace: string,
+    region: string,
+    path: string,
+    request: string,
+    allowed: Array<string>,
+    parent_id: string,
+    parent_version: string,
+    parent_digest: string,
+    maximum: Caps,
+    available: Caps,
+    remaining: Caps,
+    reserved: Caps,
+    work: Option<StoredWorkRecord>
+};
+
+public type EditJournalRecord = {
+    format: i32,
+    chain: string,
+    turn: i32,
+    phase: string,
+    binding: Binding
 };

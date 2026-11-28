@@ -16,15 +16,13 @@ import nomo.application.editing.ports.{
 };
 import nomo.application.harness.ports.{DiagnosticOutput, HarnessProgress};
 import nomo.application.harness.work.complete;
+import nomo.application.resources.{EditableRoot, ReadOnlyRoot};
 import nomo.application.sessions.ports.EditJournal;
-import nomo.core.conversation.Event;
-import nomo.domain.editing.{Confirmed, Prepared, Selector, bind, render_edit, selector_error, validate};
+import nomo.domain.conversation.Event;
+import nomo.domain.editing.{Binding, Confirmed, Prepared, Selector, bind, render_edit, selector_error, validate};
 import nomo.domain.limits.edit_json_bytes;
 import nomo.domain.sessions.work.WorkRequest;
 import nomo.domain.wire.{ascii_json_with, encode};
-import nomo.session.edit_operation.Binding;
-import nomo.tools.edit_file.EditableRoot;
-import nomo.tools.workspace.ReadOnlyRoot;
 import std.effects.Fs;
 import std.fs.IOError as fs_IOError;
 import std.io.IOError;

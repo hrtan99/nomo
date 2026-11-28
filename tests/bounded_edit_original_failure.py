@@ -20,7 +20,7 @@ profile = "fixture"
 default_profile = "fixture"
 [runtime.profiles.fixture]
 boundary_policy = "bounded-edit-fixture"
-[runtime.profiles.fixture.filesystem.regions."nomo.tools.edit_file.EditableRoot"]
+[runtime.profiles.fixture.filesystem.regions."nomo.application.resources.EditableRoot"]
 root = "fixture"
 read = true
 write = true
@@ -51,7 +51,7 @@ def main():
             assert isinstance(value,str) and value.startswith('[') and value.endswith(']')
             return set(value[1:-1].split(', ')) if value!='[]' else set()
         actions=parse_list(row['requested_actions']);escaping=parse_list(row['escaping_effects'])
-        assert {'Fs.read[nomo.tools.edit_file.EditableRoot]','Fs.stat[nomo.tools.edit_file.EditableRoot]'} <= actions
+        assert {'Fs.read[nomo.application.resources.EditableRoot]','Fs.stat[nomo.application.resources.EditableRoot]'} <= actions
         assert 'Error<std.fs.IOError>' in escaping and not any('ReadLimitError' in effect for effect in escaping)
         out['effects_sha256']=sha(evidence/'effects.stdout.bin')
         for name,expected in CASES.items():

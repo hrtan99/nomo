@@ -4,7 +4,7 @@ import std.io.println;
 import std.text.split;
 import std.json.parse;
 import std.agent.message.Message;
-import nomo.core.conversation.Event;
+import nomo.domain.conversation.Event;
 import nomo.domain.harness.loop.Context;
 import nomo.domain.context.Measurement;
 import nomo.domain.context.Refusal;

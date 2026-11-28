@@ -1,12 +1,9 @@
 module nomo.domain.sessions.state;
 
-import nomo.core.conversation.{Event, State};
-import nomo.domain.conversation.{capacity_error, fresh, stop};
+import nomo.domain.conversation.{Event, State, capacity_error, fresh, stop};
 import nomo.domain.limits.{event_bytes, history_bytes};
 import nomo.domain.sessions.event_codec.Bundle;
 import nomo.domain.text.{input_error, text_printable};
-import nomo.session.session_state.{Caps, Ledger, Operation, Reference, Snapshot};
-import nomo.session.store_record.Record;
 import std.collections.Map;
 import std.text.{char_count, from_usize, trim};
 
@@ -64,7 +61,7 @@ public flow plan(saved: Snapshot, requested: Request, generation: i32, input: st
 // Same typed record shape, explicit non-checkpoint phase. The immutable demo claim
 // binds the predecessor ID; this row binds generation 0 and the distinct next key.
 // Reserved spending is a high-water mark, never measured completed work.
-public flow continuing(admitted: Admission, next_save: string) -> Record {
+public flow continuing(admitted: Admission, next_save: string) -> MetadataRecord {
     let prior = admitted.prior;
     let reserved = Snapshot {
         format = 1,
@@ -463,11 +460,11 @@ public flow with_events(saved: Snapshot, events: Array<Event>) -> Snapshot {
     };
 }
 
-public flow pending(saved: Snapshot, save_id: string) -> Record {
+public flow pending(saved: Snapshot, save_id: string) -> MetadataRecord {
     let descriptors = saved.history.events.iter().map(event => event {
         text = ""
     }).collect();
-    return Record {
+    return MetadataRecord {
         format = 1,
         phase = "pending",
         save_id,
@@ -476,7 +473,7 @@ public flow pending(saved: Snapshot, save_id: string) -> Record {
     };
 }
 
-public flow published(row: Record) -> Record {
+public flow published(row: MetadataRecord) -> MetadataRecord {
     return row {
         phase = "published"
     };
@@ -492,7 +489,7 @@ public flow bundle(saved: Snapshot, save_id: string) -> Bundle {
     };
 }
 
-public flow restore(row: Record, body: Bundle) -> Result<Snapshot, string> {
+public flow restore(row: MetadataRecord, body: Bundle) -> Result<Snapshot, string> {
     if row.format != 1 || (row.phase != "pending" && row.phase != "published") {
         return Err("invalid metadata format or phase");
     }
@@ -691,3 +688,69 @@ public flow successor(state: State, prior: Projection, reserved: i32, status: i3
     };
     return mapped(observed, seed, prior.history.events.len());
 }
+
+public type DemoClaim = {
+    format: i32,
+    phase: string,
+    session_id: string,
+    save_id: string,
+    binding: string,
+    maximum: i32,
+    budget: i32
+};
+
+// Draft typed application data, not a codec, storage version or dispatch authority.
+public type Caps = {
+    steps: i32,
+    turn_steps: i32,
+    attempts: i32,
+    tokens: i32,
+    scan_bytes: i32
+};
+
+public type Ledger = {
+    attempts: i32,
+    tokens: i32,
+    scan_bytes: i32,
+    step_unit: string,
+    attempt_unit: string,
+    token_unit: string,
+    scan_unit: string
+};
+
+public type Operation = {
+    id: string,
+    status: string,
+    attempts: i32,
+    tokens: i32,
+    scan_bytes: i32
+};
+
+public type Reference = {
+    operation: string,
+    phase: string
+};
+
+public type Snapshot = {
+    format: i32,
+    session_id: string,
+    generation: i32,
+    mode: string,
+    binding: string,
+    lifecycle: string,
+    history: State,
+    references: Array<Reference>,
+    operations: Array<Operation>,
+    original_caps: Caps,
+    current_caps: Caps,
+    ledger: Ledger
+};
+
+// Application metadata only: event bodies belong to the single Session bundle.
+public type MetadataRecord = {
+    format: i32,
+    phase: string,
+    save_id: string,
+    session_key: string,
+    snapshot: Snapshot
+};

@@ -34,15 +34,7 @@ import nomo.adapters.model.read.{
     unresolved
 };
 import nomo.adapters.model.text.{delegation_child, delegation_main, main_stage};
-import nomo.adapters.model.tool_loop.{
-    LegacyActions,
-    MultiModel,
-    StandardModel,
-    UnicodeActions,
-    WorkModel,
-    old_infer,
-    work_infer
-};
+import nomo.adapters.model.tool_loop.{LegacyActions, MultiModel, StandardModel, UnicodeActions, WorkModel, old_infer, work_infer};
 import nomo.application.harness.chat.run_mode;
 import nomo.application.harness.ports.{
     ChatChildStage,
@@ -80,16 +72,13 @@ import nomo.application.harness.text.{
     text_delegation_run,
     turn_controller
 };
+import nomo.application.resources.ReadOnlyRoot;
 import nomo.application.workspace.ports.{FileReader, LiteralSearcher, ReadTools};
-import nomo.core.conversation.{Event, State};
-import nomo.domain.conversation.TextTurn;
-import nomo.domain.harness.chat.{Context, TurnResult};
+import nomo.domain.conversation.{Event, State, TextTurn};
+import nomo.domain.harness.chat.{Context, Invocation, TurnResult};
 import nomo.domain.harness.delegation.{Job, Outcome, admit, settle};
-import nomo.domain.harness.loop.{Limits, LoopMode, LoopTurn, Session, default_limits};
+import nomo.domain.harness.loop.{Limits, LoopMode, LoopTurn, ReadLedger, Session, default_limits};
 import nomo.domain.harness.read.read_fresh;
-import nomo.harness.harness_tool_chat_contract.Invocation;
-import nomo.harness.harness_tool_contract.Ledger;
-import nomo.tools.workspace.ReadOnlyRoot;
 import std.io.println;
 
 // Exactly one synchronous child invocation; no retry, sibling or recursive route.
@@ -138,7 +127,7 @@ public flow chain_child_turn(task: string, allowed: Array<string>, selected: Sta
 public flow ascii_read_run_context_with(
     request: string,
     allowed: Array<string>,
-    initial: Ledger,
+    initial: ReadLedger,
     prefix: string,
     require_tool: bool,
     compatible_plan: bool,
@@ -163,7 +152,7 @@ public flow ascii_read_run_context_with(
 public flow ascii_read_run_context(
     request: string,
     allowed: Array<string>,
-    initial: Ledger,
+    initial: ReadLedger,
     prefix: string,
     require_tool: bool,
     compatible_plan: bool,
@@ -279,7 +268,7 @@ public flow expanded_work_child_turn(
 public flow unicode_read_run_context_with(
     request: string,
     allowed: Array<string>,
-    initial: Ledger,
+    initial: ReadLedger,
     prefix: string,
     require_tool: bool,
     compatible_plan: bool,
@@ -306,7 +295,7 @@ public flow unicode_read_run_context_with(
 public flow run_expanded_context(
     request: string,
     allowed: Array<string>,
-    initial: Ledger,
+    initial: ReadLedger,
     wide: bool,
     high_input: bool
 ) -> Result<Report, Failure> {
@@ -333,7 +322,7 @@ public flow run_expanded_context(
 public flow unicode_read_run_context(
     request: string,
     allowed: Array<string>,
-    initial: Ledger,
+    initial: ReadLedger,
     prefix: string,
     require_tool: bool,
     compatible_plan: bool,

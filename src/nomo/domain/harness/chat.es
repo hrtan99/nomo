@@ -1,15 +1,7 @@
 module nomo.domain.harness.chat;
 
-import nomo.core.conversation.{Event, State};
-import nomo.domain.conversation.{add, fresh};
-import nomo.domain.harness.loop.{
-    Context as loop_Context,
-    Session,
-    allowed_error,
-    candidate_error,
-    context_error,
-    question_error
-};
+import nomo.domain.conversation.{Event, State, add, fresh};
+import nomo.domain.harness.loop.{Context as loop_Context, ReadLedger, Session, allowed_error, candidate_error, context_error, question_error};
 import nomo.domain.harness.read.{
     Observed,
     bounded as read_bounded,
@@ -23,22 +15,20 @@ import nomo.domain.harness.read.{
 };
 import nomo.domain.limits.{child_answer_bytes, context_bytes, message_bytes, outcome_bytes};
 import nomo.domain.text.{bounded, context_json_error, data_safe, text_printable};
-import nomo.harness.harness_tool_chat_contract.{Invocation, Previous};
-import nomo.harness.harness_tool_contract.Ledger;
 import std.agent.message.Message;
 import std.json.JsonValue;
 import std.text.{char_count, starts_with};
 
 // Policies account configured reservations. They never dispatch a model or retry.
 public spec ChatBudgetPolicy {
-    flow maximum(self) -> Ledger ![];
+    flow maximum(self) -> ReadLedger ![];
     flow turn_limit(self) -> i32 ![];
     flow validate_invocation(self, value: Invocation) -> string ![Error<IndexError>, Error<BudgetExceeded>];
-    flow reserve_stage(self, value: Ledger, call: bool) -> Result<Ledger, string> ![];
-    flow settle_child(self, value: Ledger, child: Session) -> Result<Ledger, string> ![];
-    flow combine(self, previous: Ledger, local: Ledger) -> Result<Ledger, string> ![];
-    flow pending(self, phase: string) -> Ledger ![];
-    flow child_pending(self) -> Ledger ![];
+    flow reserve_stage(self, value: ReadLedger, call: bool) -> Result<ReadLedger, string> ![];
+    flow settle_child(self, value: ReadLedger, child: Session) -> Result<ReadLedger, string> ![];
+    flow combine(self, previous: ReadLedger, local: ReadLedger) -> Result<ReadLedger, string> ![];
+    flow pending(self, phase: string) -> ReadLedger ![];
+    flow child_pending(self) -> ReadLedger ![];
     flow parent_tokens(self) -> i32 ![];
     flow child_action_tokens(self) -> i32 ![];
     flow child_final_tokens(self) -> i32 ![];
@@ -65,7 +55,7 @@ public type MultiBudget = {
     parent: i32,
     resilient: bool,
     reasoning: bool,
-    ceiling: Ledger
+    ceiling: ReadLedger
 };
 
 public enum SelectedBudget {
@@ -74,7 +64,7 @@ public enum SelectedBudget {
 }
 
 impl SingleBudget ~ ChatBudgetPolicy {
-    flow maximum(self) -> Ledger ![] {
+    flow maximum(self) -> ReadLedger ![] {
         return match self.mode {
             SingleMode.Extended => extended_maximum(),
             SingleMode.Persistent => session_maximum(),
@@ -99,15 +89,15 @@ impl SingleBudget ~ ChatBudgetPolicy {
         };
     }
 
-    flow reserve_stage(self, value: Ledger, call: bool) -> Result<Ledger, string> ![] {
+    flow reserve_stage(self, value: ReadLedger, call: bool) -> Result<ReadLedger, string> ![] {
         return bump(value, call);
     }
 
-    flow settle_child(self, value: Ledger, child: Session) -> Result<Ledger, string> ![] {
+    flow settle_child(self, value: ReadLedger, child: Session) -> Result<ReadLedger, string> ![] {
         return settle(value, child);
     }
 
-    flow combine(self, previous: Ledger, local: Ledger) -> Result<Ledger, string> ![] {
+    flow combine(self, previous: ReadLedger, local: ReadLedger) -> Result<ReadLedger, string> ![] {
         return match self.mode {
             SingleMode.Extended => extended_combine(previous, local),
             SingleMode.Persistent => session_combine(previous, local),
@@ -115,12 +105,12 @@ impl SingleBudget ~ ChatBudgetPolicy {
         };
     }
 
-    flow pending(self, phase: string) -> Ledger ![] {
+    flow pending(self, phase: string) -> ReadLedger ![] {
         return pending(phase, false, 2048, 2048, 2048);
     }
 
-    flow child_pending(self) -> Ledger ![] {
-        return Ledger {
+    flow child_pending(self) -> ReadLedger ![] {
+        return ReadLedger {
             steps = 3,
             calls = 2,
             tokens = 4096,
@@ -163,7 +153,7 @@ impl SingleBudget ~ ChatBudgetPolicy {
 }
 
 impl MultiBudget ~ ChatBudgetPolicy {
-    flow maximum(self) -> Ledger ![] {
+    flow maximum(self) -> ReadLedger ![] {
         return self.ceiling;
     }
 
@@ -175,24 +165,24 @@ impl MultiBudget ~ ChatBudgetPolicy {
         return multi_turn_error(value, self.turns);
     }
 
-    flow reserve_stage(self, value: Ledger, call: bool) -> Result<Ledger, string> ![] {
+    flow reserve_stage(self, value: ReadLedger, call: bool) -> Result<ReadLedger, string> ![] {
         return multi_bump(value, call, self.parent);
     }
 
-    flow settle_child(self, value: Ledger, child: Session) -> Result<Ledger, string> ![] {
+    flow settle_child(self, value: ReadLedger, child: Session) -> Result<ReadLedger, string> ![] {
         return multi_settle(value, child, self.parent, self.resilient, self.reasoning);
     }
 
-    flow combine(self, previous: Ledger, local: Ledger) -> Result<Ledger, string> ![] {
+    flow combine(self, previous: ReadLedger, local: ReadLedger) -> Result<ReadLedger, string> ![] {
         return multi_combine(previous, local, self.ceiling);
     }
 
-    flow pending(self, phase: string) -> Ledger ![] {
+    flow pending(self, phase: string) -> ReadLedger ![] {
         return pending(phase, true, self.parent, self.child_action_tokens(), self.child_final_tokens());
     }
 
-    flow child_pending(self) -> Ledger ![] {
-        return Ledger {
+    flow child_pending(self) -> ReadLedger ![] {
+        return ReadLedger {
             steps = 7,
             calls = 4,
             tokens = self.child_final_tokens() + self.child_action_tokens() * 3,
@@ -250,7 +240,7 @@ impl MultiBudget ~ ChatBudgetPolicy {
     }
 }
 
-flow pending(phase: string, multi: bool, parent: i32, child_action: i32, child_final: i32) -> Ledger {
+flow pending(phase: string, multi: bool, parent: i32, child_action: i32, child_final: i32) -> ReadLedger {
     let calls = if phase == "aggregate" {
         0
     } else {
@@ -286,7 +276,7 @@ flow pending(phase: string, multi: bool, parent: i32, child_action: i32, child_f
             0
         }
     };
-    return Ledger {
+    return ReadLedger {
         steps,
         calls,
         tokens = if calls == 0 {
@@ -432,7 +422,7 @@ public type Completed = {
 
 public type LocalTurn = {
     status: i32,
-    usage: Ledger,
+    usage: ReadLedger,
     selected: Previous,
     resolved: bool,
     completed: Option<Completed>
@@ -445,8 +435,8 @@ public type TurnResult = {
     completed: Option<Completed>
 };
 
-public flow default_maximum() -> Ledger {
-    return Ledger {
+public flow default_maximum() -> ReadLedger {
+    return ReadLedger {
         steps = 14,
         calls = 8,
         tokens = 16384,
@@ -691,7 +681,7 @@ public flow chat_inspect_turn(
     return inspect_turn_shared(child, status, request, task, allowed, prior, false);
 }
 
-public flow invocation_error(state: Ledger) -> string {
+public flow invocation_error(state: ReadLedger) -> string {
     if state.steps < 0 || state.steps > 14 || state.calls < 0 || state.calls > 8 || state.tokens < 0
         || state.tokens > 16384 || state.tools < 0 || state.tools > 2 || state.scan < 0 || state.scan > 32768 {
         return "invalid invocation ledger";
@@ -706,7 +696,7 @@ public flow invocation_error(state: Ledger) -> string {
     return "";
 }
 
-public flow admission_error(state: Ledger, maximum: Ledger) -> string {
+public flow admission_error(state: ReadLedger, maximum: ReadLedger) -> string {
     let invalid = invocation_error(state);
     if invalid != "" {
         return invalid;
@@ -761,7 +751,7 @@ public flow chat_turn_error(invocation: Invocation) -> string {
     return turn_error_shared(invocation, chat_prior_error(invocation.prior));
 }
 
-public flow combine(state: Ledger, usage: Ledger, maximum: Ledger) -> Result<Ledger, string> {
+public flow combine(state: ReadLedger, usage: ReadLedger, maximum: ReadLedger) -> Result<ReadLedger, string> {
     let invalid = admission_error(state, maximum);
     if invalid != "" {
         return Err(invalid);
@@ -770,7 +760,7 @@ public flow combine(state: Ledger, usage: Ledger, maximum: Ledger) -> Result<Led
     if used != "" {
         return Err(used);
     }
-    let result = Ledger {
+    let result = ReadLedger {
         steps = state.steps + usage.steps,
         calls = state.calls + usage.calls,
         tokens = state.tokens + usage.tokens,
@@ -821,8 +811,8 @@ public flow chat_policy_turn_error(invocation: Invocation) -> string {
 
 // The opt-in four-turn budget is separate from the legacy two-turn contract.
 // Amounts are reservations in application accounting, not measured usage.
-public flow extended_maximum() -> Ledger {
-    return Ledger {
+public flow extended_maximum() -> ReadLedger {
+    return ReadLedger {
         steps = 28,
         calls = 16,
         tokens = 32768,
@@ -840,11 +830,11 @@ public flow extended_invocation() -> Invocation {
     };
 }
 
-public flow is_extended(maximum: Ledger) -> bool {
+public flow is_extended(maximum: ReadLedger) -> bool {
     return maximum == extended_maximum();
 }
 
-flow extended_ledger_error(value: Ledger) -> string {
+flow extended_ledger_error(value: ReadLedger) -> string {
     if value.steps < 0 || value.steps > 28 || value.calls < 0 || value.calls > 16 || value.tokens < 0
         || value.tokens > 32768 || value.tools < 0 || value.tools > 4 || value.scan < 0 || value.scan > 65536 {
         return "invalid extended invocation ledger";
@@ -859,7 +849,7 @@ flow extended_ledger_error(value: Ledger) -> string {
     return "";
 }
 
-public flow extended_admission_error(value: Ledger) -> string {
+public flow extended_admission_error(value: ReadLedger) -> string {
     let invalid = extended_ledger_error(value);
     if invalid != "" {
         return invalid;
@@ -910,7 +900,7 @@ public flow extended_turn_error(invocation: Invocation) -> string {
     return "";
 }
 
-public flow extended_combine(previous: Ledger, local: Ledger) -> Result<Ledger, string> {
+public flow extended_combine(previous: ReadLedger, local: ReadLedger) -> Result<ReadLedger, string> {
     let invalid = extended_admission_error(previous);
     if invalid != "" {
         return Err(invalid);
@@ -919,7 +909,7 @@ public flow extended_combine(previous: Ledger, local: Ledger) -> Result<Ledger, 
     if bad_local != "" {
         return Err(bad_local);
     }
-    let value = Ledger {
+    let value = ReadLedger {
         steps = previous.steps + local.steps,
         calls = previous.calls + local.calls,
         tokens = previous.tokens + local.tokens,
@@ -935,8 +925,8 @@ public flow extended_combine(previous: Ledger, local: Ledger) -> Result<Ledger, 
 
 // Persistent event sessions reserve a bounded series of turns without
 // resetting any already charged usage.
-public flow session_maximum() -> Ledger {
-    return Ledger {
+public flow session_maximum() -> ReadLedger {
+    return ReadLedger {
         steps = 224,
         calls = 128,
         tokens = 262144,
@@ -983,12 +973,12 @@ public flow session_turn_error(value: Invocation) -> string {
     return "";
 }
 
-public flow session_combine(previous: Ledger, local: Ledger) -> Result<Ledger, string> {
+public flow session_combine(previous: ReadLedger, local: ReadLedger) -> Result<ReadLedger, string> {
     let error = read_ledger_error(local);
     if error != "" {
         return Err(error);
     }
-    let value = Ledger {
+    let value = ReadLedger {
         steps = previous.steps + local.steps,
         calls = previous.calls + local.calls,
         tokens = previous.tokens + local.tokens,
@@ -1187,8 +1177,8 @@ public flow inspect_multi_turn(
 }
 
 // Separate reservations preserve the meaning of existing session records.
-public flow multi_maximum(turns: i32) -> Ledger {
-    return Ledger {
+public flow multi_maximum(turns: i32) -> ReadLedger {
+    return ReadLedger {
         steps = turns * 11,
         calls = turns * 6,
         tokens = turns * 20480,
@@ -1198,8 +1188,8 @@ public flow multi_maximum(turns: i32) -> Ledger {
 }
 
 // A new reservation covers two 4096-token parent calls; legacy records retain their allowance.
-public flow multi_wide_maximum(turns: i32) -> Ledger {
-    return Ledger {
+public flow multi_wide_maximum(turns: i32) -> ReadLedger {
+    return ReadLedger {
         steps = turns * 11,
         calls = turns * 6,
         tokens = turns * 24576,
@@ -1209,8 +1199,8 @@ public flow multi_wide_maximum(turns: i32) -> Ledger {
 }
 
 // New main stages reserve 131072 output tokens each; child calls stay separate.
-public flow multi_large_maximum(turns: i32) -> Ledger {
-    return Ledger {
+public flow multi_large_maximum(turns: i32) -> ReadLedger {
+    return ReadLedger {
         steps = turns * 11,
         calls = turns * 6,
         tokens = turns * 278528,
@@ -1221,8 +1211,8 @@ public flow multi_large_maximum(turns: i32) -> Ledger {
 
 // Format 16 keeps three 4096-token child actions but gives its final child
 // response the same 131072-token reasoning-safe cap as each parent stage.
-public flow multi_resilient_maximum(turns: i32) -> Ledger {
-    return Ledger {
+public flow multi_resilient_maximum(turns: i32) -> ReadLedger {
+    return ReadLedger {
         steps = turns * 11,
         calls = turns * 6,
         tokens = turns * 405504,
@@ -1234,8 +1224,8 @@ public flow multi_resilient_maximum(turns: i32) -> Ledger {
 // Explicit high-input sessions keep the large parent context but reserve only
 // 8192 tokens for each parent and 4096 for each child model call. This leaves
 // substantially more of a provider context window available to saved history.
-public flow multi_input_maximum(turns: i32) -> Ledger {
-    return Ledger {
+public flow multi_input_maximum(turns: i32) -> ReadLedger {
+    return ReadLedger {
         steps = turns * 11,
         calls = turns * 6,
         tokens = turns * 32768,
@@ -1246,8 +1236,8 @@ public flow multi_input_maximum(turns: i32) -> Ledger {
 
 // Format 18 preserves the high-input context while giving every child model
 // stage enough generation space for reasoning before its bounded protocol reply.
-public flow multi_input_reasoning_maximum(turns: i32) -> Ledger {
-    return Ledger {
+public flow multi_input_reasoning_maximum(turns: i32) -> ReadLedger {
+    return ReadLedger {
         steps = turns * 11,
         calls = turns * 6,
         tokens = turns * 81920,
@@ -1256,8 +1246,8 @@ public flow multi_input_reasoning_maximum(turns: i32) -> Ledger {
     };
 }
 
-public flow multi_full_maximum(turns: i32) -> Ledger {
-    return Ledger {
+public flow multi_full_maximum(turns: i32) -> ReadLedger {
+    return ReadLedger {
         steps = turns * 11,
         calls = turns * 6,
         tokens = turns * 786432,
@@ -1266,7 +1256,7 @@ public flow multi_full_maximum(turns: i32) -> Ledger {
     };
 }
 
-public flow multi_error(value: Ledger) -> string {
+public flow multi_error(value: ReadLedger) -> string {
     if value.steps < 0 || value.steps > 11 || value.calls < 0 || value.calls > 6 || value.tools < 0
         || value.tools > 3 || (
         value.tokens < value.calls * 2048 || value.tokens > value.calls * 131072
@@ -1278,7 +1268,7 @@ public flow multi_error(value: Ledger) -> string {
     return "";
 }
 
-public flow multi_bump(value: Ledger, call: bool, parent: i32) -> Result<Ledger, string> {
+public flow multi_bump(value: ReadLedger, call: bool, parent: i32) -> Result<ReadLedger, string> {
     if multi_error(value) != "" {
         return Err("invalid multi-step ledger");
     }
@@ -1302,11 +1292,11 @@ public flow multi_bump(value: Ledger, call: bool, parent: i32) -> Result<Ledger,
     return Ok(next);
 }
 
-public flow multi_settle(value: Ledger, child: Session, parent: i32, resilient: bool, reasoning: bool) -> Result<
-    Ledger,
+public flow multi_settle(value: ReadLedger, child: Session, parent: i32, resilient: bool, reasoning: bool) -> Result<
+    ReadLedger,
     string
 > {
-    let expected = Ledger {
+    let expected = ReadLedger {
         steps = 2,
         calls = 1,
         tokens = parent,
@@ -1392,7 +1382,7 @@ public flow multi_settle(value: Ledger, child: Session, parent: i32, resilient: 
         }
     };
     return Ok(
-        Ledger {
+        ReadLedger {
             steps = 2 + calls + tools,
             calls = 1 + calls,
             tokens = parent + generation,
@@ -1416,14 +1406,14 @@ public flow multi_turn_error(value: Invocation, maximum: i32) -> string {
         }
         return "";
     }
-    let legacy = Ledger {
+    let legacy = ReadLedger {
         steps = maximum * 11,
         calls = maximum * 6,
         tokens = maximum * 12288,
         tools = maximum * 3,
         scan = maximum * 49152
     };
-    let previous = Ledger {
+    let previous = ReadLedger {
         steps = maximum * 11,
         calls = maximum * 6,
         tokens = maximum * 12288,
@@ -1527,12 +1517,15 @@ public flow multi_turn_error(value: Invocation, maximum: i32) -> string {
     return "";
 }
 
-public flow multi_combine(previous: Ledger, local: Ledger, maximum: Ledger) -> Result<Ledger, string> {
+public flow multi_combine(previous: ReadLedger, local: ReadLedger, maximum: ReadLedger) -> Result<
+    ReadLedger,
+    string
+> {
     let error = multi_error(local);
     if error != "" {
         return Err(error);
     }
-    let value = Ledger {
+    let value = ReadLedger {
         steps = previous.steps + local.steps,
         calls = previous.calls + local.calls,
         tokens = previous.tokens + local.tokens,
@@ -1545,3 +1538,19 @@ public flow multi_combine(previous: Ledger, local: Ledger, maximum: Ledger) -> R
     }
     return Ok(value);
 }
+
+// Only validated successful selected data crosses a turn boundary.
+public type Previous = {
+    task: string,
+    result: string,
+    tool: string,
+    outcome: string,
+    answer: string
+};
+
+public type Invocation = {
+    usage: ReadLedger,
+    maximum: ReadLedger,
+    admitted: i32,
+    prior: Previous
+};

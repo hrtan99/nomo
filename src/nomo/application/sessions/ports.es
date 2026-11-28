@@ -1,24 +1,12 @@
 module nomo.application.sessions.ports;
 
 import nomo.application.editing.ports.Ticket as ports_Ticket;
-import nomo.core.conversation.Event;
-import nomo.domain.editing.Selector;
+import nomo.domain.conversation.Event;
+import nomo.domain.editing.{Binding, EditOperation, Selector};
 import nomo.domain.harness.chat.TurnResult;
-import nomo.domain.sessions.chain.{
-    CapturedShow,
-    ObservationPass,
-    ObservedRow,
-    Snapshot as chain_Snapshot,
-    TurnRequest,
-    WorkOutcome
-};
-import nomo.domain.sessions.work.{CheckFacts, CheckResult, Facts};
-import nomo.session.chat_session_contract.Session;
-import nomo.session.edit_operation.{Binding, Record as edit_operation_Record};
-import nomo.session.history_check_store.Record as history_check_store_Record;
-import nomo.session.history_followup_guard.Record as history_followup_guard_Record;
-import nomo.session.history_work_guard.Record as history_work_guard_Record;
-import nomo.session.work_chain.Record;
+import nomo.domain.sessions.chain.{CapturedShow, ObservationPass, ObservedRow, Record, Snapshot as chain_Snapshot, TurnRequest, WorkOutcome};
+import nomo.domain.sessions.chat.ChatSession;
+import nomo.domain.sessions.work.{CheckFacts, CheckRecord, CheckResult, Facts, FollowupRecord, WorkRecord};
 import std.memory.{
     MemoryEntry,
     MemoryVersion,
@@ -143,17 +131,17 @@ public spec WorkFactsReader {
 }
 
 public spec FollowupPredecessors {
-    flow work(self) -> Result<Option<history_work_guard_Record>, string> ![
+    flow work(self) -> Result<Option<WorkRecord>, string> ![
         Memory,
         Error<StorageError>,
         Error<IndexError>,
         Error<BudgetExceeded>
     ];
     flow edit(self, id: string, workspace: string, path: string) -> Result<
-        Option<edit_operation_Record>,
+        Option<EditOperation>,
         string
     > ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>];
-    flow check(self) -> Result<Option<history_check_store_Record>, string> ![
+    flow check(self) -> Result<Option<CheckRecord>, string> ![
         Memory,
         Error<StorageError>,
         Error<IndexError>,
@@ -184,7 +172,7 @@ public spec CasRows<Row> {
 
 // Storage layouts and admission proofs stay in their concrete adapters.
 public spec CheckAccess {
-    flow work(self) -> Result<Option<history_work_guard_Record>, string> ![
+    flow work(self) -> Result<Option<WorkRecord>, string> ![
         Memory,
         Error<StorageError>,
         Error<IndexError>,
@@ -217,7 +205,7 @@ public spec EditJournal {
         Error<IndexError>,
         Error<BudgetExceeded>
     ];
-    flow inspect(self, selector: Selector) -> Result<Option<edit_operation_Record>, string> ![
+    flow inspect(self, selector: Selector) -> Result<Option<EditOperation>, string> ![
         Memory,
         Error<StorageError>,
         Error<IndexError>,
@@ -226,12 +214,12 @@ public spec EditJournal {
 }
 
 public spec HistoryCheckRows {
-    flow read(self) -> Option<MemoryEntry<string, history_check_store_Record>> ![
+    flow read(self) -> Option<MemoryEntry<string, CheckRecord>> ![
         Memory,
         Error<StorageError>,
         Error<IndexError>
     ];
-    flow write(self, row: history_check_store_Record, condition: WriteCondition) -> Result<
+    flow write(self, row: CheckRecord, condition: WriteCondition) -> Result<
         MemoryVersion,
         string
     > ![Memory, Error<StorageError>, Error<IndexError>];
@@ -275,7 +263,7 @@ public type Submission = {
 
 public type Entry = {
     key: string,
-    value: Session,
+    value: ChatSession,
     version: MemoryVersion,
     first_count: usize,
     events: Array<Event>,
@@ -284,13 +272,13 @@ public type Entry = {
 };
 
 public type HistoricalFollowupTicket = {
-    record: history_followup_guard_Record,
+    record: FollowupRecord,
     version: MemoryVersion,
     history: Entry
 };
 
 public type HistoricalWorkTicket = {
-    record: history_work_guard_Record,
+    record: WorkRecord,
     version: MemoryVersion,
     history: Entry
 };

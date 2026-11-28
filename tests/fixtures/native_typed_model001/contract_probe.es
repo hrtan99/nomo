@@ -10,7 +10,7 @@ import nomo.domain.harness.typed_work.project_context;
 import nomo.domain.harness.work.Context;
 import nomo.domain.harness.work.Evidence;
 import nomo.domain.harness.edit.Context as EditContext;
-import nomo.harness.harness_tool_contract.Ledger as ReadLedger;
+import nomo.domain.harness.loop.ReadLedger;
 
 type Check = { label: string, passed: bool };
 flow slash() -> string { return std.text.from_char('\\'); }

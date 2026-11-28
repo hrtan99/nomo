@@ -1,8 +1,9 @@
 module nomo.domain.harness.read;
 
-import nomo.core.conversation.Event;
+import nomo.domain.conversation.Event;
 import nomo.domain.harness.loop.{
     Action,
+    ReadLedger,
     Session,
     allowed_error,
     candidate_error,
@@ -28,7 +29,6 @@ import nomo.domain.limits.{
 };
 import nomo.domain.text.{bounded as text_bounded, context_json_error, data_safe, text_printable};
 import nomo.domain.wire.{FieldError, decode_fields, encode, string_fields};
-import nomo.harness.harness_tool_contract.Ledger as harness_tool_contract_Ledger;
 import std.agent.message.Message;
 import std.json.JsonValue;
 import std.text.{char_count, from_char, from_i32, len, starts_with, trim};
@@ -301,13 +301,13 @@ public type Observed = {
     outcome: string
 };
 
-public flow numbers(state: harness_tool_contract_Ledger) -> string {
+public flow numbers(state: ReadLedger) -> string {
     return "steps=" + from_i32(state.steps) + " calls=" + from_i32(state.calls) + " tokens="
         + from_i32(state.tokens) + " tools=" + from_i32(state.tools) + " scan=" + from_i32(state.scan);
 }
 
-public flow read_fresh() -> harness_tool_contract_Ledger {
-    return harness_tool_contract_Ledger {
+public flow read_fresh() -> ReadLedger {
+    return ReadLedger {
         steps = 0,
         calls = 0,
         tokens = 0,
@@ -316,7 +316,7 @@ public flow read_fresh() -> harness_tool_contract_Ledger {
     };
 }
 
-public flow read_ledger_error(state: harness_tool_contract_Ledger) -> string {
+public flow read_ledger_error(state: ReadLedger) -> string {
     if state.steps < 0 || state.steps > 7 || state.calls < 0 || state.calls > 4 || state.tokens < 0
         || state.tokens > 8192 || state.tools < 0 || state.tools > 1 || state.scan < 0 || state.scan > 16384 {
         return "invalid shared tool ledger";
@@ -331,8 +331,8 @@ public flow read_ledger_error(state: harness_tool_contract_Ledger) -> string {
     return "";
 }
 
-public flow bump(state: harness_tool_contract_Ledger, call: bool) -> Result<
-    harness_tool_contract_Ledger,
+public flow bump(state: ReadLedger, call: bool) -> Result<
+    ReadLedger,
     string
 > {
     let invalid = read_ledger_error(state);
@@ -406,8 +406,8 @@ flow child_ledger_error(child: Session, work: bool) -> string {
     return "";
 }
 
-public flow settle(state: harness_tool_contract_Ledger, child: Session) -> Result<
-    harness_tool_contract_Ledger,
+public flow settle(state: ReadLedger, child: Session) -> Result<
+    ReadLedger,
     string
 > {
     let invalid = read_ledger_error(state);
@@ -432,7 +432,7 @@ public flow settle(state: harness_tool_contract_Ledger, child: Session) -> Resul
         0
     };
     return Ok(
-        harness_tool_contract_Ledger {
+        ReadLedger {
             steps = 2 + child.history.spent,
             calls = 1 + calls,
             tokens = (1 + calls) * 2048,
@@ -448,7 +448,7 @@ public flow settle(state: harness_tool_contract_Ledger, child: Session) -> Resul
 
 // Expanded work has one 2048-token parent plan, two 4096-token child
 // attempts, and one 2048-token parent aggregate. Legacy ledgers remain valid.
-public flow work_error(state: harness_tool_contract_Ledger) -> string {
+public flow work_error(state: ReadLedger) -> string {
     if read_ledger_error(state) == "" {
         return "";
     }
@@ -488,8 +488,8 @@ public flow work_error(state: harness_tool_contract_Ledger) -> string {
     };
 }
 
-public flow wide_bump(state: harness_tool_contract_Ledger, call: bool) -> Result<
-    harness_tool_contract_Ledger,
+public flow wide_bump(state: ReadLedger, call: bool) -> Result<
+    ReadLedger,
     string
 > {
     let error = work_error(state);
@@ -522,8 +522,8 @@ public flow wide_bump(state: harness_tool_contract_Ledger, call: bool) -> Result
     );
 }
 
-public flow work_bump(state: harness_tool_contract_Ledger, call: bool) -> Result<
-    harness_tool_contract_Ledger,
+public flow work_bump(state: ReadLedger, call: bool) -> Result<
+    ReadLedger,
     string
 > {
     let error = work_error(state);
@@ -559,7 +559,7 @@ public flow work_bump(state: harness_tool_contract_Ledger, call: bool) -> Result
     return Ok(next);
 }
 
-public flow high_input_error(state: harness_tool_contract_Ledger) -> string {
+public flow high_input_error(state: ReadLedger) -> string {
     if state.steps < 0 || state.steps > 7 || state.calls < 0 || state.calls > 4
         || state.tokens != state.calls * 131072 || state.tools < 0 || state.tools > 1
         || (state.scan != state.tools * 65540 && !(state.tools == 1 && compatible_scan_i32(state.scan)))
@@ -569,8 +569,8 @@ public flow high_input_error(state: harness_tool_contract_Ledger) -> string {
     return "";
 }
 
-public flow high_input_bump(state: harness_tool_contract_Ledger, call: bool) -> Result<
-    harness_tool_contract_Ledger,
+public flow high_input_bump(state: ReadLedger, call: bool) -> Result<
+    ReadLedger,
     string
 > {
     let error = high_input_error(state);
@@ -603,11 +603,11 @@ public flow high_input_bump(state: harness_tool_contract_Ledger, call: bool) -> 
     return Ok(next);
 }
 
-public flow high_input_settle(state: harness_tool_contract_Ledger, child: Session) -> Result<
-    harness_tool_contract_Ledger,
+public flow high_input_settle(state: ReadLedger, child: Session) -> Result<
+    ReadLedger,
     string
 > {
-    let expected = harness_tool_contract_Ledger {
+    let expected = ReadLedger {
         steps = 2,
         calls = 1,
         tokens = 131072,
@@ -618,7 +618,7 @@ public flow high_input_settle(state: harness_tool_contract_Ledger, child: Sessio
         || child.tools != 1 || !compatible_scan_bytes(child.scan) {
         return Err("invalid high-input child ledger");
     }
-    let value = harness_tool_contract_Ledger {
+    let value = ReadLedger {
         steps = 5,
         calls = 3,
         tokens = 393216,
@@ -632,14 +632,14 @@ public flow high_input_settle(state: harness_tool_contract_Ledger, child: Sessio
     return Ok(value);
 }
 
-public flow work_settle(state: harness_tool_contract_Ledger, child: Session) -> Result<
-    harness_tool_contract_Ledger,
+public flow work_settle(state: ReadLedger, child: Session) -> Result<
+    ReadLedger,
     string
 > {
     if child.tokens == child.calls * 2048 {
         return settle(state, child);
     }
-    let expected = harness_tool_contract_Ledger {
+    let expected = ReadLedger {
         steps = 2,
         calls = 1,
         tokens = if state.tokens == 4096 {
@@ -682,7 +682,7 @@ public flow work_settle(state: harness_tool_contract_Ledger, child: Session) -> 
     } else {
         0
     };
-    let value = harness_tool_contract_Ledger {
+    let value = ReadLedger {
         steps = 2 + child.history.spent,
         calls = 1 + calls,
         tokens = state.tokens + if child.tokens == 135168 {

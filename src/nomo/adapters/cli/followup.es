@@ -37,15 +37,13 @@ import nomo.adapters.storage.work_admission.{
 import nomo.adapters.storage.work_history.{EventWorkTimeline, LegacyWorkTimeline, snapshot};
 import nomo.application.editing.ports.{Run, Ticket};
 import nomo.application.editing.workflow.work_controller_execute;
+import nomo.application.resources.{EditableRoot, PolicyRoot, ReadOnlyRoot};
 import nomo.bootstrap.work.{HistoryFollowupStages, HistoryWork, PriorWork};
-import nomo.core.conversation.Event;
+import nomo.domain.conversation.Event;
+import nomo.domain.harness.chat.Previous;
+import nomo.domain.sessions.chat.RecoverableChatFrame;
 import nomo.domain.sessions.event_codec.{Policy, event_text_codec_decode};
 import nomo.domain.sessions.work.{CheckOutput, WorkFacts, WorkRequest, selection, summary_source};
-import nomo.harness.harness_tool_chat_contract.Previous;
-import nomo.session.event_policy.PolicyRoot;
-import nomo.session.recoverable_chat_store.Frame;
-import nomo.tools.edit_file.EditableRoot;
-import nomo.tools.workspace.ReadOnlyRoot;
 import std.effects.Fs;
 import std.fs.IOError as fs_IOError;
 import std.io.{IOError, println};
@@ -240,7 +238,7 @@ flow more(
     prior_request: string,
     previous: Previous,
     conversation: Array<Event>,
-    chat: MemoryEntry<string, Frame>,
+    chat: MemoryEntry<string, RecoverableChatFrame>,
     first_id: string,
     check_digest: string,
     policy: Policy,

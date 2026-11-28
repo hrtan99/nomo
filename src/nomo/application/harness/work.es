@@ -1,13 +1,7 @@
 module nomo.application.harness.work;
 
 import nomo.application.editing.ports.EditOriginal;
-import nomo.application.harness.ports.{
-    DiagnosticOutput,
-    HarnessProgress,
-    LegacyEditStages,
-    LegacyStringStages,
-    WorkModelStages
-};
+import nomo.application.harness.ports.{DiagnosticOutput, HarnessProgress, LegacyEditStages, LegacyStringStages, WorkModelStages};
 import nomo.application.harness.read.{AsciiContext, UnicodeContext, run_context_policy};
 import nomo.domain.editing.{Confirmed, prepare_original, prepare_original_legacy};
 import nomo.domain.harness.edit.{
@@ -31,6 +25,7 @@ import nomo.domain.harness.work.{
     HistoricalWorkBudget,
     LargeWorkBudget,
     WorkBudgetPolicy,
+    WorkLedger,
     bump_edit_mode,
     collect,
     context_error,
@@ -43,16 +38,15 @@ import nomo.domain.harness.work.{
 import nomo.domain.limits.{file_bytes, scan_i32};
 import nomo.domain.sessions.work.{Completed, Failure, Pending, Summary, WorkRequest};
 import nomo.domain.wire.json;
-import nomo.harness.harness_work_contract.Ledger;
 import std.text.{from_i32, from_usize};
 
 // Stage observations are an application port.  Entry points decide how to
 // render or inspect them without coupling this controller to Console effects.
 public effect HarnessWorkStage {
-    action write(name: string, state: Ledger) -> unit;
+    action write(name: string, state: WorkLedger) -> unit;
 }
 
-flow failed(state: Ledger, error: string) -> Result<Pending, Failure> {
+flow failed(state: WorkLedger, error: string) -> Result<Pending, Failure> {
     return Err(Failure {
         state,
         error
@@ -77,14 +71,14 @@ flow display(prefix: string, text: string) -> unit {
     }
 }
 
-public flow historical_ledger_text(state: Ledger) -> string {
+public flow historical_ledger_text(state: WorkLedger) -> string {
     return "LEDGER work steps=" + from_i32(state.read.steps + state.edit.steps) + "/13 calls="
         + from_i32(state.read.calls + state.edit.calls) + "/7 generation_allowance="
         + from_i32(state.read.tokens + state.edit.tokens) + "/47104 historical_native_allowance="
         + from_i32(native_tokens(state)) + "/196608";
 }
 
-public flow expanded_ledger_text(state: Ledger, wide: bool, high_input: bool) -> string {
+public flow expanded_ledger_text(state: WorkLedger, wide: bool, high_input: bool) -> string {
     return "LEDGER work steps=" + from_i32(state.read.steps + state.edit.steps) + "/13 calls="
         + from_i32(state.read.calls + state.edit.calls) + "/7 generation_allowance="
         + from_i32(state.read.tokens + state.edit.tokens) + (if high_input {
@@ -98,7 +92,7 @@ public flow expanded_ledger_text(state: Ledger, wide: bool, high_input: bool) ->
     }) + "; configured allowances are not measured usage";
 }
 
-public flow historical_stage(name: string, state: Ledger) -> unit {
+public flow historical_stage(name: string, state: WorkLedger) -> unit {
     progress("STAGE " + name);
     progress(
         historical_ledger_text(state)
@@ -106,12 +100,12 @@ public flow historical_stage(name: string, state: Ledger) -> unit {
     );
 }
 
-public flow expanded_stage(name: string, state: Ledger, wide: bool, high_input: bool) -> unit {
+public flow expanded_stage(name: string, state: WorkLedger, wide: bool, high_input: bool) -> unit {
     progress("STAGE " + name);
     progress(expanded_ledger_text(state, wide, high_input));
 }
 
-public flow chain_stage(name: string, state: Ledger, user_context: bool) -> unit {
+public flow chain_stage(name: string, state: WorkLedger, user_context: bool) -> unit {
     progress("STAGE " + name);
     progress(historical_ledger_text(state) + if user_context {
         "; per-turn configured allowances are not measured usage; user-context work cannot continue or resume"

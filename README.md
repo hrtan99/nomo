@@ -108,13 +108,38 @@ The default switch does not mean all thirteen architecture tasks are accepted.
 
 Source modules now follow capability boundaries within `domain`, `application`,
 `adapters` and `bootstrap`: Harness controllers occupy five files, CLI families
-seventeen, model adapters seven, and assembly three. The first consolidation has
-163 files in 27 subdirectories, including ten existing owner prototypes and 49
-identity-only compatibility files. Those identities remain until their explicit
-storage/root migration is accepted; the conditional final layout is 115 files.
-The extra first-stage file preserves `ArchivedJob`: a real old-writer/new-reader
-check rejected its planned move with `schema_mismatch`.
-See the [consolidation receipt](examples/native-project/file-consolidation-20261128.json).
+seventeen, model adapters seven, and assembly three. The completed layout has
+112 files, including seven retained v4 prototype
+modules. The 52 old compatibility files and their pinned manifest are removed;
+resource markers live in `application/resources.es`. Prototypes remain outside
+`nomo.main`'s import graph. `config/architecture.json` enforces the current layers,
+import resolution, cycles and assembly policy.
+
+Moving nominal types changes their official Memory schema identity. For an
+existing native 0.24.13 database, stop the old Nomo and its background jobs, then
+run the explicit migration into a new directory:
+
+```sh
+./scripts/nomo-migrate-native --from native-02413 /absolute/old/conversations.sqlite3 /absolute/new-directory
+# After migration reports completion:
+NOMO_NATIVE_STATE=/absolute/new-directory/state ./scripts/nomo /absolute/project
+```
+
+The migration reads with the original types, converts directly to the new types,
+and uses the official new codec and Memory writes. It retains all records,
+budgets, reservations, unknown outcomes and linked IDs, plus the original database
+and receipts. Editor/job filesystem objects are copied with their metadata.
+Historical binding and opaque version strings stay historical; fresh destination
+versions are observed through new writes. Pending work requires fresh root/version
+observations and approval rather than replaying an old approval or command.
+The original live state and selectors remain unchanged until you select the new
+state directory yourself. The frozen old reader is an explicit one-time migration
+entry under `tests/fixtures/state_relocation`, outside the product graph.
+
+See the [consolidation receipt](examples/native-project/file-consolidation-20261128.json)
+the [compatibility removal receipt](examples/native-project/compatibility-removal-20261128.json),
+the [compatibility removal receipt](examples/native-project/compatibility-removal-20261128.json),
+and the [relocation migration probe](tests/state_relocation_probe.py).
 
 ## Development
 
