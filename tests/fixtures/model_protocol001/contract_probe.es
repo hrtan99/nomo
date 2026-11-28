@@ -1,10 +1,14 @@
 module app.contract_probe;
 
 import std.io.println;
-import std.text.{contains, char_count as len, split};
-import nomo.core.text.printable;
-import nomo.harness.harness_model_contract.{decode_plan, decode_read_plan};
-import nomo.harness.model_plan_diagnostic.returned_text;
+import std.text.contains;
+import std.text.char_count as len;
+import std.text.split;
+import nomo.domain.text.text_printable as printable;
+import nomo.domain.harness.read.text_decode_plan as decode_plan;
+import nomo.domain.harness.read.decode_read_plan;
+
+import nomo.domain.harness.loop.returned_text;
 
 type Check = { label: string, passed: bool };
 flow slash() -> string { return std.text.from_char('\\'); }

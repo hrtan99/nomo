@@ -45,7 +45,7 @@ def contracts():
 
 
 def actual_cases():
-    example = 'src/nomo/session/work_record.es'
+    example = 'src/nomo/domain/sessions/work.es'
     deep = 'a/b/c/d/e/f/g/input.txt'
     other = 'a/b/c/d/e/f/g/other.txt'
     return [saved.work.cases.case('nested_example_read', path=example, allowed=[example], context_files={example:'blue'}),

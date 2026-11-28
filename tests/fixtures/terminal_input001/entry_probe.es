@@ -2,23 +2,32 @@ module app.terminal_input_probe;
 
 import std.io.println;
 import std.text.from_i32;
-import std.collections.len as count;
 import std.io.IOError as ConsoleError;
 import std.fs.IOError as FileError;
 import std.effects.Fs;
-import nomo.tools.workspace.ReadOnlyRoot;
-import nomo.tools.edit_file.EditableRoot;
-import nomo.entry.terminal_entry.run as terminal;
-import nomo.entry.terminal_entry.run_once as terminal_once;
-import nomo.entry.terminal_entry.{run_with_operations, run_once_with_operations};
-import nomo.session.work_chain_usecase.{WorkRequest, ContinueRequest, TurnRequest, WorkOutcome, WorkStop, CapturedShow, TerminalWork, TerminalRead, work};
-import nomo.session.work_chain.{turn_caps, initial};
-import nomo.tools.edit_contract.Selector;
-import nomo.tools.edit_encoding.json;
-import nomo.harness.harness_work_contract.Ledger;
-import nomo.harness.harness_tool_contract.Ledger as ReadLedger;
-import nomo.harness.harness_edit_contract.fresh as edit_fresh;
-import nomo.entry.work_chain_entry.present_outcome;
+import nomo.application.resources.ReadOnlyRoot;
+import nomo.application.resources.EditableRoot;
+import nomo.adapters.cli.terminal.run as terminal;
+import nomo.adapters.cli.terminal.run_once as terminal_once;
+import nomo.adapters.cli.terminal.run_with_operations;
+import nomo.adapters.cli.terminal.run_once_with_operations;
+import nomo.domain.sessions.chain.WorkRequest;
+import nomo.domain.sessions.chain.ContinueRequest;
+import nomo.domain.sessions.chain.TurnRequest;
+import nomo.domain.sessions.chain.WorkOutcome;
+import nomo.domain.sessions.chain.WorkStop;
+import nomo.domain.sessions.chain.CapturedShow;
+import nomo.application.sessions.ports.TerminalWork;
+import nomo.application.sessions.ports.TerminalRead;
+import nomo.application.sessions.chain.work;
+import nomo.domain.sessions.chain.turn_caps;
+import nomo.domain.sessions.chain.initial;
+import nomo.domain.editing.Selector;
+import nomo.domain.wire.json;
+import nomo.domain.harness.work.WorkLedger;
+import nomo.domain.harness.loop.ReadLedger;
+import nomo.domain.harness.edit.fresh as edit_fresh;
+import nomo.adapters.cli.chains.present_outcome;
 
 // Calls the actual entry without replacing its controller or Console actions.
 // The broad row acknowledges the entry's existing static contract; the test
@@ -38,10 +47,10 @@ public flow once(args: Array<string>) -> i32 ![Console, Memory, Approval, Fs.rea
 
 // Deterministic source handlers; fake Completed does not establish durability.
 flow encoded(fields: Array<string>) -> string {
-    return match json(fields) { Ok(value) => value, Err(error) => { abort(error); } };
+    return match json(fields) { Ok(value) => value, Err(error) => abort(error), };
 }
 flow stopped_value() -> WorkOutcome {
-    let state = Ledger { read = ReadLedger { steps = 2, calls = 1, tokens = 2048, tools = 0, scan = 0 }, edit = edit_fresh() };
+    let state = WorkLedger { read = ReadLedger { steps = 2, calls = 1, tokens = 2048, tools = 0, scan = 0 }, edit = edit_fresh() };
     return WorkOutcome.Stopped(WorkStop { state = state, error = "v2 work-chain commit unknown; admission retained, no retry" });
 }
 flow fake_work(mode: string, request: TurnRequest) -> WorkOutcome {
@@ -62,7 +71,7 @@ flow fake_show(mode: string, selected: Selector) -> Result<Option<CapturedShow>,
     println("READ_PORT " + encoded([selected.id, selected.workspace, selected.path]));
     if mode == "read-fail" { return Err("bounded read refused"); }
     if mode == "captured" {
-        let row = match initial(selected.id, selected.workspace, selected.path, "captured only", ["context.txt", "other.txt"], turn_caps()) { Ok(value) => value, Err(error) => { abort(error); } };
+        let row = match initial(selected.id, selected.workspace, selected.path, "captured only", ["context.txt", "other.txt"], turn_caps()) { Ok(value) => value, Err(error) => abort(error), };
         return Ok(Some(CapturedShow { row = row, journal = None() }));
     }
     return Ok(None());
@@ -74,11 +83,11 @@ flow fake_latest(mode: string, workspace: string, path: string) -> Result<string
 }
 public flow typed(args: Array<string>) -> i32 ![Console, Error<IndexError>, Error<ConsoleError>] {
     let mode = args[0]; var selected: Array<string> = []; var index: usize = 1;
-    while index < count(args) limit Iterations(20) { selected = selected.push(args[index]); index = index + 1; }
-    let result = handle { if mode == "once" || mode == "once-stop" || mode == "once-missing" { run_once_with_operations(selected) } else { run_with_operations(selected) } } with {
-        TerminalWork.execute(request) => { resume fake_work(if mode == "once-stop" { "stop" } else { mode }, request); }
-        TerminalRead.show(selector) => { resume fake_show(mode, selector); }
-        TerminalRead.latest(workspace, path) => { resume fake_latest(mode, workspace, path); }
+    while index < args.len() limit Iterations(20) { selected = selected.push(args[index]); index = index + 1; }
+    let result = handle if mode == "once" || mode == "once-stop" || mode == "once-missing" { run_once_with_operations(selected) } else { run_with_operations(selected) } with {
+        TerminalWork.execute(request) => fake_work(if mode == "once-stop" { "stop" } else { mode }, request);
+        TerminalRead.show(selector) => fake_show(mode, selector);
+        TerminalRead.latest(workspace, path) => fake_latest(mode, workspace, path);
     };
     return returned(result);
 }

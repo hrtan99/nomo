@@ -1,126 +1,124 @@
-#!/usr/bin/env python3
-"""Start a workspace session, or resume one by ID or workspace binding."""
-import argparse
-import importlib.util
-import os
-from pathlib import Path
-import subprocess
-import sys
+#!/usr/bin/env bash
+# Environment-only launcher; Etas owns commands, sessions, tools and recovery.
+set -euo pipefail
 
-ROOT = Path(__file__).resolve().parent.parent
-spec = importlib.util.spec_from_file_location('session_registry', ROOT/'scripts/nomo-session-id.py')
-registry = importlib.util.module_from_spec(spec); spec.loader.exec_module(registry)
+task_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+if [[ "${1:-}" == --help || "${1:-}" == -h ]]; then
+  cat <<'HELP'
+Usage: nomo [PROJECT_DIRECTORY | --root DIRECTORY] [OPTIONS]
 
+--new, --id ID, --resume [ID], --latest, --title TITLE
+--projects, --open [FOLDER], --sessions [--all], --history, --events, --status
+--import FILE, --export FILE, --once PROMPT, --check PROGRAM [ARG ...]
 
-def private_dir(path, create):
-    if not path.is_absolute() or path.is_symlink():
-        raise ValueError('state directory must be absolute and not a symlink')
-    if create:
-        path.mkdir(mode=0o700, parents=True, exist_ok=True)
-    base, fd = registry.registry(str(path))
-    os.close(fd)
-    return base
+Launch the Etas application. PROJECT_DIRECTORY defaults to cwd.
+Set MINIMAX_API_KEY for the configured model endpoint. Native state defaults
+to $XDG_STATE_HOME/nomo/native (or ~/.local/state/nomo/native).
+NOMO_NATIVE_STATE and NOMO_NATIVE_TRACE_ROOT select state and trace directories.
+Inside Nomo, /help lists the commands implemented by Etas.
+Ctrl+P then Ctrl+Q detaches the terminal while Etas and its jobs stay running.
+Run the same command without startup options to reconnect. /quit shuts down Etas.
+See NATIVE_MIGRATION.md for current runtime limitations and old-state migration.
+HELP
+  exit 0
+fi
 
-
-def state_paths(resume, workspace):
-    default = Path(os.environ.get('XDG_STATE_HOME') or Path.home()/'.local/state')/'nomo'
-    selected = Path(os.environ.get('NOMO_STATE_DIR') or default)
-    candidate = selected.resolve()
-    if workspace is not None and (candidate == workspace or candidate in workspace.parents or workspace in candidate.parents):
-        raise ValueError('state and workspace must not overlap')
-    base = private_dir(selected, not resume)
-    sessions = private_dir(base/'sessions', not resume)
-    policy = base/'policy'
-    if not resume and not policy.exists() and not policy.is_symlink():
-        if any(sessions.iterdir()):
-            raise ValueError('policy missing for existing sessions; inspect state')
-        policy.mkdir(mode=0o700)
-        fd = os.open(policy/'policy.json', os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
-        try:
-            data = b'{"format":1,"literals":["__NOMO_NO_SECRET_FILTER_CONFIGURED__"]}\n'
-            if os.write(fd, data) != len(data):
-                raise OSError('event policy write incomplete')
-            os.fsync(fd)
-        finally:
-            os.close(fd)
-        subprocess.run([sys.executable, str(ROOT/'scripts/nomo-event-policy.py'), 'init', '--directory', str(policy)], check=True)
-    policy = private_dir(policy, False)
-    return sessions, policy
-
-
-def legacy_main():
-    parser = argparse.ArgumentParser(description=__doc__, epilog='Set NOMO_STATE_DIR to select a private state directory. --latest resumes the most recently used compatible session bound to the current workspace. Explicit historical IDs remain usable but are not automatically bound. This revision uses ETAS 0.13.5; historical sessions retain their recorded budget versions.')
-    parser.add_argument('--root', default=os.getcwd(), help='workspace directory (default: current directory)')
-    selection = parser.add_mutually_exclusive_group()
-    selection.add_argument('--id', help='resume this exact session ID')
-    selection.add_argument('--latest', action='store_true', help='resume the latest compatible session for this workspace')
-    parser.add_argument('--status', action='store_true', help='inspect the selected session offline')
-    parser.add_argument('--events', action='store_true', help='include recorded events with --status')
-    parser.add_argument('--once', help='run one read-only question')
-    parser.add_argument('--high-input', action='store_true', help='new sessions only: full history with 131072 output tokens per model call')
-    scope = parser.add_mutually_exclusive_group()
-    scope.add_argument('--page', type=int, choices=range(8), help='initial discovery page, 0..7 (default: 0)')
-    scope.add_argument('--allow', help='read only these one to four comma-separated relative files')
-    parser.add_argument('--check', nargs=argparse.REMAINDER, help='offline command after a confirmed edit')
-    args = parser.parse_args()
-    if args.events and not args.status: parser.error('--events requires --status')
-    if args.high_input and (args.id is not None or args.latest or args.status): parser.error('--high-input creates a new session and cannot be combined with --id, --latest or --status')
-    if args.status and ((args.id is None and not args.latest) or args.once is not None or args.page is not None or args.allow is not None or args.check is not None):
-        parser.error('--status requires --id or --latest and accepts no question, scope or check')
-    if args.check == []:
-        parser.error('--check requires a command')
-    try:
-        os.umask(0o077)
-        if args.allow is not None and (len(args.allow.encode('utf-8')) > 515 or '*' in args.allow or not 1 <= len(args.allow.split(',')) <= 4 or not all(args.allow.split(','))):
-            raise ValueError('--allow requires one to four explicit relative files')
-        workspace = None if args.status and not args.latest else Path(args.root)
-        if workspace is not None:
-            if not workspace.is_dir() or workspace.is_symlink():
-                raise ValueError('workspace must be an existing directory with a non-symlink leaf')
-            workspace = workspace.resolve(strict=True)
-        sessions, policy = state_paths(args.id is not None or args.latest, workspace)
-        selected_id=args.id
-        if args.latest:
-            identity=registry.workspace_identity(str(workspace))
-            _,fd=registry.registry(str(sessions))
-            try:selected_id=registry.latest_compatible(fd,sessions,identity,str(policy))
-            finally:os.close(fd)
-            print('Selected latest compatible workspace session: '+selected_id,flush=True)
-        if args.status:
-            command = [str(ROOT/'scripts/nomo-read.sh'), 'session-id', 'status', '--sessions-dir', str(sessions), '--id', selected_id, '--events-policy-dir', str(policy), *(['--events'] if args.events else [])]
-        else:
-            print('Saved event text may contain sensitive data; no secret filter is configured by default.', flush=True)
-            print(('Discovery is bounded and does not interpret .gitignore' if args.allow is None else 'Only explicitly selected files are in scope') + '; new sessions bind the canonical workspace path and directory identity.', flush=True)
-            command = [str(ROOT/'scripts/nomo-read.sh'), 'session-chat', '--sessions-dir', str(sessions),
-                       '--id='+selected_id if selected_id is not None else '--new', '--root', str(workspace),
-                       *(['--discover', '--page', str(args.page or 0)] if args.allow is None else ['--allow='+args.allow]),
-                       '--events-policy-dir', str(policy)]
-            if args.once is not None:
-                command += ['--once', args.once]
-            if args.high_input:
-                command += ['--high-input']
-            if args.check is not None:
-                command += ['--check', *args.check]
-        os.execv(command[0], command)
-    except (OSError, ValueError, subprocess.CalledProcessError) as error:
-        print('REFUSED ' + str(error), file=sys.stderr)
-        return 1
-
-
-def main():
-    if '--legacy' in sys.argv or any(value == '--allow' or value.startswith('--allow=') or value == '--page' for value in sys.argv[1:]):
-        if '--legacy' in sys.argv:
-            sys.argv.remove('--legacy')
-        return legacy_main()
-    from nomo_project_chat import main as project_main
-    return project_main()
-
-
-if __name__ == '__main__':
-    from nomo_terminal import install
-    install()
-    try:
-        raise SystemExit(main())
-    except (OSError, ValueError, RuntimeError) as error:
-        print('ERROR ' + str(error), file=sys.stderr)
-        raise SystemExit(1)
+task_project="$PWD"
+if [[ $# -gt 0 && "$1" != --* ]]; then
+  task_project="$1"
+  shift
+fi
+task_arguments=()
+task_offline=false
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --root|--workspace)
+      task_project="$2"
+      shift 2
+      ;;
+    --root=*|--workspace=*) task_project="${1#*=}"; shift ;;
+    --once)
+      task_offline=true
+      task_arguments+=("$1")
+      shift
+      if [[ $# -gt 0 ]]; then task_arguments+=("$1"); shift; fi
+      ;;
+    --id|--title|--import)
+      task_arguments+=("$1")
+      shift
+      if [[ $# -gt 0 ]]; then task_arguments+=("$1"); shift; fi
+      ;;
+    --export)
+      task_offline=true
+      task_arguments+=("$1")
+      shift
+      if [[ $# -gt 0 ]]; then task_arguments+=("$1"); shift; fi
+      ;;
+    --projects|--sessions|--history|--events|--status|--export=*|--once=*)
+      task_offline=true
+      task_arguments+=("$1")
+      shift
+      ;;
+    --check|--check=*) task_arguments+=("$@"); break ;;
+    *) task_arguments+=("$1"); shift ;;
+  esac
+done
+set -- ${task_arguments[@]+"${task_arguments[@]}"}
+umask 077
+task_state="${NOMO_NATIVE_STATE:-${NOMO_STATE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/nomo}/native}"
+mkdir -p -- "$task_state"
+export NOMO_NATIVE_STATE="$(cd -- "$task_state" && pwd -P)"
+task_traces="${NOMO_NATIVE_TRACE_ROOT:-$NOMO_NATIVE_STATE/traces}"
+mkdir -p -- "$task_traces"
+task_traces="$(cd -- "$task_traces" && pwd -P)"
+export NOMO_NATIVE_UID="$(id -u)" NOMO_NATIVE_GID="$(id -g)"
+while true; do
+  if [[ "$task_project" == "~/"* ]]; then task_project="$HOME/${task_project:2}"; fi
+  export NOMO_NATIVE_WORKSPACE="$(cd -- "$task_project" && pwd -P)"
+  export NOMO_NATIVE_EVIDENCE="$(mktemp -d "$task_traces/run-XXXXXXXX")"
+  export NOMO_NATIVE_CONTROL_DIR="$NOMO_NATIVE_EVIDENCE/control"
+  mkdir -- "$NOMO_NATIVE_CONTROL_DIR"
+  set +e
+  task_command=(docker compose --project-name nomo-native --env-file /dev/null \
+    --file "$task_root/compose.yaml" \
+    --file "$task_root/config/etas-02413-official-compose.yaml" \
+    --file "$task_root/config/local-tryout-compose.yaml" \
+    --file "$task_root/config/nomo-native-launch-compose.yaml" \
+    --file "$task_root/config/nomo-native-compose.yaml" \
+    run --rm --no-deps --pull never --tty=true dev \
+    /home/nomo/.cargo/bin/etas run /workspace \
+    --flow native_project --profile nomo-native --allow-effects \
+    --max-tool-rounds "${NOMO_NATIVE_MAX_TOOL_ROUNDS:-256}" \
+    --trace-out /native-evidence/trace.json \
+    --args --workspace "$NOMO_NATIVE_WORKSPACE" "$@")
+  if [[ "$task_offline" == true ]]; then
+    # Startup inspection/export is a separate native invocation; it never
+    # injects input into a resident terminal or its pending approval prompt.
+    if [[ ! -t 0 || ! -t 1 ]]; then
+      for task_index in "${!task_command[@]}"; do
+        if [[ "${task_command[$task_index]}" == --tty=true ]]; then task_command[$task_index]=--tty=false; fi
+      done
+    fi
+    "${task_command[@]}"
+    task_status=$?
+    if [[ "$task_status" -eq 0 && -f "$NOMO_NATIVE_CONTROL_DIR/next-project" ]]; then
+      mv -- "$NOMO_NATIVE_CONTROL_DIR/next-project" "$NOMO_NATIVE_EVIDENCE/next-project"
+      task_status=$?
+    fi
+  else
+    python3 "$task_root/scripts/native-worker-transport.py" "${task_command[@]}"
+    task_status=$?
+  fi
+  set -e
+  if [[ "$task_status" -ne 0 ]]; then exit "$task_status"; fi
+  if [[ ! -f "$NOMO_NATIVE_EVIDENCE/next-project" ]]; then exit 0; fi
+  # The application chose the folder and argv. Decode its private transport
+  # record, preserving argument boundaries without terminal input injection.
+  python3 "$task_root/scripts/native-worker-transport.py" --handoff "$NOMO_NATIVE_EVIDENCE/next-project" > "$NOMO_NATIVE_EVIDENCE/launch.argv"
+  task_first=true
+  set --
+  while IFS= read -r -d '' task_value; do
+    if [[ "$task_first" == true ]]; then task_project="$task_value"; task_first=false;
+    else set -- "$@" "$task_value"; fi
+  done < "$NOMO_NATIVE_EVIDENCE/launch.argv"
+done

@@ -1,5 +1,6 @@
 module app.callable_negative;
-import nomo.model.text_stage.{Context, TextModelStage};
+import nomo.application.harness.ports.Context;
+import nomo.application.harness.ports.TextModelStage;
 flow bad(context: Context) -> string ![Error<string>] ~ TextModelStage {
     if context.request != "" { perform Error<string>.raise("intentional outside-bound error"); }
     return "unused";

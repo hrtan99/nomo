@@ -3,12 +3,21 @@ module app.read_tools_probe;
 import std.io.println;
 import std.fs.Region;
 import std.text.split;
-import std.collections.len as count;
-import nomo.core.conversation.{Event, State};
-import nomo.model.model_tool_contract.{Session, Limits, Context, LoopTurn, fresh_loop};
-import nomo.agent.model_tool_controller.run_loop_controller;
-import nomo.harness.legacy_string_stages.LegacyChildModel;
-import nomo.tools.read_contract.{Outcome, outcome, display, ReadTools, NomoRead, NomoSearch};
+import nomo.domain.conversation.Event;
+import nomo.domain.conversation.State;
+import nomo.domain.harness.loop.Session;
+import nomo.domain.harness.loop.Limits;
+import nomo.domain.harness.loop.LoopTurn;
+import nomo.domain.harness.loop.fresh_loop;
+import nomo.domain.harness.loop.Context;
+import nomo.bootstrap.harness.legacy_model_tool_run_loop_controller as run_loop_controller;
+import nomo.application.harness.ports.LegacyChildModel;
+import nomo.domain.workspace.Outcome;
+import nomo.domain.workspace.outcome;
+import nomo.domain.workspace.read_contract_display as display;
+import nomo.application.workspace.ports.NomoRead;
+import nomo.application.workspace.ports.NomoSearch;
+import nomo.application.workspace.ports.ReadTools;
 
 type FixtureRoot;
 impl FixtureRoot ~ Region;
@@ -28,7 +37,7 @@ public flow fixture_read_b(name: string) -> Outcome ![Error<IndexError>] ~ NomoR
     let texts = ["blue\n", "blue\n", "fixture refusal", __LARGE__];
     let sizes: Array<usize> = [5, 5, 0, 257];
     var index: usize = 0;
-    while index < count(names) limit Iterations(4) {
+    while index < names.len() limit Iterations(4) {
         if names[index] == name { return outcome(statuses[index], texts[index], sizes[index]); }
         index = index + 1;
     }
@@ -67,19 +76,19 @@ flow exercise(label: string, alternate: bool, allowed: Array<string>, command: s
             let required = if value.final_only { completed } else { initial };
             if value != required { abort("complete source Model Context changed"); }
             let reply = if value.final_only { "[\"final\",\"Seen blue\"]" } else { command };
-            resume reply;
+            reply
         }
         ReadTools.read(name) => {
             println("PORT " + label + " Read");
             if reads == 0 || name != allowed[0] { abort("unexpected source read interpretation"); }
             let result = if alternate { fixture_read_b(name) } else { fixture_read_a(name) };
-            resume result;
+            result
         }
         ReadTools.search(names, literal) => {
             println("PORT " + label + " Search");
             if searches == 0 || names != allowed || literal != "blue" { abort("unexpected source search interpretation"); }
             let result = if alternate { fixture_search_b(names, literal) } else { fixture_search_a(names, literal) };
-            resume result;
+            result
         }
     };
     return actual == expected;
@@ -95,13 +104,13 @@ public flow backend_abort(args: Array<string>) -> i32 {
     let result = run_loop_controller("Task", ["fail.txt"], limits, fresh_loop(), false, false) with {
         LegacyChildModel.infer(_) => {
             println("PORT backend_abort Model");
-            resume "[\"read\",\"fail.txt\"]";
+            "[\"read\",\"fail.txt\"]"
         }
         ReadTools.read(name) => {
             println("PORT backend_abort Read");
-            resume fixture_read_a(name);
+            fixture_read_a(name)
         }
-        ReadTools.search(_, _) => { abort("unexpected search before backend abort"); }
+        ReadTools.search(_, _) => abort("unexpected search before backend abort");
     };
     return result.status;
 }

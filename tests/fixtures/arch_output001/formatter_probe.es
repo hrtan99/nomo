@@ -1,7 +1,7 @@
 module app.formatter_probe;
 
-import nomo.core.conversation.Event;
-import nomo.agent.console_events.publish;
+import nomo.domain.conversation.Event;
+import nomo.adapters.cli.console.publish;
 
 public flow observe(args: Array<string>) -> i32 {
     __EVENTS__

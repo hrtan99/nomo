@@ -61,7 +61,7 @@ def cases():
            ('abc', 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad'),
            ('前😀', hashlib.sha256('前😀'.encode()).hexdigest())]
     add('sha256_known_vectors', ' && '.join('hashed('+literal(text)+', '+literal(digest)+')' for text, digest in sha))
-    binding = dict(id='op', workspace='owned', region='nomo.tools.edit_file.EditableRoot', path='note.txt',
+    binding = dict(id='op', workspace='owned', region='nomo.application.resources.EditableRoot', path='note.txt',
                    request_digest='a'*64, before_digest='b'*64, after_digest='c'*64, before_bytes=2048, after_bytes=0)
     b = lambda **changes: record('Binding', dict(binding, **changes))
     row = lambda **changes: 'Record { format = '+str(changes.get('format', 1))+', phase = '+literal(changes.get('phase', 'intent'))+', binding = '+b()+' }'

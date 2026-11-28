@@ -4,11 +4,13 @@ import std.io.println;
 import std.text.split;
 import std.bytes.len as byte_count;
 import std.codec.text.utf8_encode;
-import nomo.tools.edit_contribution.{Contribution, project};
-import nomo.harness.typed_edit_contract.project_context;
-import nomo.harness.harness_work_contract.{Context, Evidence};
-import nomo.harness.harness_edit_contract.Context as EditContext;
-import nomo.harness.harness_tool_contract.Ledger as ReadLedger;
+import nomo.domain.editing.Contribution;
+import nomo.domain.editing.project;
+import nomo.domain.harness.typed_work.project_context;
+import nomo.domain.harness.work.Context;
+import nomo.domain.harness.work.Evidence;
+import nomo.domain.harness.edit.Context as EditContext;
+import nomo.domain.harness.loop.ReadLedger;
 
 type Check = { label: string, passed: bool };
 flow slash() -> string { return std.text.from_char('\\'); }
@@ -43,11 +45,11 @@ flow contextual(before: string, target: string, replacement: string, phase: stri
 }
 
 public flow pure_probe() -> bool {
-    for item in checks() limit Iterations(32) { if !item.passed { return false; } }
+    @limits([Iterations(32)]) for item in checks()   { if !item.passed { return false; } }
     return true;
 }
 public flow observe(args: Array<string>) -> i32 {
-    for item in checks() limit Iterations(32) {
+    @limits([Iterations(32)]) for item in checks()   {
         if !item.passed { println("FAIL " + item.label); abort("typed contribution pure contract software bug"); }
         println("PASS " + item.label);
     }

@@ -71,7 +71,7 @@ def manifest(item, fixture_root):
         text = text.replace('"filesystem=allow"', '"filesystem=deny"')
     profiles = tomllib.loads(text)["runtime"]["profiles"]
     selected = profiles["gateway-qwen-readonly"]
-    assert selected["filesystem"]["regions"] == {"nomo.tools.workspace.ReadOnlyRoot": {
+    assert selected["filesystem"]["regions"] == {"nomo.application.resources.ReadOnlyRoot": {
         "root": str(fixture_root / item["variant"]), "read": True, "write": False}}, "test region changed authority"
     assert selected["approval"] == {"mode": "deny"}
     assert selected["model"]["retry"] == {"attempts": 1, "delay_ms": 0}

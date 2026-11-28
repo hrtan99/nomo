@@ -1,0 +1,161 @@
+{
+  "date": "2026-11-26",
+  "status": "official-0240-verified-native-witness-blocker-persists",
+  "compiler": {
+    "selector": "latest0240",
+    "version": "0.24.0",
+    "source_overrides": [],
+    "repositories": {
+      "cli": {
+        "repository": "etas",
+        "revision": "3443967bf6f728241d6940e7c18f9a878819c622",
+        "tree": "8ae36e92ce00109bcbc81569efd4085e6ff865f4",
+        "packages": [
+          "etas_cli",
+          "etas_driver",
+          "etas_package",
+          "etas_tests"
+        ]
+      },
+      "core": {
+        "repository": "etas-core",
+        "revision": "44a25f003d996dd89230295f111e617c0a2a3783",
+        "tree": "f9e8b1534e6f8e04d4f02071e5d5018c75757f4f",
+        "packages": [
+          "etas_builtin",
+          "etas_cache",
+          "etas_code",
+          "etas_core",
+          "etas_host",
+          "etas_memory_derive",
+          "etas_package_metadata",
+          "etas_std",
+          "etas_utils"
+        ]
+      },
+      "frontend": {
+        "repository": "etas-frontend",
+        "revision": "2bf2e31bbc0231a5cd05e2fd93772f7e45649bf2",
+        "tree": "ca92f814fae676fca0deac65a44226456a851b0c",
+        "packages": [
+          "etas_effects",
+          "etas_frontend",
+          "etas_hir",
+          "etas_hir_analysis",
+          "etas_syntax",
+          "etas_syntax_derive",
+          "etas_types"
+        ]
+      },
+      "interpreter": {
+        "repository": "etas-interpreter",
+        "revision": "5564633b2e4a0f27f4bcbd06d25e2177af204a83",
+        "tree": "4ec3dfa29eb4741808d3ababfbfaa294350aae96",
+        "packages": [
+          "etas_interpreter"
+        ]
+      }
+    },
+    "cache_root": "etas-0240",
+    "build_target": "etas-0230/target",
+    "source": "Official CLI 0.24.0 at 3443967 and its locked canonical impl binder fixes and scoped callable injection; matching SDK; existing cache reused.",
+    "cargo_lock_sha256": "79cacb917cb392be4b0613a3f528c8e17e497257cc477513d63c7a97b87a341c",
+    "verified_seed_binary_sha256": "bf4a3557a0ebe8cfdf82126dbfa3add7aa33bdea9d4b7f6bae5e19ef7e0c450f",
+    "installed_sdk": true,
+    "build_profile": "dev"
+  },
+  "installed_identity": {
+    "lock_sha256": "79cacb917cb392be4b0613a3f528c8e17e497257cc477513d63c7a97b87a341c",
+    "method": "adopted-independently-verified-0240-build",
+    "path": "/home/nomo/.cargo/bin/etas",
+    "sdk": {
+      "abi": {
+        "artifact_hash": "blake3:1b30dcb2399c5e6053f64c6e986d80955717182d7e9af1d313e1d9c5dd0d3fc1",
+        "body_schema": 94,
+        "compiler_version": "0.21.0",
+        "effect_analysis_hash": "blake3:c2617624533f938fd3c350d4ba176e04507deed4d24ef448fece138f07b6b42c",
+        "interpreter_layout_hash": "blake3:a2e91ab4896e8148cc21a17786f41eb32bfdbab03c4a8a664381aab0bd2d2071",
+        "metadata_schema": 78,
+        "native_binding_abi": "blake3:c2620b315312e5c96f43d67f9160dd81048b8a030de13347e29442d9e30231e3",
+        "schema": 3,
+        "std_contract": "phase1|etas.std.text.contract.v1|etas.std.text.primitive-abi.v1|etas.std.text.source.v1|unicode:17.0.0:7c74aebf116629b6:etas.std.text.unicode.v1|usize:64",
+        "target": "aarch64-unknown-linux-gnu",
+        "toolchain_id": "etas-0.8.0-aarch64-unknown-linux-gnu-c2620b315312"
+      },
+      "manifest_path": "/home/nomo/.cargo/lib/etas/etas-0.8.0-aarch64-unknown-linux-gnu-c2620b315312/std/manifest.json",
+      "manifest_sha256": "e9b3b5e8aef9a3b2adcf743a4241548e5aff50ccd1b89ec9709cc4f4e1ccc770",
+      "receipt": "etas-std-install-v2\n000000000000000018eb97b30fab84ca-752-aarch64-unknown-linux-gnu\nblake3:175bad5e0793b8c84c2f60fb90acff6f82aa22115718c8ad92dc5587b464a07a\n"
+    },
+    "sha256": "bf4a3557a0ebe8cfdf82126dbfa3add7aa33bdea9d4b7f6bae5e19ef7e0c450f",
+    "version": "etas 0.24.0\n"
+  },
+  "build": {
+    "profile": "dev",
+    "elapsed": "4m 27s",
+    "source_patches": [],
+    "jobs": 1,
+    "memory_bytes": 4294967296,
+    "cpus": 4,
+    "pids": 256,
+    "new_cache_volume": false,
+    "backup": "Previous CLI and SDK preserved under /home/nomo/.cargo/etas-0232/"
+  },
+  "same_project_source": {
+    "count": 450,
+    "manifest_sha256": "62583ac500d6d3b921218f77790ca3c6ccc5b9273ab818c58da660b4f4cf567c",
+    "matches_previous_ioc_receipt": true,
+    "excludes": "Ten untracked local v4 prototypes; no committed module is excluded."
+  },
+  "static_checks": [
+    {
+      "scope": "existing-process-snapshot",
+      "exit": 4,
+      "stdout": "",
+      "stderr": "frontend session failed: Pipeline(\"native invocation has no checked implementation witness\")\n",
+      "elapsed_seconds": 0.999,
+      "resources_before": {
+        "memory.max": "4294967296",
+        "memory.peak": "9306112",
+        "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+        "cpu.max": "400000 100000",
+        "pids.max": "256"
+      },
+      "resources_after": {
+        "memory.max": "4294967296",
+        "memory.peak": "83378176",
+        "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+        "cpu.max": "400000 100000",
+        "pids.max": "256"
+      }
+    },
+    {
+      "scope": "complete-project",
+      "exit": 4,
+      "stdout": "",
+      "stderr": "frontend session failed: Pipeline(\"native invocation has no checked implementation witness\")\n",
+      "elapsed_seconds": 16.787,
+      "resources_before": {
+        "memory.max": "4294967296",
+        "memory.peak": "83378176",
+        "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+        "cpu.max": "400000 100000",
+        "pids.max": "256"
+      },
+      "resources_after": {
+        "memory.max": "4294967296",
+        "memory.peak": "566050816",
+        "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+        "cpu.max": "400000 100000",
+        "pids.max": "256"
+      }
+    }
+  ],
+  "qualification": "The unchanged six-file issue snapshot and complete project both exit 4 without an actionable source location. No ordinary source diagnostic precedes the pipeline failure; neither check is a compiler pass. Matching message text alone does not establish a common root cause.",
+  "runtime": {
+    "conversation_probe": "Not rerun on 0.24.0 because the requested compiler recheck still fails. The 4 GiB OOM was last observed on 0.23.2 and remains unqualified on this graph.",
+    "real_model_requests": 0,
+    "default_native_cutover": "Not accepted"
+  },
+  "upstream_issue": "https://github.com/etas-project/etas-frontend/issues/100",
+  "upstream_followup": "https://github.com/etas-project/etas-frontend/issues/100#issuecomment-7191995196"
+}

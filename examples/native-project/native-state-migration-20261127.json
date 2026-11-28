@@ -1,0 +1,147 @@
+{
+  "date": "2026-11-27",
+  "status": "source-accepted-actual-migration-blocked-at-standard-json",
+  "compiler_receipt": "examples/native-project/compiler-0244-20261127.json",
+  "checked_snapshot": {
+    "root": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-migration-0244-bgzmzav7",
+    "tree": "f42bb4dad4f008024c34d9971d86ef662c23ca7c",
+    "evidence": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-migration-0244-bgzmzav7/compiler-evidence",
+    "overlay": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-migration-0244-bgzmzav7/compiler-compose.json",
+    "source_count": 463,
+    "source_manifest_sha256": "9cfdee6b52145d5217c7cffb34f9d710938277c5228599cacba95a751b4b6987"
+  },
+  "runtime_snapshot": {
+    "root": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-migration-0244-ouq855n0",
+    "tree": "480fa5141495add862fc492390ac79238026281f",
+    "evidence": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-migration-0244-ouq855n0/compiler-evidence",
+    "overlay": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-migration-0244-ouq855n0/compiler-compose.json",
+    "source_count": 463,
+    "source_manifest_sha256": "9cfdee6b52145d5217c7cffb34f9d710938277c5228599cacba95a751b4b6987"
+  },
+  "same_checked_etas_source": true,
+  "full_check": {
+    "exit": 0,
+    "elapsed_seconds": 59.04036611,
+    "resources": {
+      "memory.max": "4294967296",
+      "memory.peak": "3227947008",
+      "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+      "cpu.max": "400000 100000",
+      "pids.max": "256"
+    }
+  },
+  "diagnostics": 0,
+  "architecture": {
+    "modules": 463,
+    "imports": 3432,
+    "preserved_identity_leaves": 48,
+    "status": "passed"
+  },
+  "implementation": {
+    "source": "Read-only old SQLite backup/envelope adapter, decimal strings retain exact integer payloads; byte arrays retain raw output. Original DB and receipts remain archived. No default-selector changes.",
+    "application": "Typed NativeStateSource / NativeStateDestination and complete-image sequencing. Input decoding finishes before record writes.",
+    "destination": "Official SDK Store.insert for fourteen store paths and original nominal/Region declarations; never copies old CAS tokens into the new backend.",
+    "activation": "Fresh destination only. A failed command retains an incomplete manifest. Live state is not switched.",
+    "supported_source": "Native SQLite format 3 / original 0.13.5 records. Shipping Python project.sqlite3 and older bounded session databases are separate pending migrations."
+  },
+  "old_source_case": {
+    "source_receipt": "examples/native-project/conversation-ports-20261125.json",
+    "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-state-migration-ff0l2ae4",
+    "result": {
+      "status": "observed",
+      "migration_exit": 3,
+      "source_before": "9287840b530b572aaa748900f7d984f58121903653016b911fe6fecb2952e77a",
+      "source_after": "9287840b530b572aaa748900f7d984f58121903653016b911fe6fecb2952e77a",
+      "original_rows": 49
+    },
+    "manifest": {
+      "status": "incomplete",
+      "source_database_sha256": "9287840b530b572aaa748900f7d984f58121903653016b911fe6fecb2952e77a",
+      "source_snapshot_sha256": "8ca2847914efd0985f6078a930553579463d3f2cb51b98687686b4875bc1aded",
+      "rows": 49,
+      "source": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-configuration-joyvj7rn/state/conversations.sqlite3",
+      "state": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-state-migration-ff0l2ae4/migrated/state",
+      "scope": "Native format-3 records only. Original receipts/CAS namespaces remain in the source backup; fresh SDK writes establish new destination versions. No command, model, recovery or live-handle replay.",
+      "exit": 3,
+      "source_database_after": "9287840b530b572aaa748900f7d984f58121903653016b911fe6fecb2952e77a"
+    },
+    "paired_host_requests": 1,
+    "finished_host_requests": 1,
+    "host_actions": [
+      "Fs.read"
+    ],
+    "outcome": {
+      "failure": {
+        "diagnostic": {
+          "code": "Analysis(MissingCheckedFact)",
+          "message": "checked revision value conversion failed: Value { source: TypeId(1158), target: TypeId(114), failure: UnmaterializedType(\"specialized type was not materialized: Applied { constructor: TypeConstructorId(105), args: [TypeId(4), TypeId(97)] }\") }",
+          "phase": "analysis",
+          "severity": "error"
+        },
+        "kind": "execution_fault"
+      },
+      "kind": "failed"
+    },
+    "local_work_settled": true,
+    "business_memory_writes": 0,
+    "model_requests": 0,
+    "command_actions": 0,
+    "all_row_comparison_executed": false,
+    "fresh_process_restore_executed": false,
+    "trace_sha256": "e641ee93bccb920422a3449ac3d1d38f9cc480558c2717bfa8364d6b8e5cffc0"
+  },
+  "retained_initial_source_mismatch": {
+    "snapshot": {
+      "root": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-migration-0244-hkeg0bat",
+      "tree": "f101ad01087319f4ce2fbdd77e82120cd4104bd4",
+      "evidence": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-migration-0244-hkeg0bat/compiler-evidence",
+      "overlay": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-migration-0244-hkeg0bat/compiler-compose.json",
+      "source_count": 463,
+      "source_manifest_sha256": "a95ea7db84920247aaaea380533edb69f4d635c0fe30ef127908d866f6a36744"
+    },
+    "check": {
+      "exit": 1,
+      "elapsed_seconds": 2.526531793,
+      "resources": {
+        "memory.max": "4294967296",
+        "memory.peak": "637005824",
+        "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+        "cpu.max": "400000 100000",
+        "pids.max": "256"
+      }
+    },
+    "correction": "Migration records must carry native.mutations.Journal/Step, rather than the separate same-field domain views."
+  },
+  "retained_initial_launch_failure": {
+    "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-state-migration-4l2pygjh",
+    "manifest": {
+      "status": "incomplete",
+      "source_database_sha256": "9287840b530b572aaa748900f7d984f58121903653016b911fe6fecb2952e77a",
+      "source_snapshot_sha256": "8ca2847914efd0985f6078a930553579463d3f2cb51b98687686b4875bc1aded",
+      "rows": 49,
+      "source": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-configuration-joyvj7rn/state/conversations.sqlite3",
+      "state": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-state-migration-4l2pygjh/migrated/state",
+      "scope": "Native format-3 records only. Original receipts/CAS namespaces remain in the source backup; fresh SDK writes establish new destination versions. No command, model, recovery or live-handle replay.",
+      "exit": 126,
+      "source_database_after": "9287840b530b572aaa748900f7d984f58121903653016b911fe6fecb2952e77a"
+    },
+    "correction": "Reuse existing native-launch UID/group/cache configuration. Exit126 occurred before Etas execution; no native action repeated."
+  },
+  "upstream_gate": "https://github.com/etas-project/etas-interpreter/issues/121",
+  "qualification": "Complete source check and one real old native source preparation/execution attempt only. Its 49 rows span nine populated store paths. Standard parse fails before migration writes, so no all-row/new-process acceptance is claimed. No fallback parser, binary codec duplication, compiler patch or new adverse case is introduced. The final launcher also marks the already-installed Cargo volume external to avoid an irrelevant Compose-project warning; that transport-only metadata change is syntax-checked, not a new migration runtime pass.",
+  "runtime_inventory": {
+    "files": 28,
+    "runtime_sloc": 4679,
+    "inclusive_product_sloc": 22666,
+    "counter": "nomo-physical-v4",
+    "line_limit_exception": "Existing explicit temporary user waiver; no removal of scope from counting."
+  },
+  "final_transport_snapshot": {
+    "root": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-migration-0244-yuphqt8b",
+    "tree": "2026c9e6ab45f15b412c9370b372c148f134fb3a",
+    "evidence": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-migration-0244-yuphqt8b/compiler-evidence",
+    "overlay": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-migration-0244-yuphqt8b/compiler-compose.json",
+    "source_count": 463,
+    "source_manifest_sha256": "9cfdee6b52145d5217c7cffb34f9d710938277c5228599cacba95a751b4b6987"
+  }
+}

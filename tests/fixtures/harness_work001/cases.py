@@ -4,7 +4,7 @@ import json
 ORDER = ['read-plan', 'read-child-first', 'read-child-final', 'read-aggregate', 'edit-plan', 'edit-child', 'edit-aggregate']
 OUTPUT = [2048, 2048, 2048, 2048, 4096, 32768, 2048]
 NATIVE = [8192, 16384, 24576, 32768, 65536, 131072, 196608]
-READ_REGION = 'nomo.tools.workspace.ReadOnlyRoot'
+READ_REGION = 'nomo.application.resources.ReadOnlyRoot'
 READ_TASK = 'Read the selected context file'
 READ_LEDGER = dict(steps=7, calls=4, tokens=8192, tools=1, scan=4096)
 

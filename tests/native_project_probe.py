@@ -117,6 +117,7 @@ def main():
     (project / 'native.txt').write_text('native Git evidence\n')
     (project / 'note.txt').write_text('before old\n')
     if args.scenario in ('transfer', 'auto'):
+        sys.path.insert(0, str(ROOT / 'tests/fixtures/legacy_project'))
         sys.path.insert(0, str(ROOT / 'scripts'))
         from nomo_history import SqliteHistory
         legacy = SqliteHistory(evidence / 'legacy-state')
@@ -135,7 +136,7 @@ def main():
         NOMO_MODEL_BASE_URL=f'http://host.docker.internal:{server.server_port}/v1',
         NOMO_MODEL_ALLOW_PRIVATE='true', NOMO_NATIVE_WORKSPACE=str(project), NOMO_NATIVE_EVIDENCE=str(traces), NOMO_NATIVE_STATE=str(state))
     command = ['docker', 'compose', '--env-file', '/dev/null']
-    for name in ('compose.yaml', 'config/etas-0135-official-compose.yaml', 'config/local-tryout-compose.yaml',
+    for name in ('compose.yaml', 'config/etas-02413-official-compose.yaml', 'config/local-tryout-compose.yaml',
                  'config/etas-runtime-cache-compose.yaml', 'config/nomo-native-compose.yaml'):
         command += ['--file', str(ROOT / name)]
     request = 'Read note.txt and change old to new after approval.' if args.scenario in ('files', 'chat', 'persist', 'catalogue') else 'Read Git status and report the branch and changed paths.'

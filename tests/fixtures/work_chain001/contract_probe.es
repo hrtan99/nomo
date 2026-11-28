@@ -2,14 +2,30 @@ module app.contract_probe;
 
 import std.io.println;
 import std.text.char_count as len;
-import nomo.session.work_chain.{Record, Caps, initial, initial_user_context, successor, validate, linked, publish_partial, confirm,
-    maximum, turn_caps, zero, summary_reservation, values, reserve, policy, caps_error, fingerprint};
-import nomo.session.work_record.Record as WorkRecord;
-import nomo.session.work_record.partial;
-import nomo.tools.edit_file.prepare_original;
-import nomo.tools.edit_binding.bind;
-import nomo.harness.harness_work_contract.Evidence;
-import nomo.harness.harness_tool_contract.Ledger;
+import nomo.domain.sessions.chain.Record;
+import nomo.domain.sessions.chain.Caps;
+import nomo.domain.sessions.chain.initial;
+import nomo.domain.sessions.chain.initial_user_context;
+import nomo.domain.sessions.chain.successor;
+import nomo.domain.sessions.chain.work_chain_validate as validate;
+import nomo.domain.sessions.chain.linked;
+import nomo.domain.sessions.chain.publish_partial;
+import nomo.domain.sessions.chain.confirm;
+import nomo.domain.sessions.chain.maximum;
+import nomo.domain.sessions.chain.turn_caps;
+import nomo.domain.sessions.chain.zero;
+import nomo.domain.sessions.chain.summary_reservation;
+import nomo.domain.sessions.chain.values;
+import nomo.domain.sessions.chain.reserve;
+import nomo.domain.sessions.chain.policy;
+import nomo.domain.sessions.chain.caps_error;
+import nomo.domain.sessions.chain.fingerprint;
+import nomo.domain.sessions.work.StoredWorkRecord;
+import nomo.domain.sessions.work.partial;
+import nomo.domain.editing.prepare_original;
+import nomo.domain.editing.bind;
+import nomo.domain.harness.work.Evidence;
+import nomo.domain.harness.loop.ReadLedger;
 
 type Check = { label: string, passed: bool };
 flow from_values(value: Array<i32>) -> Caps {
@@ -34,12 +50,12 @@ flow user_context_states() -> bool {
     return row.format == 3 && pending.format == 3 && completed.format == 3 && validate(row) == "" && validate(pending) == "" && validate(completed) == "" &&
         refused && linked(completed, "observed-opaque-version", child) != "" && legacy_name.format == 2 && validate(legacy_name) == "";
 }
-flow work(id: string, before: string, target: string, replacement: string) -> Result<WorkRecord, string> {
+flow work(id: string, before: string, target: string, replacement: string) -> Result<StoredWorkRecord, string> {
     let prepared = match prepare_original("target.txt", before, target, replacement) { Ok(value) => value, Err(error) => { return Err(error); } };
     let binding = match bind(id, "owned", "target.txt", prepared) { Ok(value) => value, Err(error) => { return Err(error); } };
     let evidence = Evidence { request = "update target from context", task = "Read context.txt", operation = "read", files = ["context.txt"],
         literal = "", outcome = "complete: blue", result = "Seen: complete: blue", summary = "Use the context result", allowed = ["context.txt"],
-        ledger = Ledger { steps = 7, calls = 4, tokens = 8192, tools = 1, scan = 4096 } };
+        ledger = ReadLedger { steps = 7, calls = 4, tokens = 8192, tools = 1, scan = 4096 } };
     return partial(binding, evidence, "replace selected text", prepared);
 }
 flow first(completed: bool) -> Result<Record, string> {

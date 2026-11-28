@@ -27,7 +27,7 @@ LABELS = ['direct child shares actual controller', 'complete tool outcome reache
 
 
 def sources():
-    pending, found = ['nomo.harness.harness_model_tools', 'nomo.harness.legacy_string_stages', 'nomo.entry.harness_work_entry'], {}
+    pending, found = ['nomo.harness.harness_model_tools', 'nomo.harness.legacy_string_stages', 'nomo.adapters.cli.legacy.harness_work_entry'], {}
     while pending:
         module = pending.pop()
         if module in found:

@@ -1,17 +1,27 @@
 module app.main;
 
-import std.io.{println, IOError};
+import std.io.println;
+import std.io.IOError;
 import std.text.from_i64;
-import nomo.adapters.etas.conversations.NativeHistory;
-import nomo.adapters.etas.attempts.NativeAttempts;
-import nomo.application.native.conversation.ports.{ConversationReader, ConversationWriter, ConversationCatalog, GenerationReservation, ResultPublication};
-import nomo.application.native.execution.ports.AttemptRepository;
-import nomo.application.native.conversation.controller.turn;
-import nomo.application.native.conversation.model.{ConversationModel, ConversationOutput};
-import nomo.application.native.context.effects.ConversationContext;
-import nomo.domain.context.projection.{ContextProjection, RollingContext, project};
-import nomo.domain.configuration.settings.Settings;
-import nomo.domain.conversation.turn.{Turn, Answer, Summary};
+import nomo.adapters.storage.conversations.NativeHistory;
+import nomo.adapters.storage.journals.NativeAttempts;
+import nomo.application.conversation.ports.ConversationReader;
+import nomo.application.conversation.ports.ConversationWriter;
+import nomo.application.conversation.ports.ConversationCatalog;
+import nomo.application.conversation.ports.GenerationReservation;
+import nomo.application.conversation.ports.ResultPublication;
+import nomo.application.execution.ports.AttemptRepository;
+import nomo.application.conversation.session.turn;
+import nomo.application.conversation.ports.ConversationModel;
+import nomo.application.conversation.ports.ConversationOutput;
+import nomo.application.conversation.ports.ConversationContext;
+import nomo.application.conversation.ports.ContextProjection;
+import nomo.adapters.codec.RollingContext;
+import nomo.domain.context.projection_project as project;
+import nomo.domain.settings.Settings;
+import nomo.domain.conversation.ModelTurn as Turn;
+import nomo.domain.conversation.Answer;
+import nomo.domain.conversation.Summary;
 
 flow settings() -> Settings {
     return Settings { context_window = 262144, max_output_tokens = 131072, compact_ratio = 0.001,
@@ -44,22 +54,20 @@ flow dispatched(history: NativeHistory, attempts: NativeAttempts, session: strin
     println("PORT " + kind + " dispatching");
 }
 
-public flow main(args: Array<string>) -> i32 ![Memory, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>, Error<IndexError>] {
+public flow main(args: Array<string>) -> i32 ![Memory, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>, Error<IndexError>, Error<BudgetExceeded>] {
     let history = NativeHistory {};
     let attempts = NativeAttempts {};
     let saved = history.create("controller-workspace", "Controlled conversation");
     var request = "";
     var index: i32 = 0;
-    while index < 32 limit Iterations(32) { request = request + "Continue the same coding objective. "; index = index + 1; }
+    @limits([Iterations(32)]) while index < 32   { request = request + "Continue the same coding objective. "; index = index + 1; }
     let accepted = turn(history, history, history, attempts, history, RollingContext {}, saved.id, request) with {
         ConversationContext.settings(session) => {
             if session != saved.id || history.load(session).next_event != 1 { abort("settings were not loaded after the user append"); }
             println("PORT settings");
-            resume settings();
+            settings()
         }
-        ConversationContext.acquire(session, task, configuration) => {
-            resume context(history, attempts, session, task, configuration);
-        }
+        ConversationContext.acquire(session, task, configuration) => context(history, attempts, session, task, configuration);
         ConversationModel.summarize(input) => {
             dispatched(history, attempts, saved.id, "summary", 32768);
             if input.request != "" || input.initial_request != request || input.history.len() != 1 || input.history[0].text != request {
@@ -74,7 +82,7 @@ public flow main(args: Array<string>) -> i32 ![Memory, Console, Error<StorageErr
             }
             resume Answer { text = "Completed deterministic turn" };
         }
-        ConversationOutput.write(line) => { println("OUTPUT " + line); resume; }
+        ConversationOutput.write(line) => println("OUTPUT " + line);
     };
     let selected = history.load(saved.id);
     if !accepted || selected.next_event != 3 || selected.first_user != 0 || selected.summary_event != 1 || selected.summary_through != 0 {
@@ -85,7 +93,7 @@ public flow main(args: Array<string>) -> i32 ![Memory, Console, Error<StorageErr
     }
     let completed = attempts.list(saved.id, false);
     if completed.len() != 2 || attempts.list(saved.id, true).len() != 0 { abort("completed attempts were not settled"); }
-    for value in completed limit Iterations(2) {
+    @limits([Iterations(2)]) for value in completed   {
         if value.phase != "completed" || value.input_event != 0 { abort("attempt completion ordering changed"); }
         if value.kind == "summary" && (value.result_event != 1 || value.through != 0) { abort("summary attempt points to the wrong history slot"); }
         if value.kind == "coding" && (value.result_event != 2 || value.through != 1) { abort("coding attempt points to the wrong history slot"); }

@@ -2,13 +2,17 @@ module app.contract_probe;
 
 import std.io.println;
 import std.text.split;
-import std.collections.len as count;
 import std.json.parse;
 import std.agent.message.Message;
-import nomo.core.conversation.Event;
-import nomo.model.tool_context.Context;
-import nomo.context.preflight.{Measurement, Refusal, measure_context, measure_text};
-import nomo.context.selection.{EventPolicy, SelectionRefusal, select};
+import nomo.domain.conversation.Event;
+import nomo.domain.harness.loop.Context;
+import nomo.domain.context.Measurement;
+import nomo.domain.context.Refusal;
+import nomo.domain.context.measure_context;
+import nomo.domain.context.measure_text;
+import nomo.domain.context.EventPolicy;
+import nomo.domain.context.SelectionRefusal;
+import nomo.domain.context.select;
 
 type Check = { label: string, passed: bool };
 flow slash() -> string { return std.text.from_char('\\'); }
@@ -35,7 +39,7 @@ flow chosen(input: Context, policies: Array<EventPolicy>, maximum: usize,
     expected: Context, selected: Array<usize>, omitted: Array<usize>, size: usize) -> bool {
     return match select(input, policies, maximum) {
         Ok(value) => value.context == expected && value.selected == selected && value.omitted == omitted &&
-            value.omitted_count == count(omitted) && value.measurement.encoded_bytes == size &&
+            value.omitted_count == omitted.len() && value.measurement.encoded_bytes == size &&
             unknown_tokens(value.measurement) && decoded_context(value.measurement.encoded, expected),
         Err(_) => false,
     };

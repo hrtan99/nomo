@@ -1,0 +1,489 @@
+{
+  "date": "2026-11-28",
+  "status": "configuration-instruction-ports-current-graph-functional-acceptance",
+  "goal_item": "DIP-11",
+  "goal_scope": "All thirteen DIP/IoC items remain active; this accepts the configuration/instruction criteria below, not default native cutover or unrelated dependencies.",
+  "base_commit": "d849f1718e3a7c4316d2c9784c6cb29e0c2780a2",
+  "toolchain": {
+    "selector": "latest02413",
+    "version": "0.24.13",
+    "source_overrides": [],
+    "repositories": {
+      "cli": {
+        "repository": "etas",
+        "revision": "e3ea414b85c76bb86c961617ed0354a6f2dce9f2",
+        "tree": "7ae316dc7789d2639f9a9495dea5d62823867a6e",
+        "packages": [
+          "etas_cli",
+          "etas_driver",
+          "etas_package",
+          "etas_tests"
+        ]
+      },
+      "core": {
+        "repository": "etas-core",
+        "revision": "178e9f7e5852ed4f724c8e4289ccc43df8b6a8ac",
+        "tree": "d2d9e20938479a84ca9c172b92e589e4b836d6a4",
+        "packages": [
+          "etas_builtin",
+          "etas_cache",
+          "etas_code",
+          "etas_core",
+          "etas_host",
+          "etas_memory_derive",
+          "etas_package_metadata",
+          "etas_std",
+          "etas_utils"
+        ]
+      },
+      "frontend": {
+        "repository": "etas-frontend",
+        "revision": "5f79f46337a30e668636dc4a4e9e3369244142ea",
+        "tree": "178086c6f7db75c63a9556e0c82c7f3b4b5b90d1",
+        "packages": [
+          "etas_effects",
+          "etas_frontend",
+          "etas_hir",
+          "etas_hir_analysis",
+          "etas_syntax",
+          "etas_syntax_derive",
+          "etas_types"
+        ]
+      },
+      "interpreter": {
+        "repository": "etas-interpreter",
+        "revision": "5ccfe47ca67c47e7d59d2761b21468c4437bd875",
+        "tree": "05ddc2c790bf246854a8231bbcb6c518e5497e51",
+        "packages": [
+          "etas_interpreter"
+        ]
+      }
+    },
+    "cache_root": "etas-02413-release",
+    "build_target": "etas-0230/target",
+    "source": "Official CLI 0.24.13 e3ea414 and its exact official lock graph, including std 0.9.0 and data/system inference overload; standard release, shared dependency cache, one Cargo job, 6 GiB build only; source/runtime 4 GiB.",
+    "installed_sdk": true,
+    "build_profile": "release",
+    "cargo_lock_sha256": "901a17e91e8e168732d42d832c390894eae152a14f7a06e411b2b89b6f959e9d",
+    "verified_seed_binary_sha256": "95809f4d563219895925dba0acd405b094cd93669fbdb00f1871d00a12166e0b"
+  },
+  "installed_identity_receipt": "examples/native-project/compiler-02413-20261128.json",
+  "sdk_artifact": "blake3:2cf438158602d3f7baad8799e5207b8f523b686a8c19a8e12b2073fdfe37512f",
+  "snapshot": {
+    "root": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-config-hash-02413-0l4af2xf",
+    "source_count": 468,
+    "source_manifest_sha256": "0318a011171bdcded970ac45667c7b59a8257e60e5eafdf52aaba3cc3c071d4f"
+  },
+  "full_check": {
+    "exit": 0,
+    "elapsed_seconds": 40.219568269,
+    "resources": {
+      "memory.max": "4294967296",
+      "memory.peak": "3111456768",
+      "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+      "cpu.max": "400000 100000",
+      "pids.max": "256"
+    }
+  },
+  "architecture": {
+    "exit": 0,
+    "stdout": "PASS architecture: 468 modules, 3508 imports, 48 identity-only compatibility leaves\n",
+    "stderr": ""
+  },
+  "sloc": {
+    "inclusive_core": 23225,
+    "counter": "physical-v4",
+    "temporary_user_line_limit_waiver": true
+  },
+  "changes": {
+    "standard_digest": "Configuration/archive fingerprint return sha256(utf8_encode(text)) directly; edit digest removes the redundant Message.cast and impossible SHA length branch while keeping its existing Result/hex protocol.",
+    "configuration_discovery": "Use iterator.any for the existing .nomo.toml presence scan.",
+    "policy_and_wire": "No stored type, region, cache shape, defaults, approval, instruction order, check argv or timeout behavior changes."
+  },
+  "standard_contract": {
+    "url": "https://github.com/etas-project/etas-core/blob/178e9f7e5852ed4f724c8e4289ccc43df8b6a8ac/crates/etas_std/library/std/crypto/complete.es",
+    "contract": "Digest is an alias of bytes; sha256 returns Digest."
+  },
+  "criteria": {
+    "pure_settings_and_context_rules": {
+      "sources": [
+        "src/nomo/domain/configuration/settings.es",
+        "src/nomo/domain/context/projection.es"
+      ],
+      "evidence": "Existing controlled loader returns exact Settings/defaults without disk, conversion command or model calls."
+    },
+    "consumer_owned_configuration_roles": {
+      "sources": [
+        "src/nomo/application/configuration/ports.es",
+        "src/nomo/application/configuration/service.es",
+        "src/nomo/bootstrap/configuration.es"
+      ],
+      "roles": [
+        "ConfigurationFile",
+        "EntriesCodec",
+        "TomlConverter",
+        "ConfigurationCacheStore",
+        "ConversationReader"
+      ],
+      "evidence": "Production and controlled consumers use the same ConfigurationLoader; bootstrap supplies concrete dependencies."
+    },
+    "consumer_owned_instruction_role": {
+      "sources": [
+        "src/nomo/application/instructions/ports.es",
+        "src/nomo/application/instructions/service.es",
+        "src/nomo/adapters/filesystem/instructions.es"
+      ],
+      "evidence": "Controlled root-to-leaf sequence and separate real rooted loader both pass unchanged assertions."
+    },
+    "production_conversion_cache_and_check": {
+      "evidence": "Original five-request scenario passes exact TOML/jq stdin, configured discovery/check, summary, fresh-process cache hit, edited configuration/defaults and all native approval audits."
+    },
+    "original_cache_compatibility": {
+      "evidence": "Actual populated 0.13.5 cache migrates with all 49 rows equal, then a fresh process reuses it without model, conversion or approval requests. Cache digest/result_event and saved event/chunk values stay exact."
+    },
+    "timeout_contract": {
+      "evidence": "Original runtime assertion keeps command_timeout=7 as retained configuration and command_timeout_active=false; no new timeout behavior is introduced."
+    }
+  },
+  "controlled_fixture": {
+    "root": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-configuration-contract-2cx1jaew",
+    "result": {
+      "exit": 0,
+      "stdout": "PORT toml\nPORT entries\nPORT scope .\nPORT guidance AGENTS.md\nPORT scope .\nPORT scope src\nPORT guidance src/AGENTS.md\nPORT scope src\nPASS configuration cache and instruction application effects\n",
+      "stderr": "",
+      "resources": {
+        "memory.max": "4294967296",
+        "memory.peak": "639430656",
+        "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+        "cpu.max": "400000 100000",
+        "pids.max": "256"
+      },
+      "physical": {
+        "exit": 0,
+        "stdout": "PASS physical project guidance\n",
+        "stderr": ""
+      },
+      "physical_host_actions": {
+        "Fs.list": 4,
+        "Console.stdout_write": 1,
+        "Fs.read": 2
+      },
+      "status": "passed",
+      "source_count": 42,
+      "paired_host_requests": 31,
+      "host_actions": {
+        "Memory.read": 10,
+        "Memory.write": 12,
+        "Console.stdout_write": 9
+      },
+      "qualification": "One conversion/cache-hit sequence with real SQLite fixture state and history, and controlled root-to-leaf guidance for a proposed file. Controlled application flow performs no filesystem, command or model action. A separate existing production loader reads two real synthetic guide files in root-to-leaf order. This does not certify the proposed adapter migration."
+    },
+    "configuration": {
+      "path": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-configuration-contract-2cx1jaew/state/controlled.trace.json",
+      "sha256": "6a4aaade1e19fc11dfaeba77f35ca6239415522b961dd7ed3843f9c44588b277",
+      "paired_successful_requests": 31,
+      "actions": {
+        "Memory.read": 10,
+        "Memory.write": 12,
+        "Console.stdout_write": 9
+      }
+    },
+    "physical_guidance": {
+      "path": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-configuration-contract-2cx1jaew/state/guidance.trace.json",
+      "sha256": "f5bd09beba2be23f90938fa3deadf8f4c3c8d95ee6d1c55f7764461c2143a831",
+      "paired_successful_requests": 7,
+      "actions": {
+        "Fs.list": 4,
+        "Fs.read": 2,
+        "Console.stdout_write": 1
+      }
+    }
+  },
+  "production_fixture": {
+    "root": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-configuration-jy2mh99w",
+    "functional": {
+      "functional_status": "passed",
+      "model_http_requests": 5,
+      "native_command_dispatches": 4,
+      "restored_command_dispatches": 0,
+      "configuration": {
+        "command_timeout_active": false,
+        "context_window_is_estimate": true,
+        "effective_context_window": 400000.0,
+        "inference_token_allowance": 536870912.0,
+        "requested": {
+          "check": [
+            "python3",
+            "-c",
+            "print('configured check passed')"
+          ],
+          "command_timeout": 7.0,
+          "compact_ratio": 0.6,
+          "context_window": 400000.0,
+          "ignore": [
+            "generated/**"
+          ],
+          "instructions": [
+            "Follow the configured coding style.",
+            "Keep caf\u00e9 characters and\nscoped guidance."
+          ],
+          "keep_messages": 2.0,
+          "max_output_tokens": 131072.0
+        },
+        "runtime_output_tokens": 131072.0,
+        "summary_token_allowance": 1048576.0
+      },
+      "changed_command_dispatches": 2,
+      "changed_configuration": {
+        "command_timeout_active": false,
+        "context_window_is_estimate": true,
+        "effective_context_window": 1048576.0,
+        "inference_token_allowance": 536870912.0,
+        "requested": {
+          "check": [],
+          "command_timeout": 600.0,
+          "compact_ratio": 0.75,
+          "context_window": 1048576.0,
+          "ignore": [],
+          "instructions": [
+            "Updated configured style."
+          ],
+          "keep_messages": 12.0,
+          "max_output_tokens": 131072.0
+        },
+        "runtime_output_tokens": 131072.0,
+        "summary_token_allowance": 1048576.0
+      },
+      "status": {
+        "first_user": 0.0,
+        "id": "native-0",
+        "ledger": {
+          "compactions": 1.0,
+          "context_bytes": 4514.0,
+          "generation_allowance": 163840.0,
+          "tools": 4.0,
+          "turns": 1.0
+        },
+        "next_event": 11.0,
+        "pending": "",
+        "summary_event": 10.0,
+        "summary_through": 7.0,
+        "title": "New conversation",
+        "workspace": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-configuration-jy2mh99w/project"
+      },
+      "approval_audit": []
+    },
+    "first": {
+      "path": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-configuration-jy2mh99w/native/trace.json",
+      "sha256": "b3ab6e560035f02dc8743ccd8666cc827b0b07d8d38e2d671bd33c823668c418",
+      "paired_successful_requests": 564,
+      "actions": {
+        "Policy.evaluate": 283,
+        "Memory.read": 150,
+        "Memory.write": 89,
+        "Console.stdout_write": 17,
+        "Console.stdin_read_line": 5,
+        "Fs.list": 5,
+        "Fs.read": 3,
+        "Approval.request": 4,
+        "Command.run": 4,
+        "Agentic.step": 4
+      }
+    },
+    "fresh_process": {
+      "path": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-configuration-jy2mh99w/native/restored.json",
+      "sha256": "6629a9277dad99e672fe97db8ef676194d001807fe687e5e684cd7cdb9b934d2",
+      "paired_successful_requests": 172,
+      "actions": {
+        "Policy.evaluate": 87,
+        "Memory.read": 51,
+        "Memory.write": 17,
+        "Console.stdout_write": 8,
+        "Console.stdin_read_line": 3,
+        "Fs.list": 3,
+        "Fs.read": 2,
+        "Agentic.step": 1
+      }
+    },
+    "changed_configuration": {
+      "path": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-configuration-jy2mh99w/native/changed.json",
+      "sha256": "f8836260175a9b337ef5cd31c02ed4fda41ee14df9c0212ac8d00c85445e8bfd",
+      "paired_successful_requests": 160,
+      "actions": {
+        "Policy.evaluate": 79,
+        "Memory.read": 34,
+        "Memory.write": 31,
+        "Console.stdout_write": 8,
+        "Console.stdin_read_line": 2,
+        "Fs.list": 1,
+        "Fs.read": 1,
+        "Approval.request": 2,
+        "Command.run": 2
+      }
+    }
+  },
+  "old_populated_cache": {
+    "status": "passed",
+    "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-state-migration-qimss6x1/configuration-cache",
+    "migration": {
+      "status": "passed",
+      "migration_exit": 0,
+      "source_before": "6ceb78d6dbd39b3d715537a03abd5fe5607031639e4f7adcd0c038ff09501947",
+      "source_after": "6ceb78d6dbd39b3d715537a03abd5fe5607031639e4f7adcd0c038ff09501947",
+      "original_rows": 49,
+      "unchanged_original": true,
+      "exact_all_row_comparison": true,
+      "migrated_store_paths": 9,
+      "complete_events": 17,
+      "migration_host_requests": 51,
+      "restore_host_requests": 120,
+      "model_requests": 0,
+      "command_actions": 0,
+      "qualification": "One actual old native image, exact all-key/all-value comparison and fresh status/history. No new adverse cases. Store kinds absent from this source retain source-check-only scope; shipping Python archive/legacy-session migration is separate."
+    },
+    "original_cache": {
+      "source": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-configuration-rgqnejd7/state/conversations.sqlite3",
+      "sha256": "6ceb78d6dbd39b3d715537a03abd5fe5607031639e4f7adcd0c038ff09501947",
+      "workspace": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-configuration-rgqnejd7/project",
+      "session": "native-0",
+      "result_event": 16,
+      "digest_hex": "32a759424ee5bf8c607703a9926cfb55a1fb868763e6e67aa4a258894092b132",
+      "raw_sha256": "32a759424ee5bf8c607703a9926cfb55a1fb868763e6e67aa4a258894092b132",
+      "cache_rows": 1,
+      "original_rows": 49
+    },
+    "effective_configuration": {
+      "command_timeout_active": false,
+      "context_window_is_estimate": true,
+      "effective_context_window": 1048576.0,
+      "inference_token_allowance": 536870912.0,
+      "requested": {
+        "check": [],
+        "command_timeout": 600.0,
+        "compact_ratio": 0.75,
+        "context_window": 1048576.0,
+        "ignore": [],
+        "instructions": [
+          "Updated configured style."
+        ],
+        "keep_messages": 12.0,
+        "max_output_tokens": 131072.0
+      },
+      "runtime_output_tokens": 131072.0,
+      "summary_token_allowance": 1048576.0
+    },
+    "paired_successful_requests": 50,
+    "actions": {
+      "Policy.evaluate": 25,
+      "Memory.read": 13,
+      "Memory.write": 2,
+      "Console.stdout_write": 6,
+      "Console.stdin_read_line": 2,
+      "Fs.list": 1,
+      "Fs.read": 1
+    },
+    "old_cache_and_saved_events_unchanged": true,
+    "source_database_and_toml_unchanged": true,
+    "qualification": "Actual populated 0.13.5 cache migrates through the production entry and is reused by a fresh 0.24.13 process. No conversion, model or approval request occurs; original cache digest and observation link remain exact."
+  },
+  "legacy_edit_positive": {
+    "root": "/Users/hrtan/Projects/nomo/tmp/hash-edit-02413/edit-entry-e2e-nl6e9dtn",
+    "result": {
+      "status": "passed",
+      "scope": "one synthetic private-workspace edit",
+      "exit": 0,
+      "gates": [
+        "application",
+        "native"
+      ],
+      "file": "before new\n",
+      "matching_container_absent": true
+    },
+    "preview": {
+      "after": "before new\n",
+      "after_bytes": "11",
+      "after_digest": "c07d6190ee3b4da91b545a74cd1928acde9afa9966f004f2eccd3a9c839e0177",
+      "before": "before old\n",
+      "before_bytes": "11",
+      "before_digest": "ad33bf05950ad45f88947e6f4b2c0f5c0badfd3e1b7985c4491b3f7c8ae0e132",
+      "format": "nomo-edit-preview-v1",
+      "id": "owned-edit",
+      "path": "note.txt",
+      "region": "nomo.tools.edit_file.EditableRoot",
+      "replacement": "new",
+      "request_digest": "b99d5f03d67ec516a45435a7514ff4ca65e1634b9c69a741f671e397b22b8628",
+      "target": "old",
+      "workspace": "private-workspace"
+    },
+    "both_digests_match_independent_hashlib": true,
+    "scope": "Only the original applied scenario; no negative/cancellation matrix or model request. Exact preview, both confirmations, durable intent, real write, successful check and worker cleanup pass."
+  },
+  "archive_hash": {
+    "status": "controlled-transfer-consumer-passed",
+    "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-transfer-controller-qnnk8weu",
+    "result": {
+      "exit": 0,
+      "stdout": "PORT copy progress after durable cursor\nPORT copy progress after durable cursor\nPASS application fork preserves events and summary\nPORT copy progress after durable cursor\nPASS application resume uses sealed source and durable cursor\n",
+      "stderr": "",
+      "resources": {
+        "memory.max": "4294967296",
+        "memory.peak": "590581760",
+        "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+        "cpu.max": "400000 100000",
+        "pids.max": "256"
+      },
+      "status": "passed",
+      "source_count": 26,
+      "paired_host_requests": 164,
+      "host_actions": {
+        "Memory.read": 94,
+        "Memory.write": 65,
+        "Console.stdout_write": 5
+      },
+      "qualification": "Application fork and import resumption use the original actual SQLite conversation/copy primitives. Progress follows durable writes; the sealed source is reused and the completed prefix is not rewritten. Codec handlers call the actual pure codec. This does not certify the unselected spec/bootstrap composition or actual archive filesystem operations."
+    },
+    "sources": {
+      "tests/fixtures/native_transfer_controller/src/app/main.es": "ce15bb9d22a5943ef9472c9904da0a41ca052e2c72c83837f7a78dbe79cd138c",
+      "src/nomo/adapters/storage/conversations.es": "6a23749075debcc6217bc3e6e3e9fb2dcac7aaa78072e908039ac233af20a4da",
+      "src/nomo/application/conversation/ports.es": "cdc78c6c816090bef7201ff3fbb2c2b80f427ada2ed7bf09469f411d59d788c5",
+      "src/nomo/domain/conversation/messages.es": "7ed8b8d97c4406986f3d6005dce9fb7ee23403213a2fd0823671fe77ad5edee4",
+      "src/nomo/domain/transfer/archive.es": "92624089a443000a743fed3d11a67b2e3f92bbaae5b4de1a1eca965d652048c8",
+      "src/nomo/adapters/storage/codec/archive.es": "46f4591b7d8f37c81d0c65ccae2086aebb79139153318e4f931b78467de1c64f",
+      "src/nomo/application/transfer/service.es": "8963bbbb96e2e5d02217e210f1de2f7fb4faf194cfb8cdc14b0b63fb5b7e9013",
+      "src/nomo/application/transfer/effects.es": "c961b51ae70e3097fe7c3588774b8b97ee728445f5691167669f8c4ee31601ef",
+      "src/nomo/domain/transfer/copy.es": "90964dc0335a975a4ffd65787d28348aa6e4021ab738d180a10333ca84eb4916",
+      "src/nomo/domain/conversation/session.es": "015f7748071199d101dd0d4a193a8537e7fbe853b9201b93d8dab48302977085",
+      "src/nomo/native/workspace.es": "399d557413ff6bd8056b8548e9dea2bce7f14c83f9fde18bcbe070d9fbde0be7",
+      "src/nomo/native/history.es": "38bb796c50441ab848e52cd342240c6cf68a8eeccf739b3a371f8441be127222",
+      "src/nomo/application/execution/ports.es": "c09afcaccdd9833d1f0633e8d5e0ea989780724b178935f6f9191274a5fe3d1c",
+      "src/nomo/application/execution/service.es": "e6c69b2f94d5ba75ec0834bef7b217c3e82e59bc20848bf14d39c84c7d3f0b12",
+      "src/nomo/domain/execution/attempt.es": "e22f9aa9f66e6859b4058fe6f219992c22d8ec7b5d54670e9611a29dad08a51d",
+      "src/nomo/domain/execution/transitions.es": "27bb227965252fa5c3313c9791fcd70e2d877e7674a6b2ba6edfd322cf8d85b2",
+      "src/nomo/native/lifecycle.es": "80028f4c7b61e0d1f984a141dfcfdddda7816add98e806c12c7247babd504dfc",
+      "src/nomo/domain/serialization/json.es": "f84d219dfe4a44fb1456f45df2b51daa7a59265a59ab44343551cb3f95f82a7f",
+      "src/nomo/application/conversation/session_context.es": "8ad4acc4095bf48ef1c356850e7b9eef518e7c076f3a7166bba3a53d52fee72f",
+      "src/nomo/domain/conversation/history.es": "590b23e5f66f572e4466bab92a6fbf99cf193279ea386f869fa12a6c05b2308c",
+      "src/nomo/application/mutations/ports.es": "d41a8dd8cb1931d0d101e3731300d2bc99a388f82bf4c8ee0dd3ef85af8fbdd5",
+      "src/nomo/application/transfer/ports.es": "51ab2163a992c7e07f8d6fa0e06c28192743fe16af00ab41469de7bf97bc35cc",
+      "src/nomo/application/commands/effects.es": "f205b83fdf9064806ebd415db769d6b19e6f25166a42a46acaf0191a3b87d85d",
+      "src/nomo/domain/mutations/models.es": "372e1325d246862f0d6f6f1258ebd6a86234df95d76aadea0289edda6000ab53",
+      "src/nomo/native/mutations.es": "6aace5d03717dbe7ed2e7790a81b720f7ac9f1f71f657547697834a86bc69247",
+      "src/nomo/domain/execution/command.es": "561fd128a1402568b33662f5fba1da7ce0ffc79f287fac2b47d9b7a5e25d4dba"
+    },
+    "owned_fixture_change": "Acknowledge Error<BudgetExceeded> already required by the called history API. Original runtime assertions remain unchanged.",
+    "initial_check": {
+      "root": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-transfer-controller-l1zyitmd",
+      "exit": 1,
+      "diagnostic": "EffectOutsideDeclaredRow for BudgetExceeded at the test entry, before runtime"
+    },
+    "qualification": "Real SQLite application fork and sealed-source resume, with actual pure JSON codec/hash via controlled archive IO. No actual archive filesystem or project-switch acceptance is claimed."
+  },
+  "supersedes_product_source_receipt": "examples/native-project/compiler-02413-20261128.json",
+  "real_provider_requests": 0,
+  "new_negative_matrix": false,
+  "complete_ioc_candidate_recheck": {
+    "status": "not-selected-source-check-still-fails",
+    "evidence": "examples/native-project/candidates/mutation-service-injection-02413.json",
+    "issue": "https://github.com/etas-project/etas-frontend/issues/106"
+  }
+}

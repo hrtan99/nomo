@@ -1,13 +1,19 @@
 module app.contract_probe;
 
 import std.io.println;
-import std.text.{char_count as len, split};
+import std.text.char_count as len;
+import std.text.split;
 import std.bytes.len as byte_count;
-import std.codec.text.{utf8_encode, utf8_decode, Strict};
+import std.codec.text.utf8_encode;
+import std.codec.text.utf8_decode;
+import std.codec.text.Strict;
 import std.json.parse;
 import std.agent.message.Message;
-import nomo.tools.path_policy.valid_path;
-import nomo.tools.edit_proposal.{Request, Proposal, propose, validate};
+import nomo.domain.workspace.valid_path;
+import nomo.domain.editing.Request;
+import nomo.domain.editing.Proposal;
+import nomo.domain.editing.propose;
+import nomo.domain.editing.validate;
 
 type Check = { label: string, mode: string, request: Request, expected: Proposal, error: string };
 flow slash() -> string { return std.text.from_char('\\'); }

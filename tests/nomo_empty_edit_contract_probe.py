@@ -5,7 +5,7 @@ from pathlib import Path
 root=Path(__file__).resolve().parent.parent
 with tempfile.TemporaryDirectory(prefix='nomo-empty-edit-contract-') as directory:
  project=Path(directory)/'project';shutil.copytree(root,project,ignore=shutil.ignore_patterns('.git','.etas','tmp','__pycache__'));(project/'.etas').mkdir()
- main=project/'src/nomo/main.es';source=main.read_text().replace('module nomo.main;','module nomo.main;\nimport nomo.tools.edit_proposal.{propose, Request};\nimport nomo.harness.harness_edit_contract.{decode_edit, decode_empty_edit};',1)
+ main=project/'src/nomo/main.es';source=main.read_text().replace('module nomo.main;','module nomo.main;\nimport nomo.tools.edit_proposal.propose;\nimport nomo.tools.edit_proposal.Request;\nimport nomo.domain.harness.edit.decode_edit;\nimport nomo.domain.harness.edit.decode_empty_edit;',1)
  source+='''
 public flow empty_edit_contract(args: Array<string>) -> i32 {
     let filled = Request { path = "note.txt", original = "", target = "", replacement = "hello" };

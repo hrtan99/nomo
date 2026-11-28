@@ -1,0 +1,180 @@
+{
+  "status": "passed-application-storage-and-fresh-undo-production-codec-failed",
+  "base_commit": "5b9e57b6a04586f767fa44396c0e014c7f5c302f",
+  "toolchain": {
+    "selector": "latest0247",
+    "version": "0.24.7",
+    "source_overrides": [],
+    "repositories": {
+      "cli": {
+        "repository": "etas",
+        "revision": "f677c3299e5a311040adb7d2dce1823ad3f1fe0a",
+        "tree": "ac045ffa6e17571b73bc6f8d748eb262b3d37c77",
+        "packages": [
+          "etas_cli",
+          "etas_driver",
+          "etas_package",
+          "etas_tests"
+        ]
+      },
+      "core": {
+        "repository": "etas-core",
+        "revision": "e0be95b0f5b2ad0f52cb92ca23e88d00cce5ea9f",
+        "tree": "c1f83ef6dabd7134e99ca34b9105a0d413aaf1ed",
+        "packages": [
+          "etas_builtin",
+          "etas_cache",
+          "etas_code",
+          "etas_core",
+          "etas_host",
+          "etas_memory_derive",
+          "etas_package_metadata",
+          "etas_std",
+          "etas_utils"
+        ]
+      },
+      "frontend": {
+        "repository": "etas-frontend",
+        "revision": "ab7deebc99d7b021b4089e568f8a9c9a0cb23f66",
+        "tree": "d189819c91a446c8b9567700ce23bf324d64c0b9",
+        "packages": [
+          "etas_effects",
+          "etas_frontend",
+          "etas_hir",
+          "etas_hir_analysis",
+          "etas_syntax",
+          "etas_syntax_derive",
+          "etas_types"
+        ]
+      },
+      "interpreter": {
+        "repository": "etas-interpreter",
+        "revision": "cd60e6b55625b7b01110885eaf7271aaf02f6f3b",
+        "tree": "a69f484ee6669041f09cd6fee0488bd5286e6129",
+        "packages": [
+          "etas_interpreter"
+        ]
+      }
+    },
+    "cache_root": "etas-0247-release",
+    "build_target": "etas-0230/target",
+    "source": "Official CLI 0.24.7 at f677c32 and its exact official lock graph, standard Cargo release profile. Build uses existing target with 6 GiB/one Cargo job; normal source/runtime remain 4 GiB.",
+    "installed_sdk": true,
+    "build_profile": "release",
+    "cargo_lock_sha256": "243b5695dcf41a347c5c1ff35a512502e9f799cfce7fbac79fcafd48a130b7d0",
+    "verified_seed_binary_sha256": "259e8da6a235fa8bb3f05bc3c9a41f2ce4f3c017bffaed2c7072c5a13ccabd5c"
+  },
+  "sdk_identity_receipt": "examples/native-project/compiler-0247-20261127.json",
+  "selected_source": {
+    "root": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0247-final-review-psvt3gag",
+    "files": 467,
+    "manifest_sha256": "6fda7ec6e609d2d95e92408b706a3ba47dda26392f97cb8e71e03a10beb29b80",
+    "manifest_encoding": "canonical JSON mapping repository path to file SHA-256",
+    "changed_files": {
+      "scripts/nomo-migrate-native": "b52ab47c5079644037473f1d35ad05730ccc34ef776c423d63f8752ce4390363",
+      "scripts/nomo_migration.py": "7381e996f6731dbfc6f8db9baa744fa1804eb7af876367668a8c29181256d97a",
+      "src/nomo/adapters/filesystem/project_migration.es": "ecba0c2820569b492aa1c236869ff9c4dfccde3b1e48555469dc63f686988aa3",
+      "src/nomo/application/migration/project_state.es": "455232bef17d7ad16985d819b824ba0b5146ff0d26eb28a8f1cfcdf71960c010",
+      "src/nomo/application/mutations/service.es": "be71f436c67c02a62563c228fd7d230e4035f7ca10559bbf90540e00eedf27a5",
+      "src/nomo/domain/migration/project_state.es": "ccaa933c64096ab80ffb9c17b9e5f79b02fcfbbca0bdbce3aaffb8939fc0cfc8",
+      "tests/project_files_migration_probe.py": "57a018bc3cd1063432417081edf410c5ac76274a5de7b2cab370216ee2ff6da7",
+      "tests/project_state_migration_probe.py": "26892f024400fe2bdd8895be7dfce1e6bbbf5c959b231befd42c28a0ec57c1d5"
+    },
+    "user_untracked_prototypes_excluded": true
+  },
+  "source_check": {
+    "exit": 0,
+    "elapsed_seconds": 42.283021894,
+    "resources": {
+      "memory.max": "4294967296",
+      "memory.peak": "2960785408",
+      "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+      "cpu.max": "400000 100000",
+      "pids.max": "256"
+    }
+  },
+  "architecture": {
+    "exit": 0,
+    "stdout": "PASS architecture: 467 modules, 3478 imports, 48 identity-only compatibility leaves\n",
+    "stderr": ""
+  },
+  "physical_inventory": {
+    "exit": 0,
+    "stdout": "counter: nomo-physical-v4; authoritative; blank and comment-only # / // lines excluded\nproduct roots: src; reviewed runtime inventory: scripts/nomo, scripts/nomo_project_chat.py, scripts/nomo_project_model.py, scripts/nomo_project_tools.py, scripts/nomo_project.py, scripts/nomo_history.py, scripts/nomo_jobs.py, scripts/nomo_git.py, scripts/nomo-read.sh, scripts/nomo-session-chat.py, scripts/nomo-session-id.py, scripts/nomo-read-session.py, scripts/nomo-history-work.py, scripts/nomo-edit.py, scripts/nomo-session-storage.py, scripts/nomo-event-policy.py, scripts/nomo-bounded-check.py, scripts/nomo-verified-etas.py, scripts/nomo_model_transport.py, scripts/nomo_terminal.py, scripts/terminal-transport.py, scripts/nomo-native, scripts/native-worker-transport.py, scripts/nomo-migrate-native, scripts/nomo_migration.py, scripts/etas003_gateway.py, scripts/local-tryout.sh, scripts/prepare-local-tryout.py, scripts/session-demo.sh\nsrc: 18215 SLOC, 21499 raw lines, 467 files\nruntime: 4892 SLOC, 5435 raw lines, 29 files\nruntime-entry: 114 SLOC, 126 raw lines, 1 files\nruntime-project: 1256 SLOC, 1409 raw lines, 7 files\nruntime-legacy: 2032 SLOC, 2199 raw lines, 9 files\nruntime-shared: 498 SLOC, 567 raw lines, 4 files\nruntime-native: 609 SLOC, 687 raw lines, 4 files\nruntime-gateway: 165 SLOC, 188 raw lines, 1 files\nruntime-tryout: 218 SLOC, 259 raw lines, 3 files\nproduct: 23107 SLOC, 26934 raw lines, 496 files\ntests: 47890 SLOC, 52199 raw lines, 426 files\nexamples: 1363 SLOC, 1591 raw lines, 65 files\nscripts: 9938 SLOC, 11251 raw lines, 132 files\nengineering-scripts: 5046 SLOC, 5816 raw lines, 103 files\n",
+    "stderr": ""
+  },
+  "integration": {
+    "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-project-state-migration-2s00pmdt",
+    "status": "passed-application-and-real-storage",
+    "source": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-project-state-migration-2s00pmdt/original/project.sqlite3",
+    "source_sha256": "c16b340b7e35db16ccd72fc65d4196f11c1bab9e8233796ac7c80f5bba7ae4a3",
+    "original_sessions": 3,
+    "original_rows": 23.0,
+    "source_unchanged": true,
+    "projection": {
+      "sessions": 3,
+      "context_messages": 10,
+      "matches_shipping_projection": true
+    },
+    "migration_host_requests": 136,
+    "fresh_status_history_host_requests": 90,
+    "real_provider_requests": 0,
+    "migration_command_actions": 0,
+    "native_undo": {
+      "status": "passed",
+      "edit": "f48bf9b0558d0173",
+      "native_approvals": 9,
+      "command_actions": 9,
+      "paired_host_requests": 469,
+      "authority_audit": "passed",
+      "model_requests": 0,
+      "restored": [
+        "note.txt bytes",
+        "note.txt mode 0751",
+        "absence of created new/ subtree"
+      ]
+    },
+    "qualification": "One actual shipping SQL image generated through its public history/compaction/fork APIs. The read-only source adapter matches complete original exports. A controlled typed source exercises the production migration application, NativeStateWriter and historical append, followed by ordinary fresh native status/history and an explicit native undo of its actual owned BatchEditor journal. Original journal remains exact. The old format does not preserve directory modes, timestamps or links. This does not qualify the production packet JSON codec, interrupted-import rollback, job conversion, bounded legacy sessions or default cutover."
+  },
+  "production_codec": {
+    "status": "failed",
+    "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-project-state-migration-2s00pmdt/production",
+    "exit": 3,
+    "packet_format": "nomo-project-state-2",
+    "source_rows": 23,
+    "outcome": {
+      "failure": {
+        "diagnostic": {
+          "code": "Analysis(MissingCheckedFact)",
+          "message": "checked revision value conversion failed: Value { source: TypeId(1159), target: TypeId(114), failure: UnmaterializedType(\"specialized type was not materialized: Applied { constructor: TypeConstructorId(105), args: [TypeId(4), TypeId(97)] }\") }",
+          "phase": "analysis",
+          "severity": "error"
+        },
+        "kind": "execution_fault"
+      },
+      "kind": "failed"
+    },
+    "local_work_settled": true,
+    "host_requests": 1,
+    "host_actions": {
+      "Fs.read": 1
+    },
+    "business_memory_actions": 0,
+    "target_business_rows": 0,
+    "model_requests": 0,
+    "command_actions": 0,
+    "project_edit_import": {
+      "status": "incomplete",
+      "edits": [
+        "f48bf9b0558d0173"
+      ],
+      "unowned_edits": []
+    },
+    "source_sha256_before": "c16b340b7e35db16ccd72fc65d4196f11c1bab9e8233796ac7c80f5bba7ae4a3",
+    "source_sha256_after": "c16b340b7e35db16ccd72fc65d4196f11c1bab9e8233796ac7c80f5bba7ae4a3",
+    "upstream": "https://github.com/etas-project/etas-interpreter/issues/121"
+  },
+  "ownership_and_recovery": "Only journal (session, workspace) pairs present in the source catalogue are prepared. Unowned files remain archived and listed. Original archive event positions provide Journal.call provenance; no previous native pending request, attempt, completion, authority or live handle is fabricated. Interrupted imported records can open a real pending rollback only on explicit recovery while the session is idle; an unfinished journal prevents new apply/undo.",
+  "remaining_scope": "Controlled typed input qualifies migration policy, actual native storage and fresh native undo of the real old editor record. Production JSON decoding failed and was not retried. Interrupted-import rollback and its admission branch have source checking only; no extra adverse test was added. Workspace jobs, bounded saved sessions and full DIP-13/default cutover remain open. Directory modes, timestamps, links and per-step dispatch are absent from the old format and cannot be inferred.",
+  "owned_launch_correction": "First source-check container did not start because the selected snapshot lacked the .etas mountpoint. Empty mountpoint added; no compiler/Host action occurred on that launch. Intermediate full check passed before the unfinished-edit admission rule was added; final changed source was checked once more and passed. No compiler patch or new negative matrix."
+}

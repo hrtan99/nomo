@@ -71,7 +71,7 @@ def main():
     for name in MODULES+['harness/typed_edit_pilot.es']:
         source=ROOT/'src/nomo'/name;target=typed_project/'src/nomo'/name;target.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(source,target)
         sources[str(source.relative_to(ROOT))]=hashlib.sha256(source.read_bytes()).hexdigest()
-    (typed_project/'src/app/contract_probe.es').write_text('module app.contract_probe;\nimport nomo.harness.harness_work_contract.Context;\nimport nomo.tools.edit_proposal.Proposal;\nimport nomo.harness.typed_edit_pilot.request_proposal;\npublic flow source_only(args: Array<string>) -> i32 { return 0; }\npublic flow typed_signature(supplied: Context) -> Result<Proposal, string> { return request_proposal(supplied); }\n')
+    (typed_project/'src/app/contract_probe.es').write_text('module app.contract_probe;\nimport nomo.domain.harness.work.Context;\nimport nomo.tools.edit_proposal.Proposal;\nimport nomo.harness.typed_edit_pilot.request_proposal;\npublic flow source_only(args: Array<string>) -> i32 { return 0; }\npublic flow typed_signature(supplied: Context) -> Result<Proposal, string> { return request_proposal(supplied); }\n')
     (typed_project/'etas.toml').write_text(MANIFEST.replace('harness-checkpoint-contract-probe','native-typed-model001-static-probe').replace('flow = "observe"', 'flow = "source_only"'))
     isolated=['src/nomo/tools/edit_contribution.es','src/nomo/harness/typed_edit_contract.es','src/nomo/harness/typed_edit_pilot.es']
     for path in (ROOT/'src').rglob('*.es'):

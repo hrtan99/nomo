@@ -152,7 +152,7 @@ def main():
         runner_inputs[path.name] = retain(path, evidence / "runner-inputs" / path.name)
         protected[str(path)] = runner_inputs[path.name]
     graph_inputs = {}
-    for name in ["etas.toml", "etas.lock", "tests/normal_graph_identity.py", "scripts/etas-0013-cli-bootstrap.py"]:
+    for name in ["etas.toml", "etas.lock", "tests/normal_graph_identity.py", "scripts/etas-02413-official-cli-bootstrap.py"]:
         path = ROOT / name
         graph_inputs[name] = retain(path, evidence / "normal-graph-inputs" / name)
         protected[str(path)] = graph_inputs[name]

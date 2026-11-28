@@ -16,10 +16,14 @@ GRAPH = Path(os.environ.get('SESSION_STORE_GRAPH', '/validation'))
 MARKER = 'nomo-session-bundle-v1'
 
 SOURCE = '''module app.main;
-import std.io.{read_all, println};
-import std.json.{parse, stringify};
+import std.io.read_all;
+import std.io.println;
+import std.json.parse;
+import std.json.stringify;
 import std.agent.message.Message;
-import nomo.session.bundle_codec.{Bundle, encode, decode};
+import nomo.session.bundle_codec.Bundle;
+import nomo.session.bundle_codec.encode;
+import nomo.session.bundle_codec.decode;
 
 public flow pure_probe() -> bool {
     let bodies: Array<string> = [];
@@ -121,7 +125,7 @@ def cases():
 
 def main():
     originals = {p: hashlib.sha256((ROOT / p).read_bytes()).hexdigest() for p in [
-        'etas.toml', 'etas.lock', 'src/nomo/session/session_state.es', 'src/nomo/core/text.es',
+        'etas.toml', 'etas.lock', 'src/nomo/domain/sessions/state.es', 'src/nomo/core/text.es',
         'src/nomo/session/bundle_codec.es']}
     project = Path(tempfile.mkdtemp(prefix='session-store-codec-', dir=EVIDENCE))
     print('EVIDENCE ' + str(project), flush=True)

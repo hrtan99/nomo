@@ -1,0 +1,517 @@
+diff --git a/etas.toml b/etas.toml
+index d8ed642..e70b15e 100644
+--- a/etas.toml
++++ b/etas.toml
+@@ -975,7 +975,7 @@ allow = ["/usr/bin/git", "/usr/bin/python3", "/bin/sh", "/bin/cp", "/bin/mkdir",
+ isolation = "trusted-unconfined"
+ [runtime.profiles.nomo-native.policy]
+ mode = "local-static"
+-rules = ["console=allow", "memory=allow", "agentic=allow", "model=allow", "tool=allow", "approval=allow", "command=approval", "filesystem:Fs.read=allow", "filesystem:Fs.list=allow", "filesystem:Fs.stat=allow", "filesystem:Fs.atomic_replace=approval"]
++rules = ["console=allow", "memory=allow", "clock:Clock.now=allow", "agentic=allow", "model=allow", "tool=allow", "approval=allow", "command=approval", "filesystem:Fs.read=allow", "filesystem:Fs.list=allow", "filesystem:Fs.stat=allow", "filesystem:Fs.atomic_replace=approval"]
+ [runtime.profiles.nomo-native.approval]
+ mode = "prompt"
+ 
+diff --git a/src/nomo/adapters/cli/conversation.es b/src/nomo/adapters/cli/conversation.es
+index a345b4b..7170c01 100644
+--- a/src/nomo/adapters/cli/conversation.es
++++ b/src/nomo/adapters/cli/conversation.es
+@@ -19,6 +19,8 @@ import nomo.application.conversation.startup.select as select_start;
+ import nomo.application.conversation.session_context.SessionContext;
+ import nomo.application.conversation.effects.ConversationOutput;
+ import nomo.domain.conversation.session.Session;
++import nomo.domain.conversation.activity.SessionActivity;
++import nomo.adapters.cli.session_activity as activity;
+ import nomo.application.execution.ports.AttemptRepository;
+ import nomo.application.conversation.turn.{ready, supported};
+ import nomo.application.transfer.effects.TransferOperations;
+@@ -77,7 +79,8 @@ flow navigation_command<C ~ ConversationService>(conversation: C, session: strin
+     if result.exit_code > 1 { println("[ERROR  ] Project discovery exited " + from_i32(result.exit_code)); }
+ }
+ 
+-flow show<A ~ AttemptRepository>(attempts: A, value: Session) -> unit {
++flow show<A ~ AttemptRepository>(attempts: A, value: Session, times: Option<SessionActivity>) -> unit {
++    activity.write(times);
+     println("[SESSION] " + value.id + " · " + value.title);
+     match perform TransferOperations.status(value.id) {
+         Some(job) => { if job.phase != "ready" { println("[COPY   ] " + job.phase + "; /resume-copy " + job.id + " or /discard-copy " + job.id); } },
+@@ -106,7 +109,8 @@ flow show_history<R ~ ConversationReader>(archive: R, session: string, query: st
+     if index < selected.next_event { println("[HISTORY] More events remain; /page " + from_i64(index)); }
+ }
+ 
+-flow show_status(value: Session) -> unit {
++flow show_status(value: Session, times: Option<SessionActivity>) -> unit {
++    activity.write(times);
+     let status = match encode(value, "status conversion failed", "status encoding failed") { Ok(value) => value, Err(error) => abort(error), };
+     println("[STATUS ] " + status);
+     println("[BUDGET ] generation_allowance is configured allowance; context_bytes is an estimate, not measured token usage.");
+@@ -160,7 +164,7 @@ impl TerminalApplication<
+         match options.open_project { Some(pathname) => { perform ProjectOperations.open(pathname, options.workspace); return 0; } None() => (), }
+         if options.sessions {
+             let items = if options.all_sessions { history.all_sessions() } else { history.sessions(options.workspace) };
+-            for item in items { println("[PROJECT] " + item.workspace); show(attempts, item); }
++            for item in items { println("[PROJECT] " + item.session.workspace); show(attempts, item.session, item.activity); }
+             return 0;
+         }
+         perform ProjectOperations.remember(options.workspace);
+@@ -171,10 +175,10 @@ impl TerminalApplication<
+             }
+         };
+         match options.title { Some(title) => { history.rename(selected.id, title); selected = history.load(selected.id); } None() => (), }
+-        if options.status { show_status(selected); return 0; }
++        if options.status { show_status(selected, history.activity(selected.id)); return 0; }
+         if options.history { show_history(history, selected.id, "", 0, -1); return 0; }
+         match options.export_path { Some(pathname) => { perform TransferOperations.save(selected.id, pathname); return 0; } None() => (), }
+-        show(attempts, selected);
++        show(attempts, selected, history.activity(selected.id));
+         for job in perform TransferOperations.copies(options.workspace) {
+             if job.phase == "staging" || job.phase == "copying" {
+                 println("[COPY   ] Unfinished " + job.kind + " " + job.id + "; /resume-copy " + job.id + " or /discard-copy " + job.id);
+@@ -207,19 +211,19 @@ impl TerminalApplication<
+                 TerminalCommand.History(query, first, count) => show_history(history, selected.id, query, first, count),
+                 TerminalCommand.Fork(index) => {
+                     let through = match index { Some(value) => value, None() => history.load(selected.id).next_event - 1 };
+-                    selected = perform TransferOperations.fork(selected.id, through); show(attempts, selected);
++                    selected = perform TransferOperations.fork(selected.id, through); show(attempts, selected, history.activity(selected.id));
+                 }
+                 TerminalCommand.Read(value) => edit_command(selected.id, "read", value),
+                 TerminalCommand.Edits => edit_command(selected.id, "list", ""),
+                 TerminalCommand.Undo(value) => edit_command(selected.id, "undo", value),
+                 TerminalCommand.Rollback(value) => edit_command(selected.id, "rollback", value),
+                 TerminalCommand.Recover(value) => edit_command(selected.id, "reconcile", value),
+-                TerminalCommand.Sessions => { for item in history.sessions(options.workspace) { show(attempts, item); } }
+-                TerminalCommand.New(title) => { selected = history.create(options.workspace, title); show(attempts, selected); }
+-                TerminalCommand.Resume(id) => { selected = history.select(options.workspace, id); show(attempts, selected); }
+-                TerminalCommand.Rename(title) => { history.rename(selected.id, title); selected = history.load(selected.id); show(attempts, selected); }
++                TerminalCommand.Sessions => { for item in history.sessions(options.workspace) { show(attempts, item.session, item.activity); } }
++                TerminalCommand.New(title) => { selected = history.create(options.workspace, title); show(attempts, selected, history.activity(selected.id)); }
++                TerminalCommand.Resume(id) => { selected = history.select(options.workspace, id); show(attempts, selected, history.activity(selected.id)); }
++                TerminalCommand.Rename(title) => { history.rename(selected.id, title); selected = history.load(selected.id); show(attempts, selected, history.activity(selected.id)); }
+                 TerminalCommand.Export(pathname) => perform TransferOperations.save(selected.id, pathname),
+-                TerminalCommand.Import(pathname) => { selected = perform TransferOperations.load(options.workspace, pathname); show(attempts, selected); }
++                TerminalCommand.Import(pathname) => { selected = perform TransferOperations.load(options.workspace, pathname); show(attempts, selected, history.activity(selected.id)); }
+                 TerminalCommand.Copies => {
+                     for job in perform TransferOperations.copies(options.workspace) {
+                         let json = match encode(job, "copy conversion failed", "copy encoding failed") { Ok(value) => value, Err(error) => abort(error), };
+@@ -229,7 +233,7 @@ impl TerminalApplication<
+                 TerminalCommand.ResumeCopy(id) => {
+                     let job = perform TransferOperations.job(id);
+                     selected = if job.kind == "fork" { perform TransferOperations.resume_fork(options.workspace, job.id) } else { perform TransferOperations.resume_import(options.workspace, job.id) };
+-                    show(attempts, selected);
++                    show(attempts, selected, history.activity(selected.id));
+                 }
+                 TerminalCommand.DiscardCopy(id) => { perform TransferOperations.discard(options.workspace, id); println("[COPY   ] Unfinished copy discarded; original and retained copied records are preserved."); }
+                 TerminalCommand.Runs => {
+@@ -264,7 +268,7 @@ impl TerminalApplication<
+                     let text = match encode(value, "check conversion failed", "check encoding failed") { Ok(value) => value, Err(error) => abort(error), };
+                     println("[CHECK  ] " + text);
+                 }
+-                TerminalCommand.Status => show_status(history.load(selected.id)),
++                TerminalCommand.Status => show_status(history.load(selected.id), history.activity(selected.id)),
+                 TerminalCommand.Ask(value) => { self.conversation.ask(selected.id, value, options.check); }
+             }
+         }
+diff --git a/src/nomo/adapters/cli/conversation_picker.es b/src/nomo/adapters/cli/conversation_picker.es
+index cef67b5..a836e34 100644
+--- a/src/nomo/adapters/cli/conversation_picker.es
++++ b/src/nomo/adapters/cli/conversation_picker.es
+@@ -2,15 +2,17 @@ module nomo.adapters.cli.conversation_picker;
+ 
+ import std.io.{println, print, read_line, IOError as ConsoleError};
+ import std.text.{trim, from_usize, parse_usize};
+-import nomo.domain.conversation.session.Session;
++import nomo.domain.conversation.activity.SessionListing;
++import nomo.adapters.cli.session_activity as activity;
+ import nomo.application.conversation.ports.ConversationPicker;
+ 
+ public type ConsoleConversationPicker = {};
+ impl ConsoleConversationPicker ~ ConversationPicker {
+-    flow choose(self, sessions: Array<Session>) -> Option<string> ![Console, Error<ConsoleError>] {
++    flow choose(self, sessions: Array<SessionListing>) -> Option<string> ![Console, Error<ConsoleError>] {
+         var number: usize = 1;
+         for item in sessions {
+-            println("[SESSION] " + from_usize(number) + " · " + item.id + " · " + item.title);
++            println("[SESSION] " + from_usize(number) + " · " + item.session.id + " · " + item.session.title);
++            activity.write(item.activity);
+             number = number + 1;
+         }
+         print("Conversation number or ID (empty cancels): ");
+@@ -20,7 +22,7 @@ impl ConsoleConversationPicker ~ ConversationPicker {
+             Ok(index) => {
+                 number = 1;
+                 for item in sessions {
+-                    if number == index { return Some(item.id); }
++                    if number == index { return Some(item.session.id); }
+                     number = number + 1;
+                 }
+                 abort("conversation number is not in the displayed list");
+diff --git a/src/nomo/adapters/cli/native/options.es b/src/nomo/adapters/cli/native/options.es
+index dba37e5..27cdf81 100644
+--- a/src/nomo/adapters/cli/native/options.es
++++ b/src/nomo/adapters/cli/native/options.es
+@@ -28,7 +28,7 @@ public flow parse(args: Array<string>) -> Options ![Error<IndexError>, Error<Bud
+         let (option, inline) = match split_once(args[index], "=") { Some((name, value)) => (name, Some(value)), None() => (args[index], None()) };
+         index = index + 1;
+         if option == "--new" { selection = SessionSelection.Fresh; continue; }
+-        if option == "--latest" { selection = SessionSelection.Existing; continue; }
++        if option == "--latest" { selection = SessionSelection.Latest; continue; }
+         if option == "--projects" { projects = true; continue; }
+         if option == "--sessions" { sessions = true; continue; }
+         if option == "--all" { all_sessions = true; continue; }
+diff --git a/src/nomo/adapters/cli/session_activity.es b/src/nomo/adapters/cli/session_activity.es
+new file mode 100644
+index 0000000..e0931c1
+--- /dev/null
++++ b/src/nomo/adapters/cli/session_activity.es
+@@ -0,0 +1,16 @@
++module nomo.adapters.cli.session_activity;
++
++import std.io.{println, IOError};
++import std.text.from_i128;
++import nomo.domain.conversation.activity.SessionActivity;
++
++flow text(value: Option<i128>) -> string {
++    return match value { Some(time) => from_i128(time), None() => "unknown" };
++}
++
++public flow write(value: Option<SessionActivity>) -> unit ![Console, Error<IOError>] {
++    match value {
++        Some(time) => println("[TIME   ] created_unix_ms=" + text(time.created) + " updated_unix_ms=" + from_i128(time.updated)),
++        None() => println("[TIME   ] created_unix_ms=unknown updated_unix_ms=unknown"),
++    }
++}
+diff --git a/src/nomo/adapters/storage/conversations.es b/src/nomo/adapters/storage/conversations.es
+index 77d30ec..c5d270b 100644
+--- a/src/nomo/adapters/storage/conversations.es
++++ b/src/nomo/adapters/storage/conversations.es
+@@ -14,6 +14,8 @@ import nomo.application.conversation.ports.{ConversationReader, ConversationWrit
+ import nomo.application.mutations.ports.MutationHistoryStore;
+ import nomo.application.transfer.ports.CopyRepository;
+ import std.json.JsonValue;
++import std.runtime.time.now;
++import nomo.domain.conversation.activity.{SessionActivity, SessionListing, recent};
+ 
+ alias Schema = MemoryRegion<{
+     Counters: Store<string, i64>,
+@@ -27,6 +29,30 @@ alias CopySchema = MemoryRegion<{ Jobs: Store<string, CopyJob> }>;
+ let Copies = std.memory.region<CopySchema>(stable_id = "nomo-native-conversation-copies-v1", store = "native-conversation-copies");
+ 
+ 
++alias ActivitySchema = MemoryRegion<{ Sessions: Store<string, SessionActivity> }>;
++let Activity = std.memory.region<ActivitySchema>(stable_id = "nomo-native-conversation-activity-v1", store = "native-conversation-activity");
++
++flow timestamp() -> i128 ![Error<StorageError>] {
++    return match now()? {
++        Ok(value) => value.unix_millis,
++        Err(_) => perform Error<StorageError>.raise(StorageError { code = "clock_unavailable", message = "Clock.now failed while recording conversation activity", operation = None() }),
++    };
++}
++
++flow insert_session(value: Session) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>] {
++    let time = timestamp();
++    Data.Sessions.insert(value.id, value);
++    Activity.Sessions.insert(value.id, SessionActivity { created = Some(time), updated = time });
++}
++
++flow touch(id: string) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>] {
++    let time = timestamp();
++    match Activity.Sessions.get_entry(id) {
++        Some(before) => Activity.Sessions.put_versioned(id, before.value { updated = time }, before.version),
++        None() => Activity.Sessions.insert(id, SessionActivity { created = None(), updated = time }),
++    }
++}
++
+ public type NativeHistory = {};
+ 
+ impl NativeHistory ~ GenerationReservation {
+@@ -94,10 +120,11 @@ impl NativeHistory ~ ConversationCatalog {
+     flow rename(self, id: string, title: string) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>] { rename(id, title); }
+     flow create(self, workspace: string, title: string) -> Session ![Memory, Error<StorageError>, Error<MemoryConflict>] {
+         let session = empty_session(allocate(), workspace, title);
+-        Data.Sessions.insert(session.id, session);
++        insert_session(session);
+         Data.Selected.put(workspace, session.id);
+         return session;
+     }
++    flow activity(self, id: string) -> Option<SessionActivity> ![Memory, Error<StorageError>] { return Activity.Sessions.get(id); }
+     flow selected(self, workspace: string) -> Option<string> { return Data.Selected.get(workspace); }
+     flow select(self, workspace: string, id: string) -> Session ![Memory, Error<StorageError>] {
+         let value = self.load(id);
+@@ -109,23 +136,24 @@ impl NativeHistory ~ ConversationCatalog {
+         Data.Selected.put(workspace, id);
+         return value;
+     }
+-    flow sessions(self, workspace: string) -> Array<Session> {
++    flow sessions(self, workspace: string) -> Array<SessionListing> {
+         return stored_sessions(Some(workspace));
+     }
+-    flow all_sessions(self) -> Array<Session> { return stored_sessions(None()); }
++    flow all_sessions(self) -> Array<SessionListing> { return stored_sessions(None()); }
+ }
+ 
+-flow stored_sessions(workspace: Option<string>) -> Array<Session> {
+-    var result: Array<Session> = [];
++flow stored_sessions(workspace: Option<string>) -> Array<SessionListing> {
++    var result: Array<SessionListing> = [];
+     var cursor: Option<MemoryCursor> = None();
+     @limits([Iterations(2147483647)]) while true {
+         let page = Data.Sessions.page(cursor, 100);
+-        result = result.extend(page.entries.iter().filter(item =>
+-            match workspace { Some(path) => item.value.workspace == path, None() => true }
+-        ).map(item => item.value).collect());
++        for item in page.entries {
++            let selected = match workspace { Some(path) => item.value.workspace == path, None() => true };
++            if selected { result = result.push(SessionListing { session = item.value, activity = Activity.Sessions.get(item.key) }); }
++        }
+         match page.cursor { Some(value) => { cursor = Some(value); } None() => { break; } }
+     }
+-    return result;
++    return recent(result);
+ }
+ 
+ flow reserve_event(id: string, role: string, name: string, call: i64, live: bool) -> i64 {
+@@ -160,6 +188,7 @@ flow write_event(id: string, index: i64, role: string, name: string, text: strin
+         parts = parts + 1;
+     }
+     Data.Events.put(event_key, Event { role, name, call, chunks = parts, complete = true });
++    touch(id);
+ }
+ 
+ flow append_event(id: string, role: string, name: string, text: string, call: i64, live: bool) -> i64 {
+@@ -337,7 +366,7 @@ public flow ensure_copy_session(id: string) -> unit ![Memory, Error<StorageError
+     if job.phase == "discarded" { abort("conversation copy was discarded; retained content is historical only"); }
+     match Data.Sessions.get(id) {
+         Some(_) => (),
+-        None() => { Data.Sessions.insert(id, empty_session(id, job.workspace, job.title)); }
++        None() => { insert_session(empty_session(id, job.workspace, job.title)); }
+     }
+ }
+ 
+diff --git a/src/nomo/application/conversation/ports.es b/src/nomo/application/conversation/ports.es
+index 3a25850..6168cb9 100644
+--- a/src/nomo/application/conversation/ports.es
++++ b/src/nomo/application/conversation/ports.es
+@@ -2,10 +2,11 @@ module nomo.application.conversation.ports;
+ 
+ import std.io.IOError as ConsoleError;
+ import nomo.domain.conversation.session.Session;
++import nomo.domain.conversation.activity.{SessionActivity, SessionListing};
+ import nomo.domain.conversation.messages.ChatMessage;
+ 
+ public spec ConversationPicker {
+-    flow choose(self, sessions: Array<Session>) -> Option<string> ![Console, Error<ConsoleError>];
++    flow choose(self, sessions: Array<SessionListing>) -> Option<string> ![Console, Error<ConsoleError>];
+ }
+ 
+ public spec ConversationReader {
+@@ -21,10 +22,11 @@ public spec ConversationWriter {
+ public spec ConversationCatalog {
+     flow rename(self, id: string, title: string) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>];
+     flow create(self, workspace: string, title: string) -> Session ![Memory, Error<StorageError>, Error<MemoryConflict>];
++    flow activity(self, id: string) -> Option<SessionActivity> ![Memory, Error<StorageError>];
+     flow selected(self, workspace: string) -> Option<string> ![Memory, Error<StorageError>];
+     flow select(self, workspace: string, id: string) -> Session ![Memory, Error<StorageError>];
+-    flow sessions(self, workspace: string) -> Array<Session> ![Memory, Error<StorageError>, Error<BudgetExceeded>];
+-    flow all_sessions(self) -> Array<Session> ![Memory, Error<StorageError>, Error<BudgetExceeded>];
++    flow sessions(self, workspace: string) -> Array<SessionListing> ![Memory, Error<StorageError>, Error<BudgetExceeded>];
++    flow all_sessions(self) -> Array<SessionListing> ![Memory, Error<StorageError>, Error<BudgetExceeded>];
+ }
+ 
+ public spec GenerationReservation {
+diff --git a/src/nomo/application/conversation/startup.es b/src/nomo/application/conversation/startup.es
+index 1c13e17..b7cdbba 100644
+--- a/src/nomo/application/conversation/startup.es
++++ b/src/nomo/application/conversation/startup.es
+@@ -23,9 +23,12 @@ public flow select<R ~ ConversationReader, C ~ ConversationCatalog, P ~ Conversa
+             Some(id) => Some(existing(reader, catalog, workspace, id, activate)),
+             None() => Some(catalog.create(workspace, "New conversation"))
+         },
+-        SessionSelection.Existing => match catalog.selected(workspace) {
+-            Some(id) => Some(existing(reader, catalog, workspace, id, activate)),
+-            None() => abort("no saved conversation is selected for this project"),
++        SessionSelection.Latest => match catalog.sessions(workspace).first() {
++            Some(item) => match item.activity {
++                Some(_) => Some(existing(reader, catalog, workspace, item.session.id, activate)),
++                None() => abort("older saved conversations have no update timestamps; select --id or --resume"),
++            },
++            None() => abort("no saved conversation for this project"),
+         }
+     };
+ }
+diff --git a/src/nomo/domain/conversation/activity.es b/src/nomo/domain/conversation/activity.es
+new file mode 100644
+index 0000000..d0a39a3
+--- /dev/null
++++ b/src/nomo/domain/conversation/activity.es
+@@ -0,0 +1,21 @@
++module nomo.domain.conversation.activity;
++
++import std.collections.sort_by;
++import nomo.domain.conversation.session.Session;
++
++// Old records have no timestamps; the missing past is not reconstructed.
++public type SessionActivity = { created: Option<i128>, updated: i128 };
++public type SessionListing = { session: Session, activity: Option<SessionActivity> };
++
++flow compare(left: Option<SessionActivity>, right: Option<SessionActivity>) -> i32 {
++    return match (left, right) {
++        (Some(a), Some(b)) => if a.updated > b.updated { -1 } else { if a.updated < b.updated { 1 } else { 0 } },
++        (Some(_), None()) => -1,
++        (None(), Some(_)) => 1,
++        (None(), None()) => 0,
++    };
++}
++
++public flow recent(entries: Array<SessionListing>) -> Array<SessionListing> {
++    return sort_by(entries, (left: SessionListing, right: SessionListing) => compare(left.activity, right.activity));
++}
+diff --git a/src/nomo/domain/conversation/start.es b/src/nomo/domain/conversation/start.es
+index 8869a19..f716587 100644
+--- a/src/nomo/domain/conversation/start.es
++++ b/src/nomo/domain/conversation/start.es
+@@ -1,3 +1,3 @@
+ module nomo.domain.conversation.start;
+ 
+-public enum SessionSelection { Current, Fresh, Existing, Exact(string), Choose }
++public enum SessionSelection { Current, Fresh, Latest, Exact(string), Choose }
+diff --git a/tests/fixtures/native_session_activity/src/app/main.es b/tests/fixtures/native_session_activity/src/app/main.es
+new file mode 100644
+index 0000000..fcd7ed8
+--- /dev/null
++++ b/tests/fixtures/native_session_activity/src/app/main.es
+@@ -0,0 +1,50 @@
++module app.main;
++
++import std.io.{println, IOError};
++import nomo.adapters.storage.conversations.NativeHistory;
++import nomo.application.conversation.ports.{ConversationReader, ConversationWriter, ConversationCatalog};
++import nomo.application.conversation.startup.select;
++import nomo.domain.conversation.start.SessionSelection;
++import nomo.adapters.cli.conversation_picker.ConsoleConversationPicker;
++import nomo.domain.serialization.json.encode;
++
++flow inspect() -> unit {
++    let history = NativeHistory {};
++    let chosen = match select(history, history, ConsoleConversationPicker {}, "activity-project", SessionSelection.Latest, false) {
++        Some(value) => value, None() => abort("latest selection cancelled"),
++    };
++    if chosen.id != "native-0" || history.selected("activity-project") != Some("native-1") {
++        abort("latest inspection changed or confused the selected conversation");
++    }
++    let current = match select(history, history, ConsoleConversationPicker {}, "activity-project", SessionSelection.Current, false) {
++        Some(value) => value, None() => abort("current selection cancelled"),
++    };
++    if current.id != "native-1" { abort("current selection lost its binding"); }
++    let sessions = history.sessions("activity-project");
++    if sessions.len() != 2 || sessions[0].session.id != chosen.id { abort("updated ordering changed"); }
++    let first = match sessions[0].activity { Some(value) => value, None() => abort("first activity missing") };
++    let second = match sessions[1].activity { Some(value) => value, None() => abort("second activity missing") };
++    if first.created == None() || second.created == None() || first.updated <= second.updated {
++        abort("recorded clock observations do not order the actual updates");
++    }
++    let text = match encode(sessions, "fixture conversion failed", "fixture encoding failed") {
++        Ok(value) => value, Err(error) => abort(error),
++    };
++    println("ACTIVITY " + text);
++}
++
++public flow main(args: Array<string>) -> i32 ![Memory, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>, Error<IndexError>, Error<BudgetExceeded>] {
++    let history = NativeHistory {};
++    let first = history.create("activity-project", "First");
++    history.create("activity-project", "Second");
++    history.append(first.id, "user", "", "Continue the first conversation", -1);
++    inspect();
++    println("PASS latest update and selected binding remain independent");
++    return 0;
++}
++
++public flow restored(args: Array<string>) -> i32 ![Memory, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>, Error<IndexError>, Error<BudgetExceeded>] {
++    inspect();
++    println("PASS restored session timestamps and selection");
++    return 0;
++}
+diff --git a/tests/native_session_activity_probe.py b/tests/native_session_activity_probe.py
+new file mode 100644
+index 0000000..6404237
+--- /dev/null
++++ b/tests/native_session_activity_probe.py
+@@ -0,0 +1,80 @@
++"""Real Clock/SQLite latest selection, selected binding and fresh-process restore."""
++from pathlib import Path
++from native_sources import copy_sources
++import json
++import subprocess
++import tempfile
++
++ROOT = Path(__file__).resolve().parents[1]
++
++
++def main():
++    evidence = Path(tempfile.mkdtemp(prefix='nomo-native-session-activity-')).resolve()
++    package, state = evidence / 'package', evidence / 'state'
++    package.mkdir()
++    (package / '.etas').mkdir()
++    state.mkdir(mode=0o777)
++    state.chmod(0o777)
++    sources = copy_sources(ROOT, package, ROOT / 'tests/fixtures/native_session_activity/src/app/main.es')
++    (evidence / 'sources.json').write_text(json.dumps(sources, indent=2) + '\n')
++    (package / 'etas.toml').write_text('''[package]
++name="native-session-activity"
++version="0.1.0"
++edition="2026"
++[source]
++root="src"
++[runtime]
++default_profile="local"
++[runtime.profiles.local.memory]
++backend="sqlite"
++path="/state/history.sqlite3"
++[runtime.profiles.local.policy]
++mode="local-static"
++rules=["memory=allow","console=allow","clock:Clock.now=allow"]
++[[bin]]
++name="native-session-activity"
++module="app.main"
++flow="main"
++''')
++    (package / 'etas.lock').write_text('version=1\nmanifest_fingerprint="etas-lock-input:v1|package=native-session-activity|version=0.1.0|edition=2026"\npackage=[]\n')
++    overlay = evidence / 'compose.json'
++    overlay.write_text(json.dumps({'services': {'dev': {'volumes': [
++        {'type': 'bind', 'source': str(package), 'target': '/workspace', 'read_only': True},
++        {'type': 'bind', 'source': str(state), 'target': '/state'}]}}}))
++    command = ['docker', 'compose', '--env-file', '/dev/null']
++    for name in ('compose.yaml', 'config/etas-0243-official-compose.yaml', 'config/etas-runtime-cache-compose.yaml', str(overlay)):
++        command += ['--file', str(ROOT / name)]
++    inside = '''import json,subprocess
++cmd=['/home/nomo/.cargo/bin/etas','--no-config','--cache','off','run','/workspace','--allow-effects']
++records=[]
++for flow in ['main','restored']:
++ p=subprocess.run(cmd+['--flow',flow,'--trace-out','/state/'+flow+'.trace.json'],capture_output=True,text=True)
++ records.append({'flow':flow,'exit':p.returncode,'stdout':p.stdout,'stderr':p.stderr})
++ if p.returncode:break
++print(json.dumps(records))'''
++    command += ['run', '--rm', '--no-deps', '--pull', 'never', '--tty=false', 'dev', 'python3', '-c', inside]
++    print('EVIDENCE ' + str(evidence), flush=True)
++    result = subprocess.run(command, cwd=ROOT, capture_output=True, text=True, timeout=1800)
++    (evidence / 'container-stderr.txt').write_text(result.stderr)
++    assert result.returncode == 0, result.stderr
++    records = json.loads(result.stdout)
++    (evidence / 'result.json').write_text(json.dumps(records, indent=2) + '\n')
++    assert len(records) == 2 and all(item['exit'] == 0 and not item['stderr'] for item in records), records
++    assert records[0]['stdout'].splitlines()[-1] == 'PASS latest update and selected binding remain independent'
++    assert records[1]['stdout'].splitlines()[-1] == 'PASS restored session timestamps and selection'
++    snapshots = [json.loads(next(line[9:] for line in item['stdout'].splitlines() if line.startswith('ACTIVITY '))) for item in records]
++    assert snapshots[0] == snapshots[1]
++    for flow in ['main', 'restored']:
++        trace = json.loads((state / (flow + '.trace.json')).read_text())
++        assert trace['outcome']['kind'] == 'completed' and trace['termination']['local_work_settled']
++        starts = [item for item in trace['events'] if item['kind'] == 'host_request_started']
++        ends = [item for item in trace['events'] if item['kind'] == 'host_request_finished']
++        assert {item['id'] for item in starts} == {item['id'] for item in ends}
++        assert all(item['outcome']['kind'] == 'succeeded' for item in ends)
++        clocks = sum(item.get('qualified_action') == 'Clock.now' for item in starts)
++        assert clocks == (3 if flow == 'main' else 0), clocks
++    print('PASS native session activity and restored selection: ' + str(evidence), flush=True)
++
++
++if __name__ == '__main__':
++    main()

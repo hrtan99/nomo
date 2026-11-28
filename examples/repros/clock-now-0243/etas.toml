@@ -1,0 +1,15 @@
+[package]
+name="session-activity-clock"
+version="0.1.0"
+edition="2026"
+[source]
+root="src"
+[runtime]
+default_profile="local"
+[runtime.profiles.local.policy]
+mode="local-static"
+rules=["console=allow","clock:Clock.now=allow"]
+[[bin]]
+name="session-activity-clock"
+module="app.main"
+flow="main"

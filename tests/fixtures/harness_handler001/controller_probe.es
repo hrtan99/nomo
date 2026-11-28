@@ -2,20 +2,40 @@ module app.harness_handler_probe;
 
 import std.io.println;
 import std.text.char_count as len;
-import nomo.core.conversation.{Event, State, add, fresh as empty_history};
-import nomo.model.model_tool_contract.{Session, LoopTurn, Context as ChildContext, question_error, default_limits};
-import nomo.agent.model_tool.run_loop_with;
-import nomo.harness.harness_tool_contract.{Context, Ledger, fresh};
-import nomo.harness.harness_model_contract.decode_plan;
-import nomo.harness.harness_model_tools.{Report, Failure, run_context};
-import nomo.harness.legacy_string_stages.{LegacyStringStages, LegacyChildModel, LegacyEditStages};
-import nomo.harness.harness_work_contract.{Context as WorkContext, Evidence, Ledger as WorkLedger};
-import nomo.harness.harness_edit_contract.{Context as EditContext, Ledger as EditLedger};
-import nomo.entry.harness_work_entry.{Completed, Summary, Failure as WorkFailure, finish_summary};
-import nomo.tools.edit_encoding.digest;
+import nomo.domain.conversation.Event;
+import nomo.domain.conversation.State;
+import nomo.domain.conversation.add;
+import nomo.domain.conversation.fresh as empty_history;
+import nomo.domain.harness.loop.Session;
+import nomo.domain.harness.loop.LoopTurn;
+import nomo.domain.harness.loop.question_error;
+import nomo.domain.harness.loop.default_limits;
+import nomo.domain.harness.loop.Context as ChildContext;
+import nomo.bootstrap.harness.model_tool_run_loop_with as run_loop_with;
+import nomo.domain.harness.read.ReadContext as Context;
+import nomo.domain.harness.read.read_fresh as fresh;
+import nomo.domain.harness.loop.ReadLedger;
+import nomo.domain.harness.read.text_decode_plan as decode_plan;
+import nomo.application.harness.ports.Report;
+import nomo.application.harness.ports.Failure;
+import nomo.bootstrap.harness.ascii_read_run_context as run_context;
+import nomo.application.harness.ports.LegacyStringStages;
+import nomo.application.harness.ports.LegacyChildModel;
+import nomo.application.harness.ports.LegacyEditStages;
+import nomo.domain.harness.work.Context as WorkContext;
+import nomo.domain.harness.work.Evidence;
+import nomo.domain.harness.work.WorkLedger;
+import nomo.domain.harness.edit.Context as EditContext;
 
-flow usage(steps: i32, calls: i32, tools: i32) -> Ledger {
-    return Ledger { steps = steps, calls = calls, tokens = calls * 2048, tools = tools, scan = tools * 4096 };
+import nomo.domain.harness.edit.EditLedger;
+import nomo.domain.sessions.work.Completed;
+import nomo.domain.sessions.work.Summary;
+import nomo.domain.sessions.work.Failure as WorkFailure;
+import nomo.adapters.cli.harness.finish_summary;
+import nomo.domain.wire.digest;
+
+flow usage(steps: i32, calls: i32, tools: i32) -> ReadLedger {
+    return ReadLedger { steps = steps, calls = calls, tokens = calls * 2048, tools = tools, scan = tools * 4096 };
 }
 flow event(role: string, kind: string, name: string, text: string) -> Event {
     return Event { role = role, kind = kind, name = name, text = text };
@@ -41,7 +61,7 @@ flow child(original: string, tool: bool, failure: bool) -> LoopTurn {
 flow mismatch(error: string) -> Result<Report, Failure> {
     return Err(Failure { state = fresh(), error = error, resolved = false });
 }
-flow deterministic(request: string, initial: Ledger, chosen: LoopTurn, plan: string, answer: string, require_tool: bool, compatible: bool) -> Result<Report, Failure> {
+flow deterministic(request: string, initial: ReadLedger, chosen: LoopTurn, plan: string, answer: string, require_tool: bool, compatible: bool) -> Result<Report, Failure> {
     return run_context(request, ["a.txt"], initial, "fixture-", require_tool, compatible, false, false) with {
         LegacyStringStages.main(context) => {
             let expected = Context { phase = context.phase, request = "Q", task = if context.phase == "plan" { "" } else { "T" },
@@ -50,7 +70,7 @@ flow deterministic(request: string, initial: Ledger, chosen: LoopTurn, plan: str
                 outcome = if context.phase == "aggregate" && chosen.state.tools == 1 { "complete: blue<LF>" } else { "" }, allowed = ["a.txt"] };
             if context != expected { finish mismatch("fixture main context changed"); }
             let response = if context.phase == "plan" { plan } else { answer };
-            resume response;
+            response
         }
         LegacyStringStages.child(task, allowed, selected) => {
             let expected = add(empty_history(), event("user", "context", "original", "Q"));
@@ -60,10 +80,10 @@ flow deterministic(request: string, initial: Ledger, chosen: LoopTurn, plan: str
     };
 }
 // Every dispatch in these precondition cases terminates the handler immediately.
-flow no_dispatch(request: string, initial: Ledger) -> Result<Report, Failure> {
+flow no_dispatch(request: string, initial: ReadLedger) -> Result<Report, Failure> {
     return run_context(request, ["a.txt"], initial, "trap-", false, false, false, false) with {
-        LegacyStringStages.main(_) => { finish mismatch("UNEXPECTED main dispatch"); }
-        LegacyStringStages.child(_, _, _) => { finish mismatch("UNEXPECTED child dispatch"); }
+        LegacyStringStages.main(_) => finish mismatch("UNEXPECTED main dispatch");
+        LegacyStringStages.child(_, _, _) => finish mismatch("UNEXPECTED child dispatch");
     };
 }
 flow child_controller(raw: string, previous: Session, trap: bool) -> LoopTurn {
@@ -81,9 +101,9 @@ flow selected_child() -> Session {
 }
 flow completed() -> Completed {
     let read = usage(7, 4, 1);
-    let request_digest = match digest("Q") { Ok(value) => value, Err(error) => { abort(error); } };
-    let before_digest = match digest("old\n") { Ok(value) => value, Err(error) => { abort(error); } };
-    let after_digest = match digest("blue\n") { Ok(value) => value, Err(error) => { abort(error); } };
+    let request_digest = match digest("Q") { Ok(value) => value, Err(error) => abort(error), };
+    let before_digest = match digest("old\n") { Ok(value) => value, Err(error) => abort(error), };
+    let after_digest = match digest("blue\n") { Ok(value) => value, Err(error) => abort(error), };
     let edit = EditContext { phase = "aggregate", request = "Q", task = "Replace old with blue", id = "fixture", workspace = "synthetic", path = "a.txt",
         before = "old\n", after = "blue\n", request_digest = request_digest, before_digest = before_digest, after_digest = after_digest, before_bytes = 4, after_bytes = 5, completed = true };
     let evidence = Evidence { request = "Q", task = "T", operation = "read", files = ["a.txt"], literal = "", outcome = "complete: blue<LF>", result = "Seen blue", summary = "Answer", allowed = ["a.txt"], ledger = read };
@@ -94,21 +114,21 @@ flow summary_mismatch(state: WorkLedger, error: string) -> Result<Summary, WorkF
     return Err(WorkFailure { state = state, error = error });
 }
 flow summary_controller(value: Completed, answer: string, trap: bool) -> Result<Summary, WorkFailure> {
-    let log = (name: string, state: WorkLedger) => {};
+    let log = (name: string, state: WorkLedger) => ();
     return finish_summary(value, log, true, false) with {
-        LegacyEditStages.plan(_) => { finish summary_mismatch(value.state, "UNEXPECTED edit plan"); }
-        LegacyEditStages.child(_) => { finish summary_mismatch(value.state, "UNEXPECTED edit child"); }
+        LegacyEditStages.plan(_) => finish summary_mismatch(value.state, "UNEXPECTED edit plan");
+        LegacyEditStages.child(_) => finish summary_mismatch(value.state, "UNEXPECTED edit child");
         LegacyEditStages.aggregate(context) => {
             if trap || context != value.context { finish summary_mismatch(value.state, "UNEXPECTED edit aggregate"); }
             resume answer;
         }
     };
 }
-flow accepted(value: Result<Report, Failure>, expected: Ledger) -> bool {
+flow accepted(value: Result<Report, Failure>, expected: ReadLedger) -> bool {
     return match value { Ok(report) => report.request == "Q" && report.task == "T" && report.answer == "Answer" &&
         report.observed.result == "Seen blue" && report.ledger == expected, Err(_) => false };
 }
-flow refused(value: Result<Report, Failure>, expected: Ledger, resolved: bool, error: string) -> bool {
+flow refused(value: Result<Report, Failure>, expected: ReadLedger, resolved: bool, error: string) -> bool {
     return match value { Ok(_) => false, Err(failure) => failure.state == expected && failure.resolved == resolved && failure.error == error };
 }
 flow verify(label: string, valid: bool) -> unit {

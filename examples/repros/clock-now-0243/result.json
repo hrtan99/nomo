@@ -1,0 +1,13 @@
+{
+  "compiler": "official 0.24.3 and matching SDK",
+  "command": "etas --no-config --cache off run . --allow-effects",
+  "exit": 3,
+  "stdout": "",
+  "stderr": "error[analysis::MissingHostHandler]: missing Phase 1 host service for Time\n --> /workspace/src/app/main.es:5:8\n  | public flow main(args: Array<string>) -> i32 ![Console, Error<IOError>, Error<TimeError>] {\n  |        ^ missing Phase 1 host service for Time\n\n",
+  "scope": "One standard wall-clock observation. No Nomo imports, Memory, model, command, filesystem or credentials. Runtime rejects entry readiness before printing.",
+  "normal_check": {
+    "exit": 0,
+    "diagnostics": 0,
+    "optimization_level": "O2"
+  }
+}

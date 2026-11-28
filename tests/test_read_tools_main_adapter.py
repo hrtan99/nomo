@@ -37,7 +37,7 @@ class MainAdapterTests(unittest.TestCase):
         test=ast.unparse(matches[0].test)
         for name in ('LegacyChildModel.infer','ReadTools.read','ReadTools.search','ConversationOutput.publish'):self.assertIn(name,test)
         code=compile(ast.fix_missing_locations(ast.Module(body=matches,type_ignores=[])),'<production-action-guard>','exec')
-        required={'Fs.read[nomo.tools.workspace.ReadOnlyRoot]','Console.stdout_write','Agentic.infer[nomo.agent.model_tool.ToolModel.run, string]'}
+        required={'Fs.read[nomo.application.resources.ReadOnlyRoot]','Console.stdout_write','Agentic.infer[nomo.agent.model_tool.ToolModel.run, string]'}
         allowed=required|{'Agentic.infer[nomo.agent.model_tool.ReadFirst.run, string]','Agentic.infer[nomo.agent.model_tool.ReadFinal.run, string]'}
         def verify(actions):exec(code,{'rows':{'requested actions':actions},'required':required,'allowed':allowed,'item':{},'diagnostic':lambda _: 'synthetic guard failure'})
         verify(required|{'ConversationOutput.publish'})

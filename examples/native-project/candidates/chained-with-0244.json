@@ -1,0 +1,35 @@
+{
+  "status": "rejected-unparenthesized-chain-retained-unselected",
+  "compiler_receipt": "examples/native-project/compiler-0244-20261127.json",
+  "candidate_snapshot": {
+    "root": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-handler-composition-0244-1v3jopyr",
+    "tree": "2589e53c749a306aa6ce1e18bd804e984eec0f43",
+    "evidence": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-handler-composition-0244-1v3jopyr/compiler-evidence",
+    "overlay": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-handler-composition-0244-1v3jopyr/compiler-compose.json",
+    "source_count": 457,
+    "source_manifest_sha256": "26dcd63a93033f6294014a5008710fe16ef1911a0d0cc2f203806e092e03ddf9"
+  },
+  "explicit_grouping_snapshot": {
+    "root": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-handler-composition-0244-j95awqf7",
+    "tree": "30c1bc8bd80635330c6bcc17f39703b8afe7410d",
+    "evidence": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-handler-composition-0244-j95awqf7/compiler-evidence",
+    "overlay": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-handler-composition-0244-j95awqf7/compiler-compose.json",
+    "source_count": 457,
+    "source_manifest_sha256": "4a7111aee1a538dd7d708a034f934d552ddf5ce70c4e2dd1f15a4cc3ee4a0c2e"
+  },
+  "check": {
+    "exit": 1,
+    "elapsed_seconds": 2.542383043000001,
+    "resources": {
+      "memory.max": "4294967296",
+      "memory.peak": "563642368",
+      "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+      "cpu.max": "400000 100000",
+      "pids.max": "256"
+    }
+  },
+  "source_check_failure": "Six type::TypeMismatch diagnostics: handle expects a handler value. All diagnostic spans include the suffix of the unparenthesized with chain. Direct constructor fields are unchanged between these two exact snapshots.",
+  "qualification": "This is a complete application integration observation, not a separately executed standalone reproduction. The operator-composition attempt is a different earlier rejected snapshot and is not qualified by this patch. No custom Handler runtime or source-order workaround is introduced.",
+  "upstream_issue": "https://github.com/etas-project/etas-frontend/issues/104",
+  "selected_receipt": "examples/native-project/constructor-ioc-20261127.json"
+}

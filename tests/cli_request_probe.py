@@ -54,7 +54,7 @@ def save_json(path, value):
 
 def source_closure():
     """Copy real transitive Nomo modules, never replacement policy/test stubs."""
-    pending, found = ["nomo.cli.cli_request"], {}
+    pending, found = ["nomo.adapters.cli.arguments.cli_request"], {}
     while pending:
         module = pending.pop()
         if module in found:

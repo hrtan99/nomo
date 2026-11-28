@@ -1,0 +1,340 @@
+{
+  "date": "2026-11-27",
+  "status": "official-0247-installed-source-and-retained-history-qualified-production-harness-rejected",
+  "compiler": {
+    "selector": "latest0247",
+    "version": "0.24.7",
+    "source_overrides": [],
+    "repositories": {
+      "cli": {
+        "repository": "etas",
+        "revision": "f677c3299e5a311040adb7d2dce1823ad3f1fe0a",
+        "tree": "ac045ffa6e17571b73bc6f8d748eb262b3d37c77",
+        "packages": [
+          "etas_cli",
+          "etas_driver",
+          "etas_package",
+          "etas_tests"
+        ]
+      },
+      "core": {
+        "repository": "etas-core",
+        "revision": "e0be95b0f5b2ad0f52cb92ca23e88d00cce5ea9f",
+        "tree": "c1f83ef6dabd7134e99ca34b9105a0d413aaf1ed",
+        "packages": [
+          "etas_builtin",
+          "etas_cache",
+          "etas_code",
+          "etas_core",
+          "etas_host",
+          "etas_memory_derive",
+          "etas_package_metadata",
+          "etas_std",
+          "etas_utils"
+        ]
+      },
+      "frontend": {
+        "repository": "etas-frontend",
+        "revision": "ab7deebc99d7b021b4089e568f8a9c9a0cb23f66",
+        "tree": "d189819c91a446c8b9567700ce23bf324d64c0b9",
+        "packages": [
+          "etas_effects",
+          "etas_frontend",
+          "etas_hir",
+          "etas_hir_analysis",
+          "etas_syntax",
+          "etas_syntax_derive",
+          "etas_types"
+        ]
+      },
+      "interpreter": {
+        "repository": "etas-interpreter",
+        "revision": "cd60e6b55625b7b01110885eaf7271aaf02f6f3b",
+        "tree": "a69f484ee6669041f09cd6fee0488bd5286e6129",
+        "packages": [
+          "etas_interpreter"
+        ]
+      }
+    },
+    "cache_root": "etas-0247-release",
+    "build_target": "etas-0230/target",
+    "source": "Official CLI 0.24.7 at f677c32 and its exact official lock graph, standard Cargo release profile. Build uses existing target with 6 GiB/one Cargo job; normal source/runtime remain 4 GiB.",
+    "installed_sdk": true,
+    "build_profile": "release",
+    "cargo_lock_sha256": "243b5695dcf41a347c5c1ff35a512502e9f799cfce7fbac79fcafd48a130b7d0",
+    "verified_seed_binary_sha256": "259e8da6a235fa8bb3f05bc3c9a41f2ce4f3c017bffaed2c7072c5a13ccabd5c"
+  },
+  "installed": {
+    "lock_sha256": "243b5695dcf41a347c5c1ff35a512502e9f799cfce7fbac79fcafd48a130b7d0",
+    "method": "adopted-independently-verified-0247-build",
+    "path": "/home/nomo/.cargo/bin/etas",
+    "sdk": {
+      "abi": {
+        "artifact_hash": "blake3:2df1d3b03ac0a6f48b544c9cab17d65c4eacfe2509aae68e9b5846b17c4aa6a8",
+        "body_schema": 99,
+        "compiler_version": "0.21.6",
+        "effect_analysis_hash": "blake3:f0a75425186bf211dd50c875524a8278f77fe6c342e042d0aed9d378f25ead57",
+        "interpreter_layout_hash": "blake3:360b34e9a599111f0cf55aa2919be196e69ffd80a19cc7938388bb5995c20d8b",
+        "metadata_schema": 78,
+        "native_binding_abi": "blake3:1f8072e9ff9c46f860213f9e74e9fb896278348d666a99a9035686f555a7cfda",
+        "schema": 3,
+        "std_contract": "phase1|etas.std.text.contract.v1|etas.std.text.primitive-abi.v1|etas.std.text.source.v1|unicode:17.0.0:7c74aebf116629b6:etas.std.text.unicode.v1|usize:64",
+        "target": "aarch64-unknown-linux-gnu",
+        "toolchain_id": "etas-0.8.2-aarch64-unknown-linux-gnu-1f8072e9ff9c"
+      },
+      "manifest_path": "/home/nomo/.cargo/lib/etas/etas-0.8.2-aarch64-unknown-linux-gnu-1f8072e9ff9c/std/manifest.json",
+      "manifest_sha256": "fd945d5891e6ef9ec3ff51f6aeb198ccb9675e2d4fe8b0ce9d11f05cef95a7d0",
+      "receipt": "etas-std-install-v2\n000000000000000018ebe534708bd3c2-429-aarch64-unknown-linux-gnu\nblake3:6e50fdeae2b9dc6a760b571db9eecdfd5e2c2ec15acef970a3fa0e0e35dc73d4\n"
+    },
+    "sha256": "259e8da6a235fa8bb3f05bc3c9a41f2ce4f3c017bffaed2c7072c5a13ccabd5c",
+    "version": "etas 0.24.7\n"
+  },
+  "build": {
+    "profile": "standard Cargo release",
+    "elapsed_seconds": 1082,
+    "cargo_jobs": 1,
+    "resources": {
+      "memory.max": "6442450944",
+      "memory.peak": "5228351488",
+      "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+      "cpu.max": "400000 100000",
+      "pids.max": "256"
+    },
+    "source_overrides": [],
+    "custom_rustflags": false,
+    "prior_installation_backup": "/home/nomo/.cargo/etas-0246-release/accepted-before-0247",
+    "old_binary_and_sdk_unchanged_through_staged_checks": true
+  },
+  "source_check": {
+    "snapshot": {
+      "root": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0247-staged-review-8mvp0sk2",
+      "base_tree": "b7cdd86b5dc45d5f9cd0201ab0c5656149047537",
+      "overlaid_files": {
+        "scripts/etas-official-cli-common.py": "9b9a6caa66905fac7d573d49db7ed6e3acb4c9f79852f635d2902d30a0e07410",
+        "scripts/etas-official-container-common.sh": "ec610c69d82188a9158626daef7e261e56af0f55eeb1f27641d94711a511ea21",
+        "scripts/etas-0247-official-cli-bootstrap.py": "ff20bfb7732e67fecb9c2f8cbfcc37516010a1975208c8935bd470d164d3ce9e",
+        "scripts/etas-0247-official-container.sh": "1a3b71d15d1929eccddf9db7c3e5eece04a89bd37fa4f7c5b1640cc502132150",
+        "tests/harness_prepare_ports_probe.py": "1dfff85ba6d901c7ec4ebe5c578e70aac821f44f343bd678c6d42097862cf6a3",
+        "config/etas-0247-official.json": "4f6b9767d04ff9f52f317b658897942fed7fd93c1b491f1c2925eafd2ae77ffb",
+        "config/etas-0247-official-compose.yaml": "c1ae856eb0870968b1572bd922e01fe9728c15f6741d480b3b0a53960b218584",
+        "config/etas-0247-official.Cargo.lock": "243b5695dcf41a347c5c1ff35a512502e9f799cfce7fbac79fcafd48a130b7d0",
+        "config/etas-0247-build-compose.yaml": "9f5cc4ac4d5306f13e0e207e86730af7a89887593704e13126247b244956612a"
+      },
+      "overlay": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0247-staged-review-8mvp0sk2/compiler-compose.json",
+      "evidence": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0247-staged-review-8mvp0sk2/compiler-evidence",
+      "source_count": 467,
+      "source_manifest_sha256": "8dd761b1e6276fdabb1c7a4740d4db7a21dd2d3141535308c28b3f75d64ee9c0"
+    },
+    "result": {
+      "exit": 0,
+      "elapsed_seconds": 42.12134514500008,
+      "binary_sha256": "259e8da6a235fa8bb3f05bc3c9a41f2ce4f3c017bffaed2c7072c5a13ccabd5c",
+      "sdk_manifest_sha256": "141c685cde348b399a1494bab99315ef52edca46b392f5dcee020f505fd6674c",
+      "sdk_artifact": "blake3:2df1d3b03ac0a6f48b544c9cab17d65c4eacfe2509aae68e9b5846b17c4aa6a8",
+      "resources": {
+        "memory.max": "4294967296",
+        "memory.peak": "2960183296",
+        "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+        "cpu.max": "400000 100000",
+        "pids.max": "256"
+      }
+    },
+    "files": 467,
+    "diagnostics": 0,
+    "qualification": "Unchanged 467 Etas product sources. The temporary SDK prefix and final global install use the same binary SHA and standard artifact hash; installed manifest/receipt generation differs and is recorded separately.",
+    "post_check_comment_correction": {
+      "path": "src/nomo/adapters/model/coding_agent.es",
+      "before_sha256": "9316b299e8ad3529d9163b09d5a76dabff3576048a61cbe7d08d3345ff036d65",
+      "after_sha256": "abc7f0f57fdd37d1e8c2b7bd2b7eee66d0b6c8e77b2a1803b2aaa6ac0459a630",
+      "non_comment_tokens_identical": true,
+      "qualification": "Only the misleading budget comment changed after the frozen full source check; executable source tokens are identical. No duplicate compiler check was run for this comment correction."
+    }
+  },
+  "production_harness": {
+    "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-harness-ports-0246-cwbdzmxj",
+    "source_count": 94,
+    "same_exact_sources_as_0246": true,
+    "result": {
+      "exit": 3,
+      "elapsed_seconds": 4.322196293999923,
+      "stdout": "",
+      "stderr": "error[analysis::MissingCheckedFact]: checked record slot 0 does not hold field `task`\n --> /workspace/src/nomo/adapters/model/harness/history_native_stages.es:103:73\n  | flow delegated(value: Delegation) -> string { return frame([\"delegate\", value.task]); }\n  |                                                                         ^ checked record slot 0 does not hold field `task`\n",
+      "resources": {
+        "memory.max": "4294967296",
+        "memory.peak": "884514816",
+        "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+        "cpu.max": "400000 100000",
+        "pids.max": "256"
+      },
+      "model_requests": 0,
+      "observer_failures": []
+    },
+    "trace_outcome": {
+      "failure": {
+        "diagnostic": {
+          "code": "Analysis(MissingCheckedFact)",
+          "message": "checked record slot 0 does not hold field `task`",
+          "phase": "analysis",
+          "severity": "error"
+        },
+        "kind": "execution_fault"
+      },
+      "kind": "failed"
+    },
+    "local_work_settled": true,
+    "host_requests": 0,
+    "qualification": "Original production HistoryStages assertions retained. First inference is not reached; six scripted responses/one read remain unexecuted. This is not accepted production preparation.",
+    "upstream": "https://github.com/etas-project/etas-interpreter/issues/124#issuecomment-7217986371"
+  },
+  "retained_history": {
+    "evidence": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0246-to-0247-history-7k5hz4dw",
+    "result": {
+      "exit": 0,
+      "source": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0245-to-0246-history-mvwjpbk5/state/conversations.sqlite3",
+      "source_sha256_before": "1fa8fd934149fe77f0baeb8bdbaf744ae33f64b8979128c5f91fac417ae38f12",
+      "source_sha256_after": "1fa8fd934149fe77f0baeb8bdbaf744ae33f64b8979128c5f91fac417ae38f12",
+      "selected": "bbf06784db24afef7b8cd9f9d4b073bb",
+      "expected_complete_events": 10,
+      "command": [
+        "docker",
+        "compose",
+        "--project-name",
+        "nomo-0247-history",
+        "--env-file",
+        "/dev/null",
+        "--file",
+        "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0247-staged-review-8mvp0sk2/compose.yaml",
+        "--file",
+        "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0247-staged-review-8mvp0sk2/config/etas-0247-official-compose.yaml",
+        "--file",
+        "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0247-staged-review-8mvp0sk2/config/local-tryout-compose.yaml",
+        "--file",
+        "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0247-staged-review-8mvp0sk2/config/etas-runtime-cache-compose.yaml",
+        "--file",
+        "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0247-staged-review-8mvp0sk2/config/nomo-native-compose.yaml",
+        "run",
+        "--rm",
+        "--no-deps",
+        "--pull",
+        "never",
+        "--tty=false",
+        "dev",
+        "/home/nomo/.cargo/etas-0247-release/staged-sdk/bin/etas",
+        "--no-config",
+        "--cache",
+        "off",
+        "run",
+        "/workspace",
+        "--flow",
+        "native_project",
+        "--profile",
+        "nomo-native",
+        "--allow-effects",
+        "--trace-out",
+        "/native-evidence/history.trace.json",
+        "--args",
+        "--workspace",
+        "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-project-state-migration-cw9zgjbf/project A",
+        "--id",
+        "bbf06784db24afef7b8cd9f9d4b073bb",
+        "--history"
+      ],
+      "qualification": "Coherent copy of the same actual state last opened by 0.24.6 (originally produced under 0.24.5). One ordinary 0.24.7 --history invocation, no original mutation, schema rewrite, model or project operation.",
+      "trace_outcome": {
+        "kind": "completed"
+      },
+      "local_work_settled": true,
+      "paired_requests": 68,
+      "host_actions": {
+        "Policy.evaluate": 34,
+        "Memory.read": 23,
+        "Memory.write": 1,
+        "Console.stdout_write": 10
+      },
+      "status": "passed",
+      "complete_events": 10,
+      "original_events_and_chunks_unchanged": true
+    }
+  },
+  "staged_sdk_observer_correction": "Official prefix installation succeeded. Initial observation incorrectly read the Cargo build target receipt instead of prefix/bin/etas and raised OSError. Corrected by observing the already installed prefix binary; SDK installation was not repeated.",
+  "default_identity": {
+    "status": "passed",
+    "graph": "latest0247",
+    "log": "tmp/etas-0247-normal-identity.log"
+  },
+  "scope": "Official CLI/SDK installed and identified; frozen 467-source check and retained history pass. Production Harness, shipping project and complete native scenario fail in separately recorded scopes. No real provider, new negative matrix or compiler patch. JSON migration/model-handler/injected-role/Clock/canonical-approval and other prior gates are not reaccepted; full thirteen-item goal and native cutover remain incomplete.",
+  "native_end_to_end": {
+    "status": "failed",
+    "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-end-to-end-u8dmaohl",
+    "trace_sha256": "1601c39079c04e0a62b1927de006f1b4713716938603263be5d80f059e6fe8f7",
+    "trace_outcome": {
+      "failure": {
+        "diagnostic": {
+          "code": "Analysis(UnhandledRuntimeError)",
+          "message": "model host boundary failed: BudgetExceeded: run-owned execution token budget is exhausted",
+          "phase": "analysis",
+          "severity": "error"
+        },
+        "kind": "execution_fault"
+      },
+      "kind": "failed"
+    },
+    "local_work_settled": true,
+    "paired_requests": 113,
+    "host_actions": {
+      "Policy.evaluate": 58,
+      "Memory.read": 25,
+      "Memory.write": 20,
+      "Console.stdout_write": 3,
+      "Console.stdin_read_line": 1,
+      "Fs.list": 3,
+      "Agentic.step": 2,
+      "Fs.read": 1
+    },
+    "host_outcomes": {
+      "succeeded": 113
+    },
+    "model_requests": 2,
+    "request_max_tokens": [
+      131072,
+      131072
+    ],
+    "synthetic_usage_per_response": {
+      "prompt_tokens": 100000,
+      "completion_tokens": 20,
+      "total_tokens": 100020
+    },
+    "file_unchanged": true,
+    "qualification": "Original positive scenario and scripted usage unchanged. Initial read completed; second model response fails budget settlement before dispatching replace_file. Edit/check/Git/chat/fresh-process assertions remain unexecuted. No retry or replay.",
+    "owned_source_error": "The former comment reversed Tokens and ContextTokens semantics. Tokens(131072) actually bounds cumulative input/output, so 200040 tokens exceed the declared budget. Comment corrected without changing behavior.",
+    "upstream_configuration_gap": "https://github.com/etas-project/etas-interpreter/issues/125"
+  },
+  "shipping_project": {
+    "status": "failed",
+    "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-project-native-whuufhkx",
+    "model_requests": 0,
+    "created_project_files": 0,
+    "diagnostic": "MissingCheckedFact: field `tool` expects 8 record fields, received [\"parts\"]",
+    "location": "src/nomo/adapters/cli/project_agent.es:34:28",
+    "qualification": "Original six-response positive scenario and assertions retained; fails before first HTTP. Batch/check/summary/reopen assertions remain unexecuted. No retry.",
+    "upstream": "https://github.com/etas-project/etas-interpreter/issues/124#issuecomment-7218497699"
+  },
+  "final_structural_review": {
+    "snapshot": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0247-final-review-hsl_9id9",
+    "source_count": 467,
+    "architecture": {
+      "exit": 0,
+      "stdout": "PASS architecture: 467 modules, 3472 imports, 48 identity-only compatibility leaves\n",
+      "stderr": ""
+    },
+    "physical_inventory": {
+      "exit": 0,
+      "stdout": "counter: nomo-physical-v4; authoritative; blank and comment-only # / // lines excluded\nproduct roots: src; reviewed runtime inventory: scripts/nomo, scripts/nomo_project_chat.py, scripts/nomo_project_model.py, scripts/nomo_project_tools.py, scripts/nomo_project.py, scripts/nomo_history.py, scripts/nomo_jobs.py, scripts/nomo_git.py, scripts/nomo-read.sh, scripts/nomo-session-chat.py, scripts/nomo-session-id.py, scripts/nomo-read-session.py, scripts/nomo-history-work.py, scripts/nomo-edit.py, scripts/nomo-session-storage.py, scripts/nomo-event-policy.py, scripts/nomo-bounded-check.py, scripts/nomo-verified-etas.py, scripts/nomo_model_transport.py, scripts/nomo_terminal.py, scripts/terminal-transport.py, scripts/nomo-native, scripts/native-worker-transport.py, scripts/nomo-migrate-native, scripts/nomo_migration.py, scripts/etas003_gateway.py, scripts/local-tryout.sh, scripts/prepare-local-tryout.py, scripts/session-demo.sh\nsrc: 18158 SLOC, 21436 raw lines, 467 files\nruntime: 4844 SLOC, 5383 raw lines, 29 files\nruntime-entry: 114 SLOC, 126 raw lines, 1 files\nruntime-project: 1256 SLOC, 1409 raw lines, 7 files\nruntime-legacy: 2032 SLOC, 2199 raw lines, 9 files\nruntime-shared: 498 SLOC, 567 raw lines, 4 files\nruntime-native: 561 SLOC, 635 raw lines, 4 files\nruntime-gateway: 165 SLOC, 188 raw lines, 1 files\nruntime-tryout: 218 SLOC, 259 raw lines, 3 files\nproduct: 23002 SLOC, 26819 raw lines, 496 files\ntests: 47810 SLOC, 52115 raw lines, 426 files\nexamples: 1363 SLOC, 1591 raw lines, 65 files\nscripts: 9890 SLOC, 11199 raw lines, 132 files\nengineering-scripts: 5046 SLOC, 5816 raw lines, 103 files\n",
+      "stderr": ""
+    },
+    "changed_python_ast": "passed",
+    "changed_shell_syntax": "passed",
+    "diff_whitespace": "passed",
+    "qualification": "Selected tracked tree with exact new toolchain files; user-untracked prototypes excluded. No runtime acceptance is implied."
+  }
+}

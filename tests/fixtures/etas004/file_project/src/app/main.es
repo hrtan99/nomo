@@ -1,6 +1,11 @@
 module app.main;
 
-import std.fs.{IOError, Region, WorkspacePath, atomic_replace, read_bytes, write_bytes};
+import std.fs.IOError;
+import std.fs.Region;
+import std.fs.WorkspacePath;
+import std.fs.atomic_replace;
+import std.fs.read_bytes;
+import std.fs.write_bytes;
 
 public flow read_path<R ~ Region>(path: WorkspacePath<R>) -> bytes ![Error<IOError>]
 {

@@ -4,18 +4,38 @@ import std.io.println;
 import std.text.split;
 import std.bytes.len as byte_count;
 import std.codec.text.utf8_encode;
-import nomo.tools.edit_encoding.digest;
-import nomo.model.model_tool_contract.{Action, decode_reply};
-import nomo.model.model_tool_contract.Context as ToolContext;
-import nomo.harness.harness_tool_contract.Context as ReadContext;
-import nomo.harness.harness_tool_contract.Ledger as ReadLedger;
-import nomo.harness.harness_edit_contract.Context as EditContext;
-import nomo.harness.harness_work_contract.{Context, Evidence};
-import nomo.harness.work_chain_model.{Input, ParentFacts, combined};
-import nomo.harness.typed_work_contract.{Delegation, ReadAction, Answer, project_read_plan, project_read_action,
-    project_read_final, project_read_aggregate, settle_read, project_edit_plan, project_edit_child, project_edit_aggregate};
-import nomo.tools.edit_contribution.Contribution;
-import nomo.harness.typed_work_reservation.{Policy, Envelope, Reservation, required, admit, advance, stop, reservation_error};
+import nomo.domain.wire.digest;
+import nomo.domain.harness.loop.Action;
+import nomo.domain.harness.loop.decode_reply;
+import nomo.domain.harness.loop.Context as ToolContext;
+import nomo.domain.harness.read.ReadContext;
+import nomo.domain.harness.loop.ReadLedger;
+import nomo.domain.harness.edit.Context as EditContext;
+import nomo.domain.harness.work.Context;
+import nomo.domain.harness.work.Evidence;
+import nomo.domain.sessions.chain.Input;
+import nomo.domain.sessions.chain.ParentFacts;
+import nomo.adapters.model.work.combined;
+import nomo.domain.harness.typed_work.Delegation;
+import nomo.domain.harness.typed_work.ReadAction;
+import nomo.domain.harness.typed_work.Answer;
+import nomo.domain.harness.typed_work.project_read_plan;
+import nomo.domain.harness.typed_work.project_read_action;
+import nomo.domain.harness.typed_work.project_read_final;
+import nomo.domain.harness.typed_work.project_read_aggregate;
+import nomo.domain.harness.typed_work.settle_read;
+import nomo.domain.harness.typed_work.project_edit_plan;
+import nomo.domain.harness.typed_work.project_edit_child;
+import nomo.domain.harness.typed_work.project_edit_aggregate;
+import nomo.domain.editing.Contribution;
+import nomo.domain.harness.typed_work.Policy;
+import nomo.domain.harness.typed_work.Envelope;
+import nomo.domain.harness.typed_work.Reservation;
+import nomo.domain.harness.typed_work.required;
+import nomo.domain.harness.typed_work.admit;
+import nomo.domain.harness.typed_work.advance;
+import nomo.domain.harness.typed_work.stop;
+import nomo.domain.harness.typed_work.reservation_error;
 
 type Check = { label: string, passed: bool };
 flow slash() -> string { return std.text.from_char('\\'); }
@@ -64,8 +84,8 @@ flow facts() -> Array<ParentFacts> {
 }
 flow work(phase: string, before: string, after: string, changed_request: bool, completed: bool) -> Context {
     let request = "Change chosen using observed context";
-    let previous = match digest(before) { Ok(value) => value, Err(error) => { abort(error); } };
-    let next = match digest(after) { Ok(value) => value, Err(error) => { abort(error); } };
+    let previous = match digest(before) { Ok(value) => value, Err(error) => abort(error), };
+    let next = match digest(after) { Ok(value) => value, Err(error) => abort(error), };
     let edit = EditContext { phase = phase, request = if changed_request { "Different request" } else { request },
         task = if phase == "plan" { "" } else { "Replace chosen with updated" }, id = "typed-work", workspace = "owned", path = "notes/report.txt",
         before = before, after = if phase == "aggregate" { after } else { "" },

@@ -1,8 +1,7 @@
 """Application mutation ordering with real fixture journals and controlled file effects."""
 from pathlib import Path
-import hashlib
+from native_sources import copy_sources
 import json
-import re
 import subprocess
 import tempfile
 
@@ -17,26 +16,7 @@ def main():
     state.mkdir(mode=0o777)
     state.chmod(0o777)
     fixture = ROOT / 'tests/fixtures/native_mutation_controller/src/app/main.es'
-    entry = package / 'src/app/main.es'
-    entry.parent.mkdir(parents=True)
-    entry.write_bytes(fixture.read_bytes())
-    pending = [fixture]
-    sources = {str(fixture.relative_to(ROOT)): hashlib.sha256(fixture.read_bytes()).hexdigest()}
-    while pending:
-        source = pending.pop()
-        for imported in re.findall(r'(?m)^(?:public\s+)?import\s+(nomo[.A-Za-z0-9_]*)', source.read_text()):
-            parts = imported.rstrip('.').split('.')
-            while parts and not (ROOT / 'src' / '/'.join(parts)).with_suffix('.es').is_file():
-                parts.pop()
-            original = (ROOT / 'src' / '/'.join(parts)).with_suffix('.es')
-            relative = original.relative_to(ROOT)
-            if str(relative) in sources:
-                continue
-            target = package / relative
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_bytes(original.read_bytes())
-            sources[str(relative)] = hashlib.sha256(original.read_bytes()).hexdigest()
-            pending.append(original)
+    sources = copy_sources(ROOT, package, fixture)
     (evidence / 'sources.json').write_text(json.dumps(sources, indent=2) + '\n')
     (package / 'etas.toml').write_text('''[package]
 name = "native-mutation-controller"
@@ -63,7 +43,7 @@ flow = "main"
         {'type': 'bind', 'source': str(package), 'target': '/workspace', 'read_only': True},
         {'type': 'bind', 'source': str(state), 'target': '/state'}]}}}))
     command = ['docker', 'compose', '--env-file', '/dev/null']
-    for name in ('compose.yaml', 'config/etas-0135-official-compose.yaml', 'config/etas-runtime-cache-compose.yaml', str(overlay)):
+    for name in ('compose.yaml', 'config/etas-02413-official-compose.yaml', 'config/etas-runtime-cache-compose.yaml', str(overlay)):
         command += ['--file', str(ROOT / name)]
     inside = '''import json,pathlib,subprocess
 cmd=['/home/nomo/.cargo/bin/etas','--no-config','--cache','off','run','/workspace','--allow-effects','--trace-out','/state/mutations.trace.json']
@@ -99,7 +79,7 @@ print(json.dumps({'exit':p.returncode,'stdout':p.stdout,'stderr':p.stderr,'resou
     events = dict(line.split() for line in resources['memory.events'].splitlines())
     assert all(events[key] == '0' for key in ('max', 'oom', 'oom_kill', 'oom_group_kill'))
     record.update(status='passed', source_count=len(sources), paired_host_requests=len(starts), host_actions=actions,
-                  qualification='Apply/undo and explicitly required recovery after a retained write. Real fixture SQLite journal/history with controlled file/command effects; no actual project mutation or native command. This does not certify on-disk rollback or production adapter acceptance.')
+                  qualification='Apply/undo and explicitly required recovery after a retained write. Actual NativeChangeJournals and real SQLite history with controlled file/command effects. This does not certify actual project filesystem writes, on-disk rollback or native approvals.')
     (evidence / 'result.json').write_text(json.dumps(record, indent=2) + '\n')
     print('PASS application mutation ordering, undo and retained-write rollback', flush=True)
 

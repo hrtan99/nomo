@@ -122,14 +122,7 @@ def main():
     for index, (arguments, expected) in enumerate(parsing):
         test = 'Ok(_) => {}, Err(_) => { abort("valid arguments refused"); }' if expected else 'Err(_) => {}, Ok(_) => { abort("invalid arguments accepted"); }'
         cases.append(('atomic_args_' + str(index), f'match parse_continue({render(arguments)}) {{ {test} }};'))
-    source = '''module app.main;
-import std.io.println;
-import nomo.core.conversation.{State, Event};
-import nomo.session.session_state.{Snapshot, Request, Caps, Ledger, Operation, Reference};
-import nomo.session.continuation_state.{plan, continuing};
-import nomo.session.stub_snapshot.successor;
-import nomo.cli.continuation_args.parse_continue;
-'''
+    source = 'module app.main;\nimport std.io.println;\nimport nomo.domain.conversation.State;\nimport nomo.domain.conversation.Event;\nimport nomo.domain.sessions.state.Snapshot;\nimport nomo.domain.sessions.state.Request;\nimport nomo.domain.sessions.state.Caps;\nimport nomo.domain.sessions.state.Ledger;\nimport nomo.domain.sessions.state.Operation;\nimport nomo.domain.sessions.state.Reference;\nimport nomo.session.continuation_state.plan;\nimport nomo.session.continuation_state.continuing;\nimport nomo.session.stub_snapshot.successor;\nimport nomo.adapters.cli.session_input.parse_continue;\n'
     for index, (label, body) in enumerate(cases):
         source += f'flow case_{index}() -> i32 {{ {body} return 0; }}\n'
     source += 'public flow contracts() -> i32 {\n'

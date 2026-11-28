@@ -1,8 +1,12 @@
 module app.production_probe;
 
-import nomo.tools.workspace.{Outcome, ReadOnlyRoot, read_file, search_files};
-import nomo.model.model_tool_contract.{Limits, fresh_loop};
-import nomo.agent.model_tool.run_loop;
+import nomo.domain.workspace.Outcome;
+import nomo.application.resources.ReadOnlyRoot;
+import nomo.adapters.filesystem.workspace.read_file;
+import nomo.adapters.filesystem.workspace.search_files;
+import nomo.domain.harness.loop.Limits;
+import nomo.domain.harness.loop.fresh_loop;
+import nomo.bootstrap.harness.model_tool_run_loop as run_loop;
 
 public flow production_read(args: Array<string>) -> i32 {
     let result: Outcome = read_file("a.txt");

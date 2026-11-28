@@ -259,8 +259,8 @@ def prepare(folder):
     project = folder / 'controller'; (project / 'src/app').mkdir(parents=True)
     # Copy the current candidate's actual production-consumer closure.
     roots = ['nomo.harness.harness_tool_chat_controller', 'nomo.harness.harness_tool_chat',
-             'nomo.harness.harness_model_tools', 'nomo.entry.harness_model_tools_chat',
-             'nomo.entry.harness_checkpoint_entry', 'nomo.entry.harness_successor_entry']
+             'nomo.harness.harness_model_tools', 'nomo.adapters.cli.legacy.harness_model_tools_chat',
+             'nomo.adapters.cli.legacy.harness_checkpoint_entry', 'nomo.adapters.cli.legacy.harness_successor_entry']
     positive_sources = {}
     for module in roots: positive_sources.update(closure(module))
     for module, path in positive_sources.items():
@@ -376,7 +376,7 @@ def audit_effects(report):
     assert main['escaping_effects'] == set(), 'native ChatMain callable escaping row'
     assert has_agent(main['requested_actions'], 'nomo.harness.harness_tool_chat.ChatMain'), 'actual ChatMain Agent identity'
     assert has_agent(main['default_actions'], 'nomo.harness.harness_tool_chat.ChatMain'), 'native ChatMain default action'
-    fs = 'Fs.read[nomo.tools.workspace.ReadOnlyRoot]'
+    fs = 'Fs.read[nomo.application.resources.ReadOnlyRoot]'
     child = selected('production_child')
     assert fs in child['requested_actions'] and fs in child['default_actions'] and 'Console.stdout_write' in child['default_actions'], 'child concrete read/Console adapter'
     assert any(has_agent(child['requested_actions'], 'nomo.agent.model_tool.' + owner) for owner in ['ToolModel', 'ReadFirst', 'ReadFinal']), 'child native Agent identity'

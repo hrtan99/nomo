@@ -1,0 +1,17 @@
+[package]
+name = "standard-approval-0243"
+version = "0.1.0"
+edition = "2026"
+
+[[bin]]
+name = "repro"
+module = "app.main"
+flow = "main"
+profile = "local"
+
+[runtime.profiles.local.policy]
+mode = "local-static"
+rules = ["console=allow", "approval=allow"]
+
+[runtime.profiles.local.approval]
+mode = "prompt"

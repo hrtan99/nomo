@@ -1,0 +1,773 @@
+{
+  "date": "2026-11-28",
+  "status": "transfer-project-terminal-ports-current-graph-functional-acceptance",
+  "goal_item": "DIP-12",
+  "goal_scope": "Accept the transfer/project/terminal criteria below on the current compiler. The full thirteen-item objective, native default cutover and separate continuous capture/fresh-Host live reconnection remain incomplete.",
+  "accepted_product_commit": "53419f7fd283f14995502060408260eb12609c99",
+  "source_snapshot": {
+    "root": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-config-hash-02413-0l4af2xf",
+    "source_count": 468,
+    "source_manifest_sha256": "0318a011171bdcded970ac45667c7b59a8257e60e5eafdf52aaba3cc3c071d4f"
+  },
+  "normal_source_check": {
+    "exit": 0,
+    "elapsed_seconds": 40.219568269,
+    "resources": {
+      "memory.max": "4294967296",
+      "memory.peak": "3111456768",
+      "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+      "cpu.max": "400000 100000",
+      "pids.max": "256"
+    }
+  },
+  "toolchain": {
+    "selector": "latest02413",
+    "version": "0.24.13",
+    "source_overrides": [],
+    "repositories": {
+      "cli": {
+        "repository": "etas",
+        "revision": "e3ea414b85c76bb86c961617ed0354a6f2dce9f2",
+        "tree": "7ae316dc7789d2639f9a9495dea5d62823867a6e",
+        "packages": [
+          "etas_cli",
+          "etas_driver",
+          "etas_package",
+          "etas_tests"
+        ]
+      },
+      "core": {
+        "repository": "etas-core",
+        "revision": "178e9f7e5852ed4f724c8e4289ccc43df8b6a8ac",
+        "tree": "d2d9e20938479a84ca9c172b92e589e4b836d6a4",
+        "packages": [
+          "etas_builtin",
+          "etas_cache",
+          "etas_code",
+          "etas_core",
+          "etas_host",
+          "etas_memory_derive",
+          "etas_package_metadata",
+          "etas_std",
+          "etas_utils"
+        ]
+      },
+      "frontend": {
+        "repository": "etas-frontend",
+        "revision": "5f79f46337a30e668636dc4a4e9e3369244142ea",
+        "tree": "178086c6f7db75c63a9556e0c82c7f3b4b5b90d1",
+        "packages": [
+          "etas_effects",
+          "etas_frontend",
+          "etas_hir",
+          "etas_hir_analysis",
+          "etas_syntax",
+          "etas_syntax_derive",
+          "etas_types"
+        ]
+      },
+      "interpreter": {
+        "repository": "etas-interpreter",
+        "revision": "5ccfe47ca67c47e7d59d2761b21468c4437bd875",
+        "tree": "05ddc2c790bf246854a8231bbcb6c518e5497e51",
+        "packages": [
+          "etas_interpreter"
+        ]
+      }
+    },
+    "cache_root": "etas-02413-release",
+    "build_target": "etas-0230/target",
+    "source": "Official CLI 0.24.13 e3ea414 and its exact official lock graph, including std 0.9.0 and data/system inference overload; standard release, shared dependency cache, one Cargo job, 6 GiB build only; source/runtime 4 GiB.",
+    "installed_sdk": true,
+    "build_profile": "release",
+    "cargo_lock_sha256": "901a17e91e8e168732d42d832c390894eae152a14f7a06e411b2b89b6f959e9d",
+    "verified_seed_binary_sha256": "95809f4d563219895925dba0acd405b094cd93669fbdb00f1871d00a12166e0b"
+  },
+  "sdk_identity": "examples/native-project/compiler-02413-20261128.json",
+  "criteria": {
+    "application_transfer_policy": {
+      "sources": [
+        "src/nomo/application/transfer/service.es",
+        "src/nomo/application/transfer/ports.es",
+        "src/nomo/application/transfer/handlers.es"
+      ],
+      "evidence": "Actual production import interruption, sealed-source resume/fork, export approval interruption and explicit new export/import pass through the selected ports and root."
+    },
+    "storage_and_codec_adapters": {
+      "sources": [
+        "src/nomo/adapters/storage/conversations.es",
+        "src/nomo/adapters/storage/codec/archive.es",
+        "src/nomo/adapters/storage/codec/archive_role.es",
+        "src/nomo/adapters/filesystem/archives.es"
+      ],
+      "evidence": "All 300 original imported events and the complete sealed raw source match after a new process. Renamed source is not reread; copy digest matches independent SHA-256. Exported content equals its approved preview."
+    },
+    "project_policy_and_adapters": {
+      "sources": [
+        "src/nomo/application/projects/service.es",
+        "src/nomo/application/projects/ports.es",
+        "src/nomo/adapters/storage/projects.es",
+        "src/nomo/adapters/filesystem/launch_control.es",
+        "src/nomo/adapters/cli/projects.es"
+      ],
+      "evidence": "Two real synthetic folders retain separate histories, actual Etas Hosts and PIDs. The same original job completes Unicode I/O and EOF after switching back."
+    },
+    "typed_terminal_and_startup": {
+      "sources": [
+        "src/nomo/application/conversation/terminal.es",
+        "src/nomo/adapters/cli/native/options.es",
+        "src/nomo/domain/conversation/start.es"
+      ],
+      "evidence": "Existing new/title/id/resume-all/open/status cases pass, including resident selection, global chooser routing, separate foreign-ID inspection and preserved forwarded startup fields. No startup command/consent is sent to resident stdin."
+    },
+    "approval_and_recovery_semantics": {
+      "evidence": "Interrupted pre-approval export performs no write; original contents remain. A fresh Host retains dispatching, explicit inspection resolves closed_unknown, and a separately approved export completes once. Imported metadata creates no live attempt/authority. Existing strict audits remain unchanged."
+    }
+  },
+  "copy_recovery": {
+    "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-copy-recovery-1bf7c7bf",
+    "result": {
+      "status": "passed",
+      "interrupted_exit": 130,
+      "interrupted_copy": {
+        "cursor": 1.0,
+        "digest": [
+          127.0,
+          42.0,
+          123.0,
+          51.0,
+          175.0,
+          119.0,
+          119.0,
+          99.0,
+          123.0,
+          35.0,
+          201.0,
+          51.0,
+          68.0,
+          37.0,
+          177.0,
+          86.0,
+          233.0,
+          221.0,
+          63.0,
+          113.0,
+          231.0,
+          109.0,
+          242.0,
+          20.0,
+          13.0,
+          25.0,
+          147.0,
+          101.0,
+          26.0,
+          240.0,
+          36.0,
+          216.0
+        ],
+        "id": "native-1",
+        "kind": "import",
+        "phase": "copying",
+        "source": "history.json",
+        "title": "Sealed original",
+        "total": 300.0,
+        "workspace": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-copy-recovery-1bf7c7bf/project"
+      },
+      "statuses": [
+        {
+          "first_user": -1.0,
+          "id": "native-0",
+          "ledger": {
+            "compactions": 0.0,
+            "context_bytes": 0.0,
+            "generation_allowance": 0.0,
+            "tools": 0.0,
+            "turns": 0.0
+          },
+          "next_event": 0.0,
+          "pending": "",
+          "summary_event": -1.0,
+          "summary_through": -1.0,
+          "title": "New conversation",
+          "workspace": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-copy-recovery-1bf7c7bf/project"
+        },
+        {
+          "first_user": 1.0,
+          "id": "native-1",
+          "ledger": {
+            "compactions": 0.0,
+            "context_bytes": 0.0,
+            "generation_allowance": 0.0,
+            "tools": 0.0,
+            "turns": 0.0
+          },
+          "next_event": 301.0,
+          "pending": "",
+          "summary_event": -1.0,
+          "summary_through": -1.0,
+          "title": "Sealed original",
+          "workspace": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-copy-recovery-1bf7c7bf/project"
+        },
+        {
+          "first_user": 2.0,
+          "id": "native-2",
+          "ledger": {
+            "compactions": 0.0,
+            "context_bytes": 0.0,
+            "generation_allowance": 0.0,
+            "tools": 0.0,
+            "turns": 0.0
+          },
+          "next_event": 5.0,
+          "pending": "",
+          "summary_event": -1.0,
+          "summary_through": -1.0,
+          "title": "Sealed original (fork)",
+          "workspace": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-copy-recovery-1bf7c7bf/project"
+        }
+      ],
+      "trace_outcomes": {
+        "interrupted": "cancelled",
+        "resumed": "completed",
+        "restored": "completed"
+      },
+      "original_sha256": "7f2a7b33af7777637b23c9334425b156e9dd3f71e76df2140d1993651af024d8",
+      "model_requests": 0
+    },
+    "traces": [
+      {
+        "path": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-copy-recovery-1bf7c7bf/native/interrupted.json",
+        "sha256": "003bd8f3b690fc9286af57ff7f346096ff8a92f4369423c7872ec153f08eba0f",
+        "outcome": {
+          "kind": "cancelled",
+          "origin_scope": 0,
+          "reason": "Interrupt"
+        },
+        "settled": true,
+        "paired_requests": 90,
+        "request_outcomes": {
+          "succeeded": 90
+        },
+        "actions": {
+          "Policy.evaluate": 45,
+          "Memory.read": 22,
+          "Memory.write": 17,
+          "Console.stdout_write": 4,
+          "Console.stdin_read_line": 1,
+          "Fs.read": 1
+        }
+      },
+      {
+        "path": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-copy-recovery-1bf7c7bf/native/resumed.json",
+        "sha256": "9470bd16e7a4cb090e21a048a0ce5a696c06cde69164c084733f0e45def58940",
+        "outcome": {
+          "kind": "completed"
+        },
+        "settled": true,
+        "paired_requests": 5684,
+        "request_outcomes": {
+          "succeeded": 5684
+        },
+        "actions": {
+          "Policy.evaluate": 2842,
+          "Memory.read": 1277,
+          "Memory.write": 1529,
+          "Console.stdout_write": 28,
+          "Console.stdin_read_line": 8
+        }
+      },
+      {
+        "path": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-copy-recovery-1bf7c7bf/native/restored.json",
+        "sha256": "f1e8c1fee19967aa08b4683a9693c7b19cc4b40b61c9af5a819f3dad34370a8d",
+        "outcome": {
+          "kind": "completed"
+        },
+        "settled": true,
+        "paired_requests": 1876,
+        "request_outcomes": {
+          "succeeded": 1876
+        },
+        "actions": {
+          "Policy.evaluate": 938,
+          "Memory.read": 621,
+          "Memory.write": 3,
+          "Console.stdout_write": 310,
+          "Console.stdin_read_line": 4
+        }
+      }
+    ]
+  },
+  "project_retention_and_startup": {
+    "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-7s_6rhac",
+    "result": {
+      "functional_status": "passed",
+      "model_http_requests": 0,
+      "native_command_dispatches": 11,
+      "native_control_write_approvals": 3,
+      "native_approvals": 14,
+      "actual_host_invocations": 3,
+      "project_attachments": 5,
+      "first_worker": "e3361fb3151da1ca4b9895fb921b66cbc822fcf66dab39b95e4f8a330141a897",
+      "second_worker": "6679b8bbb1f985713af8ba40034f69c825c33d6e5a396dddb253178ee368e80a",
+      "first_etas_pid": 1123,
+      "second_etas_pid": 1201,
+      "selected_paths": [
+        "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-7s_6rhac/second \u9e48\u9e55",
+        "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-7s_6rhac/first project",
+        "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-7s_6rhac/second \u9e48\u9e55",
+        "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-7s_6rhac/second \u9e48\u9e55",
+        "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-7s_6rhac/second \u9e48\u9e55"
+      ],
+      "restored_status": {
+        "first_user": -1.0,
+        "id": "native-1",
+        "ledger": {
+          "compactions": 0.0,
+          "context_bytes": 0.0,
+          "generation_allowance": 0.0,
+          "tools": 1.0,
+          "turns": 0.0
+        },
+        "next_event": 2.0,
+        "pending": "",
+        "summary_event": -1.0,
+        "summary_through": -1.0,
+        "title": "Second project",
+        "workspace": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-7s_6rhac/second \u9e48\u9e55"
+      },
+      "traces": [
+        "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-7s_6rhac/traces/run-yb16Tw94/trace.json",
+        "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-7s_6rhac/traces/run-Cl8RukLp/trace.json",
+        "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-7s_6rhac/traces/run-QZenopJq/trace.json"
+      ],
+      "scope": "Etas-owned project selection, same-Host project return and original live job Unicode I/O/EOF, separate histories, startup chooser reattaching another retained Host",
+      "startup_routing": {
+        "status": "passed",
+        "first_worker": "ea4f28987e1f1b4843d620f8af0b6daa686a69d126e991a411663687d0b9c9ba",
+        "first_etas_pid": 1511,
+        "second_worker": "f03c3503eac60b47280be95ee3bfa0c9c6221839eba3e0c1280cd63ae80306ec",
+        "second_etas_pid": 1432,
+        "additional": {
+          "first_user": -1.0,
+          "id": "native-2",
+          "ledger": {
+            "compactions": 0.0,
+            "context_bytes": 0.0,
+            "generation_allowance": 0.0,
+            "tools": 0.0,
+            "turns": 0.0
+          },
+          "next_event": 0.0,
+          "pending": "",
+          "summary_event": -1.0,
+          "summary_through": -1.0,
+          "title": "Additional A",
+          "workspace": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-7s_6rhac/first project"
+        },
+        "resumed": {
+          "first_user": -1.0,
+          "id": "native-0",
+          "ledger": {
+            "compactions": 0.0,
+            "context_bytes": 0.0,
+            "generation_allowance": 0.0,
+            "tools": 8.0,
+            "turns": 0.0
+          },
+          "next_event": 16.0,
+          "pending": "",
+          "summary_event": -1.0,
+          "summary_through": -1.0,
+          "title": "Resumed A",
+          "workspace": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-7s_6rhac/first project"
+        },
+        "foreign_status": {
+          "first_user": -1.0,
+          "id": "native-1",
+          "ledger": {
+            "compactions": 0.0,
+            "context_bytes": 0.0,
+            "generation_allowance": 0.0,
+            "tools": 1.0,
+            "turns": 0.0
+          },
+          "next_event": 2.0,
+          "pending": "",
+          "summary_event": -1.0,
+          "summary_through": -1.0,
+          "title": "Second project",
+          "workspace": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-7s_6rhac/second \u9e48\u9e55"
+        },
+        "forwarded": {
+          "first_user": -1.0,
+          "id": "native-3",
+          "ledger": {
+            "compactions": 0.0,
+            "context_bytes": 0.0,
+            "generation_allowance": 0.0,
+            "tools": 0.0,
+            "turns": 0.0
+          },
+          "next_event": 0.0,
+          "pending": "",
+          "summary_event": -1.0,
+          "summary_through": -1.0,
+          "title": "Forwarded startup",
+          "workspace": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-7s_6rhac/second \u9e48\u9e55"
+        },
+        "native_command_actions_including_original_case": 11,
+        "native_control_actions_including_original_case": 5,
+        "traces": 11,
+        "scope": "Same-Host exact startup selection, global chooser to a retained foreign Host, isolated foreign-ID inspection, and --open preserving new/title/status. No startup command or consent is sent to resident stdin."
+      }
+    },
+    "all_traces": [
+      {
+        "path": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-7s_6rhac/traces/run-Cl8RukLp/trace.json",
+        "sha256": "a71f74a5eef6e97f3b620178450ee4ba496ad3ec234a9ea42d3f5b97e8f42771",
+        "outcome": {
+          "kind": "completed"
+        },
+        "settled": true,
+        "paired_requests": 137,
+        "request_outcomes": {
+          "succeeded": 137
+        },
+        "actions": {
+          "Policy.evaluate": 68,
+          "Memory.read": 27,
+          "Memory.write": 13,
+          "Console.stdout_write": 18,
+          "Console.stdin_read_line": 7,
+          "Fs.read": 1,
+          "Fs.list": 1,
+          "Approval.request": 1,
+          "Fs.atomic_replace": 1
+        }
+      },
+      {
+        "path": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-7s_6rhac/traces/run-En2eo2yA/trace.json",
+        "sha256": "a24acac8cc956564666431cf82f9bebb9a6625a46c93468942ae5172c50d6a6b",
+        "outcome": {
+          "kind": "completed"
+        },
+        "settled": true,
+        "paired_requests": 78,
+        "request_outcomes": {
+          "succeeded": 78
+        },
+        "actions": {
+          "Policy.evaluate": 39,
+          "Memory.read": 17,
+          "Memory.write": 5,
+          "Console.stdout_write": 13,
+          "Console.stdin_read_line": 4
+        }
+      },
+      {
+        "path": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-7s_6rhac/traces/run-KTOCJJGt/trace.json",
+        "sha256": "0c9d2f0912200a979277f9e73a814499300e001ab92f35d7683bd737841d5e4d",
+        "outcome": {
+          "kind": "completed"
+        },
+        "settled": true,
+        "paired_requests": 25,
+        "request_outcomes": {
+          "succeeded": 25
+        },
+        "actions": {
+          "Policy.evaluate": 12,
+          "Memory.read": 2,
+          "Console.stdout_write": 8,
+          "Console.stdin_read_line": 1,
+          "Approval.request": 1,
+          "Fs.atomic_replace": 1
+        }
+      },
+      {
+        "path": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-7s_6rhac/traces/run-MSSOoJ1X/trace.json",
+        "sha256": "63df714417ae4fd58607e0d8ca644b931101cf7d9cfdf00341e26a3de35dfccf",
+        "outcome": {
+          "kind": "completed"
+        },
+        "settled": true,
+        "paired_requests": 5,
+        "request_outcomes": {
+          "succeeded": 5
+        },
+        "actions": {
+          "Policy.evaluate": 2,
+          "Console.stdout_write": 1,
+          "Approval.request": 1,
+          "Fs.atomic_replace": 1
+        }
+      },
+      {
+        "path": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-7s_6rhac/traces/run-OSoaChRn/trace.json",
+        "sha256": "ed32b939e78dbd0d4cd00f888819c8af4c199dfa6f8136908310d768557b5dda",
+        "outcome": {
+          "kind": "completed"
+        },
+        "settled": true,
+        "paired_requests": 22,
+        "request_outcomes": {
+          "succeeded": 22
+        },
+        "actions": {
+          "Policy.evaluate": 11,
+          "Memory.read": 4,
+          "Memory.write": 5,
+          "Console.stdout_write": 2
+        }
+      },
+      {
+        "path": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-7s_6rhac/traces/run-QZenopJq/trace.json",
+        "sha256": "b91dd7df51dec859f3266a8e414c6e2fee9695699a1e7212b6b1be01d0405ca6",
+        "outcome": {
+          "kind": "completed"
+        },
+        "settled": true,
+        "paired_requests": 17,
+        "request_outcomes": {
+          "succeeded": 17
+        },
+        "actions": {
+          "Policy.evaluate": 8,
+          "Memory.read": 2,
+          "Console.stdout_write": 4,
+          "Console.stdin_read_line": 1,
+          "Approval.request": 1,
+          "Fs.atomic_replace": 1
+        }
+      },
+      {
+        "path": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-7s_6rhac/traces/run-YD6CU8bl/trace.json",
+        "sha256": "eebb49b938146963c1f9ca01f4234d905c71d9946c604584cf302a794df022f8",
+        "outcome": {
+          "kind": "completed"
+        },
+        "settled": true,
+        "paired_requests": 40,
+        "request_outcomes": {
+          "succeeded": 40
+        },
+        "actions": {
+          "Policy.evaluate": 20,
+          "Memory.read": 10,
+          "Memory.write": 2,
+          "Console.stdout_write": 6,
+          "Console.stdin_read_line": 2
+        }
+      },
+      {
+        "path": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-7s_6rhac/traces/run-a9sg2yMl/trace.json",
+        "sha256": "5f1c16106d9f7fb08d93a7fb4ec48691ad31d5c3f85a9061fb5be01138d1cec4",
+        "outcome": {
+          "kind": "completed"
+        },
+        "settled": true,
+        "paired_requests": 26,
+        "request_outcomes": {
+          "succeeded": 26
+        },
+        "actions": {
+          "Policy.evaluate": 13,
+          "Memory.read": 8,
+          "Memory.write": 3,
+          "Console.stdout_write": 2
+        }
+      },
+      {
+        "path": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-7s_6rhac/traces/run-fg5hR4Iz/trace.json",
+        "sha256": "98616172ff91ba769e3802bbda2853c90b5b482ceaf748734b4edd9111e3c97a",
+        "outcome": {
+          "kind": "completed"
+        },
+        "settled": true,
+        "paired_requests": 20,
+        "request_outcomes": {
+          "succeeded": 20
+        },
+        "actions": {
+          "Policy.evaluate": 10,
+          "Memory.read": 6,
+          "Memory.write": 2,
+          "Console.stdout_write": 2
+        }
+      },
+      {
+        "path": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-7s_6rhac/traces/run-j10FSwBZ/trace.json",
+        "sha256": "2983c0d3c83d8e5e2ec77ceed9556119cb1f7a3e73dbc4f0cb507b2771e829de",
+        "outcome": {
+          "kind": "completed"
+        },
+        "settled": true,
+        "paired_requests": 10,
+        "request_outcomes": {
+          "succeeded": 10
+        },
+        "actions": {
+          "Policy.evaluate": 5,
+          "Memory.read": 2,
+          "Memory.write": 1,
+          "Console.stdout_write": 2
+        }
+      },
+      {
+        "path": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-7s_6rhac/traces/run-yb16Tw94/trace.json",
+        "sha256": "cbe97605ba18357f703257bc901bbb9e336d56e600e9f436b5460c98fa77a2a4",
+        "outcome": {
+          "kind": "completed"
+        },
+        "settled": true,
+        "paired_requests": 710,
+        "request_outcomes": {
+          "succeeded": 710
+        },
+        "actions": {
+          "Policy.evaluate": 349,
+          "Memory.read": 167,
+          "Memory.write": 119,
+          "Console.stdout_write": 37,
+          "Console.stdin_read_line": 12,
+          "Fs.read": 1,
+          "Fs.list": 1,
+          "Approval.request": 12,
+          "Command.start": 1,
+          "Command.reconnect": 5,
+          "Command.read": 3,
+          "Fs.atomic_replace": 1,
+          "Command.write": 2
+        }
+      }
+    ],
+    "total_native_command_actions": 11,
+    "total_native_control_writes": 5,
+    "total_native_approval_requests": 16
+  },
+  "export_recovery": {
+    "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-export-recovery-qt45inb1",
+    "result": {
+      "status": "passed",
+      "scope": "real export approval interruption, fresh-Host unknown-outcome resolution without replay, explicitly approved new export, and imported metadata remaining historical",
+      "interrupted_exit_code": 130,
+      "unresolved_attempt": {
+        "id": "native-0-run-0",
+        "input_event": -1.0,
+        "kind": "export",
+        "label": "cancelled.json",
+        "phase": "dispatching",
+        "recovery_event": -1.0,
+        "result_event": -1.0,
+        "session": "native-0",
+        "through": 1.0
+      },
+      "final_attempts": [
+        {
+          "id": "native-0-run-0",
+          "input_event": -1.0,
+          "kind": "export",
+          "label": "cancelled.json",
+          "phase": "closed_unknown",
+          "recovery_event": 4.0,
+          "result_event": -1.0,
+          "session": "native-0",
+          "through": 1.0
+        },
+        {
+          "id": "native-0-run-1",
+          "input_event": -1.0,
+          "kind": "export",
+          "label": "accepted.json",
+          "phase": "completed",
+          "recovery_event": -1.0,
+          "result_event": 5.0,
+          "session": "native-0",
+          "through": 4.0
+        }
+      ],
+      "native_write_approvals": 1,
+      "model_http_requests": 0,
+      "command_dispatches": 0,
+      "exported_path": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-export-recovery-qt45inb1/project/accepted.json",
+      "traces": [
+        "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-export-recovery-qt45inb1/traces/run-G2PTANLe/trace.json",
+        "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-export-recovery-qt45inb1/traces/run-Aiga2qX3/trace.json"
+      ],
+      "outcomes": [
+        "cancelled",
+        "completed"
+      ],
+      "limitations": [
+        "This covers interruption before write approval, not every post-write finalization window."
+      ]
+    },
+    "traces": [
+      {
+        "path": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-export-recovery-qt45inb1/traces/run-G2PTANLe/trace.json",
+        "sha256": "72a3a03d878dba453b151d6abe757147005de624250cd22db5f78cbc4b225d04",
+        "outcome": {
+          "kind": "cancelled",
+          "origin_scope": 0,
+          "reason": "Interrupt"
+        },
+        "settled": true,
+        "paired_requests": 110,
+        "request_outcomes": {
+          "succeeded": 109,
+          "failed": 1
+        },
+        "actions": {
+          "Policy.evaluate": 55,
+          "Memory.read": 25,
+          "Memory.write": 16,
+          "Console.stdout_write": 8,
+          "Console.stdin_read_line": 3,
+          "Fs.read": 1,
+          "Fs.list": 1,
+          "Approval.request": 1
+        }
+      },
+      {
+        "path": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-export-recovery-qt45inb1/traces/run-Aiga2qX3/trace.json",
+        "sha256": "1d4db73667be949a0d7c0a871f3fba3518453ef31dc08000e81bc6df9513de39",
+        "outcome": {
+          "kind": "completed"
+        },
+        "settled": true,
+        "paired_requests": 397,
+        "request_outcomes": {
+          "succeeded": 397
+        },
+        "actions": {
+          "Policy.evaluate": 198,
+          "Memory.read": 97,
+          "Memory.write": 60,
+          "Console.stdout_write": 28,
+          "Console.stdin_read_line": 9,
+          "Fs.read": 2,
+          "Fs.list": 1,
+          "Approval.request": 1,
+          "Fs.atomic_replace": 1
+        }
+      }
+    ]
+  },
+  "unchanged_product_source": true,
+  "new_product_validation_or_fallback": false,
+  "real_provider_requests": 0,
+  "model_requests": 0,
+  "new_negative_matrix": false,
+  "source_limit": {
+    "physical_v4_core": 23225,
+    "temporary_user_waiver": true
+  },
+  "continuous_capture": "examples/native-project/candidates/native-output-capture-ioc-02413.json",
+  "not_accepted": [
+    "Fresh-Host reconnection of an old live process",
+    "PTY process API",
+    "Continuous capture during UI wait and cancellation/interrupted-read restoration",
+    "Every post-write export finalization interruption window",
+    "Complete native coding/context limits and default native cutover"
+  ]
+}

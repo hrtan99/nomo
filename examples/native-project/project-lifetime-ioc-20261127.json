@@ -1,0 +1,155 @@
+{
+  "date": "2026-11-27",
+  "status": "passed",
+  "compiler": "official Etas 0.24.3 and matching SDK",
+  "probe": "tests/native_projects_probe.py",
+  "snapshot": {
+    "root": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-w95i5y1_",
+    "tree": "d8681f2b5fe93a13bf0ab17f933db81c312b0814",
+    "evidence": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-w95i5y1_/compiler-evidence",
+    "overlay": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-w95i5y1_/compiler-compose.json",
+    "source_count": 441,
+    "source_manifest_sha256": "fa92918e77314ea6198a1832770816fadbf20ab55468377a9ae2d235804f55f2"
+  },
+  "source_check": {
+    "reference": "edit-confirmation-ioc-20261127.json#execution_use_case",
+    "snapshot": {
+      "root": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-kmx17ms9",
+      "tree": "08aba28f83bc8d761b5cc214871afb48b3d0993e",
+      "evidence": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-kmx17ms9/compiler-evidence",
+      "overlay": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-kmx17ms9/compiler-compose.json",
+      "source_count": 441,
+      "source_manifest_sha256": "fa92918e77314ea6198a1832770816fadbf20ab55468377a9ae2d235804f55f2"
+    },
+    "full_check": {
+      "exit": 0,
+      "elapsed_seconds": 64.42639027899986,
+      "resources": {
+        "memory.max": "4294967296",
+        "memory.peak": "3223678976",
+        "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+        "cpu.max": "400000 100000",
+        "pids.max": "256"
+      },
+      "source_count": 441,
+      "diagnostics": 0
+    },
+    "qualification": "The runtime and full-check snapshots have identical product source manifests; only the external Client observation deadline differs."
+  },
+  "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-xlvkce6d",
+  "driver_exit": 0,
+  "functional": {
+    "functional_status": "passed",
+    "model_http_requests": 0,
+    "native_command_dispatches": 11,
+    "native_control_write_approvals": 3,
+    "native_approvals": 14,
+    "actual_host_invocations": 3,
+    "project_attachments": 5,
+    "first_worker": "1217398baf1d267ed4273956a7ea25393454ae74897610254d1cd49b7b2b86d5",
+    "second_worker": "e3e664e9876da3419243096d191752c7f64e5293ebb3b257ab25341d7195dc42",
+    "first_etas_pid": 4854,
+    "second_etas_pid": 5133,
+    "selected_paths": [
+      "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-xlvkce6d/second 鹈鹕",
+      "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-xlvkce6d/first project",
+      "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-xlvkce6d/second 鹈鹕"
+    ],
+    "restored_status": {
+      "first_user": -1.0,
+      "id": "native-1",
+      "ledger": {
+        "compactions": 0.0,
+        "context_bytes": 0.0,
+        "generation_allowance": 0.0,
+        "tools": 1.0,
+        "turns": 0.0
+      },
+      "next_event": 2.0,
+      "pending": "",
+      "summary_event": -1.0,
+      "summary_through": -1.0,
+      "title": "Second project",
+      "workspace": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-xlvkce6d/second 鹈鹕"
+    },
+    "traces": [
+      "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-xlvkce6d/traces/run-rPnjXtJs/trace.json",
+      "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-xlvkce6d/traces/run-CyVMc2a6/trace.json",
+      "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-xlvkce6d/traces/run-nNOQcB8d/trace.json"
+    ],
+    "scope": "Etas-owned project selection, same-Host project return and original live job Unicode I/O/EOF, separate histories, startup chooser reattaching another retained Host"
+  },
+  "traces": [
+    {
+      "path": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-xlvkce6d/traces/run-rPnjXtJs/trace.json",
+      "sha256": "41fb8f4569055538314740a428d88374e5f52748d0c3364cc716f6d240a14f8e",
+      "outcome": {
+        "kind": "completed"
+      },
+      "local_work_settled": true,
+      "paired_successful_host_requests": 684,
+      "action_counts": {
+        "Policy.evaluate": 336,
+        "Memory.read": 155,
+        "Memory.write": 119,
+        "Console.stdout_write": 36,
+        "Console.stdin_read_line": 12,
+        "Fs.read": 1,
+        "Fs.list": 1,
+        "Approval.request": 12,
+        "Command.start": 1,
+        "Command.reconnect": 5,
+        "Command.read": 3,
+        "Fs.atomic_replace": 1,
+        "Command.write": 2
+      },
+      "trace_wall_seconds": 1385.640512,
+      "summed_host_duration_seconds": 156.217013
+    },
+    {
+      "path": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-xlvkce6d/traces/run-CyVMc2a6/trace.json",
+      "sha256": "b25c8edb709dc952e612abfb1b568017df42ee28cfbab348005502c6dd094a66",
+      "outcome": {
+        "kind": "completed"
+      },
+      "local_work_settled": true,
+      "paired_successful_host_requests": 123,
+      "action_counts": {
+        "Policy.evaluate": 61,
+        "Memory.read": 20,
+        "Memory.write": 13,
+        "Console.stdout_write": 18,
+        "Console.stdin_read_line": 7,
+        "Fs.read": 1,
+        "Fs.list": 1,
+        "Approval.request": 1,
+        "Fs.atomic_replace": 1
+      },
+      "trace_wall_seconds": 947.870701,
+      "summed_host_duration_seconds": 800.341481
+    },
+    {
+      "path": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-xlvkce6d/traces/run-nNOQcB8d/trace.json",
+      "sha256": "0787db54aff83343698b9078d8544b0d3ac8b2aad678c43546bccc394e9814f3",
+      "outcome": {
+        "kind": "completed"
+      },
+      "local_work_settled": true,
+      "paired_successful_host_requests": 17,
+      "action_counts": {
+        "Policy.evaluate": 8,
+        "Memory.read": 2,
+        "Console.stdout_write": 4,
+        "Console.stdin_read_line": 1,
+        "Approval.request": 1,
+        "Fs.atomic_replace": 1
+      },
+      "trace_wall_seconds": 2.128184,
+      "summed_host_duration_seconds": 0.178739
+    }
+  ],
+  "paired_successful_host_requests": 824,
+  "qualification": "Original complete A→B→A retained-Host/project scenario, original job Unicode I/O/EOF, separate histories and a new startup chooser reattaching B. Container identities and actual Etas PIDs are checked before/after return. Eleven native command actions plus three launch-control writes pass fourteen individual approvals and the original authority audit. This does not prove Ctrl+P/Ctrl+Q hotkey handling on this source, destroyed-Host live-child reconnection, PTY, continuous capture, timestamp/--latest semantics, legacy import, or default cutover. Later legacy-persistence code changes have their own separate source/runtime qualification.",
+  "real_provider_requests": 0,
+  "negative_matrix_added": false
+}

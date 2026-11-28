@@ -1,12 +1,16 @@
 module app.main;
 
-import std.io.{println, read_all};
-import std.text.{char_count as len, from_usize};
-import std.collections.len as count;
+import std.io.println;
+import std.io.read_all;
+import std.text.char_count as len;
+import std.text.from_usize;
 import std.json.parse;
 import std.agent.message.Message;
-import nomo.cli.cli_request.{Request, LineCommand, parse_args, parse_line};
-import nomo.core.text.printable;
+import nomo.adapters.cli.input.Request;
+import nomo.adapters.cli.input.LineCommand;
+import nomo.adapters.cli.input.cli_request_parse_args as parse_args;
+import nomo.adapters.cli.input.cli_request_parse_line as parse_line;
+import nomo.domain.text.text_printable as printable;
 
 type Case = { label: string, mode: string, args: Array<string>, raw: string,
     accepted: bool, kind: string, session_id: string, once_supplied: bool,
@@ -51,7 +55,7 @@ flow args_case(item: Case) -> unit {
         Err(error) => {
             if item.accepted { abort("refused accepted request fixture"); }
             if !bounded_diagnostic(error) { abort("unbounded request diagnostic"); }
-        }
+        },
     }
 }
 
@@ -67,20 +71,20 @@ flow line_case(item: Case) -> unit {
         Err(error) => {
             if item.accepted { abort("refused accepted line fixture"); }
             if !bounded_diagnostic(error) || !line_diagnostic(error) { abort("non-fixed line diagnostic"); }
-        }
+        },
     }
 }
 
 public flow main(args: Array<string>) -> i32 {
     let parsed = match parse(read_all()) {
-        Ok(value) => value, Err(_) => { abort("invalid synthetic JSON fixture"); }
+        Ok(value) => value, Err(_) => abort("invalid synthetic JSON fixture"),
     };
     let message = Message.new(parsed);
     let conversion: Option<Message<Array<Case>>> = message.cast<Array<Case>>();
     let fixtures = match conversion {
-        Some(value) => value.body, None() => { abort("invalid synthetic fixture shape"); }
+        Some(value) => value.body, None() => abort("invalid synthetic fixture shape"),
     };
-    if count(fixtures) == 0 || count(fixtures) > 512 { abort("invalid fixture count"); }
+    if fixtures.len() == 0 || fixtures.len() > 512 { abort("invalid fixture count"); }
     var ordinal: usize = 0;
     for item in fixtures limit Iterations(512) {
         println("CASE " + from_usize(ordinal) + " " + item.label);
@@ -90,6 +94,6 @@ public flow main(args: Array<string>) -> i32 {
         println("PASS " + from_usize(ordinal) + " " + item.label);
         ordinal = ordinal + 1;
     }
-    println("PASS CLI001A " + from_usize(count(fixtures)));
+    println("PASS CLI001A " + from_usize(fixtures.len()));
     return 0;
 }

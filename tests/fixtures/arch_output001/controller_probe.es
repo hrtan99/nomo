@@ -2,13 +2,16 @@ module app.output_probe;
 
 import std.io.println;
 import std.text.split;
-import nomo.core.conversation.{Event, State};
-import nomo.agent.conversation_events.{Turn, emit, failure};
-import nomo.agent.stub_loop_controller.turn_controller;
-import nomo.agent.loop.turn as production_turn;
-import nomo.agent.console_events.publish;
-import nomo.model.conversation_output.ConversationOutput;
-import nomo.tools.edit_encoding.json;
+import nomo.domain.conversation.Event;
+import nomo.domain.conversation.State;
+import nomo.domain.conversation.TextTurn as Turn;
+import nomo.application.harness.text.emit;
+import nomo.application.harness.text.failure;
+import nomo.application.harness.text.turn_controller;
+import nomo.bootstrap.harness.turn as production_turn;
+import nomo.adapters.cli.console.publish;
+import nomo.application.harness.ports.ConversationOutput;
+import nomo.domain.wire.json;
 
 flow slash() -> string { return std.text.from_char('\\'); }
 flow collect(event: Event) -> unit {
@@ -19,7 +22,7 @@ flow collect(event: Event) -> unit {
 }
 flow collected(raw: string, maximum: i32, budget: i32, previous: State) -> Turn {
     return turn_controller(raw, maximum, budget, previous) with {
-        ConversationOutput.publish(event) => { resume collect(event); }
+        ConversationOutput.publish(event) => collect(event);
     };
 }
 public flow semantic_emit(args: Array<string>) -> State {
@@ -44,13 +47,13 @@ public flow production_observe(args: Array<string>) -> i32 {
 }
 public flow semantic_observe(args: Array<string>) -> i32 {
     println("CASE unicode_append");
-    let emitted = semantic_emit(args) with { ConversationOutput.publish(event) => { resume collect(event); } };
+    let emitted = semantic_emit(args) with { ConversationOutput.publish(event) => collect(event); };
     let expected_emit = __SEMANTIC_EXPECTED__;
     if emitted != expected_emit { abort("whole semantic State differs"); }
     println("PASS unicode_append");
     println("CASE failure_status");
     let previous = __SEMANTIC_PREVIOUS__;
-    let failed = failure(previous, "exact failure", 37) with { ConversationOutput.publish(event) => { resume collect(event); } };
+    let failed = failure(previous, "exact failure", 37) with { ConversationOutput.publish(event) => collect(event); };
     let expected_failure = __FAILURE_EXPECTED__;
     if failed != expected_failure { abort("whole failure Turn differs"); }
     println("PASS failure_status");

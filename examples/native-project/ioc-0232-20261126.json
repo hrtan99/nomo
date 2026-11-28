@@ -1,0 +1,146 @@
+{
+  "date": "2026-11-26",
+  "status": "ioc-source-implemented-compiler-runtime-acceptance-blocked",
+  "compiler_receipt": "compiler-0232-20261126.json",
+  "composition": {
+    "consumer_contract": "nomo.application.conversation.service_ports.ConversationService",
+    "service_implementation": "nomo.adapters.model.conversation_service.NativeConversation",
+    "terminal_injected_fields": [
+      "history",
+      "attempts",
+      "picker",
+      "conversation"
+    ],
+    "service_injected_fields": [
+      "history",
+      "attempts",
+      "instructions",
+      "jobs",
+      "coding",
+      "summary",
+      "projection"
+    ],
+    "configuration": "Explicit loader closure uses the same history dependency; session is bound at each service call.",
+    "injection_lifetime": "Owner-local factories construct records in bootstrap provider scope; dependencies are resolved at construction.",
+    "generic_constraints": "Startup-selected roles use T ~ Port; no runtime implementation selection is claimed.",
+    "removed_forwarders": [
+      "ConversationRequests.turn",
+      "ConversationRequests.compact",
+      "ConversationRequests.settings"
+    ],
+    "preserved_runtime_handler_order_innermost_first": [
+      "processes",
+      "transfer",
+      "projects",
+      "mutations",
+      "instructions",
+      "command"
+    ],
+    "preserved_call_context": [
+      "SessionContext",
+      "SettingsContext"
+    ]
+  },
+  "source_sha256": {
+    "src/nomo/application/conversation/service_ports.es": "ffb7c1ff0b8ff980f9daaa824629f5fcdd4de42e7c8bc9adc2dd6ac35ad88f8d",
+    "src/nomo/adapters/model/conversation_service.es": "9e5e6f31840d921f35e5439de1fa8d4899236911b008dd721bde0dcc5dfb5382",
+    "src/nomo/adapters/cli/conversation.es": "7dfaed28443fe25fbada008f624e4a3fbd2120df2fe2dd98c60b4d71c577d8f3",
+    "src/nomo/bootstrap/main.es": "9fd62c676ca5c0ed58d46ea9c9ad155185e1f0e435385b4ae7983cce196ab7c8",
+    "src/nomo/bootstrap/conversation.es": "66dcfc11933823789c669d98b1e09ec7ec333d260d756321b4ec9a03d589c366",
+    "src/nomo/bootstrap/configuration.es": "4612a05d075726a23d86274684df48928118eba6a76127106a2c989823f11d20",
+    "src/nomo/bootstrap/mutations.es": "3dfb31803f564e8185c0dfa1c02b3cfe5d51b2e9eba37017b24bb9e0b11ef7f0"
+  },
+  "checks": {
+    "working_tree_architecture": {
+      "status": "passed",
+      "modules": 460,
+      "imports": 3401,
+      "compatibility_leaves": 51
+    },
+    "review_package_architecture": {
+      "status": "passed",
+      "modules": 450,
+      "imports": 3344,
+      "compatibility_leaves": 48
+    },
+    "review_package_compile": {
+      "status": "failed-pipeline-diagnostic",
+      "exit": 4,
+      "stdout": "",
+      "stderr": "frontend session failed: Pipeline(\"native invocation has no checked implementation witness\")",
+      "source_count": 450,
+      "source_manifest_sha256": "62583ac500d6d3b921218f77790ca3c6ccc5b9273ab818c58da660b4f4cf567c",
+      "command": "etas --no-config --cache off check --all /workspace",
+      "source_package": "Exact Git index export; excludes the ten local untracked v4 prototypes.",
+      "qualification": "No ordinary source diagnostic was reported before this pipeline failure; this is not a type/effect-check pass."
+    },
+    "existing_conversation_probe": {
+      "status": "failed-oom",
+      "result": {
+        "exit": -9,
+        "stdout": "",
+        "stderr": "",
+        "resources": {
+          "memory.max": "4294967296",
+          "memory.peak": "4294967296",
+          "memory.events": "low 0\nhigh 0\nmax 59\noom 1\noom_kill 1\noom_group_kill 0",
+          "cpu.max": "400000 100000",
+          "pids.max": "256"
+        }
+      },
+      "evidence_directory": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-conversation-nq29gjje",
+      "sources": {
+        "tests/fixtures/native_conversation/src/app/main.es": "9fe37fe9566b8670885d1e6bc767c4a24da3049016c904a2a2f38c978578ef39",
+        "src/nomo/adapters/storage/conversations.es": "d0112763acbd103903ea525b56487e1f73033e71be2bdf3748e4b97c4e101c4d",
+        "src/nomo/adapters/storage/attempts.es": "f17b18e33430e60042b37ad3c24738c1f46694e77502ee167376bee275adb078",
+        "src/nomo/application/conversation/ports.es": "516843507e274a0b7ed781bffe7c886069515de2956b21a8995ce3a3d75b012a",
+        "src/nomo/application/execution/ports.es": "1ea448e2a6849ab467c733c5df1652c6ed37dec894608c2f7e882b7fb9a4f9e8",
+        "src/nomo/application/conversation/turn.es": "87ff871581ff83d1810fa0870d0e70fcd1318fa37db3d1b9e51bef5af8e74c3a",
+        "src/nomo/application/conversation/effects.es": "75850dc6b50fd8a05da6ab5c0b92de7eeafaf661e612c01a9c4ad442a26f9494",
+        "src/nomo/application/context/effects.es": "7cd641db12247e1643cc4e8ce26518c8e4fe654c8ba18469da40954717f2bfa0",
+        "src/nomo/application/context/ports.es": "b80a757a7a4dc6b323627056692d372b5690461be9a11aed0087a2c80d39e9a8",
+        "src/nomo/adapters/model/context_projection.es": "4cdc61c57cbf4eb432bda14443d7a24543980f94b03aba75a005455450156caf",
+        "src/nomo/domain/context/projection.es": "211c530419e1168f64b8c2fdb2c0adb6cf43202fd02e00f6a92ebab93af28d7d",
+        "src/nomo/domain/configuration/settings.es": "6998625e6d1014df77506ea091cdb8cd8c66514b1ecb318e3771dfa2cbc2eed2",
+        "src/nomo/domain/conversation/turn.es": "0afd9665cfed2ee6e47707d79711b52b534965b4841e413b0ff3bcc1d3337931",
+        "src/nomo/domain/conversation/messages.es": "011a1bc4e1be0c74c9239bfd6fd7410f62ce39de2d16fe192102f1be8008c7e9",
+        "src/nomo/domain/context/instructions.es": "7519e911f752d1a8240e14759074ea358eaf00f53804e43a0b9968b45398448b",
+        "src/nomo/domain/process/jobs.es": "ec1e527dc82f31f75a45a2480f47d85df0e1ee8f4c0713c50d1372648acfc508",
+        "src/nomo/domain/execution/attempt.es": "e22f9aa9f66e6859b4058fe6f219992c22d8ec7b5d54670e9611a29dad08a51d",
+        "src/nomo/native/lifecycle.es": "c2f97e3344d296a87d1289c27e6215e395767af0a069bebba2be5c38e92040cb",
+        "src/nomo/domain/serialization/json.es": "f84d219dfe4a44fb1456f45df2b51daa7a59265a59ab44343551cb3f95f82a7f",
+        "src/nomo/native/workspace.es": "399d557413ff6bd8056b8548e9dea2bce7f14c83f9fde18bcbe070d9fbde0be7",
+        "src/nomo/application/commands/effects.es": "f205b83fdf9064806ebd415db769d6b19e6f25166a42a46acaf0191a3b87d85d",
+        "src/nomo/application/instructions/ports.es": "9aedaf99c4785ff30a6f77dbe066e2fc1ebe021a0efe0508a7c9c3c912257980",
+        "src/nomo/application/processes/ports.es": "86341a1425618f014ebac38e36edfc043adbb287d413950a35aaf47ba85e5400",
+        "src/nomo/application/mutations/ports.es": "2e8d52f71008618f60be5a2757f004bc19bffde40506ba15e7f6ead009843fe5",
+        "src/nomo/application/conversation/session_context.es": "8ad4acc4095bf48ef1c356850e7b9eef518e7c076f3a7166bba3a53d52fee72f",
+        "src/nomo/application/configuration/context.es": "49f767e9a6c9a1424cdba158355827f5f37da74aa5b66a9703ce497e001efb11",
+        "src/nomo/domain/conversation/session.es": "015f7748071199d101dd0d4a193a8537e7fbe853b9201b93d8dab48302977085",
+        "src/nomo/domain/conversation/history.es": "590b23e5f66f572e4466bab92a6fbf99cf193279ea386f869fa12a6c05b2308c",
+        "src/nomo/domain/mutations/models.es": "b4d1dfdcbed5d3083e6b95a2c19ea48b2353e88e03b60e1c2906d2875745b784",
+        "src/nomo/native/history.es": "38bb796c50441ab848e52cd342240c6cf68a8eeccf739b3a371f8441be127222",
+        "src/nomo/domain/process/observations.es": "c05a48557b50d8810195b8f6a23b27ebde59ddd0f4f78daf6d4caf9c72a5fdf8",
+        "src/nomo/domain/execution/command.es": "561fd128a1402568b33662f5fba1da7ce0ffc79f287fac2b47d9b7a5e25d4dba",
+        "src/nomo/application/execution/service.es": "881ff911b29cdf64448faec37428e49c8ab47c0d187e5e07eb4e996da6d6f676",
+        "src/nomo/application/conversation/compact.es": "792fd7c024dfa344b5deedc5ff82f177216b66c79dc3ea5b101440ff7c548b4a",
+        "src/nomo/domain/execution/transitions.es": "27bb227965252fa5c3313c9791fcd70e2d877e7674a6b2ba6edfd322cf8d85b2",
+        "src/nomo/domain/transfer/copy.es": "90964dc0335a975a4ffd65787d28348aa6e4021ab738d180a10333ca84eb4916"
+      },
+      "scope": "Existing application turn and real fixture SQLite with controlled model/context effects. This does not exercise the new constructor-injection lifecycle.",
+      "phase": "Unknown: etas run produced no trace before termination; compilation versus interpretation is not established."
+    }
+  },
+  "upstream_followups": [
+    "https://github.com/etas-project/etas-frontend/issues/100#issuecomment-7188512836",
+    "https://github.com/etas-project/etas-frontend/issues/101#issuecomment-7188521016"
+  ],
+  "real_model_requests": 0,
+  "acceptance_remaining": [
+    "Actionable source diagnostic or fix for missing native invocation witness",
+    "Passing conversation/reservation/summary/recovery scenario within resource limit",
+    "Production read/edit/check/Git/new-process workflow and injection lifetime",
+    "PTY/capture/background process lifetime and default native cutover"
+  ],
+  "qualification": "Architecture and toolchain verification are separate from compilation and runtime acceptance. Historical passes do not qualify this source."
+}

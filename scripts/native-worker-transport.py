@@ -14,6 +14,25 @@ import termios
 import tempfile
 import tty
 
+STARTUP_PROTOCOL = '1'
+
+
+def deliver(control, destination, typed):
+    source = control / 'next-project'
+    if typed:
+        shutil.move(str(source), destination)
+    else:
+        # Retained older Hosts publish a folder only. Preserve their lifetime;
+        # upgrade that known transport format without inventing startup options.
+        destination.write_text(json.dumps({'workspace': source.read_text(), 'arguments': []}))
+        source.unlink()
+
+
+def handoff(path):
+    request = json.loads(Path(path).read_text())
+    for argument in [request['workspace'], *request['arguments']]:
+        sys.stdout.buffer.write(argument.encode() + b'\0')
+
 
 def docker(*arguments):
     return subprocess.check_output(['docker', *arguments], text=True).strip()
@@ -139,20 +158,33 @@ def main(command):
                 raise RuntimeError('The container name belongs to another execution endpoint')
             observed = state(identifiers)
             if observed['Status'] == 'exited':
-                print('[WORKER ] Previous execution exited with status ' + str(observed['ExitCode']), flush=True)
+                print('[STATE  ] Previous execution exited with status ' + str(observed['ExitCode']), flush=True)
                 subprocess.run(['docker', 'rm', identifiers], check=True, stdout=subprocess.DEVNULL)
                 existing = False
             elif observed['Status'] != 'running':
                 raise RuntimeError('Execution endpoint is ' + observed['Status'] + '; inspect it before reconnecting')
         if existing:
-            # Startup arguments belong to the Etas invocation, not to a terminal
-            # attach. Never inject them into a possibly pending approval prompt.
             source_arguments = command[command.index('--args') + 1:]
             if source_arguments != ['--workspace', workspace]:
-                raise RuntimeError('An execution endpoint is already running. Reconnect without startup arguments; select conversations with native /new or /resume commands')
+                if labels.get('nomo.native.startup_protocol') != STARTUP_PROTOCOL:
+                    raise RuntimeError('This retained Host predates startup selection. Reconnect without options; use /resume or /quit before starting the updated endpoint')
+                # The application records the requested selection in a separate
+                # native invocation. The resident stdin receives no bytes.
+                preparation = command.copy()
+                preparation[preparation.index('--flow') + 1] = 'native_attach'
+                requested_evidence = Path(os.environ['NOMO_NATIVE_EVIDENCE'])
+                requested_control = Path(os.environ['NOMO_NATIVE_CONTROL_DIR'])
+                print('[TRACE  ] ' + str(requested_evidence), flush=True)
+                result = subprocess.call(preparation)
+                if result:
+                    return result
+                if (requested_control / 'next-project').is_file():
+                    deliver(requested_control, requested_evidence / 'next-project', True)
+                    return 0
             evidence = Path(labels['nomo.native.evidence'])
             control = Path(labels['nomo.native.control'])
             identifier = identifiers
+            typed = labels.get('nomo.native.startup_protocol') == STARTUP_PROTOCOL
         else:
             evidence = Path(os.environ['NOMO_NATIVE_EVIDENCE'])
             control = Path(os.environ['NOMO_NATIVE_CONTROL_DIR'])
@@ -161,9 +193,11 @@ def main(command):
             options = [part for part in command[index + 1:service] if part not in ('--rm', '--tty=true', '--tty=false')]
             command = command[:index + 1] + ['--detach', '--interactive', '--tty=' + str(sys.stdin.isatty()).lower(), '--name', name,
                 '--label', 'nomo.native.worker=' + identity,
+                '--label', 'nomo.native.startup_protocol=' + STARTUP_PROTOCOL,
                 '--label', 'nomo.native.evidence=' + str(evidence),
                 '--label', 'nomo.native.control=' + str(control)] + options + command[service:]
             identifier = subprocess.check_output(command, text=True).strip()
+            typed = True
         print('[PROJECT] ' + workspace + '\n[STATE  ] ' + str(directory) + '\n[TRACE  ] ' + str(evidence) +
               '\n[WORKER ] ' + identifier + '\n[CLIENT ] Ctrl+P then Ctrl+Q detaches; /quit shuts down this execution endpoint. Retained terminal output follows.', flush=True)
         terminal = json.loads(docker('inspect', '--format', '{{json .Config.Tty}}', identifier))
@@ -174,7 +208,7 @@ def main(command):
             # Consume only the native source's private mount request, never a
             # terminal/model marker. The delivered file is outside LaunchRoot,
             # so it cannot trigger the same request on a later reattachment.
-            shutil.move(str(control / 'next-project'), destination)
+            deliver(control, destination, typed)
             if observed['Status'] == 'exited':
                 subprocess.run(['docker', 'rm', identifier], check=True, stdout=subprocess.DEVNULL)
                 if observed['ExitCode'] != 0:
@@ -190,14 +224,17 @@ def main(command):
             raise RuntimeError('Execution endpoint is ' + observed['Status'] + '; its result is not established')
         code = observed['ExitCode']
         if code == 0 and (control / 'next-project').is_file():
-            shutil.move(str(control / 'next-project'), destination)
+            deliver(control, destination, typed)
         subprocess.run(['docker', 'rm', identifier], check=True, stdout=subprocess.DEVNULL)
         return code
 
 
 if __name__ == '__main__':
     try:
-        sys.exit(main(sys.argv[1:]))
+        if sys.argv[1:2] == ['--handoff']:
+            handoff(sys.argv[2])
+        else:
+            sys.exit(main(sys.argv[1:]))
     except (OSError, RuntimeError, subprocess.CalledProcessError) as error:
         print('[ERROR  ] ' + str(error), file=sys.stderr)
         sys.exit(1)

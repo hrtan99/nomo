@@ -321,7 +321,7 @@ def main():
     runner_paths = [Path(__file__).resolve(), FIXTURE, ROOT / "tests/harness_session_probe.py", previous.FIXTURE,
                     ROOT / "tests/harness_tool_chat_probe.py", ROOT / "tests/fixtures/harness_tool002a/cases.py",
                     ROOT / "tests/harness_tool_probe.py", ROOT / "tests/fixtures/harness_tool001/cases.py",
-                    ROOT / "scripts/session-demo-001b-verify.py", ROOT / "tests/harness_model_probe.py",
+                    ROOT / "tests/storage_observer.py", ROOT / "tests/harness_model_probe.py",
                     ROOT / "tests/harness_chat_probe.py", ROOT / "tests/harness_entry_probe.py", ROOT / "tests/model_tool_probe.py",
                     ROOT / "tests/foundation_probe.py", ROOT / "tests/normal_graph_identity.py",
                     ROOT / "tests/fixtures/harness_model001/cases.py", *chat.once.previous.graph_identity.bootstrap_evidence_paths(),

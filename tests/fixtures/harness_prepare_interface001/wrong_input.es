@@ -1,6 +1,6 @@
 module app.callable_negative;
 import std.fs.Region;
-import nomo.harness.edit_original.OriginalReader;
+import nomo.application.editing.ports.OriginalReader;
 type FixtureRoot;
 impl FixtureRoot ~ Region;
 flow bad(path: i32) -> Result<string, string> ~ OriginalReader<FixtureRoot> { return Err("unused"); }

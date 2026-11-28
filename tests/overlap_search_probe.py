@@ -32,7 +32,7 @@ def main():
     for label,root in roots:
         with tempfile.TemporaryDirectory(prefix='nomo-overlap-') as directory:
             project=Path(directory)/'project';shutil.copytree(root,project,ignore=shutil.ignore_patterns('.git','.etas','tmp','__pycache__'));(project/'.etas').mkdir()
-            main_file=project/'src/nomo/main.es';source=main_file.read_text().replace('module nomo.main;','module nomo.main;\nimport nomo.tools.edit_proposal.{propose, Request};',1)
+            main_file=project/'src/nomo/main.es';source=main_file.read_text().replace('module nomo.main;','module nomo.main;\nimport nomo.tools.edit_proposal.propose;\nimport nomo.tools.edit_proposal.Request;',1)
             source+='\ntype Case = { original: string, target: string, after: string, error: string };\n'
             source+='public flow overlap_probe(args: Array<string>) -> i32 {\n    let cases: Array<Case> = ['+',\n'.join(records)+'];\n'
             source+='    for item in cases limit Iterations(250) {\n        let request = Request { path = "note.txt", original = item.original, target = item.target, replacement = "Z" };\n        match propose(request) { Ok(value) => { if item.error != "" || value.after != item.after { return 1; } } Err(error) => { if error != item.error { return 2; } } }\n    }\n    return 0;\n}\n'

@@ -1,18 +1,26 @@
 module app.contract_probe;
 
 import std.io.println;
-import std.text.{split, char_count as len};
-import std.collections.len as count;
+import std.text.split;
+import std.text.char_count as len;
 import std.bytes.len as byte_count;
 import std.codec.text.utf8_encode;
-import std.json.{JsonValue, parse, stringify};
+import std.json.JsonValue;
+import std.json.parse;
+import std.json.stringify;
 import std.agent.message.Message;
-import nomo.session.edit_operation.Binding;
-import nomo.session.work_record.{Record, Captured, partial, confirm, validate, admit, same_record};
-import nomo.harness.harness_tool_contract.Ledger as ReadLedger;
-import nomo.harness.harness_work_contract.Evidence;
-import nomo.tools.edit_file.prepare_original;
-import nomo.tools.edit_binding.bind;
+import nomo.domain.editing.Binding;
+import nomo.domain.sessions.work.StoredWorkRecord;
+import nomo.domain.sessions.work.Captured;
+import nomo.domain.sessions.work.partial;
+import nomo.domain.sessions.work.confirm;
+import nomo.domain.sessions.work.validate;
+import nomo.domain.sessions.work.admit;
+import nomo.domain.sessions.work.same_record;
+import nomo.domain.harness.loop.ReadLedger;
+import nomo.domain.harness.work.Evidence;
+import nomo.domain.editing.prepare_original;
+import nomo.domain.editing.bind;
 
 type Check = { label: string, passed: bool };
 flow slash() -> string { return std.text.from_char('\\'); }
@@ -41,10 +49,10 @@ flow roundtrip(binding: Binding, evidence: Evidence, task: string, before: strin
     if actual_binding != binding { return false; }
     let pending = match partial(binding, evidence, task, prepared) { Ok(value) => value, Err(_) => { return false; } };
     if pending.format != 1 || pending.phase != "summary-unconfirmed" || pending.binding != binding || !same_record(pending, pending) ||
-        !same_fields(pending.body, partial_fields) || count(partial_fields) != 52 { return false; }
+        !same_fields(pending.body, partial_fields) || partial_fields.len() != 52 { return false; }
     let first = match validate(pending) { Ok(value) => value, Err(_) => { return false; } };
     if !captured(first, binding, evidence, task, before, after, target, replacement, "", false) { return false; }
-    match admit(pending) { Ok(value) => { if !value { return false; } } Err(_) => { return false; } }
+    match admit(pending) { Ok(value) => { if !value { return false; } }, Err(_) => { return false; } }
     let complete = match confirm(pending, summary) { Ok(value) => value, Err(_) => { return false; } };
     if complete.format != 1 || complete.phase != "summary-confirmed" || complete.binding != binding || same_record(pending, complete) ||
         !same_fields(complete.body, complete_fields) || byte_count(utf8_encode(complete.body)) > 65536 { return false; }
@@ -53,7 +61,7 @@ flow roundtrip(binding: Binding, evidence: Evidence, task: string, before: strin
     return match confirm(complete, summary) { Ok(_) => false, Err(_) => true };
 }
 flow body(binding: Binding, phase: string, format: i32, raw: string, accepted: bool) -> bool {
-    let row = Record { format = format, phase = phase, binding = binding, body = raw };
+    let row = StoredWorkRecord { format = format, phase = phase, binding = binding, body = raw };
     return match validate(row) { Ok(_) => accepted, Err(_) => !accepted };
 }
 flow fields(binding: Binding, phase: string, format: i32, values: Array<string>, accepted: bool) -> bool {
@@ -71,7 +79,7 @@ flow padding(binding: Binding, values: Array<string>, total: usize, accepted: bo
 }
 flow summary(binding: Binding, values: Array<string>, text: string, accepted: bool) -> bool {
     let raw = encoded(values); if raw == "" { return false; }
-    let row = Record { format = 1, phase = "summary-unconfirmed", binding = binding, body = raw };
+    let row = StoredWorkRecord { format = 1, phase = "summary-unconfirmed", binding = binding, body = raw };
     return match confirm(row, text) {
         Ok(_) => accepted, Err(_) => !accepted };
 }

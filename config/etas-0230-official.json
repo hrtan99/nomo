@@ -1,0 +1,63 @@
+{
+  "selector": "latest0230",
+  "version": "0.23.0",
+  "source_overrides": [],
+  "repositories": {
+    "cli": {
+      "repository": "etas",
+      "revision": "f904fa0da460262aab4a3ed490d1704c1dd526a7",
+      "tree": "8cb705c5c6e3af773ab8d31666615d351f2fb089",
+      "packages": [
+        "etas_cli",
+        "etas_driver",
+        "etas_package",
+        "etas_tests"
+      ]
+    },
+    "core": {
+      "repository": "etas-core",
+      "revision": "19a2b142edc2f61b97c27d8bd3270d0cc35bcc50",
+      "tree": "c799c73c497809acf771d0e555f56955f8057f66",
+      "packages": [
+        "etas_builtin",
+        "etas_cache",
+        "etas_code",
+        "etas_core",
+        "etas_host",
+        "etas_memory_derive",
+        "etas_package_metadata",
+        "etas_std",
+        "etas_utils"
+      ]
+    },
+    "frontend": {
+      "repository": "etas-frontend",
+      "revision": "61f17bcd20704e55df7d723968bb836275d57908",
+      "tree": "0eb4c691deb5e9545274404e34bd0bbf97e8a230",
+      "packages": [
+        "etas_effects",
+        "etas_frontend",
+        "etas_hir",
+        "etas_hir_analysis",
+        "etas_syntax",
+        "etas_syntax_derive",
+        "etas_types"
+      ]
+    },
+    "interpreter": {
+      "repository": "etas-interpreter",
+      "revision": "fb7a8bc03109b2c8c20f73780025b8f05f2a9a86",
+      "tree": "198c30d4d620d424f529f0f37da0720b8b91b048",
+      "packages": [
+        "etas_interpreter"
+      ]
+    }
+  },
+  "cache_root": "etas-0230",
+  "build_target": "etas-0230/target",
+  "source": "Official CLI 0.23.0 at f904fa0d and its locked dependency graph; matching installed SDK; no source overrides.",
+  "cargo_lock_sha256": "6be90cb08562d26025aedb85e75e363db39eb6acb1a9d62fdf223e4115064a38",
+  "verified_seed_binary_sha256": "88450cfd52d011ec3f3ed943b3df9b986e32513b6cd818090733e4339c911f10",
+  "installed_sdk": true,
+  "build_profile": "dev"
+}

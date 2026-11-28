@@ -1,6 +1,8 @@
 module app.main;
 import std.io.println;
-import std.memory.{prepare_put, operation_ref, Missing};
+import std.memory.prepare_put;
+import std.memory.operation_ref;
+import std.memory.Missing;
 import std.memory.WriteOutcome as Write;
 import std.memory.ReconcileResult as Lookup;
 import std.memory.ConfirmedOutcome as Confirmation;

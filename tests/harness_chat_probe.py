@@ -238,7 +238,7 @@ def main():
     cases, paths = load_cases(), product_paths()
     runner_paths = [Path(__file__).resolve(), FIXTURE, OLD_FIXTURE, ROOT / "tests/harness_entry_probe.py",
                     ROOT / "tests/foundation_probe.py", ROOT / "tests/normal_graph_identity.py",
-                    ROOT / "scripts/etas-0013-cli-bootstrap.py"]
+                    ROOT / "scripts/etas-02413-official-cli-bootstrap.py"]
     frozen_product, frozen_runner = input_hashes(paths), input_hashes(runner_paths)
     destination.mkdir(parents=True, exist_ok=True)
     evidence = Path(tempfile.mkdtemp(prefix="harness002a-chat-", dir=destination))

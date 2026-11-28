@@ -1,0 +1,63 @@
+{
+  "selector": "latest0244",
+  "version": "0.24.4",
+  "source_overrides": [],
+  "repositories": {
+    "cli": {
+      "repository": "etas",
+      "revision": "b1e9c5f8503e60d4d57ad97d35bd91ec55c62e35",
+      "tree": "ecc51204e5cdfd38845c2416226353042ecf7851",
+      "packages": [
+        "etas_cli",
+        "etas_driver",
+        "etas_package",
+        "etas_tests"
+      ]
+    },
+    "core": {
+      "repository": "etas-core",
+      "revision": "fef316605552c90091f6c81c1d3943cb6ec56004",
+      "tree": "a24c6716ac41c711b296495cd2e7b5b0cec7fe33",
+      "packages": [
+        "etas_builtin",
+        "etas_cache",
+        "etas_code",
+        "etas_core",
+        "etas_host",
+        "etas_memory_derive",
+        "etas_package_metadata",
+        "etas_std",
+        "etas_utils"
+      ]
+    },
+    "frontend": {
+      "repository": "etas-frontend",
+      "revision": "1399adc6b818b3f78ce276416cc9742c84660cff",
+      "tree": "d53c9d720e5f211037395366a579408e7620cb87",
+      "packages": [
+        "etas_effects",
+        "etas_frontend",
+        "etas_hir",
+        "etas_hir_analysis",
+        "etas_syntax",
+        "etas_syntax_derive",
+        "etas_types"
+      ]
+    },
+    "interpreter": {
+      "repository": "etas-interpreter",
+      "revision": "9e57556de51256ede6865df9e0c30e2e7a13ef1f",
+      "tree": "d525a8998f506a2e69bcda541dc60681dd1a3181",
+      "packages": [
+        "etas_interpreter"
+      ]
+    }
+  },
+  "cache_root": "etas-0244-release",
+  "build_target": "etas-0230/target",
+  "source": "Official CLI 0.24.4 at b1e9c5f, standard Cargo release profile and exact official lock graph with matching SDK. Existing target/cache reused; only the build container uses 8 GiB and 2 Cargo jobs, while application checks/runtime remain 4 GiB. Prior accepted CLI/SDK are preserved before selection.",
+  "installed_sdk": true,
+  "build_profile": "release",
+  "cargo_lock_sha256": "6948c1b86062ef57e6607c440abddaa79b27ef79ff9f1a1685935528cff932d9",
+  "verified_seed_binary_sha256": "63bf2d5ff5d109e32e7c393e21e8f29aeed78572c6562afa4bff86785f855f9a"
+}

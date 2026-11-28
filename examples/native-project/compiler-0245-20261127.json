@@ -1,0 +1,186 @@
+{
+  "date": "2026-11-27",
+  "status": "official-0245-source-and-retained-projects-passed-configuration-gate-retained",
+  "compiler": {
+    "selector": "latest0245",
+    "version": "0.24.5",
+    "source_overrides": [],
+    "repositories": {
+      "cli": {
+        "repository": "etas",
+        "revision": "20a757e92037d4704b8b951433a805d605d0f2a2",
+        "tree": "a867c5291352fd81748b53fa9bf8c99fb2b707a3",
+        "packages": [
+          "etas_cli",
+          "etas_driver",
+          "etas_package",
+          "etas_tests"
+        ]
+      },
+      "core": {
+        "repository": "etas-core",
+        "revision": "4b5a048e20c190b4b5dcda7a72c5a90b95ba7ebf",
+        "tree": "c2d18ed4923ac23057cdf217cda4d63291567318",
+        "packages": [
+          "etas_builtin",
+          "etas_cache",
+          "etas_code",
+          "etas_core",
+          "etas_host",
+          "etas_memory_derive",
+          "etas_package_metadata",
+          "etas_std",
+          "etas_utils"
+        ]
+      },
+      "frontend": {
+        "repository": "etas-frontend",
+        "revision": "73587b841fea909810f251f4ae6fb3d23b91a3b9",
+        "tree": "ce8bd2f0644b23aaaa185eecd50fb75196e78aa0",
+        "packages": [
+          "etas_effects",
+          "etas_frontend",
+          "etas_hir",
+          "etas_hir_analysis",
+          "etas_syntax",
+          "etas_syntax_derive",
+          "etas_types"
+        ]
+      },
+      "interpreter": {
+        "repository": "etas-interpreter",
+        "revision": "4d1bb1506a558c460fdbb9360627bd34c77b2a9b",
+        "tree": "5716b1fcec7205a333298eaa9f69edca831b6ac1",
+        "packages": [
+          "etas_interpreter"
+        ]
+      }
+    },
+    "cache_root": "etas-0245-release",
+    "build_target": "etas-0230/target",
+    "source": "Official CLI 0.24.5 at 20a757e and its exact official lock graph, standard Cargo release profile. A separate 6 GiB/1 Cargo job build reuses the existing target/cache while the prior invocation keeps its installed CLI/SDK. Normal application checks/runtime remain 4 GiB. Installation requires matching SDK and preserved prior bytes.",
+    "installed_sdk": true,
+    "build_profile": "release",
+    "cargo_lock_sha256": "dc6d1c86c5b0f994fccea1bb7dcd24640d0b0dcbd0e66b1da7d6a402ac9f3a0b",
+    "verified_seed_binary_sha256": "230258da48bae1122466d3584e93eacd05b9afe994d579df2388daecc24bb195"
+  },
+  "installed": {
+    "lock_sha256": "dc6d1c86c5b0f994fccea1bb7dcd24640d0b0dcbd0e66b1da7d6a402ac9f3a0b",
+    "method": "adopted-independently-verified-0245-build",
+    "path": "/home/nomo/.cargo/bin/etas",
+    "sdk": {
+      "abi": {
+        "artifact_hash": "blake3:4332aca7c9614fc2d48667d23718cfb702e4306b00d2f0e270f532e66d556091",
+        "body_schema": 99,
+        "compiler_version": "0.21.5",
+        "effect_analysis_hash": "blake3:100b0cd11ea5ff299a6cfa1cd07058d86e939d06eead1772de58a9086b794783",
+        "interpreter_layout_hash": "blake3:f8af84b388be8de044338924b2e0c32f2c3272c22ad195bac7aa7367d1caeded",
+        "metadata_schema": 78,
+        "native_binding_abi": "blake3:1f8072e9ff9c46f860213f9e74e9fb896278348d666a99a9035686f555a7cfda",
+        "schema": 3,
+        "std_contract": "phase1|etas.std.text.contract.v1|etas.std.text.primitive-abi.v1|etas.std.text.source.v1|unicode:17.0.0:7c74aebf116629b6:etas.std.text.unicode.v1|usize:64",
+        "target": "aarch64-unknown-linux-gnu",
+        "toolchain_id": "etas-0.8.1-aarch64-unknown-linux-gnu-1f8072e9ff9c"
+      },
+      "manifest_path": "/home/nomo/.cargo/lib/etas/etas-0.8.1-aarch64-unknown-linux-gnu-1f8072e9ff9c/std/manifest.json",
+      "manifest_sha256": "05bcc73419a20c13c752e4c8f00974d0ebaa44e66d48add5709f991044623d01",
+      "receipt": "etas-std-install-v2\n000000000000000018ebdbef8f54e547-815-aarch64-unknown-linux-gnu\nblake3:599fa07b4561f130f798672e00fa46435c6ac431dce1af37d053f298c8924899\n"
+    },
+    "sha256": "230258da48bae1122466d3584e93eacd05b9afe994d579df2388daecc24bb195",
+    "version": "etas 0.24.5\n"
+  },
+  "build": {
+    "profile": "standard Cargo release",
+    "elapsed_seconds": 1197,
+    "resources": {
+      "memory.max": "6442450944",
+      "memory.peak": "5936246784",
+      "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+      "cpu.max": "400000 100000",
+      "pids.max": "256"
+    },
+    "cargo_jobs": 1,
+    "source_overrides": [],
+    "custom_rustflags": false,
+    "prior_cli_and_sdk_backup": "/home/nomo/.cargo/etas-0244-release/accepted-before-0245",
+    "scope": "6 GiB build only; normal source/runtime remain 4 GiB. Previous installed CLI and SDK hashes checked unchanged throughout build; all retained older Hosts completed before installation."
+  },
+  "snapshot": {
+    "root": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0245-review-3rhbopyb",
+    "tree": "e4d19da5c9b27a2d8ca63b3a465241b6ee7904fc",
+    "evidence": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0245-review-3rhbopyb/compiler-evidence",
+    "overlay": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0245-review-3rhbopyb/compiler-compose.json",
+    "source_count": 463,
+    "source_manifest_sha256": "749c5fab65d92e4acce0ad9445ab6f45ac26a27656d59277c67a9ab7e242529c"
+  },
+  "full_source_check": {
+    "exit": 0,
+    "elapsed_seconds": 61.15114281999968,
+    "resources": {
+      "memory.max": "4294967296",
+      "memory.peak": "3260694528",
+      "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+      "cpu.max": "400000 100000",
+      "pids.max": "256"
+    },
+    "source_count": 463,
+    "diagnostics": 0
+  },
+  "architecture": {
+    "status": "passed",
+    "modules": 463,
+    "imports": 3442,
+    "preserved_identity_leaves": 48
+  },
+  "configuration_contract": {
+    "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-configuration-contract-kmj46gvk",
+    "result": {
+      "exit": 3,
+      "stdout": "PORT toml\nPORT entries\n",
+      "stderr": "error[analysis::MissingCheckedFact]: checked revision value conversion failed: Value { source: TypeId(1159), target: TypeId(114), failure: UnmaterializedType(\"specialized type was not materialized: Applied { constructor: TypeConstructorId(105), args: [TypeId(4), TypeId(97)] }\") }\n --> /workspace/src/nomo/adapters/storage/codec/configuration.es:23:22\n  |     let root = match parse(text) { Ok(value) => cast<Array<Entry>>(value, \"root entries\"), Err(_) => abort(\"TOML decoder returned invalid JSON\"), };\n  |                      ^ checked revision value conversion failed: Value { source: TypeId(1159), target: TypeId(114), failure: UnmaterializedType(\"specialized type was not materialized: Applied { constructor: TypeConstructorId(105), args: [TypeId(4), TypeId(97)] }\") }\n",
+      "resources": {
+        "memory.max": "4294967296",
+        "memory.peak": "515387392",
+        "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+        "cpu.max": "400000 100000",
+        "pids.max": "256"
+      },
+      "physical": {}
+    },
+    "outcome": {
+      "failure": {
+        "diagnostic": {
+          "code": "Analysis(MissingCheckedFact)",
+          "message": "checked revision value conversion failed: Value { source: TypeId(1159), target: TypeId(114), failure: UnmaterializedType(\"specialized type was not materialized: Applied { constructor: TypeConstructorId(105), args: [TypeId(4), TypeId(97)] }\") }",
+          "phase": "analysis",
+          "severity": "error"
+        },
+        "kind": "execution_fault"
+      },
+      "kind": "failed"
+    },
+    "termination_settled": true,
+    "host_started": 18,
+    "host_finished": 18,
+    "upstream_followup": "https://github.com/etas-project/etas-interpreter/issues/121#issuecomment-7214683282",
+    "qualification": "Existing positive consumer; same standard JSON MissingCheckedFact on the new graph. Physical-guidance continuation not executed. No parser substitution or new adverse case."
+  },
+  "old_native_migration": {
+    "status": "not-rerun",
+    "qualification": "The same standard JSON gate is still observed in the existing configuration consumer. The prepared migration and earlier failure retain their prior exact scope; this compiler does not have new all-row/fresh-history migration acceptance."
+  },
+  "default_native_cutover": false,
+  "full_13_item_refactor_complete": false,
+  "real_provider_requests": 0,
+  "new_negative_matrix": false,
+  "retained_projects": {
+    "status": "passed",
+    "receipt": "examples/native-project/startup-routing-0245-20261127.json",
+    "traces": 11,
+    "paired_successful_host_requests": 1090,
+    "native_commands": 11,
+    "native_control_writes": 5,
+    "fresh_idle_reattach": true,
+    "real_provider_requests": 0
+  }
+}

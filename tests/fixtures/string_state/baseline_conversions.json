@@ -1,0 +1,260 @@
+[
+  {
+    "store": "nomo-native-configuration-v1/Parsed",
+    "old": "nomo.domain.settings.CachedConfiguration",
+    "new": "nomo.domain.settings.CachedConfiguration",
+    "expression": "entry.value"
+  },
+  {
+    "store": "nomo-native-file-journals-v1/Journals",
+    "old": "nomo.domain.changes.Journal",
+    "new": "nomo.domain.changes.FileJournal",
+    "expression": "upgrade_0(entry.value)"
+  },
+  {
+    "store": "nomo-native-file-journals-v1/Steps",
+    "old": "nomo.domain.changes.Step",
+    "new": "nomo.domain.changes.FileStep",
+    "expression": "upgrade_1(entry.value)"
+  },
+  {
+    "store": "nomo-native-processes-v1/Jobs",
+    "old": "nomo.domain.processes.Job",
+    "new": "nomo.domain.processes.ProcessJob",
+    "expression": "upgrade_2(entry.value)"
+  },
+  {
+    "store": "nomo-native-processes-v1/Outputs",
+    "old": "nomo.domain.processes.JobEvent",
+    "new": "nomo.domain.processes.ProcessOutput",
+    "expression": "upgrade_3(entry.value)"
+  },
+  {
+    "store": "nomo-native-projects-v1/Recent",
+    "old": "Array<string>",
+    "new": "Array<string>",
+    "expression": "entry.value"
+  },
+  {
+    "store": "nomo-chat-history-v1/Rows",
+    "old": "nomo.domain.sessions.chat.ChatSession",
+    "new": "nomo.domain.sessions.chat.ChatSessionState",
+    "expression": "upgrade_4(entry.value)"
+  },
+  {
+    "store": "nomo-chat-history-v3/Rows",
+    "old": "nomo.domain.sessions.chat.ChatHistoryFrame",
+    "new": "nomo.domain.sessions.chat.ChatHistorySnapshot",
+    "expression": "upgrade_7(entry.value)"
+  },
+  {
+    "store": "nomo-check-output-v1/Rows",
+    "old": "nomo.domain.sessions.work.CheckOutputRecord",
+    "new": "nomo.domain.sessions.work.CapturedCheckOutput",
+    "expression": "upgrade_9(entry.value)"
+  },
+  {
+    "store": "nomo-session-demo-v1/Claims",
+    "old": "nomo.domain.sessions.state.DemoClaim",
+    "new": "nomo.domain.sessions.state.DemoSessionClaim",
+    "expression": "upgrade_10(entry.value)"
+  },
+  {
+    "store": "nomo-continuous-work-v1/Rows",
+    "old": "nomo.domain.sessions.work.ContinuousBook",
+    "new": "nomo.domain.sessions.work.ContinuousWorkHistory",
+    "expression": "upgrade_11(entry.value)"
+  },
+  {
+    "store": "nomo-edit-operation-v1/Rows",
+    "old": "nomo.domain.editing.EditOperation",
+    "new": "nomo.domain.editing.LiteralEditRecord",
+    "expression": "upgrade_16(entry.value)"
+  },
+  {
+    "store": "nomo-edit-followup-v1/Rows",
+    "old": "nomo.domain.editing.EditOperation",
+    "new": "nomo.domain.editing.LiteralEditRecord",
+    "expression": "upgrade_16(entry.value)"
+  },
+  {
+    "store": "nomo-event-history-v1/Rows",
+    "old": "nomo.domain.sessions.event_codec.History",
+    "new": "nomo.domain.sessions.event_codec.RecordedTraceHistory",
+    "expression": "upgrade_17(entry.value)"
+  },
+  {
+    "store": "nomo-harness-checkpoint-v1/Rows",
+    "old": "nomo.domain.sessions.checkpoints.CheckpointRecord",
+    "new": "nomo.domain.sessions.checkpoints.StoredCheckpoint",
+    "expression": "upgrade_18(entry.value)"
+  },
+  {
+    "store": "nomo-harness-successor-v1/Rows",
+    "old": "nomo.domain.sessions.checkpoints.SuccessorRecord",
+    "new": "nomo.domain.sessions.checkpoints.StoredSuccessor",
+    "expression": "upgrade_19(entry.value)"
+  },
+  {
+    "store": "nomo-history-check-v1/Rows",
+    "old": "nomo.domain.sessions.work.CheckRecord",
+    "new": "nomo.domain.sessions.work.CheckAttempt",
+    "expression": "upgrade_20(entry.value)"
+  },
+  {
+    "store": "nomo-followup-check-v1/Rows",
+    "old": "nomo.domain.sessions.work.CheckRecord",
+    "new": "nomo.domain.sessions.work.CheckAttempt",
+    "expression": "upgrade_20(entry.value)"
+  },
+  {
+    "store": "nomo-history-work-v1/Rows",
+    "old": "nomo.domain.sessions.work.WorkRecord",
+    "new": "nomo.domain.sessions.work.WorkAttempt",
+    "expression": "upgrade_21(entry.value)"
+  },
+  {
+    "store": "nomo-history-followup-v1/Rows",
+    "old": "nomo.domain.sessions.work.FollowupRecord",
+    "new": "nomo.domain.sessions.work.FollowupAttempt",
+    "expression": "upgrade_22(entry.value)"
+  },
+  {
+    "store": "nomo-recoverable-check-v1/Rows",
+    "old": "nomo.domain.sessions.work.CheckFrame",
+    "new": "nomo.domain.sessions.work.CapturedCheckAttempt",
+    "expression": "upgrade_24(entry.value)"
+  },
+  {
+    "store": "nomo-recoverable-chat-v1/Rows",
+    "old": "nomo.domain.sessions.chat.RecoverableChatFrame",
+    "new": "nomo.domain.sessions.chat.ChatSessionSnapshot",
+    "expression": "upgrade_25(entry.value)"
+  },
+  {
+    "store": "nomo-recoverable-chat-evidence-v1/Rows",
+    "old": "nomo.domain.sessions.chat.ChatEvidence",
+    "new": "nomo.domain.sessions.chat.ChatEvidence",
+    "expression": "entry.value"
+  },
+  {
+    "store": "nomo-recoverable-followup-check-v1/Rows",
+    "old": "nomo.domain.sessions.work.CheckFrame",
+    "new": "nomo.domain.sessions.work.CapturedCheckAttempt",
+    "expression": "upgrade_24(entry.value)"
+  },
+  {
+    "store": "nomo-recoverable-followup-v1/Rows",
+    "old": "nomo.domain.sessions.work.RecoverableFollowupFrame",
+    "new": "nomo.domain.sessions.work.FollowupSessionFrame",
+    "expression": "upgrade_27(entry.value)"
+  },
+  {
+    "store": "nomo-recoverable-work-v1/Rows",
+    "old": "nomo.domain.sessions.work.RecoverableWorkFrame",
+    "new": "nomo.domain.sessions.work.WorkSessionFrame",
+    "expression": "upgrade_28(entry.value)"
+  },
+  {
+    "store": "nomo-recovery-decision-v1/Rows",
+    "old": "nomo.domain.sessions.chain.RecoveryDecision",
+    "new": "nomo.domain.sessions.chain.RecordedRecovery",
+    "expression": "upgrade_29(entry.value)"
+  },
+  {
+    "store": "nomo-session-store-v1/Rows",
+    "old": "nomo.domain.sessions.state.MetadataRecord",
+    "new": "nomo.domain.sessions.state.StoredSessionMetadata",
+    "expression": "upgrade_30(entry.value)"
+  },
+  {
+    "store": "nomo-work-chain-edit-v2/Rows",
+    "old": "nomo.domain.sessions.chain.EditJournalRecord",
+    "new": "nomo.domain.sessions.chain.ChainEditJournal",
+    "expression": "upgrade_35(entry.value)"
+  },
+  {
+    "store": "nomo-work-chain-v2/Rows",
+    "old": "nomo.domain.sessions.chain.Record",
+    "new": "nomo.domain.sessions.chain.WorkChain",
+    "expression": "upgrade_36(entry.value)"
+  },
+  {
+    "store": "nomo-work-record-v1/Rows",
+    "old": "nomo.domain.sessions.work.StoredWorkRecord",
+    "new": "nomo.domain.sessions.work.CapturedWork",
+    "expression": "upgrade_37(entry.value)"
+  },
+  {
+    "store": "nomo-native-conversations-v1/Counters",
+    "old": "i64",
+    "new": "i64",
+    "expression": "entry.value"
+  },
+  {
+    "store": "nomo-native-conversations-v1/Selected",
+    "old": "string",
+    "new": "string",
+    "expression": "entry.value"
+  },
+  {
+    "store": "nomo-native-conversations-v1/Sessions",
+    "old": "nomo.domain.conversation.SavedSession",
+    "new": "nomo.domain.conversation.SavedSession",
+    "expression": "entry.value"
+  },
+  {
+    "store": "nomo-native-conversations-v1/Events",
+    "old": "nomo.domain.conversation.StoredEvent",
+    "new": "nomo.domain.conversation.StoredEvent",
+    "expression": "entry.value"
+  },
+  {
+    "store": "nomo-native-conversations-v1/Chunks",
+    "old": "string",
+    "new": "string",
+    "expression": "entry.value"
+  },
+  {
+    "store": "nomo-native-conversation-copies-v1/Jobs",
+    "old": "nomo.domain.archives.CopyJob",
+    "new": "nomo.domain.archives.ConversationCopy",
+    "expression": "upgrade_38(entry.value)"
+  },
+  {
+    "store": "nomo-native-project-jobs-v1/Jobs",
+    "old": "nomo.domain.processes.ArchivedJob",
+    "new": "nomo.domain.processes.ArchivedProcessJob",
+    "expression": "upgrade_39(entry.value)"
+  },
+  {
+    "store": "nomo-native-project-jobs-v1/Parts",
+    "old": "bytes",
+    "new": "bytes",
+    "expression": "entry.value"
+  },
+  {
+    "store": "nomo-native-attempts-v1/Counter",
+    "old": "i64",
+    "new": "i64",
+    "expression": "entry.value"
+  },
+  {
+    "store": "nomo-native-attempts-v1/Attempts",
+    "old": "nomo.domain.attempts.Attempt",
+    "new": "nomo.domain.attempts.ExecutionAttempt",
+    "expression": "upgrade_40(entry.value)"
+  },
+  {
+    "store": "nomo-user-context-edit-v4/Rows",
+    "old": "nomo.domain.sessions.user_context_chain_v4.JournalRecord",
+    "new": "nomo.domain.sessions.user_context_chain_v4.RootBoundChainJournal",
+    "expression": "upgrade_41(entry.value)"
+  },
+  {
+    "store": "nomo-user-context-chain-v4/Rows",
+    "old": "nomo.domain.sessions.user_context_chain_v4.Record",
+    "new": "nomo.domain.sessions.user_context_chain_v4.RootBoundWorkChain",
+    "expression": "upgrade_42(entry.value)"
+  }
+]

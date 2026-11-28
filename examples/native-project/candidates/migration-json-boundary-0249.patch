@@ -1,0 +1,116 @@
+diff --git a/src/nomo/adapters/filesystem/migration_packet.es b/src/nomo/adapters/filesystem/migration_packet.es
+index 9e8dd51..5439605 100644
+--- a/src/nomo/adapters/filesystem/migration_packet.es
++++ b/src/nomo/adapters/filesystem/migration_packet.es
+@@ -3,13 +3,12 @@ module nomo.adapters.filesystem.migration_packet;
+ import std.effects.Fs;
+ import std.fs.{path, read_bytes_limited, IOError as FileError, ReadLimitError};
+ import std.codec.text.{utf8_decode, Strict};
+-import std.json.parse;
++import std.json.{JsonValue, parse};
+ import std.agent.message.Message;
+ import std.text.{parse_i64, parse_usize};
+ import nomo.application.migration.ports.MigrationRoot;
+ 
+-public flow decode<T>(text: string) -> T {
+-    let json = match parse(text) { Ok(value) => value, Err(_) => abort("migration packet is not JSON"), };
++public flow decode<T>(json: JsonValue) -> T {
+     let typed: Option<Message<T>> = Message.new(json).cast<T>();
+     return match typed { Some(value) => value.body, None() => abort("migration packet has an invalid stored value"), };
+ }
+@@ -19,10 +18,10 @@ public flow integer(text: string) -> i64 {
+ public flow size(text: string) -> usize {
+     return match parse_usize(text) { Ok(value) => value, Err(_) => abort("migration usize is invalid"), };
+ }
+-public flow read<T>() -> T ![Fs.read<MigrationRoot>, Error<FileError>, Error<ReadLimitError>] {
++public flow read() -> JsonValue ![Fs.read<MigrationRoot>, Error<FileError>, Error<ReadLimitError>] {
+     let source = match path<MigrationRoot>("snapshot.json") { Ok(value) => value, Err(_) => abort("migration packet path is unavailable"), };
+     let text = match utf8_decode(read_bytes_limited(source, 536870912), Strict) {
+         Ok(value) => value, Err(_) => abort("migration packet is not UTF-8"),
+     };
+-    return decode<T>(text);
++    return match parse(text) { Ok(value) => value, Err(_) => abort("migration packet is not JSON"), };
+ }
+diff --git a/src/nomo/adapters/filesystem/native_migration.es b/src/nomo/adapters/filesystem/native_migration.es
+index d65f39e..ff35314 100644
+--- a/src/nomo/adapters/filesystem/native_migration.es
++++ b/src/nomo/adapters/filesystem/native_migration.es
+@@ -4,6 +4,7 @@ import std.effects.Fs;
+ import std.fs.{IOError as FileError, ReadLimitError};
+ import std.bytes.from_array;
+ import std.text.parse_i32;
++import std.json.parse;
+ import nomo.adapters.filesystem.migration_packet.{decode, integer, size, read};
+ import nomo.application.migration.ports.{NativeStateSource, MigrationRoot};
+ import nomo.domain.migration.native_state.{NativeImage, NativeRecord};
+@@ -67,24 +68,25 @@ flow output(value: WireOutput) -> JobEvent ![Error<IndexError>] {
+ }
+ flow record(row: WireRow) -> NativeRecord ![Error<IndexError>] {
+     let key = row.key;
++    let json = match parse(row.value) { Ok(value) => value, Err(_) => abort("migration packet is not JSON"), };
+     return match row.store {
+-        "conversations.Counters" => NativeRecord.Counter(key, integer(decode<string>(row.value))),
+-        "conversations.Selected" => NativeRecord.Selected(key, decode<string>(row.value)),
+-        "conversations.Sessions" => NativeRecord.Session(key, session(decode<WireSession>(row.value))),
+-        "conversations.Events" => NativeRecord.Event(key, event(decode<WireEvent>(row.value))),
+-        "conversations.Chunks" => NativeRecord.Chunk(key, decode<string>(row.value)),
+-        "copies.Jobs" => NativeRecord.Copy(key, copy(decode<WireCopy>(row.value))),
+-        "attempts.Counter" => NativeRecord.AttemptCounter(key, integer(decode<string>(row.value))),
+-        "attempts.Attempts" => NativeRecord.Attempt(key, attempt(decode<WireAttempt>(row.value))),
++        "conversations.Counters" => NativeRecord.Counter(key, integer(decode<string>(json))),
++        "conversations.Selected" => NativeRecord.Selected(key, decode<string>(json)),
++        "conversations.Sessions" => NativeRecord.Session(key, session(decode<WireSession>(json))),
++        "conversations.Events" => NativeRecord.Event(key, event(decode<WireEvent>(json))),
++        "conversations.Chunks" => NativeRecord.Chunk(key, decode<string>(json)),
++        "copies.Jobs" => NativeRecord.Copy(key, copy(decode<WireCopy>(json))),
++        "attempts.Counter" => NativeRecord.AttemptCounter(key, integer(decode<string>(json))),
++        "attempts.Attempts" => NativeRecord.Attempt(key, attempt(decode<WireAttempt>(json))),
+         "configuration.Parsed" => {
+-            let value = decode<WireCache>(row.value);
++            let value = decode<WireCache>(json);
+             NativeRecord.Configuration(key, Cached { digest = from_array(value.digest), session = value.session, result_event = integer(value.result_event) })
+         },
+-        "projects.Recent" => NativeRecord.Projects(key, decode<Array<string>>(row.value)),
+-        "mutations.Journals" => NativeRecord.Journal(key, journal(decode<WireJournal>(row.value))),
+-        "mutations.Steps" => NativeRecord.Step(key, decode<Step>(row.value)),
+-        "processes.Jobs" => NativeRecord.Job(key, decode<Job>(row.value)),
+-        "processes.Outputs" => NativeRecord.Output(key, output(decode<WireOutput>(row.value))),
++        "projects.Recent" => NativeRecord.Projects(key, decode<Array<string>>(json)),
++        "mutations.Journals" => NativeRecord.Journal(key, journal(decode<WireJournal>(json))),
++        "mutations.Steps" => NativeRecord.Step(key, decode<Step>(json)),
++        "processes.Jobs" => NativeRecord.Job(key, decode<Job>(json)),
++        "processes.Outputs" => NativeRecord.Output(key, output(decode<WireOutput>(json))),
+         _ => abort("unsupported native migration store: " + row.store),
+     };
+ }
+@@ -92,7 +94,7 @@ flow record(row: WireRow) -> NativeRecord ![Error<IndexError>] {
+ public type LegacyNativePacket = {};
+ impl LegacyNativePacket ~ NativeStateSource {
+     flow load(self) -> NativeImage ![Fs.read<MigrationRoot>, Error<FileError>, Error<ReadLimitError>, Error<IndexError>] {
+-        let packet = read<Packet>();
++        let packet = decode<Packet>(read());
+         if packet.format != "nomo-native-state-0135-v1" { abort("unsupported native migration packet format"); }
+         return NativeImage { source_sha256 = packet.source_sha256, records = packet.rows.iter().map(row => record(row)).collect() };
+     }
+diff --git a/src/nomo/adapters/filesystem/project_migration.es b/src/nomo/adapters/filesystem/project_migration.es
+index 612e2e3..d9a1cbb 100644
+--- a/src/nomo/adapters/filesystem/project_migration.es
++++ b/src/nomo/adapters/filesystem/project_migration.es
+@@ -4,7 +4,7 @@ import std.effects.Fs;
+ import std.fs.{IOError as FileError, ReadLimitError};
+ import nomo.application.migration.ports.{ProjectStateSource, MigrationRoot};
+ import nomo.domain.migration.project_state.{ProjectImage, ProjectConversation, ProjectEvent, ProjectEdit};
+-import nomo.adapters.filesystem.migration_packet.{read, integer};
++import nomo.adapters.filesystem.migration_packet.{read, decode, integer};
+ 
+ // Original SQLite integer IDs travel as decimal strings, never JSON numbers.
+ type WireEvent = { id: string, role: string, kind: string, name: string, text: string };
+@@ -16,7 +16,7 @@ type Packet = { format: string, source_sha256: string, projects: Array<string>,
+ public type ProjectStatePacket = {};
+ impl ProjectStatePacket ~ ProjectStateSource {
+     flow load(self) -> ProjectImage ![Fs.read<MigrationRoot>, Error<FileError>, Error<ReadLimitError>, Error<IndexError>] {
+-        let packet = read<Packet>();
++        let packet = decode<Packet>(read());
+         if packet.format != "nomo-project-state-2" { abort("unsupported project migration packet format"); }
+         return ProjectImage { source_sha256 = packet.source_sha256, projects = packet.projects,
+             edits = packet.edits,

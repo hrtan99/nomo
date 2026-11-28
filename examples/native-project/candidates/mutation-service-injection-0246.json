@@ -1,0 +1,2683 @@
+{
+  "status": "unselected-source-candidate-not-runtime-accepted",
+  "source": {
+    "root": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0246-review-mw6y119g",
+    "tree": "70882b99d144c3a14ab86f2cb31b1da971652730",
+    "evidence": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0246-review-mw6y119g/compiler-evidence",
+    "overlay": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0246-review-mw6y119g/compiler-compose.json",
+    "source_count": 468,
+    "source_manifest_sha256": "bc4895ebee98139c1fda209d1d1f9218ada631927aaec48f658b6b08c0afa58e"
+  },
+  "check": {
+    "exit": 1,
+    "elapsed_seconds": 71.7430760740001,
+    "resources": {
+      "memory.max": "4294967296",
+      "memory.peak": "3291373568",
+      "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+      "cpu.max": "400000 100000",
+      "pids.max": "256"
+    }
+  },
+  "architecture": "PASS architecture: 468 modules, 3487 imports, 48 identity-only compatibility leaves",
+  "diagnostics": [
+    {
+      "path": "/workspace/src/nomo/adapters/model/coding_agent.es",
+      "code": "effect::UnknownEffectTag",
+      "message": "effect tag is not known to the current effect registry",
+      "primary": {
+        "label": "effect tag is not known to the current effect registry",
+        "span": {
+          "end": 7663,
+          "endColumn": 6,
+          "endLine": 35,
+          "source": 92,
+          "start": 2218,
+          "startColumn": 12,
+          "startLine": 30
+        }
+      }
+    },
+    {
+      "path": "/workspace/src/nomo/adapters/model/coding_agent.es",
+      "code": "effect::UnknownEffectTag",
+      "message": "effect tag is not known to the current effect registry",
+      "primary": {
+        "label": "effect tag is not known to the current effect registry",
+        "span": {
+          "end": 7663,
+          "endColumn": 6,
+          "endLine": 35,
+          "source": 92,
+          "start": 2218,
+          "startColumn": 12,
+          "startLine": 30
+        }
+      }
+    },
+    {
+      "path": "/workspace/src/nomo/adapters/model/coding_agent.es",
+      "code": "effect::UnknownEffectTag",
+      "message": "effect tag is not known to the current effect registry",
+      "primary": {
+        "label": "effect tag is not known to the current effect registry",
+        "span": {
+          "end": 7663,
+          "endColumn": 6,
+          "endLine": 35,
+          "source": 92,
+          "start": 2218,
+          "startColumn": 12,
+          "startLine": 30
+        }
+      }
+    },
+    {
+      "path": "/workspace/src/nomo/adapters/model/coding_agent.es",
+      "code": "effect::UnknownEffectTag",
+      "message": "effect tag is not known to the current effect registry",
+      "primary": {
+        "label": "effect tag is not known to the current effect registry",
+        "span": {
+          "end": 7663,
+          "endColumn": 6,
+          "endLine": 35,
+          "source": 92,
+          "start": 2218,
+          "startColumn": 12,
+          "startLine": 30
+        }
+      }
+    },
+    {
+      "path": "/workspace/src/nomo/adapters/model/native.es",
+      "code": "effect::EffectOutsideDeclaredRow",
+      "message": "inferred effect std.effects.Inject.get escapes the declared effect row",
+      "primary": {
+        "label": "inferred effect std.effects.Inject.get escapes the declared effect row",
+        "span": {
+          "end": 1750,
+          "endColumn": 6,
+          "endLine": 26,
+          "source": 115,
+          "start": 926,
+          "startColumn": 5,
+          "startLine": 20
+        }
+      }
+    },
+    {
+      "path": "/workspace/src/nomo/adapters/model/native.es",
+      "code": "effect::EscapedEffect",
+      "message": "requested action std.effects.Inject.get is not handled by a scoped or default handler and is outside the declared effect row",
+      "primary": {
+        "label": "requested action std.effects.Inject.get is not handled by a scoped or default handler and is outside the declared effect row",
+        "span": {
+          "end": 1750,
+          "endColumn": 6,
+          "endLine": 26,
+          "source": 115,
+          "start": 926,
+          "startColumn": 5,
+          "startLine": 20
+        }
+      }
+    },
+    {
+      "path": "/workspace/src/nomo/adapters/model/native.es",
+      "code": "effect::EffectOutsideDeclaredRow",
+      "message": "implementation escaping effects exceed the behavioral spec method bound",
+      "primary": {
+        "label": "implementation escaping effects exceed the behavioral spec method bound",
+        "span": {
+          "end": 1750,
+          "endColumn": 6,
+          "endLine": 26,
+          "source": 115,
+          "start": 926,
+          "startColumn": 5,
+          "startLine": 20
+        }
+      }
+    },
+    {
+      "path": "/workspace/src/nomo/adapters/model/tools/files.es",
+      "code": "effect::UnknownEffectTag",
+      "message": "effect tag is not known to the current effect registry",
+      "primary": {
+        "label": "effect tag is not known to the current effect registry",
+        "span": {
+          "end": 4402,
+          "endColumn": 2,
+          "endLine": 64,
+          "source": 118,
+          "start": 3899,
+          "startColumn": 8,
+          "startLine": 60
+        }
+      }
+    },
+    {
+      "path": "/workspace/src/nomo/adapters/model/tools/files.es",
+      "code": "effect::UnknownEffectTag",
+      "message": "effect tag is not known to the current effect registry",
+      "primary": {
+        "label": "effect tag is not known to the current effect registry",
+        "span": {
+          "end": 4402,
+          "endColumn": 2,
+          "endLine": 64,
+          "source": 118,
+          "start": 3899,
+          "startColumn": 8,
+          "startLine": 60
+        }
+      }
+    },
+    {
+      "path": "/workspace/src/nomo/adapters/model/tools/files.es",
+      "code": "effect::UnknownEffectTag",
+      "message": "effect tag is not known to the current effect registry",
+      "primary": {
+        "label": "effect tag is not known to the current effect registry",
+        "span": {
+          "end": 5026,
+          "endColumn": 2,
+          "endLine": 71,
+          "source": 118,
+          "start": 4496,
+          "startColumn": 8,
+          "startLine": 67
+        }
+      }
+    },
+    {
+      "path": "/workspace/src/nomo/adapters/model/tools/files.es",
+      "code": "effect::UnknownEffectTag",
+      "message": "effect tag is not known to the current effect registry",
+      "primary": {
+        "label": "effect tag is not known to the current effect registry",
+        "span": {
+          "end": 5026,
+          "endColumn": 2,
+          "endLine": 71,
+          "source": 118,
+          "start": 4496,
+          "startColumn": 8,
+          "startLine": 67
+        }
+      }
+    },
+    {
+      "path": "/workspace/src/nomo/adapters/model/tools/files.es",
+      "code": "effect::UnknownEffectTag",
+      "message": "effect tag is not known to the current effect registry",
+      "primary": {
+        "label": "effect tag is not known to the current effect registry",
+        "span": {
+          "end": 4402,
+          "endColumn": 2,
+          "endLine": 64,
+          "source": 118,
+          "start": 3899,
+          "startColumn": 8,
+          "startLine": 60
+        }
+      }
+    },
+    {
+      "path": "/workspace/src/nomo/adapters/model/tools/files.es",
+      "code": "effect::UnknownEffectTag",
+      "message": "effect tag is not known to the current effect registry",
+      "primary": {
+        "label": "effect tag is not known to the current effect registry",
+        "span": {
+          "end": 4402,
+          "endColumn": 2,
+          "endLine": 64,
+          "source": 118,
+          "start": 3899,
+          "startColumn": 8,
+          "startLine": 60
+        }
+      }
+    },
+    {
+      "path": "/workspace/src/nomo/adapters/model/tools/files.es",
+      "code": "effect::UnknownEffectTag",
+      "message": "effect tag is not known to the current effect registry",
+      "primary": {
+        "label": "effect tag is not known to the current effect registry",
+        "span": {
+          "end": 5026,
+          "endColumn": 2,
+          "endLine": 71,
+          "source": 118,
+          "start": 4496,
+          "startColumn": 8,
+          "startLine": 67
+        }
+      }
+    },
+    {
+      "path": "/workspace/src/nomo/adapters/model/tools/files.es",
+      "code": "effect::UnknownEffectTag",
+      "message": "effect tag is not known to the current effect registry",
+      "primary": {
+        "label": "effect tag is not known to the current effect registry",
+        "span": {
+          "end": 5026,
+          "endColumn": 2,
+          "endLine": 71,
+          "source": 118,
+          "start": 4496,
+          "startColumn": 8,
+          "startLine": 67
+        }
+      }
+    },
+    {
+      "path": "/workspace/src/nomo/adapters/model/tools/files.es",
+      "code": "effect::IncompleteEffectFacts",
+      "message": "trace spec allow clauses cannot prove coverage of unresolved requested actions",
+      "primary": {
+        "label": "trace spec allow clauses cannot prove coverage of unresolved requested actions",
+        "span": {
+          "end": 4402,
+          "endColumn": 2,
+          "endLine": 64,
+          "source": 118,
+          "start": 3899,
+          "startColumn": 8,
+          "startLine": 60
+        }
+      }
+    },
+    {
+      "path": "/workspace/src/nomo/adapters/model/tools/files.es",
+      "code": "effect::IncompleteEffectFacts",
+      "message": "trace spec deny clause cannot prove requested action selectors are disjoint",
+      "primary": {
+        "label": "trace spec deny clause cannot prove requested action selectors are disjoint",
+        "span": {
+          "end": 3780,
+          "endColumn": 59,
+          "endLine": 57,
+          "source": 118,
+          "start": 3759,
+          "startColumn": 38,
+          "startLine": 57
+        }
+      }
+    },
+    {
+      "path": "/workspace/src/nomo/adapters/model/tools/files.es",
+      "code": "effect::IncompleteEffectFacts",
+      "message": "trace spec allow clauses cannot prove coverage of unresolved requested actions",
+      "primary": {
+        "label": "trace spec allow clauses cannot prove coverage of unresolved requested actions",
+        "span": {
+          "end": 5026,
+          "endColumn": 2,
+          "endLine": 71,
+          "source": 118,
+          "start": 4496,
+          "startColumn": 8,
+          "startLine": 67
+        }
+      }
+    },
+    {
+      "path": "/workspace/src/nomo/adapters/model/tools/files.es",
+      "code": "effect::IncompleteEffectFacts",
+      "message": "trace spec deny clause cannot prove requested action selectors are disjoint",
+      "primary": {
+        "label": "trace spec deny clause cannot prove requested action selectors are disjoint",
+        "span": {
+          "end": 3780,
+          "endColumn": 59,
+          "endLine": 57,
+          "source": 118,
+          "start": 3759,
+          "startColumn": 38,
+          "startLine": 57
+        }
+      }
+    },
+    {
+      "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+      "code": "effect::UnknownEffectTag",
+      "message": "effect tag is not known to the current effect registry",
+      "primary": {
+        "label": "effect tag is not known to the current effect registry",
+        "span": {
+          "end": 1625,
+          "endColumn": 2,
+          "endLine": 20,
+          "source": 119,
+          "start": 1147,
+          "startColumn": 8,
+          "startLine": 17
+        }
+      }
+    },
+    {
+      "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+      "code": "effect::UnknownEffectTag",
+      "message": "effect tag is not known to the current effect registry",
+      "primary": {
+        "label": "effect tag is not known to the current effect registry",
+        "span": {
+          "end": 1625,
+          "endColumn": 2,
+          "endLine": 20,
+          "source": 119,
+          "start": 1147,
+          "startColumn": 8,
+          "startLine": 17
+        }
+      }
+    },
+    {
+      "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+      "code": "effect::UnknownEffectTag",
+      "message": "effect tag is not known to the current effect registry",
+      "primary": {
+        "label": "effect tag is not known to the current effect registry",
+        "span": {
+          "end": 2284,
+          "endColumn": 2,
+          "endLine": 26,
+          "source": 119,
+          "start": 1727,
+          "startColumn": 8,
+          "startLine": 23
+        }
+      }
+    },
+    {
+      "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+      "code": "effect::UnknownEffectTag",
+      "message": "effect tag is not known to the current effect registry",
+      "primary": {
+        "label": "effect tag is not known to the current effect registry",
+        "span": {
+          "end": 2284,
+          "endColumn": 2,
+          "endLine": 26,
+          "source": 119,
+          "start": 1727,
+          "startColumn": 8,
+          "startLine": 23
+        }
+      }
+    },
+    {
+      "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+      "code": "effect::UnknownEffectTag",
+      "message": "effect tag is not known to the current effect registry",
+      "primary": {
+        "label": "effect tag is not known to the current effect registry",
+        "span": {
+          "end": 2910,
+          "endColumn": 2,
+          "endLine": 32,
+          "source": 119,
+          "start": 2356,
+          "startColumn": 8,
+          "startLine": 29
+        }
+      }
+    },
+    {
+      "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+      "code": "effect::UnknownEffectTag",
+      "message": "effect tag is not known to the current effect registry",
+      "primary": {
+        "label": "effect tag is not known to the current effect registry",
+        "span": {
+          "end": 2910,
+          "endColumn": 2,
+          "endLine": 32,
+          "source": 119,
+          "start": 2356,
+          "startColumn": 8,
+          "startLine": 29
+        }
+      }
+    },
+    {
+      "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+      "code": "effect::UnknownEffectTag",
+      "message": "effect tag is not known to the current effect registry",
+      "primary": {
+        "label": "effect tag is not known to the current effect registry",
+        "span": {
+          "end": 3511,
+          "endColumn": 2,
+          "endLine": 38,
+          "source": 119,
+          "start": 2971,
+          "startColumn": 8,
+          "startLine": 35
+        }
+      }
+    },
+    {
+      "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+      "code": "effect::UnknownEffectTag",
+      "message": "effect tag is not known to the current effect registry",
+      "primary": {
+        "label": "effect tag is not known to the current effect registry",
+        "span": {
+          "end": 3511,
+          "endColumn": 2,
+          "endLine": 38,
+          "source": 119,
+          "start": 2971,
+          "startColumn": 8,
+          "startLine": 35
+        }
+      }
+    },
+    {
+      "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+      "code": "effect::UnknownEffectTag",
+      "message": "effect tag is not known to the current effect registry",
+      "primary": {
+        "label": "effect tag is not known to the current effect registry",
+        "span": {
+          "end": 4126,
+          "endColumn": 2,
+          "endLine": 44,
+          "source": 119,
+          "start": 3591,
+          "startColumn": 8,
+          "startLine": 41
+        }
+      }
+    },
+    {
+      "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+      "code": "effect::UnknownEffectTag",
+      "message": "effect tag is not known to the current effect registry",
+      "primary": {
+        "label": "effect tag is not known to the current effect registry",
+        "span": {
+          "end": 4126,
+          "endColumn": 2,
+          "endLine": 44,
+          "source": 119,
+          "start": 3591,
+          "startColumn": 8,
+          "startLine": 41
+        }
+      }
+    },
+    {
+      "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+      "code": "effect::UnknownEffectTag",
+      "message": "effect tag is not known to the current effect registry",
+      "primary": {
+        "label": "effect tag is not known to the current effect registry",
+        "span": {
+          "end": 4783,
+          "endColumn": 2,
+          "endLine": 50,
+          "source": 119,
+          "start": 4228,
+          "startColumn": 8,
+          "startLine": 47
+        }
+      }
+    },
+    {
+      "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+      "code": "effect::UnknownEffectTag",
+      "message": "effect tag is not known to the current effect registry",
+      "primary": {
+        "label": "effect tag is not known to the current effect registry",
+        "span": {
+          "end": 4783,
+          "endColumn": 2,
+          "endLine": 50,
+          "source": 119,
+          "start": 4228,
+          "startColumn": 8,
+          "startLine": 47
+        }
+      }
+    },
+    {
+      "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+      "code": "effect::UnknownEffectTag",
+      "message": "effect tag is not known to the current effect registry",
+      "primary": {
+        "label": "effect tag is not known to the current effect registry",
+        "span": {
+          "end": 5452,
+          "endColumn": 2,
+          "endLine": 56,
+          "source": 119,
+          "start": 4978,
+          "startColumn": 8,
+          "startLine": 53
+        }
+      }
+    },
+    {
+      "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+      "code": "effect::UnknownEffectTag",
+      "message": "effect tag is not known to the current effect registry",
+      "primary": {
+        "label": "effect tag is not known to the current effect registry",
+        "span": {
+          "end": 5452,
+          "endColumn": 2,
+          "endLine": 56,
+          "source": 119,
+          "start": 4978,
+          "startColumn": 8,
+          "startLine": 53
+        }
+      }
+    },
+    {
+      "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+      "code": "effect::UnknownEffectTag",
+      "message": "effect tag is not known to the current effect registry",
+      "primary": {
+        "label": "effect tag is not known to the current effect registry",
+        "span": {
+          "end": 6116,
+          "endColumn": 2,
+          "endLine": 62,
+          "source": 119,
+          "start": 5634,
+          "startColumn": 8,
+          "startLine": 59
+        }
+      }
+    },
+    {
+      "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+      "code": "effect::UnknownEffectTag",
+      "message": "effect tag is not known to the current effect registry",
+      "primary": {
+        "label": "effect tag is not known to the current effect registry",
+        "span": {
+          "end": 6116,
+          "endColumn": 2,
+          "endLine": 62,
+          "source": 119,
+          "start": 5634,
+          "startColumn": 8,
+          "startLine": 59
+        }
+      }
+    },
+    {
+      "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+      "code": "effect::UnknownEffectTag",
+      "message": "effect tag is not known to the current effect registry",
+      "primary": {
+        "label": "effect tag is not known to the current effect registry",
+        "span": {
+          "end": 6706,
+          "endColumn": 2,
+          "endLine": 68,
+          "source": 119,
+          "start": 6244,
+          "startColumn": 8,
+          "startLine": 65
+        }
+      }
+    },
+    {
+      "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+      "code": "effect::UnknownEffectTag",
+      "message": "effect tag is not known to the current effect registry",
+      "primary": {
+        "label": "effect tag is not known to the current effect registry",
+        "span": {
+          "end": 6706,
+          "endColumn": 2,
+          "endLine": 68,
+          "source": 119,
+          "start": 6244,
+          "startColumn": 8,
+          "startLine": 65
+        }
+      }
+    },
+    {
+      "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+      "code": "effect::UnknownEffectTag",
+      "message": "effect tag is not known to the current effect registry",
+      "primary": {
+        "label": "effect tag is not known to the current effect registry",
+        "span": {
+          "end": 7352,
+          "endColumn": 2,
+          "endLine": 74,
+          "source": 119,
+          "start": 6868,
+          "startColumn": 8,
+          "startLine": 71
+        }
+      }
+    },
+    {
+      "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+      "code": "effect::UnknownEffectTag",
+      "message": "effect tag is not known to the current effect registry",
+      "primary": {
+        "label": "effect tag is not known to the current effect registry",
+        "span": {
+          "end": 7352,
+          "endColumn": 2,
+          "endLine": 74,
+          "source": 119,
+          "start": 6868,
+          "startColumn": 8,
+          "startLine": 71
+        }
+      }
+    },
+    {
+      "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+      "code": "effect::UnknownEffectTag",
+      "message": "effect tag is not known to the current effect registry",
+      "primary": {
+        "label": "effect tag is not known to the current effect registry",
+        "span": {
+          "end": 1625,
+          "endColumn": 2,
+          "endLine": 20,
+          "source": 119,
+          "start": 1147,
+          "startColumn": 8,
+          "startLine": 17
+        }
+      }
+    },
+    {
+      "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+      "code": "effect::UnknownEffectTag",
+      "message": "effect tag is not known to the current effect registry",
+      "primary": {
+        "label": "effect tag is not known to the current effect registry",
+        "span": {
+          "end": 1625,
+          "endColumn": 2,
+          "endLine": 20,
+          "source": 119,
+          "start": 1147,
+          "startColumn": 8,
+          "startLine": 17
+        }
+      }
+    },
+    {
+      "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+      "code": "effect::UnknownEffectTag",
+      "message": "effect tag is not known to the current effect registry",
+      "primary": {
+        "label": "effect tag is not known to the current effect registry",
+        "span": {
+          "end": 2284,
+          "endColumn": 2,
+          "endLine": 26,
+          "source": 119,
+          "start": 1727,
+          "startColumn": 8,
+          "startLine": 23
+        }
+      }
+    },
+    {
+      "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+      "code": "effect::UnknownEffectTag",
+      "message": "effect tag is not known to the current effect registry",
+      "primary": {
+        "label": "effect tag is not known to the current effect registry",
+        "span": {
+          "end": 2284,
+          "endColumn": 2,
+          "endLine": 26,
+          "source": 119,
+          "start": 1727,
+          "startColumn": 8,
+          "startLine": 23
+        }
+      }
+    },
+    {
+      "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+      "code": "effect::UnknownEffectTag",
+      "message": "effect tag is not known to the current effect registry",
+      "primary": {
+        "label": "effect tag is not known to the current effect registry",
+        "span": {
+          "end": 2910,
+          "endColumn": 2,
+          "endLine": 32,
+          "source": 119,
+          "start": 2356,
+          "startColumn": 8,
+          "startLine": 29
+        }
+      }
+    },
+    {
+      "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+      "code": "effect::UnknownEffectTag",
+      "message": "effect tag is not known to the current effect registry",
+      "primary": {
+        "label": "effect tag is not known to the current effect registry",
+        "span": {
+          "end": 2910,
+          "endColumn": 2,
+          "endLine": 32,
+          "source": 119,
+          "start": 2356,
+          "startColumn": 8,
+          "startLine": 29
+        }
+      }
+    },
+    {
+      "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+      "code": "effect::UnknownEffectTag",
+      "message": "effect tag is not known to the current effect registry",
+      "primary": {
+        "label": "effect tag is not known to the current effect registry",
+        "span": {
+          "end": 3511,
+          "endColumn": 2,
+          "endLine": 38,
+          "source": 119,
+          "start": 2971,
+          "startColumn": 8,
+          "startLine": 35
+        }
+      }
+    },
+    {
+      "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+      "code": "effect::UnknownEffectTag",
+      "message": "effect tag is not known to the current effect registry",
+      "primary": {
+        "label": "effect tag is not known to the current effect registry",
+        "span": {
+          "end": 3511,
+          "endColumn": 2,
+          "endLine": 38,
+          "source": 119,
+          "start": 2971,
+          "startColumn": 8,
+          "startLine": 35
+        }
+      }
+    },
+    {
+      "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+      "code": "effect::UnknownEffectTag",
+      "message": "effect tag is not known to the current effect registry",
+      "primary": {
+        "label": "effect tag is not known to the current effect registry",
+        "span": {
+          "end": 4126,
+          "endColumn": 2,
+          "endLine": 44,
+          "source": 119,
+          "start": 3591,
+          "startColumn": 8,
+          "startLine": 41
+        }
+      }
+    },
+    {
+      "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+      "code": "effect::UnknownEffectTag",
+      "message": "effect tag is not known to the current effect registry",
+      "primary": {
+        "label": "effect tag is not known to the current effect registry",
+        "span": {
+          "end": 4126,
+          "endColumn": 2,
+          "endLine": 44,
+          "source": 119,
+          "start": 3591,
+          "startColumn": 8,
+          "startLine": 41
+        }
+      }
+    },
+    {
+      "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+      "code": "effect::UnknownEffectTag",
+      "message": "effect tag is not known to the current effect registry",
+      "primary": {
+        "label": "effect tag is not known to the current effect registry",
+        "span": {
+          "end": 4783,
+          "endColumn": 2,
+          "endLine": 50,
+          "source": 119,
+          "start": 4228,
+          "startColumn": 8,
+          "startLine": 47
+        }
+      }
+    },
+    {
+      "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+      "code": "effect::UnknownEffectTag",
+      "message": "effect tag is not known to the current effect registry",
+      "primary": {
+        "label": "effect tag is not known to the current effect registry",
+        "span": {
+          "end": 4783,
+          "endColumn": 2,
+          "endLine": 50,
+          "source": 119,
+          "start": 4228,
+          "startColumn": 8,
+          "startLine": 47
+        }
+      }
+    },
+    {
+      "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+      "code": "effect::UnknownEffectTag",
+      "message": "effect tag is not known to the current effect registry",
+      "primary": {
+        "label": "effect tag is not known to the current effect registry",
+        "span": {
+          "end": 5452,
+          "endColumn": 2,
+          "endLine": 56,
+          "source": 119,
+          "start": 4978,
+          "startColumn": 8,
+          "startLine": 53
+        }
+      }
+    },
+    {
+      "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+      "code": "effect::UnknownEffectTag",
+      "message": "effect tag is not known to the current effect registry",
+      "primary": {
+        "label": "effect tag is not known to the current effect registry",
+        "span": {
+          "end": 5452,
+          "endColumn": 2,
+          "endLine": 56,
+          "source": 119,
+          "start": 4978,
+          "startColumn": 8,
+          "startLine": 53
+        }
+      }
+    },
+    {
+      "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+      "code": "effect::UnknownEffectTag",
+      "message": "effect tag is not known to the current effect registry",
+      "primary": {
+        "label": "effect tag is not known to the current effect registry",
+        "span": {
+          "end": 6116,
+          "endColumn": 2,
+          "endLine": 62,
+          "source": 119,
+          "start": 5634,
+          "startColumn": 8,
+          "startLine": 59
+        }
+      }
+    },
+    {
+      "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+      "code": "effect::UnknownEffectTag",
+      "message": "effect tag is not known to the current effect registry",
+      "primary": {
+        "label": "effect tag is not known to the current effect registry",
+        "span": {
+          "end": 6116,
+          "endColumn": 2,
+          "endLine": 62,
+          "source": 119,
+          "start": 5634,
+          "startColumn": 8,
+          "startLine": 59
+        }
+      }
+    },
+    {
+      "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+      "code": "effect::UnknownEffectTag",
+      "message": "effect tag is not known to the current effect registry",
+      "primary": {
+        "label": "effect tag is not known to the current effect registry",
+        "span": {
+          "end": 6706,
+          "endColumn": 2,
+          "endLine": 68,
+          "source": 119,
+          "start": 6244,
+          "startColumn": 8,
+          "startLine": 65
+        }
+      }
+    },
+    {
+      "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+      "code": "effect::UnknownEffectTag",
+      "message": "effect tag is not known to the current effect registry",
+      "primary": {
+        "label": "effect tag is not known to the current effect registry",
+        "span": {
+          "end": 6706,
+          "endColumn": 2,
+          "endLine": 68,
+          "source": 119,
+          "start": 6244,
+          "startColumn": 8,
+          "startLine": 65
+        }
+      }
+    },
+    {
+      "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+      "code": "effect::UnknownEffectTag",
+      "message": "effect tag is not known to the current effect registry",
+      "primary": {
+        "label": "effect tag is not known to the current effect registry",
+        "span": {
+          "end": 7352,
+          "endColumn": 2,
+          "endLine": 74,
+          "source": 119,
+          "start": 6868,
+          "startColumn": 8,
+          "startLine": 71
+        }
+      }
+    },
+    {
+      "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+      "code": "effect::UnknownEffectTag",
+      "message": "effect tag is not known to the current effect registry",
+      "primary": {
+        "label": "effect tag is not known to the current effect registry",
+        "span": {
+          "end": 7352,
+          "endColumn": 2,
+          "endLine": 74,
+          "source": 119,
+          "start": 6868,
+          "startColumn": 8,
+          "startLine": 71
+        }
+      }
+    },
+    {
+      "path": "/workspace/src/nomo/bootstrap/main.es",
+      "code": "effect::IncompleteEffectFacts",
+      "message": "call effect selector specialization failed: invalid callable environment: captured return projection [Field(\"configuration\")] of {Existential { pack: HirExprId(45271), environment: CallableEnvironmentId { scope: Some(CodeFingerprint(e565d5d894247c7428b1a37b73512eb31ed1f19d6a5f11096846b8aec57a7fbd)), origin: CodeFingerprint(ba332add5c4e5ca39f11c85e0d242c6f75804488d3f77f610df271e8111029ab), application: CodeFingerprint(417c111c4adb00cc5410f5db3256a9a657e4b7c2e911042c672619a56fd90a0d), instance: Some(CodeFingerprint(4c9a9d9f6a9972fbccae045c32bf3bc6b458781dc4c53687fa1329b99e143d60)), generic_context: Some(CodeFingerprint(73076da637360ec48e91119a9bf836405d135e0f01c455561a0f32a9a92586e1)) } }} (paths []) has no checked callable origins",
+      "primary": {
+        "label": "call effect selector specialization failed: invalid callable environment: captured return projection [Field(\"configuration\")] of {Existential { pack: HirExprId(45271), environment: CallableEnvironmentId { scope: Some(CodeFingerprint(e565d5d894247c7428b1a37b73512eb31ed1f19d6a5f11096846b8aec57a7fbd)), origin: CodeFingerprint(ba332add5c4e5ca39f11c85e0d242c6f75804488d3f77f610df271e8111029ab), application: CodeFingerprint(417c111c4adb00cc5410f5db3256a9a657e4b7c2e911042c672619a56fd90a0d), instance: Some(CodeFingerprint(4c9a9d9f6a9972fbccae045c32bf3bc6b458781dc4c53687fa1329b99e143d60)), generic_context: Some(CodeFingerprint(73076da637360ec48e91119a9bf836405d135e0f01c455561a0f32a9a92586e1)) } }} (paths []) has no checked callable origins",
+        "span": {
+          "end": 4308,
+          "endColumn": 56,
+          "endLine": 68,
+          "source": 297,
+          "start": 4269,
+          "startColumn": 17,
+          "startLine": 68
+        }
+      }
+    }
+  ],
+  "other_source_attempts": [
+    {
+      "label": "own-record-packing",
+      "root": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0246-review-oc744d0_",
+      "check": {
+        "exit": 1,
+        "elapsed_seconds": 2.4563955430000135,
+        "resources": {
+          "memory.max": "4294967296",
+          "memory.peak": "632188928",
+          "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+          "cpu.max": "400000 100000",
+          "pids.max": "256"
+        }
+      },
+      "diagnostics": [
+        {
+          "path": "/workspace/src/nomo/bootstrap/main.es",
+          "code": "type::Mismatch",
+          "message": "type does not match the expected type: `{history: nomo.adapters.storage.conversations.NativeHistory, attempts: nomo.adapters.storage.attempts.NativeAttempts, picker: nomo.adapters.cli.conversation_picker.ConsoleConversationPicker, input: nomo.adapters.cli.conversation.ConsoleTerminalInput, mutations: nomo.application.mutations.controller.Mutations<nomo.adapters.filesystem.mutation_files.ProjectMutationFiles, nomo.adapters.storage.change_journals.NativeChangeJournals, nomo.adapters.storage.conversations.NativeHistory, nomo.adapters.cli.output.ConsoleLines>, conversation: nomo.application.conversation.service.Conversation<nomo.adapters.storage.conversations.NativeHistory, nomo.adapters.storage.attempts.NativeAttempts, nomo.adapters.filesystem.instructions.ProjectInstructionFiles, nomo.adapters.storage.processes.NativeJobs, nomo.adapters.model.native.NativeCodingModel, nomo.adapters.model.native.NativeSummaryModel, nomo.adapters.model.context_projection.RollingContext, nomo.application.configuration.service.ConfigurationLoader<nomo.adapters.storage.conversations.NativeHistory, nomo.adapters.filesystem.configuration.file.ProjectConfigurationFile, nomo.adapters.filesystem.configuration.codec.JsonConfigurationCodec, nomo.adapters.filesystem.configuration.converter.TaploConfigurationConverter, nomo.adapters.storage.configuration_cache.NativeConfigurationCache>, nomo.adapters.cli.output.ConsoleLines>}` is not assignable to `nomo.application.conversation.terminal.TerminalApplication<nomo.adapters.storage.conversations.NativeHistory, nomo.adapters.storage.attempts.NativeAttempts, nomo.adapters.cli.conversation_picker.ConsoleConversationPicker, nomo.application.conversation.service.Conversation<nomo.adapters.storage.conversations.NativeHistory, nomo.adapters.storage.attempts.NativeAttempts, nomo.adapters.filesystem.instructions.ProjectInstructionFiles, nomo.adapters.storage.processes.NativeJobs, nomo.adapters.model.native.NativeCodingModel, nomo.adapters.model.native.NativeSummaryModel, nomo.adapters.model.context_projection.RollingContext, nomo.application.configuration.service.ConfigurationLoader<nomo.adapters.storage.conversations.NativeHistory, nomo.adapters.filesystem.configuration.file.ProjectConfigurationFile, nomo.adapters.filesystem.configuration.codec.JsonConfigurationCodec, nomo.adapters.filesystem.configuration.converter.TaploConfigurationConverter, nomo.adapters.storage.configuration_cache.NativeConfigurationCache>, nomo.adapters.cli.output.ConsoleLines>, nomo.adapters.cli.conversation.ConsoleTerminalInput>`",
+          "primary": {
+            "label": "type does not match the expected type: `{history: nomo.adapters.storage.conversations.NativeHistory, attempts: nomo.adapters.storage.attempts.NativeAttempts, picker: nomo.adapters.cli.conversation_picker.ConsoleConversationPicker, input: nomo.adapters.cli.conversation.ConsoleTerminalInput, mutations: nomo.application.mutations.controller.Mutations<nomo.adapters.filesystem.mutation_files.ProjectMutationFiles, nomo.adapters.storage.change_journals.NativeChangeJournals, nomo.adapters.storage.conversations.NativeHistory, nomo.adapters.cli.output.ConsoleLines>, conversation: nomo.application.conversation.service.Conversation<nomo.adapters.storage.conversations.NativeHistory, nomo.adapters.storage.attempts.NativeAttempts, nomo.adapters.filesystem.instructions.ProjectInstructionFiles, nomo.adapters.storage.processes.NativeJobs, nomo.adapters.model.native.NativeCodingModel, nomo.adapters.model.native.NativeSummaryModel, nomo.adapters.model.context_projection.RollingContext, nomo.application.configuration.service.ConfigurationLoader<nomo.adapters.storage.conversations.NativeHistory, nomo.adapters.filesystem.configuration.file.ProjectConfigurationFile, nomo.adapters.filesystem.configuration.codec.JsonConfigurationCodec, nomo.adapters.filesystem.configuration.converter.TaploConfigurationConverter, nomo.adapters.storage.configuration_cache.NativeConfigurationCache>, nomo.adapters.cli.output.ConsoleLines>}` is not assignable to `nomo.application.conversation.terminal.TerminalApplication<nomo.adapters.storage.conversations.NativeHistory, nomo.adapters.storage.attempts.NativeAttempts, nomo.adapters.cli.conversation_picker.ConsoleConversationPicker, nomo.application.conversation.service.Conversation<nomo.adapters.storage.conversations.NativeHistory, nomo.adapters.storage.attempts.NativeAttempts, nomo.adapters.filesystem.instructions.ProjectInstructionFiles, nomo.adapters.storage.processes.NativeJobs, nomo.adapters.model.native.NativeCodingModel, nomo.adapters.model.native.NativeSummaryModel, nomo.adapters.model.context_projection.RollingContext, nomo.application.configuration.service.ConfigurationLoader<nomo.adapters.storage.conversations.NativeHistory, nomo.adapters.filesystem.configuration.file.ProjectConfigurationFile, nomo.adapters.filesystem.configuration.codec.JsonConfigurationCodec, nomo.adapters.filesystem.configuration.converter.TaploConfigurationConverter, nomo.adapters.storage.configuration_cache.NativeConfigurationCache>, nomo.adapters.cli.output.ConsoleLines>, nomo.adapters.cli.conversation.ConsoleTerminalInput>`",
+            "span": {
+              "end": 3499,
+              "endColumn": 6,
+              "endLine": 58,
+              "source": 297,
+              "start": 3091,
+              "startColumn": 23,
+              "startLine": 51
+            }
+          }
+        }
+      ]
+    },
+    {
+      "label": "typed-inject-selector",
+      "root": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0246-review-3lgrncio",
+      "check": {
+        "exit": 1,
+        "elapsed_seconds": 64.80854840500004,
+        "resources": {
+          "memory.max": "4294967296",
+          "memory.peak": "3287511040",
+          "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+          "cpu.max": "400000 100000",
+          "pids.max": "256"
+        }
+      },
+      "diagnostics": [
+        {
+          "path": "/workspace/src/nomo/adapters/model/coding_agent.es",
+          "code": "effect::UnknownEffectTag",
+          "message": "effect tag is not known to the current effect registry",
+          "primary": {
+            "label": "effect tag is not known to the current effect registry",
+            "span": {
+              "end": 7674,
+              "endColumn": 6,
+              "endLine": 35,
+              "source": 92,
+              "start": 2208,
+              "startColumn": 12,
+              "startLine": 30
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/coding_agent.es",
+          "code": "effect::UnknownEffectTag",
+          "message": "effect tag is not known to the current effect registry",
+          "primary": {
+            "label": "effect tag is not known to the current effect registry",
+            "span": {
+              "end": 7674,
+              "endColumn": 6,
+              "endLine": 35,
+              "source": 92,
+              "start": 2208,
+              "startColumn": 12,
+              "startLine": 30
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/native.es",
+          "code": "effect::EffectOutsideDeclaredRow",
+          "message": "inferred effect std.effects.Inject.get escapes the declared effect row",
+          "primary": {
+            "label": "inferred effect std.effects.Inject.get escapes the declared effect row",
+            "span": {
+              "end": 1750,
+              "endColumn": 6,
+              "endLine": 26,
+              "source": 115,
+              "start": 926,
+              "startColumn": 5,
+              "startLine": 20
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/native.es",
+          "code": "effect::EscapedEffect",
+          "message": "requested action std.effects.Inject.get is not handled by a scoped or default handler and is outside the declared effect row",
+          "primary": {
+            "label": "requested action std.effects.Inject.get is not handled by a scoped or default handler and is outside the declared effect row",
+            "span": {
+              "end": 1750,
+              "endColumn": 6,
+              "endLine": 26,
+              "source": 115,
+              "start": 926,
+              "startColumn": 5,
+              "startLine": 20
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/native.es",
+          "code": "effect::EffectOutsideDeclaredRow",
+          "message": "implementation escaping effects exceed the behavioral spec method bound",
+          "primary": {
+            "label": "implementation escaping effects exceed the behavioral spec method bound",
+            "span": {
+              "end": 1750,
+              "endColumn": 6,
+              "endLine": 26,
+              "source": 115,
+              "start": 926,
+              "startColumn": 5,
+              "startLine": 20
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/tools/files.es",
+          "code": "effect::UnknownEffectTag",
+          "message": "effect tag is not known to the current effect registry",
+          "primary": {
+            "label": "effect tag is not known to the current effect registry",
+            "span": {
+              "end": 4434,
+              "endColumn": 2,
+              "endLine": 64,
+              "source": 118,
+              "start": 3910,
+              "startColumn": 8,
+              "startLine": 60
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/tools/files.es",
+          "code": "effect::UnknownEffectTag",
+          "message": "effect tag is not known to the current effect registry",
+          "primary": {
+            "label": "effect tag is not known to the current effect registry",
+            "span": {
+              "end": 5079,
+              "endColumn": 2,
+              "endLine": 71,
+              "source": 118,
+              "start": 4528,
+              "startColumn": 8,
+              "startLine": 67
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/tools/files.es",
+          "code": "effect::UnknownEffectTag",
+          "message": "effect tag is not known to the current effect registry",
+          "primary": {
+            "label": "effect tag is not known to the current effect registry",
+            "span": {
+              "end": 4434,
+              "endColumn": 2,
+              "endLine": 64,
+              "source": 118,
+              "start": 3910,
+              "startColumn": 8,
+              "startLine": 60
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/tools/files.es",
+          "code": "effect::UnknownEffectTag",
+          "message": "effect tag is not known to the current effect registry",
+          "primary": {
+            "label": "effect tag is not known to the current effect registry",
+            "span": {
+              "end": 5079,
+              "endColumn": 2,
+              "endLine": 71,
+              "source": 118,
+              "start": 4528,
+              "startColumn": 8,
+              "startLine": 67
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/tools/files.es",
+          "code": "effect::IncompleteEffectFacts",
+          "message": "trace spec allow clauses cannot prove coverage of unresolved requested actions",
+          "primary": {
+            "label": "trace spec allow clauses cannot prove coverage of unresolved requested actions",
+            "span": {
+              "end": 4434,
+              "endColumn": 2,
+              "endLine": 64,
+              "source": 118,
+              "start": 3910,
+              "startColumn": 8,
+              "startLine": 60
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/tools/files.es",
+          "code": "effect::IncompleteEffectFacts",
+          "message": "trace spec deny clause cannot prove requested action selectors are disjoint",
+          "primary": {
+            "label": "trace spec deny clause cannot prove requested action selectors are disjoint",
+            "span": {
+              "end": 3791,
+              "endColumn": 80,
+              "endLine": 57,
+              "source": 118,
+              "start": 3770,
+              "startColumn": 59,
+              "startLine": 57
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/tools/files.es",
+          "code": "effect::IncompleteEffectFacts",
+          "message": "trace spec allow clauses cannot prove coverage of unresolved requested actions",
+          "primary": {
+            "label": "trace spec allow clauses cannot prove coverage of unresolved requested actions",
+            "span": {
+              "end": 5079,
+              "endColumn": 2,
+              "endLine": 71,
+              "source": 118,
+              "start": 4528,
+              "startColumn": 8,
+              "startLine": 67
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/tools/files.es",
+          "code": "effect::IncompleteEffectFacts",
+          "message": "trace spec deny clause cannot prove requested action selectors are disjoint",
+          "primary": {
+            "label": "trace spec deny clause cannot prove requested action selectors are disjoint",
+            "span": {
+              "end": 3791,
+              "endColumn": 80,
+              "endLine": 57,
+              "source": 118,
+              "start": 3770,
+              "startColumn": 59,
+              "startLine": 57
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+          "code": "effect::UnknownEffectTag",
+          "message": "effect tag is not known to the current effect registry",
+          "primary": {
+            "label": "effect tag is not known to the current effect registry",
+            "span": {
+              "end": 1636,
+              "endColumn": 2,
+              "endLine": 20,
+              "source": 119,
+              "start": 1137,
+              "startColumn": 8,
+              "startLine": 17
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+          "code": "effect::UnknownEffectTag",
+          "message": "effect tag is not known to the current effect registry",
+          "primary": {
+            "label": "effect tag is not known to the current effect registry",
+            "span": {
+              "end": 2316,
+              "endColumn": 2,
+              "endLine": 26,
+              "source": 119,
+              "start": 1738,
+              "startColumn": 8,
+              "startLine": 23
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+          "code": "effect::UnknownEffectTag",
+          "message": "effect tag is not known to the current effect registry",
+          "primary": {
+            "label": "effect tag is not known to the current effect registry",
+            "span": {
+              "end": 2963,
+              "endColumn": 2,
+              "endLine": 32,
+              "source": 119,
+              "start": 2388,
+              "startColumn": 8,
+              "startLine": 29
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+          "code": "effect::UnknownEffectTag",
+          "message": "effect tag is not known to the current effect registry",
+          "primary": {
+            "label": "effect tag is not known to the current effect registry",
+            "span": {
+              "end": 3585,
+              "endColumn": 2,
+              "endLine": 38,
+              "source": 119,
+              "start": 3024,
+              "startColumn": 8,
+              "startLine": 35
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+          "code": "effect::UnknownEffectTag",
+          "message": "effect tag is not known to the current effect registry",
+          "primary": {
+            "label": "effect tag is not known to the current effect registry",
+            "span": {
+              "end": 4221,
+              "endColumn": 2,
+              "endLine": 44,
+              "source": 119,
+              "start": 3665,
+              "startColumn": 8,
+              "startLine": 41
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+          "code": "effect::UnknownEffectTag",
+          "message": "effect tag is not known to the current effect registry",
+          "primary": {
+            "label": "effect tag is not known to the current effect registry",
+            "span": {
+              "end": 4899,
+              "endColumn": 2,
+              "endLine": 50,
+              "source": 119,
+              "start": 4323,
+              "startColumn": 8,
+              "startLine": 47
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+          "code": "effect::UnknownEffectTag",
+          "message": "effect tag is not known to the current effect registry",
+          "primary": {
+            "label": "effect tag is not known to the current effect registry",
+            "span": {
+              "end": 5589,
+              "endColumn": 2,
+              "endLine": 56,
+              "source": 119,
+              "start": 5094,
+              "startColumn": 8,
+              "startLine": 53
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+          "code": "effect::UnknownEffectTag",
+          "message": "effect tag is not known to the current effect registry",
+          "primary": {
+            "label": "effect tag is not known to the current effect registry",
+            "span": {
+              "end": 6274,
+              "endColumn": 2,
+              "endLine": 62,
+              "source": 119,
+              "start": 5771,
+              "startColumn": 8,
+              "startLine": 59
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+          "code": "effect::UnknownEffectTag",
+          "message": "effect tag is not known to the current effect registry",
+          "primary": {
+            "label": "effect tag is not known to the current effect registry",
+            "span": {
+              "end": 6885,
+              "endColumn": 2,
+              "endLine": 68,
+              "source": 119,
+              "start": 6402,
+              "startColumn": 8,
+              "startLine": 65
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+          "code": "effect::UnknownEffectTag",
+          "message": "effect tag is not known to the current effect registry",
+          "primary": {
+            "label": "effect tag is not known to the current effect registry",
+            "span": {
+              "end": 7552,
+              "endColumn": 2,
+              "endLine": 74,
+              "source": 119,
+              "start": 7047,
+              "startColumn": 8,
+              "startLine": 71
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+          "code": "effect::UnknownEffectTag",
+          "message": "effect tag is not known to the current effect registry",
+          "primary": {
+            "label": "effect tag is not known to the current effect registry",
+            "span": {
+              "end": 1636,
+              "endColumn": 2,
+              "endLine": 20,
+              "source": 119,
+              "start": 1137,
+              "startColumn": 8,
+              "startLine": 17
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+          "code": "effect::UnknownEffectTag",
+          "message": "effect tag is not known to the current effect registry",
+          "primary": {
+            "label": "effect tag is not known to the current effect registry",
+            "span": {
+              "end": 2316,
+              "endColumn": 2,
+              "endLine": 26,
+              "source": 119,
+              "start": 1738,
+              "startColumn": 8,
+              "startLine": 23
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+          "code": "effect::UnknownEffectTag",
+          "message": "effect tag is not known to the current effect registry",
+          "primary": {
+            "label": "effect tag is not known to the current effect registry",
+            "span": {
+              "end": 2963,
+              "endColumn": 2,
+              "endLine": 32,
+              "source": 119,
+              "start": 2388,
+              "startColumn": 8,
+              "startLine": 29
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+          "code": "effect::UnknownEffectTag",
+          "message": "effect tag is not known to the current effect registry",
+          "primary": {
+            "label": "effect tag is not known to the current effect registry",
+            "span": {
+              "end": 3585,
+              "endColumn": 2,
+              "endLine": 38,
+              "source": 119,
+              "start": 3024,
+              "startColumn": 8,
+              "startLine": 35
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+          "code": "effect::UnknownEffectTag",
+          "message": "effect tag is not known to the current effect registry",
+          "primary": {
+            "label": "effect tag is not known to the current effect registry",
+            "span": {
+              "end": 4221,
+              "endColumn": 2,
+              "endLine": 44,
+              "source": 119,
+              "start": 3665,
+              "startColumn": 8,
+              "startLine": 41
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+          "code": "effect::UnknownEffectTag",
+          "message": "effect tag is not known to the current effect registry",
+          "primary": {
+            "label": "effect tag is not known to the current effect registry",
+            "span": {
+              "end": 4899,
+              "endColumn": 2,
+              "endLine": 50,
+              "source": 119,
+              "start": 4323,
+              "startColumn": 8,
+              "startLine": 47
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+          "code": "effect::UnknownEffectTag",
+          "message": "effect tag is not known to the current effect registry",
+          "primary": {
+            "label": "effect tag is not known to the current effect registry",
+            "span": {
+              "end": 5589,
+              "endColumn": 2,
+              "endLine": 56,
+              "source": 119,
+              "start": 5094,
+              "startColumn": 8,
+              "startLine": 53
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+          "code": "effect::UnknownEffectTag",
+          "message": "effect tag is not known to the current effect registry",
+          "primary": {
+            "label": "effect tag is not known to the current effect registry",
+            "span": {
+              "end": 6274,
+              "endColumn": 2,
+              "endLine": 62,
+              "source": 119,
+              "start": 5771,
+              "startColumn": 8,
+              "startLine": 59
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+          "code": "effect::UnknownEffectTag",
+          "message": "effect tag is not known to the current effect registry",
+          "primary": {
+            "label": "effect tag is not known to the current effect registry",
+            "span": {
+              "end": 6885,
+              "endColumn": 2,
+              "endLine": 68,
+              "source": 119,
+              "start": 6402,
+              "startColumn": 8,
+              "startLine": 65
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+          "code": "effect::UnknownEffectTag",
+          "message": "effect tag is not known to the current effect registry",
+          "primary": {
+            "label": "effect tag is not known to the current effect registry",
+            "span": {
+              "end": 7552,
+              "endColumn": 2,
+              "endLine": 74,
+              "source": 119,
+              "start": 7047,
+              "startColumn": 8,
+              "startLine": 71
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/bootstrap/main.es",
+          "code": "effect::IncompleteEffectFacts",
+          "message": "call effect selector specialization failed: invalid callable environment: captured return projection [Field(\"configuration\")] of {Existential { pack: HirExprId(45528), environment: CallableEnvironmentId { scope: Some(CodeFingerprint(1a339eec7f44caa4eda0ec1c0ad91b7eebf6f4985bebd5e5d8d6169cbc34764d)), origin: CodeFingerprint(8023d837a06d8125dbc94d572914c4c0cb6d37e7fb2329fcdbd81569f9194f77), application: CodeFingerprint(8023d837a06d8125dbc94d572914c4c0cb6d37e7fb2329fcdbd81569f9194f77), instance: None, generic_context: None } }} (paths []) has no checked callable origins",
+          "primary": {
+            "label": "call effect selector specialization failed: invalid callable environment: captured return projection [Field(\"configuration\")] of {Existential { pack: HirExprId(45528), environment: CallableEnvironmentId { scope: Some(CodeFingerprint(1a339eec7f44caa4eda0ec1c0ad91b7eebf6f4985bebd5e5d8d6169cbc34764d)), origin: CodeFingerprint(8023d837a06d8125dbc94d572914c4c0cb6d37e7fb2329fcdbd81569f9194f77), application: CodeFingerprint(8023d837a06d8125dbc94d572914c4c0cb6d37e7fb2329fcdbd81569f9194f77), instance: None, generic_context: None } }} (paths []) has no checked callable origins",
+            "span": {
+              "end": 4324,
+              "endColumn": 56,
+              "endLine": 67,
+              "source": 297,
+              "start": 4285,
+              "startColumn": 17,
+              "startLine": 67
+            }
+          }
+        }
+      ]
+    },
+    {
+      "label": "typed-inject-selector-imported",
+      "root": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0246-review-wflijczm",
+      "check": {
+        "exit": 1,
+        "elapsed_seconds": 64.20065686200002,
+        "resources": {
+          "memory.max": "4294967296",
+          "memory.peak": "3293245440",
+          "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+          "cpu.max": "400000 100000",
+          "pids.max": "256"
+        }
+      },
+      "diagnostics": [
+        {
+          "path": "/workspace/src/nomo/adapters/model/coding_agent.es",
+          "code": "effect::UnknownEffectTag",
+          "message": "effect tag is not known to the current effect registry",
+          "primary": {
+            "label": "effect tag is not known to the current effect registry",
+            "span": {
+              "end": 7684,
+              "endColumn": 6,
+              "endLine": 35,
+              "source": 92,
+              "start": 2218,
+              "startColumn": 12,
+              "startLine": 30
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/coding_agent.es",
+          "code": "effect::UnknownEffectTag",
+          "message": "effect tag is not known to the current effect registry",
+          "primary": {
+            "label": "effect tag is not known to the current effect registry",
+            "span": {
+              "end": 7684,
+              "endColumn": 6,
+              "endLine": 35,
+              "source": 92,
+              "start": 2218,
+              "startColumn": 12,
+              "startLine": 30
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/native.es",
+          "code": "effect::EffectOutsideDeclaredRow",
+          "message": "inferred effect std.effects.Inject.get escapes the declared effect row",
+          "primary": {
+            "label": "inferred effect std.effects.Inject.get escapes the declared effect row",
+            "span": {
+              "end": 1750,
+              "endColumn": 6,
+              "endLine": 26,
+              "source": 115,
+              "start": 926,
+              "startColumn": 5,
+              "startLine": 20
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/native.es",
+          "code": "effect::EscapedEffect",
+          "message": "requested action std.effects.Inject.get is not handled by a scoped or default handler and is outside the declared effect row",
+          "primary": {
+            "label": "requested action std.effects.Inject.get is not handled by a scoped or default handler and is outside the declared effect row",
+            "span": {
+              "end": 1750,
+              "endColumn": 6,
+              "endLine": 26,
+              "source": 115,
+              "start": 926,
+              "startColumn": 5,
+              "startLine": 20
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/native.es",
+          "code": "effect::EffectOutsideDeclaredRow",
+          "message": "implementation escaping effects exceed the behavioral spec method bound",
+          "primary": {
+            "label": "implementation escaping effects exceed the behavioral spec method bound",
+            "span": {
+              "end": 1750,
+              "endColumn": 6,
+              "endLine": 26,
+              "source": 115,
+              "start": 926,
+              "startColumn": 5,
+              "startLine": 20
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/tools/files.es",
+          "code": "effect::UnknownEffectTag",
+          "message": "effect tag is not known to the current effect registry",
+          "primary": {
+            "label": "effect tag is not known to the current effect registry",
+            "span": {
+              "end": 4444,
+              "endColumn": 2,
+              "endLine": 64,
+              "source": 118,
+              "start": 3920,
+              "startColumn": 8,
+              "startLine": 60
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/tools/files.es",
+          "code": "effect::UnknownEffectTag",
+          "message": "effect tag is not known to the current effect registry",
+          "primary": {
+            "label": "effect tag is not known to the current effect registry",
+            "span": {
+              "end": 5089,
+              "endColumn": 2,
+              "endLine": 71,
+              "source": 118,
+              "start": 4538,
+              "startColumn": 8,
+              "startLine": 67
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/tools/files.es",
+          "code": "effect::UnknownEffectTag",
+          "message": "effect tag is not known to the current effect registry",
+          "primary": {
+            "label": "effect tag is not known to the current effect registry",
+            "span": {
+              "end": 4444,
+              "endColumn": 2,
+              "endLine": 64,
+              "source": 118,
+              "start": 3920,
+              "startColumn": 8,
+              "startLine": 60
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/tools/files.es",
+          "code": "effect::UnknownEffectTag",
+          "message": "effect tag is not known to the current effect registry",
+          "primary": {
+            "label": "effect tag is not known to the current effect registry",
+            "span": {
+              "end": 5089,
+              "endColumn": 2,
+              "endLine": 71,
+              "source": 118,
+              "start": 4538,
+              "startColumn": 8,
+              "startLine": 67
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/tools/files.es",
+          "code": "effect::IncompleteEffectFacts",
+          "message": "trace spec allow clauses cannot prove coverage of unresolved requested actions",
+          "primary": {
+            "label": "trace spec allow clauses cannot prove coverage of unresolved requested actions",
+            "span": {
+              "end": 4444,
+              "endColumn": 2,
+              "endLine": 64,
+              "source": 118,
+              "start": 3920,
+              "startColumn": 8,
+              "startLine": 60
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/tools/files.es",
+          "code": "effect::IncompleteEffectFacts",
+          "message": "trace spec deny clause cannot prove requested action selectors are disjoint",
+          "primary": {
+            "label": "trace spec deny clause cannot prove requested action selectors are disjoint",
+            "span": {
+              "end": 3801,
+              "endColumn": 80,
+              "endLine": 57,
+              "source": 118,
+              "start": 3780,
+              "startColumn": 59,
+              "startLine": 57
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/tools/files.es",
+          "code": "effect::IncompleteEffectFacts",
+          "message": "trace spec allow clauses cannot prove coverage of unresolved requested actions",
+          "primary": {
+            "label": "trace spec allow clauses cannot prove coverage of unresolved requested actions",
+            "span": {
+              "end": 5089,
+              "endColumn": 2,
+              "endLine": 71,
+              "source": 118,
+              "start": 4538,
+              "startColumn": 8,
+              "startLine": 67
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/tools/files.es",
+          "code": "effect::IncompleteEffectFacts",
+          "message": "trace spec deny clause cannot prove requested action selectors are disjoint",
+          "primary": {
+            "label": "trace spec deny clause cannot prove requested action selectors are disjoint",
+            "span": {
+              "end": 3801,
+              "endColumn": 80,
+              "endLine": 57,
+              "source": 118,
+              "start": 3780,
+              "startColumn": 59,
+              "startLine": 57
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+          "code": "effect::UnknownEffectTag",
+          "message": "effect tag is not known to the current effect registry",
+          "primary": {
+            "label": "effect tag is not known to the current effect registry",
+            "span": {
+              "end": 1646,
+              "endColumn": 2,
+              "endLine": 20,
+              "source": 119,
+              "start": 1147,
+              "startColumn": 8,
+              "startLine": 17
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+          "code": "effect::UnknownEffectTag",
+          "message": "effect tag is not known to the current effect registry",
+          "primary": {
+            "label": "effect tag is not known to the current effect registry",
+            "span": {
+              "end": 2326,
+              "endColumn": 2,
+              "endLine": 26,
+              "source": 119,
+              "start": 1748,
+              "startColumn": 8,
+              "startLine": 23
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+          "code": "effect::UnknownEffectTag",
+          "message": "effect tag is not known to the current effect registry",
+          "primary": {
+            "label": "effect tag is not known to the current effect registry",
+            "span": {
+              "end": 2973,
+              "endColumn": 2,
+              "endLine": 32,
+              "source": 119,
+              "start": 2398,
+              "startColumn": 8,
+              "startLine": 29
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+          "code": "effect::UnknownEffectTag",
+          "message": "effect tag is not known to the current effect registry",
+          "primary": {
+            "label": "effect tag is not known to the current effect registry",
+            "span": {
+              "end": 3595,
+              "endColumn": 2,
+              "endLine": 38,
+              "source": 119,
+              "start": 3034,
+              "startColumn": 8,
+              "startLine": 35
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+          "code": "effect::UnknownEffectTag",
+          "message": "effect tag is not known to the current effect registry",
+          "primary": {
+            "label": "effect tag is not known to the current effect registry",
+            "span": {
+              "end": 4231,
+              "endColumn": 2,
+              "endLine": 44,
+              "source": 119,
+              "start": 3675,
+              "startColumn": 8,
+              "startLine": 41
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+          "code": "effect::UnknownEffectTag",
+          "message": "effect tag is not known to the current effect registry",
+          "primary": {
+            "label": "effect tag is not known to the current effect registry",
+            "span": {
+              "end": 4909,
+              "endColumn": 2,
+              "endLine": 50,
+              "source": 119,
+              "start": 4333,
+              "startColumn": 8,
+              "startLine": 47
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+          "code": "effect::UnknownEffectTag",
+          "message": "effect tag is not known to the current effect registry",
+          "primary": {
+            "label": "effect tag is not known to the current effect registry",
+            "span": {
+              "end": 5599,
+              "endColumn": 2,
+              "endLine": 56,
+              "source": 119,
+              "start": 5104,
+              "startColumn": 8,
+              "startLine": 53
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+          "code": "effect::UnknownEffectTag",
+          "message": "effect tag is not known to the current effect registry",
+          "primary": {
+            "label": "effect tag is not known to the current effect registry",
+            "span": {
+              "end": 6284,
+              "endColumn": 2,
+              "endLine": 62,
+              "source": 119,
+              "start": 5781,
+              "startColumn": 8,
+              "startLine": 59
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+          "code": "effect::UnknownEffectTag",
+          "message": "effect tag is not known to the current effect registry",
+          "primary": {
+            "label": "effect tag is not known to the current effect registry",
+            "span": {
+              "end": 6895,
+              "endColumn": 2,
+              "endLine": 68,
+              "source": 119,
+              "start": 6412,
+              "startColumn": 8,
+              "startLine": 65
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+          "code": "effect::UnknownEffectTag",
+          "message": "effect tag is not known to the current effect registry",
+          "primary": {
+            "label": "effect tag is not known to the current effect registry",
+            "span": {
+              "end": 7562,
+              "endColumn": 2,
+              "endLine": 74,
+              "source": 119,
+              "start": 7057,
+              "startColumn": 8,
+              "startLine": 71
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+          "code": "effect::UnknownEffectTag",
+          "message": "effect tag is not known to the current effect registry",
+          "primary": {
+            "label": "effect tag is not known to the current effect registry",
+            "span": {
+              "end": 1646,
+              "endColumn": 2,
+              "endLine": 20,
+              "source": 119,
+              "start": 1147,
+              "startColumn": 8,
+              "startLine": 17
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+          "code": "effect::UnknownEffectTag",
+          "message": "effect tag is not known to the current effect registry",
+          "primary": {
+            "label": "effect tag is not known to the current effect registry",
+            "span": {
+              "end": 2326,
+              "endColumn": 2,
+              "endLine": 26,
+              "source": 119,
+              "start": 1748,
+              "startColumn": 8,
+              "startLine": 23
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+          "code": "effect::UnknownEffectTag",
+          "message": "effect tag is not known to the current effect registry",
+          "primary": {
+            "label": "effect tag is not known to the current effect registry",
+            "span": {
+              "end": 2973,
+              "endColumn": 2,
+              "endLine": 32,
+              "source": 119,
+              "start": 2398,
+              "startColumn": 8,
+              "startLine": 29
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+          "code": "effect::UnknownEffectTag",
+          "message": "effect tag is not known to the current effect registry",
+          "primary": {
+            "label": "effect tag is not known to the current effect registry",
+            "span": {
+              "end": 3595,
+              "endColumn": 2,
+              "endLine": 38,
+              "source": 119,
+              "start": 3034,
+              "startColumn": 8,
+              "startLine": 35
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+          "code": "effect::UnknownEffectTag",
+          "message": "effect tag is not known to the current effect registry",
+          "primary": {
+            "label": "effect tag is not known to the current effect registry",
+            "span": {
+              "end": 4231,
+              "endColumn": 2,
+              "endLine": 44,
+              "source": 119,
+              "start": 3675,
+              "startColumn": 8,
+              "startLine": 41
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+          "code": "effect::UnknownEffectTag",
+          "message": "effect tag is not known to the current effect registry",
+          "primary": {
+            "label": "effect tag is not known to the current effect registry",
+            "span": {
+              "end": 4909,
+              "endColumn": 2,
+              "endLine": 50,
+              "source": 119,
+              "start": 4333,
+              "startColumn": 8,
+              "startLine": 47
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+          "code": "effect::UnknownEffectTag",
+          "message": "effect tag is not known to the current effect registry",
+          "primary": {
+            "label": "effect tag is not known to the current effect registry",
+            "span": {
+              "end": 5599,
+              "endColumn": 2,
+              "endLine": 56,
+              "source": 119,
+              "start": 5104,
+              "startColumn": 8,
+              "startLine": 53
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+          "code": "effect::UnknownEffectTag",
+          "message": "effect tag is not known to the current effect registry",
+          "primary": {
+            "label": "effect tag is not known to the current effect registry",
+            "span": {
+              "end": 6284,
+              "endColumn": 2,
+              "endLine": 62,
+              "source": 119,
+              "start": 5781,
+              "startColumn": 8,
+              "startLine": 59
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+          "code": "effect::UnknownEffectTag",
+          "message": "effect tag is not known to the current effect registry",
+          "primary": {
+            "label": "effect tag is not known to the current effect registry",
+            "span": {
+              "end": 6895,
+              "endColumn": 2,
+              "endLine": 68,
+              "source": 119,
+              "start": 6412,
+              "startColumn": 8,
+              "startLine": 65
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/tools/mutations.es",
+          "code": "effect::UnknownEffectTag",
+          "message": "effect tag is not known to the current effect registry",
+          "primary": {
+            "label": "effect tag is not known to the current effect registry",
+            "span": {
+              "end": 7562,
+              "endColumn": 2,
+              "endLine": 74,
+              "source": 119,
+              "start": 7057,
+              "startColumn": 8,
+              "startLine": 71
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/bootstrap/main.es",
+          "code": "effect::IncompleteEffectFacts",
+          "message": "call effect selector specialization failed: invalid callable environment: captured return projection [Field(\"configuration\")] of {Existential { pack: HirExprId(45528), environment: CallableEnvironmentId { scope: Some(CodeFingerprint(1a339eec7f44caa4eda0ec1c0ad91b7eebf6f4985bebd5e5d8d6169cbc34764d)), origin: CodeFingerprint(8023d837a06d8125dbc94d572914c4c0cb6d37e7fb2329fcdbd81569f9194f77), application: CodeFingerprint(8023d837a06d8125dbc94d572914c4c0cb6d37e7fb2329fcdbd81569f9194f77), instance: None, generic_context: None } }} (paths []) has no checked callable origins",
+          "primary": {
+            "label": "call effect selector specialization failed: invalid callable environment: captured return projection [Field(\"configuration\")] of {Existential { pack: HirExprId(45528), environment: CallableEnvironmentId { scope: Some(CodeFingerprint(1a339eec7f44caa4eda0ec1c0ad91b7eebf6f4985bebd5e5d8d6169cbc34764d)), origin: CodeFingerprint(8023d837a06d8125dbc94d572914c4c0cb6d37e7fb2329fcdbd81569f9194f77), application: CodeFingerprint(8023d837a06d8125dbc94d572914c4c0cb6d37e7fb2329fcdbd81569f9194f77), instance: None, generic_context: None } }} (paths []) has no checked callable origins",
+            "span": {
+              "end": 4324,
+              "endColumn": 56,
+              "endLine": 67,
+              "source": 297,
+              "start": 4285,
+              "startColumn": 17,
+              "startLine": 67
+            }
+          }
+        }
+      ]
+    },
+    {
+      "label": "erased-member-tools",
+      "root": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0246-review-0pt23c6f",
+      "check": {
+        "exit": 1,
+        "elapsed_seconds": 63.87805723700001,
+        "resources": {
+          "memory.max": "4294967296",
+          "memory.peak": "3290804224",
+          "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+          "cpu.max": "400000 100000",
+          "pids.max": "256"
+        }
+      },
+      "diagnostics": [
+        {
+          "path": "/workspace/src/nomo/adapters/model/coding_agent.es",
+          "code": "effect::IncompleteEffectFacts",
+          "message": "trace spec allow clauses cannot prove coverage of unresolved requested actions",
+          "primary": {
+            "label": "trace spec allow clauses cannot prove coverage of unresolved requested actions",
+            "span": {
+              "end": 14954,
+              "endColumn": 6,
+              "endLine": 107,
+              "source": 92,
+              "start": 14472,
+              "startColumn": 12,
+              "startLine": 103
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/coding_agent.es",
+          "code": "effect::IncompleteEffectFacts",
+          "message": "trace spec deny clause cannot prove requested action selectors are disjoint",
+          "primary": {
+            "label": "trace spec deny clause cannot prove requested action selectors are disjoint",
+            "span": {
+              "end": 2499,
+              "endColumn": 49,
+              "endLine": 31,
+              "source": 92,
+              "start": 2478,
+              "startColumn": 28,
+              "startLine": 31
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/coding_agent.es",
+          "code": "effect::IncompleteEffectFacts",
+          "message": "trace spec allow clauses cannot prove coverage of unresolved requested actions",
+          "primary": {
+            "label": "trace spec allow clauses cannot prove coverage of unresolved requested actions",
+            "span": {
+              "end": 15749,
+              "endColumn": 6,
+              "endLine": 115,
+              "source": 92,
+              "start": 15056,
+              "startColumn": 12,
+              "startLine": 110
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/coding_agent.es",
+          "code": "effect::IncompleteEffectFacts",
+          "message": "trace spec deny clause cannot prove requested action selectors are disjoint",
+          "primary": {
+            "label": "trace spec deny clause cannot prove requested action selectors are disjoint",
+            "span": {
+              "end": 2499,
+              "endColumn": 49,
+              "endLine": 31,
+              "source": 92,
+              "start": 2478,
+              "startColumn": 28,
+              "startLine": 31
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/bootstrap/main.es",
+          "code": "effect::IncompleteEffectFacts",
+          "message": "call effect selector specialization failed: invalid callable environment: captured return projection [Field(\"configuration\")] of {Existential { pack: HirExprId(45495), environment: CallableEnvironmentId { scope: Some(CodeFingerprint(fc683a10cf571048309f9512c11a5decda000c3015f0fe73928b7d88dd7e242f)), origin: CodeFingerprint(8f60c44656095d3323c2456027bbaab7c9b5094ce7e6e416d42537feeddf62f9), application: CodeFingerprint(8f60c44656095d3323c2456027bbaab7c9b5094ce7e6e416d42537feeddf62f9), instance: None, generic_context: None } }} (paths []) has no checked callable origins",
+          "primary": {
+            "label": "call effect selector specialization failed: invalid callable environment: captured return projection [Field(\"configuration\")] of {Existential { pack: HirExprId(45495), environment: CallableEnvironmentId { scope: Some(CodeFingerprint(fc683a10cf571048309f9512c11a5decda000c3015f0fe73928b7d88dd7e242f)), origin: CodeFingerprint(8f60c44656095d3323c2456027bbaab7c9b5094ce7e6e416d42537feeddf62f9), application: CodeFingerprint(8f60c44656095d3323c2456027bbaab7c9b5094ce7e6e416d42537feeddf62f9), instance: None, generic_context: None } }} (paths []) has no checked callable origins",
+            "span": {
+              "end": 4324,
+              "endColumn": 56,
+              "endLine": 67,
+              "source": 296,
+              "start": 4285,
+              "startColumn": 17,
+              "startLine": 67
+            }
+          }
+        }
+      ]
+    },
+    {
+      "label": "generic-member-tools",
+      "root": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0246-review-rv6r9dyu",
+      "check": {
+        "exit": 1,
+        "elapsed_seconds": 65.13919573700002,
+        "resources": {
+          "memory.max": "4294967296",
+          "memory.peak": "3279245312",
+          "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+          "cpu.max": "400000 100000",
+          "pids.max": "256"
+        }
+      },
+      "diagnostics": [
+        {
+          "path": "/workspace/src/nomo/adapters/model/coding_agent.es",
+          "code": "effect::IncompleteEffectFacts",
+          "message": "invalid callable environment: method evidence has no unique checked implementation",
+          "primary": {
+            "label": "invalid callable environment: method evidence has no unique checked implementation",
+            "span": {
+              "end": 8679,
+              "endColumn": 97,
+              "endLine": 45,
+              "source": 92,
+              "start": 8598,
+              "startColumn": 16,
+              "startLine": 45
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/coding_agent.es",
+          "code": "effect::IncompleteEffectFacts",
+          "message": "invalid callable environment: method evidence has no unique checked implementation",
+          "primary": {
+            "label": "invalid callable environment: method evidence has no unique checked implementation",
+            "span": {
+              "end": 9349,
+              "endColumn": 167,
+              "endLine": 51,
+              "source": 92,
+              "start": 9198,
+              "startColumn": 16,
+              "startLine": 51
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/coding_agent.es",
+          "code": "effect::IncompleteEffectFacts",
+          "message": "invalid callable environment: method evidence has no unique checked implementation",
+          "primary": {
+            "label": "invalid callable environment: method evidence has no unique checked implementation",
+            "span": {
+              "end": 9986,
+              "endColumn": 165,
+              "endLine": 57,
+              "source": 92,
+              "start": 9837,
+              "startColumn": 16,
+              "startLine": 57
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/coding_agent.es",
+          "code": "effect::IncompleteEffectFacts",
+          "message": "invalid callable environment: method evidence has no unique checked implementation",
+          "primary": {
+            "label": "invalid callable environment: method evidence has no unique checked implementation",
+            "span": {
+              "end": 10598,
+              "endColumn": 164,
+              "endLine": 63,
+              "source": 92,
+              "start": 10450,
+              "startColumn": 16,
+              "startLine": 63
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/coding_agent.es",
+          "code": "effect::IncompleteEffectFacts",
+          "message": "invalid callable environment: method evidence has no unique checked implementation",
+          "primary": {
+            "label": "invalid callable environment: method evidence has no unique checked implementation",
+            "span": {
+              "end": 11224,
+              "endColumn": 162,
+              "endLine": 69,
+              "source": 92,
+              "start": 11078,
+              "startColumn": 16,
+              "startLine": 69
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/coding_agent.es",
+          "code": "effect::IncompleteEffectFacts",
+          "message": "invalid callable environment: method evidence has no unique checked implementation",
+          "primary": {
+            "label": "invalid callable environment: method evidence has no unique checked implementation",
+            "span": {
+              "end": 11892,
+              "endColumn": 165,
+              "endLine": 75,
+              "source": 92,
+              "start": 11743,
+              "startColumn": 16,
+              "startLine": 75
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/coding_agent.es",
+          "code": "effect::IncompleteEffectFacts",
+          "message": "invalid callable environment: method evidence has no unique checked implementation",
+          "primary": {
+            "label": "invalid callable environment: method evidence has no unique checked implementation",
+            "span": {
+              "end": 12544,
+              "endColumn": 76,
+              "endLine": 81,
+              "source": 92,
+              "start": 12484,
+              "startColumn": 16,
+              "startLine": 81
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/coding_agent.es",
+          "code": "effect::IncompleteEffectFacts",
+          "message": "invalid callable environment: method evidence has no unique checked implementation",
+          "primary": {
+            "label": "invalid callable environment: method evidence has no unique checked implementation",
+            "span": {
+              "end": 13191,
+              "endColumn": 80,
+              "endLine": 87,
+              "source": 92,
+              "start": 13127,
+              "startColumn": 16,
+              "startLine": 87
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/coding_agent.es",
+          "code": "effect::IncompleteEffectFacts",
+          "message": "invalid callable environment: method evidence has no unique checked implementation",
+          "primary": {
+            "label": "invalid callable environment: method evidence has no unique checked implementation",
+            "span": {
+              "end": 13760,
+              "endColumn": 73,
+              "endLine": 93,
+              "source": 92,
+              "start": 13703,
+              "startColumn": 16,
+              "startLine": 93
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/coding_agent.es",
+          "code": "effect::IncompleteEffectFacts",
+          "message": "invalid callable environment: method evidence has no unique checked implementation",
+          "primary": {
+            "label": "invalid callable environment: method evidence has no unique checked implementation",
+            "span": {
+              "end": 14389,
+              "endColumn": 81,
+              "endLine": 99,
+              "source": 92,
+              "start": 14324,
+              "startColumn": 16,
+              "startLine": 99
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/coding_agent.es",
+          "code": "effect::IncompleteEffectFacts",
+          "message": "invalid callable environment: method evidence has no unique checked implementation",
+          "primary": {
+            "label": "invalid callable environment: method evidence has no unique checked implementation",
+            "span": {
+              "end": 14996,
+              "endColumn": 81,
+              "endLine": 106,
+              "source": 92,
+              "start": 14931,
+              "startColumn": 16,
+              "startLine": 106
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/coding_agent.es",
+          "code": "effect::IncompleteEffectFacts",
+          "message": "invalid callable environment: method evidence has no unique checked implementation",
+          "primary": {
+            "label": "invalid callable environment: method evidence has no unique checked implementation",
+            "span": {
+              "end": 15699,
+              "endColumn": 168,
+              "endLine": 113,
+              "source": 92,
+              "start": 15553,
+              "startColumn": 22,
+              "startLine": 113
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/coding_agent.es",
+          "code": "effect::IncompleteEffectFacts",
+          "message": "trace spec analysis requires complete expression action facts",
+          "primary": {
+            "label": "trace spec analysis requires complete expression action facts",
+            "span": {
+              "end": 14996,
+              "endColumn": 81,
+              "endLine": 106,
+              "source": 92,
+              "start": 14931,
+              "startColumn": 16,
+              "startLine": 106
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/coding_agent.es",
+          "code": "effect::IncompleteEffectFacts",
+          "message": "trace spec analysis requires complete expression action facts",
+          "primary": {
+            "label": "trace spec analysis requires complete expression action facts",
+            "span": {
+              "end": 15699,
+              "endColumn": 168,
+              "endLine": 113,
+              "source": 92,
+              "start": 15553,
+              "startColumn": 22,
+              "startLine": 113
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/coding_agent.es",
+          "code": "effect::IncompleteEffectFacts",
+          "message": "trace spec validation requires complete trace spec summary facts",
+          "primary": {
+            "label": "trace spec validation requires complete trace spec summary facts",
+            "span": {
+              "end": 15002,
+              "endColumn": 6,
+              "endLine": 107,
+              "source": 92,
+              "start": 14520,
+              "startColumn": 12,
+              "startLine": 103
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/adapters/model/coding_agent.es",
+          "code": "effect::IncompleteEffectFacts",
+          "message": "trace spec validation requires complete trace spec summary facts",
+          "primary": {
+            "label": "trace spec validation requires complete trace spec summary facts",
+            "span": {
+              "end": 15797,
+              "endColumn": 6,
+              "endLine": 115,
+              "source": 92,
+              "start": 15104,
+              "startColumn": 12,
+              "startLine": 110
+            }
+          }
+        },
+        {
+          "path": "/workspace/src/nomo/bootstrap/main.es",
+          "code": "effect::IncompleteEffectFacts",
+          "message": "call effect selector specialization failed: invalid callable environment: captured callable dependency has no solution slot",
+          "primary": {
+            "label": "call effect selector specialization failed: invalid callable environment: captured callable dependency has no solution slot",
+            "span": {
+              "end": 4326,
+              "endColumn": 56,
+              "endLine": 68,
+              "source": 296,
+              "start": 4287,
+              "startColumn": 17,
+              "startLine": 68
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "runtime_executed": false,
+  "candidate": "examples/native-project/candidates/mutation-service-injection-0246.patch",
+  "unchanged_policy": "Existing edit sequencing, native approval paths, trace restrictions and prompt/tool ordinary arguments remain in the candidate.",
+  "upstream_issue": "https://github.com/etas-project/etas-frontend/issues/105"
+}

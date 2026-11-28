@@ -12,7 +12,8 @@ from native_recovery_probe import audit, terminal
 
 ROOT = Path(__file__).resolve().parents[1]
 ECHO = ['-u', '-c', "import sys; print('ready',flush=True)\nfor line in sys.stdin: print('echo:'+line.rstrip('\\n'),flush=True)"]
-SLEEP = ['-u', '-c', "import time; print('sleeping',flush=True); time.sleep(300)"]
+# The child must remain live until the explicit stop, even with runtime #120.
+SLEEP = ['-u', '-c', "import signal; print('sleeping',flush=True); signal.pause()"]
 TEXT = '鹈鹕 café\n'
 
 
@@ -50,7 +51,9 @@ class Client:
 
     def collect(self, prompt, approve=True, marker=None):
         start, approvals = len(self.output), 0
-        deadline = time.monotonic() + 90
+        # Observation only: official 0.24.3 currently spends long CPU gaps
+        # between Host actions (interpreter #120). Keep the same live worker.
+        deadline = time.monotonic() + 1800
         while time.monotonic() < deadline:
             readable, _, _ = select.select([self.master], [], [], 0.2)
             if readable:
@@ -125,7 +128,7 @@ def main():
     project.mkdir(mode=0o700)
     environment = dict(os.environ, MINIMAX_API_KEY='unused-no-model', NOMO_NATIVE_STATE=str(evidence / 'state'),
                        NOMO_NATIVE_TRACE_ROOT=str(evidence / 'traces'))
-    command = [str(ROOT / 'scripts/nomo-native'), str(project)]
+    command = [str(ROOT / 'scripts/nomo'), str(project)]
     print('EVIDENCE ' + str(evidence), flush=True)
     first = Client(command + ['--new'], environment, evidence, 'first-client')
     worker = next(line.split('[WORKER ] ', 1)[1] for line in first.output.decode().splitlines() if '[WORKER ] ' in line)

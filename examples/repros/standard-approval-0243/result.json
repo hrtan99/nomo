@@ -1,0 +1,25 @@
+{
+  "check_exit": 0,
+  "diagnostics": 0,
+  "source_count": 1,
+  "run_exit": 3,
+  "prompt_answers": 0,
+  "qualification": "One actual standard approve call, Prompt/local-static allow profile, no source-defined handler. No Nomo, model, Memory, Command, Fs or credentials.",
+  "outcome": {
+    "failure": {
+      "diagnostic": {
+        "code": "Analysis(UnhandledEffectAction)",
+        "message": "unhandled effect action std.effects.Approval.request escaped the checked-HIR interpreter entry",
+        "phase": "analysis",
+        "severity": "error"
+      },
+      "kind": "language"
+    },
+    "kind": "failed"
+  },
+  "trace_sha256": "d1146723a0c279836dcb94c12ac89c726fa3e1f79915c5213b5f41a4b567a632",
+  "evidence": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-426t80ro/compiler-evidence/standard-approval-minimal",
+  "compiler": "official Etas 0.24.3",
+  "cli_commit": "dd5768dc871b99fb4cc06c4532c772e257d2f64b",
+  "interpreter_commit": "5dfc2a121efb326107d461e08e66b31499db143b"
+}

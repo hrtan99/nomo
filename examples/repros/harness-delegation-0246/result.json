@@ -1,0 +1,40 @@
+{
+  "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-harness-ports-0246-91m8b4kl",
+  "result": {
+    "exit": 3,
+    "elapsed_seconds": 4.9963048349999895,
+    "stdout": "",
+    "stderr": "error[analysis::MissingCheckedFact]: checked record slot 0 does not hold field `task`\n --> /workspace/src/nomo/adapters/model/harness/history_native_stages.es:103:73\n  | flow delegated(value: Delegation) -> string { return frame([\"delegate\", value.task]); }\n  |                                                                         ^ checked record slot 0 does not hold field `task`\n",
+    "resources": {
+      "memory.max": "4294967296",
+      "memory.peak": "1092366336",
+      "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+      "cpu.max": "400000 100000",
+      "pids.max": "256"
+    },
+    "model_requests": 0,
+    "observer_failures": []
+  },
+  "trace": {
+    "outcome": {
+      "failure": {
+        "diagnostic": {
+          "code": "Analysis(MissingCheckedFact)",
+          "message": "checked record slot 0 does not hold field `task`",
+          "phase": "analysis",
+          "severity": "error"
+        },
+        "kind": "execution_fault"
+      },
+      "kind": "failed"
+    },
+    "local_work_settled": true,
+    "incomplete": false,
+    "paired_requests": 0,
+    "host_actions": {},
+    "all_finished_successful": true
+  },
+  "flow": "production_stages",
+  "qualification": "Original production HistoryStages and child pipeline. Entry preparation fails before any HTTP or Host action; planned six-response/one-read assertions are not executed or passed.",
+  "upstream_issue": "https://github.com/etas-project/etas-interpreter/issues/124"
+}

@@ -4,7 +4,9 @@ import std.fs.IOError as FileError;
 import std.runtime.error.IndexError;
 import std.io.println;
 import std.io.IOError as ConsoleError;
-import nomo.tools.workspace.{ReadOnlyRoot, read_file, search_files};
+import nomo.application.resources.ReadOnlyRoot;
+import nomo.adapters.filesystem.workspace.read_file;
+import nomo.adapters.filesystem.workspace.search_files;
 public flow nomo_bounded_probe_empty(args: Array<string>) -> i32 ![Fs.read<ReadOnlyRoot>, Error<FileError>, Error<IndexError>, Console, Error<ConsoleError>] {
     let actual = read_file("empty.txt");
     if actual.status != "complete" || actual.text != "" || actual.scanned != 0 { abort("empty outcome differs"); }

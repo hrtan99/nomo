@@ -1,0 +1,59 @@
+{
+  "date": "2026-11-27",
+  "status": "normal-source-check-passed-runtime-not-rerun",
+  "snapshot": {
+    "root": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-bz8u1nil",
+    "tree": "5c47c7a788da12270659104038e15612e67fbeba",
+    "evidence": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-bz8u1nil/compiler-evidence",
+    "overlay": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-bz8u1nil/compiler-compose.json",
+    "source_count": 448,
+    "source_manifest_sha256": "dc542ab3ea9e1eb52e6977648d3b8934582ce870fd3b3249d62f7a4dd46d1a66"
+  },
+  "delivery": {
+    "tree": "9d500b17d9df25571caafd37945f5f230ab7fe7e",
+    "source_count": 448,
+    "source_manifest_sha256": "299b53bc6c9498988008f846a74a33ecac22cc56168870a22f30a9dd0fd7c8ed",
+    "check_snapshot": {
+      "root": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-bz8u1nil",
+      "tree": "5c47c7a788da12270659104038e15612e67fbeba",
+      "evidence": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-bz8u1nil/compiler-evidence",
+      "overlay": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-bz8u1nil/compiler-compose.json",
+      "source_count": 448,
+      "source_manifest_sha256": "dc542ab3ea9e1eb52e6977648d3b8934582ce870fd3b3249d62f7a4dd46d1a66"
+    },
+    "post_check_delta": {
+      "path": "src/nomo/domain/sessions/recoverable_work_state.es",
+      "change": "one trailing blank line removed",
+      "token_stream_unchanged": true,
+      "additional_compiler_run": false
+    }
+  },
+  "full_check": {
+    "exit": 0,
+    "elapsed_seconds": 59.27823019300001,
+    "resources": {
+      "memory.max": "4294967296",
+      "memory.peak": "3209953280",
+      "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+      "cpu.max": "400000 100000",
+      "pids.max": "256"
+    },
+    "source_count": 448,
+    "diagnostics": 0
+  },
+  "architecture": {
+    "status": "passed",
+    "modules": 448,
+    "imports": 3344,
+    "preserved_identity_leaves": 48
+  },
+  "changes": [
+    "FollowupPredecessors is owned by application/sessions. The history_followup application service consumes actual first-work/edit/check readers, CasRows and PriorChatReader; NativeHistoryFollowup provides the selected Memory and predecessor adapters.",
+    "The existing followup format/budget rules move to domain/sessions/history_followup_guard. Recoverable work state constructors, completion/abandon transitions, chat binding and filtered-event rules move to domain/sessions/recoverable_work_state; native stores import these pure rules.",
+    "ProjectLaunchControl publishes the chosen directory. NativeProjectLaunch alone constructs the existing next-project WorkspacePath and performs the same atomic replacement. The redundant target method and application path plumbing are removed."
+  ],
+  "preserved": "Same predecessor inspection order, exact reservation/ledger rules and messages, stored record shapes/owners and Memory namespaces, Missing/Match conditions, one commit plus readback, version checks, no retry and original approval/write effects. Existing checks were moved, not expanded.",
+  "qualification": "Source acceptance for actual callers and adapter implementations. No new runtime, negative matrix, real model or Host acceptance is claimed for this continuation. Earlier immutable edit and retained-project scenarios retain their exact earlier source scopes. Full WorkPersistence/history-work-family runtime acceptance, startup/legacy parity and native default cutover remain open.",
+  "real_provider_requests": 0,
+  "new_runtime_cases": 0
+}

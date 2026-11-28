@@ -1,0 +1,31 @@
+{
+  "exit": 3,
+  "elapsed_seconds": 1.3979505000002064,
+  "stdout": "",
+  "stderr": "",
+  "trace": {
+    "outcome": {
+      "failure": {
+        "diagnostic": {
+          "code": "Analysis(MissingCheckedFact)",
+          "message": "field `slots` expects 4 record fields, received [\"entries\", \"length\"]",
+          "phase": "analysis",
+          "severity": "error"
+        },
+        "kind": "execution_fault"
+      },
+      "kind": "failed"
+    },
+    "termination": {
+      "local_work_settled": true,
+      "operations": [],
+      "scope": 0
+    },
+    "host_requests": 0
+  },
+  "resources": {
+    "memory.max": "4294967296",
+    "memory.peak": "374546432",
+    "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0"
+  }
+}

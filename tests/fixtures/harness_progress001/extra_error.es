@@ -1,5 +1,5 @@
 module app.callable_negative;
-import nomo.model.harness_progress.ProgressSink;
+import nomo.application.harness.ports.ProgressSink;
 flow bad(value: string) -> unit ![Error<string>] ~ ProgressSink {
     if value != "" { perform Error<string>.raise("intentional outside-bound error"); }
 }

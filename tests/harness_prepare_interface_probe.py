@@ -23,7 +23,7 @@ def audit(report):
         assert len(found)==1,(name,len(found));x=found[0]
         assert 'rejected' not in x['support'].lower() and not any('Unresolved' in v for v in x['residual_checks'])
         rows={k:row_set(x[k]) for k in ['escaping_effects','requested_actions','default_actions']};result[name]={'rows':{k:sorted(v) for k,v in rows.items()},'support':x['support']};return rows
-    fs={'Fs.stat[nomo.tools.edit_file.EditableRoot]','Fs.read[nomo.tools.edit_file.EditableRoot]'}
+    fs={'Fs.stat[nomo.application.resources.EditableRoot]','Fs.read[nomo.application.resources.EditableRoot]'}
     reader=selected('read_original');assert fs <= reader['requested_actions'] and fs <= reader['default_actions'] and not fs & reader['escaping_effects']
     assert {'Error<std.fs.IOError>','Error<std.runtime.error.IndexError>'} <= reader['escaping_effects']
     source=selected('prepare_with');assert 'EditOriginal.read' in source['requested_actions'] and 'EditOriginal.read' in source['escaping_effects']

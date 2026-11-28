@@ -1,65 +1,82 @@
 module app.main;
 
-import std.io.{println, IOError};
+import std.io.println;
+import std.io.IOError;
 import std.effects.Fs;
-import std.fs.{ReadLimitError, IOError as FileError};
-import nomo.native.workspace.ProjectRoot;
-import nomo.native.project.load_instructions;
-import nomo.core.json.encode;
-import nomo.native.history.SessionContext;
-import nomo.adapters.etas.conversations.NativeHistory;
-import nomo.application.native.conversation.ports.{ConversationCatalog, ConversationReader, ConversationWriter};
-import nomo.application.native.configuration.ports.{ConfigurationSource, ConfigurationCodec, ConfigurationConversion, ConfigurationCache};
-import nomo.application.native.configuration.service.load as load_settings;
-import nomo.application.native.instructions.ports.InstructionFiles;
-import nomo.application.native.instructions.service.load as load_guidance;
-import nomo.adapters.codec.configuration.{decode, fingerprint, observation};
-import nomo.domain.configuration.conversion.{ConfigurationOutput, Converted, CacheReference};
-import nomo.domain.configuration.settings.Settings;
-import nomo.domain.context.instructions.ProjectInstruction;
+import nomo.application.execution.ports.CommandOperations;
+import std.fs.ReadLimitError;
+import std.fs.IOError as FileError;
+import nomo.application.resources.ProjectRoot;
+import nomo.application.workspace.ports.InstructionReader;
+import nomo.domain.wire.encode;
+import nomo.adapters.storage.conversations.NativeHistory;
+import nomo.application.conversation.ports.ConversationCatalog;
+import nomo.application.conversation.ports.ConversationReader;
+import nomo.application.conversation.ports.ConversationWriter;
+import nomo.application.workspace.ports.ConfigurationFile;
+import nomo.application.workspace.ports.TomlConverter;
+import nomo.application.workspace.ports.ConfigurationCacheStore;
+import nomo.application.workspace.service.ConfigurationLoader;
+import nomo.adapters.codec.JsonConfigurationCodec;
+import nomo.adapters.filesystem.workspace.ProjectInstructionFiles;
+import nomo.application.workspace.ports.InstructionFiles;
+import nomo.application.workspace.service.load as load_guidance;
+import nomo.application.workspace.ports.ConfigurationOutput;
+import nomo.application.workspace.ports.Converted;
+import nomo.domain.settings.CachedConfiguration;
+import nomo.domain.settings.Settings;
+import nomo.domain.workspace.ProjectInstruction;
 
-alias Schema = MemoryRegion<{ Entries: Store<string, CacheReference> }>;
+alias Schema = MemoryRegion<{ Entries: Store<string, CachedConfiguration> }>;
 let Cache = std.memory.region<Schema>(stable_id = "nomo-configuration-contract-fixture-v1", store = "configuration-fixture");
 
 flow observed(history: NativeHistory, session: string, name: string, text: string) -> Converted {
     let output = ConfigurationOutput { exit_code = 0, stdout = text, stderr = "" };
-    let json = match encode(output, "fixture conversion failed", "fixture encoding failed") { Ok(value) => value, Err(error) => { abort(error); } };
+    let json = match encode(output, "fixture conversion failed", "fixture encoding failed") { Ok(value) => value, Err(error) => abort(error), };
     let event = history.append(session, "observation", name, json, -1);
     return Converted { result_event = event, output = output };
 }
 
-flow configured(history: NativeHistory, session: string) -> Settings {
-    return load_settings(history) with {
-        ConfigurationSource.read() => { println("PORT source"); resume Some("keep_messages = 2\n"); }
-        ConfigurationCodec.fingerprint(raw) => { resume fingerprint(raw); }
-        ConfigurationCodec.decode_json(text) => { resume decode(text); }
-        ConfigurationCodec.observation(text) => { resume observation(text); }
-        SessionContext.current() => { println("PORT session"); resume session; }
-        ConfigurationCache.lookup(workspace) => {
-            if workspace != "configuration-workspace" { abort("cache workspace changed"); }
-            println("PORT lookup");
-            resume Cache.Entries.get(workspace);
-        }
-        ConfigurationCache.remember(workspace, value) => {
-            if value.session != session || value.result_event != 1 { abort("cache result linkage changed"); }
-            Cache.Entries.put(workspace, value);
-            println("PORT remember");
-            resume;
-        }
-        ConfigurationConversion.toml(raw) => {
-            if raw != "keep_messages = 2\n" { abort("converter lost exact raw configuration"); }
-            println("PORT toml");
-            resume observed(history, session, "project_configuration", "{\"keep_messages\":2}");
-        }
-        ConfigurationConversion.entries(json) => {
-            if json != "{\"keep_messages\":2}" { abort("entry conversion input changed"); }
-            println("PORT entries");
-            resume observed(history, session, "configuration_entries", "[{\"key\":\"keep_messages\",\"value\":2}]");
-        }
-    };
+type FixtureSource = {};
+impl FixtureSource ~ ConfigurationFile {
+    flow read(self) -> Option<string> { return Some("keep_messages = 2\n"); }
 }
 
-public flow main(args: Array<string>) -> i32 ![Memory, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>, Error<IndexError>] {
+type FixtureConversion = { history: NativeHistory };
+impl FixtureConversion ~ TomlConverter {
+    flow toml(self, session: string, raw: string) -> Converted ![Memory, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>, Error<BudgetExceeded>] {
+        if raw != "keep_messages = 2\n" { abort("converter lost exact raw configuration"); }
+        println("PORT toml");
+        return observed(self.history, session, "project_configuration", "{\"keep_messages\":2}");
+    }
+    flow entries(self, session: string, json: string) -> Converted ![Memory, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>, Error<BudgetExceeded>] {
+        if json != "{\"keep_messages\":2}" { abort("entry conversion input changed"); }
+        println("PORT entries");
+        return observed(self.history, session, "configuration_entries", "[{\"key\":\"keep_messages\",\"value\":2}]");
+    }
+}
+
+type FixtureCache = { session: string };
+impl FixtureCache ~ ConfigurationCacheStore {
+    flow lookup(self, workspace: string) -> Option<CachedConfiguration> {
+        if workspace != "configuration-workspace" { abort("cache workspace changed"); }
+        return Cache.Entries.get(workspace);
+    }
+    flow remember(self, workspace: string, value: CachedConfiguration) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>] {
+        if value.session != self.session || value.result_event != 1 { abort("cache result linkage changed"); }
+        Cache.Entries.put(workspace, value);
+    }
+}
+
+flow configured(history: NativeHistory, session: string) -> Settings {
+    let loader = ConfigurationLoader<NativeHistory, FixtureSource, JsonConfigurationCodec, FixtureConversion, FixtureCache> {
+        history, source = FixtureSource {}, codec = JsonConfigurationCodec {},
+        converter = FixtureConversion { history }, cache = FixtureCache { session },
+    };
+    return loader.load(session);
+}
+
+public flow main(args: Array<string>) -> i32 ![CommandOperations, Memory, Console, Command.run<DefaultCommandSandbox>, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Error<FileError>, Error<ReadLimitError>, Error<StorageError>, Error<MemoryConflict>, Error<IOError>, Error<IndexError>, Error<BudgetExceeded>] {
     let history = NativeHistory {};
     let session = history.create("configuration-workspace", "Configuration contract");
     let first = configured(history, session.id);
@@ -75,11 +92,11 @@ public flow main(args: Array<string>) -> i32 ![Memory, Console, Error<StorageErr
         }
         InstructionFiles.entries(scope) => {
             println("PORT scope " + scope);
-            resume if scope == "." { ["AGENTS.md", "src"] } else { ["src/AGENTS.md"] };
+            if scope == "." { ["AGENTS.md", "src"] } else { ["src/AGENTS.md"] }
         }
         InstructionFiles.text(path) => {
             println("PORT guidance " + path);
-            resume if path == "AGENTS.md" { "Root guidance" } else { "Scoped guidance" };
+            if path == "AGENTS.md" { "Root guidance" } else { "Scoped guidance" }
         }
     };
     if guidance != [ProjectInstruction { scope = ".", path = "AGENTS.md", text = "Root guidance" },
@@ -91,7 +108,7 @@ public flow main(args: Array<string>) -> i32 ![Memory, Console, Error<StorageErr
 }
 
 public flow physical_guidance(args: Array<string>) -> i32 ![Console, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Error<FileError>, Error<ReadLimitError>, Error<IOError>] {
-    let guidance = load_instructions("src/future/new.py");
+    let guidance = (ProjectInstructionFiles {}).read("src/future/new.py");
     if guidance != [ProjectInstruction { scope = ".", path = "AGENTS.md", text = "Root guidance" },
                     ProjectInstruction { scope = "src", path = "src/AGENTS.md", text = "Scoped guidance" }] {
         abort("physical root-to-leaf guidance changed");

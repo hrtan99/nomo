@@ -1,0 +1,63 @@
+{
+  "selector": "latest02412",
+  "version": "0.24.12",
+  "source_overrides": [],
+  "repositories": {
+    "cli": {
+      "repository": "etas",
+      "revision": "e9a84176dbbc532f78bd2b9afd39321f0563d00d",
+      "tree": "e54e2a485f6c40f0cfbbb29b78606be4148d6dfa",
+      "packages": [
+        "etas_cli",
+        "etas_driver",
+        "etas_package",
+        "etas_tests"
+      ]
+    },
+    "core": {
+      "repository": "etas-core",
+      "revision": "178e9f7e5852ed4f724c8e4289ccc43df8b6a8ac",
+      "tree": "d2d9e20938479a84ca9c172b92e589e4b836d6a4",
+      "packages": [
+        "etas_builtin",
+        "etas_cache",
+        "etas_code",
+        "etas_core",
+        "etas_host",
+        "etas_memory_derive",
+        "etas_package_metadata",
+        "etas_std",
+        "etas_utils"
+      ]
+    },
+    "frontend": {
+      "repository": "etas-frontend",
+      "revision": "5d86342557b57841d742c552f06a1f682da331d2",
+      "tree": "f920c4bc72e7b06ff1019ee3fa5c47ada286dbf0",
+      "packages": [
+        "etas_effects",
+        "etas_frontend",
+        "etas_hir",
+        "etas_hir_analysis",
+        "etas_syntax",
+        "etas_syntax_derive",
+        "etas_types"
+      ]
+    },
+    "interpreter": {
+      "repository": "etas-interpreter",
+      "revision": "677803f3f639eebeb3b388255d32c55150705c3b",
+      "tree": "d120c3b9b311c5c703895822dcae07283d934e1a",
+      "packages": [
+        "etas_interpreter"
+      ]
+    }
+  },
+  "cache_root": "etas-02412-release",
+  "build_target": "etas-0230/target",
+  "source": "Official CLI 0.24.12 e9a8417 and its exact official lock graph, including std 0.9.0 and iterator SDK callback fixes; standard release, shared dependency cache, one Cargo job, 6 GiB build only; source/runtime 4 GiB.",
+  "installed_sdk": true,
+  "build_profile": "release",
+  "cargo_lock_sha256": "175d8fd8901f0a0af58fff2635aae31692fc851adfa61598acc08b24cc4885c1",
+  "verified_seed_binary_sha256": "c5fcbfe68c663574d95637d37e7399b7f2f835b20a0c86e95a3425127434af66"
+}

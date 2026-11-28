@@ -1,0 +1,104 @@
+{
+  "date": "2026-11-27",
+  "status": "unselected-canonical-api-check-passed-native-dispatch-failed",
+  "patch": "examples/native-project/candidates/standard-approval-0243.patch",
+  "patch_sha256": "d034e0e8595c2e529b108c621934597809941fc9d9e62f6cda9c68e8ebcd8944",
+  "base": {
+    "base_tree": "dc3da6de58c2c1aba7674a7eaf6cbca86c0ed5d7",
+    "candidate_tree": "21d0d428f8d1b70836a2146d762e0d9136172c84",
+    "paths": [
+      "src/nomo/adapters/cli/legacy/edit_coordinator.es",
+      "src/nomo/adapters/cli/legacy/edit_entry.es",
+      "src/nomo/adapters/cli/legacy/harness_edit_entry.es",
+      "src/nomo/adapters/cli/legacy/harness_work_entry.es",
+      "src/nomo/adapters/cli/legacy/work_chain_entry.es",
+      "src/nomo/adapters/cli/legacy/work_session_entry.es",
+      "src/nomo/application/edit/confirmation.es",
+      "src/nomo/application/edit/effects.es",
+      "src/nomo/application/edit/execute.es",
+      "src/nomo/application/edit/ports.es",
+      "src/nomo/application/work/controller.es",
+      "src/nomo/application/work/ports.es",
+      "tests/edit_preview_probe.py",
+      "tests/fixtures/edit_preview001/preview_probe.es"
+    ]
+  },
+  "snapshot": {
+    "root": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-426t80ro",
+    "tree": "67f02a2ca1064c6f03d44ceeaa56128a51ae27a8",
+    "evidence": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-426t80ro/compiler-evidence",
+    "overlay": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-426t80ro/compiler-compose.json",
+    "source_count": 444,
+    "source_manifest_sha256": "07d07c499c3d6d0b4bf7f77f408a0b9e030b3b5d9999fe89d911fbf512d4367c"
+  },
+  "full_check": {
+    "exit": 0,
+    "elapsed_seconds": 55.91990427600001,
+    "resources": {
+      "memory.max": "4294967296",
+      "memory.peak": "3243851776",
+      "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+      "cpu.max": "400000 100000",
+      "pids.max": "256"
+    },
+    "source_count": 444,
+    "diagnostics": 0
+  },
+  "fixture_snapshot": {
+    "root": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-gwh4w7zp",
+    "tree": "21d0d428f8d1b70836a2146d762e0d9136172c84",
+    "evidence": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-gwh4w7zp/compiler-evidence",
+    "overlay": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-gwh4w7zp/compiler-compose.json",
+    "source_count": 444,
+    "source_manifest_sha256": "07d07c499c3d6d0b4bf7f77f408a0b9e030b3b5d9999fe89d911fbf512d4367c"
+  },
+  "runtime": {
+    "probe": "tests/edit_write_probe.py --suite smoke",
+    "evidence": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-426t80ro/compiler-evidence/edit-write-2r39mwea",
+    "driver_status": "failed",
+    "runtime_exit": 3,
+    "diagnostic": "Analysis(UnhandledEffectAction): unhandled effect action std.effects.Approval.request escaped the checked-HIR interpreter entry",
+    "qualification": "Full preview printed; no native prompt or approval, no edit intent and no file write. This original smoke is failed, not a native approval acceptance."
+  },
+  "minimal_reproduction": "examples/repros/standard-approval-0243",
+  "qualification": "Uses the canonical published typed std.effects.Approval and std.runtime.approval.approve. The complete candidate is retained outside the selected product because its native prompt dispatch fails. Selected legacy product remains unchanged; its functional edit smoke passes but does not certify native protected approval authority. No boolean bridge, custom runtime, fake approval or new negative matrix is installed.",
+  "real_provider_requests": 0,
+  "fixture_check": {
+    "exit": 0,
+    "source_count": 70,
+    "diagnostics": 0,
+    "elapsed_seconds": 3.394,
+    "qualification": "Canonical candidate fixture checks after char.from_u32 correction; no fixture runtime matrix was run."
+  },
+  "upstream": "https://github.com/etas-project/etas-interpreter/issues/122",
+  "selected_confirmation_fixture_check": {
+    "snapshot": {
+      "root": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-28oe90ly",
+      "tree": "dc3da6de58c2c1aba7674a7eaf6cbca86c0ed5d7",
+      "evidence": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-28oe90ly/compiler-evidence",
+      "overlay": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-28oe90ly/compiler-compose.json",
+      "source_count": 445,
+      "source_manifest_sha256": "0a4ac047b80da276d1524222320c5e123beec175e3d72d68297591983779cf2f"
+    },
+    "exit": 0,
+    "source_count": 71,
+    "diagnostics": 0,
+    "elapsed_seconds": 3.1269575019999998,
+    "evidence": "compiler-evidence/edit-preview001-6ep5koss",
+    "qualification": "Independent selected fixture changes use WorkConfirmation substitution and original pure preview requirements. Type-check only; no additional runtime matrix."
+  },
+  "current_preflight": {
+    "base_commit": "b79c678c5546e773acf68c46415ab0967e433b29",
+    "base_tree": "0fb34edf8ae1a2dd9ba4db0d49eb3655d7621c30",
+    "candidate_tree": "66a2a07a33a47819224a38038479f3290fc6327f",
+    "status": "passed",
+    "scope": "Apply only against the terminal application refactor; original canonical API failed-runtime snapshots remain exact and unchanged. No compiler/runtime rerun or acceptance is inferred."
+  },
+  "previous_preflight": {
+    "base_commit": "12bccddf562593766fc33a049b017ace3c514e77",
+    "base_tree": "9d500b17d9df25571caafd37945f5f230ab7fe7e",
+    "candidate_tree": "1b76c4abb764c3c824eab5b91d2f8c61eb933e26",
+    "status": "passed",
+    "scope": "Temporary-index apply only against the selected final source. Earlier exact compiler/runtime snapshots retain their original scope; no new compile/runtime acceptance is inferred."
+  }
+}

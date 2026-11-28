@@ -15,7 +15,7 @@ def main():
         shutil.copytree(ROOT, project, ignore=shutil.ignore_patterns('.git', '.etas', 'tmp', '__pycache__'))
         (project / '.etas').mkdir()
         main_file = project / 'src/nomo/main.es'
-        source = main_file.read_text().replace('module nomo.main;', 'module nomo.main;\nimport nomo.tools.edit_file.prepare_original_legacy;', 1)
+        source = main_file.read_text().replace('module nomo.main;', 'module nomo.main;\nimport nomo.domain.editing.prepare_original_legacy;', 1)
         too_large, prefix, addition = 'x' * 16385, 'x' * 8192, 'y' * 8193
         source += '\npublic flow legacy_size_probe(args: Array<string>) -> i32 {\n'
         source += '    match prepare_original_legacy("note.txt", "' + too_large + '", "x", "y") { Err(_) => {} Ok(_) => { return 4; } }\n'

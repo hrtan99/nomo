@@ -8,23 +8,8 @@ PRODUCT_ROOTS = ("src",)
 OTHER_ROOTS = ("tests", "examples", "scripts")
 RUNTIME_GROUPS = {
     "entry": ("scripts/nomo",),
-    "project": (
-        "scripts/nomo_project_chat.py", "scripts/nomo_project_model.py",
-        "scripts/nomo_project_tools.py", "scripts/nomo_project.py",
-        "scripts/nomo_history.py", "scripts/nomo_jobs.py", "scripts/nomo_git.py",
-    ),
-    "legacy": (
-        "scripts/nomo-read.sh", "scripts/nomo-session-chat.py",
-        "scripts/nomo-session-id.py", "scripts/nomo-read-session.py",
-        "scripts/nomo-history-work.py", "scripts/nomo-edit.py",
-        "scripts/nomo-session-storage.py", "scripts/nomo-event-policy.py",
-        "scripts/nomo-bounded-check.py",
-    ),
-    "shared": (
-        "scripts/nomo-verified-etas.py", "scripts/nomo_model_transport.py",
-        "scripts/nomo_terminal.py", "scripts/terminal-transport.py",
-    ),
-    "native": ("scripts/nomo-native", "scripts/native-worker-transport.py"),
+    "transport": ("scripts/terminal-transport.py",),
+    "native": ("scripts/nomo-native", "scripts/native-worker-transport.py", "scripts/nomo-migrate-native", "scripts/nomo_migration.py"),
     "gateway": ("scripts/etas003_gateway.py",),
     "tryout": (
         "scripts/local-tryout.sh", "scripts/prepare-local-tryout.py",

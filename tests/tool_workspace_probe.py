@@ -39,7 +39,7 @@ def main():
         manifest = (ROOT / 'etas.toml').read_text() + '''
 [runtime.profiles.read-only]
 boundary_policy = "nomo-tool001a"
-[runtime.profiles.read-only.filesystem.regions."nomo.tools.workspace.ReadOnlyRoot"]
+[runtime.profiles.read-only.filesystem.regions."nomo.application.resources.ReadOnlyRoot"]
 root = "fixture"
 read = true
 write = false
@@ -58,10 +58,10 @@ mode = "deny"
         actions = [line.strip() for line in effects.stdout.splitlines() if line.strip().startswith('requested actions:')]
         defaults = [line.strip() for line in effects.stdout.splitlines() if line.strip().startswith('default actions:')]
         assert actions in [
-            ['requested actions: [Console.stdout_write, ConversationOutput.publish, Fs.read[nomo.tools.workspace.ReadOnlyRoot], Fs.list[nomo.tools.workspace.ReadOnlyRoot]]'],
-            ['requested actions: [Console.stdout_write, Fs.read[nomo.tools.workspace.ReadOnlyRoot], Fs.list[nomo.tools.workspace.ReadOnlyRoot]]'],
+            ['requested actions: [Console.stdout_write, ConversationOutput.publish, Fs.read[nomo.application.resources.ReadOnlyRoot], Fs.list[nomo.application.resources.ReadOnlyRoot]]'],
+            ['requested actions: [Console.stdout_write, Fs.read[nomo.application.resources.ReadOnlyRoot], Fs.list[nomo.application.resources.ReadOnlyRoot]]'],
         ], effects.stdout
-        assert defaults == ['default actions: [Console.stdout_write, Fs.read[nomo.tools.workspace.ReadOnlyRoot], Fs.list[nomo.tools.workspace.ReadOnlyRoot]]'], effects.stdout
+        assert defaults == ['default actions: [Console.stdout_write, Fs.read[nomo.application.resources.ReadOnlyRoot], Fs.list[nomo.application.resources.ReadOnlyRoot]]'], effects.stdout
         print('PASS exact_readonly_actions_no_model_command_or_write', flush=True)
         fixture = project / 'fixture'
         (fixture / 'docs').mkdir(parents=True)

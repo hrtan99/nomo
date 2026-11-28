@@ -1,7 +1,9 @@
 module app.main;
 
-import std.io.{println, read_line};
-import std.host.command.{command, run};
+import std.io.println;
+import std.io.read_line;
+import std.host.command.command;
+import std.host.command.run;
 import std.option.unwrap;
 import std.memory.version;
 

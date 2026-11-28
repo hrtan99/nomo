@@ -1,0 +1,303 @@
+{
+  "date": "2026-11-27",
+  "status": "official-0244-source-and-controlled-consumer-passed-old-schema-migration-required",
+  "compiler": {
+    "selector": "latest0244",
+    "version": "0.24.4",
+    "source_overrides": [],
+    "repositories": {
+      "cli": {
+        "repository": "etas",
+        "revision": "b1e9c5f8503e60d4d57ad97d35bd91ec55c62e35",
+        "tree": "ecc51204e5cdfd38845c2416226353042ecf7851",
+        "packages": [
+          "etas_cli",
+          "etas_driver",
+          "etas_package",
+          "etas_tests"
+        ]
+      },
+      "core": {
+        "repository": "etas-core",
+        "revision": "fef316605552c90091f6c81c1d3943cb6ec56004",
+        "tree": "a24c6716ac41c711b296495cd2e7b5b0cec7fe33",
+        "packages": [
+          "etas_builtin",
+          "etas_cache",
+          "etas_code",
+          "etas_core",
+          "etas_host",
+          "etas_memory_derive",
+          "etas_package_metadata",
+          "etas_std",
+          "etas_utils"
+        ]
+      },
+      "frontend": {
+        "repository": "etas-frontend",
+        "revision": "1399adc6b818b3f78ce276416cc9742c84660cff",
+        "tree": "d53c9d720e5f211037395366a579408e7620cb87",
+        "packages": [
+          "etas_effects",
+          "etas_frontend",
+          "etas_hir",
+          "etas_hir_analysis",
+          "etas_syntax",
+          "etas_syntax_derive",
+          "etas_types"
+        ]
+      },
+      "interpreter": {
+        "repository": "etas-interpreter",
+        "revision": "9e57556de51256ede6865df9e0c30e2e7a13ef1f",
+        "tree": "d525a8998f506a2e69bcda541dc60681dd1a3181",
+        "packages": [
+          "etas_interpreter"
+        ]
+      }
+    },
+    "cache_root": "etas-0244-release",
+    "build_target": "etas-0230/target",
+    "source": "Official CLI 0.24.4 at b1e9c5f, standard Cargo release profile and exact official lock graph with matching SDK. Existing target/cache reused; only the build container uses 8 GiB and 2 Cargo jobs, while application checks/runtime remain 4 GiB. Prior accepted CLI/SDK are preserved before selection.",
+    "installed_sdk": true,
+    "build_profile": "release",
+    "cargo_lock_sha256": "6948c1b86062ef57e6607c440abddaa79b27ef79ff9f1a1685935528cff932d9",
+    "verified_seed_binary_sha256": "63bf2d5ff5d109e32e7c393e21e8f29aeed78572c6562afa4bff86785f855f9a"
+  },
+  "installed": {
+    "lock_sha256": "6948c1b86062ef57e6607c440abddaa79b27ef79ff9f1a1685935528cff932d9",
+    "method": "adopted-independently-verified-0244-build",
+    "path": "/home/nomo/.cargo/bin/etas",
+    "sdk": {
+      "abi": {
+        "artifact_hash": "blake3:2239672a9d5ba343642cda33288eb2e4a789545837396d04703ae80db79dd8b6",
+        "body_schema": 99,
+        "compiler_version": "0.21.4",
+        "effect_analysis_hash": "blake3:cc77b4904efed97b63c151e06b2cf2e131de310c437e0afc732af09885c0384b",
+        "interpreter_layout_hash": "blake3:b24105f5be1d2a8221b5e7aac3df39e74db42fe08c715b19b18025819ef889b9",
+        "metadata_schema": 78,
+        "native_binding_abi": "blake3:c2620b315312e5c96f43d67f9160dd81048b8a030de13347e29442d9e30231e3",
+        "schema": 3,
+        "std_contract": "phase1|etas.std.text.contract.v1|etas.std.text.primitive-abi.v1|etas.std.text.source.v1|unicode:17.0.0:7c74aebf116629b6:etas.std.text.unicode.v1|usize:64",
+        "target": "aarch64-unknown-linux-gnu",
+        "toolchain_id": "etas-0.8.1-aarch64-unknown-linux-gnu-c2620b315312"
+      },
+      "manifest_path": "/home/nomo/.cargo/lib/etas/etas-0.8.1-aarch64-unknown-linux-gnu-c2620b315312/std/manifest.json",
+      "manifest_sha256": "daa515732d5e94405a9fa64a8a529254a54548ee24c89424bf11d2d62f443c43",
+      "receipt": "etas-std-install-v2\n000000000000000018ebd6eb0974aa22-900-aarch64-unknown-linux-gnu\nblake3:c3418920e7ef78c6c3763d5454ba4ac4a968abbf0ec2e3f9f2e168d55c83d416\n"
+    },
+    "sha256": "63bf2d5ff5d109e32e7c393e21e8f29aeed78572c6562afa4bff86785f855f9a",
+    "version": "etas 0.24.4\n"
+  },
+  "build": {
+    "profile": "standard Cargo release",
+    "elapsed_seconds": 623,
+    "resources": {
+      "memory.max": "8589934592",
+      "memory.peak": "6734635008",
+      "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+      "cpu.max": "400000 100000",
+      "pids.max": "256"
+    },
+    "cargo_jobs": 2,
+    "cache_volume": "nomo-cargo-0230-20261126-f904fa0",
+    "prior_cli_and_sdk_backup": "/home/nomo/.cargo/etas-0243-release/accepted-before-0244",
+    "prior_cli_sha256": "a172dd7a35541f91ebaa0fb4462f462fe76374bc8d3ffa6f2237a87e76d7d8f2",
+    "source_overrides": [],
+    "custom_rustflags": false,
+    "scope": "8 GiB build only; application check/runtime retain 4 GiB. Official GitHub releases collection is empty, so the exact official main graph is built from source."
+  },
+  "snapshot": {
+    "root": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0244-review-4b8xk0f5",
+    "tree": "22ffb628dae68d08377aee634d87142f324d81c2",
+    "evidence": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0244-review-4b8xk0f5/compiler-evidence",
+    "overlay": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0244-review-4b8xk0f5/compiler-compose.json",
+    "source_count": 457,
+    "source_manifest_sha256": "b6f2b00f1d844c58a3568f15e9e76817aec7a9a68e0ed8293caf35d9e87589c8"
+  },
+  "full_source_check": {
+    "exit": 0,
+    "elapsed_seconds": 56.45312131800006,
+    "resources": {
+      "memory.max": "4294967296",
+      "memory.peak": "3185270784",
+      "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+      "cpu.max": "400000 100000",
+      "pids.max": "256"
+    },
+    "source_count": 457,
+    "diagnostics": 0
+  },
+  "architecture": {
+    "modules": 457,
+    "imports": 3389,
+    "preserved_identity_leaves": 48,
+    "status": "passed"
+  },
+  "controlled_conversation": {
+    "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-conversation-ytp3_7cv",
+    "result": {
+      "exit": 0,
+      "stdout": "PORT settings\nPORT context 1\nOUTPUT [CONTEXT] Summarizing; complete original history stays saved.\nPORT context 1\nPORT summary dispatching\nPORT context 2\nPORT coding dispatching\nOUTPUT Completed deterministic turn\nPASS deterministic conversation with compaction\n",
+      "stderr": "",
+      "resources": {
+        "memory.max": "4294967296",
+        "memory.peak": "591421440",
+        "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+        "cpu.max": "400000 100000",
+        "pids.max": "256"
+      },
+      "status": "passed",
+      "source_count": 39,
+      "paired_host_requests": 107,
+      "host_actions": {
+        "Memory.read": 68,
+        "Memory.write": 30,
+        "Console.stdout_write": 9
+      },
+      "qualification": "One summary followed by one coding result through application effects. Real SQLite history, reservations and attempts; no native model, filesystem, command or approval action. This is not full production-composition acceptance."
+    },
+    "host_span_seconds": 72.889957,
+    "summed_host_seconds": 0.051622
+  },
+  "qualification": "The existing summary/coding/SQLite case passes on the new graph, with its original expected stdout, budget/attempt/publication order and settled trace. No real or synthetic HTTP model service is used. It is not the full production composition or default cutover. The prior 0.24.3 worker traces retain their exact older graph scope.",
+  "previous_observed_conversation_host_span_seconds": 368.032616,
+  "performance_qualification": "The same original scenario and 107 Host operations now span 72.889957 seconds; current transitive package has 39 files and the older receipt reported 35. This is an observed scenario comparison, not a fully isolated compiler-only benchmark. Summed Host durations are 0.051622 seconds.",
+  "acceptance": {
+    "full_source_check": true,
+    "installed_sdk_pairing": true,
+    "controlled_sqlite_conversation": true,
+    "old_native_history_restore": false,
+    "full_production_lifetimes_on_0244": false,
+    "default_native_cutover": false,
+    "configuration_contract": false
+  },
+  "real_provider_requests": 0,
+  "new_negative_matrix": false,
+  "old_native_history_restore": {
+    "status": "failed-schema-mismatch",
+    "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-history-upgrade-nluh_0wr",
+    "result": {
+      "status": "observed",
+      "runtime_exit": 3,
+      "source_database_before": "9287840b530b572aaa748900f7d984f58121903653016b911fe6fecb2952e77a",
+      "source_database_after": "9287840b530b572aaa748900f7d984f58121903653016b911fe6fecb2952e77a",
+      "source_unchanged": true,
+      "approvals": 0,
+      "traces": [
+        {
+          "path": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-history-upgrade-nluh_0wr/traces/run-67soBZ4R/trace.json",
+          "outcome": {
+            "failure": {
+              "diagnostic": {
+                "code": "Analysis(UnhandledRuntimeError)",
+                "message": "unhandled Error[std.memory.StorageError] escaped the checked-HIR interpreter entry: Nominal { ty: TypeId(15), value: Record(RecordValue([(\"code\", String(\"schema_mismatch\")), (\"message\", String(\"store codec/schema binding differs from persisted data\")), (\"operation\", Nominal { ty: TypeId(18), value: Variant { name: \"None\", fields: [] } })])) }",
+                "phase": "analysis",
+                "severity": "error"
+              },
+              "kind": "language"
+            },
+            "kind": "failed"
+          },
+          "termination": {
+            "local_work_settled": true,
+            "operations": [
+              {
+                "cleanup_errors": [],
+                "completed_units": null,
+                "dispatched": true,
+                "external_outcome": {
+                  "kind": "confirmed"
+                },
+                "id": 0,
+                "parent_operation": null,
+                "request_id": 1,
+                "scope": 1
+              },
+              {
+                "cleanup_errors": [],
+                "completed_units": null,
+                "dispatched": true,
+                "external_outcome": {
+                  "kind": "unknown"
+                },
+                "id": 1,
+                "parent_operation": null,
+                "request_id": 0,
+                "scope": 2
+              },
+              {
+                "cleanup_errors": [],
+                "completed_units": null,
+                "dispatched": true,
+                "external_outcome": {
+                  "kind": "unknown"
+                },
+                "id": 2,
+                "parent_operation": 1,
+                "request_id": 0,
+                "scope": 2
+              }
+            ],
+            "scope": 0
+          },
+          "started": 2,
+          "finished": 2,
+          "commands": 0,
+          "model_requests": 0,
+          "approval_audit": []
+        }
+      ],
+      "snapshot": {
+        "root": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0244-review-4b8xk0f5",
+        "tree": "22ffb628dae68d08377aee634d87142f324d81c2",
+        "evidence": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0244-review-4b8xk0f5/compiler-evidence",
+        "overlay": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0244-review-4b8xk0f5/compiler-compose.json",
+        "source_count": 457,
+        "source_manifest_sha256": "b6f2b00f1d844c58a3568f15e9e76817aec7a9a68e0ed8293caf35d9e87589c8"
+      },
+      "scope": "Existing actual 0.13.5 synthetic state, same stored IDs/Session and all 17 events. No import rewrite, model or external command is supplied by the driver. Configuration execution remains a separate unresolved requirement."
+    },
+    "source_receipt": "examples/native-project/conversation-ports-20261125.json",
+    "source_version": "official 0.13.5",
+    "source_database_original_sha256": "9287840b530b572aaa748900f7d984f58121903653016b911fe6fecb2952e77a",
+    "complete_original_events": 17,
+    "failure": "First real NativeRecentProjects load rejects the old store codec/schema binding. The source database is unchanged; zero Command/model/approval actions. This does not prove the subsequent conversation decoder accepts or rejects old rows because execution stops first.",
+    "next_owned_work": "An explicit data migration using the SDK storage contract must preserve old IDs, history order, incomplete state and source data; persistent nominal-name fingerprints alone do not establish codec compatibility. Do not clear bindings or pretend an empty store is restored."
+  },
+  "configuration_contract": {
+    "evidence": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-configuration-contract-0fh666ce",
+    "result": {
+      "exit": 3,
+      "stdout": "PORT toml\nPORT entries\n",
+      "stderr": "error[analysis::MissingCheckedFact]: checked revision value conversion failed: Value { source: TypeId(1158), target: TypeId(114), failure: UnmaterializedType(\"specialized type was not materialized: Applied { constructor: TypeConstructorId(105), args: [TypeId(4), TypeId(97)] }\") }\n --> /workspace/src/nomo/adapters/storage/codec/configuration.es:23:22\n  |     let root = match parse(text) { Ok(value) => cast<Array<Entry>>(value, \"root entries\"), Err(_) => abort(\"TOML decoder returned invalid JSON\"), };\n  |                      ^ checked revision value conversion failed: Value { source: TypeId(1158), target: TypeId(114), failure: UnmaterializedType(\"specialized type was not materialized: Applied { constructor: TypeConstructorId(105), args: [TypeId(4), TypeId(97)] }\") }\n",
+      "resources": {
+        "memory.max": "4294967296",
+        "memory.peak": "640188416",
+        "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+        "cpu.max": "400000 100000",
+        "pids.max": "256"
+      },
+      "physical": {}
+    },
+    "trace_sha256": "1c15e571d2ce5323da519900d53bbb3184122b478b3e082884f9c702b603736a",
+    "outcome": {
+      "failure": {
+        "diagnostic": {
+          "code": "Analysis(MissingCheckedFact)",
+          "message": "checked revision value conversion failed: Value { source: TypeId(1158), target: TypeId(114), failure: UnmaterializedType(\"specialized type was not materialized: Applied { constructor: TypeConstructorId(105), args: [TypeId(4), TypeId(97)] }\") }",
+          "phase": "analysis",
+          "severity": "error"
+        },
+        "kind": "execution_fault"
+      },
+      "kind": "failed"
+    },
+    "termination_settled": true,
+    "host_started": 18,
+    "host_finished": 18,
+    "source_count": 39,
+    "upstream_issue": "https://github.com/etas-project/etas-interpreter/issues/121",
+    "qualification": "Original positive cache/JSON configuration consumer fails at standard parse before configuration publication; its physical-guidance continuation is not run. No model request or Command action, no fallback JSON parser, and no new negative case."
+  }
+}

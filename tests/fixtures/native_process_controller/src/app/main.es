@@ -1,18 +1,25 @@
 module app.main;
 
-import std.io.{println, IOError};
+import std.io.println;
+import std.io.IOError;
 import std.codec.text.utf8_encode;
-import std.fs.{WorkspacePath, path};
+import std.fs.WorkspacePath;
+import std.fs.path;
 import std.text.from_i64;
-import nomo.native.workspace.ProjectRoot;
-import nomo.domain.process.jobs.{Job, JobEvent};
-import nomo.domain.process.observations.ProcessEvent;
-import nomo.application.native.processes.ports.{ProcessControl, JobRepository, OutputArchive, ProcessPreviewSink};
-import nomo.application.native.processes.service;
-import nomo.adapters.etas.conversations.NativeHistory;
-import nomo.adapters.etas.attempts.NativeAttempts;
-import nomo.application.native.conversation.ports.{ConversationCatalog, ConversationReader};
-import nomo.application.native.execution.ports.AttemptRepository;
+import nomo.application.resources.ProjectRoot;
+import nomo.domain.processes.Job;
+import nomo.domain.processes.JobEvent;
+import nomo.domain.processes.ProcessEvent;
+import nomo.application.execution.ports.ProcessControl;
+import nomo.application.execution.ports.JobRepository;
+import nomo.application.execution.ports.OutputArchive;
+import nomo.application.execution.ports.ProcessPreviewSink;
+import nomo.application.execution.jobs as service;
+import nomo.adapters.storage.conversations.NativeHistory;
+import nomo.adapters.storage.journals.NativeAttempts;
+import nomo.application.conversation.ports.ConversationCatalog;
+import nomo.application.conversation.ports.ConversationReader;
+import nomo.application.execution.ports.AttemptRepository;
 
 alias Schema = MemoryRegion<{ Jobs: Store<string, Job>, Outputs: Store<string, JobEvent> }>;
 let Data = std.memory.region<Schema>(stable_id = "nomo-process-controller-fixture-v1", store = "process-controller-fixture");
@@ -20,11 +27,12 @@ let Data = std.memory.region<Schema>(stable_id = "nomo-process-controller-fixtur
 type Token = { reference: string };
 type ControlledProcess = {};
 impl ControlledProcess ~ ProcessControl<Token> {
-    flow root(self) -> WorkspacePath<ProjectRoot> ![] { return match path<ProjectRoot>(".") { Ok(value) => value, Err(_) => { abort("fixture path failed"); } }; }
-    flow start(self, root: WorkspacePath<ProjectRoot>, program: string, arguments: Array<string>) -> string ![Command.start<DefaultCommandSandbox>] {
+    flow root(self) -> WorkspacePath<ProjectRoot> ![] { return match path<ProjectRoot>(".") { Ok(value) => value, Err(_) => abort("fixture path failed"), }; }
+    flow start(self, root: WorkspacePath<ProjectRoot>, program: string, arguments: Array<string>) -> Token ![Command.start<DefaultCommandSandbox>] {
         if program != "controlled" || arguments != ["utf8"] { abort("start arguments changed"); }
-        return "fixture-handle";
+        return Token { reference = "fixture-handle" };
     }
+    flow reference(self, process: Token) -> string ![] { return process.reference; }
     flow attach(self, reference: string) -> Token ![Command.reconnect<DefaultCommandSandbox>] {
         if reference != "fixture-handle" { abort("saved reference changed"); }
         return Token { reference = reference };
@@ -50,10 +58,10 @@ impl Jobs ~ JobRepository {
     flow load(self, id: string) -> Option<Job> ![Memory, Error<StorageError>] { return Data.Jobs.get(id); }
     flow insert(self, value: Job) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>] { Data.Jobs.insert(value.id, value); }
     flow save(self, value: Job) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>] { Data.Jobs.put(value.id, value); }
-    flow list(self, session: string) -> Array<Job> ![Memory, Error<StorageError>] {
+    flow list(self, session: string) -> Array<Job> ![Memory, Error<StorageError>, Error<BudgetExceeded>] {
         let page = Data.Jobs.page(None(), 100);
         var result: Array<Job> = [];
-        for entry in page.entries limit Iterations(100) { if entry.value.session == session { result = result.push(entry.value); } }
+        @limits([Iterations(100)]) for entry in page.entries   { if entry.value.session == session { result = result.push(entry.value); } }
         return result;
     }
 }
@@ -69,7 +77,7 @@ impl Preview ~ ProcessPreviewSink {
     flow write(self, line: string) -> unit ![Console, Error<IOError>] { println(line); }
 }
 
-public flow main(args: Array<string>) -> i32 ![Memory, Console, Command.start<DefaultCommandSandbox>, Command.reconnect<DefaultCommandSandbox>, Command.read<DefaultCommandSandbox>, Command.write<DefaultCommandSandbox>, Command.stop<DefaultCommandSandbox>, Error<StorageError>, Error<MemoryConflict>, Error<IOError>, Error<IndexError>] {
+public flow main(args: Array<string>) -> i32 ![Memory, Console, Command.start<DefaultCommandSandbox>, Command.reconnect<DefaultCommandSandbox>, Command.read<DefaultCommandSandbox>, Command.write<DefaultCommandSandbox>, Command.stop<DefaultCommandSandbox>, Error<StorageError>, Error<MemoryConflict>, Error<IOError>, Error<IndexError>, Error<BudgetExceeded>] {
     let history = NativeHistory {}; let attempts = NativeAttempts {};
     let jobs = Jobs {}; let archive = Outputs {}; let control = ControlledProcess {}; let preview = Preview {};
     let session = history.create("process-controller", "Controlled process observations");
@@ -77,7 +85,7 @@ public flow main(args: Array<string>) -> i32 ![Memory, Console, Command.start<De
     if job.phase != "started" || job.handle != "fixture-handle" { abort("start observation changed"); }
     let output = service.read(control, jobs, archive, preview, attempts, history, history, history, session.id, job.id, 4096);
     if output.phase != "output" || output.stdout != "鹈鹕 café\n" || output.stdout_bytes != utf8_encode(output.stdout) || output.stderr_bytes != utf8_encode("stderr\n") { abort("observed bytes changed"); }
-    let still_started = match jobs.load(job.id) { Some(value) => value, None() => { abort("saved job missing"); } };
+    let still_started = match jobs.load(job.id) { Some(value) => value, None() => abort("saved job missing"), };
     if still_started.phase != "started" { abort("output invented a terminal phase"); }
     let written = service.write(control, jobs, preview, attempts, history, history, history, session.id, job.id, "鹈鹕 café\n");
     let closed = service.close_input(control, jobs, preview, attempts, history, history, history, session.id, job.id);
@@ -89,7 +97,8 @@ public flow main(args: Array<string>) -> i32 ![Memory, Console, Command.start<De
     let listed = service.list(jobs, session.id);
     if listed.len() != 1 || listed[0].phase != "stopped" { abort("saved job phase changed"); }
     let final = history.load(session.id);
-    if final.pending != "" || final.ledger.tools != 5 || attempts.list(session.id, true).len() != 0 { abort("durable completion changed"); }
+    // Five commands and one job_output observation are counted as tool use.
+    if final.pending != "" || final.ledger.tools != 6 || attempts.list(session.id, true).len() != 0 { abort("durable completion changed"); }
     println("PASS process controller durable output ordering");
     return 0;
 }

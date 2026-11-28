@@ -1,0 +1,1037 @@
+{
+  "status": "official-02412-selected-scoped-runtime-acceptance",
+  "toolchain": {
+    "selector": "latest02412",
+    "version": "0.24.12",
+    "source_overrides": [],
+    "repositories": {
+      "cli": {
+        "repository": "etas",
+        "revision": "e9a84176dbbc532f78bd2b9afd39321f0563d00d",
+        "tree": "e54e2a485f6c40f0cfbbb29b78606be4148d6dfa",
+        "packages": [
+          "etas_cli",
+          "etas_driver",
+          "etas_package",
+          "etas_tests"
+        ]
+      },
+      "core": {
+        "repository": "etas-core",
+        "revision": "178e9f7e5852ed4f724c8e4289ccc43df8b6a8ac",
+        "tree": "d2d9e20938479a84ca9c172b92e589e4b836d6a4",
+        "packages": [
+          "etas_builtin",
+          "etas_cache",
+          "etas_code",
+          "etas_core",
+          "etas_host",
+          "etas_memory_derive",
+          "etas_package_metadata",
+          "etas_std",
+          "etas_utils"
+        ]
+      },
+      "frontend": {
+        "repository": "etas-frontend",
+        "revision": "5d86342557b57841d742c552f06a1f682da331d2",
+        "tree": "f920c4bc72e7b06ff1019ee3fa5c47ada286dbf0",
+        "packages": [
+          "etas_effects",
+          "etas_frontend",
+          "etas_hir",
+          "etas_hir_analysis",
+          "etas_syntax",
+          "etas_syntax_derive",
+          "etas_types"
+        ]
+      },
+      "interpreter": {
+        "repository": "etas-interpreter",
+        "revision": "677803f3f639eebeb3b388255d32c55150705c3b",
+        "tree": "d120c3b9b311c5c703895822dcae07283d934e1a",
+        "packages": [
+          "etas_interpreter"
+        ]
+      }
+    },
+    "cache_root": "etas-02412-release",
+    "build_target": "etas-0230/target",
+    "source": "Official CLI 0.24.12 e9a8417 and its exact official lock graph, including std 0.9.0 and iterator SDK callback fixes; standard release, shared dependency cache, one Cargo job, 6 GiB build only; source/runtime 4 GiB.",
+    "installed_sdk": true,
+    "build_profile": "release",
+    "cargo_lock_sha256": "175d8fd8901f0a0af58fff2635aae31692fc851adfa61598acc08b24cc4885c1",
+    "verified_seed_binary_sha256": "c5fcbfe68c663574d95637d37e7399b7f2f835b20a0c86e95a3425127434af66"
+  },
+  "installed": {
+    "lock_sha256": "175d8fd8901f0a0af58fff2635aae31692fc851adfa61598acc08b24cc4885c1",
+    "method": "adopted-independently-verified-02412-build",
+    "path": "/home/nomo/.cargo/bin/etas",
+    "sdk": {
+      "abi": {
+        "artifact_hash": "blake3:f04a40df141d16efc1a8b604d79ae817affc31fc11d8aa8ecf6e1dff3124877e",
+        "body_schema": 99,
+        "compiler_version": "0.21.9",
+        "effect_analysis_hash": "blake3:8f09108e018e4323c0b1a4dc83a56148c80d3ce6e46658bc323cca53e536aa4d",
+        "interpreter_layout_hash": "blake3:3cec714b12ed6093a5f616af794ebdae66a7ab6cbc16834283b1c6a208cdbc39",
+        "metadata_schema": 79,
+        "native_binding_abi": "blake3:1f8072e9ff9c46f860213f9e74e9fb896278348d666a99a9035686f555a7cfda",
+        "schema": 3,
+        "std_contract": "phase1|etas.std.text.contract.v1|etas.std.text.primitive-abi.v1|etas.std.text.source.v1|unicode:17.0.0:7c74aebf116629b6:etas.std.text.unicode.v1|usize:64",
+        "target": "aarch64-unknown-linux-gnu",
+        "toolchain_id": "etas-0.8.3-aarch64-unknown-linux-gnu-1f8072e9ff9c"
+      },
+      "manifest_path": "/home/nomo/.cargo/lib/etas/etas-0.8.3-aarch64-unknown-linux-gnu-1f8072e9ff9c/std/manifest.json",
+      "manifest_sha256": "78238396f16dce9f497a2d111393b0381561215293c88b8cee7411cc8ddb476d",
+      "receipt": "etas-std-install-v2\n000000000000000018ebeefe56bd9f0b-815-aarch64-unknown-linux-gnu\nblake3:162589c64d2205df896c84877ceef255de96cb4bd30b036e5bfb3e29c29c4fd1\n"
+    },
+    "sha256": "c5fcbfe68c663574d95637d37e7399b7f2f835b20a0c86e95a3425127434af66",
+    "version": "etas 0.24.12\n"
+  },
+  "build": {
+    "elapsed_seconds": 1201,
+    "profile": "standard Cargo release with dependency cache",
+    "cargo_jobs": 1,
+    "resources": {
+      "memory.max": "6442450944",
+      "memory.peak": "5092462592",
+      "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+      "cpu.max": "400000 100000",
+      "pids.max": "256"
+    },
+    "active_before_build": {
+      "binary": "2f027a99e9b7ff94c555410c46bc5d60354a2cb195c586bedf3aa24fd647b563",
+      "sdk": "59fe17a22770b2c00c5339979ce9f2b5b87bda09b1bc5eeb08520724abe189ce",
+      "receipt": "etas-std-install-v2\n000000000000000018ebe8dd8e5c5ed5-81-aarch64-unknown-linux-gnu\nblake3:ee0661924ee657712018f6311d4da8300c5234e4368192fa1b25fe54676dca94\n"
+    },
+    "old_installation_unchanged_during_build_and_staged_checks": true,
+    "old_backup": "/home/nomo/.cargo/etas-0249-release/accepted-before-02412",
+    "preparation_correction": "Superseded 0.24.11 preparation initially used no-network dev and exited before fetching; continued via the existing networked dependency service. The current 0.24.12 preparation used that correct service directly."
+  },
+  "superseded_intermediate_build": {
+    "status": "interrupted-superseded-by-user-requested-02412",
+    "exit": 143,
+    "recorded_at": "2026-11-27T14:48:48.149565+00:00",
+    "graph": {
+      "selector": "latest02411",
+      "version": "0.24.11",
+      "source_overrides": [],
+      "repositories": {
+        "cli": {
+          "repository": "etas",
+          "revision": "fd1c020e76bc62e90a2d41cd95ba95714e70b295",
+          "tree": "d7e184438966d7cd6681d14eb7d2ab79774500ad",
+          "packages": [
+            "etas_cli",
+            "etas_driver",
+            "etas_package",
+            "etas_tests"
+          ]
+        },
+        "core": {
+          "repository": "etas-core",
+          "revision": "14bdd603bf2de0b0cbf49338909cb09718f64d90",
+          "tree": "2f42ef429f0b8727857a4123bc44f9d111aaf6f8",
+          "packages": [
+            "etas_builtin",
+            "etas_cache",
+            "etas_code",
+            "etas_core",
+            "etas_host",
+            "etas_memory_derive",
+            "etas_package_metadata",
+            "etas_std",
+            "etas_utils"
+          ]
+        },
+        "frontend": {
+          "repository": "etas-frontend",
+          "revision": "3d104e16508e7e7a01cb9622ee8410756c7361c5",
+          "tree": "0133bb57dc8ab844d5281a3854de5060a9936027",
+          "packages": [
+            "etas_effects",
+            "etas_frontend",
+            "etas_hir",
+            "etas_hir_analysis",
+            "etas_syntax",
+            "etas_syntax_derive",
+            "etas_types"
+          ]
+        },
+        "interpreter": {
+          "repository": "etas-interpreter",
+          "revision": "cf37cda8488f73c98f31e4710b4f43379084c5af",
+          "tree": "3b24a30b2ff146fb4038072ce3fe4f7dd926abbb",
+          "packages": [
+            "etas_interpreter"
+          ]
+        }
+      },
+      "cache_root": "etas-02411-release",
+      "build_target": "etas-0230/target",
+      "source": "Official CLI 0.24.11 fd1c020 and its exact official lock graph; standard release with shared dependency cache, one Cargo job, 6 GiB build only; normal source/runtime 4 GiB.",
+      "installed_sdk": true,
+      "build_profile": "release",
+      "cargo_lock_sha256": "f247078a3b19b55e52a1e971877ab6cb002efd5c48f83a8dcd7ab26c4e5ecde1"
+    },
+    "reason": "User reported newer 0.24.12 while the owned 0.24.11 build was still live. Stopped only that container; completed Cargo cache retained.",
+    "log": "tmp/etas-02411-build.log",
+    "sdk_installed": false,
+    "runtime_accepted": false,
+    "current_installation": "0.24.9 retained; new 0.24.12 build checks its binary/SDK/receipt hashes before compiling"
+  },
+  "staged_sdk": {
+    "binary": "/home/nomo/.cargo/etas-02412-release/staged-sdk/bin/etas",
+    "sha256": "c5fcbfe68c663574d95637d37e7399b7f2f835b20a0c86e95a3425127434af66",
+    "sdk_manifest": "/home/nomo/.cargo/etas-02412-release/staged-sdk/lib/etas/etas-0.8.3-aarch64-unknown-linux-gnu-1f8072e9ff9c/std/manifest.json",
+    "manifest_sha256": "214ed5d2dfc54e54094c41d92781a9828087711f8a21c1a1dc37014f5cf5bb29",
+    "manifest": {
+      "schema": 3,
+      "package": "std",
+      "version": "0.9.0",
+      "edition": "2026",
+      "compiler_version": "0.21.9",
+      "body_schema": 99,
+      "metadata_schema": 79,
+      "toolchain_id": "etas-0.8.3-aarch64-unknown-linux-gnu-1f8072e9ff9c",
+      "native_binding_abi": "blake3:1f8072e9ff9c46f860213f9e74e9fb896278348d666a99a9035686f555a7cfda",
+      "std_contract": "phase1|etas.std.text.contract.v1|etas.std.text.primitive-abi.v1|etas.std.text.source.v1|unicode:17.0.0:7c74aebf116629b6:etas.std.text.unicode.v1|usize:64",
+      "target": "aarch64-unknown-linux-gnu",
+      "artifact": "artifacts/std.etasmeta",
+      "artifact_hash": "blake3:f04a40df141d16efc1a8b604d79ae817affc31fc11d8aa8ecf6e1dff3124877e",
+      "checked_objects": {
+        "index": {
+          "path": "artifacts/objects/e2f57eacde962c89a7134f39125f3d3fefc57d0abd293286ae7671765b7db58b.bin",
+          "hash": "blake3:e2f57eacde962c89a7134f39125f3d3fefc57d0abd293286ae7671765b7db58b"
+        },
+        "shared": {
+          "path": "artifacts/objects/fdad70ba1bc4310e0c227965298dcd0b5ec4afdc4e42222b74e51f857834bab5.bin",
+          "hash": "blake3:fdad70ba1bc4310e0c227965298dcd0b5ec4afdc4e42222b74e51f857834bab5"
+        },
+        "modules": {
+          "0": {
+            "path": "artifacts/objects/709d6fad6d159c2fe0e940f42c24be02b7e81016f43be64708d1b24cdf37d05d.bin",
+            "hash": "blake3:709d6fad6d159c2fe0e940f42c24be02b7e81016f43be64708d1b24cdf37d05d"
+          },
+          "1": {
+            "path": "artifacts/objects/b294b9447b5a9f6e1237d68ca76aa9484e77762a46ee5529a20f1a9269f5ccd4.bin",
+            "hash": "blake3:b294b9447b5a9f6e1237d68ca76aa9484e77762a46ee5529a20f1a9269f5ccd4"
+          },
+          "2": {
+            "path": "artifacts/objects/721f79bc2aa69c1697911e893dfc486401472a5543c859436c35ff171a8a99f8.bin",
+            "hash": "blake3:721f79bc2aa69c1697911e893dfc486401472a5543c859436c35ff171a8a99f8"
+          },
+          "3": {
+            "path": "artifacts/objects/ff69d511af1226832449d3ced84cb68f24f50623cfa879c0d64fd3434b9d512c.bin",
+            "hash": "blake3:ff69d511af1226832449d3ced84cb68f24f50623cfa879c0d64fd3434b9d512c"
+          },
+          "4": {
+            "path": "artifacts/objects/8c2f2206b40c5a1096646de0dbb4bd72491faae4e6734d55c7f2df592731ea7c.bin",
+            "hash": "blake3:8c2f2206b40c5a1096646de0dbb4bd72491faae4e6734d55c7f2df592731ea7c"
+          },
+          "5": {
+            "path": "artifacts/objects/f909f02eae2ee06a923926a4a44b48b9fda5f67e6829d4cd1c094e09bdae7c6f.bin",
+            "hash": "blake3:f909f02eae2ee06a923926a4a44b48b9fda5f67e6829d4cd1c094e09bdae7c6f"
+          },
+          "6": {
+            "path": "artifacts/objects/54934a2f5f26cc5816cc0eadc4b4b47cda7b8074cce50bd8facc6175ecf8e3c8.bin",
+            "hash": "blake3:54934a2f5f26cc5816cc0eadc4b4b47cda7b8074cce50bd8facc6175ecf8e3c8"
+          },
+          "7": {
+            "path": "artifacts/objects/eb836b1cf34d97a39bf6d44f07bff4db1563fd000d5f0bad3e8b9620feee406a.bin",
+            "hash": "blake3:eb836b1cf34d97a39bf6d44f07bff4db1563fd000d5f0bad3e8b9620feee406a"
+          },
+          "8": {
+            "path": "artifacts/objects/746bf011ff8a7399fc3577d9394007aa2454d560e1f8437ce59e44648265b140.bin",
+            "hash": "blake3:746bf011ff8a7399fc3577d9394007aa2454d560e1f8437ce59e44648265b140"
+          },
+          "9": {
+            "path": "artifacts/objects/fa6b6a6234a78d9077a879648093eafa74a5f7aecc89760a916aea38ecf312ea.bin",
+            "hash": "blake3:fa6b6a6234a78d9077a879648093eafa74a5f7aecc89760a916aea38ecf312ea"
+          },
+          "10": {
+            "path": "artifacts/objects/102a5c0f8ee0f67a06118d56e77bea9ebce8f4afe4af2e87b728595b4cc03597.bin",
+            "hash": "blake3:102a5c0f8ee0f67a06118d56e77bea9ebce8f4afe4af2e87b728595b4cc03597"
+          },
+          "11": {
+            "path": "artifacts/objects/78ae681d710a98b02a288c3e0ea0d240bcd0cfae509e207f62c094d867e45c0d.bin",
+            "hash": "blake3:78ae681d710a98b02a288c3e0ea0d240bcd0cfae509e207f62c094d867e45c0d"
+          },
+          "12": {
+            "path": "artifacts/objects/7e3eff9ef7613a50340eb12677ee03b83ac759fcba9bb32705f07248d56d473b.bin",
+            "hash": "blake3:7e3eff9ef7613a50340eb12677ee03b83ac759fcba9bb32705f07248d56d473b"
+          },
+          "13": {
+            "path": "artifacts/objects/b1bf2b189469aaae429a8bf27c19daa487d60c5f84c0f8c359f7213f2cecbe09.bin",
+            "hash": "blake3:b1bf2b189469aaae429a8bf27c19daa487d60c5f84c0f8c359f7213f2cecbe09"
+          },
+          "14": {
+            "path": "artifacts/objects/b9dcf00b36ebd049ecb0bf726ea1ae060729b94d3e50183a972ab4865ebc3bb0.bin",
+            "hash": "blake3:b9dcf00b36ebd049ecb0bf726ea1ae060729b94d3e50183a972ab4865ebc3bb0"
+          },
+          "15": {
+            "path": "artifacts/objects/d545830f621759441bb2a077be85d00cb6827fb6d7cdbaf42341bb9e0564614b.bin",
+            "hash": "blake3:d545830f621759441bb2a077be85d00cb6827fb6d7cdbaf42341bb9e0564614b"
+          },
+          "16": {
+            "path": "artifacts/objects/74b49ec29b241e369ffdc1d4b5c071c3bc29f5d72655a16bb53dfa63ce3c574d.bin",
+            "hash": "blake3:74b49ec29b241e369ffdc1d4b5c071c3bc29f5d72655a16bb53dfa63ce3c574d"
+          },
+          "17": {
+            "path": "artifacts/objects/0b4176f69815e34c70e39b9c2857a0888868f96f71c106a9aa523ef48ec9c9dd.bin",
+            "hash": "blake3:0b4176f69815e34c70e39b9c2857a0888868f96f71c106a9aa523ef48ec9c9dd"
+          },
+          "18": {
+            "path": "artifacts/objects/56230e8717d692cb878e98d2955bccc8925d9f7c69b39512383dc1b301117745.bin",
+            "hash": "blake3:56230e8717d692cb878e98d2955bccc8925d9f7c69b39512383dc1b301117745"
+          },
+          "19": {
+            "path": "artifacts/objects/c75c1186aaf5b516c1417bbb3e88b2c84e54b992f767bf53a8b0f92d02fce591.bin",
+            "hash": "blake3:c75c1186aaf5b516c1417bbb3e88b2c84e54b992f767bf53a8b0f92d02fce591"
+          },
+          "20": {
+            "path": "artifacts/objects/2160c15c748d393ccdb6aabf0d2c322a0b0895ba3953abf18cfe93f5ae081730.bin",
+            "hash": "blake3:2160c15c748d393ccdb6aabf0d2c322a0b0895ba3953abf18cfe93f5ae081730"
+          },
+          "21": {
+            "path": "artifacts/objects/5a43e5a6a68123b713345beba7663b877e4168499faaf0421773d14b86c69a23.bin",
+            "hash": "blake3:5a43e5a6a68123b713345beba7663b877e4168499faaf0421773d14b86c69a23"
+          },
+          "22": {
+            "path": "artifacts/objects/dc8789b732e1d31b7dfa0076a8885f26573b5dba9524a7f224ea8e8e940c88de.bin",
+            "hash": "blake3:dc8789b732e1d31b7dfa0076a8885f26573b5dba9524a7f224ea8e8e940c88de"
+          },
+          "23": {
+            "path": "artifacts/objects/1de670d1bf549441a3e4916829fe5d2416fed4c4e976f2b5089a1c30b542f084.bin",
+            "hash": "blake3:1de670d1bf549441a3e4916829fe5d2416fed4c4e976f2b5089a1c30b542f084"
+          },
+          "24": {
+            "path": "artifacts/objects/02119f554f1f4c796df3db37d689c9ae53af007d752c90a66df89e7e0c769ead.bin",
+            "hash": "blake3:02119f554f1f4c796df3db37d689c9ae53af007d752c90a66df89e7e0c769ead"
+          },
+          "25": {
+            "path": "artifacts/objects/273d2c4c9d208e6eb50f64b7070b9cf267463480f2dbfcd1204fb5c99638d0b4.bin",
+            "hash": "blake3:273d2c4c9d208e6eb50f64b7070b9cf267463480f2dbfcd1204fb5c99638d0b4"
+          },
+          "26": {
+            "path": "artifacts/objects/83b107eb62cafe05325fe5ec68140b490f367e576c707b31e29410ed0f94f186.bin",
+            "hash": "blake3:83b107eb62cafe05325fe5ec68140b490f367e576c707b31e29410ed0f94f186"
+          },
+          "27": {
+            "path": "artifacts/objects/448fe69d7c36d2c84121998e5382033a5b8b558de8a0743c816484cd0f3c94a9.bin",
+            "hash": "blake3:448fe69d7c36d2c84121998e5382033a5b8b558de8a0743c816484cd0f3c94a9"
+          },
+          "28": {
+            "path": "artifacts/objects/b63f259db81a27657c77d4215ba7fa82cbf475062ab1f38f170270ffd6bb04a9.bin",
+            "hash": "blake3:b63f259db81a27657c77d4215ba7fa82cbf475062ab1f38f170270ffd6bb04a9"
+          },
+          "29": {
+            "path": "artifacts/objects/7e3eff9ef7613a50340eb12677ee03b83ac759fcba9bb32705f07248d56d473b.bin",
+            "hash": "blake3:7e3eff9ef7613a50340eb12677ee03b83ac759fcba9bb32705f07248d56d473b"
+          },
+          "30": {
+            "path": "artifacts/objects/a69340195a05aed9b556c751dce1d9244dd5a63d9b7acea6be1809aed15e027a.bin",
+            "hash": "blake3:a69340195a05aed9b556c751dce1d9244dd5a63d9b7acea6be1809aed15e027a"
+          },
+          "31": {
+            "path": "artifacts/objects/d2a1f80cdb4ab7ac29ffb58697a46a58b1e8fe6d324abee7b6c41ddf490077ac.bin",
+            "hash": "blake3:d2a1f80cdb4ab7ac29ffb58697a46a58b1e8fe6d324abee7b6c41ddf490077ac"
+          },
+          "32": {
+            "path": "artifacts/objects/3d364b4957ce4c1b0949556d3c5f27de6e87e22449ece6e237fce044a4e53c90.bin",
+            "hash": "blake3:3d364b4957ce4c1b0949556d3c5f27de6e87e22449ece6e237fce044a4e53c90"
+          },
+          "33": {
+            "path": "artifacts/objects/012f33edcdcf57e7ad9501d1231deb0d32962dbaea41f0eddc6b77677fa3fb1a.bin",
+            "hash": "blake3:012f33edcdcf57e7ad9501d1231deb0d32962dbaea41f0eddc6b77677fa3fb1a"
+          },
+          "34": {
+            "path": "artifacts/objects/e3d6363bbec0748fa576b548458b561ff9f16fc4fd637fc56257c97daaf6e49f.bin",
+            "hash": "blake3:e3d6363bbec0748fa576b548458b561ff9f16fc4fd637fc56257c97daaf6e49f"
+          },
+          "35": {
+            "path": "artifacts/objects/9f3bb91095c8ab6407749b62c7196aa8c1ed20065622a95f90d10f1372658241.bin",
+            "hash": "blake3:9f3bb91095c8ab6407749b62c7196aa8c1ed20065622a95f90d10f1372658241"
+          },
+          "36": {
+            "path": "artifacts/objects/7e3eff9ef7613a50340eb12677ee03b83ac759fcba9bb32705f07248d56d473b.bin",
+            "hash": "blake3:7e3eff9ef7613a50340eb12677ee03b83ac759fcba9bb32705f07248d56d473b"
+          },
+          "37": {
+            "path": "artifacts/objects/1b6a661005064b877df050946b34010b2e664fb31dec2f7ecb1698f50d866fa2.bin",
+            "hash": "blake3:1b6a661005064b877df050946b34010b2e664fb31dec2f7ecb1698f50d866fa2"
+          },
+          "38": {
+            "path": "artifacts/objects/2436238041fed61761d2c00cad37d76e488783f8a48b74907144baa5d0e1af70.bin",
+            "hash": "blake3:2436238041fed61761d2c00cad37d76e488783f8a48b74907144baa5d0e1af70"
+          },
+          "39": {
+            "path": "artifacts/objects/7e3eff9ef7613a50340eb12677ee03b83ac759fcba9bb32705f07248d56d473b.bin",
+            "hash": "blake3:7e3eff9ef7613a50340eb12677ee03b83ac759fcba9bb32705f07248d56d473b"
+          },
+          "40": {
+            "path": "artifacts/objects/2ebd2db37b98338840fcea26038c69ea458d869f2d5b6e430725892e87cb76d7.bin",
+            "hash": "blake3:2ebd2db37b98338840fcea26038c69ea458d869f2d5b6e430725892e87cb76d7"
+          },
+          "41": {
+            "path": "artifacts/objects/9fa7b256ab6d39df7b260d2d525ee61b3c64c38beafb8bfa263fd7eb4f4c9560.bin",
+            "hash": "blake3:9fa7b256ab6d39df7b260d2d525ee61b3c64c38beafb8bfa263fd7eb4f4c9560"
+          },
+          "42": {
+            "path": "artifacts/objects/4beedd643d18dfe43c42e6ff8df5782fb6cb4ff5790c972536ac1c56c3142c1c.bin",
+            "hash": "blake3:4beedd643d18dfe43c42e6ff8df5782fb6cb4ff5790c972536ac1c56c3142c1c"
+          },
+          "43": {
+            "path": "artifacts/objects/463b61a639ecfd4c25eed6a1a12328250343470b13108beb36c491764011528f.bin",
+            "hash": "blake3:463b61a639ecfd4c25eed6a1a12328250343470b13108beb36c491764011528f"
+          },
+          "44": {
+            "path": "artifacts/objects/183dbe63d371a89d9a5ddd69f3e5572f800dd616b5dc68347602f19fdb978497.bin",
+            "hash": "blake3:183dbe63d371a89d9a5ddd69f3e5572f800dd616b5dc68347602f19fdb978497"
+          },
+          "45": {
+            "path": "artifacts/objects/b8ddce4d73ba71be633d07c0452c87ac7f916b8b1dd04c1f8835a413b477e94f.bin",
+            "hash": "blake3:b8ddce4d73ba71be633d07c0452c87ac7f916b8b1dd04c1f8835a413b477e94f"
+          },
+          "46": {
+            "path": "artifacts/objects/2708ec6460bc391d22e0f59945238a8533ba77acda8e78cb0217bdd9d0f94b04.bin",
+            "hash": "blake3:2708ec6460bc391d22e0f59945238a8533ba77acda8e78cb0217bdd9d0f94b04"
+          },
+          "47": {
+            "path": "artifacts/objects/3463ace029d5f2d31a33e016cf24f32fdf1ccd1402853ede139c1c7d6fa8db2e.bin",
+            "hash": "blake3:3463ace029d5f2d31a33e016cf24f32fdf1ccd1402853ede139c1c7d6fa8db2e"
+          },
+          "48": {
+            "path": "artifacts/objects/48dae4d2a20b9c62469e8efc8a245b81f3b5823a809e574af0e35746a616ee0d.bin",
+            "hash": "blake3:48dae4d2a20b9c62469e8efc8a245b81f3b5823a809e574af0e35746a616ee0d"
+          },
+          "49": {
+            "path": "artifacts/objects/8afdf9812fbe3dfd32f5adf2154939f081150f291717cc1f6c1787afe56b6376.bin",
+            "hash": "blake3:8afdf9812fbe3dfd32f5adf2154939f081150f291717cc1f6c1787afe56b6376"
+          },
+          "50": {
+            "path": "artifacts/objects/59b4c6e5e4b71e4d7deeb49bfeece243949e5abe6d1d2010cab30e8b35bb156f.bin",
+            "hash": "blake3:59b4c6e5e4b71e4d7deeb49bfeece243949e5abe6d1d2010cab30e8b35bb156f"
+          },
+          "51": {
+            "path": "artifacts/objects/655b3a2e199bcce4c562c35ce8e278e4ec30bc002530ad933d7ce53b177f0d81.bin",
+            "hash": "blake3:655b3a2e199bcce4c562c35ce8e278e4ec30bc002530ad933d7ce53b177f0d81"
+          },
+          "52": {
+            "path": "artifacts/objects/3726eeda24b0143f2d058e9b35e7f6b5330ac93ba00707508ce34367c2467a59.bin",
+            "hash": "blake3:3726eeda24b0143f2d058e9b35e7f6b5330ac93ba00707508ce34367c2467a59"
+          }
+        }
+      },
+      "effect_analysis_hash": "blake3:8f09108e018e4323c0b1a4dc83a56148c80d3ce6e46658bc323cca53e536aa4d",
+      "interpreter_layout_hash": "blake3:fee38e267a455f8a8f48126eb8d36cdeed6ef07a0e5a434ecfe8d7977e24781a",
+      "prepared_queries_hash": "blake3:cc3e4e99acd713aa6f59b7a342efb72023b6661821abe3968049056d5293cc5b",
+      "source_payload_hash": "blake3:231451af51e07ce530ecc2d4451c3eefd7f20da6e08e8091972154aa9956487d",
+      "manifest_hash": "blake3:c30af2246a3a1f8ca0d314b3b4e3b4337d32ddd91f04d25d1e958d8c52bba6b1",
+      "dependency_lock_hash": "blake3:missing",
+      "sources": {
+        "library/std/agent/conversation/mod.es": "blake3:a2221e2c684d1532063d99b77692f67feef3ff8b5493caa342aee8c69d3244e3",
+        "library/std/agent/group/complete.es": "blake3:f8c693d162c587d9ffb05dd9d1bc1cca7d722764ad77a5be0965a5e14691f9d9",
+        "library/std/agent/message/complete.es": "blake3:b80f63795470e0556a65d0ae2de5f449f848f6ec5b2517af360e98fb714d4c60",
+        "library/std/agent/message/context.es": "blake3:e52ad790edd33cbe15897caf4f0427c65df1c3a1a8eefaa6a80d73a4e32cdd07",
+        "library/std/agent/mod.es": "blake3:b9931ac7a81e66f922bebb05cfe1527d9bdbe19a2babd2d45fa5b2330e5d1788",
+        "library/std/agent/prompt/complete.es": "blake3:699dd73ab82f4fa171cd62ea1bb6106ecdc99ec3931f9579920996e0da00adb8",
+        "library/std/agent/prompt/encoding.es": "blake3:2cae594141c78ef12f449b48061c9bed490e74174e936bda87d20eea233bb5ce",
+        "library/std/agent/protocol.es": "blake3:acca088b46de3e8eea3436f35cc285d0db976cc9a1e36d66742b9263e1ee5c6b",
+        "library/std/agent/schema/complete.es": "blake3:25d4fa890332225b62fda2edd2ddfdf49ff5a340db6017a05c3ebb7bb06446c2",
+        "library/std/agent/session/complete.es": "blake3:5619005b22e10dd67618e93e5f3d3a8c113458f2e8cc7c210a5e33debc8531e7",
+        "library/std/agent/session/fence.es": "blake3:0eab73bfb2e2237934a75ba64ca54cbbe5cd952fecaea72894adec2765262590",
+        "library/std/agent/session/fence_json.es": "blake3:2cd12c5c00809132def16fe03d744f1af8d1b36564a57de791040c48bba85475",
+        "library/std/agent/session/keys.es": "blake3:b5b021bbee43b4a3d7db0b28edcfa45269b4264e755b00667d3689b3dd69ffda",
+        "library/std/agent/session/lease.es": "blake3:1f4824e166c18b6b3f679d50a45e059da225d5e39540e871e40a5ab2383c8200",
+        "library/std/agent/session/publication.es": "blake3:bb8e8ced51a33f917581a02ec1216f06e62c8b270cae8944b311cd0e33d27152",
+        "library/std/browser/protocol/complete.es": "blake3:8fcb7cb24a589f64ea5ba999dd9957cd8f882a0a1b1fe778b5c91ad3394c3e71",
+        "library/std/bytes/builder.es": "blake3:062acb32175011eecbd848e4d7d38ca7e4c67c05d957378aedb3efe3b449ddae",
+        "library/std/bytes/mod.es": "blake3:62e6ec0e85ec7832bc0ebfe03af4f283e230dd7c7e5cc9014e92ed85b7306f8d",
+        "library/std/bytes/operations.es": "blake3:917ddf1983fd05748cae01865e97c37479431c3cb170c68b6cacabec8db42e30",
+        "library/std/char/mod.es": "blake3:ac1abe30e2ed2d065e3956ca0a3938daec488c20cf876d6001e94127dd86dca0",
+        "library/std/char/properties.es": "blake3:1840e20ba537a7f97d985722dfbfc3cb1df99dd30b3cb9bac0c6c609276841c2",
+        "library/std/codec/text/mod.es": "blake3:2333c0feb39b7e3997d5eb15905b9a913f7fc42208d4caa11e9ca5a49da6811a",
+        "library/std/collections/algorithms.es": "blake3:ec78ac50ba690266a88685d10d0bc4287ee58736d7be17dbfe51d054de4f54dc",
+        "library/std/collections/bit_set.es": "blake3:05fc73d92687897617536ee4ffc1a9993be5eefdf068d0fecb6dc62106fbee28",
+        "library/std/collections/bounded_deque.es": "blake3:c4decbed4764811ac460f0b5b2899f8b5a2aacdc1f102f9b3299b827a51ced7a",
+        "library/std/collections/collection_hashes.es": "blake3:dcee663a1e77308753257256cd28f22b129eda4762aa03210eb9963a8d6175a8",
+        "library/std/collections/errors.es": "blake3:98bc64b76306243473d788102337202561f22657b6536840efc0c56ac3dc997b",
+        "library/std/collections/grouping.es": "blake3:b29c9719db91f8f7bdff16c1a7318e77df4c5869250a3b5c9341c49ee59550c0",
+        "library/std/collections/hashing.es": "blake3:13413ef4cafa5d81c7a150574c96db02d4a34e0158e3a010263b299506e2e700",
+        "library/std/collections/iteration.es": "blake3:5d412d2e3df8284bb7cec9f40abab1be1502bfe26011c954331d82ddd02855b5",
+        "library/std/collections/iterator_adapters.es": "blake3:3f95ba3512a4dc43bb1a648bf365ac9edd43f3812d64b9beb726ab423ce0dde4",
+        "library/std/collections/iterator_consumers.es": "blake3:12a7a569905c425d26680cb334330d82aee499d78fc08c7faa434d9d6cf2e277",
+        "library/std/collections/maps.es": "blake3:e28a63892578903c7169ad0c34374ae4f5f01a7c8f4cedca972be371c0a7d12d",
+        "library/std/collections/mod.es": "blake3:d96f746168e204350b20114f992a9ab250a24d757fad7dcc58330b44d935b123",
+        "library/std/collections/order.es": "blake3:c4b8eae53dc8bf8306b9ff51f00b99327ac29002e62b3b25bc54b2418412789f",
+        "library/std/collections/ordered.es": "blake3:9061d02c9276d2ebf288f6a2a35c18effa72875ce242812875f00fec0af38e42",
+        "library/std/collections/ordered_sets.es": "blake3:fd376ad12702b04d65e9e597b1080e3347f85af228b32a92fe7cf55c31dc131a",
+        "library/std/collections/priority_operations.es": "blake3:ade752c9b54f1f20af2b56e8d8e371027b81a4d98803763072e4599e73cfc658",
+        "library/std/collections/priority_queue.es": "blake3:bceb0522db8d37f2153630c8fd6a00d8d1a7aa9b377c276ddaa2c535ddb0f1fb",
+        "library/std/collections/range_iteration.es": "blake3:18747af690cf24e95b138ec733019ca1102cd41bf268ee3fc6bc976f97d6865a",
+        "library/std/collections/selection.es": "blake3:6fa413f4c50381f4ee2f864a42734ba2d1ea7554e26b9850715a983e507201c2",
+        "library/std/collections/sequence_constructors.es": "blake3:566884117fd4734b46b5ba2c4beb92dcfbc961f8c4949e1b7cd3ed777c0c836e",
+        "library/std/collections/sequences.es": "blake3:8d43b88495796b0055debe321fe4074b38a06933a205f579bfec6b788f3fed2a",
+        "library/std/collections/sorting.es": "blake3:0bd90e011aa8aa9d144685b4ac8305a3fcfb2305fd91d8c4aadcc2f8892ebafa",
+        "library/std/collections/storage.es": "blake3:607c50d3174f732da3312e183ba4c27ef86af57f16ee0139ea464d2dd23899b3",
+        "library/std/collections/value_equality.es": "blake3:9f8526c62286e4330a16b08ae11f17ef6d75acaeaaa51885a01d8b7b666e8394",
+        "library/std/command/mod.es": "blake3:e48a8102259e025213930ce4f8de18005e7eefb6834a051cbf0cfde275379480",
+        "library/std/compiler/complete.es": "blake3:e22d8e284ae894b74cb76768a7a987450ce3a5857cd39ed7e3a7c5bf5cfc31a6",
+        "library/std/compiler/definitions.es": "blake3:c7cb4a023b56ff6938c3a21fa428b25c414421fb8898b6e66f10a3cd9e45c650",
+        "library/std/compiler/diff.es": "blake3:9c75a4fe6172255e40b573eb4b05da9c4d26be321371308097ed3db0672376d0",
+        "library/std/compiler/format.es": "blake3:f45597cc6d62efcc047d0477903d490b1f5e9dfe4417398f731b165e04f4fc1a",
+        "library/std/compiler/metadata.es": "blake3:c3bf288fe2b72c76cd7abe533c5a4f1aa638887ab8f9d679e14b6c94a3a61648",
+        "library/std/compiler/reports.es": "blake3:74554280e91ccd71350a402a0dcb57bd26b2b8eb259db6aabd0ab2473e0e67fc",
+        "library/std/compiler/syntax.es": "blake3:e0c8c84a986c5d94a36c0855df85b60f007a51b741c144ccd43f1adadc32e38d",
+        "library/std/core/mod.es": "blake3:097a9b47fd45c176ef2fd7676165122f2c3264f79b8cbe7726c1a2e68ec48f53",
+        "library/std/core/primitives.es": "blake3:759735f86ee01e34ccbcba28a88f3e99271d6a77cf4b3234fd0772cb7f00070c",
+        "library/std/crypto/blake3.es": "blake3:c1436a6340b330580abc6a628f950c38a471ab7b93bf0fd0fea6d5fc4d166c63",
+        "library/std/crypto/complete.es": "blake3:d9c7e5fb9421bde44e4d2f65333f2d2013fa0a353d07208ac84bda3c122384d3",
+        "library/std/crypto/sha256.es": "blake3:32b2a9f22b0bafb7dc1bd9febccb9cbc35b43d3b5f9a10fa10b51871aebbb211",
+        "library/std/effects/complete.es": "blake3:177ee6abf77b5b242a42be2b07e56fc5f571296147a115e17f0453a0b161ce3c",
+        "library/std/effects/mod.es": "blake3:2f1db54e29461465f957741623359859ad96bc969118afcf79031b7fc1b5e3df",
+        "library/std/effects/random.es": "blake3:0e21ed467372c8f4872e21084144d5a555fcb60d980fdd70c341b6b023c99447",
+        "library/std/fs/mod.es": "blake3:16f5a5b67e0ef03b342e4a18092d22f765fa4abb3e9c0d6bddc806c036a6da33",
+        "library/std/host/command/complete.es": "blake3:f98a3f997045598a8d09de5510ccf3f855254288ed4d067b6660bd0f739ab8d7",
+        "library/std/host/path/complete.es": "blake3:fa31469393921428a226f649c43a8df70f69719c6717b0309aa1696934690808",
+        "library/std/host/sandbox/complete.es": "blake3:28ad797f94b380c05cbf24b595c4f0147819e5f0569052b873d76c064395f9b1",
+        "library/std/host/url/complete.es": "blake3:8d1656efe6c77180a796f04d4129e358da4a76ee2fb8970dae26e5e42db1ed2d",
+        "library/std/http/codec/body.es": "blake3:494ce5aa9057907efac03c9af39d5899355e67b8fd481b965f1e536dc9cf8d24",
+        "library/std/http/codec/chunk.es": "blake3:6ea9cb3b68f61e0f32074ca33edaa3a55438edf7f6bb9641d3c7f03ab1bde0c1",
+        "library/std/http/codec/complete.es": "blake3:f59919ddbde35ba0370556cc925c5ea979d75287873ff84c1c1189f6df6bb106",
+        "library/std/http/codec/head.es": "blake3:db3d5bbfe96b23c08d38e2198fad875ac20af6c086f45f61a39189de127570ca",
+        "library/std/http/codec/request.es": "blake3:8171e50363dab119177c6b3b8ba673834f186c9f7099839c4a49f5636bf4f535",
+        "library/std/http/codec/wire.es": "blake3:ee4ec184ad0a1341bedd5aec6be5031f163307e9d630290daf216b5b4099c2fe",
+        "library/std/io/error.es": "blake3:34f30c1b602ccb5baec05e39ebb65064a46a6dc9124029a3106c9e6318a10c9a",
+        "library/std/io/mod.es": "blake3:bf05350c0a21bc25d1c26467052a01bba3b293cc1cf738bcc2b6b750d0ec13b3",
+        "library/std/json/complete.es": "blake3:6e9e937111cea4fa331043af4ff2ea59dbad0a6a9607a0569fd0804d624ace0a",
+        "library/std/json/reader.es": "blake3:b001abec74363bac787b7d72667ad64b5a655d3997de0439ad419d658f9d2854",
+        "library/std/json/writer.es": "blake3:0bdb23cac603d2b1f8fba298382c8fc7a6e5dd34d1fea1506e631e68d8f05e62",
+        "library/std/math/angle_reduction.es": "blake3:2bedcb39c00eedf3614afd67ced0419e00b620198b43b0f8fbc157318d6b1864",
+        "library/std/math/complete.es": "blake3:dc950b89dfd6d7308c422996fa52275f241418764aa71e73901a2dcdd479dd21",
+        "library/std/math/exponential.es": "blake3:85758b3cc46b51036da38c2480a733ef2cb7938ab9d33b6ff9f91fee2cd3e7d1",
+        "library/std/math/floats.es": "blake3:06139936df57c1438e2f9bb930d33e2b41cdd1d4b8ac09880781c4acca24f6cb",
+        "library/std/math/integers.es": "blake3:2c1a17157b068e059a7fb1c96f98d6073b43399fa9e9dc7b387b60cfd0a0b67b",
+        "library/std/math/trigonometric.es": "blake3:a1911ef17933a4b444084228d1c357f0af23d394c5fe75c0a5646b9de779581e",
+        "library/std/memory/binary.es": "blake3:d187e5b2aefaee307415d0fcfb50993d22cdef311fca38180bb896c0a93be091",
+        "library/std/memory/complete.es": "blake3:8cdaa6d87b43695bcd8adc2e61b253aec7bdb483d47e1892faebc2ee7fdedb4a",
+        "library/std/memory/context.es": "blake3:95372ada1513ff6f41feb2e242409f46b8668a8f21fcb6d40768d65fbc4da9e4",
+        "library/std/memory/encoding.es": "blake3:f696a575d9bc72954980e736569fe99852bc154885476924e0d035f9ea13dc57",
+        "library/std/memory/preparation.es": "blake3:8ac65a494b11d7217d6a3b4822dac1fd52eaff085dd11ae92c3175eecf13b673",
+        "library/std/memory/selection.es": "blake3:bdd8b552ffa656e8241488732394087fb3cd945ece6922727c5f03c6b1be1221",
+        "library/std/memory/storage.es": "blake3:6fc4accf935e4e80720d2b0872b5c01ae3810c8a7f9882d9c42dff1ab9ffdb71",
+        "library/std/net/tcp/complete.es": "blake3:eeae294758ff9aee3a8145d2699feba72d60d2a9f29d85c97de2486b2ae8fd8c",
+        "library/std/option/combinators.es": "blake3:29a5fb0a3aca6d0f39e4c62b92a167b3bf75dba56c1103ae70e09e8c211a16aa",
+        "library/std/option/mod.es": "blake3:d0dec82adef5a945c62ca9bcbcf9182cadb7448963315a09e2b467ef50a9e79e",
+        "library/std/prelude/complete.es": "blake3:a7dcc809e6cad954dbdfe92105f0039c7c7227d4da9248af025f1b756d0f0e41",
+        "library/std/prelude/mod.es": "blake3:c52c1c6c7ec9082c7f7d7a319f52cdcf5308bbe3cb9b17ac036a60888402cbf0",
+        "library/std/random/mod.es": "blake3:d84cbbf7d40d2206bc6e8110b9db0a02402834af810c32b1a988f33b2c90fdef",
+        "library/std/resource/mod.es": "blake3:97817b3d58732e02ffd272fdc38b52108b1f298c88fb572da06a89d3bb92b07b",
+        "library/std/result/combinators.es": "blake3:7508e0c4dce394b595d5145c3120ad19d4f37e347686a838866d440351128f76",
+        "library/std/result/mod.es": "blake3:e38763b6fb9a2590c56cff1a49c79476306908b7bff23c6014fc7723c2f12db5",
+        "library/std/runtime/approval/complete.es": "blake3:ccf72299096972d8ed70111bc38c2e629f695eb3ad68c34a28698a91d3a35ca2",
+        "library/std/runtime/budget/mod.es": "blake3:4a8bfac97f45a0624036dbe43817289647c2e150f49206d16704bbfbca759463",
+        "library/std/runtime/checkpoint/mod.es": "blake3:47a3d15b59642465b0c132f6b5e5fa3d95f6cffee6f3d61e8d19d05438959574",
+        "library/std/runtime/effects/mod.es": "blake3:6c9a064e0af881a8f065b442bf18e3a113cb38c772934018dd637bae7cbed18f",
+        "library/std/runtime/error/complete.es": "blake3:d176c9bd6ac477ece81b760bca2dcb260182b0e317690424331cd9ac2d70071b",
+        "library/std/runtime/limits/mod.es": "blake3:c4be885edff4f054935073bd42dad74a05e0bb6dc6cb331bda689cf983627c9e",
+        "library/std/runtime/mod.es": "blake3:6e78785d3a95af7592e68ab72fa92114746e4b5e3f17c62811940e032182c996",
+        "library/std/runtime/time/complete.es": "blake3:4c4d3052e89fda2a5070821cbef380bf02a7a89d09aeea3700b2290a29113046",
+        "library/std/runtime/time/instant.es": "blake3:b3c3017c277d722c789df919001acc2fb9c7578cebbfea6dbb79bfb4f3e3a6ef",
+        "library/std/runtime/time/mod.es": "blake3:943ad51b34e378b3288ac906df8147cf283a884aaebadc6662ad206db01ae07d",
+        "library/std/runtime/trace/complete.es": "blake3:2da31902277055368c85235bd12f4b711e60cd110c5e77653d14e7f87924c8d2",
+        "library/std/runtime/value/mod.es": "blake3:1b48a73db5d697cce574222ee4cdd50135eee9301586ec9eadf48156810172c2",
+        "library/std/runtime/value/tagged.es": "blake3:1d97bbeeff72973f60a85bad9b344bd3c014f91297669a7f98f5ae4ff960c192",
+        "library/std/secret/complete.es": "blake3:1d90b8d82668c40a621e9d3a3876b992c461215fc834ac17a92c168e3e52abc5",
+        "library/std/security/declassify/complete.es": "blake3:3463304f791c436d906eb1cf15c849909373ee538853c718def21ed4017a6ddf",
+        "library/std/security/trust/complete.es": "blake3:0cb1129dc2ade81661a9c2b96177d8fff2611fcd89c92f76edf3c3ede19b89a7",
+        "library/std/stream/clock.es": "blake3:9cf84296fda839d3dd6bf624f95c194909f3bc9d7fdea12074dd02ea88418d0a",
+        "library/std/stream/complete.es": "blake3:efa63d75c1bda42257fada8c82fc563544d5ba8e8b715b97d24511edaf38caaf",
+        "library/std/stream/read_scope.es": "blake3:7b6505c995201f040bdffed0de4967ea7b96057ec605194b53ecc4ad991b2976",
+        "library/std/task/complete.es": "blake3:cabcdc058d1eb99c260be6553ef0c1dcf7f0067bfab3665dd55d5508ace41b50",
+        "library/std/task/mod.es": "blake3:2fa0881c1c18297e2db2edfe5e8289a1aa9a3e2745b46fca8a3ad1a0b28ab79a",
+        "library/std/task/scheduler/handlers.es": "blake3:d03a785f8e1e32826feaf248ab15c6694a9ac946b78f2f6883ad1b7339c870f2",
+        "library/std/task/scheduler/mod.es": "blake3:92469e5e26017fb24f593e306bd0bc2fb6358f2d39f7061e363a2ca49d5169d0",
+        "library/std/task/scheduler/policy.es": "blake3:27b36b5a40fb051f2753edfa2bd4c6aee1905efb9cff6202f6d4b0d92bbff3e6",
+        "library/std/task/scope.es": "blake3:e682957eedc76e5f72ac02c5d7fdde2e2d1c428948ea2e35d5b75d2ed2aa8bbb",
+        "library/std/task/transfers.es": "blake3:95d9e4eaddfbdf7253adbcd6b28ad389bc926d951f611c567c2c859c5ed25dfc",
+        "library/std/text/ascii.es": "blake3:bf3257abb71cad051706b8172440f4648d4196da31bc8c6ca35a1e7afeb69163",
+        "library/std/text/assembly.es": "blake3:538ba4a59d5eb56cd1adeb7c1669f5f3673c2bbb2c8995dcd97089be90c8fbe3",
+        "library/std/text/big_natural.es": "blake3:97784d5a0138c23cfacd4b65ed7270bfb0fda62fc745aeffbe748f6cf29cd72b",
+        "library/std/text/boolean.es": "blake3:fbb275524649c8adfd40141f51a8b76250194881ec4b6175c17ad9d2e1f97a38",
+        "library/std/text/builder.es": "blake3:1ab31bf49eba12c92266443e2159210013249b8a719d81a13b4d3670006fa354",
+        "library/std/text/case.es": "blake3:3f28c531915f16d5eef4c72af2f85676897e2baeb53d4262821a916216ea09fa",
+        "library/std/text/case_data.es": "blake3:09ab4fa1bba71144619fe01e2e2a4b342d5ff02dcb679f5d8e3859a9e7650305",
+        "library/std/text/errors.es": "blake3:6faa0f81a67ec55df26c9c90ebe08ec5548c4817ca9a83ed3ff0a3837d349774",
+        "library/std/text/float_parse.es": "blake3:c68599053fd79980f4a5c36f86ed6d01bc9da2d874dd7ded4ca726f260983c34",
+        "library/std/text/float_render.es": "blake3:483505aad11185d6ba5da4e9992e716c6946f42c8df3d8ce225d28e501ea7e9e",
+        "library/std/text/float_tables.es": "blake3:59f4a07ac7911c4ca43f4c12ccf7813f896c03722317fbdc39515c90181088fc",
+        "library/std/text/format.es": "blake3:7de535e17fafc9752cff795499b21a7eb4692f1a91058f508ea517682291f745",
+        "library/std/text/integers.es": "blake3:f61e1453ba70337d229cb880ec2f77f9a44c8b74ab9217fc872e3259c13db9c2",
+        "library/std/text/intervals.es": "blake3:6d6fbdbde206ad645d8a4ba3a2f4d95842f91d4d638d1be91c6fa581a8b803ee",
+        "library/std/text/lazy.es": "blake3:75aeea446239c5e2db9bdaac55241ef47e110f28cb039276b31bd41c2b4bb8e2",
+        "library/std/text/mod.es": "blake3:31f5d61da960c96dcaf8063be7435fb2276129089323196cb9eb2c691942f203",
+        "library/std/text/native.es": "blake3:cef571be3c834622799da4ab58ff62e1340efd36db53636cbfe63252d88b84f2",
+        "library/std/text/pattern.es": "blake3:6e8635950a15d6d53d495ce1ac9bedb80841ecb79d8f0c17b27b1552568de863",
+        "library/std/text/positions.es": "blake3:fc8a8ceb0f142c0e88ed07449f0d589cb10a8617d1be30ad60afa05aab2c1c20",
+        "library/std/text/replace.es": "blake3:c56ef9bce6ccd399d14e7a84ca36dcc6801a677dd3cb54008168f56481e3698b",
+        "library/std/text/search.es": "blake3:e2805ad860f09e531aae7a6613da6cbbbafeaace53d58c38d8d1691d769d579f",
+        "library/std/text/split.es": "blake3:9b1fc5cd6338933b8dcc15f9cd2e4237cf20c41fb4af42991eaee624415a572b",
+        "library/std/text/storage.es": "blake3:59e0d508c68bbdd466e2e041aa6f39d257e817d147c2ce46e019d169bb2f5e6f",
+        "library/std/text/unicode/casefold.es": "blake3:23c2140567820aaecd2be66829a0c64904ad3a51a634a667626dcb54dd982b61",
+        "library/std/text/unicode/complete.es": "blake3:743d8ee6fe4e1f2dccc0b25370778695da113554748d09405ee772c3566c94c3",
+        "library/std/text/unicode/fold_data.es": "blake3:b5b06f7c64213cfb0fc46724842280228a40890040c0d5f65d623a03c62f43cf",
+        "library/std/text/unicode/grapheme_data.es": "blake3:f5efd01dec7ce41c8d40a4dc0566c7d6244637f96aea9834378389b5632131b3",
+        "library/std/text/unicode/normalization_data.es": "blake3:c5c6b5604ef21a4a7af8590264f22066a433408f5bff0c229ce40fc0a1dae93b",
+        "library/std/text/unicode/normalize.es": "blake3:6f3802475d9098feca10b1a4d5022e544c1d0f0157bc91a4cdf7dc9cc23d1678",
+        "library/std/text/unicode/quick_check_data.es": "blake3:a7beb4442d1b3b60e3ab3120ff61d6f236b6b0d4a52969b5076cac75005087e7",
+        "library/std/text/unicode/segment.es": "blake3:650f0122e4da5b496f8b5393b2baacb662f3e2d1f40ae6c7da865b88242be9c4",
+        "library/std/tls/complete.es": "blake3:a9b010fcb043ae24b3cf88e2519b53b78bf50ee8d87ac50eacf7cc7a9addc02e",
+        "library/std/tool/mod.es": "blake3:fbb5194b035830ab1ca1d2684608eeaddeb4b45de081283e11e9989a7ef91efa"
+      }
+    },
+    "receipt": "etas-std-install-v2\n000000000000000018ebeefe56bd9f0b-815-aarch64-unknown-linux-gnu\nblake3:03dce1b46258d4b35abc2148fd79c09201c444423e130275f0ce4313005fd1b5\n"
+  },
+  "selected_source": {
+    "root": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-02412-staged-review-7u52f_x2",
+    "base_commit": "2105a26479e650f75aaa746b8a5daa494051aa4d",
+    "source_count": 468,
+    "source_manifest_sha256": "814f21b0decb39c4b809d63618bc7486ea673eeb504f60a841bc03d51ed350c9",
+    "changed_etas_sources": [
+      "src/nomo/adapters/filesystem/migration_packet.es",
+      "src/nomo/adapters/filesystem/native_migration.es",
+      "src/nomo/adapters/filesystem/project_migration.es"
+    ]
+  },
+  "source_check": {
+    "exit": 0,
+    "elapsed_seconds": 40.19061868600011,
+    "binary_sha256": "c5fcbfe68c663574d95637d37e7399b7f2f835b20a0c86e95a3425127434af66",
+    "sdk_manifest_sha256": "214ed5d2dfc54e54094c41d92781a9828087711f8a21c1a1dc37014f5cf5bb29",
+    "sdk_artifact": "blake3:f04a40df141d16efc1a8b604d79ae817affc31fc11d8aa8ecf6e1dff3124877e",
+    "resources": {
+      "memory.max": "4294967296",
+      "memory.peak": "2961764352",
+      "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+      "cpu.max": "400000 100000",
+      "pids.max": "256"
+    }
+  },
+  "architecture": {
+    "exit": 0,
+    "stdout": "PASS architecture: 468 modules, 3508 imports, 48 identity-only compatibility leaves\n",
+    "stderr": ""
+  },
+  "sloc": {
+    "inclusive_core": 23234,
+    "counter": "physical-v4",
+    "temporary_user_waiver": true
+  },
+  "final_launcher_snapshot": {
+    "root": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-02412-final-review-xojte8cf",
+    "source_manifest_sha256": "814f21b0decb39c4b809d63618bc7486ea673eeb504f60a841bc03d51ed350c9",
+    "same_checked_etas_sources": true,
+    "default_graph_identity": "passed latest02412"
+  },
+  "owned_migration_fix": {
+    "cause": "A JSON nullable/string exit code was declared as Etas Option; neutral Message.cast requires enum host variants. JSON maps through explicit wire records instead.",
+    "implementation": "Move existing native migration WireExitCode/exit_code projection to migration_packet and share it with project migration. Keep stored Option<i32>, old native data and domain types unchanged.",
+    "parser": "official std.json.parse and Message.cast unchanged; no alternate parser, codec or forced type anchor"
+  },
+  "old_0249_history": {
+    "evidence": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0249-to-02412-history-r3hvt66q",
+    "result": {
+      "exit": 0,
+      "source": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-project-state-migration-wxtv8bcc/state/conversations.sqlite3",
+      "source_sha256_before": "3ed8421f7e53d5cdf30d7f836879fabe99c308c24e8e897f333ba9e338422b44",
+      "source_sha256_after": "3ed8421f7e53d5cdf30d7f836879fabe99c308c24e8e897f333ba9e338422b44",
+      "selected": "fbf96b8ef197f98f283c9cb8788aa11c",
+      "expected_complete_events": 36,
+      "command": [
+        "docker",
+        "compose",
+        "--project-name",
+        "nomo-02412-history",
+        "--env-file",
+        "/dev/null",
+        "--file",
+        "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-02412-staged-review-7u52f_x2/compose.yaml",
+        "--file",
+        "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-02412-staged-review-7u52f_x2/config/etas-02412-official-compose.yaml",
+        "--file",
+        "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-02412-staged-review-7u52f_x2/config/local-tryout-compose.yaml",
+        "--file",
+        "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-02412-staged-review-7u52f_x2/config/etas-runtime-cache-compose.yaml",
+        "--file",
+        "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-02412-staged-review-7u52f_x2/config/nomo-native-compose.yaml",
+        "run",
+        "--rm",
+        "--no-deps",
+        "--pull",
+        "never",
+        "--tty=false",
+        "dev",
+        "/home/nomo/.cargo/etas-02412-release/staged-sdk/bin/etas",
+        "--no-config",
+        "--cache",
+        "off",
+        "run",
+        "/workspace",
+        "--flow",
+        "native_project",
+        "--profile",
+        "nomo-native",
+        "--allow-effects",
+        "--trace-out",
+        "/native-evidence/history.trace.json",
+        "--args",
+        "--workspace",
+        "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-project-state-migration-wxtv8bcc/project A",
+        "--id",
+        "fbf96b8ef197f98f283c9cb8788aa11c",
+        "--history"
+      ],
+      "qualification": "Coherent copy of actual 0.24.9 state containing an imported old journal and completed native undo. One ordinary 0.24.12 --history invocation, no original mutation, schema rewrite, model or project operation.",
+      "trace_outcome": {
+        "kind": "completed"
+      },
+      "local_work_settled": true,
+      "paired_requests": 224,
+      "host_actions": {
+        "Policy.evaluate": 112,
+        "Memory.read": 75,
+        "Memory.write": 1,
+        "Console.stdout_write": 36
+      },
+      "status": "passed",
+      "complete_events": 36,
+      "original_events_and_chunks_unchanged": true
+    }
+  },
+  "injected_tool_repro": {
+    "exit": 0,
+    "original_repro": "examples/repros/injected-tools-0246",
+    "source_sha256": "02f368dfde6af58b880347bce76360318bc2cee2c8480c0920bd6bac8fbd31ab",
+    "command": [
+      "docker",
+      "compose",
+      "--project-name",
+      "nomo-injected-tools-02412",
+      "--env-file",
+      "/dev/null",
+      "--file",
+      "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-02412-staged-review-7u52f_x2/compose.yaml",
+      "--file",
+      "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-02412-staged-review-7u52f_x2/config/etas-02412-official-compose.yaml",
+      "--file",
+      "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-02412-staged-review-7u52f_x2/config/etas-runtime-cache-compose.yaml",
+      "run",
+      "--rm",
+      "--no-deps",
+      "--pull",
+      "never",
+      "--tty=false",
+      "dev",
+      "/home/nomo/.cargo/etas-02412-release/staged-sdk/bin/etas",
+      "--no-config",
+      "--cache",
+      "off",
+      "check",
+      "--all",
+      "--format",
+      "json",
+      "/workspace/examples/repros/injected-tools-0246"
+    ],
+    "diagnostics": [],
+    "qualification": "Same original one-file #105 check, zero diagnostics. No model/tool runtime. The complete mutation-service injection candidate remains unselected."
+  },
+  "project_formal_migration": {
+    "root": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-project-state-migration-wxtv8bcc/production-02412",
+    "qualification": {
+      "status": "passed-formal-codec-all-rows-and-fresh-history",
+      "source": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-project-state-migration-wxtv8bcc/original/project.sqlite3",
+      "source_sha256": "0273fa79d1effcacad7125f1d0c8091350193effbe5a2fd08b0db1f22e968f92",
+      "source_unchanged": true,
+      "business_rows_compared": 66,
+      "source_rows": 25,
+      "migration_host_requests": 146,
+      "fresh_history_host_requests": 80,
+      "model_requests": 0,
+      "command_actions": 0,
+      "retained_reference": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-project-state-migration-wxtv8bcc"
+    },
+    "receipt": {
+      "status": "completed",
+      "source_database_sha256": "0273fa79d1effcacad7125f1d0c8091350193effbe5a2fd08b0db1f22e968f92",
+      "source_snapshot_sha256": "85b1148b5ea27ab0c0155f7f8a0812bf4e11f97ff54a91a28a194a8c939f4207",
+      "source_format": "project",
+      "rows": 25,
+      "source": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-project-state-migration-wxtv8bcc/original/project.sqlite3",
+      "state": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-project-state-migration-wxtv8bcc/production-02412/state",
+      "snapshots": null,
+      "project_files_backup": {
+        "format": "nomo-project-files-1",
+        "directories": [
+          "edits",
+          "jobs"
+        ],
+        "files": {
+          "edits/9a32cb707ad08036.json": {
+            "bytes": 455,
+            "sha256": "4cbc112240611a0b296f85e94a7491a696dbffb089e58d8c64a88452b2e98a04"
+          },
+          "edits/d47e1742530685e8.json": {
+            "bytes": 813,
+            "sha256": "66dc70fe12f0159d1a90e26d70712f740a165f5569ee1759c2614088e788a1af"
+          },
+          "jobs/2b7521d3044157ac/daemon.log": {
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "jobs/2b7521d3044157ac/output.log": {
+            "bytes": 5,
+            "sha256": "76d04b349840e2065f489c0dfa011445ae0ddb640254e93b7d4c6f7968decdfb"
+          },
+          "jobs/2b7521d3044157ac/status.json": {
+            "bytes": 342,
+            "sha256": "18be0f48264f53ef9372b4a99646377567e6678e58619c60dd7da4918803c601"
+          }
+        },
+        "native_import": "not-performed",
+        "scope": "Original edit snapshots, job status and raw output only. No native edit journal, job ownership, live handle or completed outcome is synthesized.",
+        "prepared_edits": [
+          "d47e1742530685e8",
+          "9a32cb707ad08036"
+        ],
+        "unowned_edits": [],
+        "prepared_jobs": [
+          "2b7521d3044157ac"
+        ]
+      },
+      "project_edit_import": {
+        "status": "completed",
+        "edits": [
+          "d47e1742530685e8",
+          "9a32cb707ad08036"
+        ],
+        "unowned_edits": []
+      },
+      "project_job_import": {
+        "status": "completed",
+        "jobs": [
+          "2b7521d3044157ac"
+        ],
+        "ownership": "workspace",
+        "live_handles": false
+      },
+      "scope": "Shipping project database only: original session IDs, full source archives, summary fences and catalogue selection. Source event IDs map to native local positions; original IDs, timestamps, parent, kind, data and measured usage remain in each source archive and backup. Owned editor journals map to native journals/steps with original archive provenance and materialized before/after bytes and file modes. Applying records stay interrupted; the source did not record directory modes, timestamps, links or per-step dispatch. Workspace-owned job metadata and raw merged output map to read-only native archives; original status JSON and all edit/job files remain under input. No conversation ownership, live handles or current liveness is inferred. Unowned journals and bounded legacy sessions are not migrated. The native allowance ledger begins at zero for new execution. No command, model, recovery or live-handle replay.",
+      "exit": 0,
+      "source_database_after": "0273fa79d1effcacad7125f1d0c8091350193effbe5a2fd08b0db1f22e968f92",
+      "report": {
+        "rows": 25.0,
+        "source_sha256": "85b1148b5ea27ab0c0155f7f8a0812bf4e11f97ff54a91a28a194a8c939f4207"
+      }
+    },
+    "trace": {
+      "path": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-project-state-migration-wxtv8bcc/production-02412/trace/trace.json",
+      "sha256": "88ef381067e7bac3483a427d33de7f81ebf8a229bd71c89a33a1c022616b33db",
+      "outcome": {
+        "kind": "completed"
+      },
+      "settled": true,
+      "paired_requests": 146,
+      "host_actions": {
+        "Fs.read": 1,
+        "Memory.write": 117,
+        "Memory.read": 27,
+        "Console.stdout_write": 1
+      }
+    }
+  },
+  "native_0135_formal_migration": {
+    "root": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-state-migration-x8kruph6",
+    "result": {
+      "status": "passed",
+      "migration_exit": 0,
+      "source_before": "eac707ef17f883505677ff3a905a089cd709ff5d57942979b4ea5581411808a5",
+      "source_after": "eac707ef17f883505677ff3a905a089cd709ff5d57942979b4ea5581411808a5",
+      "original_rows": 197,
+      "unchanged_original": true,
+      "exact_all_row_comparison": true,
+      "migrated_store_paths": 10,
+      "complete_events": 91,
+      "migration_host_requests": 199,
+      "restore_host_requests": 564,
+      "model_requests": 0,
+      "command_actions": 0,
+      "qualification": "One actual old native image, exact all-key/all-value comparison and fresh status/history. No new adverse cases. Store kinds absent from this source retain source-check-only scope; shipping Python archive/legacy-session migration is separate."
+    },
+    "receipt": {
+      "status": "completed",
+      "source_database_sha256": "eac707ef17f883505677ff3a905a089cd709ff5d57942979b4ea5581411808a5",
+      "source_snapshot_sha256": "c84230fea83808433c2757493e4034f5a4f3eb74176166fd56b81e9536e271f1",
+      "source_format": "native-0135",
+      "rows": 197,
+      "source": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-mutations-554gkkl2/state/conversations.sqlite3",
+      "state": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-state-migration-x8kruph6/migrated/state",
+      "snapshots": {
+        "directories": [
+          "edits"
+        ],
+        "referenced_snapshots": 9
+      },
+      "project_files_backup": null,
+      "project_edit_import": null,
+      "project_job_import": null,
+      "scope": "Native format-3 records only. Original receipts/CAS namespaces remain in the source backup; fresh SDK writes establish new destination versions. No command, model, recovery or live-handle replay.",
+      "exit": 0,
+      "source_database_after": "eac707ef17f883505677ff3a905a089cd709ff5d57942979b4ea5581411808a5",
+      "report": {
+        "rows": 197.0,
+        "source_sha256": "c84230fea83808433c2757493e4034f5a4f3eb74176166fd56b81e9536e271f1"
+      }
+    },
+    "trace": {
+      "path": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-state-migration-x8kruph6/migrated/trace/trace.json",
+      "sha256": "569027298eb8744624f34c429761ec0b9d9bc9be3d5ddd2f58c52cb120f3c0e5",
+      "outcome": {
+        "kind": "completed"
+      },
+      "settled": true,
+      "paired_requests": 199,
+      "host_actions": {
+        "Fs.read": 1,
+        "Memory.write": 197,
+        "Console.stdout_write": 1
+      }
+    }
+  },
+  "original_model_mutations": {
+    "root": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-mutations-guvqh1wj",
+    "synthetic_model_requests": 4,
+    "trace": {
+      "path": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-mutations-guvqh1wj/native/trace.json",
+      "sha256": "1caa9bb6f05e5fd0de8848f2cc0a21a9a200924806e5505b44dfb7a01d55eb06",
+      "outcome": {
+        "kind": "completed"
+      },
+      "settled": true,
+      "paired_requests": 1932,
+      "host_actions": {
+        "Policy.evaluate": 953,
+        "Memory.read": 369,
+        "Memory.write": 430,
+        "Console.stdout_write": 60,
+        "Console.stdin_read_line": 5,
+        "Fs.list": 46,
+        "Agentic.step": 4,
+        "Approval.request": 32,
+        "Command.run": 30,
+        "Fs.atomic_replace": 2,
+        "Fs.read": 1
+      }
+    },
+    "original_driver": "passed unchanged business assertions",
+    "authority_audit": "passed: each 30 Command.run / 2 Fs.atomic_replace has its own canonical native approval",
+    "restored": [
+      "note text",
+      "move binary bytes",
+      "deleted directory binary bytes",
+      "file mode 0751",
+      "absence of new/ and extra/"
+    ],
+    "session": "pending empty; ledger.tools=2"
+  },
+  "shipping_project": {
+    "root": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-project-native-u0opb_1y",
+    "synthetic_model_requests": 6,
+    "status": "passed original creation/check/full-history/model-compaction/process-reopen consumer"
+  },
+  "specification": {
+    "retrieved_on": "2026-11-27",
+    "repository": "https://github.com/etas-project/etas",
+    "revision": "e9a84176dbbc532f78bd2b9afd39321f0563d00d",
+    "cli_version": "0.24.12",
+    "kind": "language specification snapshot, not compiler/runtime acceptance",
+    "files": [
+      {
+        "path": "docs/design/01-overview.md",
+        "git_blob_sha": "152aedbfa53dee628b7cdac62f6aec7d2bb1e003",
+        "url": "https://github.com/etas-project/etas/blob/e9a84176dbbc532f78bd2b9afd39321f0563d00d/docs/design/01-overview.md"
+      },
+      {
+        "path": "docs/design/02-general-programming-constructs.md",
+        "git_blob_sha": "54e4081ed5ad189692892e76f7c6c4a1f63cf5e4",
+        "url": "https://github.com/etas-project/etas/blob/e9a84176dbbc532f78bd2b9afd39321f0563d00d/docs/design/02-general-programming-constructs.md"
+      },
+      {
+        "path": "docs/design/03-agents-tools-prompts-memory.md",
+        "git_blob_sha": "4df06c650f752d84a31dd79d3f731128339a83ef",
+        "url": "https://github.com/etas-project/etas/blob/e9a84176dbbc532f78bd2b9afd39321f0563d00d/docs/design/03-agents-tools-prompts-memory.md"
+      },
+      {
+        "path": "docs/design/04-flows-human-gates-and-protocols.md",
+        "git_blob_sha": "960ed9e91741552506530657eddecf8f593b990b",
+        "url": "https://github.com/etas-project/etas/blob/e9a84176dbbc532f78bd2b9afd39321f0563d00d/docs/design/04-flows-human-gates-and-protocols.md"
+      },
+      {
+        "path": "docs/design/05-type-system-and-errors.md",
+        "git_blob_sha": "cc396d648e32981c133221a52d31aa7d76f1057b",
+        "url": "https://github.com/etas-project/etas/blob/e9a84176dbbc532f78bd2b9afd39321f0563d00d/docs/design/05-type-system-and-errors.md"
+      },
+      {
+        "path": "docs/design/06-effect-system-and-inference.md",
+        "git_blob_sha": "7b05404d083f11a2606dc5bca1c3dad21640b747",
+        "url": "https://github.com/etas-project/etas/blob/e9a84176dbbc532f78bd2b9afd39321f0563d00d/docs/design/06-effect-system-and-inference.md"
+      },
+      {
+        "path": "docs/design/07-examples.md",
+        "git_blob_sha": "48b20b7893bc6076c0986e21822945448b47fed8",
+        "url": "https://github.com/etas-project/etas/blob/e9a84176dbbc532f78bd2b9afd39321f0563d00d/docs/design/07-examples.md"
+      },
+      {
+        "path": "docs/design/09-syntax-principles.md",
+        "git_blob_sha": "4844888fbbeb6b42069f68f1f5ccb4b979485813",
+        "url": "https://github.com/etas-project/etas/blob/e9a84176dbbc532f78bd2b9afd39321f0563d00d/docs/design/09-syntax-principles.md"
+      },
+      {
+        "path": "docs/design/14-safety-analysis-static-dynamic.md",
+        "git_blob_sha": "b2ce96244fbe81498d9603d9881142f0081c899f",
+        "url": "https://github.com/etas-project/etas/blob/e9a84176dbbc532f78bd2b9afd39321f0563d00d/docs/design/14-safety-analysis-static-dynamic.md"
+      },
+      {
+        "path": "docs/design/15-package-management.md",
+        "git_blob_sha": "cccb8141d3a84a415e91c63bbf8e2cb2b57af62b",
+        "url": "https://github.com/etas-project/etas/blob/e9a84176dbbc532f78bd2b9afd39321f0563d00d/docs/design/15-package-management.md"
+      },
+      {
+        "path": "docs/design/16-concurrency.md",
+        "git_blob_sha": "2845e61fa1aa3a8fbb5b455d93c8b9c1bdb0ec3e",
+        "url": "https://github.com/etas-project/etas/blob/e9a84176dbbc532f78bd2b9afd39321f0563d00d/docs/design/16-concurrency.md"
+      },
+      {
+        "path": "docs/design/18-reflection-and-checked-code-generation.md",
+        "git_blob_sha": "1bd51d6e0e3f2be4e50f1968590fb9b80748df88",
+        "url": "https://github.com/etas-project/etas/blob/e9a84176dbbc532f78bd2b9afd39321f0563d00d/docs/design/18-reflection-and-checked-code-generation.md"
+      },
+      {
+        "path": "docs/design/19-standard-library.md",
+        "git_blob_sha": "978e5a73df991b77f0bd1f2c74b0e503968adfee",
+        "url": "https://github.com/etas-project/etas/blob/e9a84176dbbc532f78bd2b9afd39321f0563d00d/docs/design/19-standard-library.md"
+      },
+      {
+        "path": "docs/design/20-lexical-capture.md",
+        "git_blob_sha": "a8cd8a94617e40e6d6dfe621d94f0b5f9267a658",
+        "url": "https://github.com/etas-project/etas/blob/e9a84176dbbc532f78bd2b9afd39321f0563d00d/docs/design/20-lexical-capture.md"
+      },
+      {
+        "path": "docs/design/README.md",
+        "git_blob_sha": "70c69e09ef0f6cf231a3a1e55b31384f4c45821c",
+        "url": "https://github.com/etas-project/etas/blob/e9a84176dbbc532f78bd2b9afd39321f0563d00d/docs/design/README.md"
+      }
+    ],
+    "all_15_git_blob_hashes_match": true
+  },
+  "remaining_scope": "Full thirteen-item goal remains active. The formal project/native codecs and original model undo now pass their recorded scopes. Independent cumulative/context/provider-output controls #125, full native read/edit/check/Git/new-process acceptance, complete service-injection integration, capture/Task/Clock/canonical approval/process capabilities, bounded legacy sessions, in-loop compaction and default native cutover remain required. Earlier consumers retain their own recorded graph/source scope. No real provider or new adverse matrix."
+}

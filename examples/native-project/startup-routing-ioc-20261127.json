@@ -1,0 +1,278 @@
+{
+  "date": "2026-11-27",
+  "status": "source-checked-functional-completion-after-retained-continuations",
+  "compiler_receipt": "examples/native-project/compiler-0244-20261127.json",
+  "checked_snapshot": {
+    "root": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-startup-routing-0244-yxb2mgwc",
+    "tree": "e3775535e0f3baea5c4b9423db8a97bdd35e4efa",
+    "evidence": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-startup-routing-0244-yxb2mgwc/compiler-evidence",
+    "overlay": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-startup-routing-0244-yxb2mgwc/compiler-compose.json",
+    "source_count": 463,
+    "source_manifest_sha256": "dc18058387ae1edcb21d4ad92109b29bd1deb593be9b7593e00168084d4186e8"
+  },
+  "runtime_snapshot": {
+    "root": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-startup-routing-0244-a4r8t1rh",
+    "tree": "1cef75242b292e30a33c41950fdcb9665677da0f",
+    "evidence": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-startup-routing-0244-a4r8t1rh/compiler-evidence",
+    "overlay": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-startup-routing-0244-a4r8t1rh/compiler-compose.json",
+    "source_count": 463,
+    "source_manifest_sha256": "dc18058387ae1edcb21d4ad92109b29bd1deb593be9b7593e00168084d4186e8"
+  },
+  "full_check": {
+    "exit": 0,
+    "elapsed_seconds": 67.39472903,
+    "resources": {
+      "memory.max": "4294967296",
+      "memory.peak": "3332186112",
+      "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+      "cpu.max": "400000 100000",
+      "pids.max": "256"
+    }
+  },
+  "diagnostics": 0,
+  "architecture": {
+    "modules": 463,
+    "imports": 3442,
+    "preserved_identities": 48,
+    "status": "passed"
+  },
+  "implementation": [
+    "Application-owned LaunchRequest carries resolved workspace and argv; the filesystem adapter publishes its JSON into the private control mount.",
+    "Cross-project exact IDs and all-session chooser route before workspace-bound actions; read-only foreign status/history use only saved data.",
+    "Existing-Host selection runs a separate native Attach entry under the endpoint lock. The resident adopts the saved selection at the next command boundary; the transport injects no startup command or consent.",
+    "One-shot requests use a separate native invocation. Existing endpoints retain their original check override and report an unsupported replacement instead of dropping it.",
+    "The known older folder-only control format is adapted explicitly; older Hosts keep bare reconnect and are not silently replaced."
+  ],
+  "runtime": {
+    "status": "functional-pass-after-explicit-retained-continuations",
+    "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-nfnsjgor",
+    "functional": {
+      "functional_status": "passed-after-retained-startup-continuations",
+      "model_http_requests": 0,
+      "native_command_dispatches": 11,
+      "native_control_write_approvals": 3,
+      "native_approvals": 14,
+      "actual_host_invocations": 3,
+      "project_attachments": 5,
+      "first_worker": "779b5b8d8491ddcad8a85428fe69c1f6df936c9a947d866fbc3370845e18a0f6",
+      "second_worker": "ca6af029a72aa64d5699fd0d0bdf12e0aac20ff1b0a48be557187586df66d75a",
+      "first_etas_pid": 826,
+      "second_etas_pid": 903,
+      "selected_paths": [
+        "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-nfnsjgor/second 鹈鹕",
+        "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-nfnsjgor/first project",
+        "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-nfnsjgor/second 鹈鹕"
+      ],
+      "restored_status": {
+        "first_user": -1.0,
+        "id": "native-1",
+        "ledger": {
+          "compactions": 0.0,
+          "context_bytes": 0.0,
+          "generation_allowance": 0.0,
+          "tools": 1.0,
+          "turns": 0.0
+        },
+        "next_event": 2.0,
+        "pending": "",
+        "summary_event": -1.0,
+        "summary_through": -1.0,
+        "title": "Second project",
+        "workspace": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-nfnsjgor/second 鹈鹕"
+      },
+      "traces": [
+        "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-nfnsjgor/traces/run-Xdmev1GO/trace.json",
+        "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-nfnsjgor/traces/run-5yrLojCF/trace.json",
+        "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-nfnsjgor/traces/run-tmNVuIEU/trace.json"
+      ],
+      "scope": "Etas-owned project selection, same-Host project return and original live job Unicode I/O/EOF, separate histories, startup chooser reattaching another retained Host",
+      "startup_routing": {
+        "status": "passed",
+        "first_worker": "27472a32272bb1315e611191b567b81561734e5862a746369571dd22d3be3cbd",
+        "first_etas_pid": 1270,
+        "second_worker": "95454c120ecf0ce23fc05c5732002133f5df1d0d02cdb5beff9af5018b00ba0d",
+        "additional": {
+          "first_user": -1.0,
+          "id": "native-2",
+          "ledger": {
+            "compactions": 0.0,
+            "context_bytes": 0.0,
+            "generation_allowance": 0.0,
+            "tools": 0.0,
+            "turns": 0.0
+          },
+          "next_event": 0.0,
+          "pending": "",
+          "summary_event": -1.0,
+          "summary_through": -1.0,
+          "title": "Additional A",
+          "workspace": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-nfnsjgor/first project"
+        },
+        "resumed": {
+          "first_user": -1.0,
+          "id": "native-0",
+          "ledger": {
+            "compactions": 0.0,
+            "context_bytes": 0.0,
+            "generation_allowance": 0.0,
+            "tools": 8.0,
+            "turns": 0.0
+          },
+          "next_event": 16.0,
+          "pending": "",
+          "summary_event": -1.0,
+          "summary_through": -1.0,
+          "title": "Resumed A",
+          "workspace": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-nfnsjgor/first project"
+        },
+        "foreign_status": {
+          "first_user": -1.0,
+          "id": "native-1",
+          "ledger": {
+            "compactions": 0.0,
+            "context_bytes": 0.0,
+            "generation_allowance": 0.0,
+            "tools": 1.0,
+            "turns": 0.0
+          },
+          "next_event": 2.0,
+          "pending": "",
+          "summary_event": -1.0,
+          "summary_through": -1.0,
+          "title": "Second project",
+          "workspace": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-nfnsjgor/second 鹈鹕"
+        },
+        "forwarded": {
+          "first_user": -1.0,
+          "id": "native-3",
+          "ledger": {
+            "compactions": 0.0,
+            "context_bytes": 0.0,
+            "generation_allowance": 0.0,
+            "tools": 0.0,
+            "turns": 0.0
+          },
+          "next_event": 0.0,
+          "pending": "",
+          "summary_event": -1.0,
+          "summary_through": -1.0,
+          "title": "Forwarded startup",
+          "workspace": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-nfnsjgor/second 鹈鹕"
+        },
+        "native_command_actions_including_original_case": 11,
+        "native_control_actions_including_original_case": 5,
+        "traces": 11,
+        "scope": "Same-Host exact startup selection, global chooser to a retained foreign Host, isolated foreign-ID inspection, and --open preserving new/title/status. No startup command or consent is sent to resident stdin.",
+        "second_container_init_pid": 1118,
+        "second_etas_pid": null,
+        "second_pid_qualification": "The same-Etas-PID assertion passed in the preceding continuation before the offline handoff error. Its numeric value was not retained; the saved checkpoint contains the container init PID only."
+      },
+      "initial_driver_status": "log-tag observer and offline transport handoff failures retained separately",
+      "source_scope": "Same checked Etas code/0.24.4 SDK; Python log tag and offline Bash handoff corrected. Explicit empty/status observer input is recorded; no consent or tool command generated by the launcher. Source handoff was consumed once, not reissued."
+    },
+    "traces": [
+      {
+        "path": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-nfnsjgor/traces/run-5yrLojCF/trace.json",
+        "sha256": "a37358a80c67eb4e0a5a8bc10b0e8d7674246d6fc12e5748b6e1ee332ee9c5cc",
+        "paired_requests": 137,
+        "outcome": "completed",
+        "settled": true
+      },
+      {
+        "path": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-nfnsjgor/traces/run-BBn80uM1/trace.json",
+        "sha256": "67887c442e690c54d926e0dc178ed6e743952eb03686089fbb7b5622cf698240",
+        "paired_requests": 22,
+        "outcome": "completed",
+        "settled": true
+      },
+      {
+        "path": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-nfnsjgor/traces/run-CxmzlgxI/trace.json",
+        "sha256": "1d19ba0bcf90b88e50f710e4f2478f60d38a55b29f913e5ea678a69b121a16df",
+        "paired_requests": 26,
+        "outcome": "completed",
+        "settled": true
+      },
+      {
+        "path": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-nfnsjgor/traces/run-QD5NBUK3/trace.json",
+        "sha256": "1eb9ecc3b1ddcb051ca68669c2b8bdb0b1ad686257aada3480f78d1b1f8909d0",
+        "paired_requests": 20,
+        "outcome": "completed",
+        "settled": true
+      },
+      {
+        "path": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-nfnsjgor/traces/run-Xdmev1GO/trace.json",
+        "sha256": "9d1ce96c411658a673c69645249a96c4914499b2a28edd83a0a2eddeb8b4da33",
+        "paired_requests": 710,
+        "outcome": "completed",
+        "settled": true
+      },
+      {
+        "path": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-nfnsjgor/traces/run-eeiQS1vr/trace.json",
+        "sha256": "2e68bf49398268fd83ec422068fd2219561b5256585bbd26713cb07a60082581",
+        "paired_requests": 52,
+        "outcome": "completed",
+        "settled": true
+      },
+      {
+        "path": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-nfnsjgor/traces/run-hKvrPg6n/trace.json",
+        "sha256": "f59b2c08686339bb27b4b10728ebd01eb408a9bfbdabb364265a2945122275d1",
+        "paired_requests": 84,
+        "outcome": "completed",
+        "settled": true
+      },
+      {
+        "path": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-nfnsjgor/traces/run-kgmKC9z2/trace.json",
+        "sha256": "db6e9ad3b10e867c2d5aef6c3174eb88b3ebcf69320e54d12cf9be743b6199d8",
+        "paired_requests": 5,
+        "outcome": "completed",
+        "settled": true
+      },
+      {
+        "path": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-nfnsjgor/traces/run-kxnzkvLy/trace.json",
+        "sha256": "27525f9cdba2f764a98b64c0c33f3bd1a9b0ee57b433166c1199a9ee41d936df",
+        "paired_requests": 25,
+        "outcome": "completed",
+        "settled": true
+      },
+      {
+        "path": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-nfnsjgor/traces/run-rUdra4ER/trace.json",
+        "sha256": "41da4f3ad0bc506e3c2655da3a0c93800a4012d76d8ab08226ed7961e175b36b",
+        "paired_requests": 10,
+        "outcome": "completed",
+        "settled": true
+      },
+      {
+        "path": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-projects-nfnsjgor/traces/run-tmNVuIEU/trace.json",
+        "sha256": "cad60b78653ebef5e869b13833a3d22bb177fc2a5cd94feb3f90a64b0feed722",
+        "paired_requests": 17,
+        "outcome": "completed",
+        "settled": true
+      }
+    ],
+    "paired_requests": 1108,
+    "actions": {
+      "Policy.evaluate": 546,
+      "Memory.read": 248,
+      "Memory.write": 150,
+      "Console.stdout_write": 99,
+      "Console.stdin_read_line": 29,
+      "Fs.read": 2,
+      "Fs.list": 2,
+      "Approval.request": 16,
+      "Fs.atomic_replace": 5,
+      "Command.start": 1,
+      "Command.reconnect": 5,
+      "Command.read": 3,
+      "Command.write": 2
+    },
+    "scope": "0.24.4 exact checked Etas source, with Python log tag and offline Bash delivery corrections; explicit idle empty/status fixture observations are retained. Final newline prompt source fix is not exercised by these old already-running Hosts."
+  },
+  "initial_failures": [
+    "Non-ID previous-exit message used the WORKER tag; STATE now owns that message. Original observer failure is retained.",
+    "Initial unterminated prompt is omitted by Docker JSON log replay. Explicit empty/status fixture observation on the same idle Hosts is retained; the separate complete-line prompt fix is pending qualification.",
+    "Offline direct invocation left its completed control file unconsumed. The Bash launcher now delivers it; the already-approved request was consumed once and only its target was invoked."
+  ],
+  "qualification": "Original A→B→A live-job/Unicode/EOF and approvals pass, then remaining native-2/exact-ID/global chooser/foreign inspection/forwarded new-title-status requirements finish on the same retained invocation. This is not a clean first-driver pass. Eleven traces complete/settle with 1,108 paired requests, 11 command and 5 private control actions, strict approval audit and zero model requests. The complete-line prompt fix and current/new compiler production acceptance remain separate. Pending-approval startup selection, existing-Host check-override replacement, activity/true --latest, archive migration, continuous capture and default cutover are not qualified by this case.",
+  "real_provider_requests": 0,
+  "new_adverse_matrix": false
+}

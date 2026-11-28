@@ -4,28 +4,44 @@ import std.io.println;
 import std.io.IOError as ConsoleError;
 import std.fs.IOError as FileError;
 import std.effects.Fs;
-import nomo.tools.workspace.ReadOnlyRoot;
-import std.text.{char_count as len, split};
-import nomo.core.conversation.{Event, State};
-import nomo.model.model_tool_contract.{Session, LoopTurn};
-import nomo.model.model_tool_contract.Context as ChildContext;
-import nomo.model.model_tool_contract.context_error as child_context_error;
-import nomo.harness.harness_tool_contract.{Ledger, Observed};
-import nomo.harness.harness_tool_contract.numbers as canonical_numbers;
-import nomo.harness.harness_model_tools.{numbers as legacy_numbers, child_turn};
-import nomo.harness.harness_tool_chat_contract.{Previous, Context, Invocation, Completed, TurnResult, empty, fresh_invocation, seed, context_error};
-import nomo.harness.harness_tool_chat_controller.run_turn_controller;
-import nomo.harness.harness_tool_chat.run_turn;
-import nomo.harness.legacy_chat_stages.LegacyChatStages;
-import nomo.entry.harness_model_tools_chat.run as chat_run;
-import nomo.entry.harness_checkpoint_entry.{run_init, run_save, run_show};
-import nomo.entry.harness_successor_entry.{run_continue, run_show as successor_show};
+import nomo.application.resources.ReadOnlyRoot;
+import std.text.char_count as len;
+import std.text.split;
+import nomo.domain.conversation.Event;
+import nomo.domain.conversation.State;
+import nomo.domain.harness.loop.Session;
+import nomo.domain.harness.loop.LoopTurn;
+import nomo.domain.harness.loop.Context as ChildContext;
+import nomo.domain.harness.loop.context_error as child_context_error;
+import nomo.domain.harness.loop.ReadLedger;
+import nomo.domain.harness.read.Observed;
+import nomo.domain.harness.read.numbers as canonical_numbers;
+import nomo.domain.harness.read.numbers as legacy_numbers;
+import nomo.bootstrap.harness.ascii_read_child_turn as child_turn;
+import nomo.domain.harness.chat.Previous;
+import nomo.domain.harness.chat.Invocation;
+import nomo.domain.harness.chat.Context;
+import nomo.domain.harness.chat.Completed;
+import nomo.domain.harness.chat.TurnResult;
+import nomo.domain.harness.chat.empty;
+import nomo.domain.harness.chat.fresh_invocation;
+import nomo.domain.harness.chat.seed;
+import nomo.domain.harness.chat.chat_context_error as context_error;
+import nomo.bootstrap.harness.ascii_chat_run_turn_controller as run_turn_controller;
+import nomo.bootstrap.harness.harness_tool_chat_run_turn as run_turn;
+import nomo.application.harness.ports.LegacyChatStages;
+import nomo.adapters.cli.harness.harness_model_tools_chat_run as chat_run;
+import nomo.adapters.cli.checkpoints.harness_checkpoint_entry_run_init as run_init;
+import nomo.adapters.cli.checkpoints.run_save;
+import nomo.adapters.cli.checkpoints.harness_checkpoint_entry_run_show as run_show;
+import nomo.adapters.cli.checkpoints.run_continue;
+import nomo.adapters.cli.checkpoints.harness_successor_entry_run_show as successor_show;
 
 // This exact shape/helper is copied from the unchanged original pure fixture.
 // Only its original zero_call_child_context_proven Check is embedded below.
-type OriginalCheck = { label: string, mode: string, ledger: Ledger, usage: Ledger, maximum: Ledger, invocation: Invocation,
+type OriginalCheck = { label: string, mode: string, ledger: ReadLedger, usage: ReadLedger, maximum: ReadLedger, invocation: Invocation,
     prior: Previous, context: Context, child: Session, legacy: Session, status: i32, allowed: Array<string>,
-    accepted: bool, expected_ledger: Ledger, expected_observed: Observed };
+    accepted: bool, expected_ledger: ReadLedger, expected_observed: Observed };
 type Vector = { label: string, request: string, allowed: Array<string>, before: Invocation, plan: Context,
     aggregate: Context, task: string, selected: State, child: LoopTurn, raw_plan: string, answer: string,
     expected: TurnResult };
@@ -65,12 +81,12 @@ flow exercise(item: Vector, invocation: Invocation) -> TurnResult {
             if value.phase != "plan" && value.phase != "aggregate" { abort("unknown main phase"); }
             println("PORT " + item.label + " main." + value.phase);
             let response = if value.phase == "plan" { item.raw_plan } else { item.answer };
-            resume response;
+            response
         }
         LegacyChatStages.child(task, files, selected, _, _, _, _) => {
             if task != item.task || files != item.allowed || selected != item.selected { abort("complete child task/allowed/State differs"); }
             println("PORT " + item.label + " child");
-            resume item.child;
+            item.child
         }
     };
     if actual != item.expected { abort("whole TurnResult/Invocation/Completed/Event value differs"); }
@@ -78,7 +94,7 @@ flow exercise(item: Vector, invocation: Invocation) -> TurnResult {
     return actual;
 }
 public flow numbers_probe(args: Array<string>) -> bool {
-    let value = Ledger { steps = 12, calls = 7, tokens = 14336, tools = 1, scan = 4096 };
+    let value = ReadLedger { steps = 12, calls = 7, tokens = 14336, tools = 1, scan = 4096 };
     let expected = "steps=12 calls=7 tokens=14336 tools=1 scan=4096";
     return canonical_numbers(value) == expected && legacy_numbers(value) == expected;
 }
@@ -110,7 +126,7 @@ public flow backend_abort(args: Array<string>) -> i32 {
             println("PORT source_abort main.plan");
             abort("D7_EXPECTED_SOURCE_STAGE_ABORT");
         }
-        LegacyChatStages.child(_, _, _, _, _, _, _) => { abort("UNEXPECTED child after source abort"); }
+        LegacyChatStages.child(_, _, _, _, _, _, _) => abort("UNEXPECTED child after source abort");
     };
     println("UNREACHABLE source abort returned TurnResult");
     return 0;

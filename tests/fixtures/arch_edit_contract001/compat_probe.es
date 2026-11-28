@@ -1,12 +1,15 @@
 module app.contract_probe;
 
 import std.io.println;
-import nomo.tools.edit_contract.{Prepared, Selector, Confirmed, prepare_original};
-import nomo.tools.edit_file.Prepared as AdapterPrepared;
-import nomo.tools.edit_file.prepare_original as adapter_prepare_original;
-import nomo.entry.edit_coordinator.Selector as CoordinatorSelector;
-import nomo.entry.edit_coordinator.Confirmed as CoordinatorConfirmed;
-import nomo.session.edit_operation.Binding;
+import nomo.domain.editing.Prepared;
+import nomo.domain.editing.Selector;
+import nomo.domain.editing.Confirmed;
+import nomo.domain.editing.prepare_original;
+import nomo.domain.editing.Prepared as AdapterPrepared;
+import nomo.domain.editing.prepare_original as adapter_prepare_original;
+import nomo.domain.editing.Selector as CoordinatorSelector;
+import nomo.domain.editing.Confirmed as CoordinatorConfirmed;
+import nomo.domain.editing.Binding;
 
 flow adapter_value(value: AdapterPrepared) -> Prepared { return value; }
 flow selector_value(value: CoordinatorSelector) -> Selector { return value; }
@@ -15,7 +18,7 @@ public flow pure_probe() -> bool {
     let direct = match prepare_original("note.txt", "old", "old", "new") { Ok(value) => value, Err(_) => { return false; } };
     let facade = match adapter_prepare_original("note.txt", "old", "old", "new") { Ok(value) => value, Err(_) => { return false; } };
     let selector = Selector { id = "op", workspace = "owned", path = "note.txt" };
-    let binding = Binding { id = "op", workspace = "owned", region = "nomo.tools.edit_file.EditableRoot", path = "note.txt",
+    let binding = Binding { id = "op", workspace = "owned", region = "nomo.application.resources.EditableRoot", path = "note.txt",
         request_digest = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         before_digest = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
         after_digest = "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc", before_bytes = 3, after_bytes = 3 };

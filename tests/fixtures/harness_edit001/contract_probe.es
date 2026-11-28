@@ -4,11 +4,21 @@ import std.io.println;
 import std.text.split;
 import std.bytes.len as byte_count;
 import std.codec.text.utf8_encode;
-import std.json.{JsonValue, parse, stringify};
+import std.json.JsonValue;
+import std.json.parse;
+import std.json.stringify;
 import std.agent.message.Message;
-import nomo.cli.harness_edit_args.Input;
-import nomo.cli.harness_edit_args.parse as parse_args;
-import nomo.harness.harness_edit_contract.{Context, Ledger, fresh, bump, ledger_error, context_error, decode_edit, decode_plan};
+import nomo.adapters.cli.edit_input.Input;
+import nomo.adapters.cli.edit_input.harness_edit_args_parse as parse_args;
+import nomo.domain.harness.edit.Context;
+import nomo.domain.harness.edit.fresh;
+import nomo.domain.harness.edit.bump;
+import nomo.domain.harness.edit.ledger_error;
+import nomo.domain.harness.edit.context_error;
+import nomo.domain.harness.edit.decode_edit;
+import nomo.domain.harness.edit.decode_plan;
+
+import nomo.domain.harness.edit.EditLedger;
 
 type Check = { label: string, passed: bool };
 flow slash() -> string { return std.text.from_char('\\'); }
@@ -35,7 +45,7 @@ flow roundtrip(value: Context) -> bool {
     let decoded: Option<Message<Context>> = parsed_message.cast<Context>();
     return match decoded { Some(item) => item.body == value, None() => false };
 }
-flow blocked(state: Ledger, call: bool) -> bool { return match bump(state, call) { Ok(_) => false, Err(_) => true }; }
+flow blocked(state: EditLedger, call: bool) -> bool { return match bump(state, call) { Ok(_) => false, Err(_) => true }; }
 flow normal_ledger() -> bool {
     var state = fresh(); var step: usize = 0;
     for call in [true, false, true, false, false, true] limit Iterations(6) {
@@ -44,7 +54,7 @@ flow normal_ledger() -> bool {
         if step == 4 && !blocked(state, true) { return false; }
         if step == 5 && (state.calls != 2 || state.tokens != 36864 || state.native_tokens != 98304 || state.boundaries != 3) { return false; }
     }
-    let expected = Ledger { steps = 6, calls = 3, tokens = 38912, native_tokens = 163840, boundaries = 3 };
+    let expected = EditLedger { steps = 6, calls = 3, tokens = 38912, native_tokens = 163840, boundaries = 3 };
     return state == expected && ledger_error(state) == "" && blocked(state, true) && blocked(state, false);
 }
 public flow pure_probe() -> bool {

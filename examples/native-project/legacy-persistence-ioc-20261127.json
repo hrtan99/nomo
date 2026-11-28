@@ -1,0 +1,244 @@
+{
+  "date": "2026-11-27",
+  "status": "source-checked-existing-edit-smoke-passed-native-authority-not-certified",
+  "base_commit": "9770f9fbe3b95ed5347e82699b5763bcab0e45d2",
+  "compiler": "official Etas 0.24.3 and matching installed SDK",
+  "snapshot": {
+    "root": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-na7uppd6",
+    "tree": "29fff24a8be03d15c8f0ed5ff729db3bed543ad1",
+    "evidence": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-na7uppd6/compiler-evidence",
+    "overlay": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-na7uppd6/compiler-compose.json",
+    "source_count": 445,
+    "source_manifest_sha256": "0a4ac047b80da276d1524222320c5e123beec175e3d72d68297591983779cf2f"
+  },
+  "full_check": {
+    "exit": 0,
+    "elapsed_seconds": 59.33450927800004,
+    "resources": {
+      "memory.max": "4294967296",
+      "memory.peak": "3228413952",
+      "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+      "cpu.max": "400000 100000",
+      "pids.max": "256"
+    },
+    "source_count": 445,
+    "diagnostics": 0
+  },
+  "architecture": {
+    "status": "passed",
+    "modules": 445,
+    "imports": 3313,
+    "identity_leaves": 48
+  },
+  "changes": [
+    "Application sessions/edit_operations owns availability, intent, completion and inspection over the existing CasRows role; FirstEditJournal and FollowupEditJournal retain their native Memory namespaces.",
+    "History-work format/budget validation belongs to domain/sessions/history_work_guard. Application sessions/history_work owns admission, prior-history binding, claim, completion and inspection through CasRows and consumer-owned PriorChatReader. NativeHistoryWork supplies the actual store and chat reads.",
+    "Five existing WorkPersistence implementations move from four CLI files to adapters/storage/work_persistence; CLI selects dependencies and invokes the existing generic Work controller. Transient constructor names/owners change; persisted declarations and resources do not."
+  ],
+  "preserved": "Existing binding/phase checks, exact refusal messages, Missing/Match conditions, one native commit per transition, readback and version checks, record shapes, schema/Region identities and configured budgets. No new validation or defensive branch is introduced.",
+  "runtime": {
+    "probe": "tests/edit_write_probe.py --suite smoke",
+    "status": "passed-original-smoke-contract",
+    "current_snapshot": {
+      "root": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-zho9opwl",
+      "tree": "54134f1af76ac249a927e7c467c9cec6e00117c4",
+      "evidence": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-zho9opwl/compiler-evidence",
+      "overlay": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-zho9opwl/compiler-compose.json",
+      "source_count": 445,
+      "source_manifest_sha256": "0a4ac047b80da276d1524222320c5e123beec175e3d72d68297591983779cf2f"
+    },
+    "qualification": "The original approved-edit smoke passes: full ASCII preview, current native/application yes gates, empty journal before both confirmations, intent before file apply, exact Unicode/CRLF/control bytes after replacement, completed journal with exact binding, read-only unchanged status and original same/different-ID consumed-slot refusals. These original refusal invocations intentionally abort; they are not new matrix cases. This does not exercise all five WorkPersistence variants or the history-work admission/claim service.",
+    "retained_failures": [
+      {
+        "snapshot": {
+          "root": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-1zy0bews",
+          "tree": "9db6d5e1fb7ec7390918f32186f1edf941e04a05",
+          "evidence": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-1zy0bews/compiler-evidence",
+          "overlay": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-1zy0bews/compiler-compose.json",
+          "source_count": 444,
+          "source_manifest_sha256": "3ded112bb77d117234dce76c6782eb98b9b6269d0b8fe3e5af6b75ad5e994331"
+        },
+        "fixture": "edit-write-63h4q0lk",
+        "driver_exit": 1,
+        "cause": "Test preview object still used the old manual JSON presentation. Native prompt reached, no approvals granted, zero intent rows and file unchanged. Original output was not retained by that old observer."
+      },
+      {
+        "snapshot": {
+          "root": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-8rbauczv",
+          "tree": "8632f4302e237f508f5b7a88f670ed689f59dbc2",
+          "evidence": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-8rbauczv/compiler-evidence",
+          "overlay": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-8rbauczv/compiler-compose.json",
+          "source_count": 445,
+          "source_manifest_sha256": "0a4ac047b80da276d1524222320c5e123beec175e3d72d68297591983779cf2f"
+        },
+        "fixture": "edit-write-6hkdm6ou",
+        "driver_exit": 1,
+        "cause": "Observer still decoded the typed key as old JSON. Exact preview and both confirmations passed; one intent with the exact binding was committed, then observer failure stopped the driver before file application. Raw output, intent and original file are retained; not a passing invocation."
+      }
+    ],
+    "evidence": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0243-review-zho9opwl/compiler-evidence/edit-write-_0dcq3sc",
+    "driver_exit": 0,
+    "resources": {
+      "memory.max": "4294967296",
+      "memory.peak": "1281101824",
+      "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+      "cpu.max": "400000 100000",
+      "pids.max": "256"
+    },
+    "cases": [
+      {
+        "name": "applied",
+        "status": "passed",
+        "exit": 0,
+        "milestones": [
+          "native_prompt_observed",
+          "nomo_prompt_observed",
+          "intent_observed",
+          "applied_observed"
+        ],
+        "journal": {
+          "operation": {
+            "region": "nomo-edit-operation-v1",
+            "path": [
+              "Rows"
+            ],
+            "value": {
+              "binding": {
+                "after_bytes": 17,
+                "after_digest": "9e20534a1c5f20601ff25add1998bf4e4be6c04801ee4d3973453ab8499b66fa",
+                "before_bytes": 17,
+                "before_digest": "521d8cd73f0e5df9cea83963a5515a7de297f927e51f552d13134c391abaa3de",
+                "id": "owned-edit",
+                "path": "note.txt",
+                "region": "nomo.tools.edit_file.EditableRoot",
+                "request_digest": "6855c5901faaeb225af1922b0cb9b87d092211b8d5dd19c81f92acf20677128b",
+                "workspace": "owned-label"
+              },
+              "format": 1,
+              "phase": "completed"
+            },
+            "version": 2
+          }
+        }
+      }
+    ],
+    "traces": [
+      {
+        "file": "apply.trace.json",
+        "sha256": "a114ba0327e3aa1c1d935fb01ecd74d328a46bca8ff4fbd44e06fcd73a335eef",
+        "outcome": {
+          "kind": "completed"
+        },
+        "local_work_settled": true,
+        "paired_successful_host_requests": 45,
+        "action_counts": {
+          "Policy.evaluate": 22,
+          "Memory.read": 5,
+          "Fs.stat": 3,
+          "Fs.read": 3,
+          "Console.stdout_write": 7,
+          "Approval.request": 1,
+          "Console.stdin_read_line": 1,
+          "Memory.write": 2,
+          "Fs.atomic_replace": 1
+        },
+        "native_style_authority_audit": [
+          {
+            "request": 31,
+            "action": "Fs.atomic_replace",
+            "authority": {
+              "active_trace_specs": [],
+              "approval_count": 0,
+              "grant_count": 13
+            },
+            "approval": 14
+          }
+        ]
+      },
+      {
+        "file": "retry-different-id.trace.json",
+        "sha256": "6d4a5714d8f885a78c7b70ad0e961999ff7c590a5c8784a4bfc5030d69c87b9f",
+        "outcome": {
+          "failure": {
+            "diagnostic": {
+              "code": "Analysis(ExecutionAborted)",
+              "message": "Nomo edit apply refused; see REFUSED output",
+              "phase": "analysis",
+              "severity": "error"
+            },
+            "kind": "execution_fault"
+          },
+          "kind": "failed"
+        },
+        "local_work_settled": true,
+        "paired_successful_host_requests": 4,
+        "action_counts": {
+          "Policy.evaluate": 2,
+          "Memory.read": 1,
+          "Console.stdout_write": 1
+        },
+        "native_style_authority_audit": []
+      },
+      {
+        "file": "retry-owned-edit.trace.json",
+        "sha256": "ff86609fbda176867cf0ae0c08c351bd133af46b8730fd109d311b8bac202bdd",
+        "outcome": {
+          "failure": {
+            "diagnostic": {
+              "code": "Analysis(ExecutionAborted)",
+              "message": "Nomo edit apply refused; see REFUSED output",
+              "phase": "analysis",
+              "severity": "error"
+            },
+            "kind": "execution_fault"
+          },
+          "kind": "failed"
+        },
+        "local_work_settled": true,
+        "paired_successful_host_requests": 4,
+        "action_counts": {
+          "Policy.evaluate": 2,
+          "Memory.read": 1,
+          "Console.stdout_write": 1
+        },
+        "native_style_authority_audit": []
+      },
+      {
+        "file": "status.trace.json",
+        "sha256": "71e1760e84c3ce27f185ba5ac2e28fcae4f2d2631a67834cf93e654d095a6526",
+        "outcome": {
+          "kind": "completed"
+        },
+        "local_work_settled": true,
+        "paired_successful_host_requests": 8,
+        "action_counts": {
+          "Policy.evaluate": 4,
+          "Memory.read": 2,
+          "Console.stdout_write": 2
+        },
+        "native_style_authority_audit": []
+      }
+    ],
+    "paired_successful_host_requests": 61,
+    "authority_limitation": "A separate counter-based audit used by native probes does not pass for this unchanged legacy profile: Fs.atomic_replace starts with approval_count=0 despite the prior boolean Approval.request. The profile directly allows filesystem:Fs.atomic_replace and uses the application-owned legacy Approval effect. Do not infer native per-operation authority acceptance from this functional smoke. Canonical std.runtime.approval.approve/typed std.effects.Approval integration remains an owned follow-up; no upstream cause is asserted."
+  },
+  "size": {
+    "counter": "nomo-physical-v4",
+    "working_source_files": 455,
+    "working_source_sloc": 17991,
+    "runtime_files": 27,
+    "runtime_sloc": 4560,
+    "inclusive_working_sloc": 22551,
+    "qualification": "Includes the unchanged local v4 prototypes. Existing explicit temporary line-limit waiver applies; no size acceptance or default retirement is claimed.",
+    "selected_package_source_sloc": 17632,
+    "selected_package_inclusive_sloc": 22192
+  },
+  "qualification": "Complete normal source and identity checks only for all moved types and history-work service. The edit smoke exercises only the edit journal/file path; it cannot qualify every WorkPersistence variant or prior-history/reservation behavior. Default cutover, remaining full consumers and existing upstream gates remain open.",
+  "real_provider_requests": 0,
+  "negative_matrix_added": false,
+  "remaining_owned_work": [
+    "Canonical standard approval interface/legacy profile authority qualification.",
+    "Full history-work and WorkPersistence-family production/deterministic acceptance.",
+    "Startup cross-project exact/resume/all-session selection, legacy saved-session migration and default cutover; current startup.select still restricts exact IDs/chooser to the mounted workspace."
+  ]
+}

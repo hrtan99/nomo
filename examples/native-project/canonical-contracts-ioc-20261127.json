@@ -1,0 +1,119 @@
+{
+  "date": "2026-11-27",
+  "status": "canonical-contracts-source-and-journal-consumer-passed",
+  "compiler_receipt": "examples/native-project/compiler-0244-20261127.json",
+  "checked_snapshot": {
+    "root": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-canonical-contracts-0244-71kft8oe",
+    "tree": "1ea6000b2135191a6425f04c220e6a4d3ce43897",
+    "evidence": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-canonical-contracts-0244-71kft8oe/compiler-evidence",
+    "overlay": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-canonical-contracts-0244-71kft8oe/compiler-compose.json",
+    "source_count": 463,
+    "source_manifest_sha256": "c106c06f5aba7842750ec9ebc22d227a12d9b2a792cb5a924027654e67b83d73"
+  },
+  "full_check": {
+    "exit": 0,
+    "elapsed_seconds": 58.474653277000016,
+    "resources": {
+      "memory.max": "4294967296",
+      "memory.peak": "3217178624",
+      "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+      "cpu.max": "400000 100000",
+      "pids.max": "256"
+    }
+  },
+  "diagnostics": 0,
+  "architecture": {
+    "modules": 463,
+    "imports": 3431,
+    "preserved_identity_leaves": 48,
+    "status": "passed"
+  },
+  "changes": [
+    "Domain Journal, SavedPath, Step and CacheReference expose their existing passive stored declarations as canonical contracts.",
+    "Delete six identical-field conversion functions and two cache record copies; consumers still use their application-owned ports.",
+    "The existing mutation consumer now selects NativeChangeJournals in its composition instead of a private duplicate fixture journal repository; original assertions and cases remain."
+  ],
+  "retained_nominal_declarations": [
+    "nomo.native.mutations.Journal",
+    "nomo.native.mutations.SavedPath",
+    "nomo.native.mutations.Step",
+    "nomo.native.configuration.Cached"
+  ],
+  "existing_mutation_consumer": {
+    "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-mutation-controller-6gpzi5ha",
+    "result": {
+      "exit": 0,
+      "stdout": "[BATCH  ] [{\"operation\":\"write\",\"path\":\"note.txt\",\"target\":\"\",\"text\":\"before new\\n\"}]\n[CHANGE ] {\"operation\":\"write\",\"path\":\"note.txt\",\"target\":\"\",\"text\":\"before new\\n\"}\n[PREVIEW] {\"after\":\"before new\\n\",\"before\":\"before old\\n\",\"path\":\"note.txt\"}\nPORT write after durable recovery metadata\n[RESTORE] {\"after\":\"/native-state/edits/native-0-0/0-0.after\",\"after_exists\":true,\"before\":\"/native-state/edits/native-0-0/0-0.before\",\"before_exists\":true,\"path\":\"note.txt\"}\nPASS controlled apply and undo\n[BATCH  ] [{\"operation\":\"write\",\"path\":\"note.txt\",\"target\":\"\",\"text\":\"before new\\n\"}]\n[CHANGE ] {\"operation\":\"write\",\"path\":\"note.txt\",\"target\":\"\",\"text\":\"before new\\n\"}\n[PREVIEW] {\"after\":\"before new\\n\",\"before\":\"before old\\n\",\"path\":\"note.txt\"}\nPORT write after durable recovery metadata\nPORT after-write snapshot failed\nPORT partial write retained\n[RESTORE] {\"after\":\"/native-state/edits/native-0-8/0-0.after\",\"after_exists\":false,\"before\":\"/native-state/edits/native-0-8/0-0.before\",\"before_exists\":true,\"path\":\"note.txt\"}\nPASS controlled explicit rollback after write\n",
+      "stderr": "",
+      "resources": {
+        "memory.max": "4294967296",
+        "memory.peak": "589975552",
+        "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+        "cpu.max": "400000 100000",
+        "pids.max": "256"
+      },
+      "status": "passed",
+      "source_count": 23,
+      "paired_host_requests": 210,
+      "host_actions": {
+        "Memory.read": 96,
+        "Memory.write": 100,
+        "Console.stdout_write": 14
+      },
+      "qualification": "Apply/undo and explicitly required recovery after a retained write. Real fixture SQLite journal/history with controlled file/command effects; no actual project mutation or native command. This does not certify on-disk rollback or production adapter acceptance."
+    },
+    "trace_sha256": "28ecd5df18e594d2f23c5824ba1e47a455ae36d225e55b661e0bf26a8954235a",
+    "outcome": {
+      "kind": "completed"
+    },
+    "local_work_settled": true,
+    "actual_journal_region": "nomo-native-file-journals-v1",
+    "final_journals": [
+      {
+        "id": "native-0-0",
+        "phase": "undone"
+      },
+      {
+        "id": "native-0-8",
+        "phase": "rolled_back"
+      }
+    ],
+    "paired_successful_host_requests": 210,
+    "model_requests": 0,
+    "command_actions": 0,
+    "actual_project_file_actions": 0,
+    "qualification": "Real native journal adapter and SQLite history; original apply/undo and explicit retained-write rollback assertions pass. File and command effects remain controlled, so no on-disk rollback, native approval or whole-production-mutation acceptance is inferred. The observer wording is corrected after this run to name the now-selected native journal adapter; no functional assertion/source changes or reexecution follow."
+  },
+  "initial_rejected_source": {
+    "snapshot": {
+      "root": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-canonical-contracts-0244-xsnl6a1c",
+      "tree": "2f1a83dba53fdfc00e0a30da2e4875e29799acd0",
+      "evidence": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-canonical-contracts-0244-xsnl6a1c/compiler-evidence",
+      "overlay": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-canonical-contracts-0244-xsnl6a1c/compiler-compose.json",
+      "source_count": 463,
+      "source_manifest_sha256": "828ce6d56cf88772ccec483388e1e6a8d2847e57b9e325c1bdae4e5293b08b13"
+    },
+    "check": {
+      "exit": 1,
+      "elapsed_seconds": 3.051652835000027,
+      "resources": {
+        "memory.max": "4294967296",
+        "memory.peak": "565272576",
+        "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+        "cpu.max": "400000 100000",
+        "pids.max": "256"
+      }
+    },
+    "correction": "Place public imports before declarations; the initial import placement was an owned source error, not an upstream failure."
+  },
+  "configuration_qualification": "Cache adapter simplification passes source checking only. No repeat of the already-failing configuration JSON consumer is added; interpreter #121 remains unresolved.",
+  "migration_qualification": "The preceding complete typed migration implementation remains unaccepted at standard JSON parse. This canonical-contract cleanup does not qualify its all-row/fresh-process assertions.",
+  "runtime_inventory": {
+    "counter": "nomo-physical-v4",
+    "runtime_files": 28,
+    "runtime_sloc": 4679,
+    "inclusive_product_sloc": 22641,
+    "line_limit": "Existing explicit user temporary waiver."
+  },
+  "new_adverse_cases": false
+}

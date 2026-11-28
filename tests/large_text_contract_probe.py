@@ -8,52 +8,7 @@ import subprocess
 import tempfile
 
 ROOT = Path(__file__).resolve().parent.parent
-SOURCE = r'''module app.probe;
-import std.io.println;
-import nomo.core.json.encode;
-import nomo.model.read_protocol.{question_error, decode_plan, decode_work_plan, decode_child, answer};
-import nomo.harness.harness_edit_contract.{decode_work_plan as edit_plan, decode_work_edit};
-import nomo.harness.harness_tool_chat_contract.Previous;
-import nomo.harness.read_tool_chat_contract.prior_error;
-import nomo.session.event_text_codec.{encode_prefix, decode};
-import nomo.session.recoverable_events.{work_batch, invalid};
-import nomo.session.redaction.Policy;
-import nomo.core.conversation.Event;
-
-flow text(size: usize) -> string {
-    var value = "x"; var width: usize = 1;
-    while width < size limit Iterations(21) { value = value + value; width = width * 2; }
-    return value;
-}
-flow json(values: Array<string>) -> string {
-    return match encode(values, "conversion failed", "encoding failed") { Ok(value) => value, Err(error) => { abort(error); } };
-}
-flow check(label: string, passed: bool) -> unit {
-    if !passed { abort(label); }
-    println("PASS " + label);
-}
-public flow observe(args: Array<string>) -> i32 {
-    let request = text(65536); let full = text(1048576);
-    let wire = json(["delegate", full]);
-    check("64 KiB request", question_error(request) == "");
-    check("1 MiB read delegation", match decode_work_plan(wire) { Ok(value) => value == full, Err(_) => false });
-    check("1 MiB standard delegation", match decode_plan(wire) { Ok(value) => value == full, Err(_) => false });
-    check("1 MiB edit delegation", match edit_plan(wire) { Ok(value) => value == full, Err(_) => false });
-    check("1 MiB parent answer", match answer(full) { Ok(value) => value == full, Err(_) => false });
-    check("1 MiB child answer", match decode_child(json(["final", full]), ["note.txt"], true) { Ok(value) => value.text == full, Err(_) => false });
-    check("64 KiB literal fields", match decode_work_edit(json(["edit", request, request + "new"])) { Ok(value) => value.target == request && value.replacement == request + "new", Err(_) => false });
-    let multiline = "Read note.txt\n" + request + "\tand report its contents";
-    check("multiline delegated task", match decode_work_plan(json(["delegate", multiline])) { Ok(value) => value == multiline, Err(_) => false });
-    let previous = Previous { task = multiline, result = full, tool = "", outcome = "", answer = full };
-    check("large resumed prior", prior_error(previous) == "");
-    let policy = Policy { format = 1, literals = ["SYNTHETIC_NEVER_PRESENT"] };
-    let prefix = match encode_prefix(full, false, policy) { Ok(value) => value, Err(error) => { abort(error); } };
-    check("1 MiB saved check output", !prefix.truncated && match decode(prefix.value, policy) { Ok(value) => value == full, Err(_) => false });
-    let events = [Event { role = "main", kind = "plan", name = "", text = multiline }, Event { role = "assistant", kind = "answer", name = "", text = full }];
-    check("large persisted event frame", match work_batch(events, policy) { Ok(value) => invalid(value, policy) == "", Err(_) => false });
-    return 0;
-}
-'''
+SOURCE = 'module app.probe;\nimport std.io.println;\nimport nomo.core.json.encode;\nimport nomo.model.read_protocol.question_error;\nimport nomo.model.read_protocol.decode_plan;\nimport nomo.model.read_protocol.decode_work_plan;\nimport nomo.model.read_protocol.decode_child;\nimport nomo.model.read_protocol.answer;\nimport nomo.domain.harness.edit.decode_work_plan as edit_plan;\nimport nomo.domain.harness.edit.decode_work_edit;\nimport nomo.domain.harness.chat.Previous;\nimport nomo.harness.read_tool_chat_contract.prior_error;\nimport nomo.session.event_text_codec.encode_prefix;\nimport nomo.session.event_text_codec.decode;\nimport nomo.domain.sessions.chat.work_batch;\nimport nomo.domain.sessions.chat.recoverable_events_invalid as invalid;\nimport nomo.session.redaction.Policy;\nimport nomo.domain.conversation.Event;\n\nflow text(size: usize) -> string {\n    var value = "x"; var width: usize = 1;\n    while width < size limit Iterations(21) { value = value + value; width = width * 2; }\n    return value;\n}\nflow json(values: Array<string>) -> string {\n    return match encode(values, "conversion failed", "encoding failed") { Ok(value) => value, Err(error) => { abort(error); } };\n}\nflow check(label: string, passed: bool) -> unit {\n    if !passed { abort(label); }\n    println("PASS " + label);\n}\npublic flow observe(args: Array<string>) -> i32 {\n    let request = text(65536); let full = text(1048576);\n    let wire = json(["delegate", full]);\n    check("64 KiB request", question_error(request) == "");\n    check("1 MiB read delegation", match decode_work_plan(wire) { Ok(value) => value == full, Err(_) => false });\n    check("1 MiB standard delegation", match decode_plan(wire) { Ok(value) => value == full, Err(_) => false });\n    check("1 MiB edit delegation", match edit_plan(wire) { Ok(value) => value == full, Err(_) => false });\n    check("1 MiB parent answer", match answer(full) { Ok(value) => value == full, Err(_) => false });\n    check("1 MiB child answer", match decode_child(json(["final", full]), ["note.txt"], true) { Ok(value) => value.text == full, Err(_) => false });\n    check("64 KiB literal fields", match decode_work_edit(json(["edit", request, request + "new"])) { Ok(value) => value.target == request && value.replacement == request + "new", Err(_) => false });\n    let multiline = "Read note.txt\\n" + request + "\\tand report its contents";\n    check("multiline delegated task", match decode_work_plan(json(["delegate", multiline])) { Ok(value) => value == multiline, Err(_) => false });\n    let previous = Previous { task = multiline, result = full, tool = "", outcome = "", answer = full };\n    check("large resumed prior", prior_error(previous) == "");\n    let policy = Policy { format = 1, literals = ["SYNTHETIC_NEVER_PRESENT"] };\n    let prefix = match encode_prefix(full, false, policy) { Ok(value) => value, Err(error) => { abort(error); } };\n    check("1 MiB saved check output", !prefix.truncated && match decode(prefix.value, policy) { Ok(value) => value == full, Err(_) => false });\n    let events = [Event { role = "main", kind = "plan", name = "", text = multiline }, Event { role = "assistant", kind = "answer", name = "", text = full }];\n    check("large persisted event frame", match work_batch(events, policy) { Ok(value) => invalid(value, policy) == "", Err(_) => false });\n    return 0;\n}\n'
 
 
 def main():

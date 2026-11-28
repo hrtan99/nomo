@@ -110,7 +110,7 @@ def main():
         parser.error("an absolute normal Etas executable is required")
     cases, paths = load_cases(), product_paths()
     runner_paths = [Path(__file__).resolve(), FIXTURE, ROOT / "tests/foundation_probe.py",
-                    ROOT / "tests/normal_graph_identity.py", ROOT / "scripts/etas-0013-cli-bootstrap.py"]
+                    ROOT / "tests/normal_graph_identity.py", ROOT / "scripts/etas-02413-official-cli-bootstrap.py"]
     frozen_product = input_hashes(paths)
     frozen_runner = input_hashes(runner_paths)
     destination.mkdir(parents=True, exist_ok=True)

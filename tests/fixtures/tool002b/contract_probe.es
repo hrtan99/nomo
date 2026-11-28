@@ -4,9 +4,17 @@ import std.io.println;
 import std.text.split;
 import std.json.parse as parse_json;
 import std.agent.message.Message;
-import nomo.cli.edit_args.{Options, parse};
-import nomo.tools.edit_encoding.{json, object, digest};
-import nomo.session.edit_operation.{Binding, Record, binding_error, record_error, same_binding, same_record};
+import nomo.adapters.cli.edit_input.Options;
+import nomo.adapters.cli.edit_input.edit_args_parse as parse;
+import nomo.domain.wire.json;
+import nomo.domain.wire.object;
+import nomo.domain.wire.digest;
+import nomo.domain.editing.Binding;
+import nomo.domain.editing.EditOperation;
+import nomo.domain.editing.binding_error;
+import nomo.domain.editing.record_error;
+import nomo.domain.editing.same_binding;
+import nomo.domain.editing.same_record;
 
 type Check = { label: string, passed: bool };
 flow slash() -> string { return std.text.from_char('\\'); }
@@ -45,9 +53,9 @@ flow hashed(text: string, expected: string) -> bool {
 
 flow different_bindings(original: Binding, changed: Array<Binding>) -> bool {
     if !same_binding(original, original) { return false; }
-    let record = Record { format = 1, phase = "intent", binding = original };
+    let record = EditOperation { format = 1, phase = "intent", binding = original };
     for value in changed limit Iterations(9) {
-        let changed_record = Record { format = 1, phase = "intent", binding = value };
+        let changed_record = EditOperation { format = 1, phase = "intent", binding = value };
         if same_binding(original, value) || same_binding(value, original) ||
             same_record(record, changed_record) { return false; }
     }

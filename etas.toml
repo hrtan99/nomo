@@ -40,7 +40,7 @@ delay_ms = 0
 
 [runtime.profiles.gateway-qwen.policy]
 mode = "local-static"
-rules = ["console=allow", "model=allow"]
+rules = ["console=allow", "agentic=allow", "model=allow"]
 
 [runtime.profiles.gateway-qwen.approval]
 mode = "deny"
@@ -64,14 +64,14 @@ connect_timeout_ms = 2000
 attempts = 1
 delay_ms = 0
 
-[runtime.profiles.gateway-qwen-readonly.filesystem.regions."nomo.tools.workspace.ReadOnlyRoot"]
+[runtime.profiles.gateway-qwen-readonly.filesystem.regions."nomo.application.resources.ReadOnlyRoot"]
 root = "/model-tool-fixture"
 read = true
 write = false
 
 [runtime.profiles.gateway-qwen-readonly.policy]
 mode = "local-static"
-rules = ["console=allow", "model=allow", "filesystem=allow"]
+rules = ["console=allow", "agentic=allow", "model=allow", "filesystem=allow"]
 
 [runtime.profiles.gateway-qwen-readonly.approval]
 mode = "deny"
@@ -153,14 +153,14 @@ connect_timeout_ms = 2000
 attempts = 1
 delay_ms = 0
 
-[runtime.profiles.harness-checkpoint-save.filesystem.regions."nomo.tools.workspace.ReadOnlyRoot"]
+[runtime.profiles.harness-checkpoint-save.filesystem.regions."nomo.application.resources.ReadOnlyRoot"]
 root = "/model-tool-fixture"
 read = true
 write = false
 
 [runtime.profiles.harness-checkpoint-save.policy]
 mode = "local-static"
-rules = ["console=allow", "memory=allow", "model=allow", "filesystem=allow"]
+rules = ["console=allow", "memory=allow", "agentic=allow", "model=allow", "filesystem=allow"]
 
 [runtime.profiles.harness-checkpoint-save.approval]
 mode = "deny"
@@ -221,7 +221,7 @@ boundary_policy = "nomo-owned-edit"
 [runtime.profiles.edit-apply.memory]
 backend = "sqlite"
 path = "edit.sqlite3"
-[runtime.profiles.edit-apply.filesystem.regions."nomo.tools.edit_file.EditableRoot"]
+[runtime.profiles.edit-apply.filesystem.regions."nomo.application.resources.EditableRoot"]
 root = "/edit-fixture"
 read = true
 write = true
@@ -279,14 +279,14 @@ connect_timeout_ms = 2000
 [runtime.profiles.harness-edit.model.retry]
 attempts = 1
 delay_ms = 0
-[runtime.profiles.harness-edit.filesystem.regions."nomo.tools.edit_file.EditableRoot"]
+[runtime.profiles.harness-edit.filesystem.regions."nomo.application.resources.EditableRoot"]
 root = "/edit-fixture"
 read = true
 write = true
 delete = false
 [runtime.profiles.harness-edit.policy]
 mode = "local-static"
-rules = ["console=allow", "memory=allow", "model=allow", "approval=allow", "filesystem:Fs.stat=allow", "filesystem:Fs.read=allow", "filesystem:Fs.atomic_replace=allow", "filesystem:Fs.write=deny", "filesystem:HostFilesystem.delete=deny"]
+rules = ["console=allow", "memory=allow", "agentic=allow", "model=allow", "approval=allow", "filesystem:Fs.stat=allow", "filesystem:Fs.read=allow", "filesystem:Fs.atomic_replace=allow", "filesystem:Fs.write=deny", "filesystem:HostFilesystem.delete=deny"]
 [runtime.profiles.harness-edit.approval]
 mode = "prompt"
 
@@ -314,19 +314,19 @@ connect_timeout_ms = 2000
 [runtime.profiles.harness-work.model.retry]
 attempts = 1
 delay_ms = 0
-[runtime.profiles.harness-work.filesystem.regions."nomo.tools.workspace.ReadOnlyRoot"]
+[runtime.profiles.harness-work.filesystem.regions."nomo.application.resources.ReadOnlyRoot"]
 root = "/work-context"
 read = true
 write = false
 delete = false
-[runtime.profiles.harness-work.filesystem.regions."nomo.tools.edit_file.EditableRoot"]
+[runtime.profiles.harness-work.filesystem.regions."nomo.application.resources.EditableRoot"]
 root = "/edit-fixture"
 read = true
 write = true
 delete = false
 [runtime.profiles.harness-work.policy]
 mode = "local-static"
-rules = ["console=allow", "memory=allow", "model=allow", "approval=allow", "filesystem:Fs.stat=allow", "filesystem:Fs.read=allow", "filesystem:Fs.atomic_replace=allow", "filesystem:Fs.write=deny", "filesystem:HostFilesystem.delete=deny"]
+rules = ["console=allow", "memory=allow", "agentic=allow", "model=allow", "approval=allow", "filesystem:Fs.stat=allow", "filesystem:Fs.read=allow", "filesystem:Fs.atomic_replace=allow", "filesystem:Fs.write=deny", "filesystem:HostFilesystem.delete=deny"]
 [runtime.profiles.harness-work.approval]
 mode = "prompt"
 
@@ -354,19 +354,19 @@ connect_timeout_ms = 2000
 [runtime.profiles.harness-work-save.model.retry]
 attempts = 1
 delay_ms = 0
-[runtime.profiles.harness-work-save.filesystem.regions."nomo.tools.workspace.ReadOnlyRoot"]
+[runtime.profiles.harness-work-save.filesystem.regions."nomo.application.resources.ReadOnlyRoot"]
 root = "/work-context"
 read = true
 write = false
 delete = false
-[runtime.profiles.harness-work-save.filesystem.regions."nomo.tools.edit_file.EditableRoot"]
+[runtime.profiles.harness-work-save.filesystem.regions."nomo.application.resources.EditableRoot"]
 root = "/edit-fixture"
 read = true
 write = true
 delete = false
 [runtime.profiles.harness-work-save.policy]
 mode = "local-static"
-rules = ["console=allow", "memory=allow", "model=allow", "approval=allow", "filesystem:Fs.stat=allow", "filesystem:Fs.read=allow", "filesystem:Fs.atomic_replace=allow", "filesystem:Fs.write=deny", "filesystem:HostFilesystem.delete=deny"]
+rules = ["console=allow", "memory=allow", "agentic=allow", "model=allow", "approval=allow", "filesystem:Fs.stat=allow", "filesystem:Fs.read=allow", "filesystem:Fs.atomic_replace=allow", "filesystem:Fs.write=deny", "filesystem:HostFilesystem.delete=deny"]
 [runtime.profiles.harness-work-save.approval]
 mode = "prompt"
 
@@ -412,19 +412,19 @@ connect_timeout_ms = 2000
 [runtime.profiles.work-chain.model.retry]
 attempts = 1
 delay_ms = 0
-[runtime.profiles.work-chain.filesystem.regions."nomo.tools.workspace.ReadOnlyRoot"]
+[runtime.profiles.work-chain.filesystem.regions."nomo.application.resources.ReadOnlyRoot"]
 root = "/work-context"
 read = true
 write = false
 delete = false
-[runtime.profiles.work-chain.filesystem.regions."nomo.tools.edit_file.EditableRoot"]
+[runtime.profiles.work-chain.filesystem.regions."nomo.application.resources.EditableRoot"]
 root = "/edit-fixture"
 read = true
 write = true
 delete = false
 [runtime.profiles.work-chain.policy]
 mode = "local-static"
-rules = ["console=allow", "memory=allow", "model=allow", "approval=allow", "filesystem:Fs.stat=allow", "filesystem:Fs.read=allow", "filesystem:Fs.atomic_replace=allow", "filesystem:Fs.write=deny", "filesystem:HostFilesystem.delete=deny"]
+rules = ["console=allow", "memory=allow", "agentic=allow", "model=allow", "approval=allow", "filesystem:Fs.stat=allow", "filesystem:Fs.read=allow", "filesystem:Fs.atomic_replace=allow", "filesystem:Fs.write=deny", "filesystem:HostFilesystem.delete=deny"]
 [runtime.profiles.work-chain.approval]
 mode = "prompt"
 
@@ -509,19 +509,19 @@ connect_timeout_ms = 2000
 [runtime.profiles.work-chain-once.model.retry]
 attempts = 1
 delay_ms = 0
-[runtime.profiles.work-chain-once.filesystem.regions."nomo.tools.workspace.ReadOnlyRoot"]
+[runtime.profiles.work-chain-once.filesystem.regions."nomo.application.resources.ReadOnlyRoot"]
 root = "/work-context"
 read = true
 write = false
 delete = false
-[runtime.profiles.work-chain-once.filesystem.regions."nomo.tools.edit_file.EditableRoot"]
+[runtime.profiles.work-chain-once.filesystem.regions."nomo.application.resources.EditableRoot"]
 root = "/edit-fixture"
 read = true
 write = true
 delete = false
 [runtime.profiles.work-chain-once.policy]
 mode = "local-static"
-rules = ["console=allow", "memory=allow", "model=allow", "approval=allow", "filesystem:Fs.stat=allow", "filesystem:Fs.read=allow", "filesystem:Fs.atomic_replace=allow", "filesystem:Fs.write=deny", "filesystem:HostFilesystem.delete=deny"]
+rules = ["console=allow", "memory=allow", "agentic=allow", "model=allow", "approval=allow", "filesystem:Fs.stat=allow", "filesystem:Fs.read=allow", "filesystem:Fs.atomic_replace=allow", "filesystem:Fs.write=deny", "filesystem:HostFilesystem.delete=deny"]
 [runtime.profiles.work-chain-once.approval]
 mode = "deny"
 
@@ -555,14 +555,14 @@ connect_timeout_ms = 2000
 attempts = 1
 delay_ms = 0
 
-[runtime.profiles.gateway-minimax-readonly.filesystem.regions."nomo.tools.workspace.ReadOnlyRoot"]
+[runtime.profiles.gateway-minimax-readonly.filesystem.regions."nomo.application.resources.ReadOnlyRoot"]
 root = "/model-tool-fixture"
 read = true
 write = false
 
 [runtime.profiles.gateway-minimax-readonly.policy]
 mode = "local-static"
-rules = ["console=allow", "model=allow", "filesystem=allow"]
+rules = ["console=allow", "agentic=allow", "model=allow", "filesystem=allow"]
 
 [runtime.profiles.gateway-minimax-readonly.approval]
 mode = "deny"
@@ -586,14 +586,14 @@ connect_timeout_ms = 2000
 [runtime.profiles.harness-minimax-edit.model.retry]
 attempts = 1
 delay_ms = 0
-[runtime.profiles.harness-minimax-edit.filesystem.regions."nomo.tools.edit_file.EditableRoot"]
+[runtime.profiles.harness-minimax-edit.filesystem.regions."nomo.application.resources.EditableRoot"]
 root = "/edit-fixture"
 read = true
 write = true
 delete = false
 [runtime.profiles.harness-minimax-edit.policy]
 mode = "local-static"
-rules = ["console=allow", "memory=allow", "model=allow", "approval=allow", "filesystem:Fs.stat=allow", "filesystem:Fs.read=allow", "filesystem:Fs.atomic_replace=allow", "filesystem:Fs.write=deny", "filesystem:HostFilesystem.delete=deny"]
+rules = ["console=allow", "memory=allow", "agentic=allow", "model=allow", "approval=allow", "filesystem:Fs.stat=allow", "filesystem:Fs.read=allow", "filesystem:Fs.atomic_replace=allow", "filesystem:Fs.write=deny", "filesystem:HostFilesystem.delete=deny"]
 [runtime.profiles.harness-minimax-edit.approval]
 mode = "prompt"
 
@@ -617,19 +617,19 @@ connect_timeout_ms = 2000
 [runtime.profiles.harness-minimax-work.model.retry]
 attempts = 1
 delay_ms = 0
-[runtime.profiles.harness-minimax-work.filesystem.regions."nomo.tools.workspace.ReadOnlyRoot"]
+[runtime.profiles.harness-minimax-work.filesystem.regions."nomo.application.resources.ReadOnlyRoot"]
 root = "/work-context"
 read = true
 write = false
 delete = false
-[runtime.profiles.harness-minimax-work.filesystem.regions."nomo.tools.edit_file.EditableRoot"]
+[runtime.profiles.harness-minimax-work.filesystem.regions."nomo.application.resources.EditableRoot"]
 root = "/edit-fixture"
 read = true
 write = true
 delete = false
 [runtime.profiles.harness-minimax-work.policy]
 mode = "local-static"
-rules = ["console=allow", "memory=allow", "model=allow", "approval=allow", "filesystem:Fs.stat=allow", "filesystem:Fs.read=allow", "filesystem:Fs.atomic_replace=allow", "filesystem:Fs.write=deny", "filesystem:HostFilesystem.delete=deny"]
+rules = ["console=allow", "memory=allow", "agentic=allow", "model=allow", "approval=allow", "filesystem:Fs.stat=allow", "filesystem:Fs.read=allow", "filesystem:Fs.atomic_replace=allow", "filesystem:Fs.write=deny", "filesystem:HostFilesystem.delete=deny"]
 [runtime.profiles.harness-minimax-work.approval]
 mode = "prompt"
 
@@ -651,13 +651,13 @@ connect_timeout_ms = 2000
 [runtime.profiles.nomo-read-session-new.model.retry]
 attempts = 1
 delay_ms = 0
-[runtime.profiles.nomo-read-session-new.filesystem.regions."nomo.tools.workspace.ReadOnlyRoot"]
+[runtime.profiles.nomo-read-session-new.filesystem.regions."nomo.application.resources.ReadOnlyRoot"]
 root = "/model-tool-fixture"
 read = true
 write = false
 [runtime.profiles.nomo-read-session-new.policy]
 mode = "local-static"
-rules = ["console=allow", "memory=allow", "model=allow", "filesystem=allow"]
+rules = ["console=allow", "memory=allow", "agentic=allow", "model=allow", "filesystem=allow"]
 [runtime.profiles.nomo-read-session-new.approval]
 mode = "deny"
 
@@ -679,13 +679,13 @@ connect_timeout_ms = 2000
 [runtime.profiles.nomo-read-session-existing.model.retry]
 attempts = 1
 delay_ms = 0
-[runtime.profiles.nomo-read-session-existing.filesystem.regions."nomo.tools.workspace.ReadOnlyRoot"]
+[runtime.profiles.nomo-read-session-existing.filesystem.regions."nomo.application.resources.ReadOnlyRoot"]
 root = "/model-tool-fixture"
 read = true
 write = false
 [runtime.profiles.nomo-read-session-existing.policy]
 mode = "local-static"
-rules = ["console=allow", "memory=allow", "model=allow", "filesystem=allow"]
+rules = ["console=allow", "memory=allow", "agentic=allow", "model=allow", "filesystem=allow"]
 [runtime.profiles.nomo-read-session-existing.approval]
 mode = "deny"
 
@@ -731,19 +731,19 @@ connect_timeout_ms = 2000
 [runtime.profiles.nomo-history-work.model.retry]
 attempts = 1
 delay_ms = 0
-[runtime.profiles.nomo-history-work.filesystem.regions."nomo.tools.workspace.ReadOnlyRoot"]
+[runtime.profiles.nomo-history-work.filesystem.regions."nomo.application.resources.ReadOnlyRoot"]
 root = "/work-context"
 read = true
 write = false
 delete = false
-[runtime.profiles.nomo-history-work.filesystem.regions."nomo.tools.edit_file.EditableRoot"]
+[runtime.profiles.nomo-history-work.filesystem.regions."nomo.application.resources.EditableRoot"]
 root = "/edit-fixture"
 read = true
 write = true
 delete = false
 [runtime.profiles.nomo-history-work.policy]
 mode = "local-static"
-rules = ["console=allow", "memory=allow", "model=allow", "approval=allow", "filesystem:Fs.stat=allow", "filesystem:Fs.read=allow", "filesystem:Fs.atomic_replace=allow", "filesystem:Fs.write=deny", "filesystem:HostFilesystem.delete=deny"]
+rules = ["console=allow", "memory=allow", "agentic=allow", "model=allow", "approval=allow", "filesystem:Fs.stat=allow", "filesystem:Fs.read=allow", "filesystem:Fs.atomic_replace=allow", "filesystem:Fs.write=deny", "filesystem:HostFilesystem.delete=deny"]
 [runtime.profiles.nomo-history-work.approval]
 mode = "prompt"
 
@@ -790,17 +790,17 @@ connect_timeout_ms = 2000
 [runtime.profiles.nomo-read-events-new.model.retry]
 attempts = 1
 delay_ms = 0
-[runtime.profiles.nomo-read-events-new.filesystem.regions."nomo.tools.workspace.ReadOnlyRoot"]
+[runtime.profiles.nomo-read-events-new.filesystem.regions."nomo.application.resources.ReadOnlyRoot"]
 root = "/model-tool-fixture"
 read = true
 write = false
 [runtime.profiles.nomo-read-events-new.policy]
 mode = "local-static"
-rules = ["console=allow", "memory=allow", "model=allow", "filesystem=allow"]
+rules = ["console=allow", "memory=allow", "agentic=allow", "model=allow", "filesystem=allow"]
 [runtime.profiles.nomo-read-events-new.approval]
 mode = "deny"
 
-[runtime.profiles.nomo-read-events-new.filesystem.regions."nomo.session.event_policy.PolicyRoot"]
+[runtime.profiles.nomo-read-events-new.filesystem.regions."nomo.application.resources.PolicyRoot"]
 root = "/tmp/nomo-event-policy"
 read = true
 write = false
@@ -823,17 +823,17 @@ connect_timeout_ms = 2000
 [runtime.profiles.nomo-read-events-existing.model.retry]
 attempts = 1
 delay_ms = 0
-[runtime.profiles.nomo-read-events-existing.filesystem.regions."nomo.tools.workspace.ReadOnlyRoot"]
+[runtime.profiles.nomo-read-events-existing.filesystem.regions."nomo.application.resources.ReadOnlyRoot"]
 root = "/model-tool-fixture"
 read = true
 write = false
 [runtime.profiles.nomo-read-events-existing.policy]
 mode = "local-static"
-rules = ["console=allow", "memory=allow", "model=allow", "filesystem=allow"]
+rules = ["console=allow", "memory=allow", "agentic=allow", "model=allow", "filesystem=allow"]
 [runtime.profiles.nomo-read-events-existing.approval]
 mode = "deny"
 
-[runtime.profiles.nomo-read-events-existing.filesystem.regions."nomo.session.event_policy.PolicyRoot"]
+[runtime.profiles.nomo-read-events-existing.filesystem.regions."nomo.application.resources.PolicyRoot"]
 root = "/tmp/nomo-event-policy"
 read = true
 write = false
@@ -849,7 +849,7 @@ rules = ["console=allow", "memory=allow", "filesystem:Fs.read=allow"]
 [runtime.profiles.nomo-read-events-status.approval]
 mode = "deny"
 
-[runtime.profiles.nomo-read-events-status.filesystem.regions."nomo.session.event_policy.PolicyRoot"]
+[runtime.profiles.nomo-read-events-status.filesystem.regions."nomo.application.resources.PolicyRoot"]
 root = "/tmp/nomo-event-policy"
 read = true
 write = false
@@ -885,24 +885,24 @@ connect_timeout_ms = 2000
 [runtime.profiles.nomo-history-events-work.model.retry]
 attempts = 1
 delay_ms = 0
-[runtime.profiles.nomo-history-events-work.filesystem.regions."nomo.tools.workspace.ReadOnlyRoot"]
+[runtime.profiles.nomo-history-events-work.filesystem.regions."nomo.application.resources.ReadOnlyRoot"]
 root = "/work-context"
 read = true
 write = false
 delete = false
-[runtime.profiles.nomo-history-events-work.filesystem.regions."nomo.tools.edit_file.EditableRoot"]
+[runtime.profiles.nomo-history-events-work.filesystem.regions."nomo.application.resources.EditableRoot"]
 root = "/edit-fixture"
 read = true
 write = true
 delete = false
 [runtime.profiles.nomo-history-events-work.policy]
 mode = "local-static"
-rules = ["console=allow", "memory=allow", "model=allow", "approval=allow", "filesystem:Fs.stat=allow", "filesystem:Fs.read=allow", "filesystem:Fs.atomic_replace=allow", "filesystem:Fs.write=deny", "filesystem:HostFilesystem.delete=deny"]
+rules = ["console=allow", "memory=allow", "agentic=allow", "model=allow", "approval=allow", "filesystem:Fs.stat=allow", "filesystem:Fs.read=allow", "filesystem:Fs.atomic_replace=allow", "filesystem:Fs.write=deny", "filesystem:HostFilesystem.delete=deny"]
 [runtime.profiles.nomo-history-events-work.approval]
 mode = "prompt"
 
 
-[runtime.profiles.nomo-history-events-work.filesystem.regions."nomo.session.event_policy.PolicyRoot"]
+[runtime.profiles.nomo-history-events-work.filesystem.regions."nomo.application.resources.PolicyRoot"]
 root = "/tmp/nomo-event-policy"
 read = true
 write = false
@@ -912,37 +912,6 @@ name = "nomo-history-events-work"
 module = "nomo.main"
 flow = "recoverable_history_work"
 profile = "nomo-history-events-work"
-
-[runtime.profiles.nomo-project]
-boundary_policy = "nomo-project"
-[runtime.profiles.nomo-project.model]
-adapter = "openai"
-model = "MiniMax-M3.1-Flash"
-base_url = "https://api.minimax.cn/v1"
-api_key_env = "MINIMAX_API_KEY"
-allow_private = false
-typed_output_encoding = "output-tool"
-[runtime.profiles.nomo-project.model.timeout]
-request_deadline_ms = 600000
-connect_timeout_ms = 10000
-[runtime.profiles.nomo-project.model.retry]
-attempts = 1
-delay_ms = 0
-[runtime.profiles.nomo-project.filesystem.regions."nomo.project.entry.RequestRoot"]
-root = "/project-request"
-read = true
-write = false
-[runtime.profiles.nomo-project.policy]
-mode = "local-static"
-rules = ["console=allow", "model=allow", "filesystem:Fs.read=allow"]
-[runtime.profiles.nomo-project.approval]
-mode = "deny"
-
-[[bin]]
-name = "nomo-project"
-module = "nomo.main"
-flow = "project_agent"
-profile = "nomo-project"
 
 [runtime.profiles.nomo-native]
 boundary_policy = "nomo-native"
@@ -962,11 +931,11 @@ connect_timeout_ms = 10000
 [runtime.profiles.nomo-native.model.retry]
 attempts = 1
 delay_ms = 0
-[runtime.profiles.nomo-native.filesystem.regions."nomo.native.workspace.ProjectRoot"]
+[runtime.profiles.nomo-native.filesystem.regions."nomo.application.resources.ProjectRoot"]
 root = "/project"
 read = true
 write = true
-[runtime.profiles.nomo-native.filesystem.regions."nomo.native.projects.LaunchRoot"]
+[runtime.profiles.nomo-native.filesystem.regions."nomo.application.resources.LaunchRoot"]
 root = "/native-launch"
 read = false
 write = true
@@ -975,7 +944,7 @@ allow = ["/usr/bin/git", "/usr/bin/python3", "/bin/sh", "/bin/cp", "/bin/mkdir",
 isolation = "trusted-unconfined"
 [runtime.profiles.nomo-native.policy]
 mode = "local-static"
-rules = ["console=allow", "memory=allow", "model=allow", "tool=allow", "approval=allow", "command=approval", "filesystem:Fs.read=allow", "filesystem:Fs.list=allow", "filesystem:Fs.stat=allow", "filesystem:Fs.atomic_replace=approval"]
+rules = ["console=allow", "memory=allow", "agentic=allow", "model=allow", "tool=allow", "approval=allow", "command=approval", "filesystem:Fs.read=allow", "filesystem:Fs.list=allow", "filesystem:Fs.stat=allow", "filesystem:Fs.atomic_replace=approval"]
 [runtime.profiles.nomo-native.approval]
 mode = "prompt"
 
@@ -984,3 +953,28 @@ name = "nomo-native"
 module = "nomo.main"
 flow = "native_project"
 profile = "nomo-native"
+
+[runtime.profiles.nomo-native-migrate.memory]
+backend = "sqlite"
+path = "/migration-target/conversations.sqlite3"
+[runtime.profiles.nomo-native-migrate.filesystem.regions."nomo.application.resources.MigrationRoot"]
+root = "/migration"
+read = true
+write = false
+[runtime.profiles.nomo-native-migrate.policy]
+mode = "local-static"
+rules = ["console=allow", "memory=allow", "filesystem:Fs.read=allow"]
+[runtime.profiles.nomo-native-migrate.approval]
+mode = "deny"
+
+[[bin]]
+name = "nomo-native-migrate"
+module = "nomo.main"
+flow = "native_state_migrate"
+profile = "nomo-native-migrate"
+
+[[bin]]
+name = "nomo-project-migrate"
+module = "nomo.main"
+flow = "project_state_migrate"
+profile = "nomo-native-migrate"

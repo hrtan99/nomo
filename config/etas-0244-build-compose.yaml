@@ -1,0 +1,7 @@
+services:
+  dev: &build-resources
+    mem_limit: 8g
+    memswap_limit: 8g
+    environment:
+      CARGO_BUILD_JOBS: "2"
+  dependency: *build-resources

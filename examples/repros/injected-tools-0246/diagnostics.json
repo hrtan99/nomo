@@ -1,0 +1,203 @@
+{
+  "command": "check",
+  "files": [
+    {
+      "diagnostics": [
+        {
+          "code": "effect::UnknownEffectTag",
+          "help": null,
+          "labels": [
+            {
+              "message": "effect tag is not known to the current effect registry",
+              "span": {
+                "end": 366,
+                "source": 1,
+                "start": 239
+              },
+              "style": "Primary"
+            }
+          ],
+          "message": "effect tag is not known to the current effect registry",
+          "notes": [],
+          "phase": "EffectCheck",
+          "primary": {
+            "label": "effect tag is not known to the current effect registry",
+            "span": {
+              "end": 366,
+              "endColumn": 2,
+              "endLine": 14,
+              "source": 1,
+              "start": 239,
+              "startColumn": 8,
+              "startLine": 11
+            }
+          },
+          "severity": "error",
+          "suggestions": []
+        },
+        {
+          "code": "effect::UnknownEffectTag",
+          "help": null,
+          "labels": [
+            {
+              "message": "effect tag is not known to the current effect registry",
+              "span": {
+                "end": 580,
+                "source": 1,
+                "start": 426
+              },
+              "style": "Primary"
+            }
+          ],
+          "message": "effect tag is not known to the current effect registry",
+          "notes": [],
+          "phase": "EffectCheck",
+          "primary": {
+            "label": "effect tag is not known to the current effect registry",
+            "span": {
+              "end": 580,
+              "endColumn": 6,
+              "endLine": 21,
+              "source": 1,
+              "start": 426,
+              "startColumn": 12,
+              "startLine": 19
+            }
+          },
+          "severity": "error",
+          "suggestions": []
+        },
+        {
+          "code": "effect::EffectOutsideDeclaredRow",
+          "help": null,
+          "labels": [
+            {
+              "message": "inferred effect std.effects.Inject.get escapes the declared effect row",
+              "span": {
+                "end": 782,
+                "source": 1,
+                "start": 591
+              },
+              "style": "Primary"
+            }
+          ],
+          "message": "inferred effect std.effects.Inject.get escapes the declared effect row",
+          "notes": [],
+          "phase": "EffectCheck",
+          "primary": {
+            "label": "inferred effect std.effects.Inject.get escapes the declared effect row",
+            "span": {
+              "end": 782,
+              "endColumn": 2,
+              "endLine": 28,
+              "source": 1,
+              "start": 591,
+              "startColumn": 8,
+              "startLine": 24
+            }
+          },
+          "severity": "error",
+          "suggestions": []
+        },
+        {
+          "code": "effect::EscapedEffect",
+          "help": null,
+          "labels": [
+            {
+              "message": "requested action std.effects.Inject.get is not handled by a scoped or default handler and is outside the declared effect row",
+              "span": {
+                "end": 782,
+                "source": 1,
+                "start": 591
+              },
+              "style": "Primary"
+            }
+          ],
+          "message": "requested action std.effects.Inject.get is not handled by a scoped or default handler and is outside the declared effect row",
+          "notes": [],
+          "phase": "EffectCheck",
+          "primary": {
+            "label": "requested action std.effects.Inject.get is not handled by a scoped or default handler and is outside the declared effect row",
+            "span": {
+              "end": 782,
+              "endColumn": 2,
+              "endLine": 28,
+              "source": 1,
+              "start": 591,
+              "startColumn": 8,
+              "startLine": 24
+            }
+          },
+          "severity": "error",
+          "suggestions": []
+        },
+        {
+          "code": "effect::UnknownEffectTag",
+          "help": null,
+          "labels": [
+            {
+              "message": "effect tag is not known to the current effect registry",
+              "span": {
+                "end": 366,
+                "source": 1,
+                "start": 239
+              },
+              "style": "Primary"
+            }
+          ],
+          "message": "effect tag is not known to the current effect registry",
+          "notes": [],
+          "phase": "EffectCheck",
+          "primary": {
+            "label": "effect tag is not known to the current effect registry",
+            "span": {
+              "end": 366,
+              "endColumn": 2,
+              "endLine": 14,
+              "source": 1,
+              "start": 239,
+              "startColumn": 8,
+              "startLine": 11
+            }
+          },
+          "severity": "error",
+          "suggestions": []
+        },
+        {
+          "code": "effect::UnknownEffectTag",
+          "help": null,
+          "labels": [
+            {
+              "message": "effect tag is not known to the current effect registry",
+              "span": {
+                "end": 580,
+                "source": 1,
+                "start": 426
+              },
+              "style": "Primary"
+            }
+          ],
+          "message": "effect tag is not known to the current effect registry",
+          "notes": [],
+          "phase": "EffectCheck",
+          "primary": {
+            "label": "effect tag is not known to the current effect registry",
+            "span": {
+              "end": 580,
+              "endColumn": 6,
+              "endLine": 21,
+              "source": 1,
+              "start": 426,
+              "startColumn": 12,
+              "startLine": 19
+            }
+          },
+          "severity": "error",
+          "suggestions": []
+        }
+      ],
+      "path": "/repro/src/app/main.es"
+    }
+  ],
+  "optimization_level": null
+}

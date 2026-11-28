@@ -1,23 +1,54 @@
 module app.discovery_interface_probe;
 
 import std.io.println;
-import std.text.{char_count as len, split, from_i32};
-import nomo.session.work_chain_discovery.{DiscoveryAuthority, discover as discover_controller, latest_parent as latest_controller};
-import nomo.session.work_chain.{Record, Caps, initial, successor, validate, linked, publish_partial, confirm,
-    maximum, turn_caps, zero, summary_reservation, values, reserve, policy, caps_error, fingerprint};
-import nomo.session.work_record.Record as WorkRecord;
-import nomo.session.work_record.partial;
-import nomo.tools.edit_file.prepare_original;
-import nomo.tools.edit_binding.bind;
-import nomo.harness.harness_work_contract.Evidence;
-import nomo.harness.harness_tool_contract.Ledger;
+import std.text.char_count as len;
+import std.text.split;
+import std.text.from_i32;
+import nomo.application.sessions.ports.DiscoveryAuthority;
+import nomo.application.sessions.chain.discover as discover_controller;
+import nomo.application.sessions.chain.latest_parent as latest_controller;
+import nomo.domain.sessions.chain.Record;
+import nomo.domain.sessions.chain.Caps;
+import nomo.domain.sessions.chain.initial;
+import nomo.domain.sessions.chain.successor;
+import nomo.domain.sessions.chain.work_chain_validate as validate;
+import nomo.domain.sessions.chain.linked;
+import nomo.domain.sessions.chain.publish_partial;
+import nomo.domain.sessions.chain.confirm;
+import nomo.domain.sessions.chain.maximum;
+import nomo.domain.sessions.chain.turn_caps;
+import nomo.domain.sessions.chain.zero;
+import nomo.domain.sessions.chain.summary_reservation;
+import nomo.domain.sessions.chain.values;
+import nomo.domain.sessions.chain.reserve;
+import nomo.domain.sessions.chain.policy;
+import nomo.domain.sessions.chain.caps_error;
+import nomo.domain.sessions.chain.fingerprint;
+import nomo.domain.sessions.work.StoredWorkRecord;
+import nomo.domain.sessions.work.partial;
+import nomo.domain.editing.prepare_original;
+import nomo.domain.editing.bind;
+import nomo.domain.harness.work.Evidence;
+import nomo.domain.harness.loop.ReadLedger;
 
 
-import nomo.session.work_chain_selection.{Snapshot, ObservedRow, ObservedJournal, Selector, select as choose, validate as selection_error, eligible, journal_phase};
-import nomo.session.work_chain_journal_contract.CapturedJournal as Journal;
-import nomo.session.work_chain_observation.{SessionObservation, ObservationPass, observe as observe_sessions};
-import nomo.cli.work_chain_selection_args.{Command, parse as selection_args};
-import nomo.cli.terminal_args.{parse as startup, parse_once, bind_parent, work_arguments, show_arguments};
+import nomo.domain.sessions.chain.Snapshot;
+import nomo.domain.sessions.chain.ObservedRow;
+import nomo.domain.sessions.chain.ObservedJournal;
+import nomo.domain.sessions.chain.Selector;
+import nomo.domain.sessions.chain.select as choose;
+import nomo.domain.sessions.chain.work_chain_selection_validate as selection_error;
+import nomo.domain.sessions.chain.eligible;
+import nomo.domain.sessions.chain.journal_phase;
+import nomo.domain.sessions.chain.CapturedJournal as Journal;
+import nomo.application.sessions.ports.SessionObservation;
+import nomo.domain.sessions.chain.ObservationPass;
+import nomo.application.sessions.chain.observe as observe_sessions;
+import nomo.adapters.cli.chain_input.Command;
+import nomo.adapters.cli.chain_input.work_chain_selection_args_parse as selection_args;
+import nomo.adapters.cli.session_input.terminal_args_parse as startup;
+import nomo.adapters.cli.session_input.parse_once;
+import nomo.adapters.cli.session_input.bind_parent;
 
 type Check = { label: string, passed: bool };
 flow from_values(value: Array<i32>) -> Caps {
@@ -30,12 +61,12 @@ flow changed_caps(value: Caps, selected: usize, difference: i32) -> Caps {
     return from_values(result);
 }
 flow admitted() -> Result<Record, string> { return initial("root-op", "owned", "target.txt", "update target from context", ["context.txt"], turn_caps()); }
-flow work(id: string, before: string, target: string, replacement: string) -> Result<WorkRecord, string> {
+flow work(id: string, before: string, target: string, replacement: string) -> Result<StoredWorkRecord, string> {
     let prepared = match prepare_original("target.txt", before, target, replacement) { Ok(value) => value, Err(error) => { return Err(error); } };
     let binding = match bind(id, "owned", "target.txt", prepared) { Ok(value) => value, Err(error) => { return Err(error); } };
     let evidence = Evidence { request = "update target from context", task = "Read context.txt", operation = "read", files = ["context.txt"],
         literal = "", outcome = "complete: blue", result = "Seen: complete: blue", summary = "Use the context result", allowed = ["context.txt"],
-        ledger = Ledger { steps = 7, calls = 4, tokens = 8192, tools = 1, scan = 4096 } };
+        ledger = ReadLedger { steps = 7, calls = 4, tokens = 8192, tools = 1, scan = 4096 } };
     return partial(binding, evidence, "replace selected text", prepared);
 }
 flow first(completed: bool) -> Result<Record, string> {
@@ -234,12 +265,12 @@ flow discover_case(label: string, kind: string, requested: string, authority: st
             println("PORT " + label + " capture " + from_i32(captures) + " " + phase);
             let selected = if captures == drift_at { changed(view, difference) } else { view };
             let answer: Result<Snapshot, string> = if captures == fail_at { Err("capture refused") } else { Ok(selected) };
-            resume answer;
+            answer
         }
         DiscoveryAuthority.inspect(id, workspace, path) => {
             println("PORT " + label + " inspect " + id);
             if workspace != "owned" || path != "target.txt" { abort("incorrect authority binding"); }
-            let rows = match choose(view, workspace, path, Selector.Exact(id)) { Ok(value) => value, Err(_) => { abort("unexpected inspect"); } };
+            let rows = match choose(view, workspace, path, Selector.Exact(id)) { Ok(value) => value, Err(_) => abort("unexpected inspect"), };
             var answer: Result<Option<Record>, string> = Ok(Some(rows[0]));
             if authority == "error" || (authority == "second_error" && id == "child-op") { answer = Err("inspect refused"); }
             else if authority == "missing" { answer = Ok(None()); }
@@ -249,12 +280,12 @@ flow discover_case(label: string, kind: string, requested: string, authority: st
         DiscoveryAuthority.confirmed_parent(id, workspace, path) => {
             println("PORT " + label + " parent " + id);
             if id != "root-op" || workspace != "owned" || path != "target.txt" { abort("incorrect parent binding"); }
-            let root = match view.root { Some(value) => value, None() => { abort("unexpected parent"); } };
+            let root = match view.root { Some(value) => value, None() => abort("unexpected parent"), };
             let altered = ObservedRow { key = if authority == "key" { "wrong" } else { root.key },
                 version = if authority == "version" { "wrong" } else { root.version },
                 value = if authority == "row" { patched(root.value, "parent_id") } else { root.value } };
             let answer: Result<ObservedRow, string> = if authority == "error" { Err("parent refused") } else { Ok(altered) };
-            resume answer;
+            answer
         }
  };
     return match result { Ok(value) => expected_error == "" && value == view, Err(error) => error == expected_error };
@@ -269,12 +300,12 @@ flow parent_case(label: string, kind: string, authority: string, fail_at: i32, d
             println("PORT " + label + " capture " + from_i32(captures) + " " + phase);
             let selected = if captures == drift_at { changed(view, difference) } else { view };
             let answer: Result<Snapshot, string> = if captures == fail_at { Err("capture refused") } else { Ok(selected) };
-            resume answer;
+            answer
         }
         DiscoveryAuthority.inspect(id, workspace, path) => {
             println("PORT " + label + " inspect " + id);
             if workspace != "owned" || path != "target.txt" { abort("incorrect authority binding"); }
-            let rows = match choose(view, workspace, path, Selector.Exact(id)) { Ok(value) => value, Err(_) => { abort("unexpected inspect"); } };
+            let rows = match choose(view, workspace, path, Selector.Exact(id)) { Ok(value) => value, Err(_) => abort("unexpected inspect"), };
             var answer: Result<Option<Record>, string> = Ok(Some(rows[0]));
             if authority == "error" || (authority == "second_error" && id == "child-op") { answer = Err("inspect refused"); }
             else if authority == "missing" { answer = Ok(None()); }
@@ -284,12 +315,12 @@ flow parent_case(label: string, kind: string, authority: string, fail_at: i32, d
         DiscoveryAuthority.confirmed_parent(id, workspace, path) => {
             println("PORT " + label + " parent " + id);
             if id != "root-op" || workspace != "owned" || path != "target.txt" { abort("incorrect parent binding"); }
-            let root = match view.root { Some(value) => value, None() => { abort("unexpected parent"); } };
+            let root = match view.root { Some(value) => value, None() => abort("unexpected parent"), };
             let altered = ObservedRow { key = if authority == "key" { "wrong" } else { root.key },
                 version = if authority == "version" { "wrong" } else { root.version },
                 value = if authority == "row" { patched(root.value, "parent_id") } else { root.value } };
             let answer: Result<ObservedRow, string> = if authority == "error" { Err("parent refused") } else { Ok(altered) };
-            resume answer;
+            answer
         }
  };
     return match result { Ok(value) => expected_error == "" && value == "root-op", Err(error) => error == expected_error };

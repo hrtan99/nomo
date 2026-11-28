@@ -2,13 +2,15 @@ module app.contract_probe;
 
 import std.io.println;
 import std.text.split;
-import nomo.tools.path_policy.valid_path;
-import nomo.tools.edit_proposal.{Request, propose};
-import nomo.session.edit_operation.selector_error;
-import nomo.model.model_tool_contract.{allowed_error, decode_reply};
-import nomo.tools.edit_encoding.json;
-import nomo.cli.edit_args.parse as show_args;
-import nomo.cli.harness_work_args.parse as work_args;
+import nomo.domain.workspace.valid_path;
+import nomo.domain.editing.Request;
+import nomo.domain.editing.propose;
+import nomo.domain.editing.selector_error;
+import nomo.domain.harness.loop.allowed_error;
+import nomo.domain.harness.loop.decode_reply;
+import nomo.domain.wire.json;
+import nomo.adapters.cli.edit_input.edit_args_parse as show_args;
+import nomo.adapters.cli.edit_input.harness_work_args_parse as work_args;
 
 type Check = { label: string, path: string, canonical: bool, allowed: bool };
 flow slash() -> string { return std.text.from_char('\\'); }

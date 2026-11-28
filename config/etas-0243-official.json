@@ -1,0 +1,63 @@
+{
+  "selector": "latest0243",
+  "version": "0.24.3",
+  "source_overrides": [],
+  "repositories": {
+    "cli": {
+      "repository": "etas",
+      "revision": "dd5768dc871b99fb4cc06c4532c772e257d2f64b",
+      "tree": "c1e2376a9c8c51cd5f6f1e872283fa122fce4ae4",
+      "packages": [
+        "etas_cli",
+        "etas_driver",
+        "etas_package",
+        "etas_tests"
+      ]
+    },
+    "core": {
+      "repository": "etas-core",
+      "revision": "377875e8afb201a782e054b313fe7e529bcaa485",
+      "tree": "eaa8b11e54a6d35c6f6cc4b66755f61635fce4f2",
+      "packages": [
+        "etas_builtin",
+        "etas_cache",
+        "etas_code",
+        "etas_core",
+        "etas_host",
+        "etas_memory_derive",
+        "etas_package_metadata",
+        "etas_std",
+        "etas_utils"
+      ]
+    },
+    "frontend": {
+      "repository": "etas-frontend",
+      "revision": "bfe255314bc142fdd79a7c5d3d7f0cc77988574e",
+      "tree": "f5c01f50ebb2dc1ec4411a63fc519342b5413f7c",
+      "packages": [
+        "etas_effects",
+        "etas_frontend",
+        "etas_hir",
+        "etas_hir_analysis",
+        "etas_syntax",
+        "etas_syntax_derive",
+        "etas_types"
+      ]
+    },
+    "interpreter": {
+      "repository": "etas-interpreter",
+      "revision": "5dfc2a121efb326107d461e08e66b31499db143b",
+      "tree": "4b417dae3f07348385c598f1deaefea826ea26db",
+      "packages": [
+        "etas_interpreter"
+      ]
+    }
+  },
+  "cache_root": "etas-0243-release",
+  "build_target": "etas-0230/target",
+  "source": "Official CLI 0.24.3 at dd5768d, standard Cargo release profile and exact locked graph; matching SDK. Existing cache/target reused. Only the build container uses 8 GiB and 2 Cargo jobs; application checks and runtime retain 4 GiB.",
+  "cargo_lock_sha256": "c46ccb9ea5b5bf3389a78722be3791304306b5c10314ac190bcfeb505f8eb66b",
+  "verified_seed_binary_sha256": "a172dd7a35541f91ebaa0fb4462f462fe76374bc8d3ffa6f2237a87e76d7d8f2",
+  "installed_sdk": true,
+  "build_profile": "release"
+}

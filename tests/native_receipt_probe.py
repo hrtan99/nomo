@@ -1,5 +1,6 @@
 """Settle a persisted result in a new Etas process; no model or project I/O."""
 from pathlib import Path
+from native_sources import copy_sources
 import json
 import subprocess
 import tempfile
@@ -14,17 +15,7 @@ def main():
     (package / '.etas').mkdir()
     state.mkdir(mode=0o777)
     state.chmod(0o777)
-    for name in ('src/nomo/native/history.es', 'src/nomo/native/lifecycle.es', 'src/nomo/core/json.es',
-                 'src/nomo/domain/conversation/messages.es', 'src/nomo/domain/execution/transitions.es',
-                 'src/nomo/application/native/conversation/ports.es', 'src/nomo/application/native/execution/ports.es',
-                 'src/nomo/application/native/execution/service.es', 'src/nomo/adapters/etas/conversations.es',
-                 'src/nomo/adapters/etas/attempts.es', 'src/nomo/bootstrap/execution.es'):
-        target = package / name
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_bytes((ROOT / name).read_bytes())
-    main_file = package / 'src/app/main.es'
-    main_file.parent.mkdir()
-    main_file.write_bytes((ROOT / 'tests/fixtures/native_receipt/src/app/main.es').read_bytes())
+    copy_sources(ROOT, package, ROOT / 'tests/fixtures/native_receipt/src/app/main.es')
     (package / 'etas.toml').write_text('''[package]
 name = "native-receipt"
 version = "0.1.0"
@@ -50,15 +41,15 @@ flow = "main"
         {'type': 'bind', 'source': str(package), 'target': '/workspace', 'read_only': True},
         {'type': 'bind', 'source': str(state), 'target': '/state'}]}}}))
     command = ['docker', 'compose', '--env-file', '/dev/null']
-    for name in ('compose.yaml', 'config/etas-0135-official-compose.yaml', 'config/local-tryout-compose.yaml',
+    for name in ('compose.yaml', 'config/etas-02413-official-compose.yaml', 'config/local-tryout-compose.yaml',
                  'config/etas-runtime-cache-compose.yaml', str(overlay)):
         command += ['--file', str(ROOT / name)]
     command += ['run', '--rm', '--no-deps', '--pull', 'never', '--tty=false', 'dev',
-                '/home/nomo/.cargo/bin/etas', 'run', '/workspace', '--allow-effects', '--args']
+                '/home/nomo/.cargo/bin/etas', 'run', '/workspace', '--allow-effects']
     print('EVIDENCE ' + str(evidence), flush=True)
     outputs = {}
-    for mode in ('seed', 'settle', 'seed-incomplete', 'settle-incomplete'):
-        result = subprocess.run(command + [mode], cwd=ROOT, capture_output=True, text=True)
+    for mode in ('seed', 'settle', 'seed-incomplete', 'settle-incomplete', 'command-port'):
+        result = subprocess.run(command + ['--trace-out', '/state/' + mode + '-trace.json', '--args', mode], cwd=ROOT, capture_output=True, text=True)
         (evidence / (mode + '-stdout.txt')).write_text(result.stdout)
         (evidence / (mode + '-stderr.txt')).write_text(result.stderr)
         outputs[mode] = result.stdout
@@ -68,6 +59,10 @@ flow = "main"
             assert result.returncode == 0, result.stdout + result.stderr
     assert 'SETTLED original result retained' in outputs['settle']
     assert 'INCOMPLETE reserved result retained as unknown' in outputs['settle-incomplete']
+    assert 'COMMAND PORT recorded exact argv/stdin' in outputs['command-port']
+    trace = json.loads((state / 'command-port-trace.json').read_text())
+    assert trace['outcome']['kind'] == 'completed'
+    assert not any(event.get('qualified_action') == 'Command.run' for event in trace['events'])
     print('PASS native result publication + new-process pending cleanup: ' + str(evidence))
 
 

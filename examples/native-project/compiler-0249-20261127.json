@@ -1,0 +1,589 @@
+{
+  "status": "official-0249-selected-partial-runtime-acceptance",
+  "toolchain": {
+    "selector": "latest0249",
+    "version": "0.24.9",
+    "source_overrides": [],
+    "repositories": {
+      "cli": {
+        "repository": "etas",
+        "revision": "db66f2d20429f64dc03cbd4686e8c91ec97cdb16",
+        "tree": "7c9af55427a534c124a25023fc8e6a9aa753d11e",
+        "packages": [
+          "etas_cli",
+          "etas_driver",
+          "etas_package",
+          "etas_tests"
+        ]
+      },
+      "core": {
+        "repository": "etas-core",
+        "revision": "e0be95b0f5b2ad0f52cb92ca23e88d00cce5ea9f",
+        "tree": "c1f83ef6dabd7134e99ca34b9105a0d413aaf1ed",
+        "packages": [
+          "etas_builtin",
+          "etas_cache",
+          "etas_code",
+          "etas_core",
+          "etas_host",
+          "etas_memory_derive",
+          "etas_package_metadata",
+          "etas_std",
+          "etas_utils"
+        ]
+      },
+      "frontend": {
+        "repository": "etas-frontend",
+        "revision": "ab7deebc99d7b021b4089e568f8a9c9a0cb23f66",
+        "tree": "d189819c91a446c8b9567700ce23bf324d64c0b9",
+        "packages": [
+          "etas_effects",
+          "etas_frontend",
+          "etas_hir",
+          "etas_hir_analysis",
+          "etas_syntax",
+          "etas_syntax_derive",
+          "etas_types"
+        ]
+      },
+      "interpreter": {
+        "repository": "etas-interpreter",
+        "revision": "0b79a7a22f46f2b8a9f388e58e97bc135e2448c8",
+        "tree": "740192694c707cd18096ebc0b6d71194ed866e04",
+        "packages": [
+          "etas_interpreter"
+        ]
+      }
+    },
+    "cache_root": "etas-0249-release",
+    "build_target": "etas-0230/target",
+    "source": "Official CLI 0.24.9 at db66f2d and exact official lock graph; standard release, existing shared target, one Cargo job, 6 GiB build only; source/runtime 4 GiB.",
+    "installed_sdk": true,
+    "build_profile": "release",
+    "cargo_lock_sha256": "28592512045dd9bf3bc51a71d5bcf25105ab514b3cc541f5f8bda115130561a8",
+    "verified_seed_binary_sha256": "2f027a99e9b7ff94c555410c46bc5d60354a2cb195c586bedf3aa24fd647b563"
+  },
+  "installed": {
+    "lock_sha256": "28592512045dd9bf3bc51a71d5bcf25105ab514b3cc541f5f8bda115130561a8",
+    "method": "adopted-independently-verified-0249-build",
+    "path": "/home/nomo/.cargo/bin/etas",
+    "sdk": {
+      "abi": {
+        "artifact_hash": "blake3:2df1d3b03ac0a6f48b544c9cab17d65c4eacfe2509aae68e9b5846b17c4aa6a8",
+        "body_schema": 99,
+        "compiler_version": "0.21.6",
+        "effect_analysis_hash": "blake3:f0a75425186bf211dd50c875524a8278f77fe6c342e042d0aed9d378f25ead57",
+        "interpreter_layout_hash": "blake3:a111bc64f8d7865804d65e70e13477c016b1e591fcbacfe5e41dcea12a323a87",
+        "metadata_schema": 78,
+        "native_binding_abi": "blake3:1f8072e9ff9c46f860213f9e74e9fb896278348d666a99a9035686f555a7cfda",
+        "schema": 3,
+        "std_contract": "phase1|etas.std.text.contract.v1|etas.std.text.primitive-abi.v1|etas.std.text.source.v1|unicode:17.0.0:7c74aebf116629b6:etas.std.text.unicode.v1|usize:64",
+        "target": "aarch64-unknown-linux-gnu",
+        "toolchain_id": "etas-0.8.2-aarch64-unknown-linux-gnu-1f8072e9ff9c"
+      },
+      "manifest_path": "/home/nomo/.cargo/lib/etas/etas-0.8.2-aarch64-unknown-linux-gnu-1f8072e9ff9c/std/manifest.json",
+      "manifest_sha256": "59fe17a22770b2c00c5339979ce9f2b5b87bda09b1bc5eeb08520724abe189ce",
+      "receipt": "etas-std-install-v2\n000000000000000018ebe8dd8e5c5ed5-81-aarch64-unknown-linux-gnu\nblake3:ee0661924ee657712018f6311d4da8300c5234e4368192fa1b25fe54676dca94\n"
+    },
+    "sha256": "2f027a99e9b7ff94c555410c46bc5d60354a2cb195c586bedf3aa24fd647b563",
+    "version": "etas 0.24.9\n"
+  },
+  "build": {
+    "elapsed_seconds": 447,
+    "profile": "standard Cargo release with reused dependency cache",
+    "cargo_jobs": 1,
+    "memory_max": 6442450944,
+    "memory_peak": 2933182464,
+    "oom": false,
+    "source_overrides": [],
+    "custom_rustflags": false,
+    "previous_binary_sdk_and_receipt_unchanged_through_staged_checks": true,
+    "previous_installation_backup": "/home/nomo/.cargo/etas-0247-release/accepted-before-0249"
+  },
+  "source_check": {
+    "snapshot": {
+      "root": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0249-staged-review-4vgallkp",
+      "base_commit": "7296362569818bc85f11d1b8a8400b6bb971eccf",
+      "overlaid_files": {
+        "scripts/etas-official-cli-common.py": "4d002414d25bf8ab5c24e028c271af5ac37f4a37b7f9423eff32192d78c9ff08",
+        "scripts/etas-official-container-common.sh": "a43cc5c86be231bc72abc83255acfd0852ca3a9c271682a4a28584589b45963f",
+        "tests/project_state_migration_probe.py": "e0770cbe81fe8801c9fc3838a599663579c49f9efd419c07326d8245b7ef7447",
+        "config/etas-0249-official-compose.yaml": "48bad757bb4cc50a872d9c70adfadacba0db7e3867bc5e59411cb1f5e9c933c3",
+        "config/etas-0249-official.json": "bac4366882a888eb4b8fcb9318620c3fae7fc4be9d1db0988e6b42fb5ab0d317",
+        "config/etas-0249-build-compose.yaml": "9f5cc4ac4d5306f13e0e207e86730af7a89887593704e13126247b244956612a",
+        "config/etas-0249-official.Cargo.lock": "28592512045dd9bf3bc51a71d5bcf25105ab514b3cc541f5f8bda115130561a8",
+        "scripts/etas-0249-official-cli-bootstrap.py": "2aa6a996760788045946433a0320314e0fada324689317c0c42d2c945c16e239",
+        "scripts/etas-0249-official-container.sh": "eddff44091648c2b8dbf993ffa1033258844ddb7eb927e8815715e45e37a4f11"
+      },
+      "overlay": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0249-staged-review-4vgallkp/compiler-compose.json",
+      "evidence": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0249-staged-review-4vgallkp/compiler-evidence",
+      "source_count": 467,
+      "source_manifest_sha256": "6fda7ec6e609d2d95e92408b706a3ba47dda26392f97cb8e71e03a10beb29b80"
+    },
+    "result": {
+      "exit": 0,
+      "elapsed_seconds": 40.05342035100011,
+      "binary_sha256": "2f027a99e9b7ff94c555410c46bc5d60354a2cb195c586bedf3aa24fd647b563",
+      "sdk_manifest_sha256": "6d10549b0b841be6af373f460940e96a1fa76e60ab462037428f1fd073b5bc73",
+      "sdk_artifact": "blake3:2df1d3b03ac0a6f48b544c9cab17d65c4eacfe2509aae68e9b5846b17c4aa6a8",
+      "resources": {
+        "memory.max": "4294967296",
+        "memory.peak": "2949349376",
+        "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+        "cpu.max": "400000 100000",
+        "pids.max": "256"
+      }
+    },
+    "final_snapshot": {
+      "root": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0249-final-review-m26esmuh",
+      "base_commit": "7296362569818bc85f11d1b8a8400b6bb971eccf",
+      "overlaid_files": {
+        "compose.yaml": "c9f73da6fcbf1c0cfb9274464850b2e997f811fa2c0000745977293c555019a8",
+        "scripts/etas-official-cli-common.py": "4d002414d25bf8ab5c24e028c271af5ac37f4a37b7f9423eff32192d78c9ff08",
+        "scripts/etas-official-container-common.sh": "a43cc5c86be231bc72abc83255acfd0852ca3a9c271682a4a28584589b45963f",
+        "scripts/nomo": "c1a0feabf49c39a94332ac27598ee710853c472cae9c671bee01cda43715965a",
+        "scripts/nomo-edit.py": "4f70124fd396530f0222b5e90dcf61ea9632dc9d1c717b62cf6fa74b6697647f",
+        "scripts/nomo-migrate-native": "dc442f85b3bef032ded2a7e34453bfe6bf7d914702585f8a278aac69d72021a5",
+        "scripts/nomo-native": "0ea04333423208bc6cdbdab4312bfccc9867f7fc57a19574904453bb4aa38776",
+        "scripts/nomo-native-tools.sh": "8c92994b1c164ce75abbafbd3d62e6ddd01ad097ca4b1005a7b81fb6f90afa6b",
+        "scripts/nomo-read.sh": "b85897bf2032f4a58a26ddacd8fd32236986b25c818b35a84175de7005e4fce7",
+        "scripts/nomo-session-chat.py": "98bfbb7c0a7178590852c155650aca99f12548e168072a1cae3203177a7132a7",
+        "scripts/nomo-verified-etas.py": "7bb968bb8d578f2d46e7d0adf2eb67061131def25571ec52c20e0766ce71a8e5",
+        "scripts/nomo_project_model.py": "ad1ec275004e3abf3516f728caaaabe78fbf3883cc28abbca06f65ab54d0ccff",
+        "tests/harness_prepare_ports_probe.py": "79e3ec1acc360feae65ac5c446b8482f11028d09d36084cb19a8208146c504f0",
+        "tests/native_attempt_recovery_probe.py": "cccd4acd88d5815429aae32d09996f422e817c08ace5d59e598432960b8cf99f",
+        "tests/native_composition_probe.py": "0d039f706137fed56cf0488fc4b04df1a0d89f878fc19c048c58fb3237fab9bb",
+        "tests/native_configuration_contract_probe.py": "18780265d0b0e05b33d5ad47f06e68287b4583b85caaf3d72e02490e97379d93",
+        "tests/native_configuration_probe.py": "ef0fd8ced89471ab4ef7f851c7357937aa5fb3876abfe7e6934a5b9d419b9bf6",
+        "tests/native_conversation_probe.py": "95906ad97a6dbf1f062afc9f13883d0d51a4734b2a73cb81adb3b42fd1c275df",
+        "tests/native_copy_recovery_probe.py": "a7c7cc86aa67902876dbeb20c1b4cc6aa96c2c215f67554a2e3aefc79b012f20",
+        "tests/native_history_commands_probe.py": "73d9964bce01c4bbe015fbd1285a37ffb01aecf01413f3ec99ee8c022db1349f",
+        "tests/native_mutation_controller_probe.py": "33a022aa6525c3eece5fe04e2231c6fc2c372b71ba80edc40e87428d0d0f091c",
+        "tests/native_mutations_probe.py": "774f5427a89ffd70e3cced804736efcb3dfe35489b5c268e9c96161860b8c1fb",
+        "tests/native_navigation_probe.py": "ae1cfe415be9eaf64b3f7b298538baa3191c6697015421ae1ff301f174843bcc",
+        "tests/native_process_controller_probe.py": "7a726976d9e6c2e24d4a5b0536a3d32dee49b5b7e50bd2021fd75f56b95bb631",
+        "tests/native_project_probe.py": "4b29e4851586825878e04935458c0ad6b9e1b16a58d9ea557c4f462a25424d37",
+        "tests/native_receipt_probe.py": "739cb14019e819a025b496d512855dc8912c4c6c73f45aa58b27e6a72bfe68c6",
+        "tests/native_recovery_probe.py": "bd33e3d7079148278799debc63b8aafc5e2352e6c8d2419bbc090be5bc6ebc9b",
+        "tests/native_stdin_probe.py": "e0c5a619f473c5c16e25b6780ab346b0c4f27eadab4dc5dedec6d7ec3f1ddd61",
+        "tests/native_transfer_controller_probe.py": "27053171d7ee58681279c1209b4660116e88938d0b38b96ab44eef902f00fae0",
+        "tests/normal_graph_identity.py": "00dd59583fb131bf00001e62b48c5e9fdc3f1f78abfac10f6e8dd3474814fdaa",
+        "tests/project_state_migration_probe.py": "777b5239ee7269f694b49db8760d23a8fba13e56d6b423c6d2db3547cc3432ad",
+        "config/etas-0249-official-compose.yaml": "48bad757bb4cc50a872d9c70adfadacba0db7e3867bc5e59411cb1f5e9c933c3",
+        "config/etas-0249-official.json": "bac4366882a888eb4b8fcb9318620c3fae7fc4be9d1db0988e6b42fb5ab0d317",
+        "config/etas-0249-build-compose.yaml": "9f5cc4ac4d5306f13e0e207e86730af7a89887593704e13126247b244956612a",
+        "config/etas-0249-official.Cargo.lock": "28592512045dd9bf3bc51a71d5bcf25105ab514b3cc541f5f8bda115130561a8",
+        "scripts/etas-0249-official-cli-bootstrap.py": "2aa6a996760788045946433a0320314e0fada324689317c0c42d2c945c16e239",
+        "scripts/etas-0249-official-container.sh": "eddff44091648c2b8dbf993ffa1033258844ddb7eb927e8815715e45e37a4f11"
+      },
+      "overlay": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0249-final-review-m26esmuh/compiler-compose.json",
+      "evidence": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0249-final-review-m26esmuh/compiler-evidence",
+      "source_count": 467,
+      "source_manifest_sha256": "6fda7ec6e609d2d95e92408b706a3ba47dda26392f97cb8e71e03a10beb29b80"
+    },
+    "all_467_product_sources_byte_identical": true,
+    "qualification": "Final wrappers/defaults and fixture corrections change Python/shell/config only; the complete Etas source manifest is identical to the checked snapshot. User-untracked prototypes excluded."
+  },
+  "harness": {
+    "status": "passed-runtime-with-offline-observer-correction",
+    "sources": 94,
+    "runtime": {
+      "path": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-harness-ports-0246-am2yzgj2/observed/production.trace.json",
+      "sha256": "71bba60ef9bd52712db6731ccdb4e0933530bc6e3eb90fa108dc4b403082a4d2",
+      "outcome": {
+        "kind": "completed"
+      },
+      "local_work_settled": true,
+      "paired_requests": 14,
+      "host_actions": {
+        "Agentic.step": 6,
+        "Console.stdout_write": 7,
+        "Fs.read": 1
+      },
+      "host_outcomes": {
+        "succeeded": 14
+      }
+    },
+    "attempts": [
+      {
+        "log": "tmp/harness-prepare-0249-staged.log",
+        "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-harness-ports-0246-58lg4qz3",
+        "result": {
+          "exit": 3,
+          "elapsed_seconds": 3.392404293000027,
+          "stdout": "",
+          "stderr": "error[analysis::UnhandledRuntimeError]: model host boundary failed: ProviderUnavailable: transport endpoint resolution failed\n --> /workspace/src/nomo/adapters/model/harness/history_native_stages.es:15:65\n  |     public flow run(self, input: Prompt) -> Delegation { return perform infer<Delegation>(input); }\n  |                                                                 ^ model host boundary failed: ProviderUnavailable: transport endpoint resolution failed\n",
+          "resources": {
+            "memory.max": "4294967296",
+            "memory.peak": "933298176",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "cpu.max": "400000 100000",
+            "pids.max": "256"
+          },
+          "model_requests": 0,
+          "observer_failures": []
+        }
+      },
+      {
+        "log": "tmp/harness-prepare-0249-connected.log",
+        "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-harness-ports-0246-ro4gkvkx",
+        "result": {
+          "exit": 3,
+          "elapsed_seconds": 3.3934872099998756,
+          "stdout": "",
+          "stderr": "error[analysis::UnhandledRuntimeError]: model host boundary failed: ProviderRejected: OpenAI-compatible endpoint returned an error status\n --> /workspace/src/nomo/adapters/model/harness/history_native_stages.es:15:65\n  |     public flow run(self, input: Prompt) -> Delegation { return perform infer<Delegation>(input); }\n  |                                                                 ^ model host boundary failed: ProviderRejected: OpenAI-compatible endpoint returned an error status\n",
+          "resources": {
+            "memory.max": "4294967296",
+            "memory.peak": "945713152",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "cpu.max": "400000 100000",
+            "pids.max": "256"
+          },
+          "model_requests": 1,
+          "observer_failures": [
+            "KeyError('tools')"
+          ]
+        }
+      },
+      {
+        "log": "tmp/harness-prepare-0249-output-tool.log",
+        "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-harness-ports-0246-y4bre2cf",
+        "result": {
+          "exit": 3,
+          "elapsed_seconds": 4.169791834999842,
+          "stdout": "user: T\nmodel: text qwen\nmodel: tool read\ntool: read: complete: blue%n\nmodel: text qwen\n",
+          "stderr": "error[analysis::UnhandledRuntimeError]: model host boundary failed: ProviderRejected: OpenAI-compatible endpoint returned an error status\n --> /workspace/src/nomo/adapters/model/legacy/read_tool.es:27:62\n  |     public flow run(self, input: Context) -> string { return perform infer<string>(Prompt.new().system(tool_system()).data(prompt_encoding.input(input))); }\n  |                                                              ^ model host boundary failed: ProviderRejected: OpenAI-compatible endpoint returned an error status\n",
+          "resources": {
+            "memory.max": "4294967296",
+            "memory.peak": "947412992",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "cpu.max": "400000 100000",
+            "pids.max": "256"
+          },
+          "model_requests": 3,
+          "observer_failures": [
+            "KeyError('tools')"
+          ]
+        }
+      },
+      {
+        "log": "tmp/harness-prepare-0249-corrected.log",
+        "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-harness-ports-0246-e8ch7ms_",
+        "result": {
+          "exit": 3,
+          "elapsed_seconds": 4.498540835999847,
+          "stdout": "user: T\nmodel: text qwen\nmodel: tool read\ntool: read: complete: blue%n\nmodel: text qwen\nCHILD MODEL REFUSAL phase=read-child-final category=prose chars=9 utf8=9\nerror: invalid JSON; phase=read-child-final category=prose chars=9 utf8=9\n",
+          "stderr": "error[analysis::ExecutionAborted]: child returned failure; no aggregation\n --> /workspace/src/app/prepare_interface_probe.es:167:25\n  |         Err(failure) => abort(failure.error),\n  |                         ^ child returned failure; no aggregation\n",
+          "resources": {
+            "memory.max": "4294967296",
+            "memory.peak": "932343808",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "cpu.max": "400000 100000",
+            "pids.max": "256"
+          },
+          "model_requests": 3,
+          "observer_failures": []
+        }
+      },
+      {
+        "log": "tmp/harness-prepare-0249-final-wire.log",
+        "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-harness-ports-0246-am2yzgj2",
+        "result": {
+          "exit": 0,
+          "elapsed_seconds": 7.058254128000044,
+          "stdout": "user: T\nmodel: text qwen\nmodel: tool read\ntool: read: complete: blue%n\nmodel: text qwen\nassistant: Seen blue\nPASS production historical stages\n",
+          "stderr": "",
+          "resources": {
+            "memory.max": "4294967296",
+            "memory.peak": "946044928",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "cpu.max": "400000 100000",
+            "pids.max": "256"
+          },
+          "model_requests": 6,
+          "observer_failures": [],
+          "status": "passed-runtime-offline-observer-continuation",
+          "paired_requests": 14,
+          "host_actions": {
+            "Agentic.step": 6,
+            "Console.stdout_write": 7,
+            "Fs.read": 1
+          },
+          "qualification": "All six original HTTP/context/ledger/result assertions and runtime completion passed. Driver stopped only at obsolete Agentic.infer trace label; corrected to actual Agentic.step and verified this same retained trace offline, without another HTTP or read. Earlier fixture network/protocol errors are retained separately."
+        }
+      }
+    ],
+    "scope": "Original full-context, ledger, proposal and one-read assertions retained. Fixture corrections: bridge networking, output-tool mode, exact historical final JSON frame, canonical percent newline, actual Agentic.step trace label. Final CLI run completes all six model requests; only the obsolete trace-label assertion is continued offline on that same trace, without replay."
+  },
+  "retained_history": {
+    "evidence": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0247-to-0249-history-ivetodhn",
+    "result": {
+      "exit": 0,
+      "source": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-project-state-migration-2s00pmdt/state/conversations.sqlite3",
+      "source_sha256_before": "6615b7caec59cd7a9c4e5654fddd7e407a15f5bc8f56a4947b0cf0cf67c54684",
+      "source_sha256_after": "6615b7caec59cd7a9c4e5654fddd7e407a15f5bc8f56a4947b0cf0cf67c54684",
+      "selected": "4b3511cabbb74c304582fd1bd7da5988",
+      "expected_complete_events": 36,
+      "command": [
+        "docker",
+        "compose",
+        "--project-name",
+        "nomo-0249-history",
+        "--env-file",
+        "/dev/null",
+        "--file",
+        "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0249-staged-review-4vgallkp/compose.yaml",
+        "--file",
+        "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0249-staged-review-4vgallkp/config/etas-0249-official-compose.yaml",
+        "--file",
+        "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0249-staged-review-4vgallkp/config/local-tryout-compose.yaml",
+        "--file",
+        "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0249-staged-review-4vgallkp/config/etas-runtime-cache-compose.yaml",
+        "--file",
+        "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-0249-staged-review-4vgallkp/config/nomo-native-compose.yaml",
+        "run",
+        "--rm",
+        "--no-deps",
+        "--pull",
+        "never",
+        "--tty=false",
+        "dev",
+        "/home/nomo/.cargo/etas-0249-release/staged-sdk/bin/etas",
+        "--no-config",
+        "--cache",
+        "off",
+        "run",
+        "/workspace",
+        "--flow",
+        "native_project",
+        "--profile",
+        "nomo-native",
+        "--allow-effects",
+        "--trace-out",
+        "/native-evidence/history.trace.json",
+        "--args",
+        "--workspace",
+        "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-project-state-migration-2s00pmdt/project A",
+        "--id",
+        "4b3511cabbb74c304582fd1bd7da5988",
+        "--history"
+      ],
+      "qualification": "Coherent copy of actual 0.24.7 state containing an imported old journal and completed native undo. One ordinary 0.24.9 --history invocation, no original mutation, schema rewrite, model or project operation.",
+      "trace_outcome": {
+        "kind": "completed"
+      },
+      "local_work_settled": true,
+      "paired_requests": 224,
+      "host_actions": {
+        "Policy.evaluate": 112,
+        "Memory.read": 75,
+        "Memory.write": 1,
+        "Console.stdout_write": 36
+      },
+      "status": "passed",
+      "complete_events": 36,
+      "original_events_and_chunks_unchanged": true
+    }
+  },
+  "shipping_project": {
+    "status": "passed",
+    "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-project-native-x6o00fxu",
+    "model_requests": 6,
+    "scope": "Original Python project entry with real tools, approved batch, successful command, full saved history, model summary and process reopen. This does not qualify native default cutover."
+  },
+  "project_edit_recovery": {
+    "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-project-state-migration-nv49t451",
+    "result": {
+      "status": "passed-application-and-real-storage",
+      "source": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-project-state-migration-nv49t451/original/project.sqlite3",
+      "source_sha256": "b7edfbf245e9a0bb8bf06d0f2a5815002b9dcdfbe8c93b201f3bdb5597fa433d",
+      "original_sessions": 3,
+      "original_rows": 24.0,
+      "source_unchanged": true,
+      "projection": {
+        "sessions": 3,
+        "context_messages": 10,
+        "matches_shipping_projection": true
+      },
+      "migration_host_requests": 143,
+      "fresh_status_history_host_requests": 90,
+      "real_provider_requests": 0,
+      "migration_command_actions": 0,
+      "native_undo": {
+        "status": "passed",
+        "edit": "bc57233d5d162f4b",
+        "native_approvals": 9,
+        "command_actions": 9,
+        "paired_host_requests": 469,
+        "authority_audit": "passed",
+        "model_requests": 0,
+        "restored": [
+          "note.txt bytes",
+          "note.txt mode 0751",
+          "absence of created new/ subtree"
+        ]
+      },
+      "native_rollback": {
+        "status": "passed",
+        "edit": "4050a2fa89d7aa50",
+        "native_approvals": 2,
+        "command_actions": 2,
+        "paired_host_requests": 216,
+        "authority_audit": "passed",
+        "model_requests": 0,
+        "restored": [
+          "interrupted.txt bytes",
+          "interrupted.txt mode 0751"
+        ]
+      },
+      "qualification": "One actual shipping SQL image generated through its public history/compaction/fork APIs. The read-only source adapter matches complete original exports. A controlled typed source exercises the production migration application, NativeStateWriter and historical append, followed by ordinary fresh native status/history, an explicit native undo and explicit rollback of two actual owned BatchEditor journals. Original journal remains exact. The old format does not preserve directory modes, timestamps or links. This does not qualify the production packet JSON codec, job conversion, bounded legacy sessions or default cutover."
+    },
+    "scope": "One real completed and one write-interrupted BatchEditor source. Controlled typed source through production migration application/real SQLite, fresh native undo and explicit idle rollback. Original SQL/journals exact; native approvals audited."
+  },
+  "production_project_migration": {
+    "status": "failed",
+    "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-project-state-migration-nv49t451/production",
+    "receipt": {
+      "status": "incomplete",
+      "source_database_sha256": "b7edfbf245e9a0bb8bf06d0f2a5815002b9dcdfbe8c93b201f3bdb5597fa433d",
+      "source_snapshot_sha256": "f3afdc04c1f83b663f65517d4850410707f2ff2a37d42fee034104a344bdddb3",
+      "source_format": "project",
+      "rows": 24,
+      "source": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-project-state-migration-nv49t451/original/project.sqlite3",
+      "state": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-project-state-migration-nv49t451/production/state",
+      "snapshots": null,
+      "project_files_backup": {
+        "format": "nomo-project-files-1",
+        "directories": [
+          "edits"
+        ],
+        "files": {
+          "edits/4050a2fa89d7aa50.json": {
+            "bytes": 455,
+            "sha256": "ef7134a1d7d8599a38409494843353366c1dacf8c41128a04b9e0a7ca2f62ffb"
+          },
+          "edits/bc57233d5d162f4b.json": {
+            "bytes": 813,
+            "sha256": "4fd0f04788bfb115c7ee0f9c5f6e5446e61335b01d6a98258ebbf5da41a1bdb2"
+          }
+        },
+        "native_import": "not-performed",
+        "scope": "Original edit snapshots, job status and raw output only. No native edit journal, job ownership, live handle or completed outcome is synthesized.",
+        "prepared_edits": [
+          "bc57233d5d162f4b",
+          "4050a2fa89d7aa50"
+        ],
+        "unowned_edits": []
+      },
+      "project_edit_import": {
+        "status": "incomplete",
+        "edits": [
+          "bc57233d5d162f4b",
+          "4050a2fa89d7aa50"
+        ],
+        "unowned_edits": []
+      },
+      "scope": "Shipping project database only: original session IDs, full source archives, summary fences and catalogue selection. Source event IDs map to native local positions; original IDs, timestamps, parent, kind, data and measured usage remain in each source archive and backup. Owned editor journals map to native journals/steps with original archive provenance and materialized before/after bytes and file modes. Applying records stay interrupted; the source did not record directory modes, timestamps, links or per-step dispatch. Unowned journals and workspace-owned job files remain under input, without native ownership or live handles. Bounded legacy sessions are not migrated. The native allowance ledger begins at zero for new execution. No command, model, recovery or live-handle replay.",
+      "exit": 3,
+      "source_database_after": "b7edfbf245e9a0bb8bf06d0f2a5815002b9dcdfbe8c93b201f3bdb5597fa433d"
+    },
+    "trace": {
+      "path": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-project-state-migration-nv49t451/production/trace/trace.json",
+      "sha256": "ef0462538f26a47aef74ad59e49542e9a06be05a90431e3454212d8515933512",
+      "outcome": {
+        "failure": {
+          "diagnostic": {
+            "code": "Analysis(MissingCheckedFact)",
+            "message": "checked revision value conversion failed: Value { source: TypeId(1159), target: TypeId(114), failure: UnmaterializedType(\"specialized type was not materialized: Applied { constructor: TypeConstructorId(105), args: [TypeId(4), TypeId(97)] }\") }",
+            "phase": "analysis",
+            "severity": "error"
+          },
+          "kind": "execution_fault"
+        },
+        "kind": "failed"
+      },
+      "local_work_settled": true,
+      "paired_requests": 1,
+      "host_actions": {
+        "Fs.read": 1
+      },
+      "host_outcomes": {
+        "succeeded": 1
+      }
+    },
+    "business_rows": 0,
+    "upstream": "https://github.com/etas-project/etas-interpreter/issues/121"
+  },
+  "model_batch_undo": {
+    "status": "failed",
+    "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-mutations-v7gt9kby",
+    "model_requests": 3,
+    "trace": {
+      "path": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-native-mutations-v7gt9kby/native/trace.json",
+      "sha256": "e9c380dbb9fa9937c3538b14e66d3aefa736017060ef676893561befb33fee30",
+      "outcome": {
+        "failure": {
+          "diagnostic": {
+            "code": "Analysis(UnhandledEffectAction)",
+            "message": "unhandled effect action ChangeOperations.undo escaped the checked-HIR interpreter entry",
+            "phase": "analysis",
+            "severity": "error"
+          },
+          "kind": "language"
+        },
+        "kind": "failed"
+      },
+      "local_work_settled": true,
+      "paired_requests": 1209,
+      "host_actions": {
+        "Policy.evaluate": 599,
+        "Memory.read": 260,
+        "Memory.write": 250,
+        "Console.stdout_write": 30,
+        "Console.stdin_read_line": 2,
+        "Fs.list": 30,
+        "Agentic.step": 3,
+        "Approval.request": 17,
+        "Command.run": 15,
+        "Fs.atomic_replace": 2,
+        "Fs.read": 1
+      },
+      "host_outcomes": {
+        "succeeded": 1209
+      }
+    },
+    "explicit_terminal_undo": {
+      "status": "passed-explicit-terminal-undo-only",
+      "edit": "native-0-1",
+      "approvals": 15,
+      "commands": 15,
+      "model_requests": 0,
+      "paired_requests": 709,
+      "unresolved_model_attempts_unchanged": [
+        {
+          "id": "native-0-run-1",
+          "input_event": 50,
+          "kind": "coding",
+          "label": "NativeCoding",
+          "phase": "dispatching",
+          "recovery_event": -1,
+          "result_event": -1,
+          "session": "native-0",
+          "through": 50
+        }
+      ],
+      "qualification": "Same retained journal, fresh explicit undo. Original model batch/undo remains failed; no forward operation repeated and its unresolved model attempt is not marked successful."
+    },
+    "upstream": "https://github.com/etas-project/etas-interpreter/issues/123",
+    "scope": "Original model path fails on second-turn ChangeOperations.undo before undo execution. Separate fresh terminal undo restores the same journal, with 15 new approvals and zero model requests. The failed model test stays failed and its unresolved attempt stays dispatching."
+  },
+  "remaining_scope": "Full thirteen-item goal remains active. Generic standard JSON migration, model tool outer Handler, independent cumulative/context/output controls (#125), injected existential tools (#105), capture/Task, Clock/canonical approval, workspace job/bounded-state migration and native default cutover remain open. No real provider or new adverse matrix.",
+  "structural_review": {
+    "architecture": "PASS 467 modules, 3478 imports, 48 identity-only leaves",
+    "inclusive_core_sloc": 23107,
+    "counter": "nomo-physical-v4",
+    "changed_python_shell_syntax": "passed 30 files",
+    "diff_whitespace": "passed",
+    "qualification": "Same exact Etas source manifest as full check; no repeated full compiler check for wrapper/test/documentation changes."
+  }
+}

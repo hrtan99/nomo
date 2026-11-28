@@ -1,0 +1,186 @@
+{
+  "status": "qualified-functional-completion-with-observer-correction",
+  "toolchain_receipt": "examples/native-project/compiler-0249-20261127.json",
+  "source": {
+    "root": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-workspace-jobs-review-mldw6z64",
+    "base_commit": "45543c6d59422818a64fc17a9f4fdffec2d4b9e1",
+    "source_count": 468,
+    "source_manifest_sha256": "7f96a34d3b40d576558864ac37c6d1a6e5c820739a8be25977cf091d8976f2dd",
+    "changed_files": {
+      "scripts/nomo-migrate-native": "ef971d2f5d3e6c0b855b3bdebe53dd5aa9c88626a8af36428c1d51336f09c8db",
+      "scripts/nomo_migration.py": "bbca59a5451f77aaf8189969a96a7ac619e16271cb1d1726617410aca25b18a6",
+      "src/nomo/adapters/cli/conversation.es": "7fbca8f01134ff3e59f072786a155fbba454c87980559ba174d8958a1e11d75c",
+      "src/nomo/adapters/cli/native/commands.es": "d3cc010ef257435eaf27809b0cc45f1fab0753e0aa5837a5ee7cec2dcb432087",
+      "src/nomo/adapters/filesystem/project_migration.es": "bfea4efaadfa467fc397f18969c815c0d20cbecfe8bda12ffacbac2c85290033",
+      "src/nomo/adapters/model/coding_agent.es": "2fd3bbd12c393d54a6c6b7a2a7880ae3643ed9b7664ec21b1a9059f3943129ba",
+      "src/nomo/adapters/model/tools/processes.es": "4bdccbf208007c087e127dc970390feefde860fe1d243f5b2eee857892622e59",
+      "src/nomo/adapters/storage/native_migration.es": "9833ea4eaa4fa3092280ec9148d62a42447e083935478450de90cda509fca122",
+      "src/nomo/adapters/storage/processes.es": "820661868fdfb191a8b5cb2f63834111944a46a789657a875ff9615977471a9a",
+      "src/nomo/application/context/acquire.es": "6477cf83f209d9040e468f612fef22f4e797a4f31ad2c6734d1ed0d7221683e5",
+      "src/nomo/application/conversation/service.es": "bdb68086d3ecc3014822283824276efb5176ad500d677d88633df936f2955dff",
+      "src/nomo/application/conversation/terminal.es": "f904dc44c82f547e77b975383c55556bd82a83adb1d9a642f87020df35536ad1",
+      "src/nomo/application/conversation/terminal_ports.es": "e01e440fbe4ea8b773ccf032376739444cee9330184fb05aafe789aec36735a8",
+      "src/nomo/application/migration/project_state.es": "e57fd21a7f062f576e0dcf8068e479523fe995afc6d5c44797c40bcd42acfb6e",
+      "src/nomo/application/processes/handlers.es": "9ba5ecdeb6988471c08528c7599b2665e2c1a368a4a1382c88be300a4e2aecc6",
+      "src/nomo/application/processes/ports.es": "59eebad84037471d22ec9254a7a4b2b3f8a73fe7045b6d2691a49b11cf752f02",
+      "src/nomo/application/processes/service.es": "fe94ecc6644af42c87d697f111c4b2f23820ded8ffd6562256f0905d2b201157",
+      "src/nomo/domain/conversation/commands.es": "f2954a1f400ecfc9e9c9b11264e46f37075164b2ebd55b81bd9960ba2351e154",
+      "src/nomo/domain/conversation/turn.es": "72482e1aff08bba23d5540c7a031da121e757f7120799e4d4a7119d0d041179a",
+      "src/nomo/domain/migration/native_state.es": "cf70e967fb83cd0b08cb8168862ee6442dc2ec746f599a002a9d7ff247ee72fc",
+      "src/nomo/domain/migration/project_state.es": "7b97767bb3b04778ab5e49e82f65d338adb567fef5f926f5b2caa9de4c9b5e15",
+      "tests/project_state_migration_probe.py": "78a1cee671af3051e74b8c1fe9e09897c38bb964b682e9ee51e3b342aec6afc0",
+      "src/nomo/domain/process/archived_jobs.es": "1bea7a9de75e039fc476da7cb3199ffaaeb292f9bd622e13297b3aaf4382ada7"
+    },
+    "check-architecture.py": {
+      "exit": 0,
+      "stdout": "PASS architecture: 468 modules, 3504 imports, 48 identity-only compatibility leaves\n",
+      "stderr": ""
+    },
+    "count-sloc.py": {
+      "exit": 0,
+      "stdout": "counter: nomo-physical-v4; authoritative; blank and comment-only # / // lines excluded\nproduct roots: src; reviewed runtime inventory: scripts/nomo, scripts/nomo_project_chat.py, scripts/nomo_project_model.py, scripts/nomo_project_tools.py, scripts/nomo_project.py, scripts/nomo_history.py, scripts/nomo_jobs.py, scripts/nomo_git.py, scripts/nomo-read.sh, scripts/nomo-session-chat.py, scripts/nomo-session-id.py, scripts/nomo-read-session.py, scripts/nomo-history-work.py, scripts/nomo-edit.py, scripts/nomo-session-storage.py, scripts/nomo-event-policy.py, scripts/nomo-bounded-check.py, scripts/nomo-verified-etas.py, scripts/nomo_model_transport.py, scripts/nomo_terminal.py, scripts/terminal-transport.py, scripts/nomo-native, scripts/native-worker-transport.py, scripts/nomo-migrate-native, scripts/nomo_migration.py, scripts/etas003_gateway.py, scripts/local-tryout.sh, scripts/prepare-local-tryout.py, scripts/session-demo.sh\nsrc: 18323 SLOC, 21619 raw lines, 468 files\nruntime: 4915 SLOC, 5460 raw lines, 29 files\nruntime-entry: 114 SLOC, 126 raw lines, 1 files\nruntime-project: 1256 SLOC, 1409 raw lines, 7 files\nruntime-legacy: 2032 SLOC, 2199 raw lines, 9 files\nruntime-shared: 498 SLOC, 567 raw lines, 4 files\nruntime-native: 632 SLOC, 712 raw lines, 4 files\nruntime-gateway: 165 SLOC, 188 raw lines, 1 files\nruntime-tryout: 218 SLOC, 259 raw lines, 3 files\nproduct: 23238 SLOC, 27079 raw lines, 497 files\ntests: 47983 SLOC, 52294 raw lines, 426 files\nexamples: 1363 SLOC, 1591 raw lines, 65 files\nscripts: 9974 SLOC, 11293 raw lines, 134 files\nengineering-scripts: 5059 SLOC, 5833 raw lines, 105 files\n",
+      "stderr": ""
+    }
+  },
+  "source_check": {
+    "exit": 0,
+    "elapsed_seconds": 41.787364561,
+    "resources": {
+      "memory.max": "4294967296",
+      "memory.peak": "2974461952",
+      "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+      "cpu.max": "400000 100000",
+      "pids.max": "256"
+    }
+  },
+  "source_diagnostics": 0,
+  "owned_initial_source_error": {
+    "root": "/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-workspace-jobs-review-vqlnoovw",
+    "exit": 1,
+    "cause": "assignment match arm required a statement block; corrected before the successful source check"
+  },
+  "runtime": {
+    "root": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-project-state-migration-wxtv8bcc",
+    "result": {
+      "status": "passed-application-and-real-storage",
+      "source": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-project-state-migration-wxtv8bcc/original/project.sqlite3",
+      "source_sha256": "0273fa79d1effcacad7125f1d0c8091350193effbe5a2fd08b0db1f22e968f92",
+      "original_sessions": 3,
+      "original_rows": 25.0,
+      "source_unchanged": true,
+      "projection": {
+        "sessions": 3,
+        "context_messages": 10,
+        "matches_shipping_projection": true
+      },
+      "migration_host_requests": 145,
+      "fresh_status_history_host_requests": 90,
+      "workspace_job_archive": {
+        "id": "2b7521d3044157ac",
+        "workspace": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-project-state-migration-wxtv8bcc/project A",
+        "raw_bytes": 5,
+        "fresh_terminal_host_requests": 56,
+        "native_approvals": 0,
+        "fabricated_native_handles": 0,
+        "source_files_unchanged": true
+      },
+      "real_provider_requests": 0,
+      "migration_command_actions": 0,
+      "native_undo": {
+        "status": "passed",
+        "edit": "d47e1742530685e8",
+        "native_approvals": 9,
+        "command_actions": 9,
+        "paired_host_requests": 469,
+        "authority_audit": "passed",
+        "model_requests": 0,
+        "restored": [
+          "note.txt bytes",
+          "note.txt mode 0751",
+          "absence of created new/ subtree"
+        ]
+      },
+      "native_rollback": {
+        "status": "passed",
+        "edit": "9a32cb707ad08036",
+        "native_approvals": 2,
+        "command_actions": 2,
+        "paired_host_requests": 216,
+        "authority_audit": "passed",
+        "model_requests": 0,
+        "restored": [
+          "interrupted.txt bytes",
+          "interrupted.txt mode 0751"
+        ]
+      },
+      "qualification": "One actual shipping SQL image generated through its public history/compaction/fork APIs. The read-only source adapter matches complete original exports. A controlled typed source exercises the production migration application, NativeStateWriter and historical append, followed by ordinary fresh native status/history, an explicit native undo and explicit rollback of two actual owned BatchEditor journals. A real completed shipping PTY job is imported with workspace ownership and exact raw output, then listed and read through the fresh native terminal with no model or command action. Original journals and job files remain exact. The old edit format does not preserve directory modes, timestamps or links. This does not qualify the production packet JSON codec, bounded legacy sessions or default cutover."
+    },
+    "fixture_sources": {
+      "tests/fixtures/native_project_migration/src/app/main.es": "30464e492ea5f659a581ae3f04fbd3236708689841ad4c25a379e84cfb225aaa",
+      "src/nomo/application/migration/ports.es": "97f055249e2635c9e1017ac28c1f0a985615daed903eeeb3f7ca81aa81755c85",
+      "src/nomo/application/migration/project_state.es": "e57fd21a7f062f576e0dcf8068e479523fe995afc6d5c44797c40bcd42acfb6e",
+      "src/nomo/adapters/storage/native_migration.es": "9833ea4eaa4fa3092280ec9148d62a42447e083935478450de90cda509fca122",
+      "src/nomo/adapters/storage/conversations.es": "6a23749075debcc6217bc3e6e3e9fb2dcac7aaa78072e908039ac233af20a4da",
+      "src/nomo/domain/serialization/json.es": "f84d219dfe4a44fb1456f45df2b51daa7a59265a59ab44343551cb3f95f82a7f",
+      "src/nomo/domain/conversation/messages.es": "7ed8b8d97c4406986f3d6005dce9fb7ee23403213a2fd0823671fe77ad5edee4",
+      "src/nomo/application/conversation/session_context.es": "8ad4acc4095bf48ef1c356850e7b9eef518e7c076f3a7166bba3a53d52fee72f",
+      "src/nomo/domain/conversation/history.es": "590b23e5f66f572e4466bab92a6fbf99cf193279ea386f869fa12a6c05b2308c",
+      "src/nomo/domain/transfer/copy.es": "90964dc0335a975a4ffd65787d28348aa6e4021ab738d180a10333ca84eb4916",
+      "src/nomo/domain/conversation/session.es": "015f7748071199d101dd0d4a193a8537e7fbe853b9201b93d8dab48302977085",
+      "src/nomo/native/history.es": "38bb796c50441ab848e52cd342240c6cf68a8eeccf739b3a371f8441be127222",
+      "src/nomo/application/conversation/ports.es": "cdc78c6c816090bef7201ff3fbb2c2b80f427ada2ed7bf09469f411d59d788c5",
+      "src/nomo/application/mutations/ports.es": "d41a8dd8cb1931d0d101e3731300d2bc99a388f82bf4c8ee0dd3ef85af8fbdd5",
+      "src/nomo/application/transfer/ports.es": "51ab2163a992c7e07f8d6fa0e06c28192743fe16af00ab41469de7bf97bc35cc",
+      "src/nomo/native/workspace.es": "399d557413ff6bd8056b8548e9dea2bce7f14c83f9fde18bcbe070d9fbde0be7",
+      "src/nomo/domain/transfer/archive.es": "92624089a443000a743fed3d11a67b2e3f92bbaae5b4de1a1eca965d652048c8",
+      "src/nomo/domain/execution/attempt.es": "e22f9aa9f66e6859b4058fe6f219992c22d8ec7b5d54670e9611a29dad08a51d",
+      "src/nomo/native/lifecycle.es": "80028f4c7b61e0d1f984a141dfcfdddda7816add98e806c12c7247babd504dfc",
+      "src/nomo/application/commands/effects.es": "f205b83fdf9064806ebd415db769d6b19e6f25166a42a46acaf0191a3b87d85d",
+      "src/nomo/domain/mutations/models.es": "372e1325d246862f0d6f6f1258ebd6a86234df95d76aadea0289edda6000ab53",
+      "src/nomo/native/mutations.es": "6aace5d03717dbe7ed2e7790a81b720f7ac9f1f71f657547697834a86bc69247",
+      "src/nomo/domain/execution/command.es": "561fd128a1402568b33662f5fba1da7ce0ffc79f287fac2b47d9b7a5e25d4dba",
+      "src/nomo/domain/migration/native_state.es": "cf70e967fb83cd0b08cb8168862ee6442dc2ec746f599a002a9d7ff247ee72fc",
+      "src/nomo/adapters/storage/attempts.es": "5ac88c4018d7201440007f7f3d8d6721852a4b6b111be67220f439dfa52adbe9",
+      "src/nomo/native/configuration.es": "9b09cc2a7554749ae77a5133536ee834349696fe69c37ccd15aa2e28b541de51",
+      "src/nomo/native/projects.es": "c7a5990adefd92aca79eee300a4dfb74f553f951573d145c7e06703b6472c4bb",
+      "src/nomo/native/processes.es": "ab43a598a18c9b3bab22b11beac047a56aa2384366a2fd5c5f97d095b727c043",
+      "src/nomo/adapters/storage/processes.es": "820661868fdfb191a8b5cb2f63834111944a46a789657a875ff9615977471a9a",
+      "src/nomo/domain/process/jobs.es": "f9dd469f38f3e7abc65594cda8294c03299f8bad54db06632bea478451e55a26",
+      "src/nomo/application/processes/ports.es": "59eebad84037471d22ec9254a7a4b2b3f8a73fe7045b6d2691a49b11cf752f02",
+      "src/nomo/domain/process/archived_jobs.es": "1bea7a9de75e039fc476da7cb3199ffaaeb292f9bd622e13297b3aaf4382ada7",
+      "src/nomo/application/context/ports.es": "a7462080acd1c94212b3f26e80801b9f1ff1385a98c8ba848afa9dcf7bd36e6d",
+      "src/nomo/domain/conversation/turn.es": "72482e1aff08bba23d5540c7a031da121e757f7120799e4d4a7119d0d041179a",
+      "src/nomo/domain/context/instructions.es": "4642a6abaa80155f65ab5d225723bb9c348287dad26fe2bca8436271ddacd920",
+      "src/nomo/domain/configuration/settings.es": "ce0779cdc7816f601e8103fda4b9703cd5e4b5f03f4d3277219f4cc2a9923db9",
+      "src/nomo/domain/process/observations.es": "c05a48557b50d8810195b8f6a23b27ebde59ddd0f4f78daf6d4caf9c72a5fdf8",
+      "src/nomo/domain/execution/transitions.es": "27bb227965252fa5c3313c9791fcd70e2d877e7674a6b2ba6edfd322cf8d85b2",
+      "src/nomo/application/execution/ports.es": "c09afcaccdd9833d1f0633e8d5e0ea989780724b178935f6f9191274a5fe3d1c",
+      "src/nomo/domain/migration/project_state.es": "7b97767bb3b04778ab5e49e82f65d338adb567fef5f926f5b2caa9de4c9b5e15",
+      "generated:src/app/source.es": "bcc6fe4d85f9dc0e3bc5c8e58679012ae61e5ff2876543117fefe8b002a41950"
+    }
+  },
+  "observer_correction": {
+    "original_driver_sha256": "78a1cee671af3051e74b8c1fe9e09897c38bb964b682e9ee51e3b342aec6afc0",
+    "corrected_driver_sha256": "31a8ff8cb4ac924f8e4b7aff22fad839856dd4b764fe9a25b6811020ccecd7d5",
+    "cause": "Option.None JSON is the standard named enum object, not null. Migration and archived terminal operations had completed before this assertion.",
+    "continuation": "Same completed terminal output validated offline; only the originally unexecuted undo/rollback suffix ran. No source migration, PTY job or archive query was replayed. A temporary Python continuation local-variable error exited before starting that suffix and was corrected.",
+    "unchanged_etas_sources": true
+  },
+  "implementation": {
+    "packet_format": "nomo-project-state-3",
+    "new_region": "nomo-native-project-jobs-v1",
+    "ownership": "original workspace; no synthesized conversation",
+    "output": "exact merged PTY bytes in 262144-byte parts",
+    "terminal": [
+      "/jobs \u2192 [OLD JOB]",
+      "/archived-output JOB [PART] \u2192 [OLD OUT]"
+    ],
+    "model_tools_source_checked": [
+      "archived_jobs",
+      "archived_job_output"
+    ],
+    "model_runtime_accepted": false,
+    "existing_job_region_or_types_changed": false
+  },
+  "scope": "The selected application/storage/fresh-terminal job archive and original real-journal undo/rollback pass with the recorded observer correction. Formal packet JSON decoding remains #121; no new formal JSON invocation was made for the v3 archive because the same parser gate is already recorded. Injected existential tools remain #105, model-driven undo #123, independent token controls #125 and other previously recorded gates remain open. Bounded legacy sessions and full thirteen-item/default native cutover remain incomplete. No real provider, additional adverse matrix or compiler patch."
+}

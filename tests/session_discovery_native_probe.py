@@ -167,9 +167,9 @@ def projection(evidence,directory,label,action,args,expected_ids,latest=None):
 
 def source_facts():
     paths=['etas.toml','etas.lock','compose.yaml','config/etas-latest-main.json','config/local-tryout-compose.yaml','config/local-tryout-model-compose.yaml','scripts/local-tryout.sh','scripts/terminal-transport.py','scripts/prepare-local-tryout.py',
-        'src/nomo/cli/terminal_args.es','src/nomo/cli/work_chain_selection_args.es','src/nomo/session/work_chain_selection.es',
-        'src/nomo/session/work_chain_observation.es','src/nomo/session/work_chain_store.es','src/nomo/entry/work_chain_sessions.es',
-        'src/nomo/entry/terminal_entry.es']
+        'src/nomo/adapters/cli/session_input.es','src/nomo/adapters/cli/chain_input.es','src/nomo/session/work_chain_selection.es',
+        'src/nomo/session/work_chain_observation.es','src/nomo/adapters/storage/chains.es','src/nomo/adapters/cli/chains.es',
+        'src/nomo/adapters/cli/terminal.es']
     profile=tomllib.loads((ROOT/'etas.toml').read_text())['runtime']['profiles']['work-chain']
     assert profile['model']['retry']==dict(attempts=1,delay_ms=0)
     return dict(model=profile['model']['model'],HTTP_attempts_per_native_request=1,

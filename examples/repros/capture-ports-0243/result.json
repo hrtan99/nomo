@@ -1,0 +1,113 @@
+{
+  "exit": 1,
+  "elapsed_seconds": 0.5035543341655284,
+  "check": {
+    "command": "check",
+    "files": [
+      {
+        "diagnostics": [
+          {
+            "code": "effect::IncompleteEffectFacts",
+            "help": null,
+            "labels": [
+              {
+                "message": "external call effect selector specialization failed: checked latent flow summary is missing for parameter `read`",
+                "span": {
+                  "end": 639,
+                  "source": 1,
+                  "start": 515
+                },
+                "style": "Primary"
+              }
+            ],
+            "message": "external call effect selector specialization failed: checked latent flow summary is missing for parameter `read`",
+            "notes": [],
+            "phase": "EffectCheck",
+            "primary": {
+              "label": "external call effect selector specialization failed: checked latent flow summary is missing for parameter `read`",
+              "span": {
+                "end": 639,
+                "endColumn": 8,
+                "endLine": 22,
+                "source": 1,
+                "start": 515,
+                "startColumn": 12,
+                "startLine": 19
+              }
+            },
+            "severity": "error",
+            "suggestions": []
+          },
+          {
+            "code": "effect::EffectOutsideDeclaredRow",
+            "help": null,
+            "labels": [
+              {
+                "message": "inferred effect Registered.put escapes the declared effect row",
+                "span": {
+                  "end": 247,
+                  "source": 1,
+                  "start": 155
+                },
+                "style": "Primary"
+              }
+            ],
+            "message": "inferred effect Registered.put escapes the declared effect row",
+            "notes": [],
+            "phase": "EffectCheck",
+            "primary": {
+              "label": "inferred effect Registered.put escapes the declared effect row",
+              "span": {
+                "end": 247,
+                "endColumn": 2,
+                "endLine": 10,
+                "source": 1,
+                "start": 155,
+                "startColumn": 1,
+                "startLine": 8
+              }
+            },
+            "severity": "error",
+            "suggestions": []
+          },
+          {
+            "code": "effect::EscapedEffect",
+            "help": null,
+            "labels": [
+              {
+                "message": "requested action Registered.put is not handled by a scoped or default handler and is outside the declared effect row",
+                "span": {
+                  "end": 247,
+                  "source": 1,
+                  "start": 155
+                },
+                "style": "Primary"
+              }
+            ],
+            "message": "requested action Registered.put is not handled by a scoped or default handler and is outside the declared effect row",
+            "notes": [],
+            "phase": "EffectCheck",
+            "primary": {
+              "label": "requested action Registered.put is not handled by a scoped or default handler and is outside the declared effect row",
+              "span": {
+                "end": 247,
+                "endColumn": 2,
+                "endLine": 10,
+                "source": 1,
+                "start": 155,
+                "startColumn": 1,
+                "startLine": 8
+              }
+            },
+            "severity": "error",
+            "suggestions": []
+          }
+        ],
+        "path": "/workspace/src/app/main.es"
+      }
+    ],
+    "optimization_level": null
+  },
+  "stderr": "time=\"2026-11-27T11:09:37+08:00\" level=warning msg=\"Found orphan containers ([nomo-recoverable-chat-direct-20261106-final nomo-etas-check-20261106-phases nomo-etas-check-20261106-constructed-fast nomo-etas-check-20261106-chunk128 nomo-etas-check-20261106-readsafe nomo-etas-check-20261106-stringops nomo-etas-check-20261106-encodedfast nomo-etas-check-20261106-dynamicchunks nomo-etas-check-20261106-largefast nomo-etas-check-20261106-fastjson nomo-recoverable-chat-probe-20261106-4 nomo-recoverable-chat-probe-20261106-3 nomo-etas-check-20261106-budget2 nomo-etas-check-20261106-budget nomo-recoverable-chat-probe-20261106-2 nomo-recoverable-chat-probe-20261106 nomo-etas-check-20261106-2 nomo-etas-check-20261106]) for this project. If you removed or renamed this service in your compose file, you can run this command with the --remove-orphans flag to clean it up.\"\n\n",
+  "compiler": "official Etas 0.24.3, exact graph and SDK in config/etas-0243-official.json"
+}

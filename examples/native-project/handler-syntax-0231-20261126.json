@@ -1,0 +1,159 @@
+{
+  "date": "2026-11-26",
+  "status": "syntax-migration-complete-full-project-acceptance-blocked",
+  "compiler": {
+    "selector": "latest0231",
+    "version": "0.23.1",
+    "source_overrides": [],
+    "repositories": {
+      "cli": {
+        "repository": "etas",
+        "revision": "cb34bdc448dc2f09bdef00adb9d26451f772f802",
+        "tree": "866d0d124b1a6ec6e88ca6e9450316baec4b6fc5",
+        "packages": [
+          "etas_cli",
+          "etas_driver",
+          "etas_package",
+          "etas_tests"
+        ]
+      },
+      "core": {
+        "repository": "etas-core",
+        "revision": "19a2b142edc2f61b97c27d8bd3270d0cc35bcc50",
+        "tree": "c799c73c497809acf771d0e555f56955f8057f66",
+        "packages": [
+          "etas_builtin",
+          "etas_cache",
+          "etas_code",
+          "etas_core",
+          "etas_host",
+          "etas_memory_derive",
+          "etas_package_metadata",
+          "etas_std",
+          "etas_utils"
+        ]
+      },
+      "frontend": {
+        "repository": "etas-frontend",
+        "revision": "d46dd0285cc2c027849ba6e241d03ead37bdaaec",
+        "tree": "1cea46aa3020f11d8e9546fb7fcb1eb2267476bf",
+        "packages": [
+          "etas_effects",
+          "etas_frontend",
+          "etas_hir",
+          "etas_hir_analysis",
+          "etas_syntax",
+          "etas_syntax_derive",
+          "etas_types"
+        ]
+      },
+      "interpreter": {
+        "repository": "etas-interpreter",
+        "revision": "d52ac593d9e4b6bc0a199f3d6b13906e1d4dd811",
+        "tree": "87f48c88afabcdf36672e5c6fc25b9cb9b14d8fb",
+        "packages": [
+          "etas_interpreter"
+        ]
+      }
+    },
+    "cache_root": "etas-0231",
+    "build_target": "etas-0230/target",
+    "source": "Official CLI 0.23.1 with implicit handler tail resumption; exact locked graph and matching SDK; reuse the existing build target and volume.",
+    "cargo_lock_sha256": "68038c4cc9189820907932b15a271afae40ffb9764a5decd32df957f8f8285ce",
+    "verified_seed_binary_sha256": "5427f388371e6b650f91c4f00fc5811dbf864ce3db4cf297b273dc6342b8c870",
+    "installed_sdk": true,
+    "build_profile": "dev"
+  },
+  "installed_identity": {
+    "lock_sha256": "68038c4cc9189820907932b15a271afae40ffb9764a5decd32df957f8f8285ce",
+    "method": "adopted-independently-verified-0231-build",
+    "path": "/home/nomo/.cargo/bin/etas",
+    "sdk": {
+      "abi": {
+        "artifact_hash": "blake3:4a09b5f01fae5309dbdcee66c2f0865fdea9e747ba54d95686961f1468abb6ae",
+        "body_schema": 93,
+        "compiler_version": "0.20.1",
+        "effect_analysis_hash": "blake3:59ddd3f049a077cdf4e2a30ee7268599da900aed6ccdfa3ec9bbefeab3ad92e3",
+        "interpreter_layout_hash": "blake3:9b5c29a9c67ad65a85ff3aa022fbbabf5e93d201057e2b4a73879ef1585d7935",
+        "metadata_schema": 77,
+        "native_binding_abi": "blake3:c2620b315312e5c96f43d67f9160dd81048b8a030de13347e29442d9e30231e3",
+        "schema": 3,
+        "std_contract": "phase1|etas.std.text.contract.v1|etas.std.text.primitive-abi.v1|etas.std.text.source.v1|unicode:17.0.0:7c74aebf116629b6:etas.std.text.unicode.v1|usize:64",
+        "target": "aarch64-unknown-linux-gnu",
+        "toolchain_id": "etas-0.7.1-aarch64-unknown-linux-gnu-c2620b315312"
+      },
+      "manifest_path": "/home/nomo/.cargo/lib/etas/etas-0.7.1-aarch64-unknown-linux-gnu-c2620b315312/std/manifest.json",
+      "manifest_sha256": "a4189163b8e596ea938001df6c66017cee1dc2ddea7aa250aa30eab4c5719624",
+      "receipt": "etas-std-install-v2\n000000000000000018eb89c4da521d30-499-aarch64-unknown-linux-gnu\nblake3:262692d31c0ad6277c2c4bad1fec7e909cb5e2d832cddb8a8d543a08a0118cb4\n"
+    },
+    "sha256": "5427f388371e6b650f91c4f00fc5811dbf864ce3db4cf297b273dc6342b8c870",
+    "version": "etas 0.23.1\n"
+  },
+  "build": {
+    "status": "passed",
+    "profile": "dev",
+    "offline_locked": true,
+    "jobs": 1,
+    "elapsed": "4m05s",
+    "cache": "existing Cargo volume and target reused"
+  },
+  "specification": {
+    "revision": "cb34bdc448dc2f09bdef00adb9d26451f772f802",
+    "handler_completion": "https://github.com/etas-project/etas/blob/cb34bdc448dc2f09bdef00adb9d26451f772f802/docs/design/06-effect-system-and-inference.md#22-handler-arm-completion"
+  },
+  "changes": {
+    "production_handler_resumptions_removed": 203,
+    "value_tails": 156,
+    "unit_tails": 47,
+    "single_expression_handler_arms": 203,
+    "single_expression_match_arms": 460,
+    "single_expression_lambdas": 4,
+    "single_expression_handled_bodies": 34,
+    "redundant_handler_tail_bindings_removed": 11,
+    "existing_fixture_files": 42,
+    "removed_collection_len_calls": 323,
+    "collection_len_source_and_fixture_files": 91,
+    "ordinary_resume_import_alias_retained": true,
+    "literal_payloads_preserved": true,
+    "persistent_declaration_identities": "architecture manifest unchanged"
+  },
+  "working_tree": {
+    "modules": 458,
+    "nomo_imports": 3351,
+    "compatibility_leaves": 51,
+    "source_fingerprint_sha256": "5b813f027cc5f74b045ae52dc8d1d0c79dd46bc6246ecb831f88be6b31e5b90a",
+    "includes_local_untracked_prototypes": true
+  },
+  "verification": {
+    "official_source_tree_lock_registry_and_sdk_guard": "passed",
+    "architecture": "passed",
+    "python_syntax": "passed",
+    "shell_syntax": "passed",
+    "git_diff_check": "passed",
+    "existing_positive_case": {
+      "name": "tool_then_final",
+      "flow": "production_observe",
+      "status": "passed",
+      "assertions": "original whole Turn comparison and four expected event outputs",
+      "observed_stdout": "CASE tool_then_final\nuser: tool:echo:blue\nmodel: tool echo\ntool: echo: blue\nassistant: stub received: blue\nPASS tool_then_final\n"
+    },
+    "full_source_check": {
+      "exit": 4,
+      "error": "checked effect tag has conflicting package identities",
+      "issue": "https://github.com/etas-project/etas-frontend/issues/101"
+    },
+    "complete_native_workflow": "not accepted; earlier 4 GiB conversation OOM not rerun"
+  },
+  "real_model_calls": 0,
+  "new_negative_test_matrices": 0,
+  "review_package": {
+    "modules": 448,
+    "architecture": "PASS architecture: 448 modules, 3294 imports, 48 identity-only compatibility leaves",
+    "source_fingerprint_sha256": "4a801ff79277248ea6837c1eb03ed4b3764a852eb89967796d4d32286c84ea83",
+    "includes_local_untracked_prototypes": false,
+    "normal_full_compile": {
+      "exit": 4,
+      "diagnostic": "frontend session failed: Pipeline(\"checked definition projection failed: Invalid(\\\"checked effect tag has conflicting package identities\\\")\")"
+    }
+  }
+}

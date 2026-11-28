@@ -1,21 +1,36 @@
 module nomo.model_tool_test;
 
 import std.io.println;
-import std.text.{split, char_count as len};
-import std.collections.len as count;
-import std.json.{JsonValue, stringify};
+import std.text.split;
+import std.text.char_count as len;
+import std.json.JsonValue;
+import std.json.stringify;
 import std.agent.message.Message;
-import nomo.core.conversation.{State, Event, fresh, add, stop};
-import nomo.model.model_tool_contract.{Action, Context, Session, Limits, fresh_loop, default_limits,
-    decode_reply, allowed_error, question_error, context_error, budget_error, charge_action};
-import nomo.agent.model_tool.run_loop;
-import nomo.tools.path_policy.valid_path;
+import nomo.domain.conversation.State;
+import nomo.domain.conversation.Event;
+import nomo.domain.conversation.fresh;
+import nomo.domain.conversation.add;
+import nomo.domain.conversation.stop;
+import nomo.domain.harness.loop.Action;
+import nomo.domain.harness.loop.Session;
+import nomo.domain.harness.loop.Limits;
+import nomo.domain.harness.loop.fresh_loop;
+import nomo.domain.harness.loop.default_limits;
+import nomo.domain.harness.loop.decode_reply;
+import nomo.domain.harness.loop.question_error;
+import nomo.domain.harness.loop.context_error;
+import nomo.domain.harness.loop.budget_error;
+import nomo.domain.harness.loop.charge_action;
+import nomo.domain.harness.loop.Context;
+import nomo.domain.harness.loop.allowed_error;
+import nomo.bootstrap.harness.model_tool_run_loop as run_loop;
+import nomo.domain.workspace.valid_path;
 
 flow emit_action(value: Action) -> unit {
     let message = Message.new(value);
     let converted: Option<Message<JsonValue>> = message.cast<JsonValue>();
-    let json = match converted { Some(item) => item.body, None() => { abort("test action conversion"); } };
-    let encoded = match stringify(json) { Ok(item) => item, Err(_) => { abort("test action JSON"); } };
+    let json = match converted { Some(item) => item.body, None() => abort("test action conversion"), };
+    let encoded = match stringify(json) { Ok(item) => item, Err(_) => abort("test action JSON"), };
     println("OK " + encoded);
 }
 
@@ -33,9 +48,9 @@ flow pure_path(args: Array<string>) -> bool { return valid_path(args[0]); }
 flow probe(args: Array<string>) -> i32 {
     let mode = args[0];
     if mode == "decode" || mode == "final_only" {
-        let allowed = if count(args) > 2 { split(args[2], ",") } else { ["a.txt", "b.txt"] };
+        let allowed = if args.len() > 2 { split(args[2], ",") } else { ["a.txt", "b.txt"] };
         match decode_reply(args[1], allowed, mode == "final_only") {
-            Ok(value) => { emit_action(value); } Err(error) => { println("ERR " + error); }
+            Ok(value) => emit_action(value), Err(error) => println("ERR " + error),
         }
         return 0;
     }
@@ -46,8 +61,8 @@ flow probe(args: Array<string>) -> i32 {
             allowed = [args[2], args[3]], final_only = true };
         let message = Message.new(context);
         let converted: Option<Message<JsonValue>> = message.cast<JsonValue>();
-        let json = match converted { Some(item) => item.body, None() => { abort("test context conversion"); } };
-        let encoded = match stringify(json) { Ok(item) => item, Err(_) => { abort("test context JSON"); } };
+        let json = match converted { Some(item) => item.body, None() => abort("test context conversion"), };
+        let encoded = match stringify(json) { Ok(item) => item, Err(_) => abort("test context JSON"), };
         println("JSON " + encoded);
         println("RESULT " + context_error(context));
         return 0;
@@ -71,7 +86,7 @@ flow probe(args: Array<string>) -> i32 {
             abort("final model accounting");
         }
         if budget_error(final, limits, false) == "" || budget_error(final, limits, true) == "" { abort("hard step cap"); }
-        if first.history.spent != 0 || count(first.history.events) != 0 || first.calls != 0 { abort("pure state was mutated"); }
+        if first.history.spent != 0 || first.history.events.len() != 0 || first.calls != 0 { abort("pure state was mutated"); }
         println("LEDGERS_OK"); return 0;
     }
     if mode == "budgets" {
@@ -123,8 +138,8 @@ flow boundary(args: Array<string>) -> i32 {
     let result = run_loop("hello", ["a.txt"], limits, prior);
     if result.status != 4 || result.state.history.spent != 0 || result.state.calls != prior.calls ||
         result.state.tokens != prior.tokens || result.state.tools != 0 || result.state.scan != 0 { abort("boundary charged denied action"); }
-    if count(result.state.history.events) > 32 || result.state.history.characters > 8192 { abort("terminal reserve exceeded"); }
-    if count(prior.history.events) > 0 && result.state.history.events[0] != prior.history.events[0] {
+    if result.state.history.events.len() > 32 || result.state.history.characters > 8192 { abort("terminal reserve exceeded"); }
+    if prior.history.events.len() > 0 && result.state.history.events[0] != prior.history.events[0] {
         abort("existing history changed");
     }
     println("BOUNDARY_OK"); return 0;

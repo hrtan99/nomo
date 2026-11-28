@@ -1,0 +1,170 @@
+{
+  "date": "2026-11-26",
+  "status": "official-toolchain-verified-application-acceptance-blocked",
+  "compiler": {
+    "selector": "latest0232",
+    "version": "0.23.2",
+    "source_overrides": [],
+    "repositories": {
+      "cli": {
+        "repository": "etas",
+        "revision": "25dcf8f884fca261c9018ab178f8bc82b1b7c9b1",
+        "tree": "4e13a7c912bb457c57c2f7b00dc57f8f492cba81",
+        "packages": [
+          "etas_cli",
+          "etas_driver",
+          "etas_package",
+          "etas_tests"
+        ]
+      },
+      "core": {
+        "repository": "etas-core",
+        "revision": "19a2b142edc2f61b97c27d8bd3270d0cc35bcc50",
+        "tree": "c799c73c497809acf771d0e555f56955f8057f66",
+        "packages": [
+          "etas_builtin",
+          "etas_cache",
+          "etas_code",
+          "etas_core",
+          "etas_host",
+          "etas_memory_derive",
+          "etas_package_metadata",
+          "etas_std",
+          "etas_utils"
+        ]
+      },
+      "frontend": {
+        "repository": "etas-frontend",
+        "revision": "08120a4170793477a14f87e0f65896633e8040c2",
+        "tree": "303cded1b5e10342969e57e08bc74e4860e6e09d",
+        "packages": [
+          "etas_effects",
+          "etas_frontend",
+          "etas_hir",
+          "etas_hir_analysis",
+          "etas_syntax",
+          "etas_syntax_derive",
+          "etas_types"
+        ]
+      },
+      "interpreter": {
+        "repository": "etas-interpreter",
+        "revision": "1b0e95ef4abee12d13e4c2bccc9548b5eedc6b93",
+        "tree": "95dfcc8f993f1ec41b08206ea242da61598c43b0",
+        "packages": [
+          "etas_interpreter"
+        ]
+      }
+    },
+    "cache_root": "etas-0232",
+    "build_target": "etas-0230/target",
+    "source": "Official CLI 0.23.2 at 25dcf8f and its locked source-effect identity isolation fix; matching installed SDK; existing cache reused.",
+    "cargo_lock_sha256": "5d5a0a83ea07839a880728b011eef094a3382ff0e40f23dd7896bc0b3fbb8433",
+    "verified_seed_binary_sha256": "a76b0c4059c5c2672a157cbc8975d7ec236ce5737fbb03a0f6bdfe3ec0817e57",
+    "installed_sdk": true,
+    "build_profile": "dev"
+  },
+  "installed_identity": {
+    "lock_sha256": "5d5a0a83ea07839a880728b011eef094a3382ff0e40f23dd7896bc0b3fbb8433",
+    "method": "adopted-independently-verified-0232-build",
+    "path": "/home/nomo/.cargo/bin/etas",
+    "sdk": {
+      "abi": {
+        "artifact_hash": "blake3:bdef31078ae167649e9e77d7411dfd4b6dc032164a24d49bab8eea7eca46a171",
+        "body_schema": 93,
+        "compiler_version": "0.20.2",
+        "effect_analysis_hash": "blake3:03426a22781000d6f7dee72834e6569e8ce40a9911bdc282064a613bf55fdf59",
+        "interpreter_layout_hash": "blake3:118e7b337f7b3b1ec8225ce55000b9ccbfe85e6387d461913374d2aed46d436c",
+        "metadata_schema": 77,
+        "native_binding_abi": "blake3:c2620b315312e5c96f43d67f9160dd81048b8a030de13347e29442d9e30231e3",
+        "schema": 3,
+        "std_contract": "phase1|etas.std.text.contract.v1|etas.std.text.primitive-abi.v1|etas.std.text.source.v1|unicode:17.0.0:7c74aebf116629b6:etas.std.text.unicode.v1|usize:64",
+        "target": "aarch64-unknown-linux-gnu",
+        "toolchain_id": "etas-0.7.1-aarch64-unknown-linux-gnu-c2620b315312"
+      },
+      "manifest_path": "/home/nomo/.cargo/lib/etas/etas-0.7.1-aarch64-unknown-linux-gnu-c2620b315312/std/manifest.json",
+      "manifest_sha256": "b40df8b49c06ba243ee3cde9b3c2b2d2e4f3559dbfccb8fb6f969999832dec8b",
+      "receipt": "etas-std-install-v2\n000000000000000018eb8ca224ab7f0c-499-aarch64-unknown-linux-gnu\nblake3:5bd677d773956bbdd20c3ad176a2ab6dd95247993356f2d35c6e82fa86adcef9\n"
+    },
+    "sha256": "a76b0c4059c5c2672a157cbc8975d7ec236ce5737fbb03a0f6bdfe3ec0817e57",
+    "version": "etas 0.23.2\n"
+  },
+  "build": {
+    "profile": "dev",
+    "source_patches": [],
+    "jobs": 1,
+    "memory_bytes": 4294967296,
+    "cpus": 4,
+    "pids": 256,
+    "reused_volume": "nomo-cargo-0230-20261126-f904fa0",
+    "new_cache_volume": false
+  },
+  "source_migration": {
+    "memory_match": "WriteCondition.Match(expected); nested variant imports are not supported",
+    "durability": "StorageDurability.Durable(); API migration alone does not establish SQLite WAL behavior",
+    "model_data": "JsonInput<T> implements PromptEncode in the model adapter and JSON-encodes the inner domain value",
+    "trusted_prompts": "Fixed prompt factories construct Trusted from a literal; user/context data remains untrusted",
+    "callable_specs": "Bound agent calls are wrapped by ordinary single-input flow functions carrying the stage spec",
+    "syntax_corrections": {
+      "required_match_blocks": {
+        "src/nomo/domain/sessions/work_chain_selection.es": 1,
+        "src/nomo/domain/execution/transitions.es": 3,
+        "src/nomo/adapters/storage/legacy/recoverable_followup_store.es": 2,
+        "src/nomo/adapters/storage/legacy/legacy_work_facts.es": 1,
+        "src/nomo/adapters/storage/legacy/recoverable_work_facts.es": 2,
+        "src/nomo/adapters/cli/native/commands.es": 1,
+        "src/nomo/adapters/cli/legacy/model_tools_chat_loop.es": 1,
+        "src/nomo/adapters/cli/legacy/harness_chat.es": 1,
+        "tests/fixtures/cli001a/main.es": 2,
+        "tests/fixtures/harness_prepare_interface001/controller_probe.es": 1,
+        "tests/fixtures/native_transfer_controller/src/app/main.es": 1
+      },
+      "required_if_blocks": {
+        "src/nomo/domain/sessions/session_display.es": 1,
+        "src/nomo/domain/sessions/work_chain_selection.es": 3,
+        "src/nomo/application/configuration/service.es": 1,
+        "src/nomo/application/processes/service.es": 1,
+        "src/nomo/application/mutations/service.es": 2,
+        "src/nomo/application/sessions/persistence.es": 1,
+        "src/nomo/adapters/cli/conversation.es": 2,
+        "src/nomo/adapters/storage/conversations.es": 4,
+        "src/nomo/adapters/storage/legacy/history_followup_guard.es": 1,
+        "src/nomo/adapters/storage/legacy/chat_history.es": 3,
+        "src/nomo/adapters/storage/legacy/event_history.es": 1,
+        "src/nomo/adapters/storage/legacy/recoverable_followup_store.es": 1,
+        "src/nomo/adapters/storage/legacy/recoverable_chat_store.es": 1,
+        "src/nomo/adapters/storage/legacy/continuous_work.es": 2,
+        "src/nomo/adapters/storage/legacy/user_context_chain_v4_store.es": 2,
+        "src/nomo/adapters/storage/legacy/recoverable_work_store.es": 1,
+        "src/nomo/adapters/cli/legacy/recoverable_history_followup.es": 2,
+        "src/nomo/adapters/cli/legacy/recoverable_history_check.es": 1,
+        "src/nomo/adapters/cli/legacy/terminal_entry.es": 2,
+        "tests/fixtures/harness001a/main.es": 3,
+        "tests/fixtures/edit_preview001/preview_probe.es": 2,
+        "tests/fixtures/arch_edit_contract001/consumer_probe.es": 1,
+        "tests/fixtures/multifile/probe.es": 1,
+        "tests/fixtures/read_unicode/text_probe.es": 17,
+        "tests/fixtures/work_record001/contract_probe.es": 1,
+        "tests/fixtures/chat_budget/large_input.es": 1,
+        "tests/fixtures/native_receipt/src/app/main.es": 1
+      },
+      "restored_early_return_branches": 4,
+      "supersedes": "Brace/lambda migration counts in handler-syntax-0231-20261126.json are historical and do not establish semantic correctness."
+    }
+  },
+  "checks": {
+    "ordinary_source_diagnostics": "None reported before the following pipeline failure; this is not a compiler pass",
+    "complete_check": {
+      "exit": 4,
+      "stderr": "frontend session failed: Pipeline(\"native invocation has no checked implementation witness\")",
+      "upstream": "https://github.com/etas-project/etas-frontend/issues/100"
+    },
+    "existing_six_file_process_snapshot": {
+      "exit": 4,
+      "stdout": "",
+      "stderr": "frontend session failed: Pipeline(\"native invocation has no checked implementation witness\")\n"
+    },
+    "former_effect_identity_projection_failure": "No longer observed on the adopted graph; upstream #101 remains separate from full acceptance"
+  },
+  "real_model_requests": 0
+}

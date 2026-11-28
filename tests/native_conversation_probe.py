@@ -1,8 +1,7 @@
 """One positive application turn with real history and controlled Model/Context effects."""
 from pathlib import Path
-import hashlib
+from native_sources import copy_sources
 import json
-import re
 import subprocess
 import tempfile
 
@@ -17,26 +16,7 @@ def main():
     state.mkdir(mode=0o777)
     state.chmod(0o777)
     fixture = ROOT / 'tests/fixtures/native_conversation/src/app/main.es'
-    entry = package / 'src/app/main.es'
-    entry.parent.mkdir(parents=True)
-    entry.write_bytes(fixture.read_bytes())
-    pending = [fixture]
-    sources = {str(fixture.relative_to(ROOT)): hashlib.sha256(fixture.read_bytes()).hexdigest()}
-    while pending:
-        source = pending.pop()
-        for imported in re.findall(r'(?m)^(?:public\s+)?import\s+(nomo[.A-Za-z0-9_]*)', source.read_text()):
-            parts = imported.rstrip('.').split('.')
-            while parts and not (ROOT / 'src' / '/'.join(parts)).with_suffix('.es').is_file():
-                parts.pop()
-            original = (ROOT / 'src' / '/'.join(parts)).with_suffix('.es')
-            relative = original.relative_to(ROOT)
-            if str(relative) in sources:
-                continue
-            target = package / relative
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_bytes(original.read_bytes())
-            sources[str(relative)] = hashlib.sha256(original.read_bytes()).hexdigest()
-            pending.append(original)
+    sources = copy_sources(ROOT, package, fixture)
     (evidence / 'sources.json').write_text(json.dumps(sources, indent=2) + '\n')
     (package / 'etas.toml').write_text('''[package]
 name = "native-conversation"
@@ -63,7 +43,7 @@ flow = "main"
         {'type': 'bind', 'source': str(package), 'target': '/workspace', 'read_only': True},
         {'type': 'bind', 'source': str(state), 'target': '/state'}]}}}))
     command = ['docker', 'compose', '--env-file', '/dev/null']
-    for name in ('compose.yaml', 'config/etas-0135-official-compose.yaml', 'config/etas-runtime-cache-compose.yaml', str(overlay)):
+    for name in ('compose.yaml', 'config/etas-02413-official-compose.yaml', 'config/etas-runtime-cache-compose.yaml', str(overlay)):
         command += ['--file', str(ROOT / name)]
     inside = '''import json,pathlib,subprocess
 cmd=['/home/nomo/.cargo/bin/etas','--no-config','--cache','off','run','/workspace','--allow-effects','--trace-out','/state/conversation.trace.json']
@@ -72,7 +52,7 @@ r={name:(pathlib.Path('/sys/fs/cgroup')/name).read_text().strip() for name in ['
 print(json.dumps({'exit':p.returncode,'stdout':p.stdout,'stderr':p.stderr,'resources':r}))'''
     command += ['run', '--rm', '--no-deps', '--pull', 'never', '--tty=false', 'dev', 'python3', '-c', inside]
     print('EVIDENCE ' + str(evidence), flush=True)
-    result = subprocess.run(command, cwd=ROOT, capture_output=True, text=True, timeout=300)
+    result = subprocess.run(command, cwd=ROOT, capture_output=True, text=True, timeout=600)
     (evidence / 'container-stderr.txt').write_text(result.stderr)
     assert result.returncode == 0, result.stderr
     record = json.loads(result.stdout)

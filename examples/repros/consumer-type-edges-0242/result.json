@@ -1,0 +1,14 @@
+{
+  "status": "failed-before-runtime-preparation-completed",
+  "review_revision": "c8d07728874965e3f9e70c840e6b148b82100aea",
+  "source_count": 441,
+  "optional_untracked_prototypes_included": false,
+  "scenario": "tests/native_project_probe.py --scenario persist",
+  "diagnostic": "consumer type/spec closure: checked definition projection failed: Limit { resource: \"edges\", limit: 262144 }",
+  "local_model_requests": 0,
+  "trace_emitted": false,
+  "synthetic_note_content": "before old\n",
+  "terminal_sha256": "ab2f89e5cd9dc69a2dd7800336533845a5ea1d49ef6da9fbf9c1ad06d4368260",
+  "runtime_resource_counters": "Not captured by this existing PTY scenario; no runtime resource assertion is claimed.",
+  "qualification": "The exact committed package was exported without optional prototypes. An initial export mount setup attempt did not start Etas; after creating the required empty .etas mount directory this run reproduced the compiler preparation limit. No file edit, summary or new-process restoration was reached."
+}

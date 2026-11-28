@@ -21,8 +21,8 @@ x-nomo-common: &nomo-common
   stop_grace_period: 10s
   environment:
     CARGO_HOME: /home/nomo/.cargo
-    CARGO_TARGET_DIR: /home/nomo/.cargo/etas-latest/target
-    NOMO_NORMAL_GRAPH: latest0135
+    CARGO_TARGET_DIR: /home/nomo/.cargo/etas-0230/target
+    NOMO_NORMAL_GRAPH: latest02413
     HISTFILE: /tmp/.bash_history
     HOME: /home/nomo
   volumes:
@@ -95,15 +95,15 @@ services:
         condition: service_healthy
     environment:
       CARGO_HOME: /home/nomo/.cargo
-      CARGO_TARGET_DIR: /home/nomo/.cargo/etas-latest/target
-      NOMO_NORMAL_GRAPH: latest0135
+      CARGO_TARGET_DIR: /home/nomo/.cargo/etas-0230/target
+      NOMO_NORMAL_GRAPH: latest02413
       HISTFILE: /tmp/.bash_history
       HOME: /home/nomo
       NOMO_GATEWAY_CLIENT_TOKEN: "${NOMO_GATEWAY_CLIENT_TOKEN:-}"
 
 volumes:
   cargo-cache:
-    name: nomo-cargo-0135-20261112-826bf13b
+    name: nomo-cargo-0230-20261126-f904fa0
 
 networks:
   model-internal:

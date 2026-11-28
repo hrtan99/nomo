@@ -1,0 +1,63 @@
+{
+  "selector": "latest02413",
+  "version": "0.24.13",
+  "source_overrides": [],
+  "repositories": {
+    "cli": {
+      "repository": "etas",
+      "revision": "e3ea414b85c76bb86c961617ed0354a6f2dce9f2",
+      "tree": "7ae316dc7789d2639f9a9495dea5d62823867a6e",
+      "packages": [
+        "etas_cli",
+        "etas_driver",
+        "etas_package",
+        "etas_tests"
+      ]
+    },
+    "core": {
+      "repository": "etas-core",
+      "revision": "178e9f7e5852ed4f724c8e4289ccc43df8b6a8ac",
+      "tree": "d2d9e20938479a84ca9c172b92e589e4b836d6a4",
+      "packages": [
+        "etas_builtin",
+        "etas_cache",
+        "etas_code",
+        "etas_core",
+        "etas_host",
+        "etas_memory_derive",
+        "etas_package_metadata",
+        "etas_std",
+        "etas_utils"
+      ]
+    },
+    "frontend": {
+      "repository": "etas-frontend",
+      "revision": "5f79f46337a30e668636dc4a4e9e3369244142ea",
+      "tree": "178086c6f7db75c63a9556e0c82c7f3b4b5b90d1",
+      "packages": [
+        "etas_effects",
+        "etas_frontend",
+        "etas_hir",
+        "etas_hir_analysis",
+        "etas_syntax",
+        "etas_syntax_derive",
+        "etas_types"
+      ]
+    },
+    "interpreter": {
+      "repository": "etas-interpreter",
+      "revision": "5ccfe47ca67c47e7d59d2761b21468c4437bd875",
+      "tree": "05ddc2c790bf246854a8231bbcb6c518e5497e51",
+      "packages": [
+        "etas_interpreter"
+      ]
+    }
+  },
+  "cache_root": "etas-02413-release",
+  "build_target": "etas-0230/target",
+  "source": "Official CLI 0.24.13 e3ea414 and its exact official lock graph, including std 0.9.0 and data/system inference overload; standard release, shared dependency cache, one Cargo job, 6 GiB build only; source/runtime 4 GiB.",
+  "installed_sdk": true,
+  "build_profile": "release",
+  "cargo_lock_sha256": "901a17e91e8e168732d42d832c390894eae152a14f7a06e411b2b89b6f959e9d",
+  "verified_seed_binary_sha256": "95809f4d563219895925dba0acd405b094cd93669fbdb00f1871d00a12166e0b"
+}

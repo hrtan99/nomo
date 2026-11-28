@@ -235,7 +235,7 @@ def run(folder, values, inputs):
                 assert rows['requested actions'] == rows['default actions'] == set(), diagnostic(item)
         for flow in ['production_read', 'production_search', 'production_loop']:
             item = invoke(production, flow + '-effects', ['effects', production, '--flow', flow]); rows = action_rows(item)
-            fs = 'Fs.read[nomo.tools.workspace.ReadOnlyRoot]'
+            fs = 'Fs.read[nomo.application.resources.ReadOnlyRoot]'
             if flow != 'production_loop':
                 # Bounded read handles ReadLimitError inside the production
                 # implementation, so it requires the effect-handler runtime.

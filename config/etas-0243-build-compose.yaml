@@ -1,0 +1,7 @@
+# Compiler build resources only; normal dev/application limits stay unchanged.
+services:
+  dev:
+    mem_limit: 8g
+    memswap_limit: 8g
+    environment:
+      CARGO_BUILD_JOBS: "2"

@@ -1,15 +1,35 @@
 module app.main;
 
-import std.io.{println, IOError};
-import nomo.adapters.etas.conversations.{NativeHistory, copy_status, copy_jobs, prepare_copy, ensure_copy_session, advance_copy, copy_event, sealed_copy_source, copy_summary, copy_record_complete, copy_job};
-import nomo.application.native.conversation.ports.{ConversationReader, ConversationWriter, ConversationCatalog};
-import nomo.domain.conversation.messages.ChatMessage;
-import nomo.domain.transfer.archive.{ArchiveDocument, PortableArchive, PortableInfo};
-import nomo.adapters.codec.archive.{json, decode, fingerprint};
-import nomo.application.native.transfer.service;
-import nomo.application.native.transfer.effects.{CopyStorage, ArchiveCodec, ArchiveFiles, TransferDisplay};
+import std.io.println;
+import std.io.IOError;
+import nomo.adapters.storage.conversations.NativeHistory;
+import nomo.adapters.storage.conversations.copy_status;
+import nomo.adapters.storage.conversations.copy_jobs;
+import nomo.adapters.storage.conversations.prepare_copy;
+import nomo.adapters.storage.conversations.ensure_copy_session;
+import nomo.adapters.storage.conversations.advance_copy;
+import nomo.adapters.storage.conversations.copy_event;
+import nomo.adapters.storage.conversations.sealed_copy_source;
+import nomo.adapters.storage.conversations.copy_summary;
+import nomo.adapters.storage.conversations.copy_record_complete;
+import nomo.adapters.storage.conversations.copy_job;
+import nomo.application.conversation.ports.ConversationReader;
+import nomo.application.conversation.ports.ConversationWriter;
+import nomo.application.conversation.ports.ConversationCatalog;
+import nomo.domain.conversation.ChatMessage;
+import nomo.domain.archives.ArchiveDocument;
+import nomo.domain.archives.PortableArchive;
+import nomo.domain.archives.PortableInfo;
+import nomo.adapters.codec.json;
+import nomo.adapters.codec.archive_decode as decode;
+import nomo.adapters.codec.archive_fingerprint as fingerprint;
+import nomo.application.transfer.service;
+import nomo.application.transfer.ports.CopyStorage;
+import nomo.application.transfer.ports.ArchiveCodec;
+import nomo.application.transfer.ports.ArchiveFiles;
+import nomo.application.transfer.ports.TransferDisplay;
 
-public flow main(args: Array<string>) -> i32 ![Memory, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>, Error<IndexError>] {
+public flow main(args: Array<string>) -> i32 ![Memory, Console, Error<StorageError>, Error<MemoryConflict>, Error<IOError>, Error<IndexError>, Error<BudgetExceeded>] {
     let history = NativeHistory {};
     let source = history.create("transfer-controller", "Original conversation");
     history.append(source.id, "user", "", "original objective", -1);
@@ -36,35 +56,32 @@ public flow main(args: Array<string>) -> i32 ![Memory, Console, Error<StorageErr
         if history.selected("transfer-controller") != Some(resumed.id) { abort("finished copy was not selected"); }
         println("PASS application resume uses sealed source and durable cursor");
     } with {
-        CopyStorage.lookup(id) => { resume copy_status(id); }
-        CopyStorage.list(workspace) => { resume copy_jobs(workspace); }
-        CopyStorage.prepare(workspace, title, kind, original, digest, total) => { resume prepare_copy(workspace, title, kind, original, digest, total); }
-        CopyStorage.ensure_session(id) => { ensure_copy_session(id); resume; }
-        CopyStorage.advance(id, cursor, phase) => { resume advance_copy(id, cursor, phase); }
+        CopyStorage.lookup(id) => copy_status(id);
+        CopyStorage.list(workspace) => copy_jobs(workspace);
+        CopyStorage.prepare(workspace, title, kind, original, digest, total) => prepare_copy(workspace, title, kind, original, digest, total);
+        CopyStorage.ensure_session(id) => ensure_copy_session(id);
+        CopyStorage.advance(id, cursor, phase) => advance_copy(id, cursor, phase);
         CopyStorage.event(id, index, role, name, text) => {
             if id == partial.id && index == 1 { abort("resume rewrote its completed prefix"); }
-            copy_event(id, index, role, name, text); resume;
-        }
-        CopyStorage.sealed(id) => { resume sealed_copy_source(id); }
-        CopyStorage.summary(id, slot) => { copy_summary(id, slot); resume; }
-        CopyStorage.complete(id, index) => { resume copy_record_complete(id, index); }
-        ArchiveCodec.encode(value) => {
-            let text = match value { ArchiveDocument.Metadata(value) => json(value), ArchiveDocument.Conversation(value) => json(value), ArchiveDocument.Outcome(value) => json(value) };
-            resume text;
-        }
-        ArchiveCodec.decode(raw) => { resume decode(raw); }
-        ArchiveCodec.fingerprint(raw) => { resume fingerprint(raw); }
-        ArchiveFiles.read(path) => { abort("sealed import reread its mutable source"); }
-        ArchiveFiles.target(path) => { abort("unexpected export target"); }
-        ArchiveFiles.replace(target, text) => { abort("unexpected export write"); }
+            copy_event(id, index, role, name, text)
+        };
+        CopyStorage.sealed(id) => sealed_copy_source(id);
+        CopyStorage.summary(id, slot) => copy_summary(id, slot);
+        CopyStorage.complete(id, index) => copy_record_complete(id, index);
+        ArchiveCodec.encode(value) => match value { ArchiveDocument.Metadata(value) => json(value), ArchiveDocument.Conversation(value) => json(value), ArchiveDocument.Outcome(value) => json(value) };
+        ArchiveCodec.decode(raw) => decode(raw);
+        ArchiveCodec.fingerprint(raw) => fingerprint(raw);
+        ArchiveFiles.read(path) => abort("sealed import reread its mutable source");
+        ArchiveFiles.target(path) => abort("unexpected export target");
+        ArchiveFiles.replace(target, text) => abort("unexpected export write");
         TransferDisplay.progress(id, copied, total) => {
             let current = copy_job(id);
             if current.phase != "copying" || current.cursor != copied || current.total != total || !copy_record_complete(id, copied) { abort("progress preceded durable copy state"); }
             if history.selected("transfer-controller") == Some(id) { abort("copy selected before completion"); }
-            println("PORT copy progress after durable cursor"); resume;
+            println("PORT copy progress after durable cursor"); ()
         }
-        TransferDisplay.preview(value) => { abort("unexpected export preview"); }
-        TransferDisplay.exported(path) => { abort("unexpected export completion"); }
+        TransferDisplay.preview(value) => abort("unexpected export preview");
+        TransferDisplay.exported(path) => abort("unexpected export completion");
     };
     return 0;
 }
