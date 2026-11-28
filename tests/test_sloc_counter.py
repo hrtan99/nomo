@@ -32,7 +32,7 @@ class SlocCounterTest(unittest.TestCase):
         self.write("src/nomo/main.es", "// note\ncode;\n\n")
         self.write("src/nomo/store.es", "first;\nsecond;\n")
         self.write("scripts/nomo", "entry()\n")
-        self.write("scripts/nomo_model_transport.py", "model_transport()\n")
+        self.write("scripts/terminal-transport.py", "transport()\n")
         self.write("scripts/native-worker-transport.py", "attach()\n")
         self.write("tests/fixture.py", "fixture()\n")
         counts = COUNTER.inventory(self.root)

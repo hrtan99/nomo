@@ -100,9 +100,10 @@ Use the explicit migration command for an old project database:
 NOMO_NATIVE_STATE=/absolute/new-directory/state ./scripts/nomo /absolute/project
 ```
 
-The migration preserves source backups and historical facts. Bounded legacy
-sessions still require the historical inspection tools; their complete native
-migration is unfinished. See [migration evidence and remaining work](NATIVE_MIGRATION.md).
+The migration preserves source backups and historical facts. Earlier bounded-session
+formats are separate from current native history and are not automatically converted.
+Their old Python entry/recovery scripts have been removed; existing data files remain.
+See [migration evidence and remaining work](NATIVE_MIGRATION.md).
 The default switch does not mean all thirteen architecture tasks are accepted.
 
 ## Development
@@ -110,10 +111,8 @@ The default switch does not mean all thirteen architecture tasks are accepted.
 Docker with Compose, Git and Python 3.11+ are needed for the local Docker-terminal
 transport, compiler tooling, tests and one-time SQLite migration. Python no longer
 runs the default project's model, conversation, tool, file-edit or Git controller.
-The old bounded-session launchers still provide legacy compatibility and recovery;
-they are not reached by the default entry and cannot all be removed before that
-state migration is complete. Historical
-format producers used only by migration probes live in
+The old bounded-session Python launch/recovery chain and its model retry proxy are
+removed. Etas owns current history persistence and recovery. Historical format producers used only by migration probes live in
 [tests/fixtures/legacy_project](tests/fixtures/legacy_project/README.md).
 
 ```sh

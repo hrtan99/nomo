@@ -1,6 +1,6 @@
 # Source boundaries
 
-The default `scripts/nomo` launcher runs the Etas composition root. `nomo-native` is an alias. Python is limited to the Docker terminal transport, legacy bounded-session compatibility/recovery, one-time source extraction and engineering tools; the former Python project controller and its Action bridge are removed.
+The default `scripts/nomo` launcher runs the Etas composition root. `nomo-native` is an alias. Python is limited to the Docker terminal transport, one-time source extraction and engineering tools; the former Python project controller, bounded-session compatibility/recovery launchers and Action bridge are removed. The engineering CLI verifier execs Etas directly without a Python model proxy.
 
 The top level follows architectural responsibility. Modules inside each layer follow the business they serve.
 

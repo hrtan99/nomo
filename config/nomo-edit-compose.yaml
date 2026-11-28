@@ -1,4 +1,0 @@
-# An edit needs no model or network access.
-services:
-  dev:
-    network_mode: none

@@ -1,3 +1,26 @@
+# Retired Python compatibility entry, 2026-11-28
+
+The old bounded-session Python launch/recovery chain is removed, together with its
+private registry/storage/policy helpers, old display adapter and model retry proxy.
+The unused check-gate branch in the development Docker transport is removed too.
+The engineering compiler verifier now execs the verified Etas CLI directly.
+Retired-launcher-only probes and orphan Compose overlays are removed; native project,
+history, migration and Etas contract tests remain. Earlier sections and receipts
+below describe their original revisions and may name commands no longer shipped.
+
+“Old sessions” here means obsolete application storage formats, directory indexes
+and workspace bindings. It does not mean the current /history archive. Existing
+saved files are untouched. The Etas history APIs, stored nominal identities and
+project migration command are unchanged. Compatible native history continues to
+restore through Etas; this retirement does not automatically translate every old
+application format into the current conversation schema.
+
+Post-removal acceptance restores all 22 events / 4,444 bytes exactly from the same
+SQLite chunks, with zero model or Command actions. Compiler identity, the existing
+SLOC counter assertions and one ordinary transport cleanup case pass. All 463
+selected Etas source files are byte-identical to the accepted compile snapshot.
+[Removal inventory and exact validation scope](examples/native-project/legacy-python-retirement-20261128.json).
+
 # Default Etas entry and standard-library cleanup, 2026-11-28
 
 `scripts/nomo` now starts the Etas application; `nomo-native` forwards to the same
