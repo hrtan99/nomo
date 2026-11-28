@@ -59,7 +59,13 @@ import std.effects.Fs;
 import std.fs.{IOError as fs_IOError, ReadLimitError};
 import std.io.{IOError, println};
 
-public alias ConfiguredConfiguration<H ~ ConversationReader> = ConfigurationLoader<H, ProjectConfigurationFile, JsonConfigurationCodec, TaploConfigurationConverter, NativeConfigurationCache>;
+public alias ConfiguredConfiguration<H ~ ConversationReader> = ConfigurationLoader<
+    H,
+    ProjectConfigurationFile,
+    JsonConfigurationCodec,
+    TaploConfigurationConverter,
+    NativeConfigurationCache
+>;
 
 public flow configuration_create<H ~ ConversationReader>(history: H) -> ConfiguredConfiguration<H> {
     return ConfiguredConfiguration<H> {
@@ -71,9 +77,30 @@ public flow configuration_create<H ~ ConversationReader>(history: H) -> Configur
     };
 }
 
-public alias ConfiguredConversation<H ~ ConversationReader + ConversationWriter + GenerationReservation + ResultPublication, A ~ AttemptRepository> = Conversation<H, A, ProjectInstructionFiles, NativeJobs, NativeCodingModel, NativeSummaryModel, RollingContext, ConfiguredConfiguration<H>, ConsoleLines>;
+public alias ConfiguredConversation<
+    H ~ ConversationReader + ConversationWriter + GenerationReservation
+        + ResultPublication,
+    A ~ AttemptRepository
+> = Conversation<
+    H,
+    A,
+    ProjectInstructionFiles,
+    NativeJobs,
+    NativeCodingModel,
+    NativeSummaryModel,
+    RollingContext,
+    ConfiguredConfiguration<H>,
+    ConsoleLines
+>;
 
-public flow conversation_create<H ~ ConversationReader + ConversationWriter + GenerationReservation + ResultPublication, A ~ AttemptRepository>(history: H, attempts: A, instructions: ProjectInstructionFiles, jobs: NativeJobs, output: ConsoleLines) -> ConfiguredConversation<H, A> {
+public flow conversation_create<
+    H ~ ConversationReader + ConversationWriter + GenerationReservation
+        + ResultPublication,
+    A ~ AttemptRepository
+>(history: H, attempts: A, instructions: ProjectInstructionFiles, jobs: NativeJobs, output: ConsoleLines) -> ConfiguredConversation<
+    H,
+    A
+> {
     return ConfiguredConversation<H, A> {
         history,
         attempts,
@@ -88,13 +115,41 @@ public flow conversation_create<H ~ ConversationReader + ConversationWriter + Ge
 }
 
 public flow main_run(args: Array<string>, mode: EntryMode) -> i32
-    ![Agentic, Memory, Console, Command.run<DefaultCommandSandbox>, Command.start<DefaultCommandSandbox>, Command.reconnect<DefaultCommandSandbox>, Command.read<DefaultCommandSandbox>, Command.write<DefaultCommandSandbox>, Command.stop<DefaultCommandSandbox>, Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Fs.stat<ProjectRoot>, Fs.atomic_replace<ProjectRoot>, Fs.atomic_replace<LaunchRoot>, Error<StorageError>, Error<MemoryConflict>, Error<fs_IOError>, Error<ReadLimitError>, Error<IOError>, Error<IndexError>, Error<BudgetExceeded>] {
+![
+    Agentic,
+    Memory,
+    Console,
+    Command.run<DefaultCommandSandbox>,
+    Command.start<DefaultCommandSandbox>,
+    Command.reconnect<DefaultCommandSandbox>,
+    Command.read<DefaultCommandSandbox>,
+    Command.write<DefaultCommandSandbox>,
+    Command.stop<DefaultCommandSandbox>,
+    Fs.read<ProjectRoot>,
+    Fs.list<ProjectRoot>,
+    Fs.stat<ProjectRoot>,
+    Fs.atomic_replace<ProjectRoot>,
+    Fs.atomic_replace<LaunchRoot>,
+    Error<StorageError>,
+    Error<MemoryConflict>,
+    Error<fs_IOError>,
+    Error<ReadLimitError>,
+    Error<IOError>,
+    Error<IndexError>,
+    Error<BudgetExceeded>
+] {
     let history = NativeHistory {};
     let attempts = NativeAttempts {};
     let jobs = NativeJobs {};
     let guidance = ProjectInstructionFiles {};
     let output = ConsoleLines {};
-    let application = TerminalApplication<NativeHistory, NativeAttempts, ConsoleConversationPicker, ConfiguredConversation<NativeHistory, NativeAttempts>, ConsoleTerminalInput> {
+    let application = TerminalApplication<
+        NativeHistory,
+        NativeAttempts,
+        ConsoleConversationPicker,
+        ConfiguredConversation<NativeHistory, NativeAttempts>,
+        ConsoleTerminalInput
+    > {
         history,
         attempts,
         picker = ConsoleConversationPicker {},
@@ -107,28 +162,72 @@ public flow main_run(args: Array<string>, mode: EntryMode) -> i32
     let observations = service_bindings(history, ProjectFiles {}, guidance);
     let changes = operations(ProjectMutationFiles {}, NativeChangeJournals {}, history, output);
     let folders = service_operations(NativeRecentProjects {}, NativeProjectLaunch {}, TerminalProjects {});
-    let archives = service_operations_2(history, attempts, ProjectArchives {}, JsonArchiveEncoding {}, TerminalTransfer {});
-    let jobs_handler = jobs_bindings(history, attempts, HostProcessControl {}, jobs, NativeOutputArchive {}, output);
-    return ((((((application.run(options_parse(args), mode) with jobs_handler)
-        with archives) with folders) with changes)
-        with observations) with commands) with terminal;
+    let archives = service_operations_2(
+        history,
+        attempts,
+        ProjectArchives {},
+        JsonArchiveEncoding {},
+        TerminalTransfer {}
+    );
+    let jobs_handler = jobs_bindings(
+        history,
+        attempts,
+        HostProcessControl {},
+        jobs,
+        NativeOutputArchive {},
+        output
+    );
+    return (
+        (
+            (((
+                (application.run(options_parse(args), mode) with jobs_handler)
+                with archives
+            ) with folders) with changes)
+            with observations
+        ) with commands
+    ) with terminal;
 }
 
 public flow native_migration_run(args: Array<string>) -> i32
-    ![Fs.read<MigrationRoot>, Memory, Console, Error<fs_IOError>, Error<ReadLimitError>, Error<IndexError>, Error<StorageError>, Error<MemoryConflict>, Error<IOError>] {
+![
+    Fs.read<MigrationRoot>,
+    Memory,
+    Console,
+    Error<fs_IOError>,
+    Error<ReadLimitError>,
+    Error<IndexError>,
+    Error<StorageError>,
+    Error<MemoryConflict>,
+    Error<IOError>
+] {
     let report = native_state_migrate(LegacyNativePacket {}, NativeStateWriter {});
     return output(report);
 }
 
 public flow project(args: Array<string>) -> i32
-    ![Fs.read<MigrationRoot>, Memory, Console, Error<fs_IOError>, Error<ReadLimitError>, Error<IndexError>, Error<StorageError>, Error<MemoryConflict>, Error<BudgetExceeded>, Error<IOError>] {
+![
+    Fs.read<MigrationRoot>,
+    Memory,
+    Console,
+    Error<fs_IOError>,
+    Error<ReadLimitError>,
+    Error<IndexError>,
+    Error<StorageError>,
+    Error<MemoryConflict>,
+    Error<BudgetExceeded>,
+    Error<IOError>
+] {
     let destination = NativeStateWriter {};
     return output(project_state_migrate(ProjectStatePacket {}, destination, destination, NativeHistory {}));
 }
 
 flow output(report: MigrationReport) -> i32 ![Console, Error<IOError>] {
-    println("[MIGRATE] " + match encode(report, "migration report conversion failed", "migration report encoding failed") {
-        Ok(value) => value, Err(error) => abort(error),
-    });
+    println(
+        "[MIGRATE] "
+            + match encode(report, "migration report conversion failed", "migration report encoding failed") {
+            Ok(value) => value,
+            Err(error) => abort(error),
+        }
+    );
     return 0;
 }

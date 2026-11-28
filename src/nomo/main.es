@@ -63,17 +63,27 @@ import std.text.{char_count, trim};
 
 // The runtime returns i32 as data; every command uses this same OS-failure boundary.
 flow completed(status: i32, message: string) -> i32 {
-    if status != 0 { abort(message); }
+    if status != 0 {
+        abort(message);
+    }
     return status;
 }
 
-flow native_project(args: Array<string>) -> i32 { return completed(main_run(args, EntryMode.Interactive), "Nomo native project stopped"); }
+flow native_project(args: Array<string>) -> i32 {
+    return completed(main_run(args, EntryMode.Interactive), "Nomo native project stopped");
+}
 
-flow native_attach(args: Array<string>) -> i32 { return completed(main_run(args, EntryMode.Attach), "Nomo native startup selection stopped"); }
+flow native_attach(args: Array<string>) -> i32 {
+    return completed(main_run(args, EntryMode.Attach), "Nomo native startup selection stopped");
+}
 
-flow native_state_migrate(args: Array<string>) -> i32 { return completed(native_migration_run(args), "Nomo native state migration stopped"); }
+flow native_state_migrate(args: Array<string>) -> i32 {
+    return completed(native_migration_run(args), "Nomo native state migration stopped");
+}
 
-flow project_state_migrate(args: Array<string>) -> i32 { return completed(project(args), "Nomo project state migration stopped"); }
+flow project_state_migrate(args: Array<string>) -> i32 {
+    return completed(project(args), "Nomo project state migration stopped");
+}
 
 flow terminal(args: Array<string>) -> i32 {
     return completed(run(args), "Nomo terminal stopped; inspect current journal and work state");
@@ -88,7 +98,10 @@ flow terminal_help(args: Array<string>) -> i32 {
 }
 
 flow work_save(args: Array<string>) -> i32 {
-    return completed(run_save(args), "Nomo work save refused; see completed edit and work record status output");
+    return completed(
+        run_save(args),
+        "Nomo work save refused; see completed edit and work record status output"
+    );
 }
 
 flow work_show(args: Array<string>) -> i32 {
@@ -96,11 +109,17 @@ flow work_show(args: Array<string>) -> i32 {
 }
 
 flow harness_work(args: Array<string>) -> i32 {
-    return completed(harness_work_entry_run(args), "Nomo read/edit work refused; see REFUSED or recorded completed output");
+    return completed(
+        harness_work_entry_run(args),
+        "Nomo read/edit work refused; see REFUSED or recorded completed output"
+    );
 }
 
 flow harness_edit(args: Array<string>) -> i32 {
-    return completed(harness_edit_entry_run(args), "Nomo model edit refused; see REFUSED or recorded completed output");
+    return completed(
+        harness_edit_entry_run(args),
+        "Nomo model edit refused; see REFUSED or recorded completed output"
+    );
 }
 
 flow edit_apply(args: Array<string>) -> i32 {
@@ -140,11 +159,17 @@ flow harness_checkpoint_continue(args: Array<string>) -> i32 {
 }
 
 flow harness_successor_show(args: Array<string>) -> i32 {
-    return completed(harness_successor_entry_run_show(args), "Nomo Harness successor show refused; see REFUSED output");
+    return completed(
+        harness_successor_entry_run_show(args),
+        "Nomo Harness successor show refused; see REFUSED output"
+    );
 }
 
 flow harness_checkpoint_init(args: Array<string>) -> i32 {
-    return completed(harness_checkpoint_entry_run_init(args), "Nomo Harness checkpoint init refused; see REFUSED output");
+    return completed(
+        harness_checkpoint_entry_run_init(args),
+        "Nomo Harness checkpoint init refused; see REFUSED output"
+    );
 }
 
 flow harness_checkpoint_save(args: Array<string>) -> i32 {
@@ -152,11 +177,17 @@ flow harness_checkpoint_save(args: Array<string>) -> i32 {
 }
 
 flow harness_checkpoint_show(args: Array<string>) -> i32 {
-    return completed(harness_checkpoint_entry_run_show(args), "Nomo Harness checkpoint show refused; see REFUSED output");
+    return completed(
+        harness_checkpoint_entry_run_show(args),
+        "Nomo Harness checkpoint show refused; see REFUSED output"
+    );
 }
 
 flow harness_model_tools_chat(args: Array<string>) -> i32 {
-    return completed(harness_model_tools_chat_run(args), "Nomo model/tool harness chat refused; see REFUSED or STOP output");
+    return completed(
+        harness_model_tools_chat_run(args),
+        "Nomo model/tool harness chat refused; see REFUSED or STOP output"
+    );
 }
 
 flow read_session_status(args: Array<string>) -> i32 {
@@ -180,7 +211,10 @@ flow recoverable_work_abandon(args: Array<string>) -> i32 {
 }
 
 flow recoverable_history_work(args: Array<string>) -> i32 {
-    return completed(recoverable_history_work_run(args), "Nomo event work stopped; inspect recorded edit status");
+    return completed(
+        recoverable_history_work_run(args),
+        "Nomo event work stopped; inspect recorded edit status"
+    );
 }
 
 flow recoverable_followup_abandon(args: Array<string>) -> i32 {
@@ -188,11 +222,17 @@ flow recoverable_followup_abandon(args: Array<string>) -> i32 {
 }
 
 flow recoverable_history_followup(args: Array<string>) -> i32 {
-    return completed(recoverable_history_followup_run(args), "Nomo event followup stopped; inspect recorded edit status");
+    return completed(
+        recoverable_history_followup_run(args),
+        "Nomo event followup stopped; inspect recorded edit status"
+    );
 }
 
 flow recoverable_history_followup_check(args: Array<string>) -> i32 {
-    return completed(recoverable_history_followup_check_run(args), "Nomo event followup check stopped; inspect recorded status");
+    return completed(
+        recoverable_history_followup_check_run(args),
+        "Nomo event followup check stopped; inspect recorded status"
+    );
 }
 
 flow recoverable_history_check(args: Array<string>) -> i32 {
@@ -204,7 +244,10 @@ flow read_session(args: Array<string>) -> i32 {
 }
 
 flow recoverable_read_session(args: Array<string>) -> i32 {
-    return completed(recoverable_read_session_run(args), "Nomo recoverable read session stopped; inspect recorded state");
+    return completed(
+        recoverable_read_session_run(args),
+        "Nomo recoverable read session stopped; inspect recorded state"
+    );
 }
 
 flow recoverable_read_status(args: Array<string>) -> i32 {
@@ -220,7 +263,10 @@ flow read_model_tools(args: Array<string>) -> i32 {
 }
 
 flow harness_model_tools(args: Array<string>) -> i32 {
-    return completed(harness_model_tools_entry_run(args), "Nomo model/tool harness refused; see REFUSED output");
+    return completed(
+        harness_model_tools_entry_run(args),
+        "Nomo model/tool harness refused; see REFUSED output"
+    );
 }
 
 flow harness_model(args: Array<string>) -> i32 {
@@ -271,51 +317,99 @@ flow model(args: Array<string>) -> i32 {
 
 flow main(args: Array<string>) -> i32 {
     let config = load(args);
-    if config.error != "" { println("error: " + config.error); abort("Nomo configuration rejected"); }
-    if config.help { foundation_help(); return 0; }
+    if config.error != "" {
+        println("error: " + config.error);
+        abort("Nomo configuration rejected");
+    }
+    if config.help {
+        foundation_help();
+        return 0;
+    }
     var state = fresh();
     if config.once {
         let outcome = turn(config.request, config.steps, config.budget, state);
-        if outcome.status != 0 { abort("Nomo request failed; see error event"); }
+        if outcome.status != 0 {
+            abort("Nomo request failed; see error event");
+        }
         return 0;
     }
     println("Nomo foundation (stub, in-memory). /help for limits; /exit to quit.");
     var lines: i32 = 0;
     @limits([Iterations(16)]) while lines < 16 {
         let input = read_line();
-        if input == "" { println("bye: EOF"); return 0; }
+        if input == "" {
+            println("bye: EOF");
+            return 0;
+        }
         lines = lines + 1;
-        if char_count(input) > request_bytes() { let outcome = reject(state, "input exceeds 65536 characters"); state = outcome.state; }
+        if char_count(input) > request_bytes() {
+            let outcome = reject(state, "input exceeds 65536 characters");
+            state = outcome.state;
+        }
         else {
             let command = trim(input);
-            if command == "/exit" { println("bye: exit"); return 0; }
-            if command == "/help" { foundation_help(); }
-            else { let outcome = turn(input, config.steps, config.budget, state); state = outcome.state; }
+            if command == "/exit" {
+                println("bye: exit");
+                return 0;
+            }
+            if command == "/help" {
+                foundation_help();
+            }
+            else {
+                let outcome = turn(input, config.steps, config.budget, state);
+                state = outcome.state;
+            }
         }
-        if state.stopped { abort("Nomo history capacity exhausted"); }
+        if state.stopped {
+            abort("Nomo history capacity exhausted");
+        }
     }
     let outcome = reject(state, "line limit reached; start a new in-memory invocation");
     state = outcome.state;
     abort("Nomo line limit exhausted");
 }
 
-flow chain_new(args: Array<string>) -> i32 { return completed(chains_run_new(args), "Nomo v2 chain new refused; see admission/journal status"); }
+flow chain_new(args: Array<string>) -> i32 {
+    return completed(chains_run_new(args), "Nomo v2 chain new refused; see admission/journal status");
+}
 
-flow chain_user_context_new(args: Array<string>) -> i32 { return completed(user_context_entry_run(args), "Nomo user-context work stopped; inspect admission/journal status"); }
+flow chain_user_context_new(args: Array<string>) -> i32 {
+    return completed(
+        user_context_entry_run(args),
+        "Nomo user-context work stopped; inspect admission/journal status"
+    );
+}
 
-flow chain_continue(args: Array<string>) -> i32 { return completed(chains_run_continue(args), "Nomo v2 continuation refused; see admission/journal status"); }
+flow chain_continue(args: Array<string>) -> i32 {
+    return completed(chains_run_continue(args), "Nomo v2 continuation refused; see admission/journal status");
+}
 
-flow chain_show(args: Array<string>) -> i32 { return completed(work_chain_sessions_run_show(args), "Nomo v2 show refused; see REFUSED"); }
+flow chain_show(args: Array<string>) -> i32 {
+    return completed(work_chain_sessions_run_show(args), "Nomo v2 show refused; see REFUSED");
+}
 
-flow chain_help(args: Array<string>) -> i32 { return completed(chains_help(args), "Nomo chain help refused; see REFUSED"); }
+flow chain_help(args: Array<string>) -> i32 {
+    return completed(chains_help(args), "Nomo chain help refused; see REFUSED");
+}
 
-flow chain_inspect(args: Array<string>) -> i32 { return completed(run_inspect(args), "Nomo fixture read-plan inspection stopped; no retry or edit"); }
+flow chain_inspect(args: Array<string>) -> i32 {
+    return completed(run_inspect(args), "Nomo fixture read-plan inspection stopped; no retry or edit");
+}
 
-flow chain_observe_new(args: Array<string>) -> i32 { return completed(run_observed_new(args), "Nomo observed fixture new refused; preserve state, no retry"); }
+flow chain_observe_new(args: Array<string>) -> i32 {
+    return completed(run_observed_new(args), "Nomo observed fixture new refused; preserve state, no retry");
+}
 
-flow chain_observe_continue(args: Array<string>) -> i32 { return completed(run_observed_continue(args), "Nomo observed fixture continuation refused; preserve state, no retry"); }
+flow chain_observe_continue(args: Array<string>) -> i32 {
+    return completed(
+        run_observed_continue(args),
+        "Nomo observed fixture continuation refused; preserve state, no retry"
+    );
+}
 
-flow chain_sessions(args: Array<string>) -> i32 { return completed(run_sessions(args), "Nomo session discovery refused; see REFUSED"); }
+flow chain_sessions(args: Array<string>) -> i32 {
+    return completed(run_sessions(args), "Nomo session discovery refused; see REFUSED");
+}
 
 flow history_followup(args: Array<string>) -> i32 {
     return completed(history_followup_run(args), "Nomo followup stopped; inspect recorded status");

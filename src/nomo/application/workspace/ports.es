@@ -12,7 +12,12 @@ import std.io.IOError;
 import std.runtime.error.IndexError;
 
 public spec ConfigurationFile {
-    flow read(self) -> Option<string> ![Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Error<fs_IOError>, Error<ReadLimitError>];
+    flow read(self) -> Option<string> ![
+        Fs.read<ProjectRoot>,
+        Fs.list<ProjectRoot>,
+        Error<fs_IOError>,
+        Error<ReadLimitError>
+    ];
 }
 
 public spec EntriesCodec {
@@ -22,13 +27,35 @@ public spec EntriesCodec {
 }
 
 public spec TomlConverter {
-    flow toml(self, session: string, raw: string) -> Converted ![CommandOperations, Memory, Console, Command.run<DefaultCommandSandbox>, Error<StorageError>, Error<MemoryConflict>, Error<IOError>, Error<BudgetExceeded>];
-    flow entries(self, session: string, json: string) -> Converted ![CommandOperations, Memory, Console, Command.run<DefaultCommandSandbox>, Error<StorageError>, Error<MemoryConflict>, Error<IOError>, Error<BudgetExceeded>];
+    flow toml(self, session: string, raw: string) -> Converted ![
+        CommandOperations,
+        Memory,
+        Console,
+        Command.run<DefaultCommandSandbox>,
+        Error<StorageError>,
+        Error<MemoryConflict>,
+        Error<IOError>,
+        Error<BudgetExceeded>
+    ];
+    flow entries(self, session: string, json: string) -> Converted ![
+        CommandOperations,
+        Memory,
+        Console,
+        Command.run<DefaultCommandSandbox>,
+        Error<StorageError>,
+        Error<MemoryConflict>,
+        Error<IOError>,
+        Error<BudgetExceeded>
+    ];
 }
 
 public spec ConfigurationCacheStore {
     flow lookup(self, workspace: string) -> Option<Cached> ![Memory, Error<StorageError>];
-    flow remember(self, workspace: string, value: Cached) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>];
+    flow remember(self, workspace: string, value: Cached) -> unit ![
+        Memory,
+        Error<StorageError>,
+        Error<MemoryConflict>
+    ];
 }
 
 public effect ReadTools {
@@ -37,7 +64,12 @@ public effect ReadTools {
 }
 
 public spec InstructionReader {
-    flow read(self, path: string) -> Array<ProjectInstruction> ![Fs.read<ProjectRoot>, Fs.list<ProjectRoot>, Error<fs_IOError>, Error<ReadLimitError>];
+    flow read(self, path: string) -> Array<ProjectInstruction> ![
+        Fs.read<ProjectRoot>,
+        Fs.list<ProjectRoot>,
+        Error<fs_IOError>,
+        Error<ReadLimitError>
+    ];
 }
 
 public effect InstructionFiles {
@@ -82,7 +114,12 @@ public spec ProjectRenderer {
 
 public spec ProjectFileSource {
     flow text(self, path: string) -> string ![Fs.read<ProjectRoot>, Error<fs_IOError>, Error<ReadLimitError>];
-    flow entries(self, path: string) -> Array<PathInfo> ![Fs.list<ProjectRoot>, Fs.stat<ProjectRoot>, Error<fs_IOError>, Error<BudgetExceeded>];
+    flow entries(self, path: string) -> Array<PathInfo> ![
+        Fs.list<ProjectRoot>,
+        Fs.stat<ProjectRoot>,
+        Error<fs_IOError>,
+        Error<BudgetExceeded>
+    ];
     flow metadata(self, path: string) -> PathInfo ![Fs.stat<ProjectRoot>, Error<fs_IOError>];
 }
 
@@ -95,22 +132,54 @@ public effect WorkspaceObservations {
 }
 
 // Views of existing saved command observations; no new stored representation.
-public type ConfigurationOutput = { exit_code: i32, stdout: string, stderr: string };
+public type ConfigurationOutput = {
+    exit_code: i32,
+    stdout: string,
+    stderr: string
+};
 
-public type Converted = { result_event: i64, output: ConfigurationOutput };
+public type Converted = {
+    result_event: i64,
+    output: ConfigurationOutput
+};
 
-public type SearchBounds = { files: usize, file_bytes: usize, total_bytes: usize, partial_results: bool };
+public type SearchBounds = {
+    files: usize,
+    file_bytes: usize,
+    total_bytes: usize,
+    partial_results: bool
+};
 
 public spec FileReader<R ~ Region> {
     flow maximum_bytes(self) -> usize ![];
-    flow read(self, name: string) -> Outcome ![Fs.read<R>, Error<fs_IOError>, Error<IndexError>, Error<BudgetExceeded>];
+    flow read(self, name: string) -> Outcome ![
+        Fs.read<R>,
+        Error<fs_IOError>,
+        Error<IndexError>,
+        Error<BudgetExceeded>
+    ];
 }
 
 public spec LiteralSearcher<R ~ Region> {
     flow bounds(self) -> SearchBounds ![];
-    flow search(self, names: Array<string>, literal: string) -> Outcome ![Fs.read<R>, Error<fs_IOError>, Error<IndexError>, Error<BudgetExceeded>];
+    flow search(self, names: Array<string>, literal: string) -> Outcome ![
+        Fs.read<R>,
+        Error<fs_IOError>,
+        Error<IndexError>,
+        Error<BudgetExceeded>
+    ];
 }
 
-public spec NomoRead<R ~ Region>: callable string => Outcome ![Fs.read<R>, Error<fs_IOError>, Error<IndexError>, Error<BudgetExceeded>];
+public spec NomoRead<R ~ Region>: callable string => Outcome ![
+    Fs.read<R>,
+    Error<fs_IOError>,
+    Error<IndexError>,
+    Error<BudgetExceeded>
+];
 
-public spec NomoSearch<R ~ Region>: callable (Array<string>, string) => Outcome ![Fs.read<R>, Error<fs_IOError>, Error<IndexError>, Error<BudgetExceeded>];
+public spec NomoSearch<R ~ Region>: callable (Array<string>, string) => Outcome ![
+    Fs.read<R>,
+    Error<fs_IOError>,
+    Error<IndexError>,
+    Error<BudgetExceeded>
+];

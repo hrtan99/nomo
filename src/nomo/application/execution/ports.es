@@ -14,7 +14,10 @@ public effect CommandOperations {
 }
 
 public spec CommandRunner {
-    flow run(self, request: CommandRequest) -> CommandOutput ![Command.run<DefaultCommandSandbox>, Error<IOError>];
+    flow run(self, request: CommandRequest) -> CommandOutput ![
+        Command.run<DefaultCommandSandbox>,
+        Error<IOError>
+    ];
 }
 
 public spec CommandPreviewSink {
@@ -22,10 +25,22 @@ public spec CommandPreviewSink {
 }
 
 public spec AttemptRepository {
-    flow list(self, session: string, unresolved: bool) -> Array<Attempt> ![Memory, Error<StorageError>, Error<BudgetExceeded>];
+    flow list(self, session: string, unresolved: bool) -> Array<Attempt> ![
+        Memory,
+        Error<StorageError>,
+        Error<BudgetExceeded>
+    ];
     flow load(self, id: string) -> Attempt ![Memory, Error<StorageError>];
-    flow prepare(self, session: string, kind: string, label: string, input_event: i64, through: i64) -> Attempt ![Memory, Error<StorageError>, Error<MemoryConflict>];
-    flow update(self, id: string, phase: string, result_event: i64, recovery_event: i64) -> Attempt ![Memory, Error<StorageError>, Error<MemoryConflict>];
+    flow prepare(self, session: string, kind: string, label: string, input_event: i64, through: i64) -> Attempt ![
+        Memory,
+        Error<StorageError>,
+        Error<MemoryConflict>
+    ];
+    flow update(self, id: string, phase: string, result_event: i64, recovery_event: i64) -> Attempt ![
+        Memory,
+        Error<StorageError>,
+        Error<MemoryConflict>
+    ];
 }
 
 // Live is the implementation's transient capability, never persisted as a Job.
@@ -48,20 +63,30 @@ public spec JobRepository {
 }
 
 public spec OutputArchive {
-    flow insert(self, session: string, call: i64, value: JobEvent) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>];
+    flow insert(self, session: string, call: i64, value: JobEvent) -> unit ![
+        Memory,
+        Error<StorageError>,
+        Error<MemoryConflict>
+    ];
     flow find(self, session: string, event: string) -> Option<JobEvent> ![Memory, Error<StorageError>];
 }
 
 public spec ArchivedJobCatalog {
     flow archived_job(self, id: string) -> Option<ArchivedJob> ![Memory, Error<StorageError>];
-    flow archived_jobs(self, workspace: string) -> Array<ArchivedJob> ![Memory, Error<StorageError>, Error<BudgetExceeded>];
+    flow archived_jobs(self, workspace: string) -> Array<ArchivedJob> ![
+        Memory,
+        Error<StorageError>,
+        Error<BudgetExceeded>
+    ];
 }
 
 public spec ArchivedJobParts {
     flow archived_part(self, job: string, part: usize) -> Option<bytes> ![Memory, Error<StorageError>];
 }
 
-public spec ProcessPreviewSink { flow write(self, line: string) -> unit ![Console, Error<IOError>]; }
+public spec ProcessPreviewSink {
+    flow write(self, line: string) -> unit ![Console, Error<IOError>];
+}
 
 // Session is carried across the outer bootstrap handler explicitly.
 public effect ProcessOperations {

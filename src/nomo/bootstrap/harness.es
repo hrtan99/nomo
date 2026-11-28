@@ -103,29 +103,83 @@ public flow harness_run(job: Job) -> Result<Outcome, string> {
 // Both entries seed explicitly selected data; local counters are charged only
 // under their owner's prior reservation. No previous tool is dispatched here.
 public flow ascii_read_child_turn(task: string, allowed: Array<string>, selected: State) -> LoopTurn ~ ChatChildStage<ReadOnlyRoot> {
-    let seeded = Session { history = selected, calls = 0, tokens = 0, tools = 0, scan = 0 };
+    let seeded = Session {
+        history = selected,
+        calls = 0,
+        tokens = 0,
+        tools = 0,
+        scan = 0
+    };
     return model_tool_run_loop(task, allowed, legacy_limits(), seeded);
 }
 
 public flow ascii_read_work_child_turn(task: string, allowed: Array<string>, selected: State) -> LoopTurn {
-    let seeded = Session { history = selected, calls = 0, tokens = 0, tools = 0, scan = 0 };
+    let seeded = Session {
+        history = selected,
+        calls = 0,
+        tokens = 0,
+        tools = 0,
+        scan = 0
+    };
     return model_tool_run_work_loop(task, allowed, legacy_limits(), seeded);
 }
 
 public flow chain_child_turn(task: string, allowed: Array<string>, selected: State, inspect_all: bool) -> LoopTurn {
-    let seeded = Session { history = selected, calls = 0, tokens = 0, tools = 0, scan = 0 };
+    let seeded = Session {
+        history = selected,
+        calls = 0,
+        tokens = 0,
+        tools = 0,
+        scan = 0
+    };
     return run_chain_work_loop(task, allowed, legacy_limits(), seeded, inspect_all);
 }
 
-public flow ascii_read_run_context_with(request: string, allowed: Array<string>, initial: Ledger,
-    prefix: string, require_tool: bool, compatible_plan: bool, inspect_plan: bool, inspect_all: bool) -> Result<Report, Failure> {
-    return run_context_policy(AsciiContext { compatible = compatible_plan }, request, allowed, initial, prefix, require_tool, inspect_plan, inspect_all);
+public flow ascii_read_run_context_with(
+    request: string,
+    allowed: Array<string>,
+    initial: Ledger,
+    prefix: string,
+    require_tool: bool,
+    compatible_plan: bool,
+    inspect_plan: bool,
+    inspect_all: bool
+) -> Result<Report, Failure> {
+    return run_context_policy(
+        AsciiContext {
+            compatible = compatible_plan
+        },
+        request,
+        allowed,
+        initial,
+        prefix,
+        require_tool,
+        inspect_plan,
+        inspect_all
+    );
 }
 
 // Interpret progress once while leaving Model stages for the caller's Handler.
-public flow ascii_read_run_context(request: string, allowed: Array<string>, initial: Ledger,
-    prefix: string, require_tool: bool, compatible_plan: bool, inspect_plan: bool, inspect_all: bool) -> Result<Report, Failure> {
-    return ascii_read_run_context_with(request, allowed, initial, prefix, require_tool, compatible_plan, inspect_plan, inspect_all) with {
+public flow ascii_read_run_context(
+    request: string,
+    allowed: Array<string>,
+    initial: Ledger,
+    prefix: string,
+    require_tool: bool,
+    compatible_plan: bool,
+    inspect_plan: bool,
+    inspect_all: bool
+) -> Result<Report, Failure> {
+    return ascii_read_run_context_with(
+        request,
+        allowed,
+        initial,
+        prefix,
+        require_tool,
+        compatible_plan,
+        inspect_plan,
+        inspect_all
+    ) with {
         HarnessProgress.write(line) => write(line);
     };
 }
@@ -137,7 +191,12 @@ public flow ascii_read_run(request: string, allowed: Array<string>) -> i32 {
     };
     let report = match result {
         Ok(value) => value,
-        Err(failure) => { if !failure.resolved { return unresolved(failure.error); } return ascii_read_refused(failure.state, failure.error); }
+        Err(failure) => {
+            if !failure.resolved {
+                return unresolved(failure.error);
+            }
+            return ascii_read_refused(failure.state, failure.error);
+        }
     };
     println("FINAL " + report.answer);
     ascii_read_finished(report.ledger);
@@ -147,13 +206,25 @@ public flow ascii_read_run(request: string, allowed: Array<string>) -> i32 {
 public flow harness_tool_chat_run_turn(request: string, allowed: Array<string>, invocation: Invocation) -> TurnResult {
     return ascii_chat_run_turn_controller(request, allowed, invocation) with {
         LegacyChatStages.main(context) => harness_tool_chat_main_stage(context);
-        LegacyChatStages.child(task, files, selected, _, _, _, _) => ascii_read_child_turn(task, files, selected);
+        LegacyChatStages.child(task, files, selected, _, _, _, _) => ascii_read_child_turn(
+            task,
+            files,
+            selected
+        );
     };
 }
 
 // Both entries seed explicitly selected data; local counters are charged only
 // under their owner's prior reservation. No previous tool is dispatched here.
-flow seed(selected: State) -> Session { return Session { history = selected, calls = 0, tokens = 0, tools = 0, scan = 0 }; }
+flow seed(selected: State) -> Session {
+    return Session {
+        history = selected,
+        calls = 0,
+        tokens = 0,
+        tools = 0,
+        scan = 0
+    };
+}
 
 public flow unicode_read_child_turn(task: string, allowed: Array<string>, selected: State) -> LoopTurn ~ ChatChildStage<ReadOnlyRoot> {
     return read_model_run_loop(task, allowed, default_limits(), seed(selected));
@@ -163,33 +234,122 @@ public flow unicode_read_work_child_turn(task: string, allowed: Array<string>, s
     return read_model_run_work_loop(task, allowed, default_limits(), seed(selected));
 }
 
-public flow chat_child_turn(task: string, allowed: Array<string>, selected: State, multi: bool, resilient: bool, high_input: bool, reasoning: bool) -> LoopTurn {
-    return if multi { run_multi_chat_loop(task, allowed, seed(selected), false, resilient, high_input, reasoning) } else { run_chat_loop(task, allowed, default_limits(), seed(selected), false) };
+public flow chat_child_turn(
+    task: string,
+    allowed: Array<string>,
+    selected: State,
+    multi: bool,
+    resilient: bool,
+    high_input: bool,
+    reasoning: bool
+) -> LoopTurn {
+    return if multi {
+        run_multi_chat_loop(task, allowed, seed(selected), false, resilient, high_input, reasoning)
+    } else {
+        run_chat_loop(task, allowed, default_limits(), seed(selected), false)
+    };
 }
 
-public flow private_chat_child_turn(task: string, allowed: Array<string>, selected: State, multi: bool, resilient: bool, high_input: bool, reasoning: bool) -> LoopTurn {
-    return if multi { run_multi_chat_loop(task, allowed, seed(selected), true, resilient, high_input, reasoning) } else { run_chat_loop(task, allowed, default_limits(), seed(selected), true) };
+public flow private_chat_child_turn(
+    task: string,
+    allowed: Array<string>,
+    selected: State,
+    multi: bool,
+    resilient: bool,
+    high_input: bool,
+    reasoning: bool
+) -> LoopTurn {
+    return if multi {
+        run_multi_chat_loop(task, allowed, seed(selected), true, resilient, high_input, reasoning)
+    } else {
+        run_chat_loop(task, allowed, default_limits(), seed(selected), true)
+    };
 }
 
-public flow expanded_work_child_turn(task: string, allowed: Array<string>, selected: State, wide: bool, high_input: bool) -> LoopTurn ~ WideChatChildStage<ReadOnlyRoot> {
+public flow expanded_work_child_turn(
+    task: string,
+    allowed: Array<string>,
+    selected: State,
+    wide: bool,
+    high_input: bool
+) -> LoopTurn ~ WideChatChildStage<ReadOnlyRoot> {
     return run_expanded_work_loop(task, allowed, seed(selected), wide, high_input);
 }
 
-public flow unicode_read_run_context_with(request: string, allowed: Array<string>, initial: Ledger,
-    prefix: string, require_tool: bool, compatible_plan: bool, inspect_plan: bool, inspect_all: bool) -> Result<Report, Failure> {
-    return run_context_policy(UnicodeContext { require_tool, expanded = false, wide = false, high_input = false }, request, allowed, initial, prefix, require_tool, inspect_plan, inspect_all);
+public flow unicode_read_run_context_with(
+    request: string,
+    allowed: Array<string>,
+    initial: Ledger,
+    prefix: string,
+    require_tool: bool,
+    compatible_plan: bool,
+    inspect_plan: bool,
+    inspect_all: bool
+) -> Result<Report, Failure> {
+    return run_context_policy(
+        UnicodeContext {
+            require_tool,
+            expanded = false,
+            wide = false,
+            high_input = false
+        },
+        request,
+        allowed,
+        initial,
+        prefix,
+        require_tool,
+        inspect_plan,
+        inspect_all
+    );
 }
 
-public flow run_expanded_context(request: string, allowed: Array<string>, initial: Ledger, wide: bool, high_input: bool) -> Result<Report, Failure> {
-    return run_context_policy(UnicodeContext { require_tool = true, expanded = true, wide, high_input }, request, allowed, initial, "read-", true, false, false) with {
+public flow run_expanded_context(
+    request: string,
+    allowed: Array<string>,
+    initial: Ledger,
+    wide: bool,
+    high_input: bool
+) -> Result<Report, Failure> {
+    return run_context_policy(
+        UnicodeContext {
+            require_tool = true,
+            expanded = true,
+            wide,
+            high_input
+        },
+        request,
+        allowed,
+        initial,
+        "read-",
+        true,
+        false,
+        false
+    ) with {
         HarnessProgress.write(line) => write(line);
     };
 }
 
 // Interpret progress once while leaving Model stages for the caller's Handler.
-public flow unicode_read_run_context(request: string, allowed: Array<string>, initial: Ledger,
-    prefix: string, require_tool: bool, compatible_plan: bool, inspect_plan: bool, inspect_all: bool) -> Result<Report, Failure> {
-    return unicode_read_run_context_with(request, allowed, initial, prefix, require_tool, compatible_plan, inspect_plan, inspect_all) with {
+public flow unicode_read_run_context(
+    request: string,
+    allowed: Array<string>,
+    initial: Ledger,
+    prefix: string,
+    require_tool: bool,
+    compatible_plan: bool,
+    inspect_plan: bool,
+    inspect_all: bool
+) -> Result<Report, Failure> {
+    return unicode_read_run_context_with(
+        request,
+        allowed,
+        initial,
+        prefix,
+        require_tool,
+        compatible_plan,
+        inspect_plan,
+        inspect_all
+    ) with {
         HarnessProgress.write(line) => write(line);
     };
 }
@@ -201,44 +361,118 @@ public flow unicode_read_run(request: string, allowed: Array<string>) -> i32 {
     };
     let report = match result {
         Ok(value) => value,
-        Err(failure) => { if !failure.resolved { return console_unresolved(failure.error); } return unicode_read_refused(failure.state, failure.error); }
+        Err(failure) => {
+            if !failure.resolved {
+                return console_unresolved(failure.error);
+            }
+            return unicode_read_refused(failure.state, failure.error);
+        }
     };
     println("FINAL " + report.answer);
     unicode_read_finished(report.ledger);
     return 0;
 }
 
-type PublicStages = { mode: MainMode };
+type PublicStages = {
+    mode: MainMode
+};
 
 impl PublicStages ~ ReadStages {
-    flow main(self, context: Context) -> string ![] { return infer_main(self.mode, Prompt.new().system(prompt_ChatMain()).data(input(context))); }
-    flow child(self, task: string, files: Array<string>, selected: State, multi: bool, resilient: bool, high_input: bool, reasoning: bool) -> LoopTurn { return chat_child_turn(task, files, selected, multi, resilient, high_input, reasoning); }
+    flow main(self, context: Context) -> string ![] {
+        return infer_main(self.mode, Prompt.new().system(prompt_ChatMain()).data(input(context)));
+    }
+
+    flow child(
+        self,
+        task: string,
+        files: Array<string>,
+        selected: State,
+        multi: bool,
+        resilient: bool,
+        high_input: bool,
+        reasoning: bool
+    ) -> LoopTurn {
+        return chat_child_turn(task, files, selected, multi, resilient, high_input, reasoning);
+    }
 }
 
-type PrivateStages = { mode: MainMode };
+type PrivateStages = {
+    mode: MainMode
+};
 
 impl PrivateStages ~ ReadStages {
-    flow main(self, context: Context) -> string ![] { return infer_main(self.mode, Prompt.new().system(prompt_ChatMain()).data(input(context))); }
-    flow child(self, task: string, files: Array<string>, selected: State, multi: bool, resilient: bool, high_input: bool, reasoning: bool) -> LoopTurn { return private_chat_child_turn(task, files, selected, multi, resilient, high_input, reasoning); }
+    flow main(self, context: Context) -> string ![] {
+        return infer_main(self.mode, Prompt.new().system(prompt_ChatMain()).data(input(context)));
+    }
+
+    flow child(
+        self,
+        task: string,
+        files: Array<string>,
+        selected: State,
+        multi: bool,
+        resilient: bool,
+        high_input: bool,
+        reasoning: bool
+    ) -> LoopTurn {
+        return private_chat_child_turn(task, files, selected, multi, resilient, high_input, reasoning);
+    }
 }
 
-type HistoryStages = { mode: MainMode, history: Array<Event> };
+type HistoryStages = {
+    mode: MainMode,
+    history: Array<Event>
+};
 
 impl HistoryStages ~ ReadStages {
-    flow main(self, context: Context) -> string ![] { return infer_main(self.mode, Prompt.new().system(prompt_HistoryChatMain()).data(input(ConversationInput { current = context, history = self.history }))); }
-    flow child(self, task: string, files: Array<string>, selected: State, multi: bool, resilient: bool, high_input: bool, reasoning: bool) -> LoopTurn { return private_chat_child_turn(task, files, selected, multi, resilient, high_input, reasoning); }
+    flow main(self, context: Context) -> string ![] {
+        return infer_main(
+            self.mode,
+            Prompt.new().system(prompt_HistoryChatMain()).data(
+                input(ConversationInput {
+                    current = context,
+                    history = self.history
+                })
+            )
+        );
+    }
+
+    flow child(
+        self,
+        task: string,
+        files: Array<string>,
+        selected: State,
+        multi: bool,
+        resilient: bool,
+        high_input: bool,
+        reasoning: bool
+    ) -> LoopTurn {
+        return private_chat_child_turn(task, files, selected, multi, resilient, high_input, reasoning);
+    }
 }
 
 public flow read_tool_chat_run_turn(request: string, allowed: Array<string>, invocation: Invocation) -> TurnResult {
-    return run_public(PublicStages { mode = main_mode(invocation) }, request, allowed, invocation);
+    return run_public(PublicStages {
+        mode = main_mode(invocation)
+    }, request, allowed, invocation);
 }
 
 public flow read_tool_chat_run_private_turn(request: string, allowed: Array<string>, invocation: Invocation) -> TurnResult {
-    return run_private(PrivateStages { mode = main_mode(invocation) }, request, allowed, invocation);
+    return run_private(PrivateStages {
+        mode = main_mode(invocation)
+    }, request, allowed, invocation);
 }
 
-public flow run_with_history(request: string, allowed: Array<string>, invocation: Invocation, history: Array<Event>) -> TurnResult {
-    return run_private(HistoryStages { mode = main_mode(invocation), history }, request, allowed, invocation);
+public flow run_with_history(
+    request: string,
+    allowed: Array<string>,
+    invocation: Invocation,
+    history: Array<Event>
+) -> TurnResult {
+    return run_private(HistoryStages {
+        mode = main_mode(invocation),
+        history
+    }, request, allowed, invocation);
 }
 
 public flow model_tool_run_loop(raw: string, allowed: Array<string>, limits: Limits, previous: Session) -> LoopTurn {
@@ -253,7 +487,13 @@ public flow model_tool_run_work_loop(raw: string, allowed: Array<string>, limits
     };
 }
 
-public flow run_chain_work_loop(raw: string, allowed: Array<string>, limits: Limits, previous: Session, inspect_all: bool) -> LoopTurn {
+public flow run_chain_work_loop(
+    raw: string,
+    allowed: Array<string>,
+    limits: Limits,
+    previous: Session,
+    inspect_all: bool
+) -> LoopTurn {
     return model_tool_run_loop_with(raw, allowed, limits, previous, true, inspect_all) with {
         LegacyChildModel.infer(context) => work_infer(context);
     };
@@ -261,7 +501,14 @@ public flow run_chain_work_loop(raw: string, allowed: Array<string>, limits: Lim
 
 // Compatibility composition: callers may still supply the Model handler.
 // The reusable controller receives both operations without native bindings.
-public flow model_tool_run_loop_with(raw: string, allowed: Array<string>, limits: Limits, previous: Session, work: bool, inspect_all: bool) -> LoopTurn {
+public flow model_tool_run_loop_with(
+    raw: string,
+    allowed: Array<string>,
+    limits: Limits,
+    previous: Session,
+    work: bool,
+    inspect_all: bool
+) -> LoopTurn {
     return legacy_model_tool_run_loop_controller(raw, allowed, limits, previous, work, inspect_all) with {
         ReadTools.read(name) => read_legacy(name);
         ReadTools.search(names, literal) => search_legacy(names, literal);
@@ -277,58 +524,195 @@ public flow model_turn(raw: string, maximum: i32, budget: i32, previous: State) 
 
 flow selected(mode: LoopMode, raw: string, allowed: Array<string>, previous: Session) -> LoopTurn {
     return match mode {
-        LoopMode.Public(limits, work, inspect) => read_run_loop_controller(raw, allowed, limits, previous, work, inspect),
-        LoopMode.Private(limits, work) => if work { run_private_work_loop_controller(raw, allowed, limits, previous) } else { run_private_loop_controller(raw, allowed, limits, previous) },
-        LoopMode.Chat(limits, hidden) => if hidden { run_private_chat_loop_controller(raw, allowed, limits, previous) } else { run_public_chat_loop_controller(raw, allowed, limits, previous) },
-        LoopMode.Expanded(wide, high_input) => run_expanded_work_loop_controller(raw, allowed, previous, wide, high_input),
-        LoopMode.Multi(hidden, resilient, reasoning) => if hidden { run_private_multi_chat_loop_controller(raw, allowed, previous, resilient, reasoning) } else { run_public_multi_chat_loop_controller(raw, allowed, previous, resilient, reasoning) },
+        LoopMode.Public(limits, work, inspect) => read_run_loop_controller(
+            raw,
+            allowed,
+            limits,
+            previous,
+            work,
+            inspect
+        ),
+        LoopMode.Private(limits, work) => if work {
+            run_private_work_loop_controller(raw, allowed, limits, previous)
+        } else {
+            run_private_loop_controller(raw, allowed, limits, previous)
+        },
+        LoopMode.Chat(limits, hidden) => if hidden {
+            run_private_chat_loop_controller(raw, allowed, limits, previous)
+        } else {
+            run_public_chat_loop_controller(raw, allowed, limits, previous)
+        },
+        LoopMode.Expanded(wide, high_input) => run_expanded_work_loop_controller(
+            raw,
+            allowed,
+            previous,
+            wide,
+            high_input
+        ),
+        LoopMode.Multi(hidden, resilient, reasoning) => if hidden {
+            run_private_multi_chat_loop_controller(raw, allowed, previous, resilient, reasoning)
+        } else {
+            run_public_multi_chat_loop_controller(raw, allowed, previous, resilient, reasoning)
+        },
     };
 }
 
-flow run_tools<F ~ FileReader<ReadOnlyRoot>, S ~ LiteralSearcher<ReadOnlyRoot>>(reader: F, searcher: S, mode: LoopMode, raw: string, allowed: Array<string>, previous: Session) -> LoopTurn {
+flow run_tools<F ~ FileReader<ReadOnlyRoot>, S ~ LiteralSearcher<ReadOnlyRoot>>(
+    reader: F,
+    searcher: S,
+    mode: LoopMode,
+    raw: string,
+    allowed: Array<string>,
+    previous: Session
+) -> LoopTurn {
     return selected(mode, raw, allowed, previous) with {
         ReadTools.read(name) => reader.read(name);
         ReadTools.search(names, literal) => searcher.search(names, literal);
     };
 }
 
-flow run_native<M ~ ChildModel, F ~ FileReader<ReadOnlyRoot>, S ~ LiteralSearcher<ReadOnlyRoot>>(model: M, reader: F, searcher: S, mode: LoopMode, raw: string, allowed: Array<string>, previous: Session) -> LoopTurn {
+flow run_native<M ~ ChildModel, F ~ FileReader<ReadOnlyRoot>, S ~ LiteralSearcher<ReadOnlyRoot>>(
+    model: M,
+    reader: F,
+    searcher: S,
+    mode: LoopMode,
+    raw: string,
+    allowed: Array<string>,
+    previous: Session
+) -> LoopTurn {
     return run_tools(reader, searcher, mode, raw, allowed, previous) with {
         LegacyChildModel.infer(context) => model.infer(context);
     };
 }
 
 public flow read_model_run_loop(raw: string, allowed: Array<string>, limits: Limits, previous: Session) -> LoopTurn {
-    return run_native(StandardModel {}, StandardFiles {}, StandardFiles {}, LoopMode.Public(limits, false, false), raw, allowed, previous);
+    return run_native(
+        StandardModel {},
+        StandardFiles {},
+        StandardFiles {},
+        LoopMode.Public(limits, false, false),
+        raw,
+        allowed,
+        previous
+    );
 }
 
 public flow read_model_run_work_loop(raw: string, allowed: Array<string>, limits: Limits, previous: Session) -> LoopTurn {
-    return run_native(StandardModel {}, StandardFiles {}, StandardFiles {}, LoopMode.Public(limits, true, false), raw, allowed, previous);
+    return run_native(
+        StandardModel {},
+        StandardFiles {},
+        StandardFiles {},
+        LoopMode.Public(limits, true, false),
+        raw,
+        allowed,
+        previous
+    );
 }
 
 // Compatibility composition leaves the model operation for its caller.
-public flow read_model_run_loop_with(raw: string, allowed: Array<string>, limits: Limits, previous: Session, work: bool, inspect_all: bool) -> LoopTurn {
-    return run_tools(StandardFiles {}, StandardFiles {}, LoopMode.Public(limits, work, inspect_all), raw, allowed, previous);
+public flow read_model_run_loop_with(
+    raw: string,
+    allowed: Array<string>,
+    limits: Limits,
+    previous: Session,
+    work: bool,
+    inspect_all: bool
+) -> LoopTurn {
+    return run_tools(
+        StandardFiles {},
+        StandardFiles {},
+        LoopMode.Public(limits, work, inspect_all),
+        raw,
+        allowed,
+        previous
+    );
 }
 
 public flow run_private_loop(raw: string, allowed: Array<string>, limits: Limits, previous: Session) -> LoopTurn {
-    return run_native(StandardModel {}, StandardFiles {}, StandardFiles {}, LoopMode.Private(limits, false), raw, allowed, previous);
+    return run_native(
+        StandardModel {},
+        StandardFiles {},
+        StandardFiles {},
+        LoopMode.Private(limits, false),
+        raw,
+        allowed,
+        previous
+    );
 }
 
 public flow run_private_work_loop(raw: string, allowed: Array<string>, limits: Limits, previous: Session) -> LoopTurn {
-    return run_native(StandardModel {}, StandardFiles {}, StandardFiles {}, LoopMode.Private(limits, true), raw, allowed, previous);
+    return run_native(
+        StandardModel {},
+        StandardFiles {},
+        StandardFiles {},
+        LoopMode.Private(limits, true),
+        raw,
+        allowed,
+        previous
+    );
 }
 
-public flow run_chat_loop(raw: string, allowed: Array<string>, limits: Limits, previous: Session, redacted: bool) -> LoopTurn {
-    return run_native(StandardModel {}, StandardFiles {}, StandardFiles {}, LoopMode.Chat(limits, redacted), raw, allowed, previous);
+public flow run_chat_loop(
+    raw: string,
+    allowed: Array<string>,
+    limits: Limits,
+    previous: Session,
+    redacted: bool
+) -> LoopTurn {
+    return run_native(
+        StandardModel {},
+        StandardFiles {},
+        StandardFiles {},
+        LoopMode.Chat(limits, redacted),
+        raw,
+        allowed,
+        previous
+    );
 }
 
-public flow run_expanded_work_loop(raw: string, allowed: Array<string>, previous: Session, wide: bool, high_input: bool) -> LoopTurn {
-    return run_native(WorkModel { wide, high_input }, WideFiles {}, WideFiles {}, LoopMode.Expanded(wide, high_input), raw, allowed, previous);
+public flow run_expanded_work_loop(
+    raw: string,
+    allowed: Array<string>,
+    previous: Session,
+    wide: bool,
+    high_input: bool
+) -> LoopTurn {
+    return run_native(
+        WorkModel {
+            wide,
+            high_input
+        },
+        WideFiles {},
+        WideFiles {},
+        LoopMode.Expanded(wide, high_input),
+        raw,
+        allowed,
+        previous
+    );
 }
 
-public flow run_multi_chat_loop(raw: string, allowed: Array<string>, previous: Session, redacted: bool, resilient: bool, high_input: bool, reasoning: bool) -> LoopTurn {
-    return run_native(MultiModel { resilient, high_input, reasoning }, WideFiles {}, MultiFiles {}, LoopMode.Multi(redacted, resilient, reasoning), raw, allowed, previous);
+public flow run_multi_chat_loop(
+    raw: string,
+    allowed: Array<string>,
+    previous: Session,
+    redacted: bool,
+    resilient: bool,
+    high_input: bool,
+    reasoning: bool
+) -> LoopTurn {
+    return run_native(
+        MultiModel {
+            resilient,
+            high_input,
+            reasoning
+        },
+        WideFiles {},
+        MultiFiles {},
+        LoopMode.Multi(redacted, resilient, reasoning),
+        raw,
+        allowed,
+        previous
+    );
 }
 
 public flow ascii_chat_run_turn_controller(request: string, allowed: Array<string>, invocation: Invocation) -> TurnResult {
@@ -340,11 +724,22 @@ public flow run_shared_turn(request: string, allowed: Array<string>, invocation:
     return run_output(PublicHarnessEvents {}, request, allowed, invocation, unicode);
 }
 
-public flow chat_run_private_turn(request: string, allowed: Array<string>, invocation: Invocation, unicode: bool) -> TurnResult {
+public flow chat_run_private_turn(
+    request: string,
+    allowed: Array<string>,
+    invocation: Invocation,
+    unicode: bool
+) -> TurnResult {
     return run_output(RedactedHarnessEvents {}, request, allowed, invocation, unicode);
 }
 
-flow run_output<S ~ ConversationSink>(sink: S, request: string, allowed: Array<string>, invocation: Invocation, unicode: bool) -> TurnResult {
+flow run_output<S ~ ConversationSink>(
+    sink: S,
+    request: string,
+    allowed: Array<string>,
+    invocation: Invocation,
+    unicode: bool
+) -> TurnResult {
     let progress = ConsoleProgress {};
     return run_mode(request, allowed, invocation, unicode) with {
         ConversationOutput.publish(event) => sink.publish(event);
@@ -352,58 +747,266 @@ flow run_output<S ~ ConversationSink>(sink: S, request: string, allowed: Array<s
     };
 }
 
-public flow legacy_model_tool_run_loop_controller(raw: string, allowed: Array<string>, limits: Limits, previous: Session, work: bool, inspect_all: bool) -> LoopTurn {
+public flow legacy_model_tool_run_loop_controller(
+    raw: string,
+    allowed: Array<string>,
+    limits: Limits,
+    previous: Session,
+    work: bool,
+    inspect_all: bool
+) -> LoopTurn {
     return run_legacy_loop(raw, allowed, limits, previous, work, inspect_all);
 }
 
-public flow read_run_loop_controller(raw: string, allowed: Array<string>, limits: Limits, previous: Session, work: bool, inspect_all: bool) -> LoopTurn {
-    return read_run_output(BoundedChild { limits, work, chat = false }, UnicodeActions {}, PublicChildEvents {}, SilentProgress {}, ConsoleDiagnostics {}, raw, allowed, previous, inspect_all);
+public flow read_run_loop_controller(
+    raw: string,
+    allowed: Array<string>,
+    limits: Limits,
+    previous: Session,
+    work: bool,
+    inspect_all: bool
+) -> LoopTurn {
+    return read_run_output(
+        BoundedChild {
+            limits,
+            work,
+            chat = false
+        },
+        UnicodeActions {},
+        PublicChildEvents {},
+        SilentProgress {},
+        ConsoleDiagnostics {},
+        raw,
+        allowed,
+        previous,
+        inspect_all
+    );
 }
 
-public flow run_private_loop_controller(raw: string, allowed: Array<string>, limits: Limits, previous: Session) -> LoopTurn {
-    return read_run_output(BoundedChild { limits, work = false, chat = false }, UnicodeActions {}, RedactedChildEvents {}, ConsoleProgress {}, ConsoleDiagnostics {}, raw, allowed, previous, false);
+public flow run_private_loop_controller(
+    raw: string,
+    allowed: Array<string>,
+    limits: Limits,
+    previous: Session
+) -> LoopTurn {
+    return read_run_output(
+        BoundedChild {
+            limits,
+            work = false,
+            chat = false
+        },
+        UnicodeActions {},
+        RedactedChildEvents {},
+        ConsoleProgress {},
+        ConsoleDiagnostics {},
+        raw,
+        allowed,
+        previous,
+        false
+    );
 }
 
-public flow run_private_work_loop_controller(raw: string, allowed: Array<string>, limits: Limits, previous: Session) -> LoopTurn {
-    return read_run_output(BoundedChild { limits, work = true, chat = false }, UnicodeActions {}, RedactedChildEvents {}, ConsoleProgress {}, ConsoleDiagnostics {}, raw, allowed, previous, false);
+public flow run_private_work_loop_controller(
+    raw: string,
+    allowed: Array<string>,
+    limits: Limits,
+    previous: Session
+) -> LoopTurn {
+    return read_run_output(
+        BoundedChild {
+            limits,
+            work = true,
+            chat = false
+        },
+        UnicodeActions {},
+        RedactedChildEvents {},
+        ConsoleProgress {},
+        ConsoleDiagnostics {},
+        raw,
+        allowed,
+        previous,
+        false
+    );
 }
 
-public flow run_public_chat_loop_controller(raw: string, allowed: Array<string>, limits: Limits, previous: Session) -> LoopTurn {
-    return read_run_output(BoundedChild { limits, work = true, chat = true }, UnicodeActions {}, PublicChildEvents {}, SilentProgress {}, ConsoleDiagnostics {}, raw, allowed, previous, false);
+public flow run_public_chat_loop_controller(
+    raw: string,
+    allowed: Array<string>,
+    limits: Limits,
+    previous: Session
+) -> LoopTurn {
+    return read_run_output(
+        BoundedChild {
+            limits,
+            work = true,
+            chat = true
+        },
+        UnicodeActions {},
+        PublicChildEvents {},
+        SilentProgress {},
+        ConsoleDiagnostics {},
+        raw,
+        allowed,
+        previous,
+        false
+    );
 }
 
-public flow run_private_chat_loop_controller(raw: string, allowed: Array<string>, limits: Limits, previous: Session) -> LoopTurn {
-    return read_run_output(BoundedChild { limits, work = true, chat = true }, UnicodeActions {}, RedactedChildEvents {}, ConsoleProgress {}, ConsoleDiagnostics {}, raw, allowed, previous, false);
+public flow run_private_chat_loop_controller(
+    raw: string,
+    allowed: Array<string>,
+    limits: Limits,
+    previous: Session
+) -> LoopTurn {
+    return read_run_output(
+        BoundedChild {
+            limits,
+            work = true,
+            chat = true
+        },
+        UnicodeActions {},
+        RedactedChildEvents {},
+        ConsoleProgress {},
+        ConsoleDiagnostics {},
+        raw,
+        allowed,
+        previous,
+        false
+    );
 }
 
-public flow run_expanded_work_loop_controller(raw: string, allowed: Array<string>, previous: Session, wide: bool, high_input: bool) -> LoopTurn {
-    return read_run_output(ExpandedChild { wide, high_input }, UnicodeActions {}, RedactedChildEvents {}, ConsoleProgress {}, ConsoleDiagnostics {}, raw, allowed, previous, false);
+public flow run_expanded_work_loop_controller(
+    raw: string,
+    allowed: Array<string>,
+    previous: Session,
+    wide: bool,
+    high_input: bool
+) -> LoopTurn {
+    return read_run_output(
+        ExpandedChild {
+            wide,
+            high_input
+        },
+        UnicodeActions {},
+        RedactedChildEvents {},
+        ConsoleProgress {},
+        ConsoleDiagnostics {},
+        raw,
+        allowed,
+        previous,
+        false
+    );
 }
 
-public flow run_public_multi_chat_loop_controller(raw: string, allowed: Array<string>, previous: Session, resilient: bool, reasoning: bool) -> LoopTurn {
-    return read_run_output(MultiChild { resilient, reasoning }, UnicodeActions {}, PublicChildEvents {}, SilentProgress {}, ConsoleDiagnostics {}, raw, allowed, previous, false);
+public flow run_public_multi_chat_loop_controller(
+    raw: string,
+    allowed: Array<string>,
+    previous: Session,
+    resilient: bool,
+    reasoning: bool
+) -> LoopTurn {
+    return read_run_output(
+        MultiChild {
+            resilient,
+            reasoning
+        },
+        UnicodeActions {},
+        PublicChildEvents {},
+        SilentProgress {},
+        ConsoleDiagnostics {},
+        raw,
+        allowed,
+        previous,
+        false
+    );
 }
 
-public flow run_private_multi_chat_loop_controller(raw: string, allowed: Array<string>, previous: Session, resilient: bool, reasoning: bool) -> LoopTurn {
-    return read_run_output(MultiChild { resilient, reasoning }, UnicodeActions {}, RedactedChildEvents {}, ConsoleProgress {}, ConsoleDiagnostics {}, raw, allowed, previous, false);
+public flow run_private_multi_chat_loop_controller(
+    raw: string,
+    allowed: Array<string>,
+    previous: Session,
+    resilient: bool,
+    reasoning: bool
+) -> LoopTurn {
+    return read_run_output(
+        MultiChild {
+            resilient,
+            reasoning
+        },
+        UnicodeActions {},
+        RedactedChildEvents {},
+        ConsoleProgress {},
+        ConsoleDiagnostics {},
+        raw,
+        allowed,
+        previous,
+        false
+    );
 }
 
-public flow run_legacy_loop(raw: string, allowed: Array<string>, limits: Limits, previous: Session, work: bool, inspect_all: bool) -> LoopTurn {
-    return read_run_output(LegacyChild { limits }, LegacyActions { work }, PublicChildEvents {}, SilentProgress {}, ConsoleDiagnostics {}, raw, allowed, previous, inspect_all);
+public flow run_legacy_loop(
+    raw: string,
+    allowed: Array<string>,
+    limits: Limits,
+    previous: Session,
+    work: bool,
+    inspect_all: bool
+) -> LoopTurn {
+    return read_run_output(
+        LegacyChild {
+            limits
+        },
+        LegacyActions {
+            work
+        },
+        PublicChildEvents {},
+        SilentProgress {},
+        ConsoleDiagnostics {},
+        raw,
+        allowed,
+        previous,
+        inspect_all
+    );
 }
 
 // The controller performs operations; the composition boundary installs one handler.
-public flow run_public<S ~ ReadStages>(stages: S, request: string, allowed: Array<string>, invocation: Invocation) -> TurnResult {
+public flow run_public<S ~ ReadStages>(
+    stages: S,
+    request: string,
+    allowed: Array<string>,
+    invocation: Invocation
+) -> TurnResult {
     return utf8_chat_run_turn_controller(request, allowed, invocation) with {
         LegacyChatStages.main(context) => stages.main(context);
-        LegacyChatStages.child(task, files, selected, multi, resilient, high_input, reasoning) => stages.child(task, files, selected, multi, resilient, high_input, reasoning);
+        LegacyChatStages.child(task, files, selected, multi, resilient, high_input, reasoning) => stages.child(
+            task,
+            files,
+            selected,
+            multi,
+            resilient,
+            high_input,
+            reasoning
+        );
     };
 }
 
-public flow run_private<S ~ ReadStages>(stages: S, request: string, allowed: Array<string>, invocation: Invocation) -> TurnResult {
+public flow run_private<S ~ ReadStages>(
+    stages: S,
+    request: string,
+    allowed: Array<string>,
+    invocation: Invocation
+) -> TurnResult {
     return run_private_turn_controller(request, allowed, invocation) with {
         LegacyChatStages.main(context) => stages.main(context);
-        LegacyChatStages.child(task, files, selected, multi, resilient, high_input, reasoning) => stages.child(task, files, selected, multi, resilient, high_input, reasoning);
+        LegacyChatStages.child(task, files, selected, multi, resilient, high_input, reasoning) => stages.child(
+            task,
+            files,
+            selected,
+            multi,
+            resilient,
+            high_input,
+            reasoning
+        );
     };
 }
 
@@ -439,7 +1042,10 @@ public flow run_private_turn_controller(request: string, allowed: Array<string>,
     return chat_run_private_turn(request, allowed, invocation, true);
 }
 
-public type ConversationInput = { current: Context, history: Array<Event> };
+public type ConversationInput = {
+    current: Context,
+    history: Array<Event>
+};
 
 public flow run_text(request: string) -> i32 {
     return text_delegation_run(request) with {

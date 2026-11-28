@@ -8,6 +8,8 @@ public type LaunchRoot;
 
 impl LaunchRoot ~ Region;
 
-alias Schema = MemoryRegion<{ Recent: Store<string, Array<string>> }>;
+alias Schema = MemoryRegion<{
+    Recent: Store<string, Array<string>>
+}>;
 
 public let Data = std.memory.region<Schema>(stable_id = "nomo-native-projects-v1", store = "native-projects");

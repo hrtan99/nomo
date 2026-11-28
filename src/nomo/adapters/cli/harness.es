@@ -82,12 +82,16 @@ flow emit(outcome: Outcome, turn: i32) -> unit {
     // child-1 is local to each coordinator call, so qualify every record by turn.
     let prefix = "TURN " + from_i32(turn) + " ";
     @limits([Iterations(3)]) for message in outcome.messages {
-        println(prefix + "EVENT " + message.sender + " -> " + message.recipient + " " +
-            message.kind + " " + message.child_id + ": " + message.text);
+        println(
+            prefix + "EVENT " + message.sender + " -> " + message.recipient + " " + message.kind + " "
+                + message.child_id + ": " + message.text
+        );
     }
     println(prefix + "FINAL " + outcome.status + ": " + outcome.text);
-    println(prefix + "LEDGER maximum=" + from_i32(outcome.ledger.maximum) +
-        " spent=" + from_i32(outcome.ledger.spent) + " reserved=" + from_i32(outcome.ledger.reserved));
+    println(
+        prefix + "LEDGER maximum=" + from_i32(outcome.ledger.maximum) + " spent="
+            + from_i32(outcome.ledger.spent) + " reserved=" + from_i32(outcome.ledger.reserved)
+    );
 }
 
 flow stop(reason: string, turns: i32, spent: i32) -> unit {
@@ -99,9 +103,15 @@ flow stop(reason: string, turns: i32, spent: i32) -> unit {
 public flow harness_chat_run(args: Array<string>) -> i32 {
     let request = match cli_request_parse_args(args) {
         Ok(value) => value,
-        Err(error) => { println("REFUSED " + error); return 1; }
+        Err(error) => {
+            println("REFUSED " + error);
+            return 1;
+        }
     };
-    if request.kind == "help" { harness_chat_help(); return 0; }
+    if request.kind == "help" {
+        harness_chat_help();
+        return 0;
+    }
     if request.kind != "new" {
         println("REFUSED resume is unavailable in the offline harness chat");
         return 1;
@@ -118,23 +128,42 @@ public flow harness_chat_run(args: Array<string>) -> i32 {
     println("Nomo harness chat (fresh, non-durable). /help for limits; /exit to quit.");
     @limits([Iterations(16)]) while lines < 16 {
         let raw = read_line();
-        if raw == "" { stop("EOF", turns, spent); return 0; }
+        if raw == "" {
+            stop("EOF", turns, spent);
+            return 0;
+        }
         lines = lines + 1;
         match cli_request_parse_line(raw) {
             Err(error) => println("REFUSED " + error),
             Ok(command) => {
-                if command.kind == "exit" { stop("exit", turns, spent); return 0; }
-                if command.kind == "help" { harness_chat_help(); }
+                if command.kind == "exit" {
+                    stop("exit", turns, spent);
+                    return 0;
+                }
+                if command.kind == "help" {
+                    harness_chat_help();
+                }
                 else {
-                    let job = Job { task = command.text, context, maximum = 16, spent };
+                    let job = Job {
+                        task = command.text,
+                        context,
+                        maximum = 16,
+                        spent
+                    };
                     match harness_run(job) {
                         Err(error) => println("REFUSED " + error),
                         Ok(outcome) => {
                             turns = turns + 1;
                             spent = outcome.ledger.spent;
                             emit(outcome, turns);
-                            if outcome.status != "completed" { stop("child refused", turns, spent); return 1; }
-                            if turns == 3 { stop("turn limit", turns, spent); return 0; }
+                            if outcome.status != "completed" {
+                                stop("child refused", turns, spent);
+                                return 1;
+                            }
+                            if turns == 3 {
+                                stop("turn limit", turns, spent);
+                                return 0;
+                            }
                             context = context.push(command.text);
                         }
                     };
@@ -147,18 +176,28 @@ public flow harness_chat_run(args: Array<string>) -> i32 {
 }
 
 flow ledger(state: Ledger) -> unit {
-    println("LEDGER steps=" + from_i32(state.steps) + "/6 calls=" + from_i32(state.calls) +
-        "/3 token_allowance=" + from_i32(state.tokens) + "/38912 boundaries=" + from_i32(state.boundaries) +
-        "/3 native_token_allowance=" + from_i32(state.native_tokens) + "/163840; allowances are not provider usage; journal does not persist model history or budgets");
+    println(
+        "LEDGER steps=" + from_i32(state.steps) + "/6 calls=" + from_i32(state.calls) + "/3 token_allowance="
+            + from_i32(state.tokens) + "/38912 boundaries=" + from_i32(state.boundaries)
+            + "/3 native_token_allowance=" + from_i32(state.native_tokens)
+            + "/163840; allowances are not provider usage; journal does not persist model history or budgets"
+    );
 }
 
-flow harness_edit_entry_refused(state: Ledger, error: string) -> i32 { println("REFUSED " + error); ledger(state); return 1; }
+flow harness_edit_entry_refused(state: Ledger, error: string) -> i32 {
+    println("REFUSED " + error);
+    ledger(state);
+    return 1;
+}
 
 flow harness_edit_entry_stage(phase: string, state: Ledger) -> unit {
-    println("STAGE " + phase + " child-1 steps=" + from_i32(state.steps) + " calls=" + from_i32(state.calls) +
-        " token_allowance=" + from_i32(state.tokens) + " remaining_calls=" + from_i32(3 - state.calls) +
-        " remaining_token_allowance=" + from_i32(38912 - state.tokens) +
-        " native_token_allowance=" + from_i32(state.native_tokens) + " remaining_native_token_allowance=" + from_i32(163840 - state.native_tokens));
+    println(
+        "STAGE " + phase + " child-1 steps=" + from_i32(state.steps) + " calls=" + from_i32(state.calls)
+            + " token_allowance=" + from_i32(state.tokens) + " remaining_calls=" + from_i32(3 - state.calls)
+            + " remaining_token_allowance=" + from_i32(38912 - state.tokens) + " native_token_allowance="
+            + from_i32(state.native_tokens) + " remaining_native_token_allowance="
+            + from_i32(163840 - state.native_tokens)
+    );
 }
 
 flow harness_edit_entry_help() -> unit {
@@ -170,43 +209,142 @@ flow harness_edit_entry_help() -> unit {
     println("Current native yes then Nomo y/yes; same/different ID cannot reuse a consumed store. Journal stores edit facts, not model history or resume.");
 }
 
-public flow harness_edit_entry_run(args: Array<string>) -> i32 ![Console, Memory, ports_Approval, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<IOError>, Error<fs_IOError>, Error<BudgetExceeded>] {
+public flow harness_edit_entry_run(args: Array<string>) -> i32 ![
+    Console,
+    Memory,
+    ports_Approval,
+    Fs.stat<EditableRoot>,
+    Fs.read<EditableRoot>,
+    Fs.atomic_replace<EditableRoot>,
+    Error<StorageError>,
+    Error<IndexError>,
+    Error<IOError>,
+    Error<fs_IOError>,
+    Error<BudgetExceeded>
+] {
     var state = fresh();
-    let input = match harness_edit_args_parse(args) { Ok(value) => value, Err(error) => { return harness_edit_entry_refused(state, error); } };
-    if input.help { harness_edit_entry_help(); return 0; }
-    let selected = Selector { id = input.id, workspace = input.workspace, path = input.path };
+    let input = match harness_edit_args_parse(args) {
+        Ok(value) => value,
+        Err(error) => {
+            return harness_edit_entry_refused(state, error);
+        }
+    };
+    if input.help {
+        harness_edit_entry_help();
+        return 0;
+    }
+    let selected = Selector {
+        id = input.id,
+        workspace = input.workspace,
+        path = input.path
+    };
     // Before File or Model, every existing slot consumes the invocation.
-    match edit_operation_store_available() { Ok(_) => (), Err(error) => { return harness_edit_entry_refused(state, error); } }
-    let before = match read_original(input.path) { Ok(value) => value, Err(error) => { return harness_edit_entry_refused(state, error); } };
+    match edit_operation_store_available() {
+        Ok(_) => (),
+        Err(error) => {
+            return harness_edit_entry_refused(state, error);
+        }
+    }
+    let before = match read_original(input.path) {
+        Ok(value) => value,
+        Err(error) => {
+            return harness_edit_entry_refused(state, error);
+        }
+    };
     let initial = edit_context("plan", selected, input.request, "", before);
-    let invalid = context_error(initial); if invalid != "" { return harness_edit_entry_refused(state, invalid); }
-    state = match bump(state, true) { Ok(value) => value, Err(error) => { return harness_edit_entry_refused(state, error); } };
+    let invalid = context_error(initial);
+    if invalid != "" {
+        return harness_edit_entry_refused(state, invalid);
+    }
+    state = match bump(state, true) {
+        Ok(value) => value,
+        Err(error) => {
+            return harness_edit_entry_refused(state, error);
+        }
+    };
     harness_edit_entry_stage("plan", state);
-    let task = match decode_plan(plan(initial)) { Ok(value) => value, Err(error) => { return harness_edit_entry_refused(state, error); } };
-    state = match bump(state, false) { Ok(value) => value, Err(error) => { return harness_edit_entry_refused(state, error); } };
+    let task = match decode_plan(plan(initial)) {
+        Ok(value) => value,
+        Err(error) => {
+            return harness_edit_entry_refused(state, error);
+        }
+    };
+    state = match bump(state, false) {
+        Ok(value) => value,
+        Err(error) => {
+            return harness_edit_entry_refused(state, error);
+        }
+    };
     display("EVENT main -> child-1 request ", task);
     let delegated = edit_context("child", selected, input.request, task, before);
-    let invalid_child = context_error(delegated); if invalid_child != "" { return harness_edit_entry_refused(state, invalid_child); }
-    state = match bump(state, true) { Ok(value) => value, Err(error) => { return harness_edit_entry_refused(state, error); } };
+    let invalid_child = context_error(delegated);
+    if invalid_child != "" {
+        return harness_edit_entry_refused(state, invalid_child);
+    }
+    state = match bump(state, true) {
+        Ok(value) => value,
+        Err(error) => {
+            return harness_edit_entry_refused(state, error);
+        }
+    };
     harness_edit_entry_stage("child", state);
-    let request = match decode_edit(propose(delegated)) { Ok(value) => value, Err(error) => { return harness_edit_entry_refused(state, error); } };
-    let prepared = match prepare_original_legacy(input.path, before, request.target, request.replacement) { Ok(value) => value, Err(error) => { return harness_edit_entry_refused(state, error); } };
-    state = match bump(state, false) { Ok(value) => value, Err(error) => { return harness_edit_entry_refused(state, error); } };
-    let outcome = match execute(selected, prepared) { Ok(value) => value, Err(error) => { return harness_edit_entry_refused(state, error); } };
+    let request = match decode_edit(propose(delegated)) {
+        Ok(value) => value,
+        Err(error) => {
+            return harness_edit_entry_refused(state, error);
+        }
+    };
+    let prepared = match prepare_original_legacy(input.path, before, request.target, request.replacement) {
+        Ok(value) => value,
+        Err(error) => {
+            return harness_edit_entry_refused(state, error);
+        }
+    };
+    state = match bump(state, false) {
+        Ok(value) => value,
+        Err(error) => {
+            return harness_edit_entry_refused(state, error);
+        }
+    };
+    let outcome = match execute(selected, prepared) {
+        Ok(value) => value,
+        Err(error) => {
+            return harness_edit_entry_refused(state, error);
+        }
+    };
     // Source receives a typed value only after the shared coordinator proves
     // durable completion. Announce it before a Model abort can terminate here.
     recorded(selected);
-    state = match bump(state, false) { Ok(value) => value, Err(error) => { return harness_edit_entry_refused(state, "edit completed; " + error); } };
+    state = match bump(state, false) {
+        Ok(value) => value,
+        Err(error) => {
+            return harness_edit_entry_refused(state, "edit completed; " + error);
+        }
+    };
     println("EVENT child-1 -> main completed " + outcome.binding.id);
     let final_context = completed_context(input.request, task, before, outcome);
     let invalid_final = context_error(final_context);
-    if invalid_final != "" { return harness_edit_entry_refused(state, "edit completed; aggregation context refused: " + invalid_final); }
-    state = match bump(state, true) { Ok(value) => value, Err(error) => { return harness_edit_entry_refused(state, "edit completed; " + error); } };
+    if invalid_final != "" {
+        return harness_edit_entry_refused(
+            state,
+            "edit completed; aggregation context refused: " + invalid_final
+        );
+    }
+    state = match bump(state, true) {
+        Ok(value) => value,
+        Err(error) => {
+            return harness_edit_entry_refused(state, "edit completed; " + error);
+        }
+    };
     harness_edit_entry_stage("aggregate", state);
     let answer = aggregate(final_context);
     let invalid_answer = text_error(answer, "final answer");
-    if invalid_answer != "" { return harness_edit_entry_refused(state, "edit completed; " + invalid_answer); }
-    display("FINAL ", answer); ledger(state); return 0;
+    if invalid_answer != "" {
+        return harness_edit_entry_refused(state, "edit completed; " + invalid_answer);
+    }
+    display("FINAL ", answer);
+    ledger(state);
+    return 0;
 }
 
 flow harness_entry_help() -> unit {
@@ -220,9 +358,15 @@ flow harness_entry_help() -> unit {
 public flow harness_entry_run(args: Array<string>) -> i32 {
     let request = match cli_request_parse_args(args) {
         Ok(value) => value,
-        Err(error) => { println("REFUSED " + error); return 1; }
+        Err(error) => {
+            println("REFUSED " + error);
+            return 1;
+        }
     };
-    if request.kind == "help" { harness_entry_help(); return 0; }
+    if request.kind == "help" {
+        harness_entry_help();
+        return 0;
+    }
     if request.kind != "new" {
         println("REFUSED resume is unavailable in the offline harness entry");
         return 1;
@@ -233,18 +377,33 @@ public flow harness_entry_run(args: Array<string>) -> i32 {
     }
     let context: Array<string> = [];
     // Pass exact raw data; admission enforces 256 before calling the child.
-    let job = Job { task = request.once, context, maximum = 5, spent = 0 };
+    let job = Job {
+        task = request.once,
+        context,
+        maximum = 5,
+        spent = 0
+    };
     let outcome = match harness_run(job) {
         Ok(value) => value,
-        Err(error) => { println("REFUSED " + error); return 1; }
+        Err(error) => {
+            println("REFUSED " + error);
+            return 1;
+        }
     };
     @limits([Iterations(3)]) for message in outcome.messages {
-        println("EVENT " + message.sender + " -> " + message.recipient + " " + message.kind + " " + message.child_id + ": " + message.text);
+        println(
+            "EVENT " + message.sender + " -> " + message.recipient + " " + message.kind + " "
+                + message.child_id + ": " + message.text
+        );
     }
     println("FINAL " + outcome.status + ": " + outcome.text);
-    println("LEDGER maximum=" + from_i32(outcome.ledger.maximum) +
-        " spent=" + from_i32(outcome.ledger.spent) + " reserved=" + from_i32(outcome.ledger.reserved));
-    if outcome.status != "completed" { return 1; }
+    println(
+        "LEDGER maximum=" + from_i32(outcome.ledger.maximum) + " spent=" + from_i32(outcome.ledger.spent)
+            + " reserved=" + from_i32(outcome.ledger.reserved)
+    );
+    if outcome.status != "completed" {
+        return 1;
+    }
     return 0;
 }
 
@@ -260,15 +419,26 @@ flow harness_model_entry_help() -> unit {
 public flow harness_model_entry_run(args: Array<string>) -> i32 {
     let request = match cli_request_parse_args(args) {
         Ok(value) => value,
-        Err(error) => { return text_delegation_refused(text_fresh(), error); }
+        Err(error) => {
+            return text_delegation_refused(text_fresh(), error);
+        }
     };
-    if request.kind == "help" { harness_model_entry_help(); return 0; }
-    if request.kind != "new" { return text_delegation_refused(text_fresh(), "resume is unavailable in the model harness"); }
-    if !request.once_supplied { return text_delegation_refused(text_fresh(), "this entry requires new --once TEXT"); }
+    if request.kind == "help" {
+        harness_model_entry_help();
+        return 0;
+    }
+    if request.kind != "new" {
+        return text_delegation_refused(text_fresh(), "resume is unavailable in the model harness");
+    }
+    if !request.once_supplied {
+        return text_delegation_refused(text_fresh(), "this entry requires new --once TEXT");
+    }
     return run_text(request.once);
 }
 
-public flow harness_model_tools_chat_run(args: Array<string>) -> i32 { return run_mode(args, false); }
+public flow harness_model_tools_chat_run(args: Array<string>) -> i32 {
+    return run_mode(args, false);
+}
 
 flow harness_model_tools_entry_help() -> unit {
     println("Nomo model/tool harness: new --once TEXT --allow FILE[,FILE] (either flag order).");
@@ -277,10 +447,16 @@ flow harness_model_tools_entry_help() -> unit {
     println("Complete model context <=2048. Read size checked after reading. One fresh serial child; no writes, commands, resume, line mode or persistence. Host aborts may leave reservations unresolved.");
 }
 
-public type AllowArgs = { remaining: Array<string>, supplied: bool, allowed: string };
+public type AllowArgs = {
+    remaining: Array<string>,
+    supplied: bool,
+    allowed: string
+};
 
 public flow extract_allow(args: Array<string>, unicode: bool) -> Result<AllowArgs, string> {
-    if args.len() == 0 || args.len() > 7 { return Err("expected bounded model/tool arguments"); }
+    if args.len() == 0 || args.len() > 7 {
+        return Err("expected bounded model/tool arguments");
+    }
     var remaining: Array<string> = [args[0]];
     var supplied = false;
     var allowed = "";
@@ -288,50 +464,106 @@ public flow extract_allow(args: Array<string>, unicode: bool) -> Result<AllowArg
     @limits([Iterations(7)]) while index < args.len() {
         let flag = args[index];
         if flag == "--allow" {
-            if supplied || index + 1 >= args.len() { return Err(if unicode { "expected exactly one --allow FILE[,FILE...]" } else { "expected exactly one --allow FILE[,FILE]" }); }
+            if supplied || index + 1 >= args.len() {
+                return Err(if unicode {
+                    "expected exactly one --allow FILE[,FILE...]"
+                } else {
+                    "expected exactly one --allow FILE[,FILE]"
+                });
+            }
             allowed = args[index + 1];
-            if unicode && !within(allowed, 195) { return Err("raw allowlist exceeds 195 UTF-8 bytes"); }
-            if !unicode && char_count(allowed) > 97 { return Err("raw allowlist exceeds 97 characters"); }
+            if unicode && !within(allowed, 195) {
+                return Err("raw allowlist exceeds 195 UTF-8 bytes");
+            }
+            if !unicode && char_count(allowed) > 97 {
+                return Err("raw allowlist exceeds 97 characters");
+            }
             supplied = true;
             index = index + 2;
         } else {
             remaining = remaining.push(flag);
             index = index + 1;
             if (flag == "--once" || flag == "--id") && index < args.len() {
-                remaining = remaining.push(args[index]); index = index + 1;
+                remaining = remaining.push(args[index]);
+                index = index + 1;
             }
         }
     }
-    return Ok(AllowArgs { remaining, supplied, allowed });
+    return Ok(AllowArgs {
+        remaining,
+        supplied,
+        allowed
+    });
 }
 
 public flow harness_model_tools_entry_run(args: Array<string>) -> i32 {
-    if args.len() == 0 || args.len() > 7 { return ascii_read_refused(read_fresh(), "expected bounded new --once TEXT --allow FILE[,FILE]"); }
-    let extracted = match extract_allow(args, false) { Ok(value) => value, Err(error) => { return ascii_read_refused(read_fresh(), error); } };
-    let request = match cli_request_parse_args(extracted.remaining) { Ok(value) => value, Err(error) => { return ascii_read_refused(read_fresh(), error); } };
-    if request.kind == "help" { if extracted.supplied { return ascii_read_refused(read_fresh(), "help must be used alone"); } harness_model_tools_entry_help(); return 0; }
-    if request.kind != "new" { return ascii_read_refused(read_fresh(), "resume is unavailable in the model/tool harness"); }
-    if !request.once_supplied { return ascii_read_refused(read_fresh(), "this entry requires new --once TEXT"); }
-    if !extracted.supplied { return ascii_read_refused(read_fresh(), "this entry requires --allow FILE[,FILE]"); }
+    if args.len() == 0 || args.len() > 7 {
+        return ascii_read_refused(read_fresh(), "expected bounded new --once TEXT --allow FILE[,FILE]");
+    }
+    let extracted = match extract_allow(args, false) {
+        Ok(value) => value,
+        Err(error) => {
+            return ascii_read_refused(read_fresh(), error);
+        }
+    };
+    let request = match cli_request_parse_args(extracted.remaining) {
+        Ok(value) => value,
+        Err(error) => {
+            return ascii_read_refused(read_fresh(), error);
+        }
+    };
+    if request.kind == "help" {
+        if extracted.supplied {
+            return ascii_read_refused(read_fresh(), "help must be used alone");
+        }
+        harness_model_tools_entry_help();
+        return 0;
+    }
+    if request.kind != "new" {
+        return ascii_read_refused(read_fresh(), "resume is unavailable in the model/tool harness");
+    }
+    if !request.once_supplied {
+        return ascii_read_refused(read_fresh(), "this entry requires new --once TEXT");
+    }
+    if !extracted.supplied {
+        return ascii_read_refused(read_fresh(), "this entry requires --allow FILE[,FILE]");
+    }
     return ascii_read_run(request.once, split(extracted.allowed, ","));
 }
 
 public flow chain_ledger(state: harness_work_contract_Ledger) -> unit {
-    println(historical_ledger_text(state) + "; per-turn configured allowances are not measured usage; bounded v2 continuation requires a fresh durable claim and current confirmation");
+    println(
+        historical_ledger_text(state)
+            + "; per-turn configured allowances are not measured usage; bounded v2 continuation requires a fresh durable claim and current confirmation"
+    );
 }
 
 public flow user_context_ledger(state: harness_work_contract_Ledger) -> unit {
-    println(historical_ledger_text(state) + "; per-turn configured allowances are not measured usage; user-context work cannot continue or resume");
+    println(
+        historical_ledger_text(state)
+            + "; per-turn configured allowances are not measured usage; user-context work cannot continue or resume"
+    );
 }
 
 flow chain_stage(name: string, state: harness_work_contract_Ledger, user_context: bool) -> unit {
     println("STAGE " + name);
-    if user_context { user_context_ledger(state); } else { chain_ledger(state); }
+    if user_context {
+        user_context_ledger(state);
+    } else {
+        chain_ledger(state);
+    }
 }
 
-public flow harness_work_entry_refused(state: harness_work_contract_Ledger, error: string) -> i32 { println("REFUSED " + error); console_ledger(state); return 1; }
+public flow harness_work_entry_refused(state: harness_work_contract_Ledger, error: string) -> i32 {
+    println("REFUSED " + error);
+    console_ledger(state);
+    return 1;
+}
 
-flow harness_work_entry_stage(name: string, state: harness_work_contract_Ledger) -> unit { println("STAGE " + name); console_ledger(state); }
+flow harness_work_entry_stage(name: string, state: harness_work_contract_Ledger) -> unit {
+    println("STAGE " + name);
+    console_ledger(state);
+}
 
 flow harness_work_entry_help() -> unit {
     println("One read-context/edit workflow: --id ID --workspace BIND --path EDITFILE --once TASK --allow FILE[,FILE].");
@@ -341,7 +573,22 @@ flow harness_work_entry_help() -> unit {
     println("Exclusive owned disposable workspace/store; native yes then Nomo y/yes. Data-only edit_status, no automatic retries or mutating resume.");
 }
 
-public flow prepare_with<effect E>(input: Work, original_error: (string) -> string ![], stage_log: (string, harness_work_contract_Ledger) -> unit ![E], chain_read: bool, inspect_plan: bool, inspect_all: bool) -> Result<Pending, Failure> ![Console, EditOriginal, LegacyStringStages, LegacyEditStages, Error<IOError>, Error<IndexError>, E] {
+public flow prepare_with<effect E>(
+    input: Work,
+    original_error: (string) -> string ![],
+    stage_log: (string, harness_work_contract_Ledger) -> unit ![E],
+    chain_read: bool,
+    inspect_plan: bool,
+    inspect_all: bool
+) -> Result<Pending, Failure> ![
+    Console,
+    EditOriginal,
+    LegacyStringStages,
+    LegacyEditStages,
+    Error<IOError>,
+    Error<IndexError>,
+    E
+] {
     return work_prepare_with(application(input), original_error, chain_read, inspect_plan, inspect_all) with {
         HarnessWorkStage.write(name, state) => stage_log(name, state);
         HarnessProgress.write(line) => println(line);
@@ -349,7 +596,21 @@ public flow prepare_with<effect E>(input: Work, original_error: (string) -> stri
     };
 }
 
-public flow prepare_unicode<effect E>(input: Work, original_error: (string) -> string ![], stage_log: (string, harness_work_contract_Ledger) -> unit ![E]) -> Result<Pending, Failure> ![Console, LegacyStringStages, LegacyEditStages, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Error<fs_IOError>, Error<IOError>, Error<IndexError>, E] {
+public flow prepare_unicode<effect E>(
+    input: Work,
+    original_error: (string) -> string ![],
+    stage_log: (string, harness_work_contract_Ledger) -> unit ![E]
+) -> Result<Pending, Failure> ![
+    Console,
+    LegacyStringStages,
+    LegacyEditStages,
+    Fs.stat<EditableRoot>,
+    Fs.read<EditableRoot>,
+    Error<fs_IOError>,
+    Error<IOError>,
+    Error<IndexError>,
+    E
+] {
     return work_prepare_unicode(application(input), original_error) with {
         HarnessWorkStage.write(name, state) => stage_log(name, state);
         EditOriginal.read(path) => read_original(path);
@@ -358,7 +619,22 @@ public flow prepare_unicode<effect E>(input: Work, original_error: (string) -> s
     };
 }
 
-public flow prepare_expanded_unicode<effect E>(input: Work, original_error: (string) -> string ![], stage_log: (string, harness_work_contract_Ledger) -> unit ![E], wide: bool) -> Result<Pending, Failure> ![Console, LegacyStringStages, LegacyEditStages, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Error<fs_IOError>, Error<IOError>, Error<IndexError>, E] {
+public flow prepare_expanded_unicode<effect E>(
+    input: Work,
+    original_error: (string) -> string ![],
+    stage_log: (string, harness_work_contract_Ledger) -> unit ![E],
+    wide: bool
+) -> Result<Pending, Failure> ![
+    Console,
+    LegacyStringStages,
+    LegacyEditStages,
+    Fs.stat<EditableRoot>,
+    Fs.read<EditableRoot>,
+    Error<fs_IOError>,
+    Error<IOError>,
+    Error<IndexError>,
+    E
+] {
     return work_prepare_expanded_unicode(application(input), original_error, wide, false) with {
         HarnessWorkStage.write(name, state) => stage_log(name, state);
         EditOriginal.read(path) => read_original_wide(path);
@@ -367,9 +643,29 @@ public flow prepare_expanded_unicode<effect E>(input: Work, original_error: (str
     };
 }
 
-public flow expanded_stage(name: string, state: harness_work_contract_Ledger, wide: bool) -> unit { println("STAGE " + name); expanded_ledger(state, wide); }
+public flow expanded_stage(name: string, state: harness_work_contract_Ledger, wide: bool) -> unit {
+    println("STAGE " + name);
+    expanded_ledger(state, wide);
+}
 
-public flow prepare<effect E>(input: Work, original_error: (string) -> string ![], stage_log: (string, harness_work_contract_Ledger) -> unit ![E], chain_read: bool, inspect_plan: bool, inspect_all: bool) -> Result<Pending, Failure> ![Console, LegacyStringStages, LegacyEditStages, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Error<fs_IOError>, Error<IOError>, Error<IndexError>, E] {
+public flow prepare<effect E>(
+    input: Work,
+    original_error: (string) -> string ![],
+    stage_log: (string, harness_work_contract_Ledger) -> unit ![E],
+    chain_read: bool,
+    inspect_plan: bool,
+    inspect_all: bool
+) -> Result<Pending, Failure> ![
+    Console,
+    LegacyStringStages,
+    LegacyEditStages,
+    Fs.stat<EditableRoot>,
+    Fs.read<EditableRoot>,
+    Error<fs_IOError>,
+    Error<IOError>,
+    Error<IndexError>,
+    E
+] {
     return prepare_with<![E]>(input, original_error, stage_log, chain_read, inspect_plan, inspect_all) with {
         EditOriginal.read(path) => read_original(path);
     };
@@ -377,7 +673,10 @@ public flow prepare<effect E>(input: Work, original_error: (string) -> string ![
 
 public flow prepare_work(input: Work) -> Result<Pending, Failure> {
     let original: (string) -> string ![] = (value: string) => "";
-    let log: (string, harness_work_contract_Ledger) -> unit ![Error<IOError>] = (name: string, state: harness_work_contract_Ledger) => harness_work_entry_stage(name, state);
+    let log: (string, harness_work_contract_Ledger) -> unit ![Error<IOError>] = (
+        name: string,
+        state: harness_work_contract_Ledger
+    ) => harness_work_entry_stage(name, state);
     return prepare<![Error<IOError>]>(input, original, log, false, false, false) with {
         LegacyStringStages.main(value) => read_main(value);
         LegacyStringStages.child(task, files, selected) => ascii_read_work_child_turn(task, files, selected);
@@ -387,23 +686,57 @@ public flow prepare_work(input: Work) -> Result<Pending, Failure> {
     };
 }
 
-flow prepare_chain_mode(input: Work, parent: Array<ParentFacts>, expected: Option<string>, inspect_plan: bool, inspect_all: bool, user_context: bool) -> Result<Pending, Failure> {
-    let original: (string) -> string ![] = (value: string) => match expected { Some(before) => if value == before { "" } else { "current original differs from confirmed parent result" }, None() => "" };
-    let log: (string, harness_work_contract_Ledger) -> unit ![Error<IOError>] = (name: string, state: harness_work_contract_Ledger) => chain_stage(name, state, user_context);
+flow prepare_chain_mode(
+    input: Work,
+    parent: Array<ParentFacts>,
+    expected: Option<string>,
+    inspect_plan: bool,
+    inspect_all: bool,
+    user_context: bool
+) -> Result<Pending, Failure> {
+    let original: (string) -> string ![] = (value: string) => match expected {
+        Some(before) => if value == before {
+            ""
+        } else {
+            "current original differs from confirmed parent result"
+        },
+        None() => ""
+    };
+    let log: (string, harness_work_contract_Ledger) -> unit ![Error<IOError>] = (
+        name: string,
+        state: harness_work_contract_Ledger
+    ) => chain_stage(name, state, user_context);
     return prepare<![Error<IOError>]>(input, original, log, true, inspect_plan, inspect_all) with {
         LegacyStringStages.main(value) => read_main(value);
-        LegacyStringStages.child(task, files, selected) => chain_child_turn(task, files, selected, inspect_all);
+        LegacyStringStages.child(task, files, selected) => chain_child_turn(
+            task,
+            files,
+            selected,
+            inspect_all
+        );
         LegacyEditStages.plan(value) => work_plan(value, parent);
         LegacyEditStages.child(value) => child(value, parent);
         LegacyEditStages.aggregate(value) => work_chain_model_aggregate(value, parent);
     };
 }
 
-public flow prepare_chain_work(input: Work, parent: Array<ParentFacts>, expected: Option<string>, inspect_plan: bool, inspect_all: bool) -> Result<Pending, Failure> {
+public flow prepare_chain_work(
+    input: Work,
+    parent: Array<ParentFacts>,
+    expected: Option<string>,
+    inspect_plan: bool,
+    inspect_all: bool
+) -> Result<Pending, Failure> {
     return prepare_chain_mode(input, parent, expected, inspect_plan, inspect_all, false);
 }
 
-public flow prepare_user_context_work(input: Work, parent: Array<ParentFacts>, expected: Option<string>, inspect_plan: bool, inspect_all: bool) -> Result<Pending, Failure> {
+public flow prepare_user_context_work(
+    input: Work,
+    parent: Array<ParentFacts>,
+    expected: Option<string>,
+    inspect_plan: bool,
+    inspect_all: bool
+) -> Result<Pending, Failure> {
     return prepare_chain_mode(input, parent, expected, inspect_plan, inspect_all, true);
 }
 
@@ -412,10 +745,16 @@ public flow completed_context_work(pending: Pending, outcome: Confirmed) -> Resu
 }
 
 public flow finish_edit(pending: Pending, outcome: Confirmed) -> Result<Completed, Failure> {
-    recorded(pending.selected); return complete(pending, outcome);
+    recorded(pending.selected);
+    return complete(pending, outcome);
 }
 
-public flow finish_summary<effect E>(completed: Completed, stage_log: (string, harness_work_contract_Ledger) -> unit ![E], work: bool, inspect_all: bool) -> Result<Summary, Failure> ![Console, LegacyEditStages, Error<IOError>, Error<IndexError>, E] {
+public flow finish_summary<effect E>(
+    completed: Completed,
+    stage_log: (string, harness_work_contract_Ledger) -> unit ![E],
+    work: bool,
+    inspect_all: bool
+) -> Result<Summary, Failure> ![Console, LegacyEditStages, Error<IOError>, Error<IndexError>, E] {
     return work_finish_summary(completed, work, inspect_all) with {
         HarnessWorkStage.write(name, state) => stage_log(name, state);
         HarnessProgress.write(line) => println(line);
@@ -423,7 +762,10 @@ public flow finish_summary<effect E>(completed: Completed, stage_log: (string, h
     };
 }
 
-public flow finish_history_summary<effect E>(completed: Completed, stage_log: (string, harness_work_contract_Ledger) -> unit ![E]) -> Result<Summary, Failure> ![Console, LegacyEditStages, Error<IOError>, Error<IndexError>, E] {
+public flow finish_history_summary<effect E>(
+    completed: Completed,
+    stage_log: (string, harness_work_contract_Ledger) -> unit ![E]
+) -> Result<Summary, Failure> ![Console, LegacyEditStages, Error<IOError>, Error<IndexError>, E] {
     return work_finish_history_summary(completed) with {
         HarnessWorkStage.write(name, state) => stage_log(name, state);
         HarnessProgress.write(line) => println(line);
@@ -432,7 +774,10 @@ public flow finish_history_summary<effect E>(completed: Completed, stage_log: (s
 }
 
 public flow summarize(completed: Completed) -> Result<Summary, Failure> {
-    let log: (string, harness_work_contract_Ledger) -> unit ![Error<IOError>] = (name: string, state: harness_work_contract_Ledger) => harness_work_entry_stage(name, state);
+    let log: (string, harness_work_contract_Ledger) -> unit ![Error<IOError>] = (
+        name: string,
+        state: harness_work_contract_Ledger
+    ) => harness_work_entry_stage(name, state);
     return finish_summary<![Error<IOError>]>(completed, log, false, false) with {
         LegacyEditStages.plan(value) => edit_plan(value);
         LegacyEditStages.child(value) => edit_child(value);
@@ -440,8 +785,16 @@ public flow summarize(completed: Completed) -> Result<Summary, Failure> {
     };
 }
 
-flow summarize_chain_mode(completed: Completed, parent: Array<ParentFacts>, inspect_all: bool, user_context: bool) -> Result<Summary, Failure> {
-    let log: (string, harness_work_contract_Ledger) -> unit ![Error<IOError>] = (name: string, state: harness_work_contract_Ledger) => chain_stage(name, state, user_context);
+flow summarize_chain_mode(
+    completed: Completed,
+    parent: Array<ParentFacts>,
+    inspect_all: bool,
+    user_context: bool
+) -> Result<Summary, Failure> {
+    let log: (string, harness_work_contract_Ledger) -> unit ![Error<IOError>] = (
+        name: string,
+        state: harness_work_contract_Ledger
+    ) => chain_stage(name, state, user_context);
     return finish_summary<![Error<IOError>]>(completed, log, true, inspect_all) with {
         LegacyEditStages.plan(value) => work_plan(value, parent);
         LegacyEditStages.child(value) => child(value, parent);
@@ -449,26 +802,82 @@ flow summarize_chain_mode(completed: Completed, parent: Array<ParentFacts>, insp
     };
 }
 
-public flow summarize_chain(completed: Completed, parent: Array<ParentFacts>, inspect_all: bool) -> Result<Summary, Failure> {
+public flow summarize_chain(completed: Completed, parent: Array<ParentFacts>, inspect_all: bool) -> Result<
+    Summary,
+    Failure
+> {
     return summarize_chain_mode(completed, parent, inspect_all, false);
 }
 
-public flow summarize_user_context(completed: Completed, parent: Array<ParentFacts>, inspect_all: bool) -> Result<Summary, Failure> {
+public flow summarize_user_context(completed: Completed, parent: Array<ParentFacts>, inspect_all: bool) -> Result<
+    Summary,
+    Failure
+> {
     return summarize_chain_mode(completed, parent, inspect_all, true);
 }
 
-public flow harness_work_entry_run(args: Array<string>) -> i32 ![Console, Memory, ports_Approval, Fs.read<ReadOnlyRoot>, Fs.stat<EditableRoot>, Fs.read<EditableRoot>, Fs.atomic_replace<EditableRoot>, Error<StorageError>, Error<IndexError>, Error<IOError>, Error<fs_IOError>, Error<BudgetExceeded>] {
-    let input = match harness_work_args_parse(args) { Ok(value) => value, Err(error) => { return harness_work_entry_refused(work_fresh(), error); } };
-    if input.edit.help { harness_work_entry_help(); return 0; }
-    match edit_operation_store_available() { Ok(_) => (), Err(error) => { return harness_work_entry_refused(work_fresh(), error); } }
-    let pending = match prepare_work(input) { Ok(value) => value, Err(failure) => { return harness_work_entry_refused(failure.state, failure.error); } };
-    let outcome = match execute(pending.selected, pending.prepared) { Ok(value) => value, Err(error) => { return harness_work_entry_refused(pending.state, error); } };
-    let completed = match finish_edit(pending, outcome) { Ok(value) => value, Err(failure) => { return harness_work_entry_refused(failure.state, failure.error); } };
-    let summary = match summarize(completed) { Ok(value) => value, Err(failure) => { return harness_work_entry_refused(failure.state, failure.error); } };
-    display("FINAL ", summary.answer); console_ledger(summary.state); return 0;
+public flow harness_work_entry_run(args: Array<string>) -> i32 ![
+    Console,
+    Memory,
+    ports_Approval,
+    Fs.read<ReadOnlyRoot>,
+    Fs.stat<EditableRoot>,
+    Fs.read<EditableRoot>,
+    Fs.atomic_replace<EditableRoot>,
+    Error<StorageError>,
+    Error<IndexError>,
+    Error<IOError>,
+    Error<fs_IOError>,
+    Error<BudgetExceeded>
+] {
+    let input = match harness_work_args_parse(args) {
+        Ok(value) => value,
+        Err(error) => {
+            return harness_work_entry_refused(work_fresh(), error);
+        }
+    };
+    if input.edit.help {
+        harness_work_entry_help();
+        return 0;
+    }
+    match edit_operation_store_available() {
+        Ok(_) => (),
+        Err(error) => {
+            return harness_work_entry_refused(work_fresh(), error);
+        }
+    }
+    let pending = match prepare_work(input) {
+        Ok(value) => value,
+        Err(failure) => {
+            return harness_work_entry_refused(failure.state, failure.error);
+        }
+    };
+    let outcome = match execute(pending.selected, pending.prepared) {
+        Ok(value) => value,
+        Err(error) => {
+            return harness_work_entry_refused(pending.state, error);
+        }
+    };
+    let completed = match finish_edit(pending, outcome) {
+        Ok(value) => value,
+        Err(failure) => {
+            return harness_work_entry_refused(failure.state, failure.error);
+        }
+    };
+    let summary = match summarize(completed) {
+        Ok(value) => value,
+        Err(failure) => {
+            return harness_work_entry_refused(failure.state, failure.error);
+        }
+    };
+    display("FINAL ", summary.answer);
+    console_ledger(summary.state);
+    return 0;
 }
 
-public flow read_model_tools_chat_run(args: Array<string>) -> i32 { return run_mode(args, true); }
+public flow read_model_tools_chat_run(args: Array<string>) -> i32 {
+    return run_mode(args, true);
+}
 
 flow read_model_tools_entry_help() -> unit {
     println("Nomo model/tool harness: new --once TEXT --allow FILE[,FILE...] (either flag order).");
@@ -478,12 +887,36 @@ flow read_model_tools_entry_help() -> unit {
 }
 
 public flow read_model_tools_entry_run(args: Array<string>) -> i32 {
-    if args.len() == 0 || args.len() > 7 { return unicode_read_refused(read_fresh(), "expected bounded new --once TEXT --allow FILE[,FILE...]"); }
-    let extracted = match extract_allow(args, true) { Ok(value) => value, Err(error) => { return unicode_read_refused(read_fresh(), error); } };
-    let request = match read_cli_parse_args(extracted.remaining) { Ok(value) => value, Err(error) => { return unicode_read_refused(read_fresh(), error); } };
-    if request.kind == "help" { if extracted.supplied { return unicode_read_refused(read_fresh(), "help must be used alone"); } read_model_tools_entry_help(); return 0; }
-    if request.kind != "new" { return unicode_read_refused(read_fresh(), "resume is unavailable in the model/tool harness"); }
-    if !request.once_supplied { return unicode_read_refused(read_fresh(), "this entry requires new --once TEXT"); }
-    if !extracted.supplied { return unicode_read_refused(read_fresh(), "this entry requires --allow FILE[,FILE...]"); }
+    if args.len() == 0 || args.len() > 7 {
+        return unicode_read_refused(read_fresh(), "expected bounded new --once TEXT --allow FILE[,FILE...]");
+    }
+    let extracted = match extract_allow(args, true) {
+        Ok(value) => value,
+        Err(error) => {
+            return unicode_read_refused(read_fresh(), error);
+        }
+    };
+    let request = match read_cli_parse_args(extracted.remaining) {
+        Ok(value) => value,
+        Err(error) => {
+            return unicode_read_refused(read_fresh(), error);
+        }
+    };
+    if request.kind == "help" {
+        if extracted.supplied {
+            return unicode_read_refused(read_fresh(), "help must be used alone");
+        }
+        read_model_tools_entry_help();
+        return 0;
+    }
+    if request.kind != "new" {
+        return unicode_read_refused(read_fresh(), "resume is unavailable in the model/tool harness");
+    }
+    if !request.once_supplied {
+        return unicode_read_refused(read_fresh(), "this entry requires new --once TEXT");
+    }
+    if !extracted.supplied {
+        return unicode_read_refused(read_fresh(), "this entry requires --allow FILE[,FILE...]");
+    }
     return unicode_read_run(request.once, split(extracted.allowed, ","));
 }

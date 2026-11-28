@@ -15,7 +15,15 @@ import std.io.IOError;
 
 public effect LegacyChatStages {
     action main(context: chat_Context) -> string;
-    action child(task: string, allowed: Array<string>, selected: State, multi: bool, resilient: bool, high_input: bool, reasoning: bool) -> LoopTurn;
+    action child(
+        task: string,
+        allowed: Array<string>,
+        selected: State,
+        multi: bool,
+        resilient: bool,
+        high_input: bool,
+        reasoning: bool
+    ) -> LoopTurn;
 }
 
 // Legacy strings and inspected child returns; never a native typed-output bridge.
@@ -34,13 +42,21 @@ public effect LegacyEditStages {
     action aggregate(context: work_Context) -> string;
 }
 
-public effect ConversationOutput { action publish(event: Event) -> unit; }
+public effect ConversationOutput {
+    action publish(event: Event) -> unit;
+}
 
-public effect DiagnosticOutput { action write(line: string) -> unit; }
+public effect DiagnosticOutput {
+    action write(line: string) -> unit;
+}
 
-public effect HarnessProgress { action write(line: string) -> unit; }
+public effect HarnessProgress {
+    action write(line: string) -> unit;
+}
 
-public effect ModelText { action infer(context: Context) -> string; }
+public effect ModelText {
+    action infer(context: Context) -> string;
+}
 
 public spec ChildLoopPolicy {
     flow shape(self) -> Shape ![];
@@ -57,17 +73,47 @@ public spec ChildModel {
 
 public spec ReadStages {
     flow main(self, context: chat_Context) -> string ![];
-    flow child(self, task: string, files: Array<string>, selected: State, multi: bool, resilient: bool, high_input: bool, reasoning: bool) -> LoopTurn ![Fs.read<ReadOnlyRoot>, Error<IOError>, Error<fs_IOError>, Error<IndexError>, Error<BudgetExceeded>];
+    flow child(
+        self,
+        task: string,
+        files: Array<string>,
+        selected: State,
+        multi: bool,
+        resilient: bool,
+        high_input: bool,
+        reasoning: bool
+    ) -> LoopTurn ![
+        Fs.read<ReadOnlyRoot>,
+        Error<IOError>,
+        Error<fs_IOError>,
+        Error<IndexError>,
+        Error<BudgetExceeded>
+    ];
 }
 
 public spec ChatMainStage: callable chat_Context => string ![];
 
-public spec ChatChildStage<R ~ Region>: callable (string, Array<string>, State) => LoopTurn ![Fs.read<R>, Error<IOError>, Error<fs_IOError>, Error<IndexError>, Error<BudgetExceeded>];
+public spec ChatChildStage<R ~ Region>: callable (string, Array<string>, State) => LoopTurn ![
+    Fs.read<R>,
+    Error<IOError>,
+    Error<fs_IOError>,
+    Error<IndexError>,
+    Error<BudgetExceeded>
+];
 
-public spec WideChatChildStage<R ~ Region>: callable (string, Array<string>, State, bool, bool) => LoopTurn ![Fs.read<R>, Error<IOError>, Error<fs_IOError>, Error<IndexError>, Error<BudgetExceeded>];
+public spec WideChatChildStage<R ~ Region>: callable (string, Array<string>, State, bool, bool) => LoopTurn ![
+    Fs.read<R>,
+    Error<IOError>,
+    Error<fs_IOError>,
+    Error<IndexError>,
+    Error<BudgetExceeded>
+];
 
 public spec ToolActionDecoder {
-    flow decode(self, raw: string, allowed: Array<string>, final_only: bool) -> Result<Action, string> ![Error<IndexError>, Error<BudgetExceeded>];
+    flow decode(self, raw: string, allowed: Array<string>, final_only: bool) -> Result<Action, string> ![
+        Error<IndexError>,
+        Error<BudgetExceeded>
+    ];
     flow record(self, raw: string) -> string ![Error<IndexError>];
     flow diagnostic(self, raw: string, error: string, final_only: bool) -> string ![];
 }
@@ -95,17 +141,32 @@ public spec ProgressSink {
 
 public spec TextModelStage: callable Context => string ![];
 
-public type Report = { request: string, task: string, allowed: Array<string>, child: Session,
-    status: i32, observed: Observed, answer: string, ledger: Ledger };
+public type Report = {
+    request: string,
+    task: string,
+    allowed: Array<string>,
+    child: Session,
+    status: i32,
+    observed: Observed,
+    answer: string,
+    ledger: Ledger
+};
 
-public type Failure = { state: Ledger, error: string, resolved: bool };
+public type Failure = {
+    state: Ledger,
+    error: string,
+    resolved: bool
+};
 
 public spec ReadContextValidation {
     flow request_error(self, value: string) -> string ![Error<IndexError>, Error<BudgetExceeded>];
     flow validate_context(self, value: ReadContext) -> string ![Error<IndexError>];
     flow decode(self, value: string) -> Result<string, string> ![Error<IndexError>, Error<BudgetExceeded>];
     flow rejection(self, raw: string, error: string) -> string ![Error<IndexError>, Error<BudgetExceeded>];
-    flow observe_child(self, child: LoopTurn, request: string, task: string, allowed: Array<string>) -> Result<Observed, string> ![Error<IndexError>, Error<BudgetExceeded>];
+    flow observe_child(self, child: LoopTurn, request: string, task: string, allowed: Array<string>) -> Result<
+        Observed,
+        string
+    > ![Error<IndexError>, Error<BudgetExceeded>];
     flow result_error(self, value: string) -> string ![Error<IndexError>, Error<BudgetExceeded>];
     flow answer_error(self, value: string) -> string ![Error<IndexError>, Error<BudgetExceeded>];
 }
@@ -122,7 +183,13 @@ public spec ReadContextProgress {
 
 public spec WorkModelStages {
     flow read(self, context: ReadContext) -> string ![];
-    flow read_child(self, task: string, files: Array<string>, selected: State) -> LoopTurn ![Fs.read<ReadOnlyRoot>, Error<IOError>, Error<fs_IOError>, Error<IndexError>, Error<BudgetExceeded>];
+    flow read_child(self, task: string, files: Array<string>, selected: State) -> LoopTurn ![
+        Fs.read<ReadOnlyRoot>,
+        Error<IOError>,
+        Error<fs_IOError>,
+        Error<IndexError>,
+        Error<BudgetExceeded>
+    ];
     flow plan(self, context: work_Context) -> string ![];
     flow propose(self, context: work_Context) -> string ![];
     flow summarize(self, context: work_Context) -> string ![];
@@ -136,10 +203,16 @@ public spec EditTextStage: callable work_Context => string ![];
 
 public spec StandaloneEditStage: callable edit_Context => string ![];
 
-public spec ChainEditStage: callable (work_Context, Array<ParentFacts>) => string ![Error<IndexError>, Error<BudgetExceeded>];
+public spec ChainEditStage: callable (work_Context, Array<ParentFacts>) => string ![
+    Error<IndexError>,
+    Error<BudgetExceeded>
+];
 
 // Copied conversation data only. The caller owns the attempt and its budget.
-public type Context = { history: Array<Event>, request: string };
+public type Context = {
+    history: Array<Event>,
+    request: string
+};
 
 // The application owns charging and call order; assembly selects these interpreters.
 public effect TextDelegationStages {

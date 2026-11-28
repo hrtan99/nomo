@@ -4,6 +4,8 @@ import nomo.session.history_check_store.Record;
 
 // Compatibility identity only. Runtime logic lives in domain/application/adapters.
 
-alias Schema = MemoryRegion<{ Rows: Store<string, Record> }>;
+alias Schema = MemoryRegion<{
+    Rows: Store<string, Record>
+}>;
 
 public let Checks = std.memory.region<Schema>(stable_id = "nomo-history-check-v1", store = "history-check");

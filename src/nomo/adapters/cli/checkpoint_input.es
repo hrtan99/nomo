@@ -5,72 +5,209 @@ import nomo.domain.sessions.checkpoints.identity_error;
 import nomo.session.harness_checkpoint.Identity;
 import std.text.{char_count, split};
 
-public type HarnessCheckpointArgsOptions = { help: bool, identity: Identity, request: string };
+public type HarnessCheckpointArgsOptions = {
+    help: bool,
+    identity: Identity,
+    request: string
+};
 
-public flow harness_checkpoint_args_parse(args: Array<string>, saving: bool) -> Result<HarnessCheckpointArgsOptions, string> {
+public flow harness_checkpoint_args_parse(args: Array<string>, saving: bool) -> Result<
+    HarnessCheckpointArgsOptions,
+    string
+> {
     if args.len() == 1 && (args[0] == "help" || args[0] == "--help") {
-        return Ok(HarnessCheckpointArgsOptions { help = true, identity = Identity { id = "", workspace = "", allowed = [] }, request = "" });
+        return Ok(
+            HarnessCheckpointArgsOptions {
+                help = true,
+                identity = Identity {
+                    id = "",
+                    workspace = "",
+                    allowed = []
+                },
+                request = ""
+            }
+        );
     }
-    let expected: usize = if saving { 8 } else { 6 };
-    if args.len() != expected { return Err("expected --id ID --workspace BIND --allow FILE[,FILE] and save --once TEXT"); }
-    var id = ""; var workspace = ""; var allow = ""; var request = "";
+    let expected: usize = if saving {
+        8
+    } else {
+        6
+    };
+    if args.len() != expected {
+        return Err("expected --id ID --workspace BIND --allow FILE[,FILE] and save --once TEXT");
+    }
+    var id = "";
+    var workspace = "";
+    var allow = "";
+    var request = "";
     var seen: Array<string> = [];
     var index: usize = 0;
     @limits([Iterations(4)]) while index < args.len() {
         let flag = args[index];
-        if seen.iter().any(previous => previous == flag) { return Err("duplicate checkpoint option"); }
+        if seen.iter().any(previous => previous == flag) {
+            return Err("duplicate checkpoint option");
+        }
         seen = seen.push(flag);
         let value = args[index + 1];
-        if flag == "--id" { id = value; }
-        else if flag == "--workspace" { workspace = value; }
-        else if flag == "--allow" { if char_count(value) > 97 { return Err("raw allowlist exceeds 97 characters"); } allow = value; }
-        else if flag == "--once" && saving { request = value; }
-        else { return Err("unknown checkpoint option"); }
+        if flag == "--id" {
+            id = value;
+        }
+        else if flag == "--workspace" {
+            workspace = value;
+        }
+        else if flag == "--allow" {
+            if char_count(value) > 97 {
+                return Err("raw allowlist exceeds 97 characters");
+            }
+            allow = value;
+        }
+        else if flag == "--once" && saving {
+            request = value;
+        }
+        else {
+            return Err("unknown checkpoint option");
+        }
         index = index + 2;
     }
-    let identity = Identity { id, workspace, allowed = split(allow, ",") };
-    let invalid = identity_error(identity); if invalid != "" { return Err(invalid); }
-    if saving { let invalid_request = question_error(request); if invalid_request != "" { return Err(invalid_request); } }
-    return Ok(HarnessCheckpointArgsOptions { help = false, identity, request });
+    let identity = Identity {
+        id,
+        workspace,
+        allowed = split(allow, ",")
+    };
+    let invalid = identity_error(identity);
+    if invalid != "" {
+        return Err(invalid);
+    }
+    if saving {
+        let invalid_request = question_error(request);
+        if invalid_request != "" {
+            return Err(invalid_request);
+        }
+    }
+    return Ok(HarnessCheckpointArgsOptions {
+        help = false,
+        identity,
+        request
+    });
 }
 
-public type HarnessSuccessorArgsOptions = { help: bool, predecessor: Identity, successor: Identity, request: string };
+public type HarnessSuccessorArgsOptions = {
+    help: bool,
+    predecessor: Identity,
+    successor: Identity,
+    request: string
+};
 
-public flow harness_successor_args_parse(args: Array<string>, continuing: bool) -> Result<HarnessSuccessorArgsOptions, string> {
+public flow harness_successor_args_parse(args: Array<string>, continuing: bool) -> Result<
+    HarnessSuccessorArgsOptions,
+    string
+> {
     if args.len() == 1 && (args[0] == "help" || args[0] == "--help") {
-        let blank = Identity { id = "", workspace = "", allowed = [] };
-        return Ok(HarnessSuccessorArgsOptions { help = true, predecessor = blank, successor = blank, request = "" });
+        let blank = Identity {
+            id = "",
+            workspace = "",
+            allowed = []
+        };
+        return Ok(
+            HarnessSuccessorArgsOptions {
+                help = true,
+                predecessor = blank,
+                successor = blank,
+                request = ""
+            }
+        );
     }
-    let expected: usize = if continuing { 10 } else { 8 };
-    if args.len() != expected { return Err("expected --id OLD --successor NEW --workspace BIND --allow FILE[,FILE] and continue --once TEXT"); }
-    var id = ""; var next = ""; var workspace = ""; var allow = ""; var request = "";
-    var seen: Array<string> = []; var index: usize = 0;
+    let expected: usize = if continuing {
+        10
+    } else {
+        8
+    };
+    if args.len() != expected {
+        return Err("expected --id OLD --successor NEW --workspace BIND --allow FILE[,FILE] and continue --once TEXT");
+    }
+    var id = "";
+    var next = "";
+    var workspace = "";
+    var allow = "";
+    var request = "";
+    var seen: Array<string> = [];
+    var index: usize = 0;
     @limits([Iterations(5)]) while index < args.len() {
         let flag = args[index];
-        if seen.iter().any(previous => previous == flag) { return Err("duplicate successor option"); }
+        if seen.iter().any(previous => previous == flag) {
+            return Err("duplicate successor option");
+        }
         seen = seen.push(flag);
         let value = args[index + 1];
-        if flag == "--id" { id = value; }
-        else if flag == "--successor" { next = value; }
-        else if flag == "--workspace" { workspace = value; }
-        else if flag == "--allow" { if char_count(value) > 97 { return Err("raw allowlist exceeds 97 characters"); } allow = value; }
-        else if flag == "--once" && continuing { request = value; }
-        else { return Err("unknown successor option"); }
+        if flag == "--id" {
+            id = value;
+        }
+        else if flag == "--successor" {
+            next = value;
+        }
+        else if flag == "--workspace" {
+            workspace = value;
+        }
+        else if flag == "--allow" {
+            if char_count(value) > 97 {
+                return Err("raw allowlist exceeds 97 characters");
+            }
+            allow = value;
+        }
+        else if flag == "--once" && continuing {
+            request = value;
+        }
+        else {
+            return Err("unknown successor option");
+        }
         index = index + 2;
     }
-    let predecessor = Identity { id, workspace, allowed = split(allow, ",") };
-    let successor = Identity { id = next, workspace, allowed = predecessor.allowed };
-    let invalid = identity_error(predecessor); if invalid != "" { return Err(invalid); }
-    let invalid_next = identity_error(successor); if invalid_next != "" { return Err(invalid_next); }
-    if id == next { return Err("successor must have a distinct checkpoint ID"); }
-    if continuing { let invalid_request = question_error(request); if invalid_request != "" { return Err(invalid_request); } }
-    return Ok(HarnessSuccessorArgsOptions { help = false, predecessor, successor, request });
+    let predecessor = Identity {
+        id,
+        workspace,
+        allowed = split(allow, ",")
+    };
+    let successor = Identity {
+        id = next,
+        workspace,
+        allowed = predecessor.allowed
+    };
+    let invalid = identity_error(predecessor);
+    if invalid != "" {
+        return Err(invalid);
+    }
+    let invalid_next = identity_error(successor);
+    if invalid_next != "" {
+        return Err(invalid_next);
+    }
+    if id == next {
+        return Err("successor must have a distinct checkpoint ID");
+    }
+    if continuing {
+        let invalid_request = question_error(request);
+        if invalid_request != "" {
+            return Err(invalid_request);
+        }
+    }
+    return Ok(HarnessSuccessorArgsOptions {
+        help = false,
+        predecessor,
+        successor,
+        request
+    });
 }
 
-public type Request = { help: bool, predecessor: Identity, successor: Identity, request: string, successor_show: bool };
+public type Request = {
+    help: bool,
+    predecessor: Identity,
+    successor: Identity,
+    request: string,
+    successor_show: bool
+};
 
 public flow help_lines() -> Array<string> {
-    return ["Nomo sessions: init -> new -> resume -> show.",
+    return [
+        "Nomo sessions: init -> new -> resume -> show.",
         "Run: etas run PROJECT --flow COMMAND --allow-effects --args OPTIONS. Commands select their existing profiles.",
         "init: --id ID --workspace BIND --allow FILE[,FILE]",
         "new: --id ID --workspace BIND --allow FILE[,FILE] --once TEXT",
@@ -83,7 +220,8 @@ public flow help_lines() -> Array<string> {
         "Failed, pending or unknown work is not completed. Admission may be consumed; do not retry automatically.",
         "Show reads saved data with no model/File configuration, tool replay or Memory mutation.",
         "NEXT arrays contain a --flow entry followed by literal --args values; replace placeholders.",
-        "Bounds: IDs/workspace and request at most 128 printable ASCII characters; allow one/two files of at most 48 characters, at most 97 raw characters."];
+        "Bounds: IDs/workspace and request at most 128 printable ASCII characters; allow one/two files of at most 48 characters, at most 97 raw characters."
+    ];
 }
 
 public flow topic_lines(topic: string) -> Array<string> {
@@ -99,28 +237,74 @@ public flow topic_lines(topic: string) -> Array<string> {
 }
 
 flow helping(topic: string) -> Request {
-    let blank = Identity { id = "", workspace = "", allowed = [] };
-    return Request { help = true, predecessor = blank, successor = blank, request = topic, successor_show = false };
+    let blank = Identity {
+        id = "",
+        workspace = "",
+        allowed = []
+    };
+    return Request {
+        help = true,
+        predecessor = blank,
+        successor = blank,
+        request = topic,
+        successor_show = false
+    };
 }
 
 flow first(args: Array<string>, saving: bool) -> Result<Request, string> {
-    let options = match harness_checkpoint_args_parse(args, saving) { Ok(value) => value, Err(error) => { return Err(error); } };
-    let blank = Identity { id = "", workspace = "", allowed = [] };
-    return Ok(Request { help = false, predecessor = options.identity, successor = blank,
-        request = options.request, successor_show = false });
+    let options = match harness_checkpoint_args_parse(args, saving) {
+        Ok(value) => value,
+        Err(error) => {
+            return Err(error);
+        }
+    };
+    let blank = Identity {
+        id = "",
+        workspace = "",
+        allowed = []
+    };
+    return Ok(
+        Request {
+            help = false,
+            predecessor = options.identity,
+            successor = blank,
+            request = options.request,
+            successor_show = false
+        }
+    );
 }
 
 flow following(args: Array<string>, continuing: bool) -> Result<Request, string> {
-    let options = match harness_successor_args_parse(args, continuing) { Ok(value) => value, Err(error) => { return Err(error); } };
-    return Ok(Request { help = false, predecessor = options.predecessor, successor = options.successor,
-        request = options.request, successor_show = !continuing });
+    let options = match harness_successor_args_parse(args, continuing) {
+        Ok(value) => value,
+        Err(error) => {
+            return Err(error);
+        }
+    };
+    return Ok(
+        Request {
+            help = false,
+            predecessor = options.predecessor,
+            successor = options.successor,
+            request = options.request,
+            successor_show = !continuing
+        }
+    );
 }
 
 // Command selection belongs to separate native entries. Only show selects a
 // first/successor data format; literal argument values never select a command.
 public flow session_lifecycle_args_parse(action: string, args: Array<string>) -> Result<Request, string> {
-    match action { "init" => (), "new" => (), "resume" => (), "show" => (), "help" => (),
-        _ => { return Err("unsupported session action; use init, new, resume, show or help"); } }
+    match action {
+        "init" => (),
+        "new" => (),
+        "resume" => (),
+        "show" => (),
+        "help" => (),
+        _ => {
+            return Err("unsupported session action; use init, new, resume, show or help");
+        }
+    }
     let help = args.len() == 1 && (args[0] == "help" || args[0] == "--help");
     if help || (action == "help" && args.len() == 0) {
         return Ok(helping(""));
@@ -129,13 +313,24 @@ public flow session_lifecycle_args_parse(action: string, args: Array<string>) ->
         "init" => first(args, false),
         "new" => first(args, true),
         "resume" => following(args, true),
-        "show" => { if args.len() == 8 { return following(args, false); } return first(args, false); },
+        "show" => {
+            if args.len() == 8 {
+                return following(args, false);
+            }
+            return first(args, false);
+        },
         "help" => {
-            if args.len() != 1 { return Err("session help accepts no selectors"); }
+            if args.len() != 1 {
+                return Err("session help accepts no selectors");
+            }
             let topic = args[0];
-            return match topic { "init" => Ok(helping(topic)), "new" => Ok(helping(topic)),
-                "resume" => Ok(helping(topic)), "show" => Ok(helping(topic)),
-                _ => Err("unsupported session help topic; use init, new, resume or show") };
+            return match topic {
+                "init" => Ok(helping(topic)),
+                "new" => Ok(helping(topic)),
+                "resume" => Ok(helping(topic)),
+                "show" => Ok(helping(topic)),
+                _ => Err("unsupported session help topic; use init, new, resume or show")
+            };
         }
         _ => Err("unsupported session action; use init, new, resume, show or help"),
     };

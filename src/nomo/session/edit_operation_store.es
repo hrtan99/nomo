@@ -4,8 +4,13 @@ import nomo.session.edit_operation.Record;
 
 // Compatibility identity only. Runtime logic lives in domain/application/adapters.
 
-alias Schema = MemoryRegion<{ Rows: Store<string, Record> }>;
+alias Schema = MemoryRegion<{
+    Rows: Store<string, Record>
+}>;
 
-public let Operations = std.memory.region<Schema>(stable_id = "nomo-edit-operation-v1", store = "edit-operation");
+public let Operations = std.memory.region<Schema>(
+    stable_id = "nomo-edit-operation-v1",
+    store = "edit-operation"
+);
 
 public let Followups = std.memory.region<Schema>(stable_id = "nomo-edit-followup-v1", store = "edit-followup");

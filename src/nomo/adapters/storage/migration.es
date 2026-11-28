@@ -14,7 +14,7 @@ public type NativeStateWriter = {};
 
 impl NativeStateWriter ~ HistoricalEvents {
     flow append(self, session: string, role: string, name: string, text: string) -> i64
-        ![Memory, Error<StorageError>, Error<MemoryConflict>, Error<BudgetExceeded>] {
+    ![Memory, Error<StorageError>, Error<MemoryConflict>, Error<BudgetExceeded>] {
         return append_historical(session, role, name, text);
     }
 }
