@@ -2,11 +2,12 @@ module nomo.domain.editing;
 
 import nomo.domain.limits.{file_bytes, message_bytes};
 import nomo.domain.text.{hex_digest, text_printable};
-import nomo.domain.wire.{digest, json};
+import nomo.domain.wire.{digest, json, json_scalar_width};
 import nomo.domain.workspace.valid_path;
 import nomo.session.edit_operation.{Binding, Record};
 import std.text.{
     TextError,
+    TextBuilder,
     char_count,
     char_get,
     concat,
@@ -201,28 +202,19 @@ flow same(left: Line, right: Line) -> bool {
 // Measure each entire encoded scalar before selecting it. In particular an
 // emoji's two JSON surrogate escapes are kept together. Never slice an escape.
 flow line_text(raw: string) -> Result<string, string> {
-    var selected = "";
+    var selected = TextBuilder.new();
     var width: usize = 0;
     var clipped = false;
     @limits([Iterations(65538)]) for codepoint in std.text.chars(raw) {
-        let character = std.text.from_char(codepoint);
-        if character != "" {
-            let encoded = match json([character]) {
-                Ok(value) => value,
-                Err(error) => {
-                    return Err(error);
-                }
-            };
-            let size = char_count(encoded) - 4;
-            if width + size > 160 {
-                clipped = true;
-                break;
-            }
-            selected = selected + character;
-            width = width + size;
+        let size = json_scalar_width(codepoint);
+        if width + size > 160 {
+            clipped = true;
+            break;
         }
+        selected.append_char(codepoint);
+        width = width + size;
     }
-    let encoded = match json([selected]) {
+    let encoded = match json([selected.build()]) {
         Ok(value) => value,
         Err(error) => {
             return Err(error);
@@ -507,87 +499,95 @@ public flow text_bytes(value: string, field: string) -> Result<usize, string> {
 // NUL-free UTF-8 text is data, including Unicode and original line endings.
 // The path is canonical syntax only; no filesystem authority is established.
 public flow propose(request: Request) -> Result<Proposal, string> {
-if !valid_path(request.path) {
-    return Err("invalid relative path");
-}
-let original_bytes = match text_bytes(request.original, "original") {
-    Ok(value) => value,
-    Err(error) => {
-        return Err(error);
+    if !valid_path(request.path) {
+        return Err("invalid relative path");
     }
-};
-let target_bytes = match text_bytes(request.target, "target") {
-    Ok(value) => value,
-    Err(error) => {
-        return Err(error);
+    let original_bytes = match text_bytes(request.original, "original") {
+        Ok(value) => value,
+        Err(error) => {
+            return Err(error);
+        }
+    };
+    let target_bytes = match text_bytes(request.target, "target") {
+        Ok(value) => value,
+        Err(error) => {
+            return Err(error);
+        }
+    };
+    let replacement_bytes = match text_bytes(request.replacement, "replacement") {
+        Ok(value) => value,
+        Err(error) => {
+            return Err(error);
+        }
+    };
+    if target_bytes == 0 {
+        if original_bytes == 0 && replacement_bytes > 0 {
+            return Ok(
+                Proposal {
+                    path = request.path,
+                    before = request.original,
+                    after = request.replacement
+                }
+            );
+        }
+        return Err("target must not be empty");
     }
-};
-let replacement_bytes = match text_bytes(request.replacement, "replacement") {
-    Ok(value) => value,
-    Err(error) => {
-        return Err(error);
+    // Search again after the first matched scalar to detect every later match,
+    // including overlapping ones, before applying the exact byte range.
+    let first_index = match find(request.original, request.target) {
+        Some(value) => value,
+        None() => {
+            return Err("literal target not found");
+        }
+    };
+    let first = match char_get(request.target, 0) {
+        Some(value) => from_char(value),
+        None() => {
+            return Err("literal match framing invalid");
+        }
+    };
+    let later: Result<Option<usize>, TextError> = find_from(
+        request.original,
+        request.target,
+        first_index + len(first)
+    )?;
+    match later {
+        Ok(Some(_)) => {
+            return Err("literal target is ambiguous");
+        },
+        Ok(None()) => (),
+        Err(_) => {
+            return Err("literal match framing invalid");
+        }
     }
-};
-if target_bytes == 0 {
-    if original_bytes == 0 && replacement_bytes > 0 {
-        return Ok(Proposal {
-            path = request.path,
-            before = request.original,
-            after = request.replacement
-        });
+    if request.target == request.replacement {
+        return Err("replacement leaves original unchanged");
     }
-    return Err("target must not be empty");
-}
-
-// Search again after the first matched scalar to detect every later match,
-// including overlapping ones, before applying the exact byte range.
-let first_index = match find(request.original, request.target) {
-    Some(value) => value,
-    None() => {
-        return Err("literal target not found");
+    // The exact match proves target_bytes <= original_bytes. Reject expansion
+    // before constructing any output, then replace the proven byte interval.
+    if original_bytes - target_bytes + replacement_bytes > file_bytes() {
+        return Err("result exceeds " + from_usize(file_bytes()) + " UTF-8 bytes");
     }
-};
-let first = match char_get(request.target, 0) {
-    Some(value) => from_char(value),
-    None() => {
-        return Err("literal match framing invalid");
-    }
-};
-let later: Result<Option<usize>, TextError> = find_from(
-    request.original,
-    request.target,
-    first_index + len(first)
-)?;
-match later {
-    Ok(Some(_)) => {
-        return Err("literal target is ambiguous");
-    },
-    Ok(None()) => (),
-    Err(_) => {
-        return Err("literal match framing invalid");
-    }
-}
-if request.target == request.replacement {
-    return Err("replacement leaves original unchanged");
-}
-// The exact match proves target_bytes <= original_bytes. Reject expansion
-// before constructing any output, then replace the proven byte interval.
-if original_bytes - target_bytes + replacement_bytes > file_bytes() {
-    return Err("result exceeds " + from_usize(file_bytes()) + " UTF-8 bytes");
-}
-let changed: Result<string, TextError> = replace_range(request.original, [first_index, first_index
-    + target_bytes), request.replacement)?;
-let after = match changed {
-    Ok(value) => value,
-    Err(_) => {
-        return Err("literal match framing invalid");
-    }
-};
-return Ok(Proposal {
-    path = request.path,
-    before = request.original,
-    after
-});
+    let changed: Result<string, TextError> = replace_range(
+        request.original,
+        [
+            first_index,
+            first_index
+                + target_bytes
+        ),
+        request.replacement
+    )?;
+    let after = match changed {
+        Ok(value) => value,
+        Err(_) => {
+            return Err("literal match framing invalid");
+        }
+    };
+    return Ok(Proposal {
+        path = request.path,
+        before = request.original,
+        after
+    });
 }
 
 // Recompute from the bound request; a bare before/after value is not approval,

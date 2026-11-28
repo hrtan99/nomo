@@ -4,12 +4,12 @@ import nomo.core.conversation.{Event, State};
 import nomo.domain.conversation.{charge, fresh};
 import nomo.domain.limits.{context_bytes, edit_response_bytes, message_bytes, message_frame_bytes, outcome_bytes};
 import nomo.domain.text.{context_json_error, search_literal, text_printable};
-import nomo.domain.wire.{FieldError, decode_fields, json};
+import nomo.domain.wire.{FieldError, decode_fields, json, json_scalar_width};
 import nomo.domain.workspace.valid_path;
 import std.agent.message.Message;
 import std.collections.unique;
 import std.json.JsonValue;
-import std.text.{char_count, contains, from_char, from_usize, len, lowercase, trim};
+import std.text.{TextBuilder, char_count, contains, from_char, from_usize, len, lowercase, trim};
 
 public type Shape = {
     calls: usize,
@@ -133,29 +133,20 @@ public flow response_text(raw: string, phase: string, excluded: string, maximum:
         || contains(folded, "api_key") {
         return shown(phase, "<redacted>", false, true);
     }
-    var prefix = "";
+    var prefix = TextBuilder.new();
     var size: usize = 4;
     var clipped = false;
     let maximum_encoded = 384 - char_count(header(phase, false, false));
     @limits([Iterations(32770)]) for codepoint in std.text.chars(raw) {
-        let character = std.text.from_char(codepoint);
-        if character != "" {
-            let encoded = match json([character]) {
-                Ok(value) => value,
-                Err(_) => {
-                    return shown(phase, "<unavailable>", true, true);
-                }
-            };
-            let width = char_count(encoded) - 4;
-            if size + width > maximum_encoded {
-                clipped = true;
-                break;
-            }
-            prefix = prefix + character;
-            size = size + width;
+        let width = json_scalar_width(codepoint);
+        if size + width > maximum_encoded {
+            clipped = true;
+            break;
         }
+        prefix.append_char(codepoint);
+        size = size + width;
     }
-    return shown(phase, prefix, clipped, false);
+    return shown(phase, prefix.build(), clipped, false);
 }
 
 public flow returned_text(raw: string, excluded: string) -> string {
