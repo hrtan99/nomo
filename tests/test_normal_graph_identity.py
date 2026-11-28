@@ -14,14 +14,14 @@ SPEC.loader.exec_module(G)
 
 
 class NormalGraphIdentityChecks(unittest.TestCase):
+
     def setUp(self):
         self.root = Path('/guard-fixture/project')
         self.cli = Path('/guard-fixture/bin/etas')
         self.bootstrap = SimpleNamespace(INSTALLED=self.cli, verify=Mock(return_value={'sha256': 'fixture-binary'}))
         self.loader = Mock()
         self.spec = SimpleNamespace(loader=self.loader)
-        values = {self.root / 'etas.lock': G.PROJECT_LOCK_SHA256, self.cli: G.LEGACY_CLI_SHA256,
-                  self.root / 'patches/etas-003/Cargo.lock': G.LEGACY_LOCK_SHA256}
+        values = {self.root / 'etas.lock': G.PROJECT_LOCK_SHA256, self.cli: 'fixture-binary'}
         self.patches = [patch.object(G, 'ROOT', self.root), patch.dict(os.environ, {}, clear=True),
                         patch.object(G.shutil, 'which', return_value=str(self.cli)),
                         patch.object(G, 'digest', side_effect=lambda path: values.get(Path(path), 'fixture-digest')),
@@ -43,56 +43,16 @@ class NormalGraphIdentityChecks(unittest.TestCase):
         self.bootstrap.verify.assert_called_once_with(read_only=True)
 
     def test_unset_selects_latest_only(self):
-        self.assertEqual(G.selected_graph(), 'latest')
-        self.assert_bootstrap('latest', 'etas-latest-cli-bootstrap.py')
+        self.assertEqual(G.selected_graph(), 'latest02413')
+        self.assert_bootstrap('latest02413', 'etas-02413-official-cli-bootstrap.py')
 
     def test_explicit_latest(self):
-        os.environ['NOMO_NORMAL_GRAPH'] = 'latest'
-        self.assert_bootstrap('latest', 'etas-latest-cli-bootstrap.py')
-
-    def test_explicit_012_uses_its_own_bootstrap(self):
-        os.environ['NOMO_NORMAL_GRAPH'] = 'latest012'
-        self.assert_bootstrap('latest012', 'etas-012-official-cli-bootstrap.py')
-
-    def test_explicit_022_uses_its_own_bootstrap(self):
-        os.environ['NOMO_NORMAL_GRAPH'] = 'latest022'
-        self.assert_bootstrap('latest022', 'etas-022-official-cli-bootstrap.py')
-
-    def test_explicit_024_uses_its_own_bootstrap(self):
-        os.environ['NOMO_NORMAL_GRAPH'] = 'latest024'
-        self.assert_bootstrap('latest024', 'etas-024-official-cli-bootstrap.py')
-
-    def test_official_evidence_includes_shared_guard_and_version_pins(self):
-        for label in ('012', '022', '023', '024'):
-            with self.subTest(label=label):
-                os.environ['NOMO_NORMAL_GRAPH'] = 'latest' + label
-                paths = G.bootstrap_evidence_paths()
-                self.assertEqual(paths, [self.root / ('scripts/etas-' + label + '-official-cli-bootstrap.py'),
-                                         self.root / 'scripts/etas-official-cli-common.py',
-                                         self.root / 'config/etas-official-legacy-bridge.json',
-                                         self.root / ('config/etas-' + label + '-official.json'),
-                                         self.root / ('config/etas-' + label + '-official.Cargo.lock')])
-        os.environ['NOMO_NORMAL_GRAPH'] = 'latest'
-        self.assertEqual(G.bootstrap_evidence_paths(), [self.root / 'scripts/etas-latest-cli-bootstrap.py'])
-
-    def test_explicit_009_recovery_uses_its_own_bootstrap(self):
-        os.environ['NOMO_NORMAL_GRAPH'] = 'latest009'
-        self.assert_bootstrap('latest009', 'etas-009-cli-bootstrap.py')
-
-    def test_explicit_etas0013_remains_historical(self):
-        os.environ['NOMO_NORMAL_GRAPH'] = 'etas0013'
-        self.assert_bootstrap('etas0013', 'etas-0013-cli-bootstrap.py')
-
-    def test_explicit_legacy_keeps_its_hash_and_lock_guard(self):
-        os.environ['NOMO_NORMAL_GRAPH'] = 'legacy'
-        self.assertEqual(self.verify(), self.cli)
-        self.assertEqual(G.bootstrap_path(), self.root / 'scripts/etas-003-cli-bootstrap.sh')
-        G.importlib.util.spec_from_file_location.assert_not_called()
-        self.bootstrap.verify.assert_not_called()
+        os.environ['NOMO_NORMAL_GRAPH'] = 'latest02413'
+        self.assert_bootstrap('latest02413', 'etas-02413-official-cli-bootstrap.py')
 
     def test_unknown_selector_is_rejected_before_resolution(self):
         os.environ['NOMO_NORMAL_GRAPH'] = 'unrecorded-candidate'
-        with self.assertRaisesRegex(RuntimeError, 'must be latest, latest0121, latest0120, latest024, latest023, latest022, latest012, latest009, legacy or etas0013'):
+        with self.assertRaisesRegex(RuntimeError, 'must be latest02413'):
             self.verify()
         G.shutil.which.assert_not_called()
         G.importlib.util.spec_from_file_location.assert_not_called()
@@ -114,7 +74,7 @@ class NormalGraphIdentityChecks(unittest.TestCase):
         self.bootstrap.verify.side_effect = RuntimeError('latest graph unavailable')
         with self.assertRaisesRegex(RuntimeError, 'latest graph unavailable'):
             self.verify()
-        G.importlib.util.spec_from_file_location.assert_called_once_with('normal_latest_bootstrap', self.root / 'scripts/etas-latest-cli-bootstrap.py')
+        G.importlib.util.spec_from_file_location.assert_called_once_with('normal_latest02413_bootstrap', self.root / 'scripts/etas-02413-official-cli-bootstrap.py')
         self.bootstrap.verify.assert_called_once_with(read_only=True)
 
     def test_missing_latest_module_never_falls_back(self):
@@ -130,12 +90,13 @@ class NormalGraphIdentityChecks(unittest.TestCase):
             self.verify()
         self.bootstrap.verify.assert_called_once_with(read_only=True)
 
-    def test_legacy_wrong_binary_rejected(self):
-        os.environ['NOMO_NORMAL_GRAPH'] = 'legacy'
-        G.digest.side_effect = lambda path: G.PROJECT_LOCK_SHA256 if Path(path).name == 'etas.lock' else 'wrong-binary'
-        with self.assertRaisesRegex(RuntimeError, 'legacy CLI hash drift'):
-            self.verify()
-        self.bootstrap.verify.assert_not_called()
+    def test_current_evidence_includes_guard_and_pins(self):
+        paths = G.bootstrap_evidence_paths()
+        self.assertEqual(paths, [self.root / 'scripts/etas-02413-official-cli-bootstrap.py',
+                                self.root / 'scripts/etas-official-cli-common.py',
+                                self.root / 'config/etas-official-legacy-bridge.json',
+                                self.root / 'config/etas-02413-official.json',
+                                self.root / 'config/etas-02413-official.Cargo.lock'])
 
 
 if __name__ == '__main__':

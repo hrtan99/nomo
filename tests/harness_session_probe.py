@@ -27,7 +27,7 @@ import harness_tool_chat_probe as chat
 
 FIXTURE = ROOT / "tests/fixtures/harness_session001/cases.py"
 specification = chat.once.load("checkpoint_exact_cases", FIXTURE)
-storage = chat.once.load("accepted_normal_storage_observer", ROOT / "scripts/session-demo-001b-verify.py")
+storage = chat.once.load("accepted_normal_storage_observer", ROOT / "tests/storage_observer.py")
 storage.DB_NAMES = ("harness.sqlite3",)
 digest, save, retain = chat.digest, chat.save, chat.retain
 resources, pressure, snapshot = chat.resources, chat.pressure, chat.snapshot
@@ -215,7 +215,7 @@ def main():
         parser.error("actual execution requires the selected absolute normal CLI")
     paths, cases = product_paths(), specification.cases()
     runner_paths = [Path(__file__).resolve(), FIXTURE, ROOT / "tests/harness_tool_chat_probe.py", ROOT / "tests/fixtures/harness_tool002a/cases.py",
-                    ROOT / "tests/harness_tool_probe.py", ROOT / "tests/fixtures/harness_tool001/cases.py", ROOT / "scripts/session-demo-001b-verify.py",
+                    ROOT / "tests/harness_tool_probe.py", ROOT / "tests/fixtures/harness_tool001/cases.py", ROOT / "tests/storage_observer.py",
                     ROOT / "tests/harness_model_probe.py", ROOT / "tests/harness_chat_probe.py", ROOT / "tests/harness_entry_probe.py",
                     ROOT / "tests/model_tool_probe.py", ROOT / "tests/foundation_probe.py", ROOT / "tests/normal_graph_identity.py",
                     ROOT / "tests/fixtures/harness_model001/cases.py", *chat.once.previous.graph_identity.bootstrap_evidence_paths(), ROOT / "config/etas-latest-main.json"]

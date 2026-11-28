@@ -148,7 +148,7 @@ def snapshot(folder):
 def helper_inputs(root):
     return {relative: digest(root / relative) for relative in
             ('tests/normal_graph_identity.py', 'tests/model_protocol_probe.py', 'tests/terminal002_native_probe.py',
-             'tests/fixtures/harness_work001/cases.py', 'scripts/etas-latest-cli-bootstrap.py')}
+             'tests/fixtures/harness_work001/cases.py', 'scripts/etas-02413-official-cli-bootstrap.py')}
 
 
 def prepare(root, destination):

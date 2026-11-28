@@ -124,4 +124,17 @@ python3 -B scripts/check-architecture.py
 python3 -B tests/native_worker_probe.py
 ```
 
+`scripts/` keeps the current entry and tooling:
+
+- `nomo`, `nomo-native`: the single application entry and its alias.
+- `container-{build,shell,smoke}.sh`, `nomo-native-tools.sh`: environment setup.
+- The four `etas-*official*` files: the selected compiler's prepare/build/verify path.
+- `nomo-migrate-native`, `nomo_migration.py`: explicit saved-state migration.
+- `check-architecture.py`, `count-sloc.py`, `lib/etas_source.py`: code checks.
+- The remaining transport, gateway and fixture helpers serve the current entry or development probes.
+
+After a toolchain upgrade is accepted, retire its superseded wrappers instead of
+accumulating another version matrix. Historical verification scripts are available
+in Git history.
+
 Runtime credentials, saved databases and generated evidence are excluded from releases.

@@ -7,12 +7,12 @@ import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parent.parent
-SCRIPT = ROOT / 'scripts/etas-022-official-container.sh'
+SCRIPT = ROOT / 'scripts/etas-02413-official-container.sh'
 
 
 class OfficialContainerRouting(unittest.TestCase):
     def setUp(self):
-        self.temp = tempfile.TemporaryDirectory(prefix='etas022-routing-')
+        self.temp = tempfile.TemporaryDirectory(prefix='toolchain-routing-')
         self.addCleanup(self.temp.cleanup)
         base = Path(self.temp.name)
         self.log = base / 'docker.json'
@@ -34,9 +34,9 @@ with open(os.environ['NOMO_TEST_LOG'], 'w') as output:
         self.assertEqual(result.returncode, 0, result.stderr)
         args = json.loads(self.log.read_text())
         self.assertEqual(args[:3], ['compose', '--env-file', '/dev/null'])
-        self.assertIn(str(ROOT / 'config/etas-022-official-compose.yaml'), args)
+        self.assertIn(str(ROOT / 'config/etas-02413-official-compose.yaml'), args)
         self.assertIn('--profile', args)
-        self.assertEqual(args[-5:], ['dependency', 'python3', '-B', '/workspace/scripts/etas-022-official-cli-bootstrap.py', 'prepare'])
+        self.assertEqual(args[-5:], ['dependency', 'python3', '-B', '/workspace/scripts/etas-02413-official-cli-bootstrap.py', 'prepare'])
 
     def test_verify_and_register_use_dev_service(self):
         for mode in ('verify', 'register-existing'):
@@ -48,7 +48,7 @@ with open(os.environ['NOMO_TEST_LOG'], 'w') as output:
                 self.assertIn('dev', args)
                 self.assertIn(mode, args)
                 if mode == 'register-existing':
-                    self.assertEqual(args[-2:], ['--binary', '/home/nomo/.cargo/etas-latest/target/release/etas'])
+                    self.assertEqual(args[-2:], ['--binary', '/home/nomo/.cargo/etas-0230/target/release/etas'])
 
     def test_invalid_mode_does_not_dispatch(self):
         result = self.invoke('unknown')

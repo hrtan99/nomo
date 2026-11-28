@@ -1,3 +1,19 @@
+# Current development scripts, 2026-11-28
+
+The scripts directory is reduced from 120 files to 21 top-level scripts plus one
+shared lexer under lib. Ninety-nine superseded compiler wrappers, one-time
+verification recipes and source-rewrite scripts are removed. Current launch,
+container, compiler, native tooling, migration and used fixture helpers remain.
+Only the test-shared SQL observer functions are extracted from the retired demo
+verifier; they are not an executable application path. The normal test graph now
+selects the same official 0.24.13 toolchain as production.
+
+Container routing (3), graph selection (9), preparation guard (1), SLOC counter
+(11), architecture and the two public help commands pass. A read-only installed
+graph verification confirms the exact existing binary/lock/SDK. Current bootstrap
+Python bytes and all 463 selected Etas modules remain unchanged; no compiler build
+or model request is run. [Removal inventory and scope](examples/native-project/scripts-cleanup-20261128.json).
+
 # Retired Python compatibility entry, 2026-11-28
 
 The old bounded-session Python launch/recovery chain is removed, together with its

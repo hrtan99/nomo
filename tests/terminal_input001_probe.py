@@ -23,13 +23,9 @@ import tempfile
 
 
 ROOT = Path(__file__).resolve().parent.parent
-CLI_SHA256 = '460f26bf3b1855b72581595cc0d85ac153312f32d9ed98e375e1beee8071d135'
-PINS = {
-    'cli': '2a57d709f9a352b26e59917b2e3fe4da761397f9',
-    'core': '9da73aec66367f724e2870f7738b436edb0faad5',
-    'frontend': '9bba251b2e584080cbc37d7f525ce786674e837a',
-    'interpreter': '6baed226c66dea56a9f9b00a1bc4ba7a4ae49fe1',
-}
+_GRAPH = json.loads((ROOT / 'config/etas-02413-official.json').read_text())
+CLI_SHA256 = _GRAPH['verified_seed_binary_sha256']
+PINS = {name: row['revision'] for name, row in _GRAPH['repositories'].items()}
 PROFILE = 'terminal-input-denied'
 CAP = '13,7,47104,196608,1,4096,3,6144,1,2048'
 PROMPT = 'REQUEST /help /show /exit'
@@ -112,13 +108,13 @@ def helpers(source):
 
 
 def identity(source):
-    config = json.loads((source / 'config/etas-latest-main.json').read_text())
-    require(config['selector'] == 'latest' and
+    config = json.loads((source / 'config/etas-02413-official.json').read_text())
+    require(config['selector'] == 'latest02413' and
             {name: row['revision'] for name, row in config['repositories'].items()} == PINS,
-            'Actual official010 configuration required')
+            'Selected official graph configuration required')
     verify, resource = helpers(source)
     cli = verify()
-    require(digest(cli) == CLI_SHA256, 'Actual selected010 binary differs')
+    require(digest(cli) == CLI_SHA256, 'Selected official binary differs')
     return cli, resource
 
 
@@ -175,8 +171,8 @@ def package_inputs(folder):
 
 def source_inputs(source, project):
     relative = [str(path.relative_to(project)) for path in sorted((project / 'src/nomo').rglob('*.es'))]
-    relative += ['tests/fixtures/terminal_input001/entry_probe.es', 'config/etas-latest-main.json',
-                 'scripts/etas-latest-cli-bootstrap.py', 'tests/normal_graph_identity.py',
+    relative += ['tests/fixtures/terminal_input001/entry_probe.es', 'config/etas-02413-official.json',
+                 'scripts/etas-02413-official-cli-bootstrap.py', 'tests/normal_graph_identity.py',
                  'tests/model_protocol_probe.py']
     return {name: digest(source / name) for name in relative}
 

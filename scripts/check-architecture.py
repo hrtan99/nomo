@@ -6,7 +6,7 @@ from pathlib import Path
 import re
 import sys
 
-from etas_0224_migration import tokens
+from lib.etas_source import tokens
 
 ROOT = Path(__file__).resolve().parents[1]
 DECLARATIONS = {'type', 'alias', 'enum', 'let', 'flow', 'tool', 'agent', 'spec', 'effect'}
