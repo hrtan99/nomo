@@ -51,7 +51,7 @@ import std.fs.{
     stat
 };
 import std.io.{IOError, println};
-import std.text.{char_count, contains, from_usize, split, starts_with};
+import std.text.{TextBuilder, char_count, contains, count, from_usize, split, split_iter, starts_with};
 
 public type ProjectArchives = {};
 
@@ -484,12 +484,14 @@ flow search_with(names: Array<string>, literal: string, maximum: usize) -> Outco
     if invalid != "" {
         return outcome("refused", invalid, 0);
     }
-    var output = "";
+    var output = TextBuilder.new();
+    var output_characters: usize = 0;
     var scanned: usize = 0;
     var consumed: usize = 0;
     var matches: usize = 0;
     var skipped: usize = 0;
-    var skipped_names = "";
+    var skipped_names = TextBuilder.new();
+    var skipped_name_characters: usize = 0;
     @limits([Iterations(256)]) for name in names {
         let remaining = maximum - consumed;
         let per_file = if maximum == 4194304 || maximum == file_bytes() {
@@ -513,23 +515,24 @@ flow search_with(names: Array<string>, literal: string, maximum: usize) -> Outco
             }
             consumed = consumed + bound + 1;
             skipped = skipped + 1;
-            if char_count(skipped_names) + char_count(name) < message_bytes() {
-                skipped_names = skipped_names + name + "\n";
+            let name_characters = char_count(name);
+            if skipped_name_characters + name_characters < message_bytes() {
+                skipped_names.append(name);
+                skipped_names.append("\n");
+                skipped_name_characters = skipped_name_characters + name_characters + 1;
             }
         } else {
             consumed = consumed + file.scanned;
-            let lines = split(file.text, "\n");
             let line_limit = file_bytes() + 1;
-            if lines.len() > line_limit {
+            if count(file.text, "\n") + 1 > line_limit {
                 return outcome("refused", "file exceeds line limit", scanned);
             }
             scanned = scanned + file.scanned;
-            var line: usize = 0;
-            @limits([Iterations(1048577)]) for text in lines {
-                line = line + 1;
+            @limits([Iterations(1048577)]) for (index, text) in split_iter(file.text, "\n").enumerate() {
                 if contains(text, literal) {
-                    let entry = name + ":" + from_usize(line) + "\n";
-                    if matches >= 65536 || char_count(output) + char_count(entry) > message_bytes() {
+                    let entry = name + ":" + from_usize(index + 1) + "\n";
+                    let entry_characters = char_count(entry);
+                    if matches >= 65536 || output_characters + entry_characters > message_bytes() {
                         return outcome(
                             if maximum == 4194304 {
                                 "incomplete"
@@ -537,14 +540,15 @@ flow search_with(names: Array<string>, literal: string, maximum: usize) -> Outco
                                 "truncated"
                             },
                             if maximum == 4194304 {
-                                "match limit reached; partial results\n" + output
+                                "match limit reached; partial results\n" + output.build()
                             } else {
-                                output
+                                output.build()
                             },
                             scanned
                         );
                     }
-                    output = output + entry;
+                    output.append(entry);
+                    output_characters = output_characters + entry_characters;
                     matches = matches + 1;
                 }
             }
@@ -563,11 +567,11 @@ flow search_with(names: Array<string>, literal: string, maximum: usize) -> Outco
                 ""
             }) + "skipped " + from_usize(skipped)
                 + " unsupported or oversized files; partial results; skipped names (may be partial):\n"
-                + skipped_names + "matches:\n" + output,
+                + skipped_names.build() + "matches:\n" + output.build(),
             scanned
         );
     }
-    return outcome("complete", output, scanned);
+    return outcome("complete", output.build(), scanned);
 }
 
 public flow search_files(names: Array<string>, literal: string) -> Outcome ![
