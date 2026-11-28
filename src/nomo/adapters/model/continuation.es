@@ -111,12 +111,7 @@ public flow target(answer: string, allowed: Array<string>) -> Option<string> {
             },
         },
     };
-    @limits([Iterations(256)]) for path in allowed {
-        if selected == path {
-            return Some(path);
-        }
-    }
-    return None();
+    return allowed.iter().take(256).find(path => path == selected);
 }
 
 // A completed delegation may use another already-budgeted chat turn; it is not an edit grant.

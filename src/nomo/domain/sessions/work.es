@@ -29,12 +29,8 @@ import nomo.session.history_work_guard.{Budget as history_work_guard_Budget, Rec
 import nomo.session.recoverable_chat_store.Frame;
 import nomo.session.recoverable_events.Frame as recoverable_events_Frame;
 import nomo.session.work_record.Record as work_record_Record;
-import std.agent.message.Message;
-import std.bytes.len as bytes_len;
-import std.codec.text.utf8_encode;
-import std.json.parse;
 import std.memory.MemoryEntry;
-import std.text.{char_count, from_char, from_i32, from_usize, get_char_slice, len, parse_i32};
+import std.text.{char_count, concat, from_char, from_i32, from_usize, get_char_slice, join, len, parse_i32};
 
 flow valid_failure_code(value: string) -> bool {
     if char_count(value) < 1 || char_count(value) > 3 {
@@ -532,8 +528,8 @@ public flow capture(pending: Pending, confirmed: Confirmed, summary: Summary) ->
     if read.operation == "search" {
         selection = selection + read.literal + "\n";
     }
-    @limits([Iterations(4)]) for name in read.files {
-        selection = selection + name + "\n";
+    if read.files.len() > 0 {
+        selection = selection + join(read.files.iter().take(4).collect(), "\n") + "\n";
     }
     return Ok(
         [
@@ -1335,35 +1331,9 @@ public flow admit(row: work_record_Record) -> Result<bool, string> {
     if row.phase != "summary-unconfirmed" {
         return Err("work admission requires an unconfirmed candidate");
     }
-    let sentinel = "\"" + from_char('\\') + "u0001\"";
-    let parsed = match parse(sentinel) {
-        Ok(value) => value,
-        Err(_) => {
-            return Err("work admission sentinel decode refused");
-        }
-    };
-    let message = Message.new(parsed);
-    let converted: Option<Message<string>> = message.cast<string>();
-    let control = match converted {
-        Some(value) => value.body,
-        None() => {
-            return Err("work admission sentinel conversion refused");
-        }
-    };
-    let control_bytes = utf8_encode(control);
-    if bytes_len(control_bytes) != 1 {
-        return Err("work admission sentinel must be exactly one UTF-8 byte");
-    }
-    let expected: u8 = 1;
-    if control_bytes[0] != expected {
-        return Err("work admission sentinel must be U+0001");
-    }
-    var summary = "";
-    var index: usize = 0;
-    @limits([Iterations(512)]) while index < 512 {
-        summary = summary + control;
-        index = index + 1;
-    }
+    let control = from_char(char.from_u32(1).unwrap());
+    let repeated: Array<string> = Array.repeat(512, control);
+    let summary = concat(repeated);
     let hypothetical = captured {
         summary,
         ledger = stage(true, captured.evidence.ledger)

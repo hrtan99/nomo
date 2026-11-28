@@ -9,7 +9,7 @@ import nomo.domain.wire.{encode, string_fields};
 import nomo.harness.harness_tool_chat_contract.Previous;
 import std.agent.message.Message;
 import std.json.parse;
-import std.text.{char_count, contains, count, is_ascii, len, replace};
+import std.text.{char_count, concat, contains, count, get_byte_slice, is_ascii, is_char_boundary, len, replace};
 
 public type Bundle = {
     format: i32,
@@ -197,24 +197,7 @@ public flow encode_prefix(text: string, truncated: bool, policy: Policy) -> Resu
             truncated = clipped
         });
     }
-    var selected = "";
-    var seen: usize = 0;
-    var marked = false;
-    @limits([Iterations(8388610)]) for codepoint in std.text.chars(clean) {
-        let character = std.text.from_char(codepoint);
-        if character != "" {
-            let width = len(character);
-            if seen + width <= 2000 || seen >= size - 2000 {
-                selected = selected + character;
-            }
-            else if !marked {
-                selected = selected + "\n[... output omitted ...]\n";
-                marked = true;
-            }
-            seen = seen + width;
-        }
-    }
-    let encoded = match event_text_codec_encode(selected, policy) {
+    let encoded = match event_text_codec_encode(excerpt(clean), policy) {
         Ok(item) => item.value,
         Err(error) => {
             return Err(error);
@@ -224,6 +207,31 @@ public flow encode_prefix(text: string, truncated: bool, policy: Policy) -> Resu
         value = encoded,
         truncated = clipped
     });
+}
+
+// Only already-redacted output above the whole-message bound reaches here.
+flow excerpt(clean: string) -> string {
+    let size = len(clean);
+    var head: usize = 2000;
+    var tail = size - 2000;
+    // UTF-8 has at most three continuation bytes at either boundary.
+    for _ in [0, 1, 2] {
+        if is_char_boundary(clean, head) {
+            break;
+        }
+        head = head - 1;
+    }
+    for _ in [0, 1, 2] {
+        if is_char_boundary(clean, tail) {
+            break;
+        }
+        tail = tail + 1;
+    }
+    return concat([
+        get_byte_slice(clean, [0, head)).unwrap(),
+        "\n[... output omitted ...]\n",
+        get_byte_slice(clean, [tail, size)).unwrap()
+    ]);
 }
 
 // The caller must provide known sensitive literals through a trusted private

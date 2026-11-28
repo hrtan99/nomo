@@ -223,11 +223,9 @@ public type ConsoleConversationPicker = {};
 
 impl ConsoleConversationPicker ~ ConversationPicker {
     flow choose(self, sessions: Array<Session>) -> Option<string> ![Console, Error<IOError>] {
-        var number: usize = 1;
-        for item in sessions {
-            println("[SESSION] " + from_usize(number) + " · " + item.id + " · " + item.title);
+        for (index, item) in sessions.iter().enumerate() {
+            println("[SESSION] " + from_usize(index + 1) + " · " + item.id + " · " + item.title);
             println("          " + item.workspace);
-            number = number + 1;
         }
         print("Conversation number or ID (empty cancels): ");
         let selected = trim(read_line());
@@ -236,12 +234,13 @@ impl ConsoleConversationPicker ~ ConversationPicker {
         }
         match parse_usize(selected) {
             Ok(index) => {
-                number = 1;
-                for item in sessions {
-                    if number == index {
-                        return Some(item.id);
+                if index > 0 {
+                    match sessions.get(index - 1) {
+                        Some(item) => {
+                            return Some(item.id);
+                        }
+                        None() => (),
                     }
-                    number = number + 1;
                 }
                 abort("conversation number is not in the displayed list");
             }

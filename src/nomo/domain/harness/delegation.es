@@ -204,15 +204,14 @@ public flow next(request: string, history: Array<Event>, has_result: bool, resul
         };
     }
     if request == "recall" || request == "recall:user" {
-        var remembered = "";
-        @limits([Iterations(32)]) for event in history {
-            if request == "recall" && event.role == "tool" && event.kind == "complete" {
-                remembered = event.text;
-            }
-            if request == "recall:user" && event.role == "user" {
-                remembered = event.text;
-            }
-        }
+        let remembered = match history.iter().take(32).filter(
+            event =>
+            (request == "recall" && event.role == "tool" && event.kind == "complete")
+                || (request == "recall:user" && event.role == "user")
+        ).last() {
+            Some(event) => event.text,
+            None() => "",
+        };
         if remembered == "" {
             return Reply {
                 kind = "error",

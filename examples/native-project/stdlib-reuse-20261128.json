@@ -1,0 +1,117 @@
+{
+  "date": "2026-11-28",
+  "status": "implemented-and-focused-cases-passed",
+  "baseline": "5a1f4d254f42da6868289c30d9e84ff3661ae15e",
+  "toolchain": "official Etas 0.24.13 / std 0.9.0",
+  "core": "178e9f7e5852ed4f724c8e4289ccc43df8b6a8ac",
+  "audit": "docs/agent/STDLIB_REUSE_AUDIT_20261128.md",
+  "changes": {
+    "S01": "split_iter and TextBuilder search/skipped-name assembly with explicit scalar counters; exact LF/CRLF/final-empty semantics and 65,536 match guard retained",
+    "S02": "char.to_u32 plus shared lowercase UTF-16 escape and nibble mechanism; no duplicate UTF-8 decoding; ASCII-fast-path and mixed-Unicode policies retained",
+    "S03": "redact complete input first; adjust at most three continuation bytes per side, then get_byte_slice for exact 2,000-byte head/tail and original marker; finite pure traversal adds no budget failure",
+    "S04": "std.text.len replaces byte-buffer allocation used only to count prompt/line bytes",
+    "S05": "char numeric predicate retains only C0/DEL rejection; C1 policy is unchanged",
+    "S06": "shared per-scalar encoded-width rules and TextBuilder append_char; no per-character JSON documents; final selected text still uses canonical encoding",
+    "S07": "one per-operation Map summary built during reference validation; original global checks, operation order, first sequence error and ledger accounting retained",
+    "S08": "Set membership with projection and selected/omitted arrays kept in original history order; exact greedy encoded-size admission unchanged",
+    "S09": "enumerate/get for conversation numbers; take(256).find for exact path selection",
+    "S10": "pure Array.repeat/concat U+0001 sentinel and join over the original four-file bounded prefix, including exact empty/final-newline rule",
+    "S11": "take(32).filter.last preserves bounded-prefix recall and the empty last-match rule",
+    "S12": "64-byte lowercase hex uses char.is_ascii_digit/to_u32; related untracked v4 prototype locally reuses the predicate and direct byte length without being selected or added to Git"
+  },
+  "validation": {
+    "normal_check": {
+      "exit": 0,
+      "selected_modules": 153,
+      "diagnostics": 0,
+      "seconds": 40.75217060099999,
+      "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-stdlib-final-result-x27e7wn8",
+      "final_tokens_identical_to_checked_source": true
+    },
+    "architecture": {
+      "modules": 163,
+      "imports": 2607,
+      "identity_leaves_including_optional_owner_prototypes": 52,
+      "cycles": 0,
+      "layer_violations": 0
+    },
+    "original_eight_checks": {
+      "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-stdlib-cleanup-0u2046rw",
+      "checks": 8,
+      "status": "passed on final split-entry fixture"
+    },
+    "new_feature_checks": {
+      "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-stdlib-cleanup-c1dl_8am",
+      "checks": 11,
+      "flows": [
+        "unicode",
+        "search",
+        "references",
+        "recall",
+        "path_selection",
+        "picker",
+        "admission"
+      ],
+      "status": "passed"
+    },
+    "final_byte_boundary_checks": {
+      "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-stdlib-cleanup-7yqjqstg",
+      "checks": 3,
+      "status": "passed after retaining purity with fixed finite boundary traversal"
+    },
+    "excerpt_scope": "The staged test adds a visibility-only observer of the actual private excerpt helper. Small UTF-8 crossings check exact clipping; the normal encode_prefix path separately checks full redaction and truncated propagation. The cancelled >1 MiB full-flow probe is not claimed as passed.",
+    "combined_candidate": "An earlier monolithic fixture failed at runtime with MissingCheckedFact: checked method receiver is missing its value type. Final probes use separate capability entry flows and retain all assertions. No interpreter patch, production type-fact bypass or root-cause claim is made.",
+    "cancelled_pressure_probes": [
+      "65,537 matching lines / 65,536-result boundary",
+      "over-1-MiB complete-redaction path"
+    ],
+    "scope": "No acceptance or performance claim for either cancelled pressure case; source match/scan/output caps remain unchanged.",
+    "external_model_calls": 0,
+    "compiler_rebuilds": 0,
+    "extra_negative_matrix": false
+  },
+  "same_input_search_comparison": {
+    "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-search-comparison-nxdxl8ng",
+    "baseline_adapter_commit": "5a1f4d2",
+    "changed_source": "src/nomo/adapters/filesystem/workspace.es",
+    "input_bytes": 256,
+    "input_lines": 128,
+    "matched_lines": 128,
+    "same_binary_sdk_and_profile": true,
+    "cache": "off",
+    "exact_outputs_equal": true,
+    "old": {
+      "wall_seconds": 3.4237907100000484,
+      "search_execution_interval_seconds": 1.544319,
+      "frontend_check_seconds": 0.789403333,
+      "interpreter_plan_seconds": 0.631651667,
+      "interpreter_eval_seconds": 1.588260501
+    },
+    "new": {
+      "wall_seconds": 1.9905120840001018,
+      "search_execution_interval_seconds": 0.369785,
+      "frontend_check_seconds": 0.646586792,
+      "interpreter_plan_seconds": 0.582419917,
+      "interpreter_eval_seconds": 0.412252667
+    },
+    "observed_search_ratio": 4.17626188190435,
+    "qualification": "One paired small-input observation, not a statistical benchmark. Search timing uses the identical BEGIN/END Console request interval, includes the file read and excludes frontend checking. This does not locate the large-pressure bottleneck or establish general throughput."
+  },
+  "changed_selected_sources_sha256": {
+    "src/nomo/adapters/cli/chains.es": "d919f295649f32bcb476de08c76f9f017589469285a0b7649f78bb6311fc50b4",
+    "src/nomo/adapters/cli/console.es": "1eb085c493eec5f4ecf7e42330e4d8e0227cb1433f069180c381324a53d69ab1",
+    "src/nomo/adapters/cli/input.es": "2e899a22bf04049950c2ab5064f899e8659eea41282a914a8e1106d7019f517f",
+    "src/nomo/adapters/filesystem/workspace.es": "ad215b1cee54f4786f2190609be6a1559d2dd35f9d57242979ad687dbd6378e1",
+    "src/nomo/adapters/model/continuation.es": "7130e71fc660da76297534fa8e864ad778a71aa86b2f063fb36bc22ac8c6aff7",
+    "src/nomo/domain/context.es": "c6059590bfb69a7a0bf2dcd82e46562a40efbb5b544bb5073f851db356c90ad2",
+    "src/nomo/domain/editing.es": "7a5031377b33302386c1a1e92776571d24eff8eb9e93ef5880f2c2cb0752cd35",
+    "src/nomo/domain/harness/delegation.es": "cd5d0e066a96b9bad900c166c264c2d7003cd3c0fa573b896139f1f2c082ed75",
+    "src/nomo/domain/harness/loop.es": "f8b68bf4b0070fee83273f7412e6ecb9dc60f50f3e7bd556fe9d5600cd6ccf50",
+    "src/nomo/domain/sessions/event_codec.es": "7a94fb5add5cb0acd1a99b502f168f941871c216247b07bdaca16910070d6d8a",
+    "src/nomo/domain/sessions/state.es": "95ef5535101f119a8e6f7e1d7f01ffe0544ed0605b11d7e3dcddec110b9e5511",
+    "src/nomo/domain/sessions/work.es": "b5d20c4fc10d38b4768b540e5e7abfac110f0a02e8ec56f0573971caff60b43d",
+    "src/nomo/domain/text.es": "00da404824665f97b7c420c76429dec2be25e62e4faaef3aa5df729621ec1739",
+    "src/nomo/domain/wire.es": "9a6d3da58fc51893d9ef23b4d7eaccb07c409e2554ff2883c279225b33c15633"
+  },
+  "existing_owner_prototypes": "Remain untracked; the related v4 helper cleanup is local only."
+}

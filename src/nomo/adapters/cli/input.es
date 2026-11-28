@@ -6,12 +6,11 @@ import nomo.domain.limits.request_bytes;
 import nomo.domain.sessions.state.valid_id;
 import nomo.domain.text.{input_error, safe, text_printable};
 import std.agent.message.Message;
-import std.bytes.len;
-import std.codec.text.utf8_encode;
 import std.json.parse;
 import std.text.{
     char_count,
     from_i32,
+    len,
     parse_i32,
     parse_i64,
     parse_usize,
@@ -298,7 +297,7 @@ public flow load_for(args: Array<string>, provider: string) -> Config {
 // Only the non-durable read-only entry uses this parser. Legacy session and
 // edit arguments retain their existing parser and wire contract.
 flow prompt_error(value: string) -> string {
-    if len(utf8_encode(value)) > request_bytes() {
+    if len(value) > request_bytes() {
         return "question exceeds 65536 UTF-8 bytes";
     }
     if trim(value) == "" || !safe(value, request_bytes()) {
@@ -335,7 +334,7 @@ public flow read_cli_parse_args(args: Array<string>) -> Result<Request, string> 
 }
 
 public flow read_cli_parse_line(raw: string) -> Result<LineCommand, string> {
-    if len(utf8_encode(raw)) > request_bytes() + 2 {
+    if len(raw) > request_bytes() + 2 {
         return Err("input exceeds 65536 UTF-8 bytes plus LF/CRLF");
     }
     let body = match strip_suffix(raw, "\r\n") {

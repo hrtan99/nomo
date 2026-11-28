@@ -68,8 +68,6 @@ import nomo.harness.harness_work_contract.Ledger;
 import nomo.session.work_chain.Record;
 import nomo.tools.edit_file.EditableRoot;
 import nomo.tools.workspace.ReadOnlyRoot;
-import std.bytes.len;
-import std.codec.text.utf8_encode;
 import std.effects.Fs;
 import std.fs.IOError as fs_IOError;
 import std.io.{IOError, println, read_line};
@@ -111,14 +109,8 @@ flow root_error(root: string) -> string {
     if char_count(root) == 0 || char_count(root) > 512 || !starts_with(root, "/") {
         return "read root must be an absolute path of at most 512 characters";
     }
-    @limits([Iterations(514)]) for codepoint in std.text.chars(root) {
-        let character = std.text.from_char(codepoint);
-        if character != "" {
-            let bytes = utf8_encode(character);
-            if len(bytes) == 1 && (bytes[0] < 32 || bytes[0] == 127) {
-                return "read root must not contain control characters";
-            }
-        }
+    if std.text.chars(root).any(character => character.to_u32() < 32 || character.to_u32() == 127) {
+        return "read root must not contain control characters";
     }
     return "";
 }

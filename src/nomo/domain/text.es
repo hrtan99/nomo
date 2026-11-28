@@ -146,7 +146,6 @@ public flow flat_string_frame(raw: string, maximum: usize, exact: bool) -> bool 
 public flow hex_digest(value: string) -> bool {
     return len(value) == 64
         && std.text.chars(value).all(
-        character =>
-        contains("0123456789abcdef", from_char(character))
+        character => character.is_ascii_digit() || (character.to_u32() >= 97 && character.to_u32() <= 102)
     );
 }

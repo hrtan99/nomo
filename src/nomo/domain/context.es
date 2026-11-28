@@ -7,6 +7,7 @@ import nomo.domain.limits.{context_bytes, message_bytes};
 import nomo.domain.settings.{as_number, effective_window, estimated_tokens};
 import nomo.domain.workspace.ProjectInstruction;
 import std.agent.message.Message;
+import std.collections.Set;
 import std.json.{JsonValue, stringify};
 import std.text.{char_count, len};
 
@@ -167,16 +168,12 @@ flow protected(event: Event) -> bool {
     )) || (event.role == "assistant" && event.kind == "final");
 }
 
-flow includes(indices: Array<usize>, target: usize) -> bool {
-    return indices.iter().any(index => index == target);
-}
-
 // Reproject from the original history so optional trials cannot reorder events.
-flow selection_project(context: Context, indices: Array<usize>) -> Context {
+flow selection_project(context: Context, indices: Set<usize>) -> Context {
     let history = context.history.iter().enumerate().filter_map(
         item => {
             let (index, event) = item;
-            return if includes(indices, index) {
+            return if indices.contains(index) {
                 Some(event)
             } else {
                 None()
@@ -213,7 +210,7 @@ public flow select(context: Context, policies: Array<EventPolicy>, maximum_bytes
     if bounded_context_error(context) != "" {
         return Err(SelectionRefusal.InvalidContext);
     }
-    var indices: Array<usize> = [];
+    var indices: Set<usize> = Set.new();
     var task = false;
     var index: usize = 0;
     @limits([Iterations(32)]) for event in context.history {
@@ -226,7 +223,7 @@ public flow select(context: Context, policies: Array<EventPolicy>, maximum_bytes
                 return Err(SelectionRefusal.InvalidPolicy);
             }
         } else {
-            indices = indices.push(index);
+            indices = indices.insert(index);
         }
         index = index + 1;
     }
@@ -242,7 +239,7 @@ public flow select(context: Context, policies: Array<EventPolicy>, maximum_bytes
     index = 0;
     @limits([Iterations(32)]) for policy in policies {
         if optional(policy) {
-            let trial = indices.push(index);
+            let trial = indices.insert(index);
             match measure_context(selection_project(context, trial), maximum_bytes) {
                 Ok(value) => {
                     indices = trial;
@@ -271,7 +268,7 @@ public flow select(context: Context, policies: Array<EventPolicy>, maximum_bytes
     var omitted: Array<usize> = [];
     index = 0;
     @limits([Iterations(32)]) for event in context.history {
-        if includes(indices, index) {
+        if indices.contains(index) {
             selected = selected.push(index);
         }
         else {
@@ -281,7 +278,7 @@ public flow select(context: Context, policies: Array<EventPolicy>, maximum_bytes
     }
     return Ok(
         Selection {
-            context = selection_project(context, selected),
+            context = selection_project(context, indices),
             measurement,
             selected,
             omitted,

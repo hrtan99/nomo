@@ -174,6 +174,14 @@ flow event_valid(event: Event, mode: string) -> bool {
         && identifier(event.name);
 }
 
+type ReferenceSummary = {
+    requests: i32,
+    outcomes: i32,
+    tool_outcomes: i32,
+    request_name: string,
+    error: string
+};
+
 // All diagnostics are fixed strings; no supplied identifier/content is echoed.
 public flow validate(saved: Snapshot, requested: Request) -> Result<Projection, string> {
     if saved.format != 1 {
@@ -264,6 +272,7 @@ public flow validate(saved: Snapshot, requested: Request) -> Result<Projection, 
     var scan_bytes: i32 = 0;
     var unresolved = saved.lifecycle == "recovery-required";
     var ids: Map<string, usize> = {};
+    var summaries: Map<string, ReferenceSummary> = {};
     for (index, operation) in saved.operations.iter().enumerate() {
         if !identifier(operation.id) {
             return Err("invalid operation identifier");
@@ -296,6 +305,16 @@ public flow validate(saved: Snapshot, requested: Request) -> Result<Projection, 
         attempts = attempts + operation.attempts;
         tokens = tokens + operation.tokens;
         scan_bytes = scan_bytes + operation.scan_bytes;
+        summaries = summaries.insert(
+            operation.id,
+            ReferenceSummary {
+                requests = 0,
+                outcomes = 0,
+                tool_outcomes = 0,
+                request_name = "",
+                error = ""
+            }
+        );
     }
     if attempts != ledger.attempts || tokens != ledger.tokens || scan_bytes != ledger.scan_bytes {
         return Err("operation ledger mismatch");
@@ -339,36 +358,44 @@ public flow validate(saved: Snapshot, requested: Request) -> Result<Projection, 
                     return Err("contradictory outcome reference");
                 }
             }
+            var summary = summaries.get(reference.operation).unwrap();
+            if reference.phase == "request" {
+                if summary.outcomes != 0 && summary.error == "" {
+                    summary = summary {
+                        error = "request follows outcome"
+                    };
+                }
+                summary = summary {
+                    requests = summary.requests + 1,
+                    request_name = event.name
+                };
+            } else {
+                if event.role == "tool" && (summary.requests != 1 || event.name != summary.request_name)
+                    && summary.error == "" {
+                    summary = summary {
+                        error = "tool outcome does not match request"
+                    };
+                }
+                summary = summary {
+                    outcomes = summary.outcomes + 1,
+                    tool_outcomes = summary.tool_outcomes + if event.role == "tool" {
+                        1
+                    } else {
+                        0
+                    }
+                };
+            }
+            summaries = summaries.insert(reference.operation, summary);
         }
     }
     var required_steps: i32 = 0;
     @limits([Iterations(32)]) for operation in saved.operations {
-        var requests: i32 = 0;
-        var outcomes: i32 = 0;
-        var tool_outcomes: i32 = 0;
-        var request_name = "";
-        var index: usize = 0;
-        @limits([Iterations(32)]) for reference in saved.references {
-            let event = saved.history.events[index];
-            index = index + 1;
-            if reference.operation == operation.id {
-                if reference.phase == "request" {
-                    if outcomes != 0 {
-                        return Err("request follows outcome");
-                    }
-                    requests = requests + 1;
-                    request_name = event.name;
-                } else {
-                    outcomes = outcomes + 1;
-                    if event.role == "tool" {
-                        tool_outcomes = tool_outcomes + 1;
-                    }
-                    if event.role == "tool" && (requests != 1 || event.name != request_name) {
-                        return Err("tool outcome does not match request");
-                    }
-                }
-            }
+        let summary = summaries.get(operation.id).unwrap();
+        if summary.error != "" {
+            return Err(summary.error);
         }
+        let requests = summary.requests;
+        let outcomes = summary.outcomes;
         if requests > 1 || outcomes > 1 || (operation.status == "completed" && outcomes != 1)
             || (operation.status != "completed" && outcomes != 0) {
             return Err("operation status and events disagree");
@@ -379,7 +406,7 @@ public flow validate(saved: Snapshot, requested: Request) -> Result<Projection, 
         // Scripted reads reserve before input validation; a completed preflight error
         // can have no request/charged step. No outcome means uncertainty, not refund.
         required_steps = required_steps + requests;
-        required_steps = required_steps + tool_outcomes;
+        required_steps = required_steps + summary.tool_outcomes;
     }
     if required_steps > saved.history.spent {
         return Err("operation step counter mismatch");
