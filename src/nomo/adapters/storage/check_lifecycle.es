@@ -1,5 +1,7 @@
 module nomo.adapters.storage.check_lifecycle;
 
+import nomo.domain.sessions.work.CheckSlot;
+import nomo.domain.sessions.work.{CheckState};
 import nomo.adapters.storage.checks.{abandon, inspect, load as checks_load, recoverable_check_store_finish, recoverable_check_store_start};
 import nomo.adapters.storage.followup_checks.{
     abandon as followup_checks_abandon,
@@ -13,7 +15,7 @@ import nomo.adapters.storage.work_admission.{abandon_check, finish_check, start_
 import nomo.application.sessions.ports.{CheckFactsReader, CheckLifecycle, Target};
 import nomo.domain.limits.message_frame_bytes;
 import nomo.domain.sessions.event_codec.{Policy, event_text_codec_decode};
-import nomo.domain.sessions.work.{CheckFacts, CheckFrame, CheckOutput, CheckOutputRecord, CheckResult};
+import nomo.domain.sessions.work.{CheckObservation, CapturedCheckAttempt, CheckOutput, CapturedCheckOutput, ExecutedCheck};
 import std.memory.Missing;
 import std.text.char_count;
 
@@ -35,17 +37,15 @@ public type ContinuousCheck = {
 flow captured(
     id: string,
     digest: string,
-    phase: string,
-    outcome: string,
-    exit_code: string,
+    phase: CheckState,
     stdout: string,
     stderr: string,
     out_truncated: bool,
     err_truncated: bool,
     policy: Policy
-) -> Result<CheckFacts, string> {
+) -> Result<CheckObservation, string> {
     var output: Option<CheckOutput> = None();
-    if phase == "complete" {
+    if phase.is_complete() {
         let out = match event_text_codec_decode(stdout, policy) {
             Ok(value) => value,
             Err(error) => {
@@ -67,24 +67,20 @@ flow captured(
             }
         );
     }
-    return Ok(CheckFacts {
+    return Ok(CheckObservation {
         id,
         digest,
         phase,
-        outcome,
-        exit_code,
         output
     });
 }
 
-flow frame_facts(frame: CheckFrame, policy: Policy) -> Result<Option<CheckFacts>, string> {
+flow frame_facts(frame: CapturedCheckAttempt, policy: Policy) -> Result<Option<CheckObservation>, string> {
     let check = frame.check;
     return match captured(
         check.id,
         check.digest,
         check.phase,
-        check.outcome,
-        check.exit_code,
         frame.stdout,
         frame.stderr,
         frame.stdout_truncated,
@@ -97,7 +93,7 @@ flow frame_facts(frame: CheckFrame, policy: Policy) -> Result<Option<CheckFacts>
 }
 
 impl FirstCheck ~ CheckFactsReader {
-    flow read(self) -> Result<Option<CheckFacts>, string> {
+    flow read(self) -> Result<Option<CheckObservation>, string> {
         return match checks_load(self.redaction, self.binding) {
             Ok(Some(item)) => frame_facts(item.value, self.redaction),
             Ok(None()) => Ok(None()),
@@ -107,7 +103,7 @@ impl FirstCheck ~ CheckFactsReader {
 }
 
 impl FollowupCheck ~ CheckFactsReader {
-    flow read(self) -> Result<Option<CheckFacts>, string> {
+    flow read(self) -> Result<Option<CheckObservation>, string> {
         return match followup_checks_load(self.redaction, self.binding) {
             Ok(Some(item)) => frame_facts(item.value, self.redaction),
             Ok(None()) => Ok(None()),
@@ -126,7 +122,7 @@ impl FirstCheck ~ CheckLifecycle {
         return recoverable_check_store_start(id, digest, self.redaction, self.binding);
     }
 
-    flow finish(self, id: string, digest: string, result: CheckResult) -> Result<bool, string> ![
+    flow finish(self, id: string, digest: string, result: ExecutedCheck) -> Result<bool, string> ![
         Memory,
         Error<StorageError>,
         Error<IndexError>,
@@ -136,7 +132,6 @@ impl FirstCheck ~ CheckLifecycle {
             id,
             digest,
             result.outcome,
-            result.exit_code,
             result.stdout,
             result.stderr,
             result.stdout_truncated,
@@ -166,7 +161,7 @@ impl FollowupCheck ~ CheckLifecycle {
         return recoverable_followup_check_store_start(id, digest, self.redaction, self.binding);
     }
 
-    flow finish(self, id: string, digest: string, result: CheckResult) -> Result<bool, string> ![
+    flow finish(self, id: string, digest: string, result: ExecutedCheck) -> Result<bool, string> ![
         Memory,
         Error<StorageError>,
         Error<IndexError>,
@@ -176,7 +171,6 @@ impl FollowupCheck ~ CheckLifecycle {
             id,
             digest,
             result.outcome,
-            result.exit_code,
             result.stdout,
             result.stderr,
             result.stdout_truncated,
@@ -208,7 +202,7 @@ impl ContinuousCheck ~ CheckLifecycle {
         };
     }
 
-    flow finish(self, id: string, digest: string, result: CheckResult) -> Result<bool, string> ![
+    flow finish(self, id: string, digest: string, result: ExecutedCheck) -> Result<bool, string> ![
         Memory,
         Error<StorageError>,
         Error<IndexError>,
@@ -219,7 +213,6 @@ impl ContinuousCheck ~ CheckLifecycle {
             id,
             digest,
             result.outcome,
-            result.exit_code,
             result.stdout,
             result.stderr,
             result.stdout_truncated,
@@ -236,25 +229,25 @@ impl ContinuousCheck ~ CheckLifecycle {
     }
 }
 
-flow check_binding(slot: string, id: string, digest: string) -> string {
-    if slot == "first" {
+flow check_binding(slot: CheckSlot, id: string, digest: string) -> string {
+    if slot == CheckSlot.First {
         let value = match inspect() {
             Ok(Some(item)) => item,
             _ => {
                 return "completed first check required";
             }
         };
-        if value.phase != "complete" || value.id != id || value.digest != digest {
+        if !value.phase.is_complete() || value.id != id || value.digest != digest {
             return "first check binding differs";
         }
-    } else if slot == "followup" {
+    } else if slot == CheckSlot.Followup {
         let value = match followup_checks_inspect() {
             Ok(Some(item)) => item,
             _ => {
                 return "completed followup check required";
             }
         };
-        if value.phase != "complete" || value.id != id || value.digest != digest {
+        if !value.phase.is_complete() || value.id != id || value.digest != digest {
             return "followup check binding differs";
         }
     } else {
@@ -263,7 +256,7 @@ flow check_binding(slot: string, id: string, digest: string) -> string {
     return "";
 }
 
-public flow save(value: CheckOutputRecord) -> Result<bool, string> ![
+public flow save(value: CapturedCheckOutput) -> Result<bool, string> ![
     Memory,
     Error<StorageError>,
     Error<IndexError>,
@@ -277,15 +270,15 @@ public flow save(value: CheckOutputRecord) -> Result<bool, string> ![
     if problem != "" {
         return Err(problem);
     }
-    if CheckOutputs.Rows.get_entry(value.slot) != None() {
+    if CheckOutputs.Rows.get_entry(value.slot.wire()) != None() {
         return Err("check output already recorded");
     }
-    match commit_native<CheckOutputRecord>(
+    match commit_native<CapturedCheckOutput>(
         CheckOutputs.Rows,
         Target {
             store = ["Rows"],
             region = "nomo-check-output-v1",
-            key = value.slot,
+            key = value.slot.wire(),
             label = "check output"
         },
         value,
@@ -296,12 +289,12 @@ public flow save(value: CheckOutputRecord) -> Result<bool, string> ![
     }
 }
 
-public flow load(slot: string, id: string, digest: string) -> Result<Option<CheckOutputRecord>, string> {
+public flow load(slot: CheckSlot, id: string, digest: string) -> Result<Option<CapturedCheckOutput>, string> {
     let problem = check_binding(slot, id, digest);
     if problem != "" {
         return Err(problem);
     }
-    let saved = CheckOutputs.Rows.get_entry(slot);
+    let saved = CheckOutputs.Rows.get_entry(slot.wire());
     match saved {
         None() => {
             return Ok(None());
@@ -313,7 +306,7 @@ public flow load(slot: string, id: string, digest: string) -> Result<Option<Chec
                 || char_count(value.stderr) > message_frame_bytes() {
                 return Err("check output record differs");
             }
-            if CheckOutputs.Rows.get_entry(slot) != saved {
+            if CheckOutputs.Rows.get_entry(slot.wire()) != saved {
                 return Err("check output changed during read");
             }
             return Ok(Some(value));
@@ -322,7 +315,7 @@ public flow load(slot: string, id: string, digest: string) -> Result<Option<Chec
 }
 
 alias CheckOutputsSchema = MemoryRegion<{
-    Rows: Store<string, CheckOutputRecord>
+    Rows: Store<string, CapturedCheckOutput>
 }>;
 
 public let CheckOutputs = std.memory.region<CheckOutputsSchema>(

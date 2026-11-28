@@ -1,9 +1,12 @@
 module nomo.domain.harness.typed_work;
 
+import nomo.domain.harness.read.ReadStage;
+import nomo.domain.harness.edit.EditStage;
 import nomo.domain.editing.{Contribution, Proposal, project};
 import nomo.domain.harness.edit.{text_error, work_summary_error};
 import nomo.domain.harness.loop.{
     Action,
+    ReadAction,
     Context as loop_Context,
     allowed_error,
     context_error as loop_context_error,
@@ -17,7 +20,7 @@ import nomo.domain.sessions.chain.Input;
 import nomo.domain.text.bounded;
 
 public flow input_error(context: Context) -> string {
-    if context.edit.phase != "child" {
+    if context.edit.phase != EditStage.Child {
         return "typed edit pilot requires child context";
     }
     return context_error(context);
@@ -37,27 +40,12 @@ public type Delegation = {
     task: string
 };
 
-public type ReadAction = {
-    operation: string,
-    files: Array<string>,
-    literal: string
-};
-
 public type Answer = {
     text: string
 };
 
-// ETAS 0.4.1 checks this typed design but cannot yet lower it to a host schema.
-// Keep the formal contract while runtime action selection remains on the strict
-// string decoder; see etas-project/etas#65.
-public enum ChildSelection {
-    Read(string),
-    Search(string, Array<string>),
-    Final(string),
-}
-
-public flow read_input_error(context: ReadContext, phase: string) -> string {
-    if (phase != "plan" && phase != "aggregate") || context.phase != phase {
+public flow read_input_error(context: ReadContext, phase: ReadStage) -> string {
+    if (phase != ReadStage.Plan && phase != ReadStage.Aggregate) || context.phase != phase {
         return "typed read context phase mismatch";
     }
     let request = question_error(context.request);
@@ -82,15 +70,16 @@ public flow child_input_error(context: loop_Context, final_only: bool) -> string
     return loop_context_error(context);
 }
 
-public flow edit_input_error(input: Input, phase: string) -> string {
-    if (phase != "plan" && phase != "child" && phase != "aggregate") || input.current.edit.phase != phase {
+public flow edit_input_error(input: Input, phase: EditStage) -> string {
+    if (phase != EditStage.Plan && phase != EditStage.Child && phase != EditStage.Aggregate)
+        || input.current.edit.phase != phase {
         return "typed edit context phase mismatch";
     }
     return context_error(input.current);
 }
 
 public flow project_read_plan(context: ReadContext, value: Delegation) -> Result<string, string> {
-    let invalid = read_input_error(context, "plan");
+    let invalid = read_input_error(context, ReadStage.Plan);
     if invalid != "" {
         return Err(invalid);
     }
@@ -105,16 +94,16 @@ public flow project_read_action(context: loop_Context, value: ReadAction) -> Res
     if invalid != "" {
         return Err(invalid);
     }
-    let selected = read_selection_error(value.operation, value.files, value.literal, context.allowed);
+    let selected = read_selection_error(
+        value.operation(),
+        value.files(),
+        value.wire_literal(),
+        context.allowed
+    );
     if selected != "" {
         return Err(selected);
     }
-    return Ok(Action {
-        operation = value.operation,
-        files = value.files,
-        literal = value.literal,
-        text = ""
-    });
+    return Ok(Action.Tool(value));
 }
 
 public flow project_read_final(context: loop_Context, value: Answer) -> Result<Action, string> {
@@ -125,16 +114,11 @@ public flow project_read_final(context: loop_Context, value: Answer) -> Result<A
     if !bounded(value.text, child_answer_bytes()) {
         return Err("invalid bounded child final answer");
     }
-    return Ok(Action {
-        operation = "final",
-        files = [],
-        literal = "",
-        text = value.text
-    });
+    return Ok(Action.Final(value.text));
 }
 
 public flow project_read_aggregate(context: ReadContext, value: Answer) -> Result<string, string> {
-    let invalid = read_input_error(context, "aggregate");
+    let invalid = read_input_error(context, ReadStage.Aggregate);
     if invalid != "" {
         return Err(invalid);
     }
@@ -156,7 +140,7 @@ public flow settle_read(pending: Evidence, value: Answer) -> Result<Evidence, st
 }
 
 public flow project_edit_plan(input: Input, value: Delegation) -> Result<string, string> {
-    let invalid = edit_input_error(input, "plan");
+    let invalid = edit_input_error(input, EditStage.Plan);
     if invalid != "" {
         return Err(invalid);
     }
@@ -168,7 +152,7 @@ public flow project_edit_plan(input: Input, value: Delegation) -> Result<string,
 }
 
 public flow project_edit_child(input: Input, value: Contribution) -> Result<Proposal, string> {
-    let invalid = edit_input_error(input, "child");
+    let invalid = edit_input_error(input, EditStage.Child);
     if invalid != "" {
         return Err(invalid);
     }
@@ -176,7 +160,7 @@ public flow project_edit_child(input: Input, value: Contribution) -> Result<Prop
 }
 
 public flow project_edit_aggregate(input: Input, value: Answer) -> Result<string, string> {
-    let invalid = edit_input_error(input, "aggregate");
+    let invalid = edit_input_error(input, EditStage.Aggregate);
     if invalid != "" {
         return Err(invalid);
     }

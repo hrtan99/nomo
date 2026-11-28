@@ -1,8 +1,9 @@
 module nomo.application.execution.attempts;
 
+import nomo.domain.attempts.{AttemptKind, AttemptPhase};
 import nomo.application.conversation.ports.{ConversationReader, ConversationWriter, ResultPublication};
 import nomo.application.execution.ports.AttemptRepository;
-import nomo.domain.attempts.{Attempt, Transition, next_phase};
+import nomo.domain.attempts.{ExecutionAttempt, Transition, next_phase};
 import std.text.from_i64;
 
 public flow turn_available<R ~ AttemptRepository>(repository: R, session: string) -> unit ![
@@ -11,8 +12,8 @@ public flow turn_available<R ~ AttemptRepository>(repository: R, session: string
     Error<BudgetExceeded>
 ] {
     match repository.list(session, true).iter().find(
-        value => value.kind == "coding"
-            || value.kind == "summary"
+        value => value.kind == AttemptKind.Coding
+            || value.kind == AttemptKind.Summary
     ) {
         Some(value) => abort(
             "inference has no recorded completion: " + value.id
@@ -25,13 +26,13 @@ public flow turn_available<R ~ AttemptRepository>(repository: R, session: string
 public flow begin<R ~ AttemptRepository>(
     repository: R,
     session: string,
-    kind: string,
+    kind: AttemptKind,
     label: string,
     input_event: i64,
     through: i64
-) -> Attempt
+) -> ExecutionAttempt
 ![Memory, Error<StorageError>, Error<MemoryConflict>, Error<BudgetExceeded>] {
-    if kind == "coding" || kind == "summary" {
+    if kind == AttemptKind.Coding || kind == AttemptKind.Summary {
         turn_available(repository, session);
     }
     return repository.prepare(session, kind, label, input_event, through);
@@ -72,7 +73,7 @@ public flow complete_attempt<R ~ AttemptRepository, P ~ ResultPublication, C ~ C
 ) -> unit
 ![Memory, Error<StorageError>, Error<MemoryConflict>, Error<BudgetExceeded>] {
     let value = repository.load(id);
-    if value.phase == "completed" {
+    if value.phase == AttemptPhase.Completed {
         return;
     }
     let complete = if value.result_event >= 0 {
@@ -81,10 +82,10 @@ public flow complete_attempt<R ~ AttemptRepository, P ~ ResultPublication, C ~ C
         false
     };
     let phase = next_phase(value, Transition.Complete, complete);
-    if value.kind == "summary" {
+    if value.kind == AttemptKind.Summary {
         publication.select_summary(value.session, value.result_event, value.through);
     }
-    if value.kind == "command" {
+    if value.kind == AttemptKind.Command {
         let binding = value.session + ":" + from_i64(value.input_event) + " command";
         if history.load(value.session).pending == binding {
             publication.finish_command(value.session, value.input_event);
@@ -98,13 +99,13 @@ public flow resolve<
     P ~ ResultPublication,
     C ~ ConversationReader,
     W ~ ConversationWriter
->(repository: R, publication: P, history: C, writer: W, session: string, id: string, note: string) -> Attempt
+>(repository: R, publication: P, history: C, writer: W, session: string, id: string, note: string) -> ExecutionAttempt
 ![Memory, Error<StorageError>, Error<MemoryConflict>, Error<BudgetExceeded>] {
     let value = repository.load(id);
     if value.session != session {
         abort("attempt belongs to another conversation");
     }
-    if value.phase == "completed" || value.phase == "closed_unknown" {
+    if value.phase == AttemptPhase.Completed || value.phase == AttemptPhase.ClosedUnknown {
         return value;
     }
     if value.result_event >= 0 && publication.result_complete(session, value.result_event) {
@@ -114,11 +115,11 @@ public flow resolve<
     if note == "" {
         abort("record your inspection and recovery decision in NOTE; the outcome remains unknown");
     }
-    let statement = "User closed unresolved " + value.kind + " " + id
+    let statement = "User closed unresolved " + value.kind.wire() + " " + id
         + ". Outcome remains unknown; no execution, success, process termination or replay is inferred. Inspection/decision: "
         + note;
     let binding = session + ":" + from_i64(value.input_event) + " command";
-    let recovery_event = if value.kind == "command" && history.load(session).pending == binding {
+    let recovery_event = if value.kind == AttemptKind.Command && history.load(session).pending == binding {
         publication.acknowledge(session, value.input_event, statement)
     }
     else {

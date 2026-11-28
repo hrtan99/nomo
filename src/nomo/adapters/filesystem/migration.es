@@ -1,9 +1,14 @@
 module nomo.adapters.filesystem.migration;
 
+import nomo.domain.archives.{CopyKind, CopyPhase};
+import nomo.domain.processes.{JobPhase, JobEventKind, ArchivedJobPhase};
+import nomo.domain.changes.SavedPath;
+import nomo.domain.changes.{JournalPhase, StepPhase};
+import nomo.domain.attempts.{AttemptKind, AttemptPhase};
 import nomo.application.resources.MigrationRoot;
 import nomo.application.transfer.ports.{NativeStateSource, ProjectStateSource, RelocatedStateSource};
 import nomo.domain.archives.{
-    CopyJob,
+    ConversationCopy,
     NativeImage,
     NativeRecord,
     ProjectConversation,
@@ -14,10 +19,10 @@ import nomo.domain.archives.{
     RelocatedImage,
     RelocatedRow
 };
-import nomo.domain.attempts.Attempt;
-import nomo.domain.changes.{Journal, Step};
+import nomo.domain.attempts.ExecutionAttempt;
+import nomo.domain.changes.{FileJournal, FileStep};
 import nomo.domain.conversation.{ConversationLedger, SavedSession, StoredEvent};
-import nomo.domain.processes.{ArchivedJob, Job, JobEvent};
+import nomo.domain.processes.{ArchivedProcessJob, ProcessJob, ProcessOutput};
 import nomo.domain.settings.CachedConfiguration;
 import std.agent.message.Message;
 import std.bytes.from_array;
@@ -211,27 +216,27 @@ flow event(value: NativeMigrationWireEvent) -> StoredEvent {
     };
 }
 
-flow copy(value: WireCopy) -> CopyJob {
-    return CopyJob {
+flow copy(value: WireCopy) -> ConversationCopy {
+    return ConversationCopy {
         id = value.id,
         workspace = value.workspace,
         title = value.title,
-        kind = value.kind,
+        kind = CopyKind.parse(value.kind),
         source = value.source,
         digest = from_array(value.digest),
         total = integer(value.total),
         cursor = integer(value.cursor),
-        phase = value.phase
+        phase = CopyPhase.parse(value.phase)
     };
 }
 
-flow attempt(value: WireAttempt) -> Attempt {
-    return Attempt {
+flow attempt(value: WireAttempt) -> ExecutionAttempt {
+    return ExecutionAttempt {
         id = value.id,
         session = value.session,
-        kind = value.kind,
+        kind = AttemptKind.parse(value.kind),
         label = value.label,
-        phase = value.phase,
+        phase = AttemptPhase.parse(value.phase),
         input_event = integer(value.input_event),
         through = integer(value.through),
         result_event = integer(value.result_event),
@@ -239,13 +244,13 @@ flow attempt(value: WireAttempt) -> Attempt {
     };
 }
 
-flow journal(value: WireJournal) -> Journal {
-    return Journal {
+flow journal(value: WireJournal) -> FileJournal {
+    return FileJournal {
         id = value.id,
         session = value.session,
         name = value.name,
         call = integer(value.call),
-        phase = value.phase,
+        phase = JournalPhase.parse(value.phase),
         steps = integer(value.steps),
         message = value.message,
         owner_call = integer(value.owner_call),
@@ -253,11 +258,11 @@ flow journal(value: WireJournal) -> Journal {
     };
 }
 
-flow output(value: WireOutput) -> JobEvent ![Error<IndexError>] {
-    return JobEvent {
+flow output(value: WireOutput) -> ProcessOutput ![Error<IndexError>] {
+    return ProcessOutput {
         job = value.job,
         call = integer(value.call),
-        phase = value.phase,
+        phase = JobEventKind.parse(value.phase),
         exit_code = exit_code(value.exit_code),
         stdout = value.stdout,
         stderr = value.stderr,
@@ -276,7 +281,7 @@ flow record(row: WireRow) -> NativeRecord ![Error<IndexError>] {
         "conversations.Chunks" => NativeRecord.Chunk(key, decode<string>(row.value)),
         "copies.Jobs" => NativeRecord.Copy(key, copy(decode<WireCopy>(row.value))),
         "attempts.Counter" => NativeRecord.AttemptCounter(key, integer(decode<string>(row.value))),
-        "attempts.Attempts" => NativeRecord.Attempt(key, attempt(decode<WireAttempt>(row.value))),
+        "attempts.Attempts" => NativeRecord.ExecutionAttempt(key, attempt(decode<WireAttempt>(row.value))),
         "configuration.Parsed" => {
             let value = decode<WireCache>(row.value);
             NativeRecord.Configuration(
@@ -289,9 +294,9 @@ flow record(row: WireRow) -> NativeRecord ![Error<IndexError>] {
             )
         },
         "projects.Recent" => NativeRecord.Projects(key, decode<Array<string>>(row.value)),
-        "mutations.Journals" => NativeRecord.Journal(key, journal(decode<WireJournal>(row.value))),
-        "mutations.Steps" => NativeRecord.Step(key, decode<Step>(row.value)),
-        "processes.Jobs" => NativeRecord.Job(key, decode<Job>(row.value)),
+        "mutations.Journals" => NativeRecord.FileJournal(key, journal(decode<WireJournal>(row.value))),
+        "mutations.Steps" => NativeRecord.FileStep(key, decode_step(decode<RawFileStep>(row.value))),
+        "processes.Jobs" => NativeRecord.ProcessJob(key, native_job(decode<WireNativeJob>(row.value))),
         "processes.Outputs" => NativeRecord.Output(key, output(decode<WireOutput>(row.value))),
         _ => abort("unsupported native migration store: " + row.store),
     };
@@ -358,11 +363,11 @@ type ProjectMigrationPacket = {
 
 flow job(old: WireJob) -> ProjectJob ![Error<IndexError>] {
     return ProjectJob {
-        record = ArchivedJob {
+        record = ArchivedProcessJob {
             id = old.id,
             workspace = old.workspace,
             arguments = old.arguments,
-            phase = old.phase,
+            phase = ArchivedJobPhase.parse(old.phase),
             exit_code = exit_code(old.exit_code),
             output_bytes = size(old.output_bytes),
             parts = old.chunks.len(),
@@ -460,5 +465,35 @@ flow relocated_row(row: RelocatedRowFile) -> RelocatedRow ![
         store = row.store,
         key = row.key,
         value = read_bytes_limited(file, 1048576)
+    };
+}
+
+type RawFileStep = {
+    phase: string,
+    paths: Array<SavedPath>
+};
+flow decode_step(value: RawFileStep) -> FileStep ![] {
+    return FileStep {
+        phase = StepPhase.parse(value.phase),
+        paths = value.paths
+    };
+}
+
+type WireNativeJob = {
+    id: string,
+    session: string,
+    program: string,
+    arguments: Array<string>,
+    handle: string,
+    phase: string
+};
+flow native_job(input: WireNativeJob) -> ProcessJob ![] {
+    return ProcessJob {
+        id = input.id,
+        session = input.session,
+        program = input.program,
+        arguments = input.arguments,
+        handle = input.handle,
+        phase = JobPhase.parse(input.phase)
     };
 }

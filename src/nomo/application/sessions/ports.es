@@ -1,12 +1,12 @@
 module nomo.application.sessions.ports;
 
 import nomo.application.editing.ports.Ticket as ports_Ticket;
-import nomo.domain.conversation.Event;
-import nomo.domain.editing.{Binding, EditOperation, Selector};
+import nomo.domain.conversation.TraceEvent;
+import nomo.domain.editing.{Binding, LiteralEditRecord, Selector};
 import nomo.domain.harness.chat.TurnResult;
-import nomo.domain.sessions.chain.{CapturedShow, ObservationPass, ObservedRow, Record, Snapshot as chain_Snapshot, TurnRequest, WorkOutcome};
-import nomo.domain.sessions.chat.ChatSession;
-import nomo.domain.sessions.work.{CheckFacts, CheckRecord, CheckResult, Facts, FollowupRecord, WorkRecord};
+import nomo.domain.sessions.chain.{CapturedShow, ObservationPass, ObservedRow, WorkChain, Snapshot as chain_Snapshot, TurnRequest, WorkOutcome};
+import nomo.domain.sessions.chat.ChatSessionState;
+import nomo.domain.sessions.work.{CheckObservation, CheckAttempt, ExecutedCheck, Facts, FollowupAttempt, WorkAttempt};
 import std.memory.{
     MemoryEntry,
     MemoryVersion,
@@ -56,7 +56,7 @@ public spec ChatRepository<Ticket> {
 }
 
 public spec CheckFactsReader {
-    flow read(self) -> Result<Option<CheckFacts>, string> ![
+    flow read(self) -> Result<Option<CheckObservation>, string> ![
         Memory,
         Error<StorageError>,
         Error<IndexError>,
@@ -71,7 +71,7 @@ public spec CheckLifecycle {
         Error<IndexError>,
         Error<BudgetExceeded>
     ];
-    flow finish(self, id: string, digest: string, result: CheckResult) -> Result<bool, string> ![
+    flow finish(self, id: string, digest: string, result: ExecutedCheck) -> Result<bool, string> ![
         Memory,
         Error<StorageError>,
         Error<IndexError>,
@@ -104,7 +104,7 @@ public flow decode_record<T, C ~ RecordCodec<T>>(codec: C, raw: string) -> Resul
 }
 
 public effect DiscoveryAuthority {
-    action inspect(id: string, workspace: string, path: string) -> Result<Option<Record>, string>;
+    action inspect(id: string, workspace: string, path: string) -> Result<Option<WorkChain>, string>;
     action confirmed_parent(id: string, workspace: string, path: string) -> Result<ObservedRow, string>;
 }
 
@@ -131,17 +131,17 @@ public spec WorkFactsReader {
 }
 
 public spec FollowupPredecessors {
-    flow work(self) -> Result<Option<WorkRecord>, string> ![
+    flow work(self) -> Result<Option<WorkAttempt>, string> ![
         Memory,
         Error<StorageError>,
         Error<IndexError>,
         Error<BudgetExceeded>
     ];
     flow edit(self, id: string, workspace: string, path: string) -> Result<
-        Option<EditOperation>,
+        Option<LiteralEditRecord>,
         string
     > ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>];
-    flow check(self) -> Result<Option<CheckRecord>, string> ![
+    flow check(self) -> Result<Option<CheckAttempt>, string> ![
         Memory,
         Error<StorageError>,
         Error<IndexError>,
@@ -172,7 +172,7 @@ public spec CasRows<Row> {
 
 // Storage layouts and admission proofs stay in their concrete adapters.
 public spec CheckAccess {
-    flow work(self) -> Result<Option<WorkRecord>, string> ![
+    flow work(self) -> Result<Option<WorkAttempt>, string> ![
         Memory,
         Error<StorageError>,
         Error<IndexError>,
@@ -205,7 +205,7 @@ public spec EditJournal {
         Error<IndexError>,
         Error<BudgetExceeded>
     ];
-    flow inspect(self, selector: Selector) -> Result<Option<EditOperation>, string> ![
+    flow inspect(self, selector: Selector) -> Result<Option<LiteralEditRecord>, string> ![
         Memory,
         Error<StorageError>,
         Error<IndexError>,
@@ -214,12 +214,12 @@ public spec EditJournal {
 }
 
 public spec HistoryCheckRows {
-    flow read(self) -> Option<MemoryEntry<string, CheckRecord>> ![
+    flow read(self) -> Option<MemoryEntry<string, CheckAttempt>> ![
         Memory,
         Error<StorageError>,
         Error<IndexError>
     ];
-    flow write(self, row: CheckRecord, condition: WriteCondition) -> Result<
+    flow write(self, row: CheckAttempt, condition: WriteCondition) -> Result<
         MemoryVersion,
         string
     > ![Memory, Error<StorageError>, Error<IndexError>];
@@ -263,22 +263,22 @@ public type Submission = {
 
 public type Entry = {
     key: string,
-    value: ChatSession,
+    value: ChatSessionState,
     version: MemoryVersion,
     first_count: usize,
-    events: Array<Event>,
+    events: Array<TraceEvent>,
     schema: i32,
     pending: bool
 };
 
 public type HistoricalFollowupTicket = {
-    record: FollowupRecord,
+    record: FollowupAttempt,
     version: MemoryVersion,
     history: Entry
 };
 
 public type HistoricalWorkTicket = {
-    record: WorkRecord,
+    record: WorkAttempt,
     version: MemoryVersion,
     history: Entry
 };

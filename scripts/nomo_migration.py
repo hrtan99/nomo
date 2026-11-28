@@ -249,23 +249,39 @@ def relocation_manifest(package, database, source_root=False):
         '[[bin]]\nname="nomo-state-relocation"\nmodule="app.main"\nflow="main"\n')
 
 
-def relocation_package(root, destination, entry, historical=False):
-    """Explicit one-time data tool; historical types never enter the main program."""
+def relocation_package(root, destination, entry, historical=False, source_format='native-02413'):
+    """Stage a one-time official reader/writer; passive old types stay outside the product."""
     frozen = root / 'tests/fixtures/state_relocation'
+    typed = root / 'tests/fixtures/string_state'
     shutil.copytree(root / 'src', destination / 'src')
     if historical:
-        shutil.copytree(frozen / 'old/src', destination / 'src', dirs_exist_ok=True)
+        kind = 'baseline' if source_format == 'native-string-state' else 'historical'
+        if kind == 'baseline':
+            declarations = json.loads((typed / 'legacy_declarations.json').read_text())
+            for module, text in declarations.items():
+                path = destination / 'src' / (module.replace('.', '/') + '.es')
+                with path.open('a') as target:
+                    target.write('\n' + text)
+        else:
+            shutil.copytree(frozen / 'old/src', destination / 'src', dirs_exist_ok=True)
+        application = destination / 'src/app'
+        application.mkdir(exist_ok=True)
+        for name in ('state_upgrade.es', kind + '_upgrade.es', kind + '_sources.es'):
+            shutil.copyfile(typed / name, application / name)
+        source = typed / 'baseline_export.es' if kind == 'baseline' else frozen / 'export.es'
+    else:
+        source = frozen / entry
     (destination / 'src/app').mkdir(exist_ok=True)
-    shutil.copyfile(frozen / entry, destination / 'src/app/main.es')
+    shutil.copyfile(source, destination / 'src/app/main.es')
     relocation_manifest(destination, '/migration/legacy-reader.sqlite3' if historical else
                         '/migration-target/conversations.sqlite3', source_root=not historical)
 
 
-def relocated_packet(root, source, incoming, state, evidence, run_export):
-    """Read original typed rows, cast directly, then encode with the new codec.
+def relocated_packet(root, source, incoming, state, evidence, run_export, source_format='native-02413'):
+    """Read original typed rows, convert explicitly, then encode with the new codec.
 
-    Neither JSON floating-point conversion nor SQL schema/receipt rewriting is
-    used. Original versions and approvals remain historical data, not authority.
+    Integers and bytes stay typed throughout. No JSON floating-point conversion
+    or SQL schema/receipt rewriting is used. Original versions and approvals remain historical data, not authority.
     """
     archive = incoming / 'legacy-source.sqlite3'
     backup(source, archive)
@@ -277,7 +293,7 @@ def relocated_packet(root, source, incoming, state, evidence, run_export):
         if present - known:
             raise ValueError('unrecognized native store; source retained without migration: ' + repr(present - known))
         count, = db.execute('SELECT count(*) FROM memory_entries').fetchone()
-    relocation_package(root, incoming / 'exporter', 'export.es', historical=True)
+    relocation_package(root, incoming / 'exporter', 'export.es', historical=True, source_format=source_format)
     relocation_package(root, incoming / 'importer', 'import.es')
     result = run_export()
     (evidence / 'export.stdout').write_text(result.stdout)

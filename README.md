@@ -115,15 +115,25 @@ resource markers live in `application/resources.es`. Prototypes remain outside
 `nomo.main`'s import graph. `config/architecture.json` enforces the current layers,
 import resolution, cycles and assembly policy.
 
-Moving nominal types changes their official Memory schema identity. For an
-existing native 0.24.13 database, stop the old Nomo and its background jobs, then
-run the explicit migration into a new directory:
+Execution, editing, conversation and Harness state now use domain-owned enums
+and payload variants. Parsed requests and check results carry typed values through
+ports and handlers; JSON codecs preserve the existing external spellings. Check
+failure codes are numeric internally. Native/imported event roles remain open
+labels and are retained verbatim.
+
+Changing stored field types changes their official Memory schema identity. Stop
+the old Nomo and its background jobs, then migrate into a new directory. For the
+112-file version before this enum/ADT change (through `60dc3a9`), use:
 
 ```sh
-./scripts/nomo-migrate-native --from native-02413 /absolute/old/conversations.sqlite3 /absolute/new-directory
+./scripts/nomo-migrate-native --from native-string-state /absolute/old/conversations.sqlite3 /absolute/new-directory
 # After migration reports completion:
 NOMO_NATIVE_STATE=/absolute/new-directory/state ./scripts/nomo /absolute/project
 ```
+
+For the earlier version before directory consolidation, use `--from native-02413`
+instead. These format names identify Nomo's stored type layout, not the installed
+compiler version.
 
 The migration reads with the original types, converts directly to the new types,
 and uses the official new codec and Memory writes. It retains all records,
@@ -136,10 +146,10 @@ The original live state and selectors remain unchanged until you select the new
 state directory yourself. The frozen old reader is an explicit one-time migration
 entry under `tests/fixtures/state_relocation`, outside the product graph.
 
-See the [consolidation receipt](examples/native-project/file-consolidation-20261128.json)
-the [compatibility removal receipt](examples/native-project/compatibility-removal-20261128.json),
-the [compatibility removal receipt](examples/native-project/compatibility-removal-20261128.json),
-and the [relocation migration probe](tests/state_relocation_probe.py).
+See the [consolidation receipt](examples/native-project/file-consolidation-20261128.json),
+[compatibility removal receipt](examples/native-project/compatibility-removal-20261128.json),
+[string-state refactor receipt](examples/native-project/string-state-refactor-20261128.json),
+and [old-writer/new-reader probe](tests/string_state_probe.py).
 
 ## Development
 

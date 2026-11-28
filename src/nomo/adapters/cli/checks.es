@@ -1,5 +1,8 @@
 module nomo.adapters.cli.checks;
 
+import nomo.domain.sessions.work.wire_check_output;
+import nomo.domain.sessions.work.CheckSlot;
+import nomo.domain.sessions.work.{CheckState, CheckOutcome};
 import nomo.adapters.storage.chat.record_check;
 import nomo.adapters.storage.check_lifecycle.{ContinuousCheck, FirstCheck, FollowupCheck, load, save};
 import nomo.adapters.storage.checks.{history_check_guard_finish, history_check_guard_start};
@@ -9,7 +12,7 @@ import nomo.adapters.storage.work_admission.continuous_work_load;
 import nomo.application.resources.PolicyRoot;
 import nomo.application.sessions.ports.CheckLifecycle;
 import nomo.domain.sessions.event_codec.Policy;
-import nomo.domain.sessions.work.{CheckOutputRecord, CheckResult};
+import nomo.domain.sessions.work.{CapturedCheckOutput, ExecutedCheck};
 import nomo.domain.wire.{ascii_json, encode};
 import std.effects.Fs;
 import std.fs.IOError as fs_IOError;
@@ -18,8 +21,12 @@ import std.json.parse;
 
 // JSON string escapes make line controls and invisible Unicode safe to print,
 // and let a reader reconstruct the stored streams without guessing markers.
-public flow render(value: CheckOutputRecord) -> Result<string, string> {
-    let json = match encode(value, "check output conversion refused", "check output encoding refused") {
+public flow render(value: CapturedCheckOutput) -> Result<string, string> {
+    let json = match encode(
+        wire_check_output(value),
+        "check output conversion refused",
+        "check output encoding refused"
+    ) {
         Ok(value) => value,
         Err(error) => {
             return Err(error);
@@ -33,7 +40,7 @@ public flow render(value: CheckOutputRecord) -> Result<string, string> {
     );
 }
 
-public flow show(slot: string, selected: Option<Selection>) -> Result<bool, string> ![
+public flow show(slot: CheckSlot, selected: Option<Selection>) -> Result<bool, string> ![
     Console,
     Memory,
     Error<StorageError>,
@@ -44,12 +51,12 @@ public flow show(slot: string, selected: Option<Selection>) -> Result<bool, stri
     let check = match selected {
         Some(value) => value,
         None() => {
-            println("CHECK OUTPUT " + slot + " unavailable: no check");
+            println("CHECK OUTPUT " + slot.wire() + " unavailable: no check");
             return Ok(true);
         }
     };
-    if check.phase != "complete" {
-        println("CHECK OUTPUT " + slot + " unavailable: check unresolved");
+    if !check.phase.is_complete() {
+        println("CHECK OUTPUT " + slot.wire() + " unavailable: check unresolved");
         return Ok(true);
     }
     let saved = match load(slot, check.id, check.digest) {
@@ -59,7 +66,7 @@ public flow show(slot: string, selected: Option<Selection>) -> Result<bool, stri
         }
     };
     match saved {
-        None() => println("CHECK OUTPUT " + slot + " unavailable: no recorded output"),
+        None() => println("CHECK OUTPUT " + slot.wire() + " unavailable: no recorded output"),
         Some(value) => {
             let json = match render(value) {
                 Ok(text) => text,
@@ -75,7 +82,7 @@ public flow show(slot: string, selected: Option<Selection>) -> Result<bool, stri
 
 // Internal launcher boundary. It is not exposed as a user command; the
 // launcher retains the session lock while it runs the selected offline check.
-public flow save_check_output(args: Array<string>, slot: string) -> i32 ![
+public flow save_check_output(args: Array<string>, slot: CheckSlot) -> i32 ![
     Console,
     Memory,
     Error<StorageError>,
@@ -83,7 +90,7 @@ public flow save_check_output(args: Array<string>, slot: string) -> i32 ![
     Error<IOError>,
     Error<BudgetExceeded>
 ] {
-    if args.len() != 5 || (slot != "first" && slot != "followup") {
+    if args.len() != 5 || (slot != CheckSlot.First && slot != CheckSlot.Followup) {
         println("REFUSED invalid internal check action");
         return 1;
     }
@@ -112,7 +119,7 @@ public flow save_check_output(args: Array<string>, slot: string) -> i32 ![
         println("REFUSED invalid output field count");
         return 1;
     }
-    let value = CheckOutputRecord {
+    let value = CapturedCheckOutput {
         format = 1,
         slot,
         id = args[1],
@@ -161,11 +168,18 @@ public flow run_slot(args: Array<string>, followup: bool) -> i32 ![
         }
     }
     if args.len() == 5 && args[0] == "finish" {
+        let outcome = match CheckOutcome.parse(args[3], args[4]) {
+            Ok(value) => value,
+            Err(error) => {
+                println("REFUSED " + error);
+                return 1;
+            }
+        };
         match (
             if followup {
-                history_followup_check_guard_finish(args[1], args[2], args[3], args[4])
+                history_followup_check_guard_finish(args[1], args[2], outcome)
             } else {
-                history_check_guard_finish(args[1], args[2], args[3], args[4])
+                history_check_guard_finish(args[1], args[2], outcome)
             }
         ) {
             Ok(_) => {
@@ -180,9 +194,9 @@ public flow run_slot(args: Array<string>, followup: bool) -> i32 ![
     }
     if args.len() == 5 && args[0] == "output" {
         return save_check_output(args, if followup {
-            "followup"
+            CheckSlot.Followup
         } else {
-            "first"
+            CheckSlot.First
         });
     }
     println("REFUSED invalid internal check action");
@@ -286,6 +300,13 @@ flow run_lifecycle<L ~ CheckLifecycle>(lifecycle: L, args: Array<string>, policy
         }
     }
     if args.len() == 9 && (args[2] == "finish" || args[2] == "independent") {
+        let outcome = match CheckOutcome.parse(args[5], args[6]) {
+            Ok(value) => value,
+            Err(error) => {
+                println("REFUSED " + error);
+                return 1;
+            }
+        };
         if (args[7] != "true" && args[7] != "false") || (args[8] != "true" && args[8] != "false") {
             println("REFUSED invalid truncation flags");
             return 1;
@@ -311,9 +332,8 @@ flow run_lifecycle<L ~ CheckLifecycle>(lifecycle: L, args: Array<string>, policy
         }
         let independent = args[2] == "independent";
         if !independent {
-            let result = CheckResult {
-                outcome = args[5],
-                exit_code = args[6],
+            let result = ExecutedCheck {
+                outcome,
                 stdout = fields[0],
                 stderr = fields[1],
                 stdout_truncated = args[7] == "true",
@@ -330,8 +350,7 @@ flow run_lifecycle<L ~ CheckLifecycle>(lifecycle: L, args: Array<string>, policy
         match record_check(
             args[3],
             args[4],
-            args[5],
-            args[6],
+            outcome,
             fields[0],
             fields[1],
             args[7] == "true",
@@ -385,7 +404,7 @@ public flow recoverable_history_followup_check_run(args: Array<string>) -> i32 !
 }
 
 public type Selection = {
-    phase: string,
+    phase: CheckState,
     id: string,
     digest: string
 };

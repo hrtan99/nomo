@@ -1,5 +1,8 @@
 module nomo.adapters.storage.followup;
 
+import nomo.domain.sessions.work.{WorkPhase};
+import nomo.domain.sessions.work.{CheckState};
+import nomo.domain.editing.LiteralEditPhase;
 import nomo.adapters.storage.chat.{chat_history_load, recoverable_chat_store_load};
 import nomo.adapters.storage.checks.{inspect as checks_inspect, load as checks_load};
 import nomo.adapters.storage.edits.{
@@ -19,18 +22,18 @@ import nomo.application.sessions.admission.{
     parent as admission_parent
 };
 import nomo.application.sessions.ports.{CasRows, Entry, FollowupPredecessors, HistoricalFollowupTicket, PriorChatReader, Submission, Target};
-import nomo.domain.conversation.Event;
-import nomo.domain.editing.{Binding, EditOperation};
+import nomo.domain.conversation.TraceEvent;
+import nomo.domain.editing.{Binding, LiteralEditRecord};
 import nomo.domain.harness.work.WorkLedger;
-import nomo.domain.sessions.chat.{RecoverableChatFrame, empty, work_batch};
+import nomo.domain.sessions.chat.{ChatSessionSnapshot, empty, work_batch};
 import nomo.domain.sessions.event_codec.Policy;
 import nomo.domain.sessions.work.{
-    CheckRecord,
-    FollowupParent,
-    FollowupRecord,
-    RecoverableFollowupFrame,
+    CheckAttempt,
+    FollowupPredecessor,
+    FollowupAttempt,
+    FollowupSessionFrame,
     Summary,
-    WorkRecord,
+    WorkAttempt,
     abandoned_record,
     admission_chat_error,
     claim_chat_error,
@@ -42,7 +45,7 @@ import std.memory.{MemoryEntry, MemoryVersion, Missing, WriteCondition};
 
 public type NativeHistoryFollowup = {};
 
-impl NativeHistoryFollowup ~ CasRows<FollowupRecord> {
+impl NativeHistoryFollowup ~ CasRows<FollowupAttempt> {
     flow target(self) -> Target ![] {
         return Target {
             store = ["Rows"],
@@ -52,18 +55,18 @@ impl NativeHistoryFollowup ~ CasRows<FollowupRecord> {
         };
     }
 
-    flow submit(self, value: FollowupRecord, condition: WriteCondition) -> Submission ![
+    flow submit(self, value: FollowupAttempt, condition: WriteCondition) -> Submission ![
         Memory,
         Error<StorageError>
     ] {
         return submit_native(FollowupRuns.Rows, "followup", value, condition);
     }
 
-    flow read(self) -> Result<Option<MemoryEntry<string, FollowupRecord>>, string> {
+    flow read(self) -> Result<Option<MemoryEntry<string, FollowupAttempt>>, string> {
         return Ok(FollowupRuns.Rows.get_entry("followup"));
     }
 
-    flow same(self, left: FollowupRecord, right: FollowupRecord) -> bool ![] {
+    flow same(self, left: FollowupAttempt, right: FollowupAttempt) -> bool ![] {
         return left == right;
     }
 }
@@ -75,23 +78,23 @@ impl NativeHistoryFollowup ~ PriorChatReader {
 }
 
 impl NativeHistoryFollowup ~ FollowupPredecessors {
-    flow work(self) -> Result<Option<WorkRecord>, string> {
+    flow work(self) -> Result<Option<WorkAttempt>, string> {
         return work_admission_inspect();
     }
 
     flow edit(self, id: string, workspace: string, path: string) -> Result<
-        Option<EditOperation>,
+        Option<LiteralEditRecord>,
         string
     > {
         return edit_operation_store_inspect(id, workspace, path);
     }
 
-    flow check(self) -> Result<Option<CheckRecord>, string> {
+    flow check(self) -> Result<Option<CheckAttempt>, string> {
         return checks_inspect();
     }
 }
 
-public flow parent() -> Result<FollowupParent, string> {
+public flow parent() -> Result<FollowupPredecessor, string> {
     return admission_parent(NativeHistoryFollowup {});
 }
 
@@ -121,11 +124,11 @@ public flow historical_followup_finish(ticket: HistoricalFollowupTicket, summary
     return history_followup_finish(NativeHistoryFollowup {}, ticket, summary, spent);
 }
 
-public flow inspect() -> Result<Option<FollowupRecord>, string> {
+public flow inspect() -> Result<Option<FollowupAttempt>, string> {
     return history_followup_inspect(NativeHistoryFollowup {});
 }
 
-flow frame_error(value: RecoverableFollowupFrame, policy: Policy, binding: string) -> string {
+flow frame_error(value: FollowupSessionFrame, policy: Policy, binding: string) -> string {
     if value.format != 1 || value.policy_binding != binding || value.parent_work_version == "" {
         return "invalid recoverable followup format or policy binding";
     }
@@ -133,7 +136,7 @@ flow frame_error(value: RecoverableFollowupFrame, policy: Policy, binding: strin
 }
 
 public flow load(policy: Policy, binding: string) -> Result<
-    Option<MemoryEntry<string, RecoverableFollowupFrame>>,
+    Option<MemoryEntry<string, FollowupSessionFrame>>,
     string
 > ![
     Memory,
@@ -169,12 +172,15 @@ public flow load(policy: Policy, binding: string) -> Result<
                     return Err("first work missing");
                 }
             };
-            if (parent_work.value.work.phase != "complete" && parent_work.value.work.phase != "abandoned")
+            if (
+                parent_work.value.work.phase != WorkPhase.Complete
+                    && parent_work.value.work.phase != WorkPhase.Abandoned
+            )
                 || parent_work.version.opaque != value.parent_work_version
                 || parent_work.value.work.id == value.work.id {
                 return Err("first work changed");
             }
-            if parent_work.value.work.phase == "complete" {
+            if parent_work.value.work.phase == WorkPhase.Complete {
                 let parent_edit = match edit_operation_store_inspect(
                     parent_work.value.work.id,
                     parent_work.value.work.workspace,
@@ -185,7 +191,7 @@ public flow load(policy: Policy, binding: string) -> Result<
                         return Err("first edit missing");
                     }
                 };
-                if parent_edit.phase != "completed" {
+                if parent_edit.phase != LiteralEditPhase.Completed {
                     return Err("first edit unresolved");
                 }
             }
@@ -197,10 +203,11 @@ public flow load(policy: Policy, binding: string) -> Result<
             };
             let check_version = match parent_check {
                 Some(value) => {
-                    if value.value.check.phase != "complete" && value.value.check.phase != "abandoned"
+                    if !value.value.check.phase.is_complete()
+                        && value.value.check.phase != CheckState.Abandoned
                         && !(
-                        parent_work.value.work.phase == "abandoned"
-                            && value.value.check.phase == "planned"
+                        parent_work.value.work.phase == WorkPhase.Abandoned
+                            && value.value.check.phase == CheckState.Planned
                     ) {
                         return Err("first check unresolved");
                     }
@@ -218,8 +225,8 @@ public flow load(policy: Policy, binding: string) -> Result<
 }
 
 flow write(
-    value: RecoverableFollowupFrame,
-    expected: Option<MemoryEntry<string, RecoverableFollowupFrame>>,
+    value: FollowupSessionFrame,
+    expected: Option<MemoryEntry<string, FollowupSessionFrame>>,
     policy: Policy,
     binding: string
 ) -> Result<
@@ -274,7 +281,7 @@ public flow recoverable_followup_store_admit(
     workspace: string,
     path: string,
     request: string,
-    chat: MemoryEntry<string, RecoverableChatFrame>,
+    chat: MemoryEntry<string, ChatSessionSnapshot>,
     policy: Policy,
     binding: string
 ) -> Result<Ticket, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
@@ -313,11 +320,14 @@ public flow recoverable_followup_store_admit(
             return Err("completed first work required");
         }
     };
-    if (parent_work.value.work.phase != "complete" && parent_work.value.work.phase != "abandoned")
+    if (
+        parent_work.value.work.phase != WorkPhase.Complete
+            && parent_work.value.work.phase != WorkPhase.Abandoned
+    )
         || parent_work.value.work.id == id {
         return Err("completed distinct first work required");
     }
-    if parent_work.value.work.phase == "complete" {
+    if parent_work.value.work.phase == WorkPhase.Complete {
         let first_edit = match edit_operation_store_inspect(
             parent_work.value.work.id,
             parent_work.value.work.workspace,
@@ -328,7 +338,7 @@ public flow recoverable_followup_store_admit(
                 return Err("completed first edit required");
             }
         };
-        if first_edit.phase != "completed" {
+        if first_edit.phase != LiteralEditPhase.Completed {
             return Err("completed first edit required");
         }
     }
@@ -340,15 +350,18 @@ public flow recoverable_followup_store_admit(
     };
     let check_version = match parent_check {
         Some(item) => {
-            if item.value.check.phase != "complete" && item.value.check.phase != "abandoned"
-                && !(parent_work.value.work.phase == "abandoned" && item.value.check.phase == "planned") {
+            if !item.value.check.phase.is_complete() && item.value.check.phase != CheckState.Abandoned
+                && !(
+                parent_work.value.work.phase == WorkPhase.Abandoned
+                    && item.value.check.phase == CheckState.Planned
+            ) {
                 return Err("first check unresolved");
             }
             item.version.opaque
         },
         None() => ""
     };
-    let frame = RecoverableFollowupFrame {
+    let frame = FollowupSessionFrame {
         format = 1,
         policy_binding = binding,
         parent_work_version = parent_work.version.opaque,
@@ -399,7 +412,7 @@ public flow recoverable_followup_store_finish(
     ticket: Ticket,
     summary: string,
     spent: WorkLedger,
-    records: Array<Event>,
+    records: Array<TraceEvent>,
     policy: Policy,
     binding: string
 ) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
@@ -496,7 +509,7 @@ impl FollowupPersistence ~ WorkPersistence<ports_Ticket, bool> {
         return self.journal.complete(ticket);
     }
 
-    flow finish(self, edited: bool, summary: Summary, records: Array<Event>) -> Result<bool, string> ![
+    flow finish(self, edited: bool, summary: Summary, records: Array<TraceEvent>) -> Result<bool, string> ![
         Memory,
         Error<StorageError>,
         Error<IndexError>,
@@ -537,7 +550,7 @@ impl RecoverableFollowupPersistence ~ WorkPersistence<ports_Ticket, bool> {
         return history_followup_edit_store_complete(ticket);
     }
 
-    flow finish(self, edited: bool, summary: Summary, records: Array<Event>) -> Result<bool, string> ![
+    flow finish(self, edited: bool, summary: Summary, records: Array<TraceEvent>) -> Result<bool, string> ![
         Memory,
         Error<StorageError>,
         Error<IndexError>,
@@ -555,13 +568,13 @@ impl RecoverableFollowupPersistence ~ WorkPersistence<ports_Ticket, bool> {
 }
 
 public type Ticket = {
-    frame: RecoverableFollowupFrame,
+    frame: FollowupSessionFrame,
     version: MemoryVersion,
-    chat: MemoryEntry<string, RecoverableChatFrame>
+    chat: MemoryEntry<string, ChatSessionSnapshot>
 };
 
 alias FollowupRunsSchema = MemoryRegion<{
-    Rows: Store<string, FollowupRecord>
+    Rows: Store<string, FollowupAttempt>
 }>;
 
 public let FollowupRuns = std.memory.region<FollowupRunsSchema>(
@@ -570,7 +583,7 @@ public let FollowupRuns = std.memory.region<FollowupRunsSchema>(
 );
 
 alias RecoverableFollowupsSchema = MemoryRegion<{
-    Rows: Store<string, RecoverableFollowupFrame>
+    Rows: Store<string, FollowupSessionFrame>
 }>;
 
 public let RecoverableFollowups = std.memory.region<RecoverableFollowupsSchema>(

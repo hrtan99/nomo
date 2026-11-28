@@ -274,8 +274,8 @@ public flow commands_service_run<
     Error<BudgetExceeded>
 ] {
     let entry = journal(mode, request.program);
-    let call = writer.append(session, entry.role, entry.name, request_text(request), -1);
-    let attempt = begin(repository, session, entry.kind, entry.label, call, call);
+    let call = writer.append(session, entry.role.wire(), entry.name, request_text(request), -1);
+    let attempt = begin(repository, session, entry.kind.attempt_kind(), entry.label, call, call);
     dispatching(repository, attempt.id);
     preview.show(request);
     let output = runner.run(request);

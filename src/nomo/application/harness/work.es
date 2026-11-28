@@ -1,5 +1,6 @@
 module nomo.application.harness.work;
 
+import nomo.domain.harness.edit.{EditStage};
 import nomo.application.editing.ports.EditOriginal;
 import nomo.application.harness.ports.{DiagnosticOutput, HarnessProgress, LegacyEditStages, LegacyStringStages, WorkModelStages};
 import nomo.application.harness.read.{AsciiContext, UnicodeContext, run_context_policy};
@@ -233,7 +234,7 @@ flow prepare_policy<P ~ WorkBudgetPolicy>(
         return failed(state, original);
     }
     let plan = Context {
-        edit = context("plan", selected, input.request, "", before),
+        edit = context(EditStage.Plan, selected, input.request, "", before),
         evidence
     };
     let error = context_error(plan);
@@ -270,7 +271,7 @@ flow prepare_policy<P ~ WorkBudgetPolicy>(
     };
     display("EVENT main -> edit-child request ", task);
     let delegated = Context {
-        edit = context("child", selected, input.request, task, before),
+        edit = context(EditStage.Child, selected, input.request, task, before),
         evidence
     };
     let child_error = context_error(delegated);

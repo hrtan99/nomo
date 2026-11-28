@@ -1,14 +1,17 @@
 module nomo.adapters.cli.state;
 
+import nomo.adapters.cli.session_input.SessionVerb;
+import nomo.domain.sessions.state.MetadataPhase;
+import nomo.domain.sessions.state.{SessionMode, SessionLifecycle, ValidationDisposition, DemoClaimPhase, wire_projection};
 import nomo.adapters.cli.session_input.{ContinueOptions, Options, parse_continue, session_cli_args_parse};
 import nomo.adapters.storage.session_records.{empty, history_store_load, publish, publish_snapshot, read, read_claim, reload, save, write_claim};
 import nomo.bootstrap.harness.turn;
 import nomo.domain.conversation.fresh;
 import nomo.domain.sessions.state.{
-    DemoClaim,
+    DemoSessionClaim,
     Projection,
     Request,
-    Snapshot,
+    SessionSnapshot,
     caps,
     continuing,
     plan,
@@ -41,7 +44,7 @@ public flow run_session(args: Array<string>) -> i32 ![
             return 2;
         }
     };
-    if options.verb == "help" {
+    if options.verb == SessionVerb.Help {
         println("Opt-in stub session storage; initialize a fresh project-owned demo store first.");
         println("save --session ID --save SAVE_ID --binding EXPECTED --input TEXT [--steps 1..16] [--budget 1..16]");
         println("show --session ID --save SAVE_ID --binding EXPECTED [--steps 1..16] [--budget 1..16]");
@@ -50,12 +53,12 @@ public flow run_session(args: Array<string>) -> i32 ![
     }
     let requested = Request {
         session_id = options.session_id,
-        mode = "stub",
+        mode = SessionMode.Stub,
         binding = options.binding,
         caps = caps(options.maximum, options.budget)
     };
     var turn_status: i32 = 0;
-    let result = if options.verb == "show" {
+    let result = if options.verb == SessionVerb.Show {
         reload(requested, options.save_id)
     } else {
         let completed = turn(options.input, options.maximum, options.budget, fresh());
@@ -85,7 +88,7 @@ public flow run_session(args: Array<string>) -> i32 ![
     let output = match display(projection) {
         Ok(value) => value,
         Err(error) => {
-            if options.verb == "save" {
+            if options.verb == SessionVerb.Save {
                 println("STORED_DISPLAY_FAILED; do not retry: " + error);
             }
             else {
@@ -95,7 +98,7 @@ public flow run_session(args: Array<string>) -> i32 ![
         }
     };
     // This confirms storage/data validation, not successful work or effect authority.
-    if options.verb == "save" {
+    if options.verb == SessionVerb.Save {
         println("SAVED turn_status=" + from_i32(turn_status) + " " + output);
     }
     else {
@@ -121,7 +124,7 @@ public flow run_continue(options: ContinueOptions) -> i32 ![
         }
     };
     let row = before.value;
-    if row.format != 1 || row.phase != "published" || row.save_id != input.save_id
+    if row.format != 1 || row.phase != MetadataPhase.Published || row.save_id != input.save_id
         || row.snapshot.session_id != input.session_id
         || row.session_key != session_key(input.session_id, input.save_id) {
         println("REFUSED current checkpoint identity or phase mismatch; no retry");
@@ -143,7 +146,7 @@ public flow run_continue(options: ContinueOptions) -> i32 ![
     };
     let requested = Request {
         session_id = input.session_id,
-        mode = "stub",
+        mode = SessionMode.Stub,
         binding = input.binding,
         caps = caps(input.maximum, input.budget)
     };
@@ -173,14 +176,14 @@ public flow run_continue(options: ContinueOptions) -> i32 ![
         }
     };
     let claim = owner.value;
-    if owner.key != "single-demo" || claim.format != 1 || claim.phase != "ready"
+    if owner.key != "single-demo" || claim.format != 1 || claim.phase != DemoClaimPhase.Ready
         || claim.session_id != input.session_id || claim.save_id != input.save_id
         || claim.binding != input.binding || caps(claim.maximum, claim.budget) != saved.original_caps {
         println("REFUSED predecessor not associated with ready demo claim");
         return 3;
     }
     let consumed = claim {
-        phase = "continue-claimed"
+        phase = DemoClaimPhase.ContinueClaimed
     };
     // A one-shot fence blocks restart even if the following metadata CAS never commits.
     let fenced = match write_claim(consumed, WriteCondition.Match(owner.version)) {
@@ -259,8 +262,8 @@ public flow run_continue(options: ContinueOptions) -> i32 ![
     return 0;
 }
 
-flow claim(options: Options, phase: string) -> DemoClaim {
-    return DemoClaim {
+flow claim(options: Options, phase: DemoClaimPhase) -> DemoSessionClaim {
+    return DemoSessionClaim {
         format = 1,
         phase,
         session_id = options.session_id,
@@ -284,7 +287,7 @@ flow initialize(options: Options) -> Result<bool, string> ![Memory, Error<Storag
         }
         None() => (),
     }
-    let version = match write_claim(claim(options, "claimed"), Missing) {
+    let version = match write_claim(claim(options, DemoClaimPhase.Claimed), Missing) {
         Ok(value) => value,
         Err(error) => {
             return Err(error);
@@ -306,7 +309,7 @@ flow initialize(options: Options) -> Result<bool, string> ![Memory, Error<Storag
     if history.messages.len() != 0 || !terminal || !no_summary {
         return Err("demo namespace is not empty");
     }
-    let ready = match write_claim(claim(options, "ready"), WriteCondition.Match(version)) {
+    let ready = match write_claim(claim(options, DemoClaimPhase.Ready), WriteCondition.Match(version)) {
         Ok(value) => value,
         Err(error) => {
             return Err(error);
@@ -318,7 +321,7 @@ flow initialize(options: Options) -> Result<bool, string> ![Memory, Error<Storag
     return Ok(true);
 }
 
-flow owned(options: Options) -> Result<DemoClaim, string> {
+flow owned(options: Options) -> Result<DemoSessionClaim, string> {
     let entry = match read_claim() {
         Some(value) => value,
         None() => {
@@ -326,10 +329,13 @@ flow owned(options: Options) -> Result<DemoClaim, string> {
         }
     };
     let owner = entry.value;
-    if entry.key != "single-demo" || owner.format != 1 || (owner.phase != "ready" && !(
-        options.verb == "show"
-            && owner.phase == "continue-claimed"
-    )) {
+    if entry.key != "single-demo" || owner.format != 1 || (
+        owner.phase != DemoClaimPhase.Ready
+            && !(
+            options.verb == SessionVerb.Show
+                && owner.phase == DemoClaimPhase.ContinueClaimed
+        )
+    ) {
         return Err("demo initialization is incomplete; no retry or repair");
     }
     if owner.session_id != options.session_id || owner.binding != options.binding {
@@ -348,13 +354,16 @@ flow ready(options: Options) -> Result<bool, string> {
             return Err(error);
         }
     };
-    if options.verb == "save" && owner.save_id != options.save_id {
+    if options.verb == SessionVerb.Save && owner.save_id != options.save_id {
         return Err("demo identity or binding mismatch");
     }
-    if options.verb == "save" && (owner.maximum != options.maximum || owner.budget != options.budget) {
+    if options.verb == SessionVerb.Save && (
+        owner.maximum != options.maximum
+            || owner.budget != options.budget
+    ) {
         return Err("demo save caps differ from initialization");
     }
-    if options.verb == "save" {
+    if options.verb == SessionVerb.Save {
         match read(options.session_id) {
             Some(_) => {
                 return Err("session metadata already exists");
@@ -368,16 +377,17 @@ flow ready(options: Options) -> Result<bool, string> {
                 return Err("session metadata missing");
             }
         };
-        if row.format != 1 || row.phase != "published" || row.save_id != options.save_id
+        if row.format != 1 || row.phase != MetadataPhase.Published || row.save_id != options.save_id
             || row.snapshot.session_id != owner.session_id || row.snapshot.binding != owner.binding
-            || row.snapshot.mode != "stub" || row.snapshot.original_caps != caps(owner.maximum, owner.budget)
+            || row.snapshot.mode != SessionMode.Stub
+            || row.snapshot.original_caps != caps(owner.maximum, owner.budget)
             || (row.snapshot.generation != 0 && row.snapshot.generation != 1)
             || (
             row.snapshot.generation == 0
-                && (row.save_id != owner.save_id || owner.phase != "ready")
+                && (row.save_id != owner.save_id || owner.phase != DemoClaimPhase.Ready)
         ) || (
             row.snapshot.generation == 1
-                && (row.save_id == owner.save_id || owner.phase != "continue-claimed")
+                && (row.save_id == owner.save_id || owner.phase != DemoClaimPhase.ContinueClaimed)
         ) {
             return Err("current checkpoint is not associated with demo claim; no historical show");
         }
@@ -452,7 +462,7 @@ public flow demo(args: Array<string>) -> i32 ![
             return 2;
         }
     };
-    if options.verb == "help" {
+    if options.verb == SessionVerb.Help {
         println("Dedicated fresh Docker demo only; exclusive directory creation and one writer are required.");
         println("init|show --session ID --save SAVE_ID --binding EXPECTED [--steps 1..16] [--budget 1..16]");
         println("save --session ID --save SAVE_ID --binding EXPECTED --input TEXT [--steps 1..16] [--budget 1..16]");
@@ -480,14 +490,14 @@ public flow demo(args: Array<string>) -> i32 ![
 }
 
 public flow display(projection: Projection) -> Result<string, string> {
-    var lifecycle = "active";
-    if projection.disposition == "recovery-required" {
-        lifecycle = "recovery-required";
+    var lifecycle = SessionLifecycle.Active;
+    if projection.disposition == ValidationDisposition.RecoveryRequired {
+        lifecycle = SessionLifecycle.RecoveryRequired;
     }
     else if projection.history.stopped {
-        lifecycle = "stopped";
+        lifecycle = SessionLifecycle.Stopped;
     }
-    let saved = Snapshot {
+    let saved = SessionSnapshot {
         format = 1,
         session_id = projection.session_id,
         generation = projection.generation,
@@ -517,7 +527,7 @@ public flow display(projection: Projection) -> Result<string, string> {
             return Err("invalid display projection");
         }
     }
-    let json = match encode(projection, "display conversion failed", "display JSON failed") {
+    let json = match encode(wire_projection(projection), "display conversion failed", "display JSON failed") {
         Ok(value) => value,
         Err(error) => {
             return Err(error);

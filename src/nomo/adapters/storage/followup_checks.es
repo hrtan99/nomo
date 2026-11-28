@@ -1,5 +1,8 @@
 module nomo.adapters.storage.followup_checks;
 
+import nomo.domain.sessions.work.{FollowupPhase};
+import nomo.domain.sessions.work.{CheckOutcome};
+import nomo.domain.editing.LiteralEditPhase;
 import nomo.adapters.storage.checks.{abandon_rows, finish_rows, load_rows, plan_rows, start_rows};
 import nomo.adapters.storage.edits.history_followup_edit_store_inspect;
 import nomo.adapters.storage.followup.{
@@ -13,22 +16,22 @@ import nomo.adapters.storage.session_records.{commit_native, submit_native};
 import nomo.application.sessions.admission.{history_check_store_finish, history_check_store_inspect, plan, start};
 import nomo.application.sessions.ports.{CasRows, CheckAccess, HistoricalFollowupTicket, HistoryCheckRows, Submission, Target};
 import nomo.domain.sessions.event_codec.Policy;
-import nomo.domain.sessions.work.{CheckFrame, CheckRecord, WorkRecord};
+import nomo.domain.sessions.work.{CapturedCheckAttempt, CheckAttempt, WorkAttempt};
 import std.memory.{MemoryEntry, MemoryVersion, WriteCondition};
 
 type FollowupCheckRows = {};
 
 impl FollowupCheckRows ~ HistoryCheckRows {
-    flow read(self) -> Option<MemoryEntry<string, CheckRecord>> {
+    flow read(self) -> Option<MemoryEntry<string, CheckAttempt>> {
         return FollowupChecks.Rows.get_entry("check");
     }
 
-    flow write(self, row: CheckRecord, condition: WriteCondition) -> Result<MemoryVersion, string> ![
+    flow write(self, row: CheckAttempt, condition: WriteCondition) -> Result<MemoryVersion, string> ![
         Memory,
         Error<StorageError>,
         Error<IndexError>
     ] {
-        return commit_native<CheckRecord>(
+        return commit_native<CheckAttempt>(
             FollowupChecks.Rows,
             Target {
                 store = ["Rows"],
@@ -48,7 +51,7 @@ impl FollowupCheckRows ~ HistoryCheckRows {
                 return "completed work record required";
             }
         };
-        if work.phase != "complete" || work.id != id {
+        if work.phase != FollowupPhase.Complete || work.id != id {
             return "completed work identity required";
         }
         let edit = match history_followup_edit_store_inspect(work.id, work.workspace, work.path) {
@@ -57,7 +60,7 @@ impl FollowupCheckRows ~ HistoryCheckRows {
                 return "completed edit record required";
             }
         };
-        return if edit.phase == "completed" {
+        return if edit.phase == LiteralEditPhase.Completed {
             ""
         } else {
             "completed edit record required"
@@ -98,13 +101,12 @@ public flow history_followup_check_guard_start(id: string, digest: string) -> Re
 public flow history_followup_check_guard_finish(
     id: string,
     digest: string,
-    outcome: string,
-    exit_code: string
+    outcome: CheckOutcome
 ) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
-    return history_check_store_finish(FollowupCheckRows {}, id, digest, outcome, exit_code);
+    return history_check_store_finish(FollowupCheckRows {}, id, digest, outcome,);
 }
 
-public flow inspect() -> Result<Option<CheckRecord>, string> {
+public flow inspect() -> Result<Option<CheckAttempt>, string> {
     return history_check_store_inspect(FollowupCheckRows {});
 }
 
@@ -113,7 +115,7 @@ public type FollowupCheckAdapter = {
     binding: string
 };
 
-impl FollowupCheckAdapter ~ CasRows<CheckFrame> {
+impl FollowupCheckAdapter ~ CasRows<CapturedCheckAttempt> {
     flow target(self) -> Target ![] {
         return Target {
             store = ["Rows"],
@@ -123,24 +125,24 @@ impl FollowupCheckAdapter ~ CasRows<CheckFrame> {
         };
     }
 
-    flow submit(self, value: CheckFrame, condition: WriteCondition) -> Submission ![
+    flow submit(self, value: CapturedCheckAttempt, condition: WriteCondition) -> Submission ![
         Memory,
         Error<StorageError>
     ] {
         return submit_native(RecoverableFollowupChecks.Rows, "check", value, condition);
     }
 
-    flow read(self) -> Result<Option<MemoryEntry<string, CheckFrame>>, string> {
+    flow read(self) -> Result<Option<MemoryEntry<string, CapturedCheckAttempt>>, string> {
         return load(self.redaction, self.binding);
     }
 
-    flow same(self, left: CheckFrame, right: CheckFrame) -> bool ![] {
+    flow same(self, left: CapturedCheckAttempt, right: CapturedCheckAttempt) -> bool ![] {
         return left == right;
     }
 }
 
 impl FollowupCheckAdapter ~ CheckAccess {
-    flow work(self) -> Result<Option<WorkRecord>, string> {
+    flow work(self) -> Result<Option<WorkAttempt>, string> {
         return match followup_load(self.redaction, self.binding) {
             Ok(Some(item)) => Ok(Some(item.value.work)),
             Ok(None()) => Ok(None()),
@@ -155,7 +157,7 @@ impl FollowupCheckAdapter ~ CheckAccess {
                 return "completed edit required";
             }
         };
-        return if edit.phase == "completed" {
+        return if edit.phase == LiteralEditPhase.Completed {
             ""
         } else {
             "completed edit required"
@@ -163,7 +165,10 @@ impl FollowupCheckAdapter ~ CheckAccess {
     }
 }
 
-public flow load(policy: Policy, binding: string) -> Result<Option<MemoryEntry<string, CheckFrame>>, string> ![
+public flow load(policy: Policy, binding: string) -> Result<
+    Option<MemoryEntry<string, CapturedCheckAttempt>>,
+    string
+> ![
     Memory,
     Error<StorageError>,
     Error<IndexError>,
@@ -215,8 +220,7 @@ public flow recoverable_followup_check_store_start(
 public flow recoverable_followup_check_store_finish(
     id: string,
     digest: string,
-    outcome: string,
-    exit_code: string,
+    outcome: CheckOutcome,
     stdout: string,
     stderr: string,
     out_truncated: bool,
@@ -233,7 +237,6 @@ public flow recoverable_followup_check_store_finish(
         id,
         digest,
         outcome,
-        exit_code,
         stdout,
         stderr,
         out_truncated,
@@ -257,7 +260,7 @@ public flow abandon(id: string, policy: Policy, binding: string) -> Result<bool,
 }
 
 alias FollowupChecksSchema = MemoryRegion<{
-    Rows: Store<string, CheckRecord>
+    Rows: Store<string, CheckAttempt>
 }>;
 
 public let FollowupChecks = std.memory.region<FollowupChecksSchema>(
@@ -266,7 +269,7 @@ public let FollowupChecks = std.memory.region<FollowupChecksSchema>(
 );
 
 alias RecoverableFollowupChecksSchema = MemoryRegion<{
-    Rows: Store<string, CheckFrame>
+    Rows: Store<string, CapturedCheckAttempt>
 }>;
 
 public let RecoverableFollowupChecks = std.memory.region<RecoverableFollowupChecksSchema>(

@@ -8,7 +8,7 @@ stable region IDs and store paths; stored nominal declarations retain their
 original defining modules and representation.
 
 `export.es` reads an owned SQLite backup with the original official codecs,
-converts each value directly with checked `Message.cast<New>()`, then encodes
+converts each value through explicit typed state-upgrade functions, then encodes
 with the official destination codec. Source and target use package `nomo` version
 `0.1.0`, because package identity participates in stored type identity. Direct
 conversion avoids passing counters through `JsonValue.Number(f64)`.
@@ -26,8 +26,11 @@ The directory must be new. The command never selects or publishes the new state;
 select its `state/` only after the migration report says `completed`. Stop the
 old Nomo and its background writers before taking the source snapshot.
 
-`seed.es` is a synthetic producer used only by `tests/state_relocation_probe.py`.
-It fills all 43 stores, including nested records, Unicode/raw bytes, historical
-binding/version observations and i64 values above JSON's exact integer range.
+`seed.es` remains the frozen producer from the original directory-move check;
+its arbitrary discriminator strings are not valid values of the new closed state
+contracts. Current positive acceptance uses `../string_state/historical_seed.es`
+and `tests/state_relocation_probe.py`: all 43 stores, meaningful pending/unknown
+states, Unicode/raw bytes, historical binding/version observations and i64 values
+above JSON's exact integer range. The frozen historical declarations are unchanged.
 `stores.json` is the explicit source/destination ownership inventory; it is not
 a replacement runtime compatibility manifest.

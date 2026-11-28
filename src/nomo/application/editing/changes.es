@@ -1,5 +1,16 @@
 module nomo.application.editing.changes;
 
+import nomo.domain.changes.ChangeCommand;
+import nomo.domain.changes.{
+    FileChangeOperation,
+    JournalPhase,
+    StepPhase,
+    ChangeStatus,
+    wire_change,
+    wire_change_outcome,
+    wire_file_outcome,
+    wire_journal
+};
 import nomo.application.conversation.ports.ConversationReader;
 import nomo.application.editing.ports.{
     ChangeJournal,
@@ -21,10 +32,10 @@ import nomo.domain.changes.{
     FileChange,
     FileOutcome,
     FilePreview,
-    Journal,
+    FileJournal,
     PlanRequest,
     SavedPath,
-    Step,
+    FileStep,
     below_root,
     completed_phase,
     content_change,
@@ -104,10 +115,7 @@ public flow mutations_handlers_execute<
     history: H,
     output: O,
     session: string,
-    operation: string,
-    name: string,
-    changes: Array<Change>,
-    edit: string
+    request: ChangeCommand
 ) -> ChangeOutcome
 ![
     CommandOperations,
@@ -125,7 +133,7 @@ public flow mutations_handlers_execute<
     Error<BudgetExceeded>
 ] {
     return handle (
-        mutations_service_execute(operation, name, changes, edit) with bindings(
+        mutations_service_execute(request) with bindings(
             files,
             journals,
             history,
@@ -169,7 +177,7 @@ public flow mutations_handlers_list<
     H ~ MutationHistoryStore
         + ConversationReader,
     O ~ MutationOutputSink
->(files: F, journals: J, history: H, output: O, session: string, observing: bool) -> Array<Journal>
+>(files: F, journals: J, history: H, output: O, session: string, observing: bool) -> Array<FileJournal>
 ![
     CommandOperations,
     Memory,
@@ -218,10 +226,7 @@ public flow operations<
             history,
             output,
             session,
-            "apply",
-            name,
-            changes,
-            ""
+            ChangeCommand.Apply(name, changes)
         );
         ChangeOperations.undo(session, edit) => mutations_handlers_execute(
             files,
@@ -229,10 +234,7 @@ public flow operations<
             history,
             output,
             session,
-            "undo",
-            "",
-            [],
-            edit
+            ChangeCommand.Undo(edit)
         );
         ChangeOperations.rollback(session, edit) => mutations_handlers_execute(
             files,
@@ -240,10 +242,7 @@ public flow operations<
             history,
             output,
             session,
-            "rollback",
-            "",
-            [],
-            edit
+            ChangeCommand.Rollback(edit)
         );
         ChangeOperations.reconcile(session, edit) => mutations_handlers_execute(
             files,
@@ -251,10 +250,7 @@ public flow operations<
             history,
             output,
             session,
-            "reconcile",
-            "",
-            [],
-            edit
+            ChangeCommand.Reconcile(edit)
         );
         ChangeOperations.replace(session, change) => replace(
             files,
@@ -342,7 +338,7 @@ flow result_published(id: string, call: i64, name: string) -> bool {
     return perform MutationHistory.published(id, call, name);
 }
 
-flow journal(id: string) -> Journal {
+flow journal(id: string) -> FileJournal {
     let value = match perform ChangeJournal.lookup(id) {
         Some(value) => value,
         None() => abort("native edit journal not found"),
@@ -354,7 +350,7 @@ flow journal(id: string) -> Journal {
     return value;
 }
 
-flow update(value: Journal, phase: string, steps: i64, message: string) -> Journal {
+flow update(value: FileJournal, phase: JournalPhase, steps: i64, message: string) -> FileJournal {
     let result = value {
         phase,
         steps,
@@ -368,7 +364,7 @@ flow command(program: string, arguments: Array<string>, call: i64) -> bool {
     return perform MutationFiles.command(program, arguments, call);
 }
 
-flow backup_root(value: Journal) -> string {
+flow backup_root(value: FileJournal) -> string {
     return perform MutationFiles.backup(value.id);
 }
 
@@ -376,7 +372,7 @@ flow step_key(id: string, index: i64) -> string {
     return id + "/" + from_i64(index);
 }
 
-flow save_before(value: Journal, index: i64, name: string, slot: usize) -> Option<SavedPath> {
+flow save_before(value: FileJournal, index: i64, name: string, slot: usize) -> Option<SavedPath> {
     let saved = backup_root(value) + "/" + from_i64(index) + "-" + from_usize(slot);
     let present = exists(name);
     if present && !command("/bin/cp", ["-a", "--", name, saved + ".before"], value.call) {
@@ -396,21 +392,21 @@ flow save_before(value: Journal, index: i64, name: string, slot: usize) -> Optio
 flow apply_step(id: string, change: Change) -> bool {
     let value = journal(id);
     let name = checked(change.path);
-    if change.operation == "create" && exists(name) {
-        update(value, "failed", value.steps, "create target already exists");
+    if change.operation == FileChangeOperation.Create && exists(name) {
+        update(value, JournalPhase.Failed, value.steps, "create target already exists");
         return false;
     }
     if requires_existing(change.operation) && !exists(name) {
-        update(value, "failed", value.steps, "change source does not exist");
+        update(value, JournalPhase.Failed, value.steps, "change source does not exist");
         return false;
     }
-    let target = if change.operation == "move" {
+    let target = if change.operation == FileChangeOperation.Move {
         checked(change.target)
     } else {
         ""
     };
-    if change.operation == "move" && exists(target) {
-        update(value, "failed", value.steps, "move destination already exists");
+    if change.operation == FileChangeOperation.Move && exists(target) {
+        update(value, JournalPhase.Failed, value.steps, "move destination already exists");
         return false;
     }
     let index = value.steps;
@@ -419,29 +415,34 @@ flow apply_step(id: string, change: Change) -> bool {
     let before = match save_before(value, index, name, 0) {
         Some(value) => value,
         None() => {
-            update(value, "failed", index, "before snapshot failed; project mutation not dispatched");
+            update(
+                value,
+                JournalPhase.Failed,
+                index,
+                "before snapshot failed; project mutation not dispatched"
+            );
             return false;
         }
     };
     paths = paths.push(before);
-    if change.operation == "move" {
+    if change.operation == FileChangeOperation.Move {
         let destination = match save_before(value, index, target, 1) {
             Some(value) => value,
             None() => {
-                update(value, "failed", index, "destination snapshot failed");
+                update(value, JournalPhase.Failed, index, "destination snapshot failed");
                 return false;
             }
         };
         paths = paths.push(destination);
     }
     // Publish the recovery material before a project mutation can start.
-    perform ChangeJournal.save_step(key, Step {
-        phase = "prepared",
+    perform ChangeJournal.save_step(key, FileStep {
+        phase = StepPhase.Prepared,
         paths
     });
-    let active = update(value, "applying", index + 1, "");
+    let active = update(value, JournalPhase.Applying, index + 1, "");
     record("edit_step", "prepared", change, value.call);
-    println("[CHANGE ] " + text(change));
+    println("[CHANGE ] " + text(wire_change(change)));
     var applied = false;
     if content_change(change.operation) {
         let original = if before.before_exists {
@@ -450,11 +451,11 @@ flow apply_step(id: string, change: Change) -> bool {
             ""
         };
         var after = change.text;
-        if change.operation == "edit" {
+        if change.operation == FileChangeOperation.Edit {
             after = match literal_after(original, change.target, change.text) {
                 Ok(value) => value,
                 Err(error) => {
-                    update(active, "failed", active.steps, error);
+                    update(active, JournalPhase.Failed, active.steps, error);
                     return false;
                 }
             };
@@ -466,49 +467,54 @@ flow apply_step(id: string, change: Change) -> bool {
         };
         record("edit_preview", "file", preview, value.call);
         println("[PREVIEW] " + text(preview));
-        perform ChangeJournal.save_step(key, Step {
-            phase = "applying",
+        perform ChangeJournal.save_step(key, FileStep {
+            phase = StepPhase.Applying,
             paths
         });
         perform MutationFiles.replace(name, after);
         applied = true;
     }
-    else if change.operation == "mkdir" {
-        perform ChangeJournal.save_step(key, Step {
-            phase = "applying",
+    else if change.operation == FileChangeOperation.Mkdir {
+        perform ChangeJournal.save_step(key, FileStep {
+            phase = StepPhase.Applying,
             paths
         });
         applied = command("/bin/mkdir", ["-p", "--", name], value.call);
     }
-    else if change.operation == "delete" {
-        perform ChangeJournal.save_step(key, Step {
-            phase = "applying",
+    else if change.operation == FileChangeOperation.Delete {
+        perform ChangeJournal.save_step(key, FileStep {
+            phase = StepPhase.Applying,
             paths
         });
         applied = command("/bin/rm", ["-rf", "--", name], value.call);
     }
-    else if change.operation == "move" {
-        perform ChangeJournal.save_step(key, Step {
-            phase = "applying",
+    else if change.operation == FileChangeOperation.Move {
+        perform ChangeJournal.save_step(key, FileStep {
+            phase = StepPhase.Applying,
             paths
         });
         applied = command("/bin/mv", ["-T", "--no-clobber", "--", name, target], value.call);
     }
     else {
-        update(active, "failed", active.steps, "unknown file operation");
+        update(active, JournalPhase.Failed, active.steps, "unknown file operation");
         return false;
     }
     if !applied {
         update(
             active,
-            "failed",
+            JournalPhase.Failed,
             active.steps,
             "native project operation failed; inspect or roll back this journal"
         );
         return false;
     }
-    if change.operation == "move" && exists(name) {
-        update(active, "failed", active.steps, "move did not remove the source; inspect retained state");
+    if change.operation == FileChangeOperation.Move && exists(name) {
+        update(
+            active,
+            JournalPhase.Failed,
+            active.steps,
+            "move did not remove the source; inspect retained state"
+        );
         return false;
     }
     var published: Array<SavedPath> = [];
@@ -517,7 +523,7 @@ flow apply_step(id: string, change: Change) -> bool {
         if present && !command("/bin/cp", ["-a", "--", item.path, item.after], value.call) {
             update(
                 active,
-                "failed",
+                JournalPhase.Failed,
                 active.steps,
                 "after snapshot failed; project mutation may already be complete"
             );
@@ -527,8 +533,8 @@ flow apply_step(id: string, change: Change) -> bool {
             after_exists = present
         });
     }
-    perform ChangeJournal.save_step(key, Step {
-        phase = "applied",
+    perform ChangeJournal.save_step(key, FileStep {
+        phase = StepPhase.Applied,
         paths = published
     });
     record("edit_step_result", "applied", change, value.call);
@@ -547,7 +553,7 @@ flow parents(id: string, name: string) -> bool {
             if !exists(prefix) && !apply_step(
                 id,
                 Change {
-                    operation = "mkdir",
+                    operation = FileChangeOperation.Mkdir,
                     path = prefix,
                     target = "",
                     text = ""
@@ -560,13 +566,13 @@ flow parents(id: string, name: string) -> bool {
     return true;
 }
 
-flow outcome(value: Journal, status: string) -> ChangeOutcome {
+flow completed_steps(value: FileJournal) -> i64 {
     var completed: i64 = 0;
     var index: i64 = 0;
     @limits([Iterations(2147483647)]) while index < value.steps {
         match perform ChangeJournal.step(step_key(value.id, index)) {
             Some(step) => {
-                if step.phase == "applied" {
+                if step.phase == StepPhase.Applied {
                     completed = completed + 1;
                 }
             },
@@ -574,6 +580,11 @@ flow outcome(value: Journal, status: string) -> ChangeOutcome {
         }
         index = index + 1;
     }
+    return completed;
+}
+
+flow outcome(value: FileJournal, status: ChangeStatus) -> ChangeOutcome {
+    let completed = completed_steps(value);
     return ChangeOutcome {
         edit = value.id,
         status,
@@ -592,63 +603,68 @@ public flow apply_plan(name: string, changes: Array<Change>) -> ChangeOutcome ![
 ] {
     require_settled_edits();
     let session = perform SessionContext.current();
-    let call = record("tool_call", name, PlanRequest {
-        format = "nomo-native-file-plan-1",
-        changes
-    }, -1);
+    let call = record(
+        "tool_call",
+        name,
+        PlanRequest {
+            format = "nomo-native-file-plan-1",
+            changes = changes.iter().map(change => wire_change(change)).collect()
+        },
+        -1
+    );
     let id = session + "-" + from_i64(call);
-    let value = Journal {
+    let value = FileJournal {
         id,
         session,
         name,
         call,
-        phase = "preparing",
+        phase = JournalPhase.Preparing,
         steps = 0,
         message = "",
         owner_call = call,
         owner_name = name
     };
     perform ChangeJournal.insert(value);
-    println("[BATCH  ] " + text(changes));
+    println("[BATCH  ] " + text(changes.iter().map(change => wire_change(change)).collect()));
     if !command("/bin/mkdir", ["-p", "--", backup_root(value)], call) {
         let failed = update(
             value,
-            "failed",
+            JournalPhase.Failed,
             0,
             "backup directory creation failed; project mutations not dispatched"
         );
-        let result = outcome(failed, "recovery_required");
-        record("partial_result", name, result, call);
+        let result = outcome(failed, ChangeStatus.RecoveryRequired);
+        record("partial_result", name, wire_change_outcome(result), call);
         return result;
     }
     for change in changes {
         let normalized = checked(change.path);
         if creates_parents(change.operation) {
             if !parents(id, normalized) {
-                let result = outcome(journal(id), "recovery_required");
-                record("partial_result", name, result, call);
+                let result = outcome(journal(id), ChangeStatus.RecoveryRequired);
+                record("partial_result", name, wire_change_outcome(result), call);
                 return result;
             }
         }
-        if change.operation == "move" && !parents(id, checked(change.target)) {
-            let result = outcome(journal(id), "recovery_required");
-            record("partial_result", name, result, call);
+        if change.operation == FileChangeOperation.Move && !parents(id, checked(change.target)) {
+            let result = outcome(journal(id), ChangeStatus.RecoveryRequired);
+            record("partial_result", name, wire_change_outcome(result), call);
             return result;
         }
         if !apply_step(id, change) {
-            let result = outcome(journal(id), "recovery_required");
-            record("partial_result", name, result, call);
+            let result = outcome(journal(id), ChangeStatus.RecoveryRequired);
+            record("partial_result", name, wire_change_outcome(result), call);
             return result;
         }
     }
     let latest = journal(id);
-    let complete = update(latest, "applied", latest.steps, "");
-    let result = outcome(complete, "applied");
-    tool_finished(name, call, result);
+    let complete = update(latest, JournalPhase.Applied, latest.steps, "");
+    let result = outcome(complete, ChangeStatus.Applied);
+    tool_finished(name, call, wire_change_outcome(result));
     return result;
 }
 
-public flow journals() -> Array<Journal> ![SessionContext.current, ChangeJournal] {
+public flow journals() -> Array<FileJournal> ![SessionContext.current, ChangeJournal] {
     let session = perform SessionContext.current();
     return perform ChangeJournal.list(session);
 }
@@ -661,13 +677,13 @@ flow require_settled_edits() -> unit ![SessionContext.current, ChangeJournal] {
     }
 }
 
-flow selected_edit(id: string) -> Journal {
+flow selected_edit(id: string) -> FileJournal {
     if id != "" {
         return journal(id);
     }
-    var selected: Option<Journal> = None();
+    var selected: Option<FileJournal> = None();
     for item in journals() {
-        if item.phase == "applied" {
+        if item.phase == JournalPhase.Applied {
             match selected {
                 Some(previous) => {
                     if item.call > previous.call {
@@ -686,12 +702,12 @@ flow selected_edit(id: string) -> Journal {
     };
 }
 
-flow imported_edit(value: Journal) -> bool {
+flow imported_edit(value: FileJournal) -> bool {
     let origin = message(value.session, value.call);
     return origin.role == "archive" && origin.name == "migrated_project_edit";
 }
 
-flow restore(value: Journal, call: i64, checking: bool) -> bool {
+flow restore(value: FileJournal, call: i64, checking: bool) -> bool {
     var index = value.steps - 1;
     @limits([Iterations(2147483647)]) while index >= 0 {
         let key = step_key(value.id, index);
@@ -717,7 +733,7 @@ flow restore(value: Journal, call: i64, checking: bool) -> bool {
                 }
             }
             perform ChangeJournal.save_step(key, step {
-                phase = "restoring"
+                phase = StepPhase.Restoring
             });
             for item in step.paths {
                 println("[RESTORE] " + text(item));
@@ -729,7 +745,7 @@ flow restore(value: Journal, call: i64, checking: bool) -> bool {
                 }
             }
             perform ChangeJournal.save_step(key, step {
-                phase = "restored"
+                phase = StepPhase.Restored
             });
             record("edit_step_result", "restored", key, call);
         }
@@ -749,12 +765,12 @@ public flow undo_changes(edit: string) -> ChangeOutcome ![
 ] {
     require_settled_edits();
     let source = selected_edit(edit);
-    if source.phase != "applied" {
+    if source.phase != JournalPhase.Applied {
         abort("only an applied edit can start undo; use rollback_changes for interrupted edits");
     }
     let call = record("tool_call", "undo_changes", source.id, -1);
     let active = source {
-        phase = "undoing",
+        phase = JournalPhase.Undoing,
         message = "",
         owner_call = call,
         owner_name = "undo_changes"
@@ -763,17 +779,17 @@ public flow undo_changes(edit: string) -> ChangeOutcome ![
     if !restore(active, call, true) {
         let failed = update(
             active,
-            "undoing",
+            JournalPhase.Undoing,
             active.steps,
             "undo stopped; current content may have changed or a restoration failed"
         );
-        let result = outcome(failed, "recovery_required");
-        record("partial_result", "undo_changes", result, call);
+        let result = outcome(failed, ChangeStatus.RecoveryRequired);
+        record("partial_result", "undo_changes", wire_change_outcome(result), call);
         return result;
     }
-    let complete = update(active, "undone", active.steps, "");
-    let result = outcome(complete, "undone");
-    tool_finished("undo_changes", call, result);
+    let complete = update(active, JournalPhase.Undone, active.steps, "");
+    let result = outcome(complete, ChangeStatus.Undone);
+    tool_finished("undo_changes", call, wire_change_outcome(result));
     return result;
 }
 
@@ -808,22 +824,22 @@ public flow rollback_changes(edit: string) -> ChangeOutcome ![
     }
     record("recovery", "rollback_changes", source.id, call);
     if !restore(active, call, false) {
-        let result = outcome(journal(edit), "recovery_required");
-        record("partial_result", "rollback_changes", result, call);
+        let result = outcome(journal(edit), ChangeStatus.RecoveryRequired);
+        record("partial_result", "rollback_changes", wire_change_outcome(result), call);
         return result;
     }
-    let complete = update(active, "rolled_back", active.steps, "");
-    let result = outcome(complete, "rolled_back");
-    record("recovery_result", "rollback_changes", result, call);
-    tool_finished(name, call, result);
+    let complete = update(active, JournalPhase.RolledBack, active.steps, "");
+    let result = outcome(complete, ChangeStatus.RolledBack);
+    record("recovery_result", "rollback_changes", wire_change_outcome(result), call);
+    tool_finished(name, call, wire_change_outcome(result));
     return result;
 }
 
 /// Inspect this conversation's durable edit phases, including an interrupted edit, without starting another mutation.
-public flow list_changes() -> Array<Journal> ![SessionContext.current, ChangeJournal, MutationHistory] {
+public flow list_changes() -> Array<FileJournal> ![SessionContext.current, ChangeJournal, MutationHistory] {
     let call = observe_started("list_changes", "");
     let result = journals();
-    observe_finished("list_changes", call, result);
+    observe_finished("list_changes", call, result.iter().map(row => wire_journal(row)).collect());
     return result;
 }
 
@@ -842,7 +858,7 @@ public flow reconcile_changes(edit: string) -> ChangeOutcome ![
         None() => {
             return ChangeOutcome {
                 edit,
-                status = "no_pending_request",
+                status = ChangeStatus.NoPendingRequest,
                 completed = 0,
                 message = "No pending operation needs reconciliation."
             };
@@ -859,12 +875,12 @@ public flow reconcile_changes(edit: string) -> ChangeOutcome ![
             if result_published(session, pending.call, pending.name) {
                 let result = ChangeOutcome {
                     edit,
-                    status = "recorded_result_retained",
+                    status = ChangeStatus.RecordedResultRetained,
                     completed = 0,
                     message = "The existing complete result was retained; no project operation was replayed."
                 };
-                record("recovery", "reconcile_changes", result, pending.call);
-                tool_finished(pending.name, pending.call, result);
+                record("recovery", "reconcile_changes", wire_change_outcome(result), pending.call);
+                tool_finished(pending.name, pending.call, wire_change_outcome(result));
                 return result;
             }
             var undispatched = !pending.complete;
@@ -882,7 +898,7 @@ public flow reconcile_changes(edit: string) -> ChangeOutcome ![
             if !undispatched {
                 return ChangeOutcome {
                     edit,
-                    status = "recovery_required",
+                    status = ChangeStatus.RecoveryRequired,
                     completed = 0,
                     message = "An older or unjournalled operation has no recorded outcome. Inspect actual state; execution is not inferred and the request remains pending."
                 };
@@ -891,34 +907,34 @@ public flow reconcile_changes(edit: string) -> ChangeOutcome ![
             // unversioned records do not establish this invariant.
             let result = ChangeOutcome {
                 edit,
-                status = "not_dispatched",
+                status = ChangeStatus.NotDispatched,
                 completed = 0,
                 message = "Request preparation stopped before project dispatch; no operation was replayed."
             };
-            record("recovery", "reconcile_changes", result, pending.call);
-            tool_finished(pending.name, pending.call, result);
+            record("recovery", "reconcile_changes", wire_change_outcome(result), pending.call);
+            tool_finished(pending.name, pending.call, wire_change_outcome(result));
             return result;
         }
     };
     if source.session != session {
         abort("edit belongs to another conversation");
     }
-    let unclaimed_undo = source.phase == "applied" && pending.name == "undo_changes";
+    let unclaimed_undo = source.phase == JournalPhase.Applied && pending.name == "undo_changes";
     let unclaimed_rollback = pending.name == "rollback_changes" && imported_edit(source);
     if (unclaimed_undo || unclaimed_rollback) && pending.complete
         && message(session, pending.call).text == text(source.id) && source.owner_call != pending.call {
         let result = ChangeOutcome {
             edit,
             status = if unclaimed_undo {
-                "undo_not_started"
+                ChangeStatus.UndoNotStarted
             } else {
-                "rollback_not_started"
+                ChangeStatus.RollbackNotStarted
             },
-            completed = outcome(source, source.phase).completed,
+            completed = completed_steps(source),
             message = "Recovery stopped before claiming the journal; the recorded edit phase is unchanged."
         };
-        record("recovery", "reconcile_changes", result, pending.call);
-        tool_finished(pending.name, pending.call, result);
+        record("recovery", "reconcile_changes", wire_change_outcome(result), pending.call);
+        tool_finished(pending.name, pending.call, wire_change_outcome(result));
         return result;
     }
     if source.owner_call != pending.call || source.owner_name != pending.name {
@@ -927,14 +943,14 @@ public flow reconcile_changes(edit: string) -> ChangeOutcome ![
     if !completed_phase(source.phase) {
         return ChangeOutcome {
             edit,
-            status = "recovery_required",
-            completed = outcome(source, source.phase).completed,
+            status = ChangeStatus.RecoveryRequired,
+            completed = completed_steps(source),
             message = "The journal is unfinished. Inspect the actual state, then explicitly roll back; no forward operation was replayed."
         };
     }
-    let result = outcome(source, source.phase);
-    record("recovery", "reconcile_changes", result, pending.call);
-    tool_finished(pending.name, pending.call, result);
+    let result = outcome(source, source.phase.final_status());
+    record("recovery", "reconcile_changes", wire_change_outcome(result), pending.call);
+    tool_finished(pending.name, pending.call, wire_change_outcome(result));
     return result;
 }
 
@@ -950,16 +966,16 @@ public flow replace_file(change: FileChange) -> FileOutcome ![
         let call = record("tool_call", "replace_file", change, -1);
         let result = FileOutcome {
             path = change.path,
-            status = "original_changed",
+            status = ChangeStatus.OriginalChanged,
             edit = ""
         };
-        tool_finished("replace_file", call, result);
+        tool_finished("replace_file", call, wire_file_outcome(result));
         return result;
     }
     let result = apply_plan(
         "replace_file",
         [Change {
-            operation = "write",
+            operation = FileChangeOperation.Write,
             path = change.path,
             target = "",
             text = change.after
@@ -972,20 +988,16 @@ public flow replace_file(change: FileChange) -> FileOutcome ![
     };
 }
 
-public flow mutations_service_execute(operation: string, name: string, changes: Array<Change>, edit: string) -> ChangeOutcome {
-    if operation == "apply" {
-        return apply_plan(name, changes);
-    }
-    if operation == "undo" {
-        return undo_changes(edit);
-    }
-    if operation == "rollback" {
-        return rollback_changes(edit);
-    }
-    return reconcile_changes(edit);
+public flow mutations_service_execute(request: ChangeCommand) -> ChangeOutcome {
+    return match request {
+        ChangeCommand.Apply(name, changes) => apply_plan(name, changes),
+        ChangeCommand.Undo(edit) => undo_changes(edit),
+        ChangeCommand.Rollback(edit) => rollback_changes(edit),
+        ChangeCommand.Reconcile(edit) => reconcile_changes(edit)
+    };
 }
 
-public flow mutations_service_list(observing: bool) -> Array<Journal> {
+public flow mutations_service_list(observing: bool) -> Array<FileJournal> {
     return if observing {
         list_changes()
     } else {

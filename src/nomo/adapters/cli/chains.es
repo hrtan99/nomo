@@ -39,11 +39,11 @@ import nomo.domain.editing.{Confirmed, Selector, bind, selector_error};
 import nomo.domain.harness.loop.allowed_error;
 import nomo.domain.harness.work.{WorkLedger, fresh};
 import nomo.domain.sessions.chain.{
-    CapturedJournal,
+    CapturedChainEdit,
     CapturedShow,
     ContinueRequest,
     ParentFacts,
-    Record,
+    WorkChain,
     Selector as chain_Selector,
     TurnRequest,
     WorkOutcome,
@@ -93,7 +93,7 @@ public flow recovery_decision_run(args: Array<string>) -> i32 ![
 
 public type Selection = {
     root: string,
-    mode: string,
+    mode: InputMode,
     accepted: bool,
     input: WorkChainArgsInput
 };
@@ -106,6 +106,28 @@ flow root_error(root: string) -> string {
         return "read root must not contain control characters";
     }
     return "";
+}
+
+public enum InputMode {
+    Tty,
+    NonTty
+}
+
+impl InputMode {
+    public flow wire(self) -> string ![] {
+        return match self {
+            InputMode.Tty => "tty",
+            InputMode.NonTty => "non-tty"
+        };
+    }
+
+    public flow parse(raw: string) -> InputMode ![] {
+        return match raw {
+            "tty" => InputMode.Tty,
+            "non-tty" => InputMode.NonTty,
+            _ => abort("invalid InputMode spelling: " + raw)
+        };
+    }
 }
 
 public flow selection(args: Array<string>) -> Result<Selection, string> {
@@ -157,7 +179,7 @@ public flow selection(args: Array<string>) -> Result<Selection, string> {
     }
     return Ok(Selection {
         root,
-        mode,
+        mode = InputMode.parse(mode),
         accepted,
         input
     });
@@ -202,7 +224,7 @@ public flow user_context_entry_run(args: Array<string>) -> i32 ![
     println("The selected directory is already mounted read-only and is visible to the native process. The file allowlist is enforced by Nomo, not by a per-file OS mount.");
     println("An allowed path may follow a symbolic link inside the root; a hard link may expose content also linked elsewhere. Files can change during reading; this is not an atomic snapshot.");
     println("Allowed file contents may be sent to the configured model. This mode edits only the prepared demo file and cannot continue or resume another turn.");
-    if selected.mode == "tty" {
+    if selected.mode == InputMode.Tty {
         println("Allow this read context? Type yes to continue:");
         let answer = read_line();
         if answer == "" || trim(answer) != "yes" {
@@ -213,7 +235,7 @@ public flow user_context_entry_run(args: Array<string>) -> i32 ![
     return execute_user_context(selected.input);
 }
 
-public flow render(row: Record, journal: Option<CapturedJournal>) -> Result<Array<string>, string> {
+public flow render(row: WorkChain, journal: Option<CapturedChainEdit>) -> Result<Array<string>, string> {
     let error = work_chain_validate(row);
     if error != "" {
         return Err(error);
@@ -235,7 +257,7 @@ public flow render(row: Record, journal: Option<CapturedJournal>) -> Result<Arra
         ],
         [
             from_i32(row.format),
-            row.phase,
+            row.phase.wire(),
             row.chain,
             row.id,
             from_i32(row.turn),
@@ -301,7 +323,7 @@ public flow render(row: Record, journal: Option<CapturedJournal>) -> Result<Arra
                 ],
                 [
                     "2",
-                    value.phase,
+                    value.phase.wire(),
                     value.chain,
                     from_i32(value.turn),
                     b.id,
@@ -899,7 +921,7 @@ public flow work_chain_entry_run_show(args: Array<string>) -> i32 {
     return present_show(inspect_application(selected));
 }
 
-public flow show_captured(row: Record, operation: Option<CapturedJournal>) -> i32 {
+public flow show_captured(row: WorkChain, operation: Option<CapturedChainEdit>) -> i32 {
     let lines = match render(row, operation) {
         Ok(value) => value,
         Err(error) => {
@@ -1087,7 +1109,7 @@ public flow run_sessions(args: Array<string>) -> i32 {
             [
                 row.id,
                 from_i32(row.turn),
-                row.phase,
+                row.phase.wire(),
                 journal_phase(view, row.turn),
                 if row.turn == 1 && eligible(view, input.workspace, input.path) {
                     "true"

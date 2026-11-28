@@ -1,19 +1,21 @@
 module nomo.adapters.storage.edits;
 
+import nomo.domain.sessions.work.{StoredWorkPhase};
+import nomo.domain.editing.LiteralEditPhase;
 import nomo.adapters.storage.session_records.submit_native;
 import nomo.application.editing.ports.Ticket as ports_Ticket;
 import nomo.application.sessions.admission.{available, begin, complete, edit_operations_inspect};
 import nomo.application.sessions.persistence.commit_once;
 import nomo.application.sessions.ports.{CasRows, EditJournal, Submission, Target};
-import nomo.domain.editing.{Binding, EditOperation, Selector, same_binding, same_record, selector_error};
-import nomo.domain.sessions.work.{StoredWorkRecord, confirm, same_record as work_same_record, validate};
+import nomo.domain.editing.{Binding, LiteralEditRecord, Selector, same_binding, same_record, selector_error};
+import nomo.domain.sessions.work.{CapturedWork, confirm, same_record as work_same_record, validate};
 import std.memory.{MemoryEntry, MemoryVersion, Missing, WriteCondition};
 
 public type FirstEditJournal = {};
 
 public type FollowupEditJournal = {};
 
-impl FirstEditJournal ~ CasRows<EditOperation> {
+impl FirstEditJournal ~ CasRows<LiteralEditRecord> {
     flow target(self) -> Target ![] {
         return Target {
             store = ["Rows"],
@@ -23,18 +25,18 @@ impl FirstEditJournal ~ CasRows<EditOperation> {
         };
     }
 
-    flow submit(self, value: EditOperation, condition: WriteCondition) -> Submission ![
+    flow submit(self, value: LiteralEditRecord, condition: WriteCondition) -> Submission ![
         Memory,
         Error<StorageError>
     ] {
         return submit_native(EditOperations.Rows, "operation", value, condition);
     }
 
-    flow read(self) -> Result<Option<MemoryEntry<string, EditOperation>>, string> {
+    flow read(self) -> Result<Option<MemoryEntry<string, LiteralEditRecord>>, string> {
         return Ok(EditOperations.Rows.get_entry("operation"));
     }
 
-    flow same(self, left: EditOperation, right: EditOperation) -> bool ![] {
+    flow same(self, left: LiteralEditRecord, right: LiteralEditRecord) -> bool ![] {
         return same_record(left, right);
     }
 }
@@ -62,12 +64,12 @@ impl FirstEditJournal ~ EditJournal {
         return complete(self, ticket);
     }
 
-    flow inspect(self, selector: Selector) -> Result<Option<EditOperation>, string> {
+    flow inspect(self, selector: Selector) -> Result<Option<LiteralEditRecord>, string> {
         return edit_operations_inspect(self, selector);
     }
 }
 
-impl FollowupEditJournal ~ CasRows<EditOperation> {
+impl FollowupEditJournal ~ CasRows<LiteralEditRecord> {
     flow target(self) -> Target ![] {
         return Target {
             store = ["Rows"],
@@ -77,18 +79,18 @@ impl FollowupEditJournal ~ CasRows<EditOperation> {
         };
     }
 
-    flow submit(self, value: EditOperation, condition: WriteCondition) -> Submission ![
+    flow submit(self, value: LiteralEditRecord, condition: WriteCondition) -> Submission ![
         Memory,
         Error<StorageError>
     ] {
         return submit_native(FollowupEditOperations.Rows, "operation", value, condition);
     }
 
-    flow read(self) -> Result<Option<MemoryEntry<string, EditOperation>>, string> {
+    flow read(self) -> Result<Option<MemoryEntry<string, LiteralEditRecord>>, string> {
         return Ok(FollowupEditOperations.Rows.get_entry("operation"));
     }
 
-    flow same(self, left: EditOperation, right: EditOperation) -> bool ![] {
+    flow same(self, left: LiteralEditRecord, right: LiteralEditRecord) -> bool ![] {
         return same_record(left, right);
     }
 }
@@ -116,7 +118,7 @@ impl FollowupEditJournal ~ EditJournal {
         return complete(self, ticket);
     }
 
-    flow inspect(self, selector: Selector) -> Result<Option<EditOperation>, string> {
+    flow inspect(self, selector: Selector) -> Result<Option<LiteralEditRecord>, string> {
         return edit_operations_inspect(self, selector);
     }
 }
@@ -147,7 +149,7 @@ public flow edit_operation_store_complete(ticket: ports_Ticket) -> Result<bool, 
 }
 
 public flow edit_operation_store_inspect(id: string, workspace: string, path: string) -> Result<
-    Option<EditOperation>,
+    Option<LiteralEditRecord>,
     string
 > {
     let journal = FirstEditJournal {};
@@ -184,7 +186,7 @@ public flow history_followup_edit_store_complete(ticket: ports_Ticket) -> Result
 }
 
 public flow history_followup_edit_store_inspect(id: string, workspace: string, path: string) -> Result<
-    Option<EditOperation>,
+    Option<LiteralEditRecord>,
     string
 > {
     let journal = FollowupEditJournal {};
@@ -199,7 +201,7 @@ flow key(id: string) -> string {
     return "work:" + id;
 }
 
-flow read(id: string) -> Option<MemoryEntry<string, StoredWorkRecord>> {
+flow read(id: string) -> Option<MemoryEntry<string, CapturedWork>> {
     return WorkRecords.Rows.get_entry(key(id));
 }
 
@@ -218,7 +220,7 @@ type RecordRows = {
     name: string
 };
 
-impl RecordRows ~ CasRows<StoredWorkRecord> {
+impl RecordRows ~ CasRows<CapturedWork> {
     flow target(self) -> Target ![] {
         return Target {
             store = ["Rows"],
@@ -228,23 +230,23 @@ impl RecordRows ~ CasRows<StoredWorkRecord> {
         };
     }
 
-    flow submit(self, value: StoredWorkRecord, condition: WriteCondition) -> Submission ![
+    flow submit(self, value: CapturedWork, condition: WriteCondition) -> Submission ![
         Memory,
         Error<StorageError>
     ] {
         return submit_native(WorkRecords.Rows, self.name, value, condition);
     }
 
-    flow read(self) -> Result<Option<MemoryEntry<string, StoredWorkRecord>>, string> {
+    flow read(self) -> Result<Option<MemoryEntry<string, CapturedWork>>, string> {
         return Ok(WorkRecords.Rows.get_entry(self.name));
     }
 
-    flow same(self, left: StoredWorkRecord, right: StoredWorkRecord) -> bool ![] {
+    flow same(self, left: CapturedWork, right: CapturedWork) -> bool ![] {
         return work_same_record(left, right);
     }
 }
 
-flow write(row: StoredWorkRecord, condition: WriteCondition) -> Result<MemoryVersion, string> ![
+flow write(row: CapturedWork, condition: WriteCondition) -> Result<MemoryVersion, string> ![
     Memory,
     Error<StorageError>,
     Error<IndexError>,
@@ -257,18 +259,18 @@ flow write(row: StoredWorkRecord, condition: WriteCondition) -> Result<MemoryVer
         }
     }
     let selected = key(row.binding.id);
-    return commit_once<StoredWorkRecord, RecordRows>(RecordRows {
+    return commit_once<CapturedWork, RecordRows>(RecordRows {
         name = selected
     }, row, condition, None());
 }
 
-public flow publish(row: StoredWorkRecord) -> Result<Ticket, string> ![
+public flow publish(row: CapturedWork) -> Result<Ticket, string> ![
     Memory,
     Error<StorageError>,
     Error<IndexError>,
     Error<BudgetExceeded>
 ] {
-    if row.phase != "summary-unconfirmed" {
+    if row.phase != StoredWorkPhase.SummaryUnconfirmed {
         return Err("initial work record must leave summary unconfirmed");
     }
     let version = match write(row, Missing) {
@@ -289,7 +291,7 @@ public flow work_record_store_complete(ticket: Ticket, summary: string) -> Resul
     Error<IndexError>,
     Error<BudgetExceeded>
 ] {
-    if ticket.row.phase != "summary-unconfirmed" {
+    if ticket.row.phase != StoredWorkPhase.SummaryUnconfirmed {
         return Err("work update requires the original partial ticket");
     }
     let row = match confirm(ticket.row, summary) {
@@ -322,7 +324,7 @@ public flow work_record_store_complete(ticket: Ticket, summary: string) -> Resul
 
 // Logical read-only: captured facts never authorize replay or assert current File state.
 public flow work_record_store_inspect(id: string, workspace: string, path: string) -> Result<
-    Option<StoredWorkRecord>,
+    Option<CapturedWork>,
     string
 > {
     let error = selector_error(id, workspace, path);
@@ -356,7 +358,7 @@ public flow work_record_store_inspect(id: string, workspace: string, path: strin
             return Err(error);
         }
     };
-    if journal.phase != "completed" || !same_binding(journal.binding, captured.binding) {
+    if journal.phase != LiteralEditPhase.Completed || !same_binding(journal.binding, captured.binding) {
         return Err("work record confirmed edit binding mismatch");
     }
     let after = match read(id) {
@@ -373,12 +375,12 @@ public flow work_record_store_inspect(id: string, workspace: string, path: strin
 }
 
 public type Ticket = {
-    row: StoredWorkRecord,
+    row: CapturedWork,
     version: MemoryVersion
 };
 
 alias EditOperationsSchema = MemoryRegion<{
-    Rows: Store<string, EditOperation>
+    Rows: Store<string, LiteralEditRecord>
 }>;
 
 public let EditOperations = std.memory.region<EditOperationsSchema>(
@@ -392,7 +394,7 @@ public let FollowupEditOperations = std.memory.region<EditOperationsSchema>(
 );
 
 alias WorkRecordsSchema = MemoryRegion<{
-    Rows: Store<string, StoredWorkRecord>
+    Rows: Store<string, CapturedWork>
 }>;
 
 public let WorkRecords = std.memory.region<WorkRecordsSchema>(

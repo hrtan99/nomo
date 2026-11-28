@@ -1,5 +1,8 @@
 module nomo.adapters.storage.checkpoints;
 
+import nomo.domain.sessions.checkpoints.{CheckpointRecordPhase};
+import nomo.domain.sessions.checkpoints.{SuccessorRecordPhase};
+import nomo.domain.harness.chat.{ChatStage};
 import nomo.adapters.codec.{CheckpointCodec, CheckpointEncoder, SuccessorCodec, SuccessorEncoder};
 import nomo.adapters.storage.session_records.commit_native;
 import nomo.application.sessions.persistence.encode_record;
@@ -9,10 +12,10 @@ import nomo.domain.harness.loop.{ReadLedger, question_error};
 import nomo.domain.harness.read.read_ledger_error;
 import nomo.domain.sessions.checkpoints.{
     Checkpoint,
-    CheckpointRecord,
+    StoredCheckpoint,
     Identity,
     Successor,
-    SuccessorRecord,
+    StoredSuccessor,
     checkpoint_validate,
     identity_error,
     restore,
@@ -24,17 +27,17 @@ flow harness_checkpoint_store_key(identity: Identity) -> string {
     return "checkpoint:" + identity.id;
 }
 
-flow harness_checkpoint_store_read(name: string) -> Option<MemoryEntry<string, CheckpointRecord>> {
+flow harness_checkpoint_store_read(name: string) -> Option<MemoryEntry<string, StoredCheckpoint>> {
     return Checkpoints.Rows.get_entry(name);
 }
 
 // Exactly one attempt, durable receipt and committed-version readback. Unknown
 // is not absence and does not authorize a retry or a second model execution.
-flow harness_checkpoint_store_write(name: string, row: CheckpointRecord, condition: WriteCondition) -> Result<
+flow harness_checkpoint_store_write(name: string, row: StoredCheckpoint, condition: WriteCondition) -> Result<
     MemoryVersion,
     string
 > ![Memory, Error<StorageError>, Error<IndexError>] {
-    return commit_native<CheckpointRecord>(
+    return commit_native<StoredCheckpoint>(
         Checkpoints.Rows,
         Target {
             store = ["Rows"],
@@ -47,7 +50,10 @@ flow harness_checkpoint_store_write(name: string, row: CheckpointRecord, conditi
     );
 }
 
-flow owner(identity: Identity, phase: string) -> Result<MemoryEntry<string, CheckpointRecord>, string> {
+flow owner(identity: Identity, phase: CheckpointRecordPhase) -> Result<
+    MemoryEntry<string, StoredCheckpoint>,
+    string
+> {
     let invalid = identity_error(identity);
     if invalid != "" {
         return Err(invalid);
@@ -89,9 +95,9 @@ public flow initialize(identity: Identity) -> Result<bool, string> ![
         }
         None() => (),
     }
-    let row = CheckpointRecord {
+    let row = StoredCheckpoint {
         format = 1,
-        phase = "ready",
+        phase = CheckpointRecordPhase.Ready,
         identity,
         body = ""
     };
@@ -109,7 +115,7 @@ public flow begin(identity: Identity) -> Result<bool, string> ![
     Error<IndexError>,
     Error<BudgetExceeded>
 ] {
-    let before = match owner(identity, "ready") {
+    let before = match owner(identity, CheckpointRecordPhase.Ready) {
         Ok(value) => value,
         Err(error) => {
             return Err(error);
@@ -121,9 +127,9 @@ public flow begin(identity: Identity) -> Result<bool, string> ![
         }
         None() => (),
     }
-    let row = CheckpointRecord {
+    let row = StoredCheckpoint {
         format = 1,
-        phase = "claimed",
+        phase = CheckpointRecordPhase.Claimed,
         identity,
         body = ""
     };
@@ -151,7 +157,7 @@ public flow harness_checkpoint_store_publish(saved: Checkpoint) -> Result<bool, 
             return Err(error);
         }
     };
-    match owner(saved.identity, "claimed") {
+    match owner(saved.identity, CheckpointRecordPhase.Claimed) {
         Ok(_) => (),
         Err(error) => {
             return Err(error);
@@ -164,9 +170,9 @@ public flow harness_checkpoint_store_publish(saved: Checkpoint) -> Result<bool, 
         }
         None() => (),
     }
-    let pending = CheckpointRecord {
+    let pending = StoredCheckpoint {
         format = 1,
-        phase = "pending",
+        phase = CheckpointRecordPhase.Pending,
         identity = saved.identity,
         body
     };
@@ -176,9 +182,9 @@ public flow harness_checkpoint_store_publish(saved: Checkpoint) -> Result<bool, 
             return Err(error);
         }
     };
-    let complete = CheckpointRecord {
+    let complete = StoredCheckpoint {
         format = 1,
-        phase = "published",
+        phase = CheckpointRecordPhase.Published,
         identity = saved.identity,
         body
     };
@@ -196,7 +202,7 @@ public flow harness_checkpoint_store_publish(saved: Checkpoint) -> Result<bool, 
 
 // Data only: this callgraph contains no model, File or Memory mutation action.
 public flow binding(identity: Identity) -> Result<Binding, string> {
-    match owner(identity, "claimed") {
+    match owner(identity, CheckpointRecordPhase.Claimed) {
         Ok(_) => (),
         Err(error) => {
             return Err(error);
@@ -213,7 +219,7 @@ public flow binding(identity: Identity) -> Result<Binding, string> {
     if before.key != name || row.format != 1 || row.identity != identity {
         return Err("checkpoint identity or format mismatch");
     }
-    if row.phase != "published" {
+    if row.phase != CheckpointRecordPhase.Published {
         return Err("checkpoint not published; no recovery or retry");
     }
     let saved = match decode_record(CheckpointCodec {}, row.body) {
@@ -259,16 +265,16 @@ flow harness_successor_store_key(identity: Identity) -> string {
     return "successor:" + identity.id;
 }
 
-flow harness_successor_store_read(name: string) -> Option<MemoryEntry<string, SuccessorRecord>> {
+flow harness_successor_store_read(name: string) -> Option<MemoryEntry<string, StoredSuccessor>> {
     return Successors.Rows.get_entry(name);
 }
 
 flow harness_successor_store_write(
     name: string,
-    row: SuccessorRecord,
+    row: StoredSuccessor,
     condition: WriteCondition
 ) -> Result<MemoryVersion, string> ![Memory, Error<StorageError>, Error<IndexError>] {
-    return commit_native<SuccessorRecord>(
+    return commit_native<StoredSuccessor>(
         Successors.Rows,
         Target {
             store = ["Rows"],
@@ -281,7 +287,7 @@ flow harness_successor_store_write(
     );
 }
 
-flow row(ticket: Ticket, phase: string, body: string, usage: ReadLedger, resolved: bool) -> SuccessorRecord {
+flow row(ticket: Ticket, phase: SuccessorRecordPhase, body: string, usage: ReadLedger, resolved: bool) -> StoredSuccessor {
     let before = ticket.predecessor;
     let reserved = if resolved {
         ReadLedger {
@@ -301,7 +307,7 @@ flow row(ticket: Ticket, phase: string, body: string, usage: ReadLedger, resolve
             scan = 4096
         }
     };
-    return SuccessorRecord {
+    return StoredSuccessor {
         format = 1,
         phase,
         predecessor = before.checkpoint.identity,
@@ -331,14 +337,14 @@ flow unchanged(before: Binding) -> string {
     return "";
 }
 
-flow claim(ticket: Ticket) -> Result<MemoryEntry<string, SuccessorRecord>, string> {
+flow claim(ticket: Ticket) -> Result<MemoryEntry<string, StoredSuccessor>, string> {
     let before = match harness_successor_store_read(admission(ticket.predecessor.checkpoint.identity)) {
         Some(value) => value,
         None() => {
             return Err("continuation admission missing; no retry");
         }
     };
-    let expected = row(ticket, "admitted", "", ticket.predecessor.checkpoint.usage, false);
+    let expected = row(ticket, SuccessorRecordPhase.Admitted, "", ticket.predecessor.checkpoint.usage, false);
     if before.value != expected || before.version.opaque != ticket.version.opaque {
         return Err("continuation admission or version changed; no retry");
     }
@@ -378,11 +384,11 @@ public flow admit(predecessor: Identity, successor: Identity, request: string) -
         }
     };
     let plan = Context {
-        phase = "plan",
+        phase = ChatStage.Plan,
         request,
         task = "",
         result = "",
-        tool = "",
+        tool = None(),
         outcome = "",
         allowed = predecessor.allowed,
         prior = restored.prior
@@ -411,7 +417,7 @@ public flow admit(predecessor: Identity, successor: Identity, request: string) -
     };
     let version = match harness_successor_store_write(
         admission(predecessor),
-        row(initial, "admitted", "", before.checkpoint.usage, false),
+        row(initial, SuccessorRecordPhase.Admitted, "", before.checkpoint.usage, false),
         Missing
     ) {
         Ok(value) => value,
@@ -472,7 +478,7 @@ public flow failed(ticket: Ticket, turn: TurnResult) -> Result<bool, string> ![
     }
     return match harness_successor_store_write(
         admission(ticket.predecessor.checkpoint.identity),
-        row(ticket, "failed", "", used, true),
+        row(ticket, SuccessorRecordPhase.Failed, "", used, true),
         WriteCondition.Match(ticket.version)
     ) {
         Ok(_) => Ok(true),
@@ -520,7 +526,7 @@ public flow harness_successor_store_publish(ticket: Ticket, saved: Successor) ->
     }
     match harness_successor_store_write(
         admission(ticket.predecessor.checkpoint.identity),
-        row(ticket, "settled", body, saved.usage, true),
+        row(ticket, SuccessorRecordPhase.Settled, body, saved.usage, true),
         WriteCondition.Match(ticket.version)
     ) {
         Ok(_) => (),
@@ -530,7 +536,7 @@ public flow harness_successor_store_publish(ticket: Ticket, saved: Successor) ->
     }
     let version = match harness_successor_store_write(
         harness_successor_store_key(ticket.successor),
-        row(ticket, "pending", body, saved.usage, true),
+        row(ticket, SuccessorRecordPhase.Pending, body, saved.usage, true),
         Missing
     ) {
         Ok(value) => value,
@@ -540,7 +546,7 @@ public flow harness_successor_store_publish(ticket: Ticket, saved: Successor) ->
     };
     let committed = match harness_successor_store_write(
         harness_successor_store_key(ticket.successor),
-        row(ticket, "published", body, saved.usage, true),
+        row(ticket, SuccessorRecordPhase.Published, body, saved.usage, true),
         WriteCondition.Match(version)
     ) {
         Ok(value) => value,
@@ -597,8 +603,20 @@ public flow harness_successor_store_reload(predecessor: Identity, successor: Ide
         version = admitted.version
     };
     if saved.predecessor != before.checkpoint || saved.predecessor_version != before.version.opaque
-        || admitted.value != row(ticket, "settled", published.value.body, saved.usage, true)
-        || published.value != row(ticket, "published", published.value.body, saved.usage, true) {
+        || admitted.value != row(
+        ticket,
+        SuccessorRecordPhase.Settled,
+        published.value.body,
+        saved.usage,
+        true
+    )
+        || published.value != row(
+        ticket,
+        SuccessorRecordPhase.Published,
+        published.value.body,
+        saved.usage,
+        true
+    ) {
         return Err("successor admission, publication or predecessor mismatch");
     }
     let admission_after = match harness_successor_store_read(admission(predecessor)) {
@@ -637,7 +655,7 @@ public type Ticket = {
 };
 
 alias CheckpointsSchema = MemoryRegion<{
-    Rows: Store<string, CheckpointRecord>
+    Rows: Store<string, StoredCheckpoint>
 }>;
 
 public let Checkpoints = std.memory.region<CheckpointsSchema>(
@@ -646,7 +664,7 @@ public let Checkpoints = std.memory.region<CheckpointsSchema>(
 );
 
 alias SuccessorsSchema = MemoryRegion<{
-    Rows: Store<string, SuccessorRecord>
+    Rows: Store<string, StoredSuccessor>
 }>;
 
 public let Successors = std.memory.region<SuccessorsSchema>(

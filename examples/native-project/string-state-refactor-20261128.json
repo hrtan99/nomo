@@ -1,0 +1,1192 @@
+{
+  "status": "completed",
+  "date": "2026-11-28",
+  "baseline_head": "60dc3a9edb9da555eb8256e26785a2f7287948fc",
+  "scope": {
+    "internal_record_candidates": 74,
+    "discriminator_fields": 103,
+    "internal_numeric_fields": 9,
+    "candidate_files": 28,
+    "product_source_files": 112,
+    "new_product_modules": 0,
+    "remaining_target_string_fields": 0
+  },
+  "audit_sha256": "169ce8b6a7c4fcc1745b84b6665380b391a2c2a29cc76805efc10da00f5603f2",
+  "implementation": {
+    "closed_state_owners": "Enums and payload ADTs live beside their domain rules; ports, effects, handlers and callers carry typed values.",
+    "coupled_states": [
+      "check phase/outcome/i32 exit code",
+      "summary state/profile/versioned provenance",
+      "edit state/binding",
+      "operation reference",
+      "read/search/final action",
+      "final/tool/error reply",
+      "parsed CLI requests"
+    ],
+    "json_boundaries": "Explicit projectors restore original spelling and shapes before JSON encoding and size checks; canonical checkpoint encoders retain their existing representation.",
+    "fixed_markers": "Existing format/encoding/unit checks remain; fixed input-result and export-result tags are emitted by codecs.",
+    "open_labels": "Native/imported conversation and archive role/kind labels remain lossless strings. ToolName remains open and dispatch performs registry lookup.",
+    "budget_attributes": {
+      "limits_annotations": 220,
+      "tools_annotations": 1,
+      "model_tools": 39,
+      "inject_annotations": 19,
+      "limits_and_tool_arguments_exactly_retained": true
+    }
+  },
+  "storage": {
+    "source_formats": [
+      "native-string-state",
+      "native-02413"
+    ],
+    "new_directory_required": true,
+    "official_sdk_read_and_write": true,
+    "encoded_rows_cross_host_as_bytes": true,
+    "numeric_values_cross_json_f64": false,
+    "source_backup_and_receipts_retained": true,
+    "selects_destination": false,
+    "replays_commands_models_approvals_or_recovery": false,
+    "historical_versions_bindings_and_unknown_outcomes_retained": true,
+    "migration_fixtures": "tests/fixtures/string_state",
+    "prior_passive_declarations": "tests/fixtures/state_relocation/old/src"
+  },
+  "validation": {
+    "toolchain": "Official Etas 0.24.13 / std 0.9.0; selected graph unchanged",
+    "compiler_check": {
+      "exit": 0,
+      "seconds": 42.807214687000055,
+      "files": 112,
+      "diagnostics": 0,
+      "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-string-r10-result-lapva0p8"
+    },
+    "architecture": {
+      "status": "passed",
+      "modules": 112,
+      "imports": 2807
+    },
+    "old_writer_new_reader": [
+      {
+        "status": "passed",
+        "source_format": "native-string-state",
+        "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-string-state-baseline-2c0s00zr",
+        "stores": 43,
+        "typed_consumer_checks": 33,
+        "protocol_goldens": 5,
+        "numeric_and_boolean_leaves_preserved": true,
+        "failed_exit_code_now_i32": 37,
+        "i64_above_json_exact_range": 9007199254740993,
+        "payload_and_binary_leaves_preserved": true,
+        "source_unchanged": true,
+        "old_receipts_retained": true,
+        "filesystem_objects_preserved": true,
+        "real_model_calls": 0,
+        "edit_command_or_recovery_replay": false
+      },
+      {
+        "status": "passed",
+        "source_format": "native-02413",
+        "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-string-state-historical-b3run322",
+        "stores": 43,
+        "typed_consumer_checks": 33,
+        "protocol_goldens": 5,
+        "numeric_and_boolean_leaves_preserved": true,
+        "failed_exit_code_now_i32": 37,
+        "i64_above_json_exact_range": 9007199254740993,
+        "payload_and_binary_leaves_preserved": true,
+        "source_unchanged": true,
+        "old_receipts_retained": true,
+        "filesystem_objects_preserved": true,
+        "real_model_calls": 0,
+        "edit_command_or_recovery_replay": false
+      }
+    ],
+    "existing_three_stage_route": {
+      "status": "passed",
+      "evidence": "/private/var/folders/65/3wmtm5jd69q9pksnh5g6qrqc0000gn/T/nomo-file-consolidation-ka6sdwk_",
+      "model_http_calls": 3,
+      "exact_original_text_output": true,
+      "charged_steps": 5,
+      "charged_calls": 3,
+      "generation_allowance": 6144,
+      "old_archived_job_read": true,
+      "explicit_old_reader_new_writer": true,
+      "stored_rows_unchanged": true
+    },
+    "real_model_calls": 0,
+    "performance_claim": null
+  },
+  "upstream_observation": {
+    "issue": "https://github.com/etas-project/etas-interpreter/issues/126",
+    "workaround": "Use the public Map.new() constructor for empty maps. Larger failing path observed on 0.24.13; no separate minimal negative probe or 0.24.15 acceptance claimed."
+  },
+  "field_coverage": [
+    {
+      "group": "R01",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.attempts.Attempt",
+      "old_field": "kind",
+      "new_type": "nomo.domain.attempts.ExecutionAttempt",
+      "replacement": "nomo.domain.attempts.AttemptKind"
+    },
+    {
+      "group": "R01",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.attempts.Attempt",
+      "old_field": "phase",
+      "new_type": "nomo.domain.attempts.ExecutionAttempt",
+      "replacement": "nomo.domain.attempts.AttemptPhase"
+    },
+    {
+      "group": "R01",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.commands.CommandJournal",
+      "old_field": "kind",
+      "new_type": "nomo.domain.commands.CommandJournal",
+      "replacement": "nomo.domain.commands.CommandKind"
+    },
+    {
+      "group": "R01",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.commands.CommandJournal",
+      "old_field": "role",
+      "new_type": "nomo.domain.commands.CommandJournal",
+      "replacement": "nomo.domain.commands.JournalRole"
+    },
+    {
+      "group": "R02",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.changes.Change",
+      "old_field": "operation",
+      "new_type": "nomo.domain.changes.Change",
+      "replacement": "nomo.domain.changes.FileChangeOperation"
+    },
+    {
+      "group": "R02",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.changes.ChangeOutcome",
+      "old_field": "status",
+      "new_type": "nomo.domain.changes.ChangeOutcome",
+      "replacement": "nomo.domain.changes.ChangeStatus"
+    },
+    {
+      "group": "R02",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.changes.FileOutcome",
+      "old_field": "status",
+      "new_type": "nomo.domain.changes.FileOutcome",
+      "replacement": "nomo.domain.changes.ChangeStatus"
+    },
+    {
+      "group": "R02",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.changes.Journal",
+      "old_field": "phase",
+      "new_type": "nomo.domain.changes.FileJournal",
+      "replacement": "nomo.domain.changes.JournalPhase"
+    },
+    {
+      "group": "R02",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.changes.Step",
+      "old_field": "phase",
+      "new_type": "nomo.domain.changes.FileStep",
+      "replacement": "nomo.domain.changes.StepPhase"
+    },
+    {
+      "group": "R02",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.editing.EditOperation",
+      "old_field": "phase",
+      "new_type": "nomo.domain.editing.LiteralEditRecord",
+      "replacement": "nomo.domain.editing.LiteralEditPhase"
+    },
+    {
+      "group": "R03",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.processes.StartRequest",
+      "old_field": "operation",
+      "new_type": "nomo.domain.processes.StartRequest",
+      "replacement": "nomo.domain.processes.ProcessOperation"
+    },
+    {
+      "group": "R03",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.processes.JobRequest",
+      "old_field": "operation",
+      "new_type": "nomo.domain.processes.JobRequest",
+      "replacement": "nomo.domain.processes.ProcessOperation"
+    },
+    {
+      "group": "R03",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.processes.ReadRequest",
+      "old_field": "operation",
+      "new_type": "nomo.domain.processes.ReadRequest",
+      "replacement": "nomo.domain.processes.ProcessOperation"
+    },
+    {
+      "group": "R03",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.processes.WriteRequest",
+      "old_field": "operation",
+      "new_type": "nomo.domain.processes.WriteRequest",
+      "replacement": "nomo.domain.processes.ProcessOperation"
+    },
+    {
+      "group": "R03",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.processes.InputResult",
+      "old_field": "operation",
+      "new_type": "nomo.domain.processes.InputResult",
+      "replacement": "nomo.domain.processes.ProcessOperation"
+    },
+    {
+      "group": "R03",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.processes.InputResult",
+      "old_field": "status",
+      "new_type": "nomo.domain.processes.InputResult",
+      "replacement": "removed; represented by the owning state/result payload or emitted by the explicit boundary encoder",
+      "current_fields": {}
+    },
+    {
+      "group": "R03",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.processes.Job",
+      "old_field": "phase",
+      "new_type": "nomo.domain.processes.ProcessJob",
+      "replacement": "nomo.domain.processes.JobPhase"
+    },
+    {
+      "group": "R03",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.processes.JobEvent",
+      "old_field": "phase",
+      "new_type": "nomo.domain.processes.ProcessOutput",
+      "replacement": "nomo.domain.processes.JobEventKind"
+    },
+    {
+      "group": "R03",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.processes.ArchivedJob",
+      "old_field": "phase",
+      "new_type": "nomo.domain.processes.ArchivedProcessJob",
+      "replacement": "nomo.domain.processes.ArchivedJobPhase"
+    },
+    {
+      "group": "R03",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.archives.CopyJob",
+      "old_field": "kind",
+      "new_type": "nomo.domain.archives.ConversationCopy",
+      "replacement": "nomo.domain.archives.CopyKind"
+    },
+    {
+      "group": "R03",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.archives.CopyJob",
+      "old_field": "phase",
+      "new_type": "nomo.domain.archives.ConversationCopy",
+      "replacement": "nomo.domain.archives.CopyPhase"
+    },
+    {
+      "group": "R03",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.archives.ExportOutcome",
+      "old_field": "status",
+      "new_type": "nomo.domain.archives.ExportOutcome",
+      "replacement": "removed; represented by the owning state/result payload or emitted by the explicit boundary encoder",
+      "current_fields": {}
+    },
+    {
+      "group": "R04",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.sessions.state.Request",
+      "old_field": "mode",
+      "new_type": "nomo.domain.sessions.state.Request",
+      "replacement": "nomo.domain.sessions.state.SessionMode"
+    },
+    {
+      "group": "R04",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.sessions.state.Projection",
+      "old_field": "mode",
+      "new_type": "nomo.domain.sessions.state.Projection",
+      "replacement": "nomo.domain.sessions.state.SessionMode"
+    },
+    {
+      "group": "R04",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.sessions.state.Projection",
+      "old_field": "disposition",
+      "new_type": "nomo.domain.sessions.state.Projection",
+      "replacement": "nomo.domain.sessions.state.ValidationDisposition"
+    },
+    {
+      "group": "R04",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.sessions.state.DemoClaim",
+      "old_field": "phase",
+      "new_type": "nomo.domain.sessions.state.DemoSessionClaim",
+      "replacement": "nomo.domain.sessions.state.DemoClaimPhase"
+    },
+    {
+      "group": "R04",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.sessions.state.Operation",
+      "old_field": "status",
+      "new_type": "nomo.domain.sessions.state.SessionOperation",
+      "replacement": "nomo.domain.sessions.state.OperationStatus"
+    },
+    {
+      "group": "R04",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.sessions.state.Reference",
+      "old_field": "phase",
+      "new_type": "nomo.domain.sessions.state.EventReference",
+      "replacement": "payload enum EventReference"
+    },
+    {
+      "group": "R04",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.sessions.state.Snapshot",
+      "old_field": "mode",
+      "new_type": "nomo.domain.sessions.state.SessionSnapshot",
+      "replacement": "nomo.domain.sessions.state.SessionMode"
+    },
+    {
+      "group": "R04",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.sessions.state.Snapshot",
+      "old_field": "lifecycle",
+      "new_type": "nomo.domain.sessions.state.SessionSnapshot",
+      "replacement": "nomo.domain.sessions.state.SessionLifecycle"
+    },
+    {
+      "group": "R04",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.sessions.state.MetadataRecord",
+      "old_field": "phase",
+      "new_type": "nomo.domain.sessions.state.StoredSessionMetadata",
+      "replacement": "nomo.domain.sessions.state.MetadataPhase"
+    },
+    {
+      "group": "R05",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.sessions.work.CheckResult",
+      "old_field": "outcome",
+      "new_type": "nomo.domain.sessions.work.ExecutedCheck",
+      "replacement": "nomo.domain.sessions.work.CheckOutcome"
+    },
+    {
+      "group": "R05",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.sessions.work.CheckFacts",
+      "old_field": "phase",
+      "new_type": "nomo.domain.sessions.work.CheckObservation",
+      "replacement": "nomo.domain.sessions.work.CheckState"
+    },
+    {
+      "group": "R05",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.sessions.work.CheckFacts",
+      "old_field": "outcome",
+      "new_type": "nomo.domain.sessions.work.CheckObservation",
+      "replacement": "removed; represented by the owning state/result payload or emitted by the explicit boundary encoder",
+      "current_fields": {
+        "phase": "nomo.domain.sessions.work.CheckState"
+      }
+    },
+    {
+      "group": "R05",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.sessions.work.WorkFacts",
+      "old_field": "summary_source",
+      "new_type": "nomo.domain.sessions.work.WorkFacts",
+      "replacement": "nomo.domain.sessions.work.SummarySource"
+    },
+    {
+      "group": "R05",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.sessions.work.WorkFacts",
+      "old_field": "check",
+      "new_type": "nomo.domain.sessions.work.WorkFacts",
+      "replacement": "nomo.domain.sessions.work.CheckSummary"
+    },
+    {
+      "group": "R05",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.sessions.work.CheckOutputRecord",
+      "old_field": "slot",
+      "new_type": "nomo.domain.sessions.work.CapturedCheckOutput",
+      "replacement": "nomo.domain.sessions.work.CheckSlot"
+    },
+    {
+      "group": "R05",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.sessions.work.ContinuousEdit",
+      "old_field": "phase",
+      "new_type": "nomo.domain.sessions.work.ContinuousEditState",
+      "replacement": "payload enum ContinuousEditState"
+    },
+    {
+      "group": "R05",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.sessions.work.ContinuousResult",
+      "old_field": "phase",
+      "new_type": "nomo.domain.sessions.work.WorkSummary",
+      "replacement": "nomo.domain.sessions.work.SummaryState"
+    },
+    {
+      "group": "R05",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.sessions.work.ContinuousResult",
+      "old_field": "source",
+      "new_type": "nomo.domain.sessions.work.WorkSummary",
+      "replacement": "removed; represented by the owning state/result payload or emitted by the explicit boundary encoder",
+      "current_fields": {
+        "phase": "nomo.domain.sessions.work.SummaryState"
+      }
+    },
+    {
+      "group": "R05",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.sessions.work.ContinuousCheck",
+      "old_field": "phase",
+      "new_type": "nomo.domain.sessions.work.ContinuousCheckAttempt",
+      "replacement": "nomo.domain.sessions.work.CheckState"
+    },
+    {
+      "group": "R05",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.sessions.work.ContinuousCheck",
+      "old_field": "outcome",
+      "new_type": "nomo.domain.sessions.work.ContinuousCheckAttempt",
+      "replacement": "removed; represented by the owning state/result payload or emitted by the explicit boundary encoder",
+      "current_fields": {
+        "phase": "nomo.domain.sessions.work.CheckState"
+      }
+    },
+    {
+      "group": "R05",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.sessions.work.CheckRecord",
+      "old_field": "phase",
+      "new_type": "nomo.domain.sessions.work.CheckAttempt",
+      "replacement": "nomo.domain.sessions.work.CheckState"
+    },
+    {
+      "group": "R05",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.sessions.work.CheckRecord",
+      "old_field": "outcome",
+      "new_type": "nomo.domain.sessions.work.CheckAttempt",
+      "replacement": "removed; represented by the owning state/result payload or emitted by the explicit boundary encoder",
+      "current_fields": {
+        "phase": "nomo.domain.sessions.work.CheckState"
+      }
+    },
+    {
+      "group": "R05",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.sessions.work.FollowupRecord",
+      "old_field": "phase",
+      "new_type": "nomo.domain.sessions.work.FollowupAttempt",
+      "replacement": "nomo.domain.sessions.work.FollowupPhase"
+    },
+    {
+      "group": "R05",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.sessions.work.WorkRecord",
+      "old_field": "phase",
+      "new_type": "nomo.domain.sessions.work.WorkAttempt",
+      "replacement": "nomo.domain.sessions.work.WorkPhase"
+    },
+    {
+      "group": "R05",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.sessions.work.StoredWorkRecord",
+      "old_field": "phase",
+      "new_type": "nomo.domain.sessions.work.CapturedWork",
+      "replacement": "nomo.domain.sessions.work.StoredWorkPhase"
+    },
+    {
+      "group": "R05",
+      "category": "internal_numeric",
+      "old_type": "nomo.domain.sessions.work.CheckResult",
+      "old_field": "exit_code",
+      "new_type": "nomo.domain.sessions.work.ExecutedCheck",
+      "replacement": "removed; represented by the owning state/result payload or emitted by the explicit boundary encoder",
+      "current_fields": {
+        "outcome": "nomo.domain.sessions.work.CheckOutcome"
+      }
+    },
+    {
+      "group": "R05",
+      "category": "internal_numeric",
+      "old_type": "nomo.domain.sessions.work.CheckFacts",
+      "old_field": "exit_code",
+      "new_type": "nomo.domain.sessions.work.CheckObservation",
+      "replacement": "removed; represented by the owning state/result payload or emitted by the explicit boundary encoder",
+      "current_fields": {
+        "phase": "nomo.domain.sessions.work.CheckState"
+      }
+    },
+    {
+      "group": "R05",
+      "category": "internal_numeric",
+      "old_type": "nomo.domain.sessions.work.WorkFacts",
+      "old_field": "exit_code",
+      "new_type": "nomo.domain.sessions.work.WorkFacts",
+      "replacement": "removed; represented by the owning state/result payload or emitted by the explicit boundary encoder",
+      "current_fields": {
+        "summary_source": "nomo.domain.sessions.work.SummarySource",
+        "check": "nomo.domain.sessions.work.CheckSummary"
+      }
+    },
+    {
+      "group": "R05",
+      "category": "internal_numeric",
+      "old_type": "nomo.domain.sessions.work.ContinuousCheck",
+      "old_field": "exit_code",
+      "new_type": "nomo.domain.sessions.work.ContinuousCheckAttempt",
+      "replacement": "removed; represented by the owning state/result payload or emitted by the explicit boundary encoder",
+      "current_fields": {
+        "phase": "nomo.domain.sessions.work.CheckState"
+      }
+    },
+    {
+      "group": "R05",
+      "category": "internal_numeric",
+      "old_type": "nomo.domain.sessions.work.CheckRecord",
+      "old_field": "exit_code",
+      "new_type": "nomo.domain.sessions.work.CheckAttempt",
+      "replacement": "removed; represented by the owning state/result payload or emitted by the explicit boundary encoder",
+      "current_fields": {
+        "phase": "nomo.domain.sessions.work.CheckState"
+      }
+    },
+    {
+      "group": "R06",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.sessions.chain.ParentFacts",
+      "old_field": "operation",
+      "new_type": "nomo.domain.sessions.chain.ParentFacts",
+      "replacement": "nomo.domain.harness.loop.ReadOperation"
+    },
+    {
+      "group": "R06",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.sessions.chain.CapturedJournal",
+      "old_field": "phase",
+      "new_type": "nomo.domain.sessions.chain.CapturedChainEdit",
+      "replacement": "nomo.domain.sessions.chain.ChainEditPhase"
+    },
+    {
+      "group": "R06",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.sessions.chain.RecoveryDecision",
+      "old_field": "choice",
+      "new_type": "nomo.domain.sessions.chain.RecordedRecovery",
+      "replacement": "nomo.domain.sessions.chain.RecoveryChoice"
+    },
+    {
+      "group": "R06",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.sessions.chain.Record",
+      "old_field": "phase",
+      "new_type": "nomo.domain.sessions.chain.WorkChain",
+      "replacement": "nomo.domain.sessions.chain.ChainPhase"
+    },
+    {
+      "group": "R06",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.sessions.chain.EditJournalRecord",
+      "old_field": "phase",
+      "new_type": "nomo.domain.sessions.chain.ChainEditJournal",
+      "replacement": "nomo.domain.sessions.chain.ChainEditPhase"
+    },
+    {
+      "group": "R06",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.sessions.user_context_chain_v4.JournalRecord",
+      "old_field": "phase",
+      "new_type": "nomo.domain.sessions.user_context_chain_v4.RootBoundChainJournal",
+      "replacement": "nomo.domain.sessions.chain.ChainEditPhase"
+    },
+    {
+      "group": "R07",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.sessions.chat.ChatSession",
+      "old_field": "phase",
+      "new_type": "nomo.domain.sessions.chat.ChatSessionState",
+      "replacement": "nomo.domain.sessions.chat.ChatPhase"
+    },
+    {
+      "group": "R07",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.sessions.checkpoints.Checkpoint",
+      "old_field": "tool",
+      "new_type": "nomo.domain.sessions.checkpoints.Checkpoint",
+      "replacement": "Option<nomo.domain.harness.loop.ReadOperation>"
+    },
+    {
+      "group": "R07",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.sessions.checkpoints.Checkpoint",
+      "old_field": "lifecycle",
+      "new_type": "nomo.domain.sessions.checkpoints.Checkpoint",
+      "replacement": "nomo.domain.sessions.checkpoints.CheckpointLifecycle"
+    },
+    {
+      "group": "R07",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.sessions.checkpoints.Successor",
+      "old_field": "tool",
+      "new_type": "nomo.domain.sessions.checkpoints.Successor",
+      "replacement": "Option<nomo.domain.harness.loop.ReadOperation>"
+    },
+    {
+      "group": "R07",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.sessions.checkpoints.Successor",
+      "old_field": "lifecycle",
+      "new_type": "nomo.domain.sessions.checkpoints.Successor",
+      "replacement": "nomo.domain.sessions.checkpoints.SuccessorLifecycle"
+    },
+    {
+      "group": "R07",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.sessions.checkpoints.CheckpointRecord",
+      "old_field": "phase",
+      "new_type": "nomo.domain.sessions.checkpoints.StoredCheckpoint",
+      "replacement": "nomo.domain.sessions.checkpoints.CheckpointRecordPhase"
+    },
+    {
+      "group": "R07",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.sessions.checkpoints.SuccessorRecord",
+      "old_field": "phase",
+      "new_type": "nomo.domain.sessions.checkpoints.StoredSuccessor",
+      "replacement": "nomo.domain.sessions.checkpoints.SuccessorRecordPhase"
+    },
+    {
+      "group": "R08",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.harness.chat.Context",
+      "old_field": "phase",
+      "new_type": "nomo.domain.harness.chat.Context",
+      "replacement": "nomo.domain.harness.chat.ChatStage"
+    },
+    {
+      "group": "R08",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.harness.chat.Context",
+      "old_field": "tool",
+      "new_type": "nomo.domain.harness.chat.Context",
+      "replacement": "Option<nomo.domain.harness.loop.ReadOperation>"
+    },
+    {
+      "group": "R08",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.harness.chat.Completed",
+      "old_field": "tool",
+      "new_type": "nomo.domain.harness.chat.Completed",
+      "replacement": "Option<nomo.domain.harness.loop.ReadOperation>"
+    },
+    {
+      "group": "R08",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.harness.chat.Previous",
+      "old_field": "tool",
+      "new_type": "nomo.domain.harness.chat.PriorRead",
+      "replacement": "Option<nomo.domain.harness.loop.ReadOperation>"
+    },
+    {
+      "group": "R08",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.harness.delegation.ChildResult",
+      "old_field": "status",
+      "new_type": "nomo.domain.harness.delegation.ChildResult",
+      "replacement": "nomo.domain.harness.delegation.DelegationStatus"
+    },
+    {
+      "group": "R08",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.harness.delegation.Outcome",
+      "old_field": "status",
+      "new_type": "nomo.domain.harness.delegation.Outcome",
+      "replacement": "nomo.domain.harness.delegation.DelegationStatus"
+    },
+    {
+      "group": "R08",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.harness.delegation.Exchange",
+      "old_field": "sender",
+      "new_type": "nomo.domain.harness.delegation.Exchange",
+      "replacement": "nomo.domain.harness.delegation.Participant"
+    },
+    {
+      "group": "R08",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.harness.delegation.Exchange",
+      "old_field": "recipient",
+      "new_type": "nomo.domain.harness.delegation.Exchange",
+      "replacement": "nomo.domain.harness.delegation.Participant"
+    },
+    {
+      "group": "R08",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.harness.delegation.Exchange",
+      "old_field": "kind",
+      "new_type": "nomo.domain.harness.delegation.Exchange",
+      "replacement": "nomo.domain.harness.delegation.ExchangeKind"
+    },
+    {
+      "group": "R08",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.harness.delegation.Reply",
+      "old_field": "kind",
+      "new_type": "nomo.domain.harness.delegation.Reply",
+      "replacement": "payload enum Reply"
+    },
+    {
+      "group": "R08",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.harness.edit.Context",
+      "old_field": "phase",
+      "new_type": "nomo.domain.harness.edit.Context",
+      "replacement": "nomo.domain.harness.edit.EditStage"
+    },
+    {
+      "group": "R08",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.harness.loop.Action",
+      "old_field": "operation",
+      "new_type": "nomo.domain.harness.loop.Action",
+      "replacement": "payload enum Action"
+    },
+    {
+      "group": "R08",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.harness.loop.ToolSelection",
+      "old_field": "operation",
+      "new_type": "nomo.domain.harness.loop.ReadAction",
+      "replacement": "payload enum ReadAction"
+    },
+    {
+      "group": "R08",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.harness.read.TextContext",
+      "old_field": "phase",
+      "new_type": "nomo.domain.harness.read.TextContext",
+      "replacement": "nomo.domain.harness.read.TextStage"
+    },
+    {
+      "group": "R08",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.harness.read.ReadContext",
+      "old_field": "phase",
+      "new_type": "nomo.domain.harness.read.ReadContext",
+      "replacement": "nomo.domain.harness.read.ReadStage"
+    },
+    {
+      "group": "R08",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.harness.read.ReadContext",
+      "old_field": "tool",
+      "new_type": "nomo.domain.harness.read.ReadContext",
+      "replacement": "Option<nomo.domain.harness.loop.ReadOperation>"
+    },
+    {
+      "group": "R08",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.harness.read.Observed",
+      "old_field": "tool",
+      "new_type": "nomo.domain.harness.read.Observed",
+      "replacement": "Option<nomo.domain.harness.loop.ReadOperation>"
+    },
+    {
+      "group": "R08",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.harness.typed_work.ReadAction",
+      "old_field": "operation",
+      "new_type": "nomo.domain.harness.loop.ReadAction",
+      "replacement": "payload enum ReadAction"
+    },
+    {
+      "group": "R08",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.harness.work.Evidence",
+      "old_field": "operation",
+      "new_type": "nomo.domain.harness.work.Evidence",
+      "replacement": "nomo.domain.harness.loop.ReadOperation"
+    },
+    {
+      "group": "R08",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.workspace.Outcome",
+      "old_field": "status",
+      "new_type": "nomo.domain.workspace.Outcome",
+      "replacement": "nomo.domain.workspace.WorkspaceOutcomeStatus"
+    },
+    {
+      "group": "R09",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.conversation.Event",
+      "old_field": "role",
+      "new_type": "nomo.domain.conversation.TraceEvent",
+      "replacement": "nomo.domain.conversation.TraceRole"
+    },
+    {
+      "group": "R09",
+      "category": "internal_enum",
+      "old_type": "nomo.domain.conversation.Event",
+      "old_field": "kind",
+      "new_type": "nomo.domain.conversation.TraceEvent",
+      "replacement": "nomo.domain.conversation.TraceKind"
+    },
+    {
+      "group": "R10",
+      "category": "internal_enum",
+      "old_type": "nomo.adapters.cli.chains.Selection",
+      "old_field": "mode",
+      "new_type": "nomo.adapters.cli.chains.Selection",
+      "replacement": "nomo.adapters.cli.chains.InputMode"
+    },
+    {
+      "group": "R10",
+      "category": "internal_enum",
+      "old_type": "nomo.adapters.cli.checks.Selection",
+      "old_field": "phase",
+      "new_type": "nomo.adapters.cli.checks.Selection",
+      "replacement": "nomo.domain.sessions.work.CheckState"
+    },
+    {
+      "group": "R10",
+      "category": "internal_enum",
+      "old_type": "nomo.adapters.cli.input.Request",
+      "old_field": "kind",
+      "new_type": "nomo.adapters.cli.input.Request",
+      "replacement": "payload enum Request"
+    },
+    {
+      "group": "R10",
+      "category": "internal_enum",
+      "old_type": "nomo.adapters.cli.input.LineCommand",
+      "old_field": "kind",
+      "new_type": "nomo.adapters.cli.input.LineCommand",
+      "replacement": "payload enum LineCommand"
+    },
+    {
+      "group": "R10",
+      "category": "internal_enum",
+      "old_type": "nomo.adapters.cli.model.Request",
+      "old_field": "operation",
+      "new_type": "nomo.adapters.cli.model.Request",
+      "replacement": "payload enum Request"
+    },
+    {
+      "group": "R10",
+      "category": "internal_enum",
+      "old_type": "nomo.adapters.cli.session_input.Options",
+      "old_field": "verb",
+      "new_type": "nomo.adapters.cli.session_input.Options",
+      "replacement": "nomo.adapters.cli.session_input.SessionVerb"
+    },
+    {
+      "group": "R10",
+      "category": "internal_enum",
+      "old_type": "nomo.adapters.cli.chat.View",
+      "old_field": "phase",
+      "new_type": "nomo.adapters.cli.chat.View",
+      "replacement": "nomo.domain.sessions.chat.ChatPhase"
+    },
+    {
+      "group": "R10",
+      "category": "internal_enum",
+      "old_type": "nomo.adapters.cli.chat.View",
+      "old_field": "work_phase",
+      "new_type": "nomo.adapters.cli.chat.View",
+      "replacement": "Option<nomo.domain.sessions.work.WorkPhase>"
+    },
+    {
+      "group": "R10",
+      "category": "internal_enum",
+      "old_type": "nomo.adapters.cli.chat.View",
+      "old_field": "work_edit_phase",
+      "new_type": "nomo.adapters.cli.chat.View",
+      "replacement": "nomo.adapters.cli.chat.EditObservation"
+    },
+    {
+      "group": "R10",
+      "category": "internal_enum",
+      "old_type": "nomo.adapters.cli.chat.View",
+      "old_field": "check_phase",
+      "new_type": "nomo.adapters.cli.chat.View",
+      "replacement": "Option<nomo.domain.sessions.work.CheckState>"
+    },
+    {
+      "group": "R10",
+      "category": "internal_enum",
+      "old_type": "nomo.adapters.cli.chat.View",
+      "old_field": "check_outcome",
+      "new_type": "nomo.adapters.cli.chat.View",
+      "replacement": "removed; represented by the owning state/result payload or emitted by the explicit boundary encoder",
+      "current_fields": {
+        "phase": "nomo.domain.sessions.chat.ChatPhase",
+        "check_phase": "Option<nomo.domain.sessions.work.CheckState>",
+        "followup_check_phase": "Option<nomo.domain.sessions.work.CheckState>"
+      }
+    },
+    {
+      "group": "R10",
+      "category": "internal_enum",
+      "old_type": "nomo.adapters.cli.chat.View",
+      "old_field": "followup_phase",
+      "new_type": "nomo.adapters.cli.chat.View",
+      "replacement": "Option<nomo.domain.sessions.work.WorkPhase>"
+    },
+    {
+      "group": "R10",
+      "category": "internal_enum",
+      "old_type": "nomo.adapters.cli.chat.View",
+      "old_field": "followup_edit_phase",
+      "new_type": "nomo.adapters.cli.chat.View",
+      "replacement": "nomo.adapters.cli.chat.EditObservation"
+    },
+    {
+      "group": "R10",
+      "category": "internal_enum",
+      "old_type": "nomo.adapters.cli.chat.View",
+      "old_field": "followup_check_phase",
+      "new_type": "nomo.adapters.cli.chat.View",
+      "replacement": "Option<nomo.domain.sessions.work.CheckState>"
+    },
+    {
+      "group": "R10",
+      "category": "internal_enum",
+      "old_type": "nomo.adapters.cli.chat.View",
+      "old_field": "followup_check_outcome",
+      "new_type": "nomo.adapters.cli.chat.View",
+      "replacement": "removed; represented by the owning state/result payload or emitted by the explicit boundary encoder",
+      "current_fields": {
+        "phase": "nomo.domain.sessions.chat.ChatPhase",
+        "check_phase": "Option<nomo.domain.sessions.work.CheckState>",
+        "followup_check_phase": "Option<nomo.domain.sessions.work.CheckState>"
+      }
+    },
+    {
+      "group": "R10",
+      "category": "internal_numeric",
+      "old_type": "nomo.adapters.cli.chat.View",
+      "old_field": "check_exit",
+      "new_type": "nomo.adapters.cli.chat.View",
+      "replacement": "removed; represented by the owning state/result payload or emitted by the explicit boundary encoder",
+      "current_fields": {
+        "phase": "nomo.domain.sessions.chat.ChatPhase",
+        "check_phase": "Option<nomo.domain.sessions.work.CheckState>",
+        "followup_check_phase": "Option<nomo.domain.sessions.work.CheckState>"
+      }
+    },
+    {
+      "group": "R10",
+      "category": "internal_numeric",
+      "old_type": "nomo.adapters.cli.chat.View",
+      "old_field": "followup_check_exit",
+      "new_type": "nomo.adapters.cli.chat.View",
+      "replacement": "removed; represented by the owning state/result payload or emitted by the explicit boundary encoder",
+      "current_fields": {
+        "phase": "nomo.domain.sessions.chat.ChatPhase",
+        "check_phase": "Option<nomo.domain.sessions.work.CheckState>",
+        "followup_check_phase": "Option<nomo.domain.sessions.work.CheckState>"
+      }
+    },
+    {
+      "group": "R10",
+      "category": "internal_enum",
+      "old_type": "nomo.bootstrap.work.HistoryWork",
+      "old_field": "summary_source",
+      "new_type": "nomo.adapters.model.work.HistoryWork",
+      "replacement": "nomo.domain.sessions.work.SummarySource"
+    },
+    {
+      "group": "R10",
+      "category": "internal_enum",
+      "old_type": "nomo.bootstrap.work.HistoryWork",
+      "old_field": "check",
+      "new_type": "nomo.adapters.model.work.HistoryWork",
+      "replacement": "nomo.domain.sessions.work.CheckSummary"
+    },
+    {
+      "group": "R10",
+      "category": "internal_enum",
+      "old_type": "nomo.bootstrap.work.PriorWork",
+      "old_field": "summary_source",
+      "new_type": "nomo.adapters.model.work.PriorWork",
+      "replacement": "nomo.domain.sessions.work.SummarySource"
+    },
+    {
+      "group": "R10",
+      "category": "internal_enum",
+      "old_type": "nomo.bootstrap.work.PriorWork",
+      "old_field": "check",
+      "new_type": "nomo.adapters.model.work.PriorWork",
+      "replacement": "nomo.domain.sessions.work.CheckSummary"
+    },
+    {
+      "group": "R10",
+      "category": "internal_enum",
+      "old_type": "nomo.bootstrap.work.ReadPriorWork",
+      "old_field": "summary_source",
+      "new_type": "nomo.adapters.model.work.ReadPriorWork",
+      "replacement": "nomo.domain.sessions.work.SummarySource"
+    },
+    {
+      "group": "R10",
+      "category": "internal_enum",
+      "old_type": "nomo.bootstrap.work.ReadPriorWork",
+      "old_field": "check",
+      "new_type": "nomo.adapters.model.work.ReadPriorWork",
+      "replacement": "nomo.domain.sessions.work.CheckSummary"
+    },
+    {
+      "group": "R10",
+      "category": "internal_numeric",
+      "old_type": "nomo.bootstrap.work.HistoryWork",
+      "old_field": "exit_code",
+      "new_type": "nomo.adapters.model.work.HistoryWork",
+      "replacement": "removed; represented by the owning state/result payload or emitted by the explicit boundary encoder",
+      "current_fields": {
+        "summary_source": "nomo.domain.sessions.work.SummarySource",
+        "check": "nomo.domain.sessions.work.CheckSummary"
+      }
+    },
+    {
+      "group": "R10",
+      "category": "internal_numeric",
+      "old_type": "nomo.bootstrap.work.PriorWork",
+      "old_field": "exit_code",
+      "new_type": "nomo.adapters.model.work.PriorWork",
+      "replacement": "removed; represented by the owning state/result payload or emitted by the explicit boundary encoder",
+      "current_fields": {
+        "summary_source": "nomo.domain.sessions.work.SummarySource",
+        "check": "nomo.domain.sessions.work.CheckSummary"
+      }
+    }
+  ],
+  "product_source_sha256": {
+    "src/nomo/adapters/cli/chain_input.es": "8002003fe904622cbab0916a7206b76766fc4aa69a7d06e2fd49104311ab3ffc",
+    "src/nomo/adapters/cli/chains.es": "6bd31a5b7afbe504d3477b8204cf3386a33c31ca7ab4ee1924b28ea21a5eb12f",
+    "src/nomo/adapters/cli/chat.es": "70946af577429c21337d349c60175d702fdd6bd41f71f53e9f1f96c79e8dffc3",
+    "src/nomo/adapters/cli/checkpoint_input.es": "8e09f3d2eb5f7bbe6cddcbe335eb6903902d9a72e491437ec2221a0c4f3085ff",
+    "src/nomo/adapters/cli/checkpoints.es": "80c6fd67383098a78590cc4a183c28ededbf909097e83a3e234eb3df53487ae6",
+    "src/nomo/adapters/cli/checks.es": "310eb91f1303119d9f14a826a5b1e06d1b6ff94ab738b22ee1b63788f55a0fec",
+    "src/nomo/adapters/cli/console.es": "e78fa210a0f5581fe41809f60906f8e59313f58e780a2a7f199294cd7b998427",
+    "src/nomo/adapters/cli/edit_input.es": "7d89fc87efdb8131d9a6c60e95aaf3e9932aa892c4650778f2f2878f9b64864b",
+    "src/nomo/adapters/cli/editing.es": "d0431e02a3d74d4c35ce1b8fc414f00c89dd809c81637a7ee08aacd85bed4580",
+    "src/nomo/adapters/cli/followup.es": "6330ddffce8b561f08d60b8b42e586c2b20019c2546ba53b63a7fb1c7f3e2a11",
+    "src/nomo/adapters/cli/harness.es": "46f426056c14f1cdd5264b6bbe63d4450a5997c8f32fd40413ecf5918e662bf7",
+    "src/nomo/adapters/cli/input.es": "7121ce87531fa7c1355c0a05e9808cfc1b631877ca13cc60471dbe42f85d0415",
+    "src/nomo/adapters/cli/model.es": "824fa4b0f043cb3ef4977aa36dc8dd9ebfc9d77b6409df6938a2df848564f6d5",
+    "src/nomo/adapters/cli/session_input.es": "77405884ec847f0234e587f6504ba82f4daab92c193d0db03c2f74b590d5f6b3",
+    "src/nomo/adapters/cli/state.es": "d2787af12eaf99eeec476f6f8bfefddea8cf8f2475b85203aa0c3e7d74c65083",
+    "src/nomo/adapters/cli/terminal.es": "01828eb3753a9a310fde25b9124bf4a092338df3d2dd427e012d999646715694",
+    "src/nomo/adapters/cli/work.es": "ad1c31bf7d6da9e18e4f6e12cbb7cefea46db14e4cda299fb4b0667293f74fe3",
+    "src/nomo/adapters/codec.es": "8de37898549331edc2752785d0e894aba824afd229fe266ca8f5f5c8793e5a4b",
+    "src/nomo/adapters/filesystem/editing.es": "3e44339aac46aca95f6b1a9d84e424597df76969f8b1b37d335712ea96754f70",
+    "src/nomo/adapters/filesystem/migration.es": "0f4914a7c1473d1043e20c1eff57d3d65c620e347ac60a268bf4fe8d711503f6",
+    "src/nomo/adapters/filesystem/workspace.es": "30bb9ce28146a892169bf1b1a57e0d46760578012f3e5068d18bc56b1fca3ced",
+    "src/nomo/adapters/model/coding.es": "208fc598b17323955f1f996bc79f981eca7f19c504b82572d33e418a8c96cdba",
+    "src/nomo/adapters/model/continuation.es": "0d11de3ee5d30db3db85fbe8a90f03edad28d2570638c9c10c27c1946522a974",
+    "src/nomo/adapters/model/read.es": "4eabfbdac2878f477c16f85417914d243c98d869310a0d500c88379599bf5886",
+    "src/nomo/adapters/model/summary.es": "ac32b5bc541f2ceefe7193aef3141d3a6ea0925b8b51456c93b5c3823e58da40",
+    "src/nomo/adapters/model/text.es": "fbd664bba91b9ba5c502091e537fcd510b861ca530be6cc9e44d35f96fa1707d",
+    "src/nomo/adapters/model/tool_loop.es": "726a70b7890211509d209858bc14a58686c8a330bfa081085ebd1259569aa9ac",
+    "src/nomo/adapters/model/work.es": "afa3fc62d8f3cd38a36399c209f170d54538b2f86e6b6730bfea1ee42a78712a",
+    "src/nomo/adapters/process/commands.es": "854ba16683834466f7fae7d49c62b91fefa69dce2b5efffe51531cc7be3d4551",
+    "src/nomo/adapters/process/configuration.es": "c6a4a63bbf8599afecd0c92ac659ca774bef0f6d864cdba16abcf27877b33f49",
+    "src/nomo/adapters/process/jobs.es": "21b97abe3ff589e310632affe956ad0e06c7d6e4a0c0118e2cdae7c7c8960707",
+    "src/nomo/adapters/storage/chains.es": "e360b37fe8d0724c94ddc749f7831a040bd5cd33bda27d230e8afe41a85de278",
+    "src/nomo/adapters/storage/chat.es": "1466e21e6c75379ce93fc2312d7e919b96e36049c888d4263788f4aaac7c9223",
+    "src/nomo/adapters/storage/check_lifecycle.es": "7e214a555d9121add80cd9210792620b1bbe12645e0b2bcb3ddafcae1394ae98",
+    "src/nomo/adapters/storage/checkpoints.es": "cfc131341c3c7cee9d1c3466d9279b9f5824de8845963a4777faa2866b9f1385",
+    "src/nomo/adapters/storage/checks.es": "f972c2bebaaec4470a743d21b96ba06741f958ba6d072e64fcffabbe73693bd7",
+    "src/nomo/adapters/storage/conversations.es": "43e7fffd40c55cc77086b0dbdc66a9f51c36285d298e8ebc221d8eeda1363d85",
+    "src/nomo/adapters/storage/edits.es": "d26c7d02797a59e59160606ea025e91ebf2e0b1b5da4d8b2df29a121ad7ae667",
+    "src/nomo/adapters/storage/followup.es": "b0251f6a8c8c2d33733ef92a951fbc27074425c891c288ac6c590c5d00e6e592",
+    "src/nomo/adapters/storage/followup_checks.es": "383b7360f17ac39b3a935072d55a0ee88619dac1709b40a8acb01835b8288254",
+    "src/nomo/adapters/storage/jobs.es": "40fa1a66ca152d60a7a675dd708f7f0f8ef693c9ab502687414f4299d7ecae13",
+    "src/nomo/adapters/storage/journals.es": "41a62ee4d329a65b4fb8d584da8e8dd7967bc6de9bc4ca53509b1add1a60c2cd",
+    "src/nomo/adapters/storage/legacy/user_context_chain_v4_journal.es": "f9c7dbbf2ce01706da6548dba0d24f4a32159cb710790dc5e91cc039d057dd0d",
+    "src/nomo/adapters/storage/legacy/user_context_chain_v4_store.es": "22170ba2a9b97f5fe9a2cadff75b5c5971dfd1b5b66d3dab01f6dc3810cb6c03",
+    "src/nomo/adapters/storage/migration.es": "9c7d2c0ccaecd91dcabd5e1f39e8b245713682b0aac0c08f7384a54adb15d929",
+    "src/nomo/adapters/storage/session_records.es": "02248a3e1569805d4dbf7e025cfdedab2baab915111f1eb694b246dc8c1217bf",
+    "src/nomo/adapters/storage/status.es": "160258bbcd06d133ebf07cbe79b5a3a4f45d62f5ad21a5f6f749c4c521dd0ae0",
+    "src/nomo/adapters/storage/work_admission.es": "79ed2b3d93439b0b61b1b82e3ab154bdb748c519c2ca1b323684443a65818007",
+    "src/nomo/adapters/storage/work_history.es": "8202735e939c0a627e27745a33668285839b1853e9b3596aeecb4f157348d51f",
+    "src/nomo/adapters/storage/workspace.es": "5680b0ee6bdc600dfb78a0707d7dab5506bd2cbf01c18141a2603db9c15ea15d",
+    "src/nomo/application/conversation/interactive.es": "cf23f2f2c615c2d831bbb237ed3e6ea4c10ee2f087185d6382479f045c5c47e5",
+    "src/nomo/application/conversation/ports.es": "c9fb483394d0cd73e6ca4292c1a39ed37771c6ee4594ae254090dc772e625bbf",
+    "src/nomo/application/conversation/session.es": "fc22bc2781c6f578b0de0514a2518ee56d3f0f1282c1c0ac3c8883c3f08aa7b5",
+    "src/nomo/application/editing/changes.es": "13bc4ce145ebf815044dd0ea9fca3eea8524daf0126da8936d1a38e1dfb7557b",
+    "src/nomo/application/editing/ports.es": "34fe4c3410aa24d410d17973622d57cbd3319c44d2d626c4735bdd5a0fc40040",
+    "src/nomo/application/editing/workflow.es": "066a8a63a6d342f71dc836dd6a86ee92c859d8ec274efd2fee068fffa28b9618",
+    "src/nomo/application/execution/attempts.es": "1835d7f68007b40300e637d177327520e8ae85aa40c399a491ffc3aaf071d115",
+    "src/nomo/application/execution/commands.es": "ef51fd9d06139a2ef2547f624ce1bb9c878694646d049d2b9661f4cbdedb3b8a",
+    "src/nomo/application/execution/jobs.es": "c64d847bdd6252bca2bdff5738a4b66942ed5bfe79d6631c104fe642d045c17b",
+    "src/nomo/application/execution/ports.es": "4c2167f03b2791f508bf34f40fa187145e7525fc3b94dbbbbcc3db9b8cc317a5",
+    "src/nomo/application/harness/chat.es": "7e088fe84c0b6079dac1a2712e8f27c0dea93a6c77741b1a4314f4add200b45e",
+    "src/nomo/application/harness/ports.es": "10af0ae47561a013b11922ddf119285a13e59e3641a47d3a183677d8362867b4",
+    "src/nomo/application/harness/read.es": "1231014e07ac60494c539c1bc819a4e824e6d686f7270d76fed63a8b5417801e",
+    "src/nomo/application/harness/text.es": "a9e4ab2c1cb0e6b407952935364465269e30660ce4b68c0f427a8e229a6a7f79",
+    "src/nomo/application/harness/work.es": "3318441867e2185f81186f006f75dfae3ce4d0356a9376e58ab3e62abda1c6fe",
+    "src/nomo/application/resources.es": "153e8a7f2b11dee2d7c2877a7f443312075440df00be05ed57bbc3a6c290c17d",
+    "src/nomo/application/scope.es": "cb4fbed76642c7f6d6aef296e98beb30612f89f59d96fa6ed744a336cef2f70e",
+    "src/nomo/application/sessions/admission.es": "f9ee41748b2cebf2b5eaf08a61c09ab0d4297e44f08f6b837074319beb120bbb",
+    "src/nomo/application/sessions/chain.es": "4022889e89aad37cb014d550492efa2fb232861a40eacbd71a05731931749bdb",
+    "src/nomo/application/sessions/chat.es": "37c5b8bbeab983c4907fff9ea872e917c74a4e1533486d5fe1302ab445942f23",
+    "src/nomo/application/sessions/effects/session_user_context_chain_v4.es": "444073875b28a66fd8867bc8a4a07f0f20b09720c124ff95aa432f22077a50e2",
+    "src/nomo/application/sessions/persistence.es": "25ec52b3133bda186a1295ac0f380ce1062b1c8f82063fa22c9bc051dae33a8d",
+    "src/nomo/application/sessions/ports.es": "1ece5fe70b7057fa0e53cc5f7c44513094da5e1f06f7fdfe5dfd0a2ecc4c71be",
+    "src/nomo/application/sessions/user_context_chain.es": "ec93b127195308d7217e17dde71aa48fd6c19fc1e4e76e194340e6068ea4d8ad",
+    "src/nomo/application/transfer/migration.es": "cc49afd17ebf199f6fea1cb4e71113ecb2dc0a3af462f42d51d1ef31ab05547d",
+    "src/nomo/application/transfer/ports.es": "f01f54e13210e21a1c269d02aff64d7389790e183f95041812d03ee2ce2cbd53",
+    "src/nomo/application/transfer/service.es": "aad811b203251e506b44c93dd6b08628ca5ad9fd41473ab7381c6f422cc6ef0a",
+    "src/nomo/application/workspace/ports.es": "13a07ea4b73b433fd404147d52b193104a2d10e1621b6c25c4494e89a9c9d6dd",
+    "src/nomo/application/workspace/service.es": "84183ea4291427915479b194bea1268a39ce5c36a00c1787fed68a5305871681",
+    "src/nomo/bootstrap/harness.es": "34d0ec5fe006d4d53214919ae32ee2465b3b41634fa4be41937a56b3a616f3d3",
+    "src/nomo/bootstrap/main.es": "7b07962755ef51343ebfddee4ec56e22c8ba688f0f67d42156d0faebe5e09be1",
+    "src/nomo/bootstrap/work.es": "14af373d9ee3307e21606a1793a3ebf281359c8075bcd6674afdb51d556a06ec",
+    "src/nomo/domain/archives.es": "c52d97de377721bc76aae8b0c6afa5255a918d21719b68094fed47901d4bfd5a",
+    "src/nomo/domain/attempts.es": "3a2d2854da541e9e2e0acb656c25b1d0f06cc2af27ed8d8b2a3ffb1961eadf13",
+    "src/nomo/domain/changes.es": "c0455e1c30f2bb5ff40312b5fc21d4248c67aca2f9eb135dd075a77a33128c25",
+    "src/nomo/domain/commands.es": "f28de0408043a7b4c0f9b86b12b33e90f0e9b48b0a718cf4cb4ba280839f9bfd",
+    "src/nomo/domain/context.es": "9842db2be28b7794a6a9442a8840b3f10c28c4abd82288443f22718cc96e8fdf",
+    "src/nomo/domain/conversation.es": "5bbfd4468dfee01d84b90027a7cd00a123550957e75b6d3391badeae81702b66",
+    "src/nomo/domain/editing.es": "9b6bc40267f7f4cdfed8b0b4b42e99308de1acd99258c7218c5dceeca5ce5b6c",
+    "src/nomo/domain/harness/chat.es": "84817571ceaa268ee054d37ba6064eb5bc759928e5ae8e6d6602fa8180ac2c09",
+    "src/nomo/domain/harness/delegation.es": "e8fc6ef1492387d392785a1592b13a25b557e86a8969ecfb8f4728166eb034f7",
+    "src/nomo/domain/harness/edit.es": "e7366c4416cd74eb931ecac2ae7ef929bb6e948755769ca797244d9fb609aa47",
+    "src/nomo/domain/harness/loop.es": "a2aff763ff8245b22166a8002dd7b2a32752ef8e102629ee0093b764f277d34e",
+    "src/nomo/domain/harness/read.es": "6955f5343d13b6eb862689393011aec22071316b0ee3174b295f9f2f7b1e2dcf",
+    "src/nomo/domain/harness/typed_work.es": "5193ce0e0f05b0a1244742d964910fb5a9a2db269c1b2ea7c802d1f39c7be306",
+    "src/nomo/domain/harness/work.es": "b88a107298f4a880ef29a8399762684883a14fb6ab60b316f38cfdcf5a2fe937",
+    "src/nomo/domain/limits.es": "a56275320160ad77de2d2786318d83989530ce90d445592897f7a6818d7953ed",
+    "src/nomo/domain/processes.es": "19d3ee6b7581123cd1bbf69b722b18ab9369a27d49021c8628b07afff15459e0",
+    "src/nomo/domain/sessions/chain.es": "046e8ed0595a37ff2aea36f7451f858b8c16286a9d4b626b66ffde73010c2bef",
+    "src/nomo/domain/sessions/chat.es": "e5f0f2eb7e59823f7b0bd2bdf969666327294e216b261433a3bcea540b406816",
+    "src/nomo/domain/sessions/checkpoints.es": "5d49db8c2df7adec0dba2ccf03083b1b20f53fba45aa3924f6d1280d786ad4cd",
+    "src/nomo/domain/sessions/event_codec.es": "1867ed2d35f46653080efb6288cd0016dd278a012e43210b2de0aad0e87ad14a",
+    "src/nomo/domain/sessions/state.es": "5ec4ddb277c105ec569ca7f2c4c6f2464f287f6e826c6c1325d2011dc31c4a25",
+    "src/nomo/domain/sessions/user_context_chain_v4.es": "fab41c118cc1060235a6bcdf4fb6563efc0bf6ffad0be406f94ee6990be4de61",
+    "src/nomo/domain/sessions/user_context_chain_v4_context.es": "86345ce3d94ca874c9f0ec3ce328d0af46357bff443e61f4960fc198945fd221",
+    "src/nomo/domain/sessions/user_context_chain_v4_store.es": "e4512c4155f29735bf65434a4a835cc7d80067a5d6e009d85d6edf4589aa1cf6",
+    "src/nomo/domain/sessions/work.es": "632a2ff4a75515269240a9bfd3995c1a83254750aecb0a1bf53e7c0812ff3e11",
+    "src/nomo/domain/settings.es": "287350617ddca49340069ae3a555c24212448113582fd0e8adfb71ff0b4f6538",
+    "src/nomo/domain/text.es": "de25e35c960e955008976e211839bd4500b9024af7da9f09cc544879e22fc8a0",
+    "src/nomo/domain/wire.es": "7aa3a8607f153efa40e70ed779989e58b3e5193fd1ac1a0408a53591e2eb205b",
+    "src/nomo/domain/workspace.es": "44a9027270139f9f28d3a16f9e1ed22d61f014583e1143a724cdd6db394b05ae",
+    "src/nomo/main.es": "52b25b1b0fc64d48b932432797c558a981d1dfd69cdc5253d64bd998ce396c6c"
+  }
+}

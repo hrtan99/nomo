@@ -1,15 +1,16 @@
 module nomo.adapters.storage.journals;
 
+import nomo.domain.attempts.{AttemptKind, AttemptPhase};
 import nomo.application.editing.ports.ChangeJournalStore;
 import nomo.application.execution.ports.AttemptRepository;
-import nomo.domain.attempts.{Attempt, unresolved as attempts_unresolved};
-import nomo.domain.changes.{Journal, Step};
+import nomo.domain.attempts.{ExecutionAttempt, unresolved as attempts_unresolved};
+import nomo.domain.changes.{FileJournal, FileStep};
 import std.memory.MemoryCursor;
 import std.text.from_i64;
 
 alias Schema = MemoryRegion<{
     Counter: Store<string, i64>,
-    Attempts: Store<string, Attempt>
+    Attempts: Store<string, ExecutionAttempt>
 }>;
 
 public let Data = std.memory.region<Schema>(stable_id = "nomo-native-attempts-v1", store = "native-attempts");
@@ -17,12 +18,12 @@ public let Data = std.memory.region<Schema>(stable_id = "nomo-native-attempts-v1
 public type NativeAttempts = {};
 
 impl NativeAttempts ~ AttemptRepository {
-    flow list(self, session: string, unresolved: bool) -> Array<Attempt> ![
+    flow list(self, session: string, unresolved: bool) -> Array<ExecutionAttempt> ![
         Memory,
         Error<StorageError>,
         Error<BudgetExceeded>
     ] {
-        var result: Array<Attempt> = [];
+        var result: Array<ExecutionAttempt> = [];
         var cursor: Option<MemoryCursor> = None();
         @limits([Iterations(2147483647)]) while true {
             let page = Data.Attempts.page(cursor, 100);
@@ -46,14 +47,14 @@ impl NativeAttempts ~ AttemptRepository {
         return result;
     }
 
-    flow load(self, id: string) -> Attempt {
+    flow load(self, id: string) -> ExecutionAttempt {
         return match Data.Attempts.get(id) {
             Some(value) => value,
             None() => abort("native attempt not found"),
         };
     }
 
-    flow prepare(self, session: string, kind: string, label: string, input_event: i64, through: i64) -> Attempt
+    flow prepare(self, session: string, kind: AttemptKind, label: string, input_event: i64, through: i64) -> ExecutionAttempt
     ![Memory, Error<StorageError>, Error<MemoryConflict>] {
         let before = Data.Counter.get_entry("attempt");
         let number = match before {
@@ -68,13 +69,13 @@ impl NativeAttempts ~ AttemptRepository {
                 Data.Counter.insert("attempt", number + 1);
             }
         }
-        let value = Attempt {
+        let value = ExecutionAttempt {
             id = session + "-run-"
                 + from_i64(number),
             session,
             kind,
             label,
-            phase = "prepared",
+            phase = AttemptPhase.Prepared,
             input_event,
             through,
             result_event = -1,
@@ -84,7 +85,7 @@ impl NativeAttempts ~ AttemptRepository {
         return value;
     }
 
-    flow update(self, id: string, phase: string, result_event: i64, recovery_event: i64) -> Attempt ![
+    flow update(self, id: string, phase: AttemptPhase, result_event: i64, recovery_event: i64) -> ExecutionAttempt ![
         Memory,
         Error<StorageError>,
         Error<MemoryConflict>
@@ -108,23 +109,23 @@ impl NativeAttempts ~ AttemptRepository {
 public type NativeChangeJournals = {};
 
 impl NativeChangeJournals ~ ChangeJournalStore {
-    flow lookup(self, id: string) -> Option<Journal> ![Memory, Error<StorageError>] {
+    flow lookup(self, id: string) -> Option<FileJournal> ![Memory, Error<StorageError>] {
         return FileJournals.Journals.get(id);
     }
 
-    flow insert(self, value: Journal) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>] {
+    flow insert(self, value: FileJournal) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>] {
         FileJournals.Journals.insert(value.id, value);
     }
 
-    flow save(self, value: Journal) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>] {
+    flow save(self, value: FileJournal) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>] {
         FileJournals.Journals.put(value.id, value);
     }
 
-    flow step(self, key: string) -> Option<Step> ![Memory, Error<StorageError>] {
+    flow step(self, key: string) -> Option<FileStep> ![Memory, Error<StorageError>] {
         return FileJournals.Steps.get(key);
     }
 
-    flow save_step(self, key: string, value: Step) -> unit ![
+    flow save_step(self, key: string, value: FileStep) -> unit ![
         Memory,
         Error<StorageError>,
         Error<MemoryConflict>
@@ -132,8 +133,12 @@ impl NativeChangeJournals ~ ChangeJournalStore {
         FileJournals.Steps.put(key, value);
     }
 
-    flow list(self, session: string) -> Array<Journal> ![Memory, Error<StorageError>, Error<BudgetExceeded>] {
-        var result: Array<Journal> = [];
+    flow list(self, session: string) -> Array<FileJournal> ![
+        Memory,
+        Error<StorageError>,
+        Error<BudgetExceeded>
+    ] {
+        var result: Array<FileJournal> = [];
         var cursor: Option<MemoryCursor> = None();
         @limits([Iterations(2147483647)]) while true {
             let page = FileJournals.Journals.page(cursor, 100);
@@ -155,10 +160,12 @@ impl NativeChangeJournals ~ ChangeJournalStore {
     }
 }
 
-alias FileJournalsSchema = MemoryRegion<{
-    Journals: Store<string, Journal>,
-    Steps: Store<string, Step>
-}>;
+alias FileJournalsSchema = MemoryRegion<
+    {
+        Journals: Store<string, FileJournal>,
+        Steps: Store<string, FileStep>
+    }
+>;
 
 public let FileJournals = std.memory.region<FileJournalsSchema>(
     stable_id = "nomo-native-file-journals-v1",

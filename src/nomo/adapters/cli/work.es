@@ -1,5 +1,6 @@
 module nomo.adapters.cli.work;
 
+import nomo.domain.sessions.work.{WorkPhase};
 import nomo.adapters.cli.console.{TerminalWorkOutput, display, ledger, simple_refused};
 import nomo.adapters.cli.edit_input.{application, edit_args_parse, harness_work_args_parse, parse_recorded};
 import nomo.adapters.cli.editing.{LegacyWorkOutput, TerminalPreview, execute, render};
@@ -366,7 +367,7 @@ public flow abandon(args: Array<string>) -> i32 ![
         redaction = policy,
         binding = args[0]
     };
-    let decision = if work.value.work.phase == "complete" {
+    let decision = if work.value.work.phase == WorkPhase.Complete {
         checks.abandon(args[1])
     } else {
         recoverable_work_store_abandon(args[1], policy, args[0])

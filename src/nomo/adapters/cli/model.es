@@ -1,10 +1,12 @@
 module nomo.adapters.cli.model;
 
+import nomo.domain.conversation.{TraceKind, TraceRole};
+import nomo.domain.workspace.WorkspaceOutcomeStatus;
 import nomo.adapters.cli.input.{cli_request_parse_line, load_for, read_cli_parse_line};
 import nomo.adapters.filesystem.workspace.{list_directory, read_legacy, search_legacy};
 import nomo.bootstrap.harness.{emit, failure, harness_tool_chat_run_turn, model_tool_run_loop, model_turn, read_tool_chat_run_turn, reject};
-import nomo.domain.conversation.{State, TextTurn, capacity_error, charge, fresh, stop as conversation_stop};
-import nomo.domain.harness.chat.{Invocation, admission_error, extended_admission_error, extended_invocation, fresh_invocation};
+import nomo.domain.conversation.{TraceState, TextTurn, capacity_error, charge, fresh, stop as conversation_stop};
+import nomo.domain.harness.chat.{ReadInvocation, admission_error, extended_admission_error, extended_invocation, fresh_invocation};
 import nomo.domain.harness.loop.{Limits, ReadLedger, allowed_error, fresh_loop, question_error as loop_question_error};
 import nomo.domain.harness.read.{question_error, read_fresh};
 import nomo.domain.limits.request_bytes;
@@ -195,7 +197,7 @@ flow ledger(prefix: string, state: ReadLedger, maximum: ReadLedger) -> unit {
     );
 }
 
-flow stop(reason: string, lines: i32, state: Invocation, unicode: bool) -> unit {
+flow stop(reason: string, lines: i32, state: ReadInvocation, unicode: bool) -> unit {
     println("STOP " + reason + " turns=" + from_i32(state.admitted) + " lines=" + from_i32(lines));
     ledger("", state.usage, displayed_maximum(unicode, state.maximum));
 }
@@ -232,7 +234,7 @@ flow line_error(raw: string, unicode: bool) -> string {
     return "";
 }
 
-flow loop(allowed: Array<string>, initial: Invocation, unicode: bool, extended: bool) -> i32 {
+flow loop(allowed: Array<string>, initial: ReadInvocation, unicode: bool, extended: bool) -> i32 {
     var state = initial;
     var lines: i32 = 0;
     let turn_limit = if extended {
@@ -264,23 +266,23 @@ flow loop(allowed: Array<string>, initial: Invocation, unicode: bool, extended: 
             }) {
                 Err(error) => println("REFUSED " + error),
                 Ok(command) => {
-                    if command.kind == "exit" {
+                    if command.is_exit() {
                         stop("exit", lines, state, unicode);
                         return 0;
                     }
-                    if command.kind == "help" {
+                    if command.is_help() {
                         help(unicode);
                     }
                     else {
                         let invalid = if unicode {
-                            question_error(command.text)
+                            question_error(command.prompt())
                         } else {
-                            loop_question_error(command.text)
+                            loop_question_error(command.prompt())
                         };
                         if invalid != "" {
                             println("REFUSED " + invalid);
                         }
-                        else if starts_with(command.text, "/") {
+                        else if starts_with(command.prompt(), "/") {
                             println("REFUSED unknown slash command");
                         }
                         else {
@@ -299,11 +301,11 @@ flow loop(allowed: Array<string>, initial: Invocation, unicode: bool, extended: 
                                 stop("budget", lines, state, unicode);
                                 return 1;
                             }
-                            println("TURN " + from_i32(state.admitted + 1) + " USER " + command.text);
+                            println("TURN " + from_i32(state.admitted + 1) + " USER " + command.prompt());
                             let result = if unicode {
-                                read_tool_chat_run_turn(command.text, allowed, state)
+                                read_tool_chat_run_turn(command.prompt(), allowed, state)
                             } else {
-                                harness_tool_chat_run_turn(command.text, allowed, state)
+                                harness_tool_chat_run_turn(command.prompt(), allowed, state)
                             };
                             if !result.resolved {
                                 return 1;
@@ -372,14 +374,14 @@ public flow run_mode(args: Array<string>, unicode: bool) -> i32 {
     }, unicode, extended);
 }
 
-public type Request = {
-    operation: string,
-    files: Array<string>,
-    literal: string
-};
+public enum Request {
+    Read(string),
+    List(string),
+    Search(Array<string>, string)
+}
 
 public type Session = {
-    history: State,
+    history: TraceState,
     reserved: usize
 };
 
@@ -424,9 +426,9 @@ public flow tool_turn(raw: string, maximum: i32, budget: i32, previous: Session)
     };
 }
 
-flow completed_reply(state: State) -> string {
+flow completed_reply(state: TraceState) -> string {
     let event = state.events[state.events.len() - 1];
-    if event.role != "tool" || event.kind != "complete" {
+    if event.role != TraceRole.Tool || event.kind != TraceKind.Complete {
         abort("scripted Provider requires a completed result");
     }
     return "read-only result: " + event.text;
@@ -434,19 +436,14 @@ flow completed_reply(state: State) -> string {
 
 // Explicit scripted Provider protocol only. TextModel output never enters here.
 public flow dispatch(request: Request) -> Outcome {
-    if request.operation == "read" && request.files.len() == 1 && request.literal == "" {
-        return read_contract_display(read_legacy(request.files[0]));
-    }
-    if request.operation == "list" && request.files.len() == 1 && request.literal == "" {
-        return read_contract_display(list_directory(request.files[0]));
-    }
-    if request.operation == "search" {
-        return read_contract_display(search_legacy(request.files, request.literal));
-    }
-    return workspace_outcome("refused", "unsupported operation or arguments", 0);
+    return match request {
+        Request.Read(path) => read_contract_display(read_legacy(path)),
+        Request.List(path) => read_contract_display(list_directory(path)),
+        Request.Search(files, literal) => read_contract_display(search_legacy(files, literal))
+    };
 }
 
-flow perform_turn(raw: string, maximum: i32, budget: i32, previous: State) -> TextTurn {
+flow perform_turn(raw: string, maximum: i32, budget: i32, previous: TraceState) -> TextTurn {
     if previous.stopped {
         return TextTurn {
             state = previous,
@@ -481,37 +478,51 @@ flow perform_turn(raw: string, maximum: i32, budget: i32, previous: State) -> Te
     if full != "" {
         return failure(conversation_stop(previous), full, 4);
     }
-    var state = emit(previous, "user", "input", "", raw);
+    var state = emit(previous, TraceRole.User, TraceKind.Input, "", raw);
     if maximum < 1 || state.spent >= budget {
         return failure(state, "invocation step budget exhausted", 4);
     }
     state = charge(state);
-    state = emit(state, "model", "request", operation, raw);
+    state = emit(state, TraceRole.Model, TraceKind.Request, operation, raw);
     if maximum < 2 || state.spent >= budget {
         return failure(state, "invocation step budget exhausted before tool", 4);
     }
     state = charge(state);
-    let result = dispatch(Request {
-        operation,
-        files,
-        literal
-    });
-    let data = result.status + ": " + result.text;
+    let selected: Option<Request> = if operation == "read" && files.len() == 1 {
+        Some(Request.Read(files[0]))
+    }
+    else {
+        if operation == "list" && files.len() == 1 {
+            Some(Request.List(files[0]))
+        }
+        else {
+            if operation == "search" {
+                Some(Request.Search(files, literal))
+            } else {
+                None()
+            }
+        }
+    };
+    let result = match selected {
+        Some(request) => dispatch(request),
+        None() => workspace_outcome(WorkspaceOutcomeStatus.Refused, "unsupported operation or arguments", 0)
+    };
+    let data = result.status.wire() + ": " + result.text;
     // Refusals are recorded, but never represented as completed successful tools.
-    if result.status != "complete" && result.status != "truncated" {
+    if result.status != WorkspaceOutcomeStatus.Complete && result.status != WorkspaceOutcomeStatus.Truncated {
         return TextTurn {
-            state = emit(state, "tool", "error", operation, data),
+            state = emit(state, TraceRole.Tool, TraceKind.Error, operation, data),
             status = 3
         };
     }
-    state = emit(state, "tool", "complete", operation, data);
+    state = emit(state, TraceRole.Tool, TraceKind.Complete, operation, data);
     if maximum < 3 || state.spent >= budget {
         return failure(state, "invocation step budget exhausted before final", 4);
     }
     state = charge(state);
     // Deterministic Provider consumes the completed result as data, never parses it.
     return TextTurn {
-        state = emit(state, "assistant", "final", "", completed_reply(state)),
+        state = emit(state, TraceRole.Assistant, TraceKind.Final, "", completed_reply(state)),
         status = 0
     };
 }

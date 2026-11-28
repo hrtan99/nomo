@@ -1,12 +1,63 @@
 module nomo.domain.harness.delegation;
 
-import nomo.domain.conversation.Event;
+import nomo.domain.conversation.{TraceRole, TraceKind};
+import nomo.domain.conversation.TraceEvent;
 import nomo.domain.limits.{context_bytes, message_bytes};
 import nomo.domain.text.{input_error, text_printable};
 import std.text.{char_count, split, starts_with, trim};
 
+public enum DelegationStatus {
+    Completed,
+    Refused
+}
+
+impl DelegationStatus {
+    public flow wire(self) -> string ![] {
+        return match self {
+            DelegationStatus.Completed => "completed",
+            DelegationStatus.Refused => "refused"
+        };
+    }
+
+    public flow parse(raw: string) -> DelegationStatus ![] {
+        return match raw {
+            "completed" => DelegationStatus.Completed,
+            "refused" => DelegationStatus.Refused,
+            _ => abort("invalid DelegationStatus spelling: " + raw)
+        };
+    }
+}
+
+public enum ExchangeKind {
+    Request,
+    Result,
+    Error,
+    Consume
+}
+
+impl ExchangeKind {
+    public flow wire(self) -> string ![] {
+        return match self {
+            ExchangeKind.Request => "request",
+            ExchangeKind.Result => "result",
+            ExchangeKind.Error => "error",
+            ExchangeKind.Consume => "consume"
+        };
+    }
+
+    public flow parse(raw: string) -> ExchangeKind ![] {
+        return match raw {
+            "request" => ExchangeKind.Request,
+            "result" => ExchangeKind.Result,
+            "error" => ExchangeKind.Error,
+            "consume" => ExchangeKind.Consume,
+            _ => abort("invalid ExchangeKind spelling: " + raw)
+        };
+    }
+}
+
 // Admission is effect-free. Err means no child, message or accounting mutation.
-public flow admit(job: Job) -> Result<Reservation, string> {
+public flow admit(job: ProcessJob) -> Result<Reservation, string> {
     if job.maximum < 1 || job.maximum > 16 || job.spent < 0 || job.spent > job.maximum {
         return Err("invalid parent step ledger");
     }
@@ -37,42 +88,42 @@ public flow admit(job: Job) -> Result<Reservation, string> {
 }
 
 flow aggregate(reservation: Reservation, result: ChildResult) -> Outcome {
-    var status = "refused";
+    var status = DelegationStatus.Refused;
     var body = "invalid child result";
     var used: i32 = 3;
-    if result.id == "child-1" && (result.status == "completed" || result.status == "refused")
+    if result.id == "child-1"
         && result.used >= 1 && result.used <= 3 && safe_text(result.text, 1152)
-        && (result.status == "completed" || fixed_refusal(result.text)) {
+        && (result.status == DelegationStatus.Completed || fixed_refusal(result.text)) {
         status = result.status;
         body = result.text;
         used = result.used;
     }
-    var kind = "error";
+    var kind = ExchangeKind.Error;
     var final = "child refused: " + body;
-    if status == "completed" {
-        kind = "result";
+    if status == DelegationStatus.Completed {
+        kind = ExchangeKind.Result;
         final = "child result: " + body;
     }
     // Task<=256, child body<=1152, final<=1167: three messages total<=2575.
     let messages = [
         Exchange {
-            sender = "main",
-            recipient = "child-1",
-            kind = "request",
+            sender = Participant.Main,
+            recipient = Participant.Child("child-1"),
+            kind = ExchangeKind.Request,
             child_id = "child-1",
             text = reservation.child.task
         },
         Exchange {
-            sender = "child-1",
-            recipient = "main",
+            sender = Participant.Child("child-1"),
+            recipient = Participant.Main,
             kind,
             child_id = "child-1",
             text = body
         },
         Exchange {
-            sender = "main",
-            recipient = "main",
-            kind = "consume",
+            sender = Participant.Main,
+            recipient = Participant.Main,
+            kind = ExchangeKind.Consume,
             child_id = "child-1",
             text = final
         },
@@ -103,7 +154,7 @@ public flow settle(reservation: Reservation, result: ChildResult) -> Result<Outc
 }
 
 // HARNESS-001A: copied selected data, never Host handles or delegated authority.
-public type Job = {
+public type ProcessJob = {
     task: string,
     context: Array<string>,
     maximum: i32,
@@ -120,7 +171,7 @@ public type ChildTask = {
 
 public type ChildResult = {
     id: string,
-    status: string,
+    status: DelegationStatus,
     text: string,
     used: i32
 };
@@ -132,22 +183,22 @@ public type Ledger = {
 };
 
 public type Exchange = {
-    sender: string,
-    recipient: string,
-    kind: string,
+    sender: Participant,
+    recipient: Participant,
+    kind: ExchangeKind,
     child_id: string,
     text: string
 };
 
 public type Outcome = {
-    status: string,
+    status: DelegationStatus,
     text: string,
     ledger: Ledger,
     messages: Array<Exchange>
 };
 
 public type Reservation = {
-    job: Job,
+    job: ProcessJob,
     child: ChildTask,
     ledger: Ledger
 };
@@ -195,67 +246,41 @@ public flow safe_text(text: string, maximum: usize) -> bool {
 }
 
 // The only adapter in this slice: deterministic data in, deterministic data out.
-public flow next(request: string, history: Array<Event>, has_result: bool, result: string) -> Reply {
+public flow next(request: string, history: Array<TraceEvent>, has_result: bool, result: string) -> Reply {
     if has_result {
-        return Reply {
-            kind = "final",
-            tool = "",
-            text = "stub received: " + result
-        };
+        return Reply.Final("stub received: " + result);
     }
     if request == "recall" || request == "recall:user" {
         let remembered = match history.iter().take(32).filter(
             event =>
-            (request == "recall" && event.role == "tool" && event.kind == "complete")
-                || (request == "recall:user" && event.role == "user")
+            (request == "recall" && event.role == TraceRole.Tool && event.kind == TraceKind.Complete)
+                || (request == "recall:user" && event.role == TraceRole.User)
         ).last() {
             Some(event) => event.text,
             None() => "",
         };
         if remembered == "" {
-            return Reply {
-                kind = "error",
-                tool = "",
-                text = "no prior completed context"
-            };
+            return Reply.Error("no prior completed context");
         }
-        return Reply {
-            kind = "final",
-            tool = "",
-            text = "remembered: " + remembered
-        };
+        return Reply.Final("remembered: " + remembered);
     }
     if request == "stub:fail" {
-        return Reply {
-            kind = "error",
-            tool = "",
-            text = "stub failure"
-        };
+        return Reply.Error("stub failure");
     }
     if starts_with(request, "tool:") {
         let parts = split(request, ":");
         if parts.len() != 3 || parts[1] == "" || parts[2] == "" {
-            return Reply {
-                kind = "error",
-                tool = "",
-                text = "expected tool:NAME:TEXT (no extra colons)"
-            };
+            return Reply.Error("expected tool:NAME:TEXT (no extra colons)");
         }
-        return Reply {
-            kind = "tool",
-            tool = parts[1],
-            text = parts[2]
-        };
+        return Reply.Tool(ToolName {
+            name = parts[1]
+        }, parts[2]);
     }
-    return Reply {
-        kind = "final",
-        tool = "",
-        text = "stub: " + request
-    };
+    return Reply.Final("stub: " + request);
 }
 
-public flow dispatch(name: string, input: string) -> ToolResult {
-    if name != "echo" {
+public flow dispatch(name: ToolName, input: string) -> ToolResult {
+    if name.name != "echo" {
         return ToolResult {
             ok = false,
             text = "unknown tool"
@@ -273,13 +298,29 @@ public flow dispatch(name: string, input: string) -> ToolResult {
     };
 }
 
-public type Reply = {
-    kind: string,
-    tool: string,
-    text: string
+public type ToolName = {
+    name: string
 };
+public enum Reply {
+    Final(string),
+    Tool(ToolName, string),
+    Error(string)
+}
 
 public type ToolResult = {
     ok: bool,
     text: string
 };
+
+public enum Participant {
+    Main,
+    Child(string)
+}
+impl Participant {
+    public flow wire(self) -> string ![] {
+        return match self {
+            Participant.Main => "main",
+            Participant.Child(id) => id
+        };
+    }
+}

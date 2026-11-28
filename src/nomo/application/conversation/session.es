@@ -1,5 +1,6 @@
 module nomo.application.conversation.session;
 
+import nomo.domain.attempts.AttemptKind;
 import nomo.application.conversation.ports.{
     CodingModel,
     ContextProjection,
@@ -97,7 +98,14 @@ public flow compact<
         index = index - 1;
     }
     let through = first - 1;
-    let attempt = begin(attempts, session, "summary", "CompactHistory", before.next_event - 1, through);
+    let attempt = begin(
+        attempts,
+        session,
+        AttemptKind.Summary,
+        "CompactHistory",
+        before.next_event - 1,
+        through
+    );
     dispatching(attempts, attempt.id);
     let summary = perform ConversationModel.summarize(input);
     returned(attempts, publication, attempt.id, "summary", "context_summary", summary.text, -1);
@@ -298,8 +306,8 @@ public flow select<R ~ ConversationReader, C ~ ConversationCatalog, P ~ Conversa
 
 public flow ready<R ~ AttemptRepository>(repository: R, session: string) -> bool {
     return match repository.list(session, true).iter().find(
-        value => value.kind == "coding"
-            || value.kind == "summary"
+        value => value.kind == AttemptKind.Coding
+            || value.kind == AttemptKind.Summary
     ) {
         Some(value) => {
             perform ConversationOutput.write(
@@ -359,7 +367,7 @@ public flow turn<
     let attempt = begin(
         attempts,
         session,
-        "coding",
+        AttemptKind.Coding,
         "NativeCoding",
         request_event,
         archive.load(session).next_event - 1

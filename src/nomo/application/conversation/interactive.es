@@ -1,5 +1,6 @@
 module nomo.application.conversation.interactive;
 
+import nomo.domain.archives.{CopyKind, CopyPhase};
 import nomo.application.conversation.ports.{
     ConversationCatalog,
     ConversationOutput,
@@ -91,7 +92,7 @@ flow process_command(session: string, request: ProcessRequest) -> unit {
                 perform TerminalOutput.show(TerminalEvent.ProcessJob(value));
             }
             for value in perform ProcessOperations.archived_jobs(session) {
-                perform TerminalOutput.show(TerminalEvent.ArchivedJob(value));
+                perform TerminalOutput.show(TerminalEvent.ArchivedProcessJob(value));
             }
         }
         ProcessRequest.Exec(argv) => perform TerminalOutput.show(
@@ -158,7 +159,7 @@ flow show<A ~ AttemptRepository>(attempts: A, value: SavedSession) -> unit {
     perform TerminalOutput.show(TerminalEvent.SessionHeader(value));
     match perform TransferOperations.status(value.id) {
         Some(job) => {
-            if job.phase != "ready" {
+            if job.phase != CopyPhase.Ready {
                 perform TerminalOutput.show(TerminalEvent.CopyState(job));
             }
         },
@@ -360,7 +361,7 @@ impl TerminalApplication<
             return 0;
         }
         for job in perform TransferOperations.copies(options.workspace) {
-            if job.phase == "staging" || job.phase == "copying" {
+            if job.phase == CopyPhase.Staging || job.phase == CopyPhase.Copying {
                 perform TerminalOutput.show(TerminalEvent.UnfinishedCopy(job));
             }
         }
@@ -500,7 +501,7 @@ impl TerminalApplication<
                 }
                 commands_Command.ResumeCopy(id) => {
                     let job = perform TransferOperations.job(id);
-                    selected = if job.kind == "fork" {
+                    selected = if job.kind == CopyKind.Fork {
                         perform TransferOperations.resume_fork(options.workspace, job.id)
                     } else {
                         perform TransferOperations.resume_import(options.workspace, job.id)

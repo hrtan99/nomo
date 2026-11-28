@@ -1,5 +1,9 @@
 module nomo.adapters.storage.work_history;
 
+import nomo.domain.sessions.work.{CheckSlot, CheckSummary, SummarySource};
+import nomo.domain.sessions.work.{FollowupPhase, WorkPhase};
+import nomo.domain.sessions.work.WorkProfile;
+import nomo.domain.editing.LiteralEditPhase;
 import nomo.adapters.storage.chat.record_work_from;
 import nomo.adapters.storage.check_lifecycle.{FirstCheck, FollowupCheck, load};
 import nomo.adapters.storage.checks.inspect as checks_inspect;
@@ -14,9 +18,9 @@ import nomo.adapters.storage.followup_checks.inspect as followup_checks_inspect;
 import nomo.adapters.storage.work_admission.{chat_available, continuous_work_load, inspect, recoverable_work_store_load};
 import nomo.application.editing.ports.WorkTimeline;
 import nomo.application.sessions.ports.WorkFactsReader;
-import nomo.domain.conversation.Event;
+import nomo.domain.conversation.TraceEvent;
 import nomo.domain.editing.Confirmed;
-import nomo.domain.sessions.chat.RecoverableChatFrame;
+import nomo.domain.sessions.chat.ChatSessionSnapshot;
 import nomo.domain.sessions.event_codec.Policy;
 import nomo.domain.sessions.work.{
     CheckOutput,
@@ -60,7 +64,7 @@ flow legacy_work_facts_read_snapshot() -> Result<Facts, string> {
             }
         },
         Some(work) => {
-            if work.phase != "complete" {
+            if work.phase != WorkPhase.Complete {
                 return Err("work is not complete; inspect before continuing");
             }
             let edit = match edit_operation_store_inspect(work.id, work.workspace, work.path) {
@@ -69,7 +73,7 @@ flow legacy_work_facts_read_snapshot() -> Result<Facts, string> {
                     return Err("completed edit record required");
                 }
             };
-            if edit.phase != "completed" {
+            if edit.phase != LiteralEditPhase.Completed {
                 return Err("edit outcome unresolved");
             }
             let check = match checks_inspect() {
@@ -78,20 +82,18 @@ flow legacy_work_facts_read_snapshot() -> Result<Facts, string> {
                     return Err(error);
                 }
             };
-            var outcome = "not requested";
-            var exit = "";
+            var outcome = CheckSummary.NotRequested;
             var output: Option<CheckOutput> = None();
             match check {
                 Some(value) => {
                     if value.id != work.id {
                         return Err("check work identity differs");
                     }
-                    if value.phase != "complete" {
+                    if !value.phase.is_complete() {
                         return Err("check outcome unresolved");
                     }
-                    outcome = value.outcome;
-                    exit = value.exit_code;
-                    let saved = match load("first", value.id, value.digest) {
+                    outcome = CheckSummary.recorded(value.phase, None());
+                    let saved = match load(CheckSlot.First, value.id, value.digest) {
                         Ok(item) => item,
                         Err(error) => {
                             return Err(error);
@@ -113,7 +115,9 @@ flow legacy_work_facts_read_snapshot() -> Result<Facts, string> {
                 }
                 None() => (),
             }
-            work_facts = Some(stored_fact(work.id, work.summary, "unknown", outcome, exit, output));
+            work_facts = Some(
+                stored_fact(work.id, work.summary, SummarySource.Unknown, outcome.with_output(output))
+            );
             let spent = match work.settled {
                 Some(value) => value,
                 None() => {
@@ -154,7 +158,7 @@ flow legacy_work_facts_read_snapshot() -> Result<Facts, string> {
             }
         },
         Some(item) => {
-            if item.phase != "complete" {
+            if item.phase != FollowupPhase.Complete {
                 return Err("followup work is unresolved");
             }
             match work_facts {
@@ -169,20 +173,18 @@ flow legacy_work_facts_read_snapshot() -> Result<Facts, string> {
                     return Err("completed followup edit required");
                 }
             };
-            if edit.phase != "completed" {
+            if edit.phase != LiteralEditPhase.Completed {
                 return Err("followup edit outcome unresolved");
             }
-            var outcome = "not requested";
-            var exit = "";
+            var outcome = CheckSummary.NotRequested;
             var output: Option<CheckOutput> = None();
             match following_check {
                 Some(value) => {
-                    if value.id != item.id || value.phase != "complete" {
+                    if value.id != item.id || !value.phase.is_complete() {
                         return Err("followup check outcome unresolved");
                     }
-                    outcome = value.outcome;
-                    exit = value.exit_code;
-                    let saved = match load("followup", value.id, value.digest) {
+                    outcome = CheckSummary.recorded(value.phase, None());
+                    let saved = match load(CheckSlot.Followup, value.id, value.digest) {
                         Ok(found) => found,
                         Err(error) => {
                             return Err(error);
@@ -220,7 +222,9 @@ flow legacy_work_facts_read_snapshot() -> Result<Facts, string> {
             let second_usage = settled_usage(second);
             work_calls = first_usage.calls + second_usage.calls;
             work_generation = first_usage.generation + second_usage.generation;
-            followup_facts = Some(stored_fact(item.id, item.summary, "unknown", outcome, exit, output));
+            followup_facts = Some(
+                stored_fact(item.id, item.summary, SummarySource.Unknown, outcome.with_output(output))
+            );
         }
     }
     return Ok(
@@ -288,12 +292,12 @@ flow recoverable_work_facts_read_snapshot(policy: Policy, binding: string) -> Re
         },
         Some(item) => {
             let work = item.value.work;
-            if work.phase == "abandoned" {
+            if work.phase == WorkPhase.Abandoned {
                 calls = work.reserved.calls;
                 generation = work.reserved.generation;
                 first_facts = Some(abandoned_fact(work.id));
             } else {
-                if work.phase != "complete" {
+                if work.phase != WorkPhase.Complete {
                     return Err("first work unresolved");
                 }
                 let edit = match edit_operation_store_inspect(work.id, work.workspace, work.path) {
@@ -302,7 +306,7 @@ flow recoverable_work_facts_read_snapshot(policy: Policy, binding: string) -> Re
                         return Err("completed first edit required");
                     }
                 };
-                if edit.phase != "completed" {
+                if edit.phase != LiteralEditPhase.Completed {
                     return Err("first edit unresolved");
                 }
                 let spent = match work.settled {
@@ -348,12 +352,12 @@ flow recoverable_work_facts_read_snapshot(policy: Policy, binding: string) -> Re
                 }
             }
             let work = item.value.work;
-            if work.phase == "abandoned" {
+            if work.phase == WorkPhase.Abandoned {
                 calls = calls + work.reserved.calls;
                 generation = generation + work.reserved.generation;
                 second_facts = Some(abandoned_fact(work.id));
             } else {
-                if work.phase != "complete" {
+                if work.phase != WorkPhase.Complete {
                     return Err("followup unresolved");
                 }
                 let edit = match history_followup_edit_store_inspect(work.id, work.workspace, work.path) {
@@ -362,7 +366,7 @@ flow recoverable_work_facts_read_snapshot(policy: Policy, binding: string) -> Re
                         return Err("completed followup edit required");
                     }
                 };
-                if edit.phase != "completed" {
+                if edit.phase != LiteralEditPhase.Completed {
                     return Err("followup edit unresolved");
                 }
                 let spent = match work.settled {
@@ -415,22 +419,25 @@ flow recoverable_work_facts_read_snapshot(policy: Policy, binding: string) -> Re
                     fact
                 });
                 index = index + 1;
-                calls = calls + if item.result.phase == "abandoned" {
+                calls = calls + if item.result.phase.is_abandoned() {
                     7
                 } else {
                     item.result.calls
                 };
-                generation = generation + if item.result.phase == "abandoned" {
-                    if item.result.source == "wide-v5" || item.result.source == "wide-v4" {
+                generation = generation + if item.result.phase.is_abandoned() {
+                    if item.result.phase.profile() == WorkProfile.WideV5
+                        || item.result.phase.profile() == WorkProfile.WideV4 {
                         286720
                     } else {
-                        if item.result.source == "high-input-v2" {
+                        if item.result.phase.profile() == WorkProfile.HighInputV2 {
                             917504
                         } else {
-                            if item.result.source == "wide-v3" || item.result.source == "high-input-v1" {
+                            if item.result.phase.profile() == WorkProfile.WideV3
+                                || item.result.phase.profile() == WorkProfile.HighInputV1 {
                                 188416
                             } else {
-                                if item.result.source == "wide" || item.result.source == "wide-v2" {
+                                if item.result.phase.profile() == WorkProfile.Wide
+                                    || item.result.phase.profile() == WorkProfile.WideV2 {
                                     61440
                                 } else {
                                     51200
@@ -498,13 +505,13 @@ impl LegacyWorkTimeline ~ WorkTimeline {
     }
 
     flow capture(self, pending: Pending, confirmed: Confirmed, summary: Summary) -> Result<
-        Array<Event>,
+        Array<TraceEvent>,
         string
     > ![Error<IndexError>] {
         return Err("legacy work has no event timeline");
     }
 
-    flow save(self, id: string, records: Array<Event>, policy: Policy, binding: string) -> Result<
+    flow save(self, id: string, records: Array<TraceEvent>, policy: Policy, binding: string) -> Result<
         bool,
         string
     > ![Memory, Error<StorageError>, Error<IndexError>] {
@@ -513,7 +520,7 @@ impl LegacyWorkTimeline ~ WorkTimeline {
 }
 
 public type EventWorkTimeline = {
-    chat: MemoryEntry<string, RecoverableChatFrame>
+    chat: MemoryEntry<string, ChatSessionSnapshot>
 };
 
 impl EventWorkTimeline ~ WorkTimeline {
@@ -522,13 +529,13 @@ impl EventWorkTimeline ~ WorkTimeline {
     }
 
     flow capture(self, pending: Pending, confirmed: Confirmed, summary: Summary) -> Result<
-        Array<Event>,
+        Array<TraceEvent>,
         string
     > ![Error<IndexError>, Error<BudgetExceeded>] {
         return capture(pending, confirmed, summary);
     }
 
-    flow save(self, id: string, records: Array<Event>, policy: Policy, binding: string) -> Result<
+    flow save(self, id: string, records: Array<TraceEvent>, policy: Policy, binding: string) -> Result<
         bool,
         string
     > ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {

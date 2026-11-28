@@ -1,5 +1,7 @@
 module nomo.domain.commands;
 
+import nomo.domain.attempts.AttemptKind;
+
 public type Argv = {
     program: string,
     arguments: Array<string>
@@ -92,8 +94,8 @@ public enum CommandMode {
 }
 
 public type CommandJournal = {
-    kind: string,
-    role: string,
+    kind: CommandKind,
+    role: JournalRole,
     name: string,
     label: string
 };
@@ -101,14 +103,14 @@ public type CommandJournal = {
 public flow journal(mode: CommandMode, program: string) -> CommandJournal {
     return match mode {
         CommandMode.Mutating => CommandJournal {
-            kind = "command",
-            role = "tool_call",
+            kind = CommandKind.Command,
+            role = JournalRole.ToolCall,
             name = "command",
             label = program
         },
         CommandMode.Observation(name) => CommandJournal {
-            kind = "observation",
-            role = "observation_call",
+            kind = CommandKind.Observation,
+            role = JournalRole.ObservationCall,
             name,
             label = name
         }
@@ -124,4 +126,57 @@ public enum GitRequest {
     Branch(string),
     Switch(string),
     Commit(string, Array<string>)
+}
+
+public enum CommandKind {
+    Command,
+    Observation
+}
+
+impl CommandKind {
+    public flow wire(self) -> string ![] {
+        return match self {
+            CommandKind.Command => "command",
+            CommandKind.Observation => "observation"
+        };
+    }
+
+    public flow parse(raw: string) -> CommandKind ![] {
+        return match raw {
+            "command" => CommandKind.Command,
+            "observation" => CommandKind.Observation,
+            _ => abort("invalid CommandKind spelling: " + raw)
+        };
+    }
+}
+
+public enum JournalRole {
+    ToolCall,
+    ObservationCall
+}
+
+impl JournalRole {
+    public flow wire(self) -> string ![] {
+        return match self {
+            JournalRole.ToolCall => "tool_call",
+            JournalRole.ObservationCall => "observation_call"
+        };
+    }
+
+    public flow parse(raw: string) -> JournalRole ![] {
+        return match raw {
+            "tool_call" => JournalRole.ToolCall,
+            "observation_call" => JournalRole.ObservationCall,
+            _ => abort("invalid JournalRole spelling: " + raw)
+        };
+    }
+}
+
+impl CommandKind {
+    public flow attempt_kind(self) -> AttemptKind ![] {
+        return match self {
+            CommandKind.Command => AttemptKind.Command,
+            CommandKind.Observation => AttemptKind.Observation
+        };
+    }
 }

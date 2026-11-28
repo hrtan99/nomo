@@ -72,8 +72,33 @@ public flow parse_continue(args: Array<string>) -> Result<ContinueOptions, strin
     });
 }
 
+public enum SessionVerb {
+    Help,
+    Save,
+    Show
+}
+
+impl SessionVerb {
+    public flow wire(self) -> string ![] {
+        return match self {
+            SessionVerb.Help => "help",
+            SessionVerb.Save => "save",
+            SessionVerb.Show => "show"
+        };
+    }
+
+    public flow parse(raw: string) -> SessionVerb ![] {
+        return match raw {
+            "help" => SessionVerb.Help,
+            "save" => SessionVerb.Save,
+            "show" => SessionVerb.Show,
+            _ => abort("invalid SessionVerb spelling: " + raw)
+        };
+    }
+}
+
 public type Options = {
-    verb: string,
+    verb: SessionVerb,
     session_id: string,
     save_id: string,
     binding: string,
@@ -101,7 +126,7 @@ public flow session_cli_args_parse(args: Array<string>) -> Result<Options, strin
     let verb = args[0];
     if verb == "--help" && args.len() == 1 {
         let help = Options {
-            verb = "help",
+            verb = SessionVerb.Help,
             session_id = "",
             save_id = "",
             binding = "",
@@ -181,7 +206,7 @@ public flow session_cli_args_parse(args: Array<string>) -> Result<Options, strin
         return Err("show forbids input");
     }
     let options = Options {
-        verb,
+        verb = SessionVerb.parse(verb),
         session_id,
         save_id,
         binding,

@@ -1,15 +1,19 @@
 module nomo.adapters.storage.chat;
 
+import nomo.domain.conversation.{TraceKind, TraceRole};
+import nomo.domain.harness.loop.{tool_name};
+import nomo.domain.sessions.chat.{ChatPhase};
+import nomo.domain.sessions.work.{CheckState, CheckOutcome};
 import nomo.adapters.storage.session_records.{append_metadata, commit_native, commit_receipt, event_history_load};
 import nomo.application.sessions.ports.{ChatRepository, Entry, Target};
-import nomo.domain.conversation.Event;
-import nomo.domain.harness.chat.{Completed, Previous, TurnResult};
+import nomo.domain.conversation.TraceEvent;
+import nomo.domain.harness.chat.{Completed, PriorRead, TurnResult};
 import nomo.domain.limits.timeline_inline_bytes;
 import nomo.domain.sessions.chat.{
     ChatEvidence,
-    ChatHistoryFrame,
-    ChatSession,
-    RecoverableChatFrame,
+    ChatHistorySnapshot,
+    ChatSessionState,
+    ChatSessionSnapshot,
     append_encoded,
     begin,
     chat_session_contract_invalid,
@@ -24,7 +28,7 @@ import nomo.domain.sessions.chat.{
     work_batch
 };
 import nomo.domain.sessions.event_codec.{
-    EventFrame,
+    TraceFrame,
     Policy,
     encode_prefix,
     event_text_codec_decode,
@@ -146,7 +150,7 @@ impl LegacyChatRepository ~ ChatRepository<Entry> {
     }
 }
 
-public alias RecoverableTicket = MemoryEntry<string, RecoverableChatFrame>;
+public alias RecoverableTicket = MemoryEntry<string, ChatSessionSnapshot>;
 
 public type RecoverableChatRepository = {
     redaction: Policy,
@@ -180,7 +184,7 @@ impl RecoverableChatRepository ~ ChatRepository<RecoverableTicket> {
                 return Err(error);
             }
         };
-        if saved.value.chat.phase != "running" {
+        if saved.value.chat.phase != ChatPhase.Running {
             return Err("reservation changed");
         }
         return Ok(saved);
@@ -215,30 +219,33 @@ impl RecoverableChatRepository ~ ChatRepository<RecoverableTicket> {
     }
 }
 
-flow legacy() -> Option<MemoryEntry<string, ChatSession>> {
+flow legacy() -> Option<MemoryEntry<string, ChatSessionState>> {
     return LegacyChats.Rows.get_entry("latest");
 }
 
-flow framed() -> Option<MemoryEntry<string, ChatHistoryFrame>> {
+flow framed() -> Option<MemoryEntry<string, ChatHistorySnapshot>> {
     return ChatHistories.Rows.get_entry("latest");
 }
 
-flow safe_role(value: string) -> bool {
-    return value == "user" || value == "main" || value == "tool" || value == "model" || value == "assistant"
-        || value == "error" || value == "other";
+flow safe_role(value: TraceRole) -> bool {
+    return value == TraceRole.User || value == TraceRole.Main || value == TraceRole.Tool
+        || value == TraceRole.Model || value == TraceRole.Assistant
+        || value == TraceRole.Error || value == TraceRole.Other;
 }
 
-flow safe_kind(value: string) -> bool {
-    return value == "request" || value == "plan" || value == "delegate" || value == "context"
-        || value == "input" || value == "tool" || value == "result" || value == "consume" || value == "answer"
-        || value == "final" || value == "error" || value == "event";
+flow safe_kind(value: TraceKind) -> bool {
+    return value == TraceKind.Request || value == TraceKind.Plan || value == TraceKind.Delegate
+        || value == TraceKind.Context
+        || value == TraceKind.Input || value == TraceKind.Tool || value == TraceKind.Result
+        || value == TraceKind.Consume || value == TraceKind.Answer
+        || value == TraceKind.Final || value == TraceKind.Error || value == TraceKind.TraceEvent;
 }
 
 flow safe_name(value: string) -> bool {
     return value == "" || value == "child-1" || value == "read" || value == "search";
 }
 
-flow chat_history_frame_error(frame: ChatHistoryFrame) -> string {
+flow chat_history_frame_error(frame: ChatHistorySnapshot) -> string {
     if frame.format != 3 || (
         frame.chat.format != 3 && frame.chat.format != 6 && frame.chat.format != 8
             && frame.chat.format != 10 && frame.chat.format != 12
@@ -287,7 +294,7 @@ public flow chat_history_load() -> Result<Option<Entry>, string> {
                     return Err(problem);
                 }
             };
-            var events: Array<Event> = [];
+            var events: Array<TraceEvent> = [];
             var first_count: usize = 0;
             var pending = false;
             match timeline {
@@ -298,7 +305,7 @@ public flow chat_history_load() -> Result<Option<Entry>, string> {
                     let turns = value.value.turns;
                     let admitted = item.value.invocation.admitted;
                     if turns != admitted {
-                        if item.value.phase != "running" || turns != admitted + 1 {
+                        if item.value.phase != ChatPhase.Running || turns != admitted + 1 {
                             return Err("legacy event history differs from chat");
                         }
                         pending = true;
@@ -375,7 +382,7 @@ public flow chat_history_load() -> Result<Option<Entry>, string> {
     }
 }
 
-flow transition(before: Option<Entry>, next: ChatSession) -> string {
+flow transition(before: Option<Entry>, next: ChatSessionState) -> string {
     let prior = match before {
         None() => {
             if next != fresh() {
@@ -385,7 +392,7 @@ flow transition(before: Option<Entry>, next: ChatSession) -> string {
         }
         Some(item) => item.value,
     };
-    if prior.phase == "ready" {
+    if prior.phase == ChatPhase.Ready {
         let reserved = match begin(prior, next.pending) {
             Ok(item) => item,
             Err(error) => {
@@ -397,7 +404,7 @@ flow transition(before: Option<Entry>, next: ChatSession) -> string {
         }
         return "";
     }
-    if prior.phase != "running" {
+    if prior.phase != ChatPhase.Running {
         return "completed session cannot transition";
     }
     let selected = next.invocation.prior;
@@ -428,28 +435,28 @@ flow transition(before: Option<Entry>, next: ChatSession) -> string {
     return "";
 }
 
-flow project(input: Array<Event>) -> Result<Array<Event>, string> {
+flow project(input: Array<TraceEvent>) -> Result<Array<TraceEvent>, string> {
     if input.len() == 0 || input.len() > 24 {
         return Err("invalid completed event batch");
     }
-    var output: Array<Event> = [];
+    var output: Array<TraceEvent> = [];
     @limits([Iterations(24)]) for item in input {
         let role = if safe_role(item.role) {
             item.role
         } else {
-            "other"
+            TraceRole.Other
         };
         let kind = if safe_kind(item.kind) {
             item.kind
         } else {
-            "event"
+            TraceKind.TraceEvent
         };
         let name = if safe_name(item.name) {
             item.name
         } else {
             ""
         };
-        output = output.push(Event {
+        output = output.push(TraceEvent {
             role,
             kind,
             name,
@@ -459,7 +466,7 @@ flow project(input: Array<Event>) -> Result<Array<Event>, string> {
     return Ok(output);
 }
 
-flow save_inner(value: ChatSession, expected: Option<Entry>, records: Array<Event>) -> Result<
+flow save_inner(value: ChatSessionState, expected: Option<Entry>, records: Array<TraceEvent>) -> Result<
     MemoryVersion,
     string
 > ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
@@ -540,7 +547,7 @@ flow save_inner(value: ChatSession, expected: Option<Entry>, records: Array<Even
         }
         return Ok(version);
     }
-    var events: Array<Event> = [];
+    var events: Array<TraceEvent> = [];
     var first_count: usize = 0;
     var previous_turns: i32 = 0;
     match before {
@@ -565,7 +572,7 @@ flow save_inner(value: ChatSession, expected: Option<Entry>, records: Array<Even
     } else if records.len() != 0 {
         return Err("unexpected completed event batch");
     }
-    let frame = ChatHistoryFrame {
+    let frame = ChatHistorySnapshot {
         format = 3,
         chat = value,
         first_count,
@@ -612,7 +619,7 @@ flow save_inner(value: ChatSession, expected: Option<Entry>, records: Array<Even
     return Ok(version);
 }
 
-public flow save(value: ChatSession, expected: Option<Entry>) -> Result<MemoryVersion, string> ![
+public flow save(value: ChatSessionState, expected: Option<Entry>) -> Result<MemoryVersion, string> ![
     Memory,
     Error<StorageError>,
     Error<IndexError>,
@@ -621,7 +628,7 @@ public flow save(value: ChatSession, expected: Option<Entry>) -> Result<MemoryVe
     return save_inner(value, expected, []);
 }
 
-public flow save_completed(value: ChatSession, expected: Option<Entry>, records: Array<Event>) -> Result<
+public flow save_completed(value: ChatSessionState, expected: Option<Entry>, records: Array<TraceEvent>) -> Result<
     MemoryVersion,
     string
 > ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
@@ -636,19 +643,25 @@ flow binding_error(binding: string) -> string {
     };
 }
 
-flow large_work_duplicate(item: Event) -> bool {
-    return ((item.role == "main" && item.kind == "tool") || (item.role == "tool" && (
-        item.kind == "complete"
-            || item.kind == "result"
-    ))) && len(item.text) > timeline_inline_bytes();
+flow large_work_duplicate(item: TraceEvent) -> bool {
+    return ((item.role == TraceRole.Main && item.kind == TraceKind.Tool) || (
+        item.role == TraceRole.Tool
+            && (
+            item.kind == TraceKind.Complete
+                || item.kind == TraceKind.Result
+        )
+    )) && len(item.text) > timeline_inline_bytes();
 }
 
-flow large_chat_duplicate(item: Event, outcome: string) -> bool {
+flow large_chat_duplicate(item: TraceEvent, outcome: string) -> bool {
     return (
-        (item.role == "main" && item.kind == "tool") || (item.role == "tool" && (
-            item.kind == "complete"
-                || item.kind == "result"
-        ))
+        (item.role == TraceRole.Main && item.kind == TraceKind.Tool) || (
+            item.role == TraceRole.Tool
+                && (
+                item.kind == TraceKind.Complete
+                    || item.kind == TraceKind.Result
+            )
+        )
     ) && item.text == outcome && len(item.text) > timeline_inline_bytes();
 }
 
@@ -669,8 +682,8 @@ flow work_omitted() -> string {
 // main/tool event is restored from the per-turn evidence row instead. Compact
 // every outgoing frame so sessions written by earlier versions are repaired on
 // their next reserve/finish without changing the durable schema or CAS head.
-flow compact_context_duplicates(value: RecoverableChatFrame, policy: Policy, binding: string) -> Result<
-    RecoverableChatFrame,
+flow compact_context_duplicates(value: ChatSessionSnapshot, policy: Policy, binding: string) -> Result<
+    ChatSessionSnapshot,
     string
 > ![
     Memory,
@@ -684,10 +697,10 @@ flow compact_context_duplicates(value: RecoverableChatFrame, policy: Policy, bin
             return Err(error);
         }
     };
-    var events: Array<Event> = [];
+    var events: Array<TraceEvent> = [];
     var chat_turn: i32 = 0;
     @limits([Iterations(4096)]) for item in value.events.events {
-        if item.role == "system" && item.kind == "native-budget" && (
+        if item.role == TraceRole.System && item.kind == TraceKind.NativeBudget && (
             item.name == "chat"
                 || item.name == "chat-large" || item.name == "chat-resilient"
                 || item.name == "chat-high-input"
@@ -695,7 +708,8 @@ flow compact_context_duplicates(value: RecoverableChatFrame, policy: Policy, bin
         ) {
             chat_turn = chat_turn + 1;
         }
-        let duplicate = item.role == "user" && item.kind == "context" && item.name == "outcome"
+        let duplicate = item.role == TraceRole.User && item.kind == TraceKind.Context
+            && item.name == "outcome"
             && len(item.text) > timeline_inline_bytes();
         var compact = false;
         if duplicate && chat_turn >= 2 {
@@ -780,15 +794,15 @@ public flow load_evidence(turn: i32, policy: Policy, binding: string) -> Result<
 // canonical selection separately, so replace only its exact projected copies
 // with explicit references. Earlier turns and non-selected work/check events
 // stay in their original order, including their positions around the references.
-public flow conversation(frame: EventFrame, latest: Previous, policy: Policy, binding: string) -> Result<
-    Array<Event>,
+public flow conversation(frame: TraceFrame, latest: PriorRead, policy: Policy, binding: string) -> Result<
+    Array<TraceEvent>,
     string
 > ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
-    var selected: Array<Event> = [];
+    var selected: Array<TraceEvent> = [];
     var chat_turn: i32 = 0;
     var chat_open = false;
     @limits([Iterations(4096)]) for event in frame.events {
-        if event.role == "system" && event.kind == "native-budget" && (
+        if event.role == TraceRole.System && event.kind == TraceKind.NativeBudget && (
             event.name == "chat"
                 || event.name == "chat-large" || event.name == "chat-resilient"
                 || event.name == "chat-high-input"
@@ -797,17 +811,25 @@ public flow conversation(frame: EventFrame, latest: Previous, policy: Policy, bi
             chat_turn = chat_turn + 1;
             chat_open = true;
         }
-        if event.role == "system" && event.kind == "work-boundary" {
+        if event.role == TraceRole.System && event.kind == TraceKind.WorkBoundary {
             chat_open = false;
         }
-        if (event.role == "user" && event.kind == "request") || (
-            event.role == "model"
-                && event.kind == "request"
-        ) || (event.role == "tool" && event.kind == "check")
-            || (event.role == "system" && (event.kind == "work-boundary" || event.kind == "notice"))
-            || (event.role == "assistant" && event.kind == "answer") || (
-            event.role == "main"
-                && (event.kind == "consume" || event.kind == "tool" || event.kind == "answer")
+        if (event.role == TraceRole.User && event.kind == TraceKind.Request)
+            || (
+            event.role == TraceRole.Model
+                && event.kind == TraceKind.Request
+        ) || (event.role == TraceRole.Tool && event.kind == TraceKind.Check)
+            || (event.role == TraceRole.System && (
+            event.kind == TraceKind.WorkBoundary
+                || event.kind == TraceKind.Notice
+        ))
+            || (event.role == TraceRole.Assistant && event.kind == TraceKind.Answer)
+            || (
+            event.role == TraceRole.Main
+                && (
+                event.kind == TraceKind.Consume || event.kind == TraceKind.Tool
+                    || event.kind == TraceKind.Answer
+            )
         ) {
             var value = match event_text_codec_decode(event.text, policy) {
                 Ok(item) => item,
@@ -815,7 +837,7 @@ public flow conversation(frame: EventFrame, latest: Previous, policy: Policy, bi
                     return Err(error);
                 }
             };
-            if event.role == "main" && event.kind == "tool" && value == chat_omitted() {
+            if event.role == TraceRole.Main && event.kind == TraceKind.Tool && value == chat_omitted() {
                 if chat_turn < frame.turns {
                     value = match load_evidence(chat_turn, policy, binding) {
                         Ok(Some(item)) => item,
@@ -827,14 +849,15 @@ public flow conversation(frame: EventFrame, latest: Previous, policy: Policy, bi
                         }
                     };
                 } else {
-                    if chat_turn != frame.turns || latest.tool == "" || latest.outcome == "" {
+                    if chat_turn != frame.turns || latest.tool == None() || latest.outcome == "" {
                         return Err("latest recoverable chat evidence missing");
                     }
                     value = latest.outcome;
                 }
             }
-            if chat_open && chat_turn == frame.turns && event.role == "main" && event.kind == "tool"
-                && latest.tool != "" && event.name == latest.tool && latest.outcome != ""
+            if chat_open && chat_turn == frame.turns && event.role == TraceRole.Main
+                && event.kind == TraceKind.Tool
+                && latest.tool != None() && event.name == tool_name(latest.tool) && latest.outcome != ""
                 && value == latest.outcome && len(value) > timeline_inline_bytes() {
                 value = "Exact latest tool outcome supplied separately as current.prior.outcome for read stages or previous.outcome for work stages; duplicate text omitted.";
             }
@@ -897,7 +920,7 @@ flow archive_evidence(turn: i32, outcome: string, policy: Policy, binding: strin
     };
 }
 
-flow recoverable_chat_store_frame_error(value: RecoverableChatFrame, policy: Policy, binding: string) -> string {
+flow recoverable_chat_store_frame_error(value: ChatSessionSnapshot, policy: Policy, binding: string) -> string {
     let bound = binding_error(binding);
     if bound != "" {
         return bound;
@@ -930,7 +953,7 @@ flow recoverable_chat_store_frame_error(value: RecoverableChatFrame, policy: Pol
         value.chat.pending,
         prior.task,
         prior.result,
-        prior.tool,
+        tool_name(prior.tool),
         prior.outcome,
         prior.answer
     ] {
@@ -952,7 +975,7 @@ flow recoverable_chat_store_frame_error(value: RecoverableChatFrame, policy: Pol
 // identity, ledger, redaction and aggregate bounds without reparsing every
 // encoded event before it is stored. load() remains the trust boundary
 // and performs the full canonical frame_error validation.
-flow constructed_frame_error(value: RecoverableChatFrame, policy: Policy, binding: string) -> string {
+flow constructed_frame_error(value: ChatSessionSnapshot, policy: Policy, binding: string) -> string {
     let bound = binding_error(binding);
     if bound != "" {
         return bound;
@@ -977,7 +1000,7 @@ flow constructed_frame_error(value: RecoverableChatFrame, policy: Policy, bindin
         value.chat.pending,
         prior.task,
         prior.result,
-        prior.tool,
+        tool_name(prior.tool),
         prior.outcome,
         prior.answer
     ] {
@@ -995,7 +1018,7 @@ flow constructed_frame_error(value: RecoverableChatFrame, policy: Policy, bindin
 }
 
 public flow recoverable_chat_store_load(policy: Policy, binding: string) -> Result<
-    Option<MemoryEntry<string, RecoverableChatFrame>>,
+    Option<MemoryEntry<string, ChatSessionSnapshot>>,
     string
 > ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     let problem = policy_error(policy);
@@ -1023,12 +1046,12 @@ public flow recoverable_chat_store_load(policy: Policy, binding: string) -> Resu
 }
 
 flow write(
-    value: RecoverableChatFrame,
-    expected: Option<MemoryEntry<string, RecoverableChatFrame>>,
+    value: ChatSessionSnapshot,
+    expected: Option<MemoryEntry<string, ChatSessionSnapshot>>,
     policy: Policy,
     binding: string
 ) -> Result<
-    MemoryEntry<string, RecoverableChatFrame>,
+    MemoryEntry<string, ChatSessionSnapshot>,
     string
 > ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     let compact = match compact_context_duplicates(value, policy, binding) {
@@ -1088,11 +1111,11 @@ public flow matches_version(expected: MemoryVersion) -> Result<bool, string> ![M
 }
 
 public flow create(policy: Policy, binding: string, high_input: bool) -> Result<
-    MemoryEntry<string, RecoverableChatFrame>,
+    MemoryEntry<string, ChatSessionSnapshot>,
     string
 > ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     return write(
-        RecoverableChatFrame {
+        ChatSessionSnapshot {
             format = 1,
             encoding = "json-string-v1",
             policy_binding = binding,
@@ -1110,12 +1133,12 @@ public flow create(policy: Policy, binding: string, high_input: bool) -> Result<
 }
 
 public flow reserve(
-    expected: MemoryEntry<string, RecoverableChatFrame>,
+    expected: MemoryEntry<string, ChatSessionSnapshot>,
     request: string,
     policy: Policy,
     binding: string
 ) -> Result<
-    MemoryEntry<string, RecoverableChatFrame>,
+    MemoryEntry<string, ChatSessionSnapshot>,
     string
 > ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     let error = recoverable_chat_store_frame_error(expected.value, policy, binding);
@@ -1123,7 +1146,7 @@ public flow reserve(
         return Err(error);
     }
     let saved = expected.value.chat;
-    if saved.invocation.prior.tool != "" {
+    if saved.invocation.prior.tool != None() {
         match archive_evidence(saved.invocation.admitted, saved.invocation.prior.outcome, policy, binding) {
             Ok(_) => (),
             Err(problem) => {
@@ -1131,7 +1154,7 @@ public flow reserve(
             }
         }
     }
-    let current = if saved.format == 3 && saved.phase == "complete" {
+    let current = if saved.format == 3 && saved.phase == ChatPhase.Complete {
         match extend(saved) {
             Ok(item) => item,
             Err(problem) => {
@@ -1180,9 +1203,9 @@ public flow reserve(
     let events = prior {
         format = 2,
         events = prior.events.push(
-            Event {
-                role = "system",
-                kind = "native-budget",
+            TraceEvent {
+                role = TraceRole.System,
+                kind = TraceKind.NativeBudget,
                 name = if saved.format == 19 {
                     "chat-full"
                 } else {
@@ -1205,7 +1228,7 @@ public flow reserve(
         )
     };
     return write(
-        RecoverableChatFrame {
+        ChatSessionSnapshot {
             format = 1,
             encoding = "json-string-v1",
             policy_binding = binding,
@@ -1219,12 +1242,12 @@ public flow reserve(
 }
 
 public flow finish(
-    expected: MemoryEntry<string, RecoverableChatFrame>,
+    expected: MemoryEntry<string, ChatSessionSnapshot>,
     result: TurnResult,
     policy: Policy,
     binding: string
 ) -> Result<
-    MemoryEntry<string, RecoverableChatFrame>,
+    MemoryEntry<string, ChatSessionSnapshot>,
     string
 > ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     let error = recoverable_chat_store_frame_error(expected.value, policy, binding);
@@ -1246,7 +1269,7 @@ public flow finish(
     if completed.records.len() == 0 || completed.records.len() > 24 {
         return Err("invalid completed event batch");
     }
-    var encoded: Array<Event> = [];
+    var encoded: Array<TraceEvent> = [];
     @limits([Iterations(24)]) for item in completed.records {
         // Only text exactly equal to the selected outcome is duplicated by
         // chat.invocation.prior.outcome. Preserve non-selected child tool
@@ -1267,7 +1290,7 @@ public flow finish(
         // The shared legacy read controller used the literal "qwen" for a
         // generic model-text event, including under MiniMax. Do not persist it
         // as a provider identity in the provider-independent record.
-        let name = if item.role == "model" && item.kind == "text" && item.name == "qwen" {
+        let name = if item.role == TraceRole.Model && item.kind == TraceKind.Text && item.name == "qwen" {
             ""
         } else {
             item.name
@@ -1284,7 +1307,7 @@ public flow finish(
         }
     };
     return write(
-        RecoverableChatFrame {
+        ChatSessionSnapshot {
             format = 1,
             encoding = "json-string-v1",
             policy_binding = binding,
@@ -1301,16 +1324,16 @@ public flow finish(
 // Callers which already crossed the load() trust boundary retain that exact CAS
 // entry through their work transaction instead of inflating the chat again.
 public flow record_work_from(
-    before: MemoryEntry<string, RecoverableChatFrame>,
+    before: MemoryEntry<string, ChatSessionSnapshot>,
     id: string,
-    records: Array<Event>,
+    records: Array<TraceEvent>,
     policy: Policy,
     binding: string
 ) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
-    if before.value.chat.phase == "running" {
+    if before.value.chat.phase == ChatPhase.Running {
         return Err("chat turn unresolved");
     }
-    var timeline_records: Array<Event> = [];
+    var timeline_records: Array<TraceEvent> = [];
     @limits([Iterations(24)]) for item in records {
         timeline_records = timeline_records.push(item {
             text = if large_work_duplicate(item) {
@@ -1334,9 +1357,9 @@ public flow record_work_from(
     };
     let previous = before.value.events;
     var ordered = previous.events.push(
-        Event {
-            role = "system",
-            kind = "work-boundary",
+        TraceEvent {
+            role = TraceRole.System,
+            kind = TraceKind.WorkBoundary,
             name = id,
             text = marker
         }
@@ -1355,7 +1378,7 @@ public flow record_work_from(
     };
 }
 
-public flow record_work(id: string, records: Array<Event>, policy: Policy, binding: string) -> Result<
+public flow record_work(id: string, records: Array<TraceEvent>, policy: Policy, binding: string) -> Result<
     bool,
     string
 > ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
@@ -1372,8 +1395,7 @@ public flow record_work(id: string, records: Array<Event>, policy: Policy, bindi
 public flow record_check(
     id: string,
     digest: string,
-    outcome: string,
-    exit_code: string,
+    outcome: CheckOutcome,
     stdout: string,
     stderr: string,
     out_truncated: bool,
@@ -1382,7 +1404,7 @@ public flow record_check(
     policy: Policy,
     binding: string
 ) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
-    let bad = invalid_values(1, "complete", id, digest, outcome, exit_code, false);
+    let bad = invalid_values(1, CheckState.Complete(outcome), id, digest, false);
     if bad != "" {
         return Err(bad);
     }
@@ -1392,7 +1414,7 @@ public flow record_check(
             return Err("existing recoverable session required");
         }
     };
-    if before.value.chat.phase == "running" {
+    if before.value.chat.phase == ChatPhase.Running {
         return Err("chat turn unresolved");
     }
     let out = match encode_prefix(stdout, out_truncated, policy) {
@@ -1420,7 +1442,8 @@ public flow record_check(
         }
     };
     let text = "Recorded check " + id + " (command digest " + digest
-        + "); workspace may have changed since. Outcome " + outcome + ". Exit " + exit_code + "\nstdout: "
+        + "); workspace may have changed since. Outcome " + outcome.wire() + ". Exit "
+        + std.text.from_i32(outcome.exit_code()) + "\nstdout: "
         + plain_out + "\nstderr: " + plain_err + "\nSome output may be omitted or truncated: "
         + if out.truncated || err.truncated {
         "yes"
@@ -1437,9 +1460,9 @@ public flow record_check(
     let events = previous {
         format = 2,
         events = previous.events.push(
-            Event {
-                role = "tool",
-                kind = "check",
+            TraceEvent {
+                role = TraceRole.Tool,
+                kind = TraceKind.Check,
                 name = if independent {
                     "independent-check"
                 } else {
@@ -1459,11 +1482,11 @@ public flow record_check(
 }
 
 alias LegacyChatsSchema = MemoryRegion<{
-    Rows: Store<string, ChatSession>
+    Rows: Store<string, ChatSessionState>
 }>;
 
 alias ChatHistoriesSchema = MemoryRegion<{
-    Rows: Store<string, ChatHistoryFrame>
+    Rows: Store<string, ChatHistorySnapshot>
 }>;
 
 public let LegacyChats = std.memory.region<LegacyChatsSchema>(
@@ -1477,7 +1500,7 @@ public let ChatHistories = std.memory.region<ChatHistoriesSchema>(
 );
 
 alias RecoverableChatsSchema = MemoryRegion<{
-    Rows: Store<string, RecoverableChatFrame>
+    Rows: Store<string, ChatSessionSnapshot>
 }>;
 
 public let RecoverableChats = std.memory.region<RecoverableChatsSchema>(

@@ -1,5 +1,7 @@
 module nomo.application.execution.jobs;
 
+import nomo.domain.processes.{ProcessOperation, ProcessWire, JobPhase};
+import nomo.domain.attempts.AttemptKind;
 import nomo.application.conversation.ports.{ConversationReader, ConversationWriter, ResultPublication};
 import nomo.application.execution.attempts.{begin, complete_attempt, dispatching, returned};
 import nomo.application.execution.ports.{
@@ -12,13 +14,13 @@ import nomo.application.execution.ports.{
     ProcessOperations,
     ProcessPreviewSink
 };
-import nomo.domain.attempts.Attempt;
+import nomo.domain.attempts.ExecutionAttempt;
 import nomo.domain.processes.{
-    ArchivedJob,
+    ArchivedProcessJob,
     ArchivedOutput,
     InputResult,
-    Job,
-    JobEvent,
+    ProcessJob,
+    ProcessOutput,
     JobRequest,
     ProcessEvent,
     ReadRequest,
@@ -143,11 +145,11 @@ flow history_text<T>(value: T) -> string {
     };
 }
 
-flow preview<V ~ ProcessPreviewSink, T>(sink: V, value: T) -> unit {
-    sink.write("[PROCESS] " + json(value));
+flow preview<V ~ ProcessPreviewSink, T ~ ProcessWire>(sink: V, value: T) -> unit {
+    sink.write("[PROCESS] " + json(value.wire()));
 }
 
-flow owned<J ~ JobRepository>(repository: J, session: string, id: string) -> Job {
+flow owned<J ~ JobRepository>(repository: J, session: string, id: string) -> ProcessJob {
     let value = match repository.load(id) {
         Some(value) => value,
         None() => abort("native job not found"),
@@ -158,49 +160,56 @@ flow owned<J ~ JobRepository>(repository: J, session: string, id: string) -> Job
     return value;
 }
 
-flow prepare<A ~ AttemptRepository, W ~ ConversationWriter, T>(
+flow prepare<A ~ AttemptRepository, W ~ ConversationWriter, T ~ ProcessWire>(
     attempts: A,
     writer: W,
     session: string,
-    operation: string,
+    label: string,
     request: T
-) -> Attempt {
-    let call = writer.append(session, "tool_call", "command", history_text(request), -1);
-    let attempt = begin(attempts, session, "command", operation, call, call);
+) -> ExecutionAttempt {
+    let call = writer.append(session, "tool_call", "command", history_text(request.wire()), -1);
+    let attempt = begin(attempts, session, AttemptKind.Command, label, call, call);
     dispatching(attempts, attempt.id);
     return attempt;
 }
 
-flow complete<A ~ AttemptRepository, P ~ ResultPublication, H ~ ConversationReader, T>(
+flow complete<A ~ AttemptRepository, P ~ ResultPublication, H ~ ConversationReader, T ~ ProcessWire>(
     attempts: A,
     publication: P,
     history: H,
-    attempt: Attempt,
+    attempt: ExecutionAttempt,
     result: T
 ) -> unit {
-    returned(attempts, publication, attempt.id, "tool", "command", json(result), attempt.input_event);
+    returned(attempts, publication, attempt.id, "tool", "command", json(result.wire()), attempt.input_event);
     complete_attempt(attempts, publication, history, attempt.id);
 }
 
-flow attach<Live, C ~ ProcessControl<Live>, V ~ ProcessPreviewSink>(control: C, preview_sink: V, job: Job) -> Live {
+flow attach<Live, C ~ ProcessControl<Live>, V ~ ProcessPreviewSink>(
+    control: C,
+    preview_sink: V,
+    job: ProcessJob
+) -> Live {
     if job.handle == "" {
         abort("job has no recorded Host handle; inspect /runs before deciding recovery");
     }
-    preview(preview_sink, JobRequest {
-        operation = "reconnect",
-        job = job.id,
-        handle = job.handle
-    });
+    preview(
+        preview_sink,
+        JobRequest {
+            operation = ProcessOperation.Reconnect,
+            job = job.id,
+            handle = job.handle
+        }
+    );
     return control.attach(job.handle);
 }
 
 flow event<J ~ JobRepository, O ~ OutputArchive>(
     jobs: J,
     archive: O,
-    job: Job,
+    job: ProcessJob,
     call: i64,
     value: ProcessEvent
-) -> JobEvent {
+) -> ProcessOutput {
     let result = observed(job.id, call, value);
     archive.insert(job.session, call, result);
     jobs.save(job {
@@ -229,7 +238,7 @@ public flow start<
     session: string,
     program: string,
     arguments: Array<string>
-) -> Job
+) -> ProcessJob
 ![
     Memory,
     Console,
@@ -240,19 +249,19 @@ public flow start<
     Error<BudgetExceeded>
 ] {
     let request = StartRequest {
-        operation = "start",
+        operation = ProcessOperation.Start,
         program,
         arguments
     };
     let attempt = prepare(attempts, writer, session, "start_job", request);
-    let job = Job {
+    let job = ProcessJob {
         id = attempt.session + "-job-"
             + from_i64(attempt.input_event),
         session = attempt.session,
         program,
         arguments,
         handle = "",
-        phase = "starting"
+        phase = JobPhase.Starting
     };
     jobs.insert(job);
     let root = control.root();
@@ -262,7 +271,7 @@ public flow start<
         program,
         arguments,
         handle = control.reference(process),
-        phase = "started"
+        phase = JobPhase.Started
     };
     jobs.save(result);
     complete(attempts, publication, history, attempt, result);
@@ -291,7 +300,7 @@ public flow read<
     session: string,
     job: string,
     max_bytes: usize
-) -> JobEvent
+) -> ProcessOutput
 ![
     Memory,
     Console,
@@ -304,7 +313,7 @@ public flow read<
 ] {
     let selected = owned(jobs, session, job);
     let request = ReadRequest {
-        operation = "read",
+        operation = ProcessOperation.Read,
         job,
         handle = selected.handle,
         max_bytes
@@ -350,7 +359,7 @@ public flow write<
 ] {
     let selected = owned(jobs, session, job);
     let request = WriteRequest {
-        operation = "write",
+        operation = ProcessOperation.Write,
         job,
         handle = selected.handle,
         input
@@ -361,8 +370,7 @@ public flow write<
     control.write(process, utf8_encode(input));
     let result = InputResult {
         job,
-        operation = "write",
-        status = "completed"
+        operation = ProcessOperation.Write
     };
     complete(attempts, publication, history, attempt, result);
     return result;
@@ -400,7 +408,7 @@ public flow close_input<
 ] {
     let selected = owned(jobs, session, job);
     let request = JobRequest {
-        operation = "close_stdin",
+        operation = ProcessOperation.CloseStdin,
         job,
         handle = selected.handle
     };
@@ -410,8 +418,7 @@ public flow close_input<
     control.close_input(process);
     let result = InputResult {
         job,
-        operation = "close_stdin",
-        status = "completed"
+        operation = ProcessOperation.CloseStdin
     };
     complete(attempts, publication, history, attempt, result);
     return result;
@@ -438,7 +445,7 @@ public flow stop<
     history: H,
     session: string,
     job: string
-) -> JobEvent
+) -> ProcessOutput
 ![
     Memory,
     Console,
@@ -451,7 +458,7 @@ public flow stop<
 ] {
     let selected = owned(jobs, session, job);
     let request = JobRequest {
-        operation = "stop",
+        operation = ProcessOperation.Stop,
         job,
         handle = selected.handle
     };
@@ -463,7 +470,7 @@ public flow stop<
     return result;
 }
 
-public flow list<J ~ JobRepository>(jobs: J, session: string) -> Array<Job> ![
+public flow list<J ~ JobRepository>(jobs: J, session: string) -> Array<ProcessJob> ![
     Memory,
     Error<StorageError>,
     Error<BudgetExceeded>
@@ -475,7 +482,7 @@ public flow archived_jobs<J ~ ArchivedJobCatalog, H ~ ConversationReader>(
     jobs: J,
     history: H,
     session: string
-) -> Array<ArchivedJob>
+) -> Array<ArchivedProcessJob>
 ![Memory, Error<StorageError>, Error<BudgetExceeded>] {
     return jobs.archived_jobs(history.load(session).workspace);
 }
@@ -526,11 +533,11 @@ public flow output<J ~ JobRepository, O ~ OutputArchive, W ~ ConversationWriter,
     history: H,
     session: string,
     job: string
-) -> Array<JobEvent>
+) -> Array<ProcessOutput>
 ![Memory, Error<StorageError>, Error<MemoryConflict>, Error<BudgetExceeded>] {
     let selected = owned(jobs, session, job);
     let call = writer.append(session, "observation_call", "job_output", history_text(job), -1);
-    var result: Array<JobEvent> = [];
+    var result: Array<ProcessOutput> = [];
     for item in history.messages(selected.session, 0) {
         if item.role != "tool_call" || item.name != "command" {
             continue;

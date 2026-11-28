@@ -1,14 +1,41 @@
 module nomo.domain.harness.edit;
 
+import nomo.domain.wire.{value as json_value, fields as json_fields};
+import std.json.JsonValue;
 import nomo.domain.editing.{Binding, Confirmed, EditText, Selector, binding_error, selector_error, text_bytes};
 import nomo.domain.harness.loop.response_error;
 import nomo.domain.limits.{context_bytes, edit_response_bytes, message_bytes, message_frame_bytes};
 import nomo.domain.wire.{FieldError, decode_fields, digest, encode};
 import std.agent.message.Message;
-import std.json.{JsonValue, stringify};
+import std.json.{stringify};
 import std.text.{char_count, len, trim};
 
-public flow context(phase: string, selector: Selector, request: string, task: string, before: string) -> Context {
+public enum EditStage {
+    Plan,
+    Child,
+    Aggregate
+}
+
+impl EditStage {
+    public flow wire(self) -> string ![] {
+        return match self {
+            EditStage.Plan => "plan",
+            EditStage.Child => "child",
+            EditStage.Aggregate => "aggregate"
+        };
+    }
+
+    public flow parse(raw: string) -> EditStage ![] {
+        return match raw {
+            "plan" => EditStage.Plan,
+            "child" => EditStage.Child,
+            "aggregate" => EditStage.Aggregate,
+            _ => abort("invalid EditStage spelling: " + raw)
+        };
+    }
+}
+
+public flow context(phase: EditStage, selector: Selector, request: string, task: string, before: string) -> Context {
     return Context {
         phase,
         request,
@@ -30,7 +57,7 @@ public flow context(phase: string, selector: Selector, request: string, task: st
 public flow completed_context(request: string, task: string, before: string, outcome: Confirmed) -> Context {
     let selected = outcome.binding;
     return Context {
-        phase = "aggregate",
+        phase = EditStage.Aggregate,
         request,
         task,
         id = selected.id,
@@ -67,7 +94,7 @@ public flow history_bound(converted: Option<Message<JsonValue>>, maximum: usize,
 }
 
 public type Context = {
-    phase: string,
+    phase: EditStage,
     request: string,
     task: string,
     id: string,
@@ -473,14 +500,11 @@ public flow work_summary_error(raw: string) -> string {
 // All fields remain literal complete data. This validates shape and binding;
 // only the controller's confirmed Completed value authorizes aggregation.
 public flow context_error(context: Context) -> string {
-    if context.phase != "plan" && context.phase != "child" && context.phase != "aggregate" {
-        return "invalid edit context phase";
-    }
     let request = text_error(context.request, "edit request");
     if request != "" {
         return request;
     }
-    if context.task != "" || context.phase != "plan" {
+    if context.task != "" || context.phase != EditStage.Plan {
         let task = text_error(context.task, "delegated task");
         if task != "" {
             return task;
@@ -499,7 +523,7 @@ public flow context_error(context: Context) -> string {
     if before != context.before_bytes {
         return "edit original byte count mismatch";
     }
-    if context.phase != "aggregate" {
+    if context.phase != EditStage.Aggregate {
         if context.completed || context.after != "" || context.after_bytes != 0
             || context.request_digest != "" || context.before_digest != "" || context.after_digest != "" {
             return "uncompleted edit context carries outcome";
@@ -567,3 +591,9 @@ public type EditLedger = {
     native_tokens: i32,
     boundaries: i32
 };
+
+impl Context {
+    public flow wire(self) -> JsonValue ![] {
+        return json_fields(json_value(self), [("phase", JsonValue.String(self.phase.wire()))]);
+    }
+}

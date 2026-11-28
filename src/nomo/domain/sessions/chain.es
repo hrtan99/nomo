@@ -1,14 +1,95 @@
 module nomo.domain.sessions.chain;
 
+import nomo.domain.wire.{value as json_value, fields as json_fields};
+import std.json.JsonValue;
+import nomo.domain.harness.loop.ReadOperation;
+import nomo.domain.sessions.work.{StoredWorkPhase};
+
 import nomo.domain.editing.{Binding, Selector as editing_Selector, binding_error, same_binding, selector_error};
 import nomo.domain.harness.loop.{allowed_error, question_error};
 import nomo.domain.harness.work.{Context, WorkLedger, context_error};
 import nomo.domain.limits.context_bytes;
-import nomo.domain.sessions.work.{StoredWorkRecord, confirm as work_confirm, validate};
+import nomo.domain.sessions.work.{CapturedWork, confirm as work_confirm, validate};
 import nomo.domain.wire.{digest, encode};
 import std.agent.message.Message;
-import std.json.{JsonValue, stringify};
+import std.json.{stringify};
 import std.text.{char_count, from_i32, from_usize, len, parse_i32, split};
+
+public enum ChainPhase {
+    Admitted,
+    SummaryUnconfirmed,
+    SummaryConfirmed
+}
+
+impl ChainPhase {
+    public flow wire(self) -> string ![] {
+        return match self {
+            ChainPhase.Admitted => "admitted",
+            ChainPhase.SummaryUnconfirmed => "summary-unconfirmed",
+            ChainPhase.SummaryConfirmed => "summary-confirmed"
+        };
+    }
+
+    public flow parse(raw: string) -> ChainPhase ![] {
+        return match raw {
+            "admitted" => ChainPhase.Admitted,
+            "summary-unconfirmed" => ChainPhase.SummaryUnconfirmed,
+            "summary-confirmed" => ChainPhase.SummaryConfirmed,
+            _ => abort("invalid ChainPhase spelling: " + raw)
+        };
+    }
+}
+
+public enum ChainEditPhase {
+    Intent,
+    Completed
+}
+
+impl ChainEditPhase {
+    public flow wire(self) -> string ![] {
+        return match self {
+            ChainEditPhase.Intent => "intent",
+            ChainEditPhase.Completed => "completed"
+        };
+    }
+
+    public flow parse(raw: string) -> ChainEditPhase ![] {
+        return match raw {
+            "intent" => ChainEditPhase.Intent,
+            "completed" => ChainEditPhase.Completed,
+            _ => abort("invalid ChainEditPhase spelling: " + raw)
+        };
+    }
+}
+
+public enum RecoveryChoice {
+    Abandon
+}
+
+impl RecoveryChoice {
+    public flow wire(self) -> string ![] {
+        return match self {
+            RecoveryChoice.Abandon => "abandon"
+        };
+    }
+
+    public flow parse(raw: string) -> RecoveryChoice ![] {
+        return match raw {
+            "abandon" => RecoveryChoice.Abandon,
+            _ => abort("invalid RecoveryChoice spelling: " + raw)
+        };
+    }
+}
+
+impl ChainPhase {
+    public flow work_phase(self) -> Option<StoredWorkPhase> ![] {
+        return match self {
+            ChainPhase.Admitted => None(),
+            ChainPhase.SummaryUnconfirmed => Some(StoredWorkPhase.SummaryUnconfirmed),
+            ChainPhase.SummaryConfirmed => Some(StoredWorkPhase.SummaryConfirmed)
+        };
+    }
+}
 
 public type ParentFacts = {
     chain: string,
@@ -18,7 +99,7 @@ public type ParentFacts = {
     after_digest: string,
     request: string,
     read_task: string,
-    operation: string,
+    operation: ReadOperation,
     files: Array<string>,
     literal: string,
     outcome: string,
@@ -32,12 +113,12 @@ public type Input = {
     parent: Array<ParentFacts>
 };
 
-public flow parent_facts(parent: Record) -> Result<Array<ParentFacts>, string> {
+public flow parent_facts(parent: WorkChain) -> Result<Array<ParentFacts>, string> {
     let invalid = work_chain_validate(parent);
     if invalid != "" {
         return Err(invalid);
     }
-    if parent.turn != 1 || parent.phase != "summary-confirmed" {
+    if parent.turn != 1 || parent.phase != ChainPhase.SummaryConfirmed {
         return Err("only a confirmed first v2 parent supplies context");
     }
     let record = match parent.work {
@@ -71,7 +152,11 @@ public flow parent_facts(parent: Record) -> Result<Array<ParentFacts>, string> {
             final_summary = value.summary
         }
     ];
-    let encoded = match encode(result, "parent facts conversion refused", "parent facts encoding refused") {
+    let encoded = match encode(
+        JsonValue.Array(result.iter().map(item => item.wire()).collect()),
+        "parent facts conversion refused",
+        "parent facts encoding refused"
+    ) {
         Ok(value) => value,
         Err(error) => {
             return Err(error);
@@ -95,7 +180,7 @@ public flow combined(current: Context, parent: Array<ParentFacts>) -> Input {
         current,
         parent
     };
-    let message = Message.new(value);
+    let message = Message.new(value.wire());
     let converted: Option<Message<JsonValue>> = message.cast<JsonValue>();
     let data = match converted {
         Some(item) => item.body,
@@ -262,9 +347,9 @@ public flow policy(raw: string) -> Result<Caps, string> {
     return parse_policy(raw);
 }
 
-flow serialized(row: Record) -> Result<string, string> {
+flow serialized(row: WorkChain) -> Result<string, string> {
     let encoded = match encode(
-        row,
+        wire_chain(row),
         "work-chain row conversion refused",
         "work-chain row serialization refused"
     ) {
@@ -279,11 +364,8 @@ flow serialized(row: Record) -> Result<string, string> {
     return Ok(encoded);
 }
 
-public flow work_chain_validate(row: Record) -> string {
-    if (row.format != 2 && row.format != 3) || (row.turn != 1 && row.turn != 2) || (
-        row.phase != "admitted"
-            && row.phase != "summary-unconfirmed" && row.phase != "summary-confirmed"
-    ) {
+public flow work_chain_validate(row: WorkChain) -> string {
+    if (row.format != 2 && row.format != 3) || (row.turn != 1 && row.turn != 2) {
         return "invalid work-chain v2 format, turn or phase";
     }
     if row.format == 3 && row.turn != 1 {
@@ -341,7 +423,7 @@ public flow work_chain_validate(row: Record) -> string {
             return "work-chain second-turn allowance mismatch";
         }
     }
-    if row.phase == "admitted" {
+    if row.phase == ChainPhase.Admitted {
         if row.work != None() || row.reserved != turn_caps() {
             return "invalid work-chain admitted reservation";
         }
@@ -358,13 +440,13 @@ public flow work_chain_validate(row: Record) -> string {
                 return error;
             }
         };
-        if work.phase != row.phase || captured.binding.id != row.id
+        if Some(work.phase) != row.phase.work_phase() || captured.binding.id != row.id
             || captured.binding.workspace != row.workspace || captured.binding.region != row.region
             || captured.binding.path != row.path || captured.evidence.request != row.request
             || captured.evidence.allowed != row.allowed {
             return "work-chain captured work binding mismatch";
         }
-        let expected = if row.phase == "summary-confirmed" {
+        let expected = if row.phase == ChainPhase.SummaryConfirmed {
             zero()
         } else {
             summary_reservation()
@@ -375,7 +457,7 @@ public flow work_chain_validate(row: Record) -> string {
     }
     var decoded: usize = 0;
     @limits([Iterations(10)]) for field in [
-        row.phase,
+        row.phase.wire(),
         row.chain,
         row.id,
         row.workspace,
@@ -398,7 +480,7 @@ public flow work_chain_validate(row: Record) -> string {
         Some(value) => {
             let binding = value.binding;
             @limits([Iterations(10)]) for field in [
-                value.phase,
+                value.phase.wire(),
                 binding.id,
                 binding.workspace,
                 binding.region,
@@ -424,7 +506,7 @@ public flow work_chain_validate(row: Record) -> string {
     };
 }
 
-public flow fingerprint(row: Record) -> Result<string, string> {
+public flow fingerprint(row: WorkChain) -> Result<string, string> {
     let invalid = work_chain_validate(row);
     if invalid != "" {
         return Err(invalid);
@@ -446,16 +528,16 @@ flow initial_format(
     allowed: Array<string>,
     policy: Caps,
     format: i32
-) -> Result<Record, string> {
+) -> Result<WorkChain, string> {
     let reservation = match reserve(lifetime(), policy) {
         Ok(value) => value,
         Err(error) => {
             return Err(error);
         }
     };
-    let row = Record {
+    let row = WorkChain {
         format,
-        phase = "admitted",
+        phase = ChainPhase.Admitted,
         chain = id,
         turn = 1,
         id,
@@ -487,7 +569,7 @@ public flow initial(
     request: string,
     allowed: Array<string>,
     policy: Caps
-) -> Result<Record, string> {
+) -> Result<WorkChain, string> {
     return initial_format(id, workspace, path, request, allowed, policy, 2);
 }
 
@@ -498,18 +580,18 @@ public flow initial_user_context(
     request: string,
     allowed: Array<string>,
     policy: Caps
-) -> Result<Record, string> {
+) -> Result<WorkChain, string> {
     return initial_format(id, workspace, path, request, allowed, policy, 3);
 }
 
 public flow successor(
-    parent: Record,
+    parent: WorkChain,
     parent_version: string,
     id: string,
     request: string,
     allowed: Array<string>,
     policy: Caps
-) -> Result<Record, string> {
+) -> Result<WorkChain, string> {
     let invalid = work_chain_validate(parent);
     if invalid != "" {
         return Err(invalid);
@@ -517,7 +599,7 @@ public flow successor(
     if parent.format != 2 {
         return Err("user-context work cannot continue or resume");
     }
-    if parent.turn != 1 || parent.phase != "summary-confirmed" {
+    if parent.turn != 1 || parent.phase != ChainPhase.SummaryConfirmed {
         return Err("only a confirmed first v2 turn can continue; no third turn or v1 upgrade");
     }
     let reservation = match reserve(parent.remaining, policy) {
@@ -534,7 +616,7 @@ public flow successor(
     };
     let row = parent {
         format = 2,
-        phase = "admitted",
+        phase = ChainPhase.Admitted,
         turn = 2,
         id,
         request,
@@ -557,7 +639,7 @@ public flow successor(
     return Ok(row);
 }
 
-public flow linked(parent: Record, parent_version: string, child: Record) -> string {
+public flow linked(parent: WorkChain, parent_version: string, child: WorkChain) -> string {
     if parent.format != 2 || child.format != 2 {
         return "user-context work cannot have a successor";
     }
@@ -569,7 +651,7 @@ public flow linked(parent: Record, parent_version: string, child: Record) -> str
     if invalid_child != "" {
         return invalid_child;
     }
-    if parent.turn != 1 || parent.phase != "summary-confirmed" || child.turn != 2
+    if parent.turn != 1 || parent.phase != ChainPhase.SummaryConfirmed || child.turn != 2
         || child.parent_id != parent.id || child.chain != parent.chain || child.workspace != parent.workspace
         || child.region != parent.region || child.path != parent.path || child.allowed != parent.allowed
         || child.parent_version != parent_version || child.id == parent.id {
@@ -622,16 +704,16 @@ public flow linked(parent: Record, parent_version: string, child: Record) -> str
     return "";
 }
 
-public flow publish_partial(row: Record, work: StoredWorkRecord) -> Result<Record, string> {
+public flow publish_partial(row: WorkChain, work: CapturedWork) -> Result<WorkChain, string> {
     let invalid = work_chain_validate(row);
     if invalid != "" {
         return Err(invalid);
     }
-    if row.phase != "admitted" || work.phase != "summary-unconfirmed" {
+    if row.phase != ChainPhase.Admitted || work.phase != StoredWorkPhase.SummaryUnconfirmed {
         return Err("chain partial requires its original admission and confirmed edit");
     }
     let result = row {
-        phase = "summary-unconfirmed",
+        phase = ChainPhase.SummaryUnconfirmed,
         reserved = summary_reservation(),
         work = Some(work)
     };
@@ -642,12 +724,12 @@ public flow publish_partial(row: Record, work: StoredWorkRecord) -> Result<Recor
     return Ok(result);
 }
 
-public flow confirm(row: Record, summary: string) -> Result<Record, string> {
+public flow confirm(row: WorkChain, summary: string) -> Result<WorkChain, string> {
     let invalid = work_chain_validate(row);
     if invalid != "" {
         return Err(invalid);
     }
-    if row.phase != "summary-unconfirmed" {
+    if row.phase != ChainPhase.SummaryUnconfirmed {
         return Err("chain summary requires an unconfirmed work record");
     }
     let work = match row.work {
@@ -663,7 +745,7 @@ public flow confirm(row: Record, summary: string) -> Result<Record, string> {
         }
     };
     let result = row {
-        phase = "summary-confirmed",
+        phase = ChainPhase.SummaryConfirmed,
         reserved = zero(),
         work = Some(completed)
     };
@@ -674,19 +756,16 @@ public flow confirm(row: Record, summary: string) -> Result<Record, string> {
     return Ok(result);
 }
 
-public type CapturedJournal = {
+public type CapturedChainEdit = {
     format: i32,
     chain: string,
     turn: i32,
-    phase: string,
+    phase: ChainEditPhase,
     binding: Binding
 };
 
-public flow invalid(row: CapturedJournal) -> string {
-    if row.format != 2 || (row.turn != 1 && row.turn != 2) || (
-        row.phase != "intent"
-            && row.phase != "completed"
-    ) {
+public flow invalid(row: CapturedChainEdit) -> string {
+    if row.format != 2 || (row.turn != 1 && row.turn != 2) {
         return "invalid v2 edit journal format, turn or phase";
     }
     let binding = binding_error(row.binding);
@@ -713,13 +792,13 @@ public enum ObservationPass {
 public type ObservedRow = {
     key: string,
     version: string,
-    value: Record
+    value: WorkChain
 };
 
 public type ObservedJournal = {
     key: string,
     version: string,
-    value: CapturedJournal
+    value: CapturedChainEdit
 };
 
 public type Snapshot = {
@@ -736,7 +815,7 @@ public enum Selector {
     Parent
 }
 
-public flow journal_error(row: Record, journal: Option<CapturedJournal>) -> string {
+public flow journal_error(row: WorkChain, journal: Option<CapturedChainEdit>) -> string {
     match journal {
         Some(value) => {
             let invalid = invalid(value);
@@ -749,7 +828,7 @@ public flow journal_error(row: Record, journal: Option<CapturedJournal>) -> stri
             }
             match row.work {
                 Some(work) => {
-                    if value.phase != "completed" || !same_binding(value.binding, work.binding) {
+                    if value.phase != ChainEditPhase.Completed || !same_binding(value.binding, work.binding) {
                         return "v2 work and completed edit journal differ";
                     }
                 },
@@ -765,7 +844,7 @@ public flow journal_error(row: Record, journal: Option<CapturedJournal>) -> stri
     return "";
 }
 
-flow journal_row(row: Record, observed: Option<ObservedJournal>) -> string {
+flow journal_row(row: WorkChain, observed: Option<ObservedJournal>) -> string {
     let key = if row.turn == 1 {
         "turn:1"
     } else {
@@ -842,21 +921,21 @@ public flow eligible(view: Snapshot, workspace: string, path: string) -> bool {
         return false;
     }
     return match view.root {
-        Some(value) => value.value.format == 2 && value.value.phase == "summary-confirmed"
+        Some(value) => value.value.format == 2 && value.value.phase == ChainPhase.SummaryConfirmed
             && view.child == None() && view.child_journal == None(),
         None() => false,
     };
 }
 
 public flow select(view: Snapshot, workspace: string, path: string, selector: Selector) -> Result<
-    Array<Record>,
+    Array<WorkChain>,
     string
 > {
     let invalid = work_chain_selection_validate(view, workspace, path);
     if invalid != "" {
         return Err(invalid);
     }
-    var rows: Array<Record> = [];
+    var rows: Array<WorkChain> = [];
     match view.root {
         Some(value) => {
             rows = rows.push(value.value);
@@ -909,7 +988,7 @@ public flow journal_phase(view: Snapshot, turn: i32) -> string {
         view.child_journal
     };
     return match selected {
-        Some(value) => value.value.phase,
+        Some(value) => value.value.phase.wire(),
         None() => "missing"
     };
 }
@@ -950,17 +1029,17 @@ public enum WorkOutcome {
 }
 
 public type CapturedShow = {
-    row: Record,
-    journal: Option<CapturedJournal>
+    row: WorkChain,
+    journal: Option<CapturedChainEdit>
 };
 
 // A recorded choice does not prove the side-effect outcome, grant authority,
 // release a budget, alter the original record, or authorize a retry.
-public type RecoveryDecision = {
+public type RecordedRecovery = {
     format: i32,
     id: string,
     target: string,
-    choice: string
+    choice: RecoveryChoice
 };
 
 public type Caps = {
@@ -976,9 +1055,9 @@ public type Caps = {
     atomic_bytes: i32
 };
 
-public type Record = {
+public type WorkChain = {
     format: i32,
-    phase: string,
+    phase: ChainPhase,
     chain: string,
     turn: i32,
     id: string,
@@ -994,13 +1073,48 @@ public type Record = {
     available: Caps,
     remaining: Caps,
     reserved: Caps,
-    work: Option<StoredWorkRecord>
+    work: Option<CapturedWork>
 };
 
-public type EditJournalRecord = {
+public type ChainEditJournal = {
     format: i32,
     chain: string,
     turn: i32,
-    phase: string,
+    phase: ChainEditPhase,
     binding: Binding
 };
+
+public flow wire_chain(input: WorkChain) -> JsonValue ![] {
+    return json_fields(
+        json_value(input),
+        [
+            ("phase", JsonValue.String(input.phase.wire())),
+            ("work", json_value(input.work.map(item => nomo.domain.sessions.work.wire_stored_work(item))))
+        ]
+    );
+}
+
+public flow wire_chain_journal(input: ChainEditJournal) -> JsonValue ![] {
+    return json_fields(json_value(input), [("phase", JsonValue.String(input.phase.wire()))]);
+}
+
+public flow wire_recovery(input: RecordedRecovery) -> JsonValue ![] {
+    return json_fields(json_value(input), [("choice", JsonValue.String(input.choice.wire()))]);
+}
+
+impl ParentFacts {
+    public flow wire(self) -> JsonValue ![] {
+        return json_fields(json_value(self), [("operation", JsonValue.String(self.operation.wire()))]);
+    }
+}
+impl Input {
+    public flow wire(self) -> JsonValue ![] {
+        return json_fields(
+            json_value(self),
+            [
+                ("current", self.current.wire()),
+                ("parent", JsonValue.Array(self.parent.iter().map(item => item.wire()).collect()))
+            ]
+        );
+    }
+}

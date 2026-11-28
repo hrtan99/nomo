@@ -1,17 +1,19 @@
 module nomo.adapters.storage.session_records;
 
+import nomo.domain.conversation.{TraceKind, TraceRole};
+import nomo.domain.sessions.state.MetadataPhase;
 import nomo.application.resources.PolicyRoot;
 import nomo.application.sessions.persistence.committed_version;
 import nomo.application.sessions.ports.{Submission, Target};
-import nomo.domain.conversation.Event;
+import nomo.domain.conversation.TraceEvent;
 import nomo.domain.limits.event_bytes;
-import nomo.domain.sessions.event_codec.{Bundle, History, Policy, bundle_codec_decode, bundle_codec_encode, events, policy_error};
+import nomo.domain.sessions.event_codec.{Bundle, RecordedTraceHistory, Policy, bundle_codec_decode, bundle_codec_encode, events, policy_error};
 import nomo.domain.sessions.state.{
-    DemoClaim,
-    MetadataRecord,
+    DemoSessionClaim,
+    StoredSessionMetadata,
     Projection,
     Request,
-    Snapshot,
+    SessionSnapshot,
     bundle,
     pending,
     published,
@@ -77,16 +79,16 @@ public flow commit_receipt<Row ~ StorageData>(
     return committed_version(target, submit_native(store, target.key, value, condition));
 }
 
-public flow read_claim() -> Option<MemoryEntry<string, DemoClaim>> {
+public flow read_claim() -> Option<MemoryEntry<string, DemoSessionClaim>> {
     return DemoClaims.Claims.get_entry("single-demo");
 }
 
 // Exact durable receipt and committed-version readback; no retry or reconciliation.
-public flow write_claim(value: DemoClaim, condition: WriteCondition) -> Result<MemoryVersion, string> ![
+public flow write_claim(value: DemoSessionClaim, condition: WriteCondition) -> Result<MemoryVersion, string> ![
     Memory,
     Error<StorageError>
 ] {
-    return commit_native<DemoClaim>(
+    return commit_native<DemoSessionClaim>(
         DemoClaims.Claims,
         Target {
             store = ["Claims"],
@@ -99,11 +101,11 @@ public flow write_claim(value: DemoClaim, condition: WriteCondition) -> Result<M
     );
 }
 
-flow read_raw() -> Option<MemoryEntry<string, History>> {
+flow read_raw() -> Option<MemoryEntry<string, RecordedTraceHistory>> {
     return EventHistory.Rows.get_entry("events");
 }
 
-flow invalid(value: History) -> string {
+flow invalid(value: RecordedTraceHistory) -> string {
     if value.format != 1 || value.turns < 1 || value.turns > 2 || value.events.len() < 1
         || value.events.len() > 48 {
         return "invalid event history bounds";
@@ -118,7 +120,7 @@ flow invalid(value: History) -> string {
         return "invalid event turn boundary";
     }
     @limits([Iterations(48)]) for event in value.events {
-        if !safe(event.role, 128) || !safe(event.kind, 128) || !safe(event.name, 128)
+        if !safe(event.role.wire(), 128) || !safe(event.kind.wire(), 128) || !safe(event.name, 128)
             || !data_safe(event.text, event_bytes()) {
             return "invalid event history content";
         }
@@ -126,7 +128,7 @@ flow invalid(value: History) -> string {
     return "";
 }
 
-public flow event_history_load() -> Result<Option<MemoryEntry<string, History>>, string> {
+public flow event_history_load() -> Result<Option<MemoryEntry<string, RecordedTraceHistory>>, string> {
     let entry = read_raw();
     match entry {
         Some(value) => {
@@ -143,7 +145,7 @@ public flow event_history_load() -> Result<Option<MemoryEntry<string, History>>,
     return Ok(entry);
 }
 
-public flow event_history_append(turn: i32, input: Array<Event>, policy: Policy) -> Result<
+public flow event_history_append(turn: i32, input: Array<TraceEvent>, policy: Policy) -> Result<
     MemoryVersion,
     string
 > ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
@@ -162,7 +164,7 @@ public flow event_history_append(turn: i32, input: Array<Event>, policy: Policy)
             return Err(error);
         }
     };
-    var prior: Array<Event> = [];
+    var prior: Array<TraceEvent> = [];
     let previous_turn = match before {
         Some(entry) => {
             prior = entry.value.events;
@@ -178,7 +180,7 @@ public flow event_history_append(turn: i32, input: Array<Event>, policy: Policy)
         return Err("event batch order differs; no retry");
     }
     prior = prior.extend(clean.events);
-    let next = History {
+    let next = RecordedTraceHistory {
         format = 1,
         turns = turn,
         first_count,
@@ -230,7 +232,7 @@ public flow event_history_append(turn: i32, input: Array<Event>, policy: Policy)
 
 // A conservative product projection: all free text and unrecognized metadata
 // are removed. This preserves event ordering, not full tool-result content.
-public flow append_metadata(turn: i32, input: Array<Event>) -> Result<MemoryVersion, string> ![
+public flow append_metadata(turn: i32, input: Array<TraceEvent>) -> Result<MemoryVersion, string> ![
     Memory,
     Error<StorageError>,
     Error<IndexError>,
@@ -239,27 +241,32 @@ public flow append_metadata(turn: i32, input: Array<Event>) -> Result<MemoryVers
     if input.len() < 1 || input.len() > 24 {
         return Err("event batch exceeds bounds");
     }
-    var clean: Array<Event> = [];
+    var clean: Array<TraceEvent> = [];
     @limits([Iterations(24)]) for item in input {
-        let role = if item.role == "user" || item.role == "main" || item.role == "tool"
-            || item.role == "model" || item.role == "assistant" || item.role == "error" {
+        let role = if item.role == TraceRole.User || item.role == TraceRole.Main
+            || item.role == TraceRole.Tool
+            || item.role == TraceRole.Model || item.role == TraceRole.Assistant
+            || item.role == TraceRole.Error {
             item.role
         } else {
-            "other"
+            TraceRole.Other
         };
-        let kind = if item.kind == "request" || item.kind == "plan" || item.kind == "delegate"
-            || item.kind == "context" || item.kind == "input" || item.kind == "tool" || item.kind == "result"
-            || item.kind == "consume" || item.kind == "answer" || item.kind == "final" || item.kind == "error" {
+        let kind = if item.kind == TraceKind.Request || item.kind == TraceKind.Plan
+            || item.kind == TraceKind.Delegate
+            || item.kind == TraceKind.Context || item.kind == TraceKind.Input || item.kind == TraceKind.Tool
+            || item.kind == TraceKind.Result
+            || item.kind == TraceKind.Consume || item.kind == TraceKind.Answer || item.kind == TraceKind.Final
+            || item.kind == TraceKind.Error {
             item.kind
         } else {
-            "event"
+            TraceKind.TraceEvent
         };
         let name = if item.name == "child-1" || item.name == "read" || item.name == "search" {
             item.name
         } else {
             ""
         };
-        clean = clean.push(Event {
+        clean = clean.push(TraceEvent {
             role,
             kind,
             name,
@@ -375,13 +382,13 @@ public flow history_store_load(key: string) -> Result<Bundle, string> {
     return bundle_codec_decode(encoded);
 }
 
-public flow read(id: string) -> Option<MemoryEntry<string, MetadataRecord>> {
+public flow read(id: string) -> Option<MemoryEntry<string, StoredSessionMetadata>> {
     return SessionMetadata.Rows.get_entry(id);
 }
 
 // Transition only against the observed/confirmed version, then verify the receipt's
 // committed version and exact row. Unknown/refused writes return without retry.
-public flow publish(row: MetadataRecord, expected: MemoryVersion) -> Result<MemoryVersion, string> ![
+public flow publish(row: StoredSessionMetadata, expected: MemoryVersion) -> Result<MemoryVersion, string> ![
     Memory,
     Error<StorageError>
 ] {
@@ -405,11 +412,11 @@ public flow publish(row: MetadataRecord, expected: MemoryVersion) -> Result<Memo
 }
 
 // A confirmed Memory mutation is not proof of Session content or effect completion.
-public flow write(row: MetadataRecord, condition: WriteCondition) -> Result<MemoryVersion, string> ![
+public flow write(row: StoredSessionMetadata, condition: WriteCondition) -> Result<MemoryVersion, string> ![
     Memory,
     Error<StorageError>
 ] {
-    return commit_receipt<MetadataRecord>(
+    return commit_receipt<StoredSessionMetadata>(
         SessionMetadata.Rows,
         Target {
             store = ["Rows"],
@@ -425,9 +432,9 @@ public flow write(row: MetadataRecord, condition: WriteCondition) -> Result<Memo
 // Shared metadata/history publication tail. The caller must already own the
 // exact current metadata version; unknown writes are never retried.
 public flow publish_snapshot(
-    saved: Snapshot,
+    saved: SessionSnapshot,
     save_id: string,
-    expected: MetadataRecord,
+    expected: StoredSessionMetadata,
     version: MemoryVersion,
     continuation: bool
 ) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
@@ -495,7 +502,7 @@ public flow publish_snapshot(
 }
 
 // Only a new ID in a fixture-provisioned empty namespace; no update, retry or repair.
-public flow save(saved: Snapshot, requested: Request, save_id: string) -> Result<Projection, string> ![
+public flow save(saved: SessionSnapshot, requested: Request, save_id: string) -> Result<Projection, string> ![
     Memory,
     Error<StorageError>,
     Error<IndexError>,
@@ -559,10 +566,10 @@ public flow reload(requested: Request, save_id: string) -> Result<Projection, st
         || row.session_key != session_key(requested.session_id, save_id) {
         return Err("metadata identity mismatch");
     }
-    if row.phase == "pending" {
+    if row.phase == MetadataPhase.Pending {
         return Err("pending save; recovery required; no retry");
     }
-    if row.phase != "published" {
+    if row.phase != MetadataPhase.Published {
         return Err("invalid metadata phase");
     }
     let body = match history_store_load(row.session_key) {
@@ -590,7 +597,7 @@ public flow reload(requested: Request, save_id: string) -> Result<Projection, st
 }
 
 alias DemoClaimsSchema = MemoryRegion<{
-    Claims: Store<string, DemoClaim>
+    Claims: Store<string, DemoSessionClaim>
 }>;
 
 public let DemoClaims = std.memory.region<DemoClaimsSchema>(
@@ -599,7 +606,7 @@ public let DemoClaims = std.memory.region<DemoClaimsSchema>(
 );
 
 alias EventHistorySchema = MemoryRegion<{
-    Rows: Store<string, History>
+    Rows: Store<string, RecordedTraceHistory>
 }>;
 
 public let EventHistory = std.memory.region<EventHistorySchema>(
@@ -608,7 +615,7 @@ public let EventHistory = std.memory.region<EventHistorySchema>(
 );
 
 alias SessionMetadataSchema = MemoryRegion<{
-    Rows: Store<string, MetadataRecord>
+    Rows: Store<string, StoredSessionMetadata>
 }>;
 
 public let SessionMetadata = std.memory.region<SessionMetadataSchema>(

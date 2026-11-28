@@ -1,10 +1,11 @@
 module nomo.adapters.storage.conversations;
 
+import nomo.domain.archives.{CopyKind, CopyPhase};
 import nomo.application.conversation.ports.{ConversationCatalog, ConversationReader, ConversationWriter, GenerationReservation, ResultPublication};
 import nomo.application.editing.ports.MutationHistoryStore;
 import nomo.application.scope.SessionContext;
 import nomo.application.transfer.ports.CopyRepository;
-import nomo.domain.archives.CopyJob;
+import nomo.domain.archives.ConversationCopy;
 import nomo.domain.conversation.{ChatMessage, ConversationLedger, PendingRequest, SavedSession, StoredEvent};
 import nomo.domain.wire.encode;
 import std.json.JsonValue;
@@ -27,7 +28,7 @@ public let Data = std.memory.region<Schema>(
 );
 
 alias CopySchema = MemoryRegion<{
-    Jobs: Store<string, CopyJob>
+    Jobs: Store<string, ConversationCopy>
 }>;
 
 public let Copies = std.memory.region<CopySchema>(
@@ -206,8 +207,8 @@ impl NativeHistory ~ ConversationCatalog {
         }
         match copy_status(id) {
             Some(job) => {
-                if job.phase != "ready" {
-                    abort("conversation copy is " + job.phase + "; use /resume-copy or /discard-copy");
+                if job.phase != CopyPhase.Ready {
+                    abort("conversation copy is " + job.phase.wire() + "; use /resume-copy or /discard-copy");
                 }
             },
             None() => (),
@@ -569,23 +570,23 @@ public flow adopt_summary(id: string, index: i64, through: i64) -> unit
     );
 }
 
-public flow copy_status(id: string) -> Option<CopyJob> ![Memory, Error<StorageError>] {
+public flow copy_status(id: string) -> Option<ConversationCopy> ![Memory, Error<StorageError>] {
     return Copies.Jobs.get(id);
 }
 
-public flow copy_job(id: string) -> CopyJob ![Memory, Error<StorageError>] {
+public flow copy_job(id: string) -> ConversationCopy ![Memory, Error<StorageError>] {
     return match copy_status(id) {
         Some(value) => value,
         None() => abort("conversation copy not found"),
     };
 }
 
-public flow copy_jobs(workspace: string) -> Array<CopyJob> ![
+public flow copy_jobs(workspace: string) -> Array<ConversationCopy> ![
     Memory,
     Error<StorageError>,
     Error<BudgetExceeded>
 ] {
-    var jobs: Array<CopyJob> = [];
+    var jobs: Array<ConversationCopy> = [];
     var cursor: Option<MemoryCursor> = None();
     @limits([Iterations(2147483647)]) while true {
         let page = Copies.Jobs.page(cursor, 100);
@@ -606,7 +607,7 @@ public flow copy_jobs(workspace: string) -> Array<CopyJob> ![
     return jobs;
 }
 
-public flow advance_copy(id: string, cursor: i64, phase: string) -> CopyJob ![
+public flow advance_copy(id: string, cursor: i64, phase: CopyPhase) -> ConversationCopy ![
     Memory,
     Error<StorageError>,
     Error<MemoryConflict>
@@ -626,7 +627,7 @@ public flow advance_copy(id: string, cursor: i64, phase: string) -> CopyJob ![
 
 public flow ensure_copy_session(id: string) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>] {
     let job = copy_job(id);
-    if job.phase == "discarded" {
+    if job.phase == CopyPhase.Discarded {
         abort("conversation copy was discarded; retained content is historical only");
     }
     match Data.Sessions.get(id) {
@@ -640,13 +641,13 @@ public flow ensure_copy_session(id: string) -> unit ![Memory, Error<StorageError
 public flow prepare_copy(
     workspace: string,
     title: string,
-    kind: string,
+    kind: CopyKind,
     source: string,
     digest: bytes,
     total: i64
-) -> CopyJob
+) -> ConversationCopy
 ![Memory, Error<StorageError>, Error<MemoryConflict>] {
-    let job = CopyJob {
+    let job = ConversationCopy {
         id = allocate(),
         workspace,
         title,
@@ -655,7 +656,7 @@ public flow prepare_copy(
         digest,
         total,
         cursor = 0,
-        phase = "staging"
+        phase = CopyPhase.Staging
     };
     // The durable job precedes its session. Neither creation selects the copy.
     Copies.Jobs.insert(job.id, job);
@@ -755,11 +756,15 @@ impl NativeHistory ~ MutationHistoryStore {
 }
 
 impl NativeHistory ~ CopyRepository {
-    flow lookup(self, id: string) -> Option<CopyJob> ![Memory, Error<StorageError>] {
+    flow lookup(self, id: string) -> Option<ConversationCopy> ![Memory, Error<StorageError>] {
         return copy_status(id);
     }
 
-    flow list(self, workspace: string) -> Array<CopyJob> ![Memory, Error<StorageError>, Error<BudgetExceeded>] {
+    flow list(self, workspace: string) -> Array<ConversationCopy> ![
+        Memory,
+        Error<StorageError>,
+        Error<BudgetExceeded>
+    ] {
         return copy_jobs(workspace);
     }
 
@@ -767,11 +772,11 @@ impl NativeHistory ~ CopyRepository {
         self,
         workspace: string,
         title: string,
-        kind: string,
+        kind: CopyKind,
         source: string,
         digest: bytes,
         total: i64
-    ) -> CopyJob ![Memory, Error<StorageError>, Error<MemoryConflict>] {
+    ) -> ConversationCopy ![Memory, Error<StorageError>, Error<MemoryConflict>] {
         return prepare_copy(workspace, title, kind, source, digest, total);
     }
 
@@ -779,7 +784,7 @@ impl NativeHistory ~ CopyRepository {
         ensure_copy_session(id);
     }
 
-    flow advance(self, id: string, cursor: i64, phase: string) -> CopyJob ![
+    flow advance(self, id: string, cursor: i64, phase: CopyPhase) -> ConversationCopy ![
         Memory,
         Error<StorageError>,
         Error<MemoryConflict>

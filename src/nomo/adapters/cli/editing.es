@@ -1,5 +1,6 @@
 module nomo.adapters.cli.editing;
 
+import nomo.domain.sessions.work.{StoredWorkPhase};
 import nomo.adapters.cli.console.{display, recorded};
 import nomo.adapters.cli.edit_input.edit_args_parse;
 import nomo.adapters.filesystem.editing.{LegacyWorkEditor, prepare};
@@ -8,9 +9,9 @@ import nomo.application.editing.ports.{Approval as ports_Approval, CurrentEditCo
 import nomo.application.editing.workflow.{confirm_using, execute_execute};
 import nomo.application.harness.work.historical_ledger_text;
 import nomo.application.resources.EditableRoot;
-import nomo.domain.editing.{Binding, Confirmed, EditOperation, Prepared, Selector};
+import nomo.domain.editing.{Binding, Confirmed, LiteralEditRecord, Prepared, Selector};
 import nomo.domain.harness.work.WorkLedger;
-import nomo.domain.sessions.work.{StoredWorkRecord, validate};
+import nomo.domain.sessions.work.{CapturedWork, validate};
 import nomo.domain.wire.object;
 import std.effects.Fs;
 import std.fs.IOError as fs_IOError;
@@ -167,7 +168,7 @@ public flow run_apply(args: Array<string>) -> i32 ![
     };
 }
 
-flow status_record(value: EditOperation) -> Result<string, string> {
+flow status_record(value: LiteralEditRecord) -> Result<string, string> {
     let selected = value.binding;
     return object(
         [
@@ -185,7 +186,7 @@ flow status_record(value: EditOperation) -> Result<string, string> {
         ],
         [
             "nomo-edit-operation-v1",
-            value.phase,
+            value.phase.wire(),
             selected.id,
             selected.workspace,
             selected.region,
@@ -235,7 +236,7 @@ public flow run_status(args: Array<string>) -> i32 {
     return 0;
 }
 
-public flow render(row: StoredWorkRecord) -> Result<Array<string>, string> {
+public flow render(row: CapturedWork) -> Result<Array<string>, string> {
     let value = match validate(row) {
         Ok(item) => item,
         Err(error) => {
@@ -253,7 +254,7 @@ public flow render(row: StoredWorkRecord) -> Result<Array<string>, string> {
     if read.files.len() == 2 {
         selected2 = read.files[1];
     }
-    let remaining = if row.phase == "summary-confirmed" {
+    let remaining = if row.phase == StoredWorkPhase.SummaryConfirmed {
         ["0", "0", "0", "0"]
     } else {
         ["1", "1", "2048", "65536"]
@@ -306,7 +307,7 @@ public flow render(row: StoredWorkRecord) -> Result<Array<string>, string> {
     let values = [
         [
             "nomo-work-record-v1",
-            row.phase,
+            row.phase.wire(),
             binding.id,
             binding.workspace,
             binding.region,
@@ -320,7 +321,7 @@ public flow render(row: StoredWorkRecord) -> Result<Array<string>, string> {
         [
             read.request,
             read.task,
-            read.operation,
+            read.operation.wire(),
             read.allowed[0],
             allowed2,
             read.files[0],

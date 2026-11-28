@@ -1,10 +1,12 @@
 module nomo.adapters.storage.legacy.user_context_chain_v4_store;
 
+import nomo.domain.sessions.chain.{ChainEditPhase, ChainPhase};
+
 import nomo.adapters.storage.legacy.user_context_chain_v4_journal.{available, inspect as user_context_chain_v4_journal_inspect};
 import nomo.domain.editing.{same_binding, selector_error};
 import nomo.domain.sessions.chain.Caps;
 import nomo.domain.sessions.user_context_chain_v4.{
-    Record,
+    RootBoundWorkChain,
     RootIdentity,
     confirm,
     identity_error,
@@ -16,7 +18,7 @@ import nomo.domain.sessions.user_context_chain_v4.{
 };
 import nomo.domain.sessions.user_context_chain_v4_context.parent_facts;
 import nomo.domain.sessions.user_context_chain_v4_store.Ticket;
-import nomo.domain.sessions.work.StoredWorkRecord;
+import nomo.domain.sessions.work.CapturedWork;
 import std.memory.{MemoryEntry, MemoryVersion, MemoryWriteChange, Missing, StorageDurability, WriteCondition, WriteOutcome};
 
 flow key(turn: i32) -> string {
@@ -27,11 +29,11 @@ flow key(turn: i32) -> string {
     };
 }
 
-flow read(turn: i32) -> Option<MemoryEntry<string, Record>> {
+flow read(turn: i32) -> Option<MemoryEntry<string, RootBoundWorkChain>> {
     return UserContextChain.Rows.get_entry(key(turn));
 }
 
-flow journal_error(row: Record) -> string {
+flow journal_error(row: RootBoundWorkChain) -> string {
     let base = row.base;
     let journal = match user_context_chain_v4_journal_inspect(
         base.chain,
@@ -49,7 +51,7 @@ flow journal_error(row: Record) -> string {
     match journal {
         Some(value) => match base.work {
             Some(work) => {
-                if value.phase != "completed" || !same_binding(value.binding, work.binding) {
+                if value.phase != ChainEditPhase.Completed || !same_binding(value.binding, work.binding) {
                     return "v4 work and completed edit journal differ";
                 }
             },
@@ -64,7 +66,7 @@ flow journal_error(row: Record) -> string {
     return "";
 }
 
-flow write(row: Record, condition: WriteCondition) -> Result<MemoryVersion, string> ![
+flow write(row: RootBoundWorkChain, condition: WriteCondition) -> Result<MemoryVersion, string> ![
     Memory,
     Error<StorageError>,
     Error<IndexError>
@@ -118,7 +120,7 @@ flow write(row: Record, condition: WriteCondition) -> Result<MemoryVersion, stri
 }
 
 public flow read_parent(id: string, workspace: string, path: string, root: RootIdentity) -> Result<
-    MemoryEntry<string, Record>,
+    MemoryEntry<string, RootBoundWorkChain>,
     string
 > {
     let error = selector_error(id, workspace, path);
@@ -137,7 +139,7 @@ public flow read_parent(id: string, workspace: string, path: string, root: RootI
     }
     let row = before.value;
     let base = row.base;
-    if before.key != key(1) || base.turn != 1 || base.phase != "summary-confirmed" || base.id != id
+    if before.key != key(1) || base.turn != 1 || base.phase != ChainPhase.SummaryConfirmed || base.id != id
         || base.chain != id || base.workspace != workspace || base.path != path || row.root != root {
         return Err("v4 parent or read-root binding mismatch");
     }
@@ -157,7 +159,7 @@ public flow read_parent(id: string, workspace: string, path: string, root: RootI
     return Ok(before);
 }
 
-flow parent_error(ticket: Ticket, row: Record) -> string {
+flow parent_error(ticket: Ticket, row: RootBoundWorkChain) -> string {
     if row.base.turn == 1 {
         if ticket.parent != None() {
             return "v4 root ticket unexpectedly has a parent";
@@ -264,7 +266,7 @@ public flow admit_continue(
     allowed: Array<string>,
     policy: Caps,
     root: RootIdentity,
-    expected_parent: MemoryEntry<string, Record>
+    expected_parent: MemoryEntry<string, RootBoundWorkChain>
 ) -> Result<Ticket, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     let error = selector_error(id, workspace, path);
     if error != "" {
@@ -321,7 +323,7 @@ public flow admit_continue(
     return Ok(ticket);
 }
 
-public flow publish_partial(ticket: Ticket, work: StoredWorkRecord) -> Result<Ticket, string> ![
+public flow publish_partial(ticket: Ticket, work: CapturedWork) -> Result<Ticket, string> ![
     Memory,
     Error<StorageError>,
     Error<IndexError>
@@ -408,7 +410,7 @@ public flow complete(ticket: Ticket, summary: string) -> Result<bool, string> ![
 
 // Show validates the whole stored graph and never grants authority to resume.
 public flow inspect(id: string, workspace: string, path: string, root: RootIdentity) -> Result<
-    Option<Record>,
+    Option<RootBoundWorkChain>,
     string
 > {
     let error = selector_error(id, workspace, path);
@@ -491,7 +493,7 @@ public flow inspect(id: string, workspace: string, path: string, root: RootIdent
 }
 
 alias UserContextChainSchema = MemoryRegion<{
-    Rows: Store<string, Record>
+    Rows: Store<string, RootBoundWorkChain>
 }>;
 
 public let UserContextChain = std.memory.region<UserContextChainSchema>(

@@ -1,5 +1,9 @@
 module nomo.domain.harness.work;
 
+import nomo.domain.wire.{value as json_value, fields as json_fields};
+import std.json.JsonValue;
+import nomo.domain.harness.loop.{ReadOperation};
+import nomo.domain.harness.loop.{Action};
 import nomo.domain.harness.edit.{
     Context as edit_Context,
     EditLedger,
@@ -31,7 +35,7 @@ import std.text.{len, starts_with};
 public type Evidence = {
     request: string,
     task: string,
-    operation: string,
+    operation: ReadOperation,
     files: Array<string>,
     literal: string,
     outcome: string,
@@ -347,10 +351,10 @@ flow selected_error(value: Evidence, complete: bool) -> string {
         return files;
     }
     var fields: Array<string> = [];
-    if value.operation == "read" && value.files.len() == 1 && value.literal == "" {
+    if value.operation == ReadOperation.Read && value.files.len() == 1 && value.literal == "" {
         fields = ["read", value.files[0]];
     }
-    else if value.operation == "search" {
+    else if value.operation == ReadOperation.Search {
         fields = ["search", value.literal, value.files[0]];
         if value.files.len() >= 2 {
             fields = fields.push(value.files[1]);
@@ -423,7 +427,7 @@ public flow collect(
             return Err(error);
         }
     };
-    if status != 0 || (observed.tool != "read" && observed.tool != "search") {
+    if status != 0 || observed.tool == None() {
         return Err("work requires a successful read or search child");
     }
     let selected = match decode_child(child.history.events[3].text, allowed, false) {
@@ -458,12 +462,18 @@ public flow collect(
             return Err(error);
         }
     };
+    let selection = match selected {
+        Action.Tool(value) => value,
+        Action.Final(_) => {
+            return Err("read evidence requires a tool");
+        }
+    };
     let evidence = Evidence {
         request,
         task,
-        operation = selected.operation,
-        files = selected.files,
-        literal = selected.literal,
+        operation = selection.operation(),
+        files = selection.files(),
+        literal = selection.wire_literal(),
         outcome = observed.outcome,
         result = observed.result,
         summary = "",
@@ -539,7 +549,7 @@ public flow context_error(value: Context) -> string {
     if value.edit.request != value.evidence.request {
         return "read and edit original request changed";
     }
-    let encoded = match encode(value, "work context conversion refused", "work context JSON refused") {
+    let encoded = match encode(value.wire(), "work context conversion refused", "work context JSON refused") {
         Ok(value) => value,
         Err(error) => {
             return error;
@@ -555,3 +565,14 @@ public type WorkLedger = {
     read: ReadLedger,
     edit: EditLedger
 };
+
+impl Evidence {
+    public flow wire(self) -> JsonValue ![] {
+        return json_fields(json_value(self), [("operation", JsonValue.String(self.operation.wire()))]);
+    }
+}
+impl Context {
+    public flow wire(self) -> JsonValue ![] {
+        return json_fields(json_value(self), [("edit", self.edit.wire()), ("evidence", self.evidence.wire())]);
+    }
+}

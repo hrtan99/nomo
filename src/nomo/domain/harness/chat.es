@@ -1,6 +1,11 @@
 module nomo.domain.harness.chat;
 
-import nomo.domain.conversation.{Event, State, add, fresh};
+import nomo.domain.conversation.{TraceKind, TraceRole};
+import nomo.domain.wire.{value as json_value, fields as json_fields};
+import std.json.JsonValue;
+import nomo.domain.harness.loop.{ReadOperation, tool_name};
+import nomo.domain.harness.loop.{Action};
+import nomo.domain.conversation.{TraceEvent, TraceState, add, fresh};
 import nomo.domain.harness.loop.{Context as loop_Context, ReadLedger, Session, allowed_error, candidate_error, context_error, question_error};
 import nomo.domain.harness.read.{
     Observed,
@@ -16,18 +21,67 @@ import nomo.domain.harness.read.{
 import nomo.domain.limits.{child_answer_bytes, context_bytes, message_bytes, outcome_bytes};
 import nomo.domain.text.{bounded, context_json_error, data_safe, text_printable};
 import std.agent.message.Message;
-import std.json.JsonValue;
 import std.text.{char_count, starts_with};
+
+public enum ReservationStage {
+    Plan,
+    Child,
+    Aggregate
+}
+
+impl ReservationStage {
+    public flow wire(self) -> string ![] {
+        return match self {
+            ReservationStage.Plan => "plan",
+            ReservationStage.Child => "child",
+            ReservationStage.Aggregate => "aggregate"
+        };
+    }
+
+    public flow parse(raw: string) -> ReservationStage ![] {
+        return match raw {
+            "plan" => ReservationStage.Plan,
+            "child" => ReservationStage.Child,
+            "aggregate" => ReservationStage.Aggregate,
+            _ => abort("invalid ReservationStage spelling: " + raw)
+        };
+    }
+}
+
+public enum ChatStage {
+    Plan,
+    Aggregate
+}
+
+impl ChatStage {
+    public flow wire(self) -> string ![] {
+        return match self {
+            ChatStage.Plan => "plan",
+            ChatStage.Aggregate => "aggregate"
+        };
+    }
+
+    public flow parse(raw: string) -> ChatStage ![] {
+        return match raw {
+            "plan" => ChatStage.Plan,
+            "aggregate" => ChatStage.Aggregate,
+            _ => abort("invalid ChatStage spelling: " + raw)
+        };
+    }
+}
 
 // Policies account configured reservations. They never dispatch a model or retry.
 public spec ChatBudgetPolicy {
     flow maximum(self) -> ReadLedger ![];
     flow turn_limit(self) -> i32 ![];
-    flow validate_invocation(self, value: Invocation) -> string ![Error<IndexError>, Error<BudgetExceeded>];
+    flow validate_invocation(self, value: ReadInvocation) -> string ![
+        Error<IndexError>,
+        Error<BudgetExceeded>
+    ];
     flow reserve_stage(self, value: ReadLedger, call: bool) -> Result<ReadLedger, string> ![];
     flow settle_child(self, value: ReadLedger, child: Session) -> Result<ReadLedger, string> ![];
     flow combine(self, previous: ReadLedger, local: ReadLedger) -> Result<ReadLedger, string> ![];
-    flow pending(self, phase: string) -> ReadLedger ![];
+    flow pending(self, phase: ReservationStage) -> ReadLedger ![];
     flow child_pending(self) -> ReadLedger ![];
     flow parent_tokens(self) -> i32 ![];
     flow child_action_tokens(self) -> i32 ![];
@@ -80,7 +134,10 @@ impl SingleBudget ~ ChatBudgetPolicy {
         };
     }
 
-    flow validate_invocation(self, value: Invocation) -> string ![Error<IndexError>, Error<BudgetExceeded>] {
+    flow validate_invocation(self, value: ReadInvocation) -> string ![
+        Error<IndexError>,
+        Error<BudgetExceeded>
+    ] {
         return match self.mode {
             SingleMode.Legacy => chat_turn_error(value),
             SingleMode.Unicode => chat_policy_turn_error(value),
@@ -105,7 +162,7 @@ impl SingleBudget ~ ChatBudgetPolicy {
         };
     }
 
-    flow pending(self, phase: string) -> ReadLedger ![] {
+    flow pending(self, phase: ReservationStage) -> ReadLedger ![] {
         return pending(phase, false, 2048, 2048, 2048);
     }
 
@@ -161,7 +218,10 @@ impl MultiBudget ~ ChatBudgetPolicy {
         return self.turns;
     }
 
-    flow validate_invocation(self, value: Invocation) -> string ![Error<IndexError>, Error<BudgetExceeded>] {
+    flow validate_invocation(self, value: ReadInvocation) -> string ![
+        Error<IndexError>,
+        Error<BudgetExceeded>
+    ] {
         return multi_turn_error(value, self.turns);
     }
 
@@ -177,7 +237,7 @@ impl MultiBudget ~ ChatBudgetPolicy {
         return multi_combine(previous, local, self.ceiling);
     }
 
-    flow pending(self, phase: string) -> ReadLedger ![] {
+    flow pending(self, phase: ReservationStage) -> ReadLedger ![] {
         return pending(phase, true, self.parent, self.child_action_tokens(), self.child_final_tokens());
     }
 
@@ -240,8 +300,8 @@ impl MultiBudget ~ ChatBudgetPolicy {
     }
 }
 
-flow pending(phase: string, multi: bool, parent: i32, child_action: i32, child_final: i32) -> ReadLedger {
-    let calls = if phase == "aggregate" {
+flow pending(phase: ReservationStage, multi: bool, parent: i32, child_action: i32, child_final: i32) -> ReadLedger {
+    let calls = if phase == ReservationStage.Aggregate {
         0
     } else {
         if multi {
@@ -250,7 +310,7 @@ flow pending(phase: string, multi: bool, parent: i32, child_action: i32, child_f
             3
         }
     };
-    let tools = if phase == "aggregate" {
+    let tools = if phase == ReservationStage.Aggregate {
         0
     } else {
         if multi {
@@ -259,14 +319,14 @@ flow pending(phase: string, multi: bool, parent: i32, child_action: i32, child_f
             1
         }
     };
-    let steps = if phase == "plan" {
+    let steps = if phase == ReservationStage.Plan {
         if multi {
             10
         } else {
             6
         }
     } else {
-        if phase == "child" {
+        if phase == ReservationStage.Child {
             if multi {
                 9
             } else {
@@ -298,7 +358,7 @@ flow pending(phase: string, multi: bool, parent: i32, child_action: i32, child_f
 }
 
 // This is the sole compatibility mapping from saved maxima to runtime policy.
-public flow select(value: Invocation, unicode: bool) -> SelectedBudget {
+public flow select(value: ReadInvocation, unicode: bool) -> SelectedBudget {
     if unicode {
         if value.maximum == multi_full_maximum(48) {
             return SelectedBudget.Multi(
@@ -400,37 +460,37 @@ public flow select(value: Invocation, unicode: bool) -> SelectedBudget {
 }
 
 public type Context = {
-    phase: string,
+    phase: ChatStage,
     request: string,
     task: string,
     result: string,
-    tool: string,
+    tool: Option<ReadOperation>,
     outcome: string,
     allowed: Array<string>,
-    prior: Previous
+    prior: PriorRead
 };
 
 public type Completed = {
     request: string,
     task: string,
     result: string,
-    tool: string,
+    tool: Option<ReadOperation>,
     outcome: string,
     answer: string,
-    records: Array<Event>
+    records: Array<TraceEvent>
 };
 
 public type LocalTurn = {
     status: i32,
     usage: ReadLedger,
-    selected: Previous,
+    selected: PriorRead,
     resolved: bool,
     completed: Option<Completed>
 };
 
 public type TurnResult = {
     status: i32,
-    state: Invocation,
+    state: ReadInvocation,
     resolved: bool,
     completed: Option<Completed>
 };
@@ -445,8 +505,8 @@ public flow default_maximum() -> ReadLedger {
     };
 }
 
-public flow fresh_invocation() -> Invocation {
-    return Invocation {
+public flow fresh_invocation() -> ReadInvocation {
+    return ReadInvocation {
         usage = read_fresh(),
         maximum = default_maximum(),
         admitted = 0,
@@ -454,19 +514,19 @@ public flow fresh_invocation() -> Invocation {
     };
 }
 
-public flow empty() -> Previous {
-    return Previous {
+public flow empty() -> PriorRead {
+    return PriorRead {
         task = "",
         result = "",
-        tool = "",
+        tool = None(),
         outcome = "",
         answer = ""
     };
 }
 
-public flow prior_error_mode(prior: Previous, unicode: bool) -> string {
+public flow prior_error_mode(prior: PriorRead, unicode: bool) -> string {
     if prior.task == "" {
-        if prior.result != "" || prior.tool != "" || prior.outcome != "" || prior.answer != "" {
+        if prior.result != "" || prior.tool != None() || prior.outcome != "" || prior.answer != "" {
             return "invalid empty prior selection";
         }
         return "";
@@ -482,11 +542,12 @@ public flow prior_error_mode(prior: Previous, unicode: bool) -> string {
     if invalid {
         return "invalid selected prior result";
     }
-    if prior.tool == "" {
+    if prior.tool == None() {
         if prior.outcome != "" {
             return "prior outcome without tool";
         }
-    } else if (prior.tool != "read" && prior.tool != "search") || !(
+    } else if (prior.tool != Some(ReadOperation.Read) && prior.tool != Some(ReadOperation.Search))
+        || !(
         if unicode {
             bounded(prior.outcome, outcome_bytes())
         } else {
@@ -494,7 +555,8 @@ public flow prior_error_mode(prior: Previous, unicode: bool) -> string {
         }
     ) || !(
         starts_with(prior.outcome, "complete: ") || (
-            unicode && prior.tool == "search" && starts_with(prior.outcome, "incomplete: ")
+            unicode && prior.tool == Some(ReadOperation.Search)
+                && starts_with(prior.outcome, "incomplete: ")
         )
     ) {
         return "invalid selected prior tool";
@@ -502,12 +564,12 @@ public flow prior_error_mode(prior: Previous, unicode: bool) -> string {
     return "";
 }
 
-public flow chat_prior_error(prior: Previous) -> string {
+public flow chat_prior_error(prior: PriorRead) -> string {
     return prior_error_mode(prior, false);
 }
 
 public flow chat_context_error(context: Context) -> string {
-    let message = Message.new(context);
+    let message = Message.new(context.wire());
     return context_json_error(
         message.cast<JsonValue>(),
         context_bytes(),
@@ -516,49 +578,67 @@ public flow chat_context_error(context: Context) -> string {
     );
 }
 
-public flow seed(request: string, prior: Previous) -> State {
-    var state = add(fresh(), Event {
-        role = "user",
-        kind = "context",
-        name = "original",
-        text = request
-    });
+public flow seed(request: string, prior: PriorRead) -> TraceState {
+    var state = add(
+        fresh(),
+        TraceEvent {
+            role = TraceRole.User,
+            kind = TraceKind.Context,
+            name = "original",
+            text = request
+        }
+    );
     if prior.task != "" {
-        state = add(state, Event {
-            role = "user",
-            kind = "context",
-            name = "task",
-            text = prior.task
-        });
-        state = add(state, Event {
-            role = "user",
-            kind = "context",
-            name = "result",
-            text = prior.result
-        });
-        state = add(state, Event {
-            role = "user",
-            kind = "context",
-            name = "tool",
-            text = prior.tool
-        });
-        state = add(state, Event {
-            role = "user",
-            kind = "context",
-            name = "outcome",
-            text = prior.outcome
-        });
-        state = add(state, Event {
-            role = "user",
-            kind = "context",
-            name = "answer",
-            text = prior.answer
-        });
+        state = add(
+            state,
+            TraceEvent {
+                role = TraceRole.User,
+                kind = TraceKind.Context,
+                name = "task",
+                text = prior.task
+            }
+        );
+        state = add(
+            state,
+            TraceEvent {
+                role = TraceRole.User,
+                kind = TraceKind.Context,
+                name = "result",
+                text = prior.result
+            }
+        );
+        state = add(
+            state,
+            TraceEvent {
+                role = TraceRole.User,
+                kind = TraceKind.Context,
+                name = "tool",
+                text = tool_name(prior.tool)
+            }
+        );
+        state = add(
+            state,
+            TraceEvent {
+                role = TraceRole.User,
+                kind = TraceKind.Context,
+                name = "outcome",
+                text = prior.outcome
+            }
+        );
+        state = add(
+            state,
+            TraceEvent {
+                role = TraceRole.User,
+                kind = TraceKind.Context,
+                name = "answer",
+                text = prior.answer
+            }
+        );
     }
     return state;
 }
 
-public flow same(left: Event, right: Event) -> bool {
+public flow same(left: TraceEvent, right: TraceEvent) -> bool {
     return left.role == right.role && left.kind == right.kind && left.name == right.name
         && left.text == right.text;
 }
@@ -571,7 +651,7 @@ public flow inspect_turn_shared(
     request: string,
     task: string,
     allowed: Array<string>,
-    prior: Previous,
+    prior: PriorRead,
     unicode: bool
 ) -> Result<Observed, string> {
     let paths = if unicode {
@@ -619,15 +699,15 @@ public flow inspect_turn_shared(
     }
     if child.calls == 0 {
         let events = normalized.events;
-        let expected_input = Event {
-            role = "user",
-            kind = "input",
+        let expected_input = TraceEvent {
+            role = TraceRole.User,
+            kind = TraceKind.Input,
             name = "",
             text = task
         };
         if events.len() != 3 || status != 4 || child.history.spent != 0 || child.tokens != 0
             || child.tools != 0 || child.scan != 0 || !same(events[1], expected_input)
-            || events[2].role != "error" || events[2].kind != "error" || events[2].name != ""
+            || events[2].role != TraceRole.Error || events[2].kind != TraceKind.Error || events[2].name != ""
             || events[2].text != (if unicode {
             "model context exceeds 33554432 serialized characters"
         } else {
@@ -653,7 +733,7 @@ public flow inspect_turn_shared(
         }
         return Ok(Observed {
             result = "",
-            tool = "",
+            tool = None(),
             outcome = ""
         });
     }
@@ -672,7 +752,7 @@ public flow chat_inspect_turn(
     request: string,
     task: string,
     allowed: Array<string>,
-    prior: Previous
+    prior: PriorRead
 ) -> Result<Observed, string> {
     let invalid = chat_prior_error(prior);
     if invalid != "" {
@@ -714,7 +794,7 @@ public flow admission_error(state: ReadLedger, maximum: ReadLedger) -> string {
     return "";
 }
 
-public flow turn_error_shared(invocation: Invocation, selected: string) -> string {
+public flow turn_error_shared(invocation: ReadInvocation, selected: string) -> string {
     let invalid = admission_error(invocation.usage, invocation.maximum);
     if invalid != "" {
         return invalid;
@@ -729,7 +809,7 @@ public flow turn_error_shared(invocation: Invocation, selected: string) -> strin
             return "first turn must own an empty invocation";
         }
     } else if invocation.admitted == 1 {
-        let tools = if invocation.prior.tool == "" {
+        let tools = if invocation.prior.tool == None() {
             0
         } else {
             1
@@ -747,7 +827,7 @@ public flow turn_error_shared(invocation: Invocation, selected: string) -> strin
     return "";
 }
 
-public flow chat_turn_error(invocation: Invocation) -> string {
+public flow chat_turn_error(invocation: ReadInvocation) -> string {
     return turn_error_shared(invocation, chat_prior_error(invocation.prior));
 }
 
@@ -774,12 +854,12 @@ public flow combine(state: ReadLedger, usage: ReadLedger, maximum: ReadLedger) -
     return Ok(result);
 }
 
-public flow chat_policy_prior_error(prior: Previous) -> string {
+public flow chat_policy_prior_error(prior: PriorRead) -> string {
     return prior_error_mode(prior, true);
 }
 
 public flow chat_policy_context_error(context: Context) -> string {
-    let message = Message.new(context);
+    let message = Message.new(context.wire());
     return context_json_error(
         message.cast<JsonValue>(),
         33554432,
@@ -796,7 +876,7 @@ public flow chat_policy_inspect_turn(
     request: string,
     task: string,
     allowed: Array<string>,
-    prior: Previous
+    prior: PriorRead
 ) -> Result<Observed, string> {
     let invalid = chat_policy_prior_error(prior);
     if invalid != "" {
@@ -805,7 +885,7 @@ public flow chat_policy_inspect_turn(
     return inspect_turn_shared(child, status, request, task, allowed, prior, true);
 }
 
-public flow chat_policy_turn_error(invocation: Invocation) -> string {
+public flow chat_policy_turn_error(invocation: ReadInvocation) -> string {
     return turn_error_shared(invocation, chat_policy_prior_error(invocation.prior));
 }
 
@@ -821,8 +901,8 @@ public flow extended_maximum() -> ReadLedger {
     };
 }
 
-public flow extended_invocation() -> Invocation {
-    return Invocation {
+public flow extended_invocation() -> ReadInvocation {
+    return ReadInvocation {
         usage = read_fresh(),
         maximum = extended_maximum(),
         admitted = 0,
@@ -860,7 +940,7 @@ public flow extended_admission_error(value: ReadLedger) -> string {
     return "";
 }
 
-public flow extended_turn_error(invocation: Invocation) -> string {
+public flow extended_turn_error(invocation: ReadInvocation) -> string {
     if !is_extended(invocation.maximum) {
         return "invalid extended invocation limits";
     }
@@ -883,7 +963,7 @@ public flow extended_turn_error(invocation: Invocation) -> string {
             return "first turn must own an empty invocation";
         }
     } else {
-        let last_tool = if invocation.prior.tool == "" {
+        let last_tool = if invocation.prior.tool == None() {
             0
         } else {
             1
@@ -935,8 +1015,8 @@ public flow session_maximum() -> ReadLedger {
     };
 }
 
-public flow session_invocation() -> Invocation {
-    return Invocation {
+public flow session_invocation() -> ReadInvocation {
+    return ReadInvocation {
         usage = read_fresh(),
         maximum = session_maximum(),
         admitted = 0,
@@ -944,7 +1024,7 @@ public flow session_invocation() -> Invocation {
     };
 }
 
-public flow session_turn_error(value: Invocation) -> string {
+public flow session_turn_error(value: ReadInvocation) -> string {
     if value.maximum != session_maximum() || value.admitted < 0 || value.admitted > 31 {
         return "session turn limit reached";
     }
@@ -962,7 +1042,7 @@ public flow session_turn_error(value: Invocation) -> string {
     if (turns == 0 && value.prior.task != "") || (turns > 0 && value.prior.task == "") {
         return "invalid session prior";
     }
-    let last_tool = if value.prior.tool == "" {
+    let last_tool = if value.prior.tool == None() {
         0
     } else {
         1
@@ -999,7 +1079,7 @@ public flow inspect_multi_turn(
     request: string,
     task: string,
     allowed: Array<string>,
-    prior: Previous,
+    prior: PriorRead,
     resilient: bool,
     reasoning: bool
 ) -> Result<Observed, string> {
@@ -1083,9 +1163,9 @@ public flow inspect_multi_turn(
     }
     if characters != child.history.characters || !same(
         events[start],
-        Event {
-            role = "user",
-            kind = "input",
+        TraceEvent {
+            role = TraceRole.User,
+            kind = TraceKind.Input,
             name = "",
             text = task
         }
@@ -1093,79 +1173,89 @@ public flow inspect_multi_turn(
         return Err("invalid multi-step history");
     }
     var cursor = start + 1;
-    var tool = "";
+    var tool: Option<ReadOperation> = None();
     var outcome = "";
     var i: usize = 0;
     @limits([Iterations(3)]) while i < child.tools {
-        if !same(events[cursor], Event {
-            role = "model",
-            kind = "text",
-            name = "qwen",
-            text = ""
-        }) {
+        if !same(
+            events[cursor],
+            TraceEvent {
+                role = TraceRole.Model,
+                kind = TraceKind.Text,
+                name = "qwen",
+                text = ""
+            }
+        ) {
             return Err("invalid multi-step model event");
         }
         let request_event = events[cursor + 1];
-        let action = match decode_child(request_event.text, allowed, false) {
+        let decoded_action = match decode_child(request_event.text, allowed, false) {
             Ok(value) => value,
             Err(error) => {
                 return Err(error);
             }
         };
+        let action = match decoded_action {
+            Action.Tool(value) => value,
+            Action.Final(_) => {
+                return Err("invalid multi-step tool outcome");
+            }
+        };
         let result = events[cursor + 2];
         if tool_failure && i + 1 == child.tools {
-            if request_event.role != "model" || request_event.kind != "request"
-                || request_event.name != action.operation || (
-                action.operation != "read"
-                    && action.operation != "search"
-            ) || result.role != "tool" || result.kind != "error"
-                || result.name != action.operation || !bounded(result.text, outcome_bytes()) {
+            if request_event.role != TraceRole.Model || request_event.kind != TraceKind.Request
+                || request_event.name != action.operation().wire() || (
+                false
+            ) || result.role != TraceRole.Tool || result.kind != TraceKind.Error
+                || result.name != action.operation().wire() || !bounded(result.text, outcome_bytes()) {
                 return Err("invalid failed tool outcome");
             }
             return Ok(Observed {
                 result = "",
-                tool = "",
+                tool = None(),
                 outcome = ""
             });
         }
-        if request_event.role != "model" || request_event.kind != "request"
-            || request_event.name != action.operation || (
-            action.operation != "read"
-                && action.operation != "search"
-        ) || result.role != "tool" || result.kind != "complete"
-            || result.name != action.operation || !(
+        if request_event.role != TraceRole.Model || request_event.kind != TraceKind.Request
+            || request_event.name != action.operation().wire() || (
+            false
+        ) || result.role != TraceRole.Tool || result.kind != TraceKind.Complete
+            || result.name != action.operation().wire() || !(
             starts_with(result.text, "complete: ") || (
-                action.operation == "search" && starts_with(result.text, "incomplete: ")
+                action.operation() == ReadOperation.Search && starts_with(result.text, "incomplete: ")
             )
         ) {
             return Err("invalid multi-step tool outcome");
         }
-        tool = action.operation;
+        tool = Some(action.operation());
         outcome = result.text;
         cursor = cursor + 3;
         i = i + 1;
     }
-    if !same(events[cursor], Event {
-        role = "model",
-        kind = "text",
-        name = "qwen",
-        text = ""
-    }) {
+    if !same(
+        events[cursor],
+        TraceEvent {
+            role = TraceRole.Model,
+            kind = TraceKind.Text,
+            name = "qwen",
+            text = ""
+        }
+    ) {
         return Err("invalid final model event");
     }
     let final = events[cursor + 1];
     if status == 3 {
-        if final.role != "error" || final.kind != "error" || final.name != ""
+        if final.role != TraceRole.Error || final.kind != TraceKind.Error || final.name != ""
             || !bounded(final.text, message_bytes()) {
             return Err("invalid multi-step refusal");
         }
         return Ok(Observed {
             result = "",
-            tool = "",
+            tool = None(),
             outcome = ""
         });
     }
-    if final.role != "assistant" || final.kind != "final" || final.name != ""
+    if final.role != TraceRole.Assistant || final.kind != TraceKind.Final || final.name != ""
         || !bounded(final.text, child_answer_bytes()) {
         return Err("invalid multi-step final");
     }
@@ -1392,7 +1482,7 @@ public flow multi_settle(value: ReadLedger, child: Session, parent: i32, resilie
     );
 }
 
-public flow multi_turn_error(value: Invocation, maximum: i32) -> string {
+public flow multi_turn_error(value: ReadInvocation, maximum: i32) -> string {
     if value.maximum == multi_full_maximum(maximum) {
         let used = value.usage;
         let turns = value.admitted;
@@ -1501,7 +1591,7 @@ public flow multi_turn_error(value: Invocation, maximum: i32) -> string {
     ) {
         return "invalid multi-step prior";
     }
-    let last_tool = if value.prior.tool == "" {
+    let last_tool = if value.prior.tool == None() {
         0
     } else {
         1
@@ -1540,17 +1630,44 @@ public flow multi_combine(previous: ReadLedger, local: ReadLedger, maximum: Read
 }
 
 // Only validated successful selected data crosses a turn boundary.
-public type Previous = {
+public type PriorRead = {
     task: string,
     result: string,
-    tool: string,
+    tool: Option<ReadOperation>,
     outcome: string,
     answer: string
 };
 
-public type Invocation = {
+public type ReadInvocation = {
     usage: ReadLedger,
     maximum: ReadLedger,
     admitted: i32,
-    prior: Previous
+    prior: PriorRead
 };
+
+impl PriorRead {
+    public flow wire(self) -> JsonValue ![] {
+        return json_fields(json_value(self), [("tool", JsonValue.String(tool_name(self.tool)))]);
+    }
+}
+impl Context {
+    public flow wire(self) -> JsonValue ![] {
+        return json_fields(
+            json_value(self),
+            [
+                ("phase", JsonValue.String(self.phase.wire())),
+                ("tool", JsonValue.String(tool_name(self.tool))),
+                ("prior", self.prior.wire())
+            ]
+        );
+    }
+}
+
+// A model decision after read-only aggregation; approval and dispatch remain in the controller.
+public enum ContinuationAction {
+    Answer(string),
+    NextPage,
+    Check(Array<string>),
+    Edit(string),
+    EditMore(string)
+}

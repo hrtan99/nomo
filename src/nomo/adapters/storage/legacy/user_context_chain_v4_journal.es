@@ -1,12 +1,13 @@
 module nomo.adapters.storage.legacy.user_context_chain_v4_journal;
 
+import nomo.domain.sessions.chain.{ChainEditPhase};
 import nomo.domain.editing.{Binding, selector_error};
-import nomo.domain.sessions.chain.{CapturedJournal, invalid as chain_invalid};
-import nomo.domain.sessions.user_context_chain_v4.{JournalRecord, RootIdentity, identity_error};
+import nomo.domain.sessions.chain.{CapturedChainEdit, invalid as chain_invalid};
+import nomo.domain.sessions.user_context_chain_v4.{RootBoundChainJournal, RootIdentity, identity_error};
 import std.memory.{MemoryEntry, MemoryVersion, MemoryWriteChange, Missing, StorageDurability, WriteCondition, WriteOutcome};
 
 public type Ticket = {
-    row: JournalRecord,
+    row: RootBoundChainJournal,
     version: MemoryVersion
 };
 
@@ -18,11 +19,11 @@ flow key(turn: i32) -> string {
     };
 }
 
-flow read(turn: i32) -> Option<MemoryEntry<string, JournalRecord>> {
+flow read(turn: i32) -> Option<MemoryEntry<string, RootBoundChainJournal>> {
     return UserContextJournal.Rows.get_entry(key(turn));
 }
 
-public flow invalid(row: JournalRecord) -> string {
+public flow invalid(row: RootBoundChainJournal) -> string {
     if row.format != 4 {
         return "invalid v4 edit journal format";
     }
@@ -31,7 +32,7 @@ public flow invalid(row: JournalRecord) -> string {
         return root;
     }
     return chain_invalid(
-        CapturedJournal {
+        CapturedChainEdit {
             format = 2,
             chain = row.chain,
             turn = row.turn,
@@ -41,7 +42,7 @@ public flow invalid(row: JournalRecord) -> string {
     );
 }
 
-flow write(row: JournalRecord, condition: WriteCondition) -> Result<MemoryVersion, string> ![
+flow write(row: RootBoundChainJournal, condition: WriteCondition) -> Result<MemoryVersion, string> ![
     Memory,
     Error<StorageError>,
     Error<IndexError>
@@ -107,11 +108,11 @@ public flow begin(chain: string, turn: i32, root: RootIdentity, binding: Binding
     Error<StorageError>,
     Error<IndexError>
 ] {
-    let row = JournalRecord {
+    let row = RootBoundChainJournal {
         format = 4,
         chain,
         turn,
-        phase = "intent",
+        phase = ChainEditPhase.Intent,
         root,
         binding
     };
@@ -142,7 +143,7 @@ public flow complete(ticket: Ticket) -> Result<bool, string> ![Memory, Error<Sto
     if error != "" {
         return Err(error);
     }
-    if ticket.row.phase != "intent" {
+    if ticket.row.phase != ChainEditPhase.Intent {
         return Err("v4 edit completion requires the exact intent");
     }
     let before = match read(ticket.row.turn) {
@@ -155,11 +156,11 @@ public flow complete(ticket: Ticket) -> Result<bool, string> ![Memory, Error<Sto
         || before.version.opaque != ticket.version.opaque {
         return Err("v4 edit intent or version changed; no retry");
     }
-    let row = JournalRecord {
+    let row = RootBoundChainJournal {
         format = 4,
         chain = ticket.row.chain,
         turn = ticket.row.turn,
-        phase = "completed",
+        phase = ChainEditPhase.Completed,
         root = ticket.row.root,
         binding = ticket.row.binding
     };
@@ -176,7 +177,7 @@ public flow complete(ticket: Ticket) -> Result<bool, string> ![Memory, Error<Sto
 }
 
 public flow inspect(chain: string, turn: i32, id: string, workspace: string, path: string, root: RootIdentity) -> Result<
-    Option<JournalRecord>,
+    Option<RootBoundChainJournal>,
     string
 > {
     let error = selector_error(id, workspace, path);
@@ -218,7 +219,7 @@ public flow inspect(chain: string, turn: i32, id: string, workspace: string, pat
 }
 
 alias UserContextJournalSchema = MemoryRegion<{
-    Rows: Store<string, JournalRecord>
+    Rows: Store<string, RootBoundChainJournal>
 }>;
 
 public let UserContextJournal = std.memory.region<UserContextJournalSchema>(

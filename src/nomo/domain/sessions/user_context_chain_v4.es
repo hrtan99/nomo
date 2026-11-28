@@ -1,9 +1,10 @@
 module nomo.domain.sessions.user_context_chain_v4;
 
+import nomo.domain.sessions.chain.ChainEditPhase;
 import nomo.domain.editing.Binding;
 import nomo.domain.sessions.chain.{
     Caps,
-    Record as chain_Record,
+    WorkChain as chain_Record,
     confirm as chain_confirm,
     initial as chain_initial,
     linked as chain_linked,
@@ -11,10 +12,9 @@ import nomo.domain.sessions.chain.{
     successor as chain_successor,
     work_chain_validate
 };
-import nomo.domain.sessions.work.StoredWorkRecord;
+import nomo.domain.sessions.work.CapturedWork;
 import nomo.domain.text.{hex_digest, text_printable};
-import nomo.domain.wire.digest;
-import std.agent.message.Message;
+import nomo.domain.wire.{digest, fields as json_fields, value as json_value};
 import std.json.{JsonValue, stringify};
 import std.text.{len, trim};
 
@@ -27,15 +27,8 @@ public flow identity_error(identity: RootIdentity) -> string {
     return "";
 }
 
-flow serialized(row: Record) -> Result<string, string> {
-    let message = Message.new(row);
-    let converted: Option<Message<JsonValue>> = message.cast<JsonValue>();
-    let data = match converted {
-        Some(value) => value.body,
-        None() => {
-            return Err("v4 chain conversion refused");
-        }
-    };
+flow serialized(row: RootBoundWorkChain) -> Result<string, string> {
+    let data = json_fields(json_value(row), [("base", nomo.domain.sessions.chain.wire_chain(row.base))]);
     let encoded = match stringify(data) {
         Ok(value) => value,
         Err(_) => {
@@ -48,7 +41,7 @@ flow serialized(row: Record) -> Result<string, string> {
     return Ok(encoded);
 }
 
-public flow validate(row: Record) -> string {
+public flow validate(row: RootBoundWorkChain) -> string {
     if row.format != 4 || row.base.format != 2 {
         return "unsupported user-context chain format";
     }
@@ -72,7 +65,7 @@ public flow validate(row: Record) -> string {
     };
 }
 
-public flow fingerprint(row: Record) -> Result<string, string> {
+public flow fingerprint(row: RootBoundWorkChain) -> Result<string, string> {
     let invalid = validate(row);
     if invalid != "" {
         return Err(invalid);
@@ -94,7 +87,7 @@ public flow initial(
     allowed: Array<string>,
     policy: Caps,
     observed: RootIdentity
-) -> Result<Record, string> {
+) -> Result<RootBoundWorkChain, string> {
     let invalid = identity_error(observed);
     if invalid != "" {
         return Err(invalid);
@@ -105,7 +98,7 @@ public flow initial(
             return Err(error);
         }
     };
-    let row = Record {
+    let row = RootBoundWorkChain {
         format = 4,
         root = observed,
         parent_proof = "",
@@ -119,14 +112,14 @@ public flow initial(
 }
 
 public flow successor(
-    parent: Record,
+    parent: RootBoundWorkChain,
     parent_version: string,
     id: string,
     request: string,
     allowed: Array<string>,
     policy: Caps,
     observed: RootIdentity
-) -> Result<Record, string> {
+) -> Result<RootBoundWorkChain, string> {
     let invalid = validate(parent);
     if invalid != "" {
         return Err(invalid);
@@ -150,7 +143,7 @@ public flow successor(
             return Err(error);
         }
     };
-    let child = Record {
+    let child = RootBoundWorkChain {
         format = 4,
         root = parent.root,
         parent_proof = proof,
@@ -163,7 +156,7 @@ public flow successor(
     return Ok(child);
 }
 
-public flow linked(parent: Record, parent_version: string, child: Record) -> string {
+public flow linked(parent: RootBoundWorkChain, parent_version: string, child: RootBoundWorkChain) -> string {
     let invalid = validate(parent);
     if invalid != "" {
         return invalid;
@@ -192,7 +185,7 @@ public flow linked(parent: Record, parent_version: string, child: Record) -> str
     };
 }
 
-public flow publish_partial(row: Record, work: StoredWorkRecord) -> Result<Record, string> {
+public flow publish_partial(row: RootBoundWorkChain, work: CapturedWork) -> Result<RootBoundWorkChain, string> {
     let invalid = validate(row);
     if invalid != "" {
         return Err(invalid);
@@ -213,7 +206,7 @@ public flow publish_partial(row: Record, work: StoredWorkRecord) -> Result<Recor
     return Ok(next);
 }
 
-public flow confirm(row: Record, summary: string) -> Result<Record, string> {
+public flow confirm(row: RootBoundWorkChain, summary: string) -> Result<RootBoundWorkChain, string> {
     let invalid = validate(row);
     if invalid != "" {
         return Err(invalid);
@@ -240,7 +233,7 @@ public type RootIdentity = {
     token: string
 };
 
-public type Record = {
+public type RootBoundWorkChain = {
     format: i32,
     root: RootIdentity,
     parent_proof: string,
@@ -248,11 +241,11 @@ public type Record = {
 };
 
 // Separate namespace: never reinterpret an existing v2 or v3 journal.
-public type JournalRecord = {
+public type RootBoundChainJournal = {
     format: i32,
     chain: string,
     turn: i32,
-    phase: string,
+    phase: ChainEditPhase,
     root: RootIdentity,
     binding: Binding
 };

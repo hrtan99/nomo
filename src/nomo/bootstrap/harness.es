@@ -1,5 +1,10 @@
 module nomo.bootstrap.harness;
 
+import nomo.adapters.model.read.{ConversationInput};
+
+import nomo.domain.conversation.{TraceRole, TraceKind};
+
+import std.json.JsonValue;
 import nomo.adapters.cli.console.{
     ConsoleDiagnostics,
     ConsoleProgress,
@@ -74,15 +79,15 @@ import nomo.application.harness.text.{
 };
 import nomo.application.resources.ReadOnlyRoot;
 import nomo.application.workspace.ports.{FileReader, LiteralSearcher, ReadTools};
-import nomo.domain.conversation.{Event, State, TextTurn};
-import nomo.domain.harness.chat.{Context, Invocation, TurnResult};
-import nomo.domain.harness.delegation.{Job, Outcome, admit, settle};
+import nomo.domain.conversation.{TraceEvent, TraceState, TextTurn};
+import nomo.domain.harness.chat.{Context, ReadInvocation, TurnResult};
+import nomo.domain.harness.delegation.{ProcessJob, Outcome, admit, settle};
 import nomo.domain.harness.loop.{Limits, LoopMode, LoopTurn, ReadLedger, Session, default_limits};
 import nomo.domain.harness.read.read_fresh;
 import std.io.println;
 
 // Exactly one synchronous child invocation; no retry, sibling or recursive route.
-public flow harness_run(job: Job) -> Result<Outcome, string> {
+public flow harness_run(job: ProcessJob) -> Result<Outcome, string> {
     return match admit(job) {
         Err(error) => Err(error),
         Ok(reservation) => settle(reservation, harness_child_run(reservation.child)),
@@ -91,7 +96,7 @@ public flow harness_run(job: Job) -> Result<Outcome, string> {
 
 // Both entries seed explicitly selected data; local counters are charged only
 // under their owner's prior reservation. No previous tool is dispatched here.
-public flow ascii_read_child_turn(task: string, allowed: Array<string>, selected: State) -> LoopTurn ~ ChatChildStage<ReadOnlyRoot> {
+public flow ascii_read_child_turn(task: string, allowed: Array<string>, selected: TraceState) -> LoopTurn ~ ChatChildStage<ReadOnlyRoot> {
     let seeded = Session {
         history = selected,
         calls = 0,
@@ -102,7 +107,7 @@ public flow ascii_read_child_turn(task: string, allowed: Array<string>, selected
     return model_tool_run_loop(task, allowed, legacy_limits(), seeded);
 }
 
-public flow ascii_read_work_child_turn(task: string, allowed: Array<string>, selected: State) -> LoopTurn {
+public flow ascii_read_work_child_turn(task: string, allowed: Array<string>, selected: TraceState) -> LoopTurn {
     let seeded = Session {
         history = selected,
         calls = 0,
@@ -113,7 +118,7 @@ public flow ascii_read_work_child_turn(task: string, allowed: Array<string>, sel
     return model_tool_run_work_loop(task, allowed, legacy_limits(), seeded);
 }
 
-public flow chain_child_turn(task: string, allowed: Array<string>, selected: State, inspect_all: bool) -> LoopTurn {
+public flow chain_child_turn(task: string, allowed: Array<string>, selected: TraceState, inspect_all: bool) -> LoopTurn {
     let seeded = Session {
         history = selected,
         calls = 0,
@@ -192,7 +197,7 @@ public flow ascii_read_run(request: string, allowed: Array<string>) -> i32 {
     return 0;
 }
 
-public flow harness_tool_chat_run_turn(request: string, allowed: Array<string>, invocation: Invocation) -> TurnResult {
+public flow harness_tool_chat_run_turn(request: string, allowed: Array<string>, invocation: ReadInvocation) -> TurnResult {
     return ascii_chat_run_turn_controller(request, allowed, invocation) with {
         LegacyChatStages.main(context) => harness_tool_chat_main_stage(context);
         LegacyChatStages.child(task, files, selected, _, _, _, _) => ascii_read_child_turn(
@@ -205,7 +210,7 @@ public flow harness_tool_chat_run_turn(request: string, allowed: Array<string>, 
 
 // Both entries seed explicitly selected data; local counters are charged only
 // under their owner's prior reservation. No previous tool is dispatched here.
-flow seed(selected: State) -> Session {
+flow seed(selected: TraceState) -> Session {
     return Session {
         history = selected,
         calls = 0,
@@ -215,18 +220,18 @@ flow seed(selected: State) -> Session {
     };
 }
 
-public flow unicode_read_child_turn(task: string, allowed: Array<string>, selected: State) -> LoopTurn ~ ChatChildStage<ReadOnlyRoot> {
+public flow unicode_read_child_turn(task: string, allowed: Array<string>, selected: TraceState) -> LoopTurn ~ ChatChildStage<ReadOnlyRoot> {
     return read_model_run_loop(task, allowed, default_limits(), seed(selected));
 }
 
-public flow unicode_read_work_child_turn(task: string, allowed: Array<string>, selected: State) -> LoopTurn ~ ChatChildStage<ReadOnlyRoot> {
+public flow unicode_read_work_child_turn(task: string, allowed: Array<string>, selected: TraceState) -> LoopTurn ~ ChatChildStage<ReadOnlyRoot> {
     return read_model_run_work_loop(task, allowed, default_limits(), seed(selected));
 }
 
 public flow chat_child_turn(
     task: string,
     allowed: Array<string>,
-    selected: State,
+    selected: TraceState,
     multi: bool,
     resilient: bool,
     high_input: bool,
@@ -242,7 +247,7 @@ public flow chat_child_turn(
 public flow private_chat_child_turn(
     task: string,
     allowed: Array<string>,
-    selected: State,
+    selected: TraceState,
     multi: bool,
     resilient: bool,
     high_input: bool,
@@ -258,7 +263,7 @@ public flow private_chat_child_turn(
 public flow expanded_work_child_turn(
     task: string,
     allowed: Array<string>,
-    selected: State,
+    selected: TraceState,
     wide: bool,
     high_input: bool
 ) -> LoopTurn ~ WideChatChildStage<ReadOnlyRoot> {
@@ -368,14 +373,14 @@ type PublicStages = {
 
 impl PublicStages ~ ReadStages {
     flow main(self, context: Context) -> string ![] {
-        return infer_main(self.mode, Prompt.new().system(prompt_ChatMain()).data(input(context)));
+        return infer_main(self.mode, Prompt.new().system(prompt_ChatMain()).data(input(context.wire())));
     }
 
     flow child(
         self,
         task: string,
         files: Array<string>,
-        selected: State,
+        selected: TraceState,
         multi: bool,
         resilient: bool,
         high_input: bool,
@@ -391,14 +396,14 @@ type PrivateStages = {
 
 impl PrivateStages ~ ReadStages {
     flow main(self, context: Context) -> string ![] {
-        return infer_main(self.mode, Prompt.new().system(prompt_ChatMain()).data(input(context)));
+        return infer_main(self.mode, Prompt.new().system(prompt_ChatMain()).data(input(context.wire())));
     }
 
     flow child(
         self,
         task: string,
         files: Array<string>,
-        selected: State,
+        selected: TraceState,
         multi: bool,
         resilient: bool,
         high_input: bool,
@@ -410,7 +415,7 @@ impl PrivateStages ~ ReadStages {
 
 type HistoryStages = {
     mode: MainMode,
-    history: Array<Event>
+    history: Array<TraceEvent>
 };
 
 impl HistoryStages ~ ReadStages {
@@ -418,10 +423,10 @@ impl HistoryStages ~ ReadStages {
         return infer_main(
             self.mode,
             Prompt.new().system(prompt_HistoryChatMain()).data(
-                input(ConversationInput {
+                input((ConversationInput {
                     current = context,
                     history = self.history
-                })
+                }).wire())
             )
         );
     }
@@ -430,7 +435,7 @@ impl HistoryStages ~ ReadStages {
         self,
         task: string,
         files: Array<string>,
-        selected: State,
+        selected: TraceState,
         multi: bool,
         resilient: bool,
         high_input: bool,
@@ -440,13 +445,17 @@ impl HistoryStages ~ ReadStages {
     }
 }
 
-public flow read_tool_chat_run_turn(request: string, allowed: Array<string>, invocation: Invocation) -> TurnResult {
+public flow read_tool_chat_run_turn(request: string, allowed: Array<string>, invocation: ReadInvocation) -> TurnResult {
     return run_public(PublicStages {
         mode = main_mode(invocation)
     }, request, allowed, invocation);
 }
 
-public flow read_tool_chat_run_private_turn(request: string, allowed: Array<string>, invocation: Invocation) -> TurnResult {
+public flow read_tool_chat_run_private_turn(
+    request: string,
+    allowed: Array<string>,
+    invocation: ReadInvocation
+) -> TurnResult {
     return run_private(PrivateStages {
         mode = main_mode(invocation)
     }, request, allowed, invocation);
@@ -455,8 +464,8 @@ public flow read_tool_chat_run_private_turn(request: string, allowed: Array<stri
 public flow run_with_history(
     request: string,
     allowed: Array<string>,
-    invocation: Invocation,
-    history: Array<Event>
+    invocation: ReadInvocation,
+    history: Array<TraceEvent>
 ) -> TurnResult {
     return run_private(HistoryStages {
         mode = main_mode(invocation),
@@ -504,7 +513,7 @@ public flow model_tool_run_loop_with(
     };
 }
 
-public flow model_turn(raw: string, maximum: i32, budget: i32, previous: State) -> TextTurn {
+public flow model_turn(raw: string, maximum: i32, budget: i32, previous: TraceState) -> TextTurn {
     return model_turn_controller(raw, maximum, budget, previous) with {
         ModelText.infer(context) => main_stage(context);
         ConversationOutput.publish(event) => publish(event);
@@ -704,19 +713,28 @@ public flow run_multi_chat_loop(
     );
 }
 
-public flow ascii_chat_run_turn_controller(request: string, allowed: Array<string>, invocation: Invocation) -> TurnResult {
+public flow ascii_chat_run_turn_controller(
+    request: string,
+    allowed: Array<string>,
+    invocation: ReadInvocation
+) -> TurnResult {
     return run_shared_turn(request, allowed, invocation, false);
 }
 
 // User-facing final answers are unchanged; progress omits arbitrary tool/task text.
-public flow run_shared_turn(request: string, allowed: Array<string>, invocation: Invocation, unicode: bool) -> TurnResult {
+public flow run_shared_turn(
+    request: string,
+    allowed: Array<string>,
+    invocation: ReadInvocation,
+    unicode: bool
+) -> TurnResult {
     return run_output(PublicHarnessEvents {}, request, allowed, invocation, unicode);
 }
 
 public flow chat_run_private_turn(
     request: string,
     allowed: Array<string>,
-    invocation: Invocation,
+    invocation: ReadInvocation,
     unicode: bool
 ) -> TurnResult {
     return run_output(RedactedHarnessEvents {}, request, allowed, invocation, unicode);
@@ -726,7 +744,7 @@ flow run_output<S ~ ConversationSink>(
     sink: S,
     request: string,
     allowed: Array<string>,
-    invocation: Invocation,
+    invocation: ReadInvocation,
     unicode: bool
 ) -> TurnResult {
     let progress = ConsoleProgress {};
@@ -963,7 +981,7 @@ public flow run_public<S ~ ReadStages>(
     stages: S,
     request: string,
     allowed: Array<string>,
-    invocation: Invocation
+    invocation: ReadInvocation
 ) -> TurnResult {
     return utf8_chat_run_turn_controller(request, allowed, invocation) with {
         LegacyChatStages.main(context) => stages.main(context);
@@ -983,7 +1001,7 @@ public flow run_private<S ~ ReadStages>(
     stages: S,
     request: string,
     allowed: Array<string>,
-    invocation: Invocation
+    invocation: ReadInvocation
 ) -> TurnResult {
     return run_private_turn_controller(request, allowed, invocation) with {
         LegacyChatStages.main(context) => stages.main(context);
@@ -999,42 +1017,37 @@ public flow run_private<S ~ ReadStages>(
     };
 }
 
-public flow emit(state: State, role: string, kind: string, name: string, text: string) -> State {
+public flow emit(state: TraceState, role: TraceRole, kind: TraceKind, name: string, text: string) -> TraceState {
     return text_emit(state, role, kind, name, text) with {
         ConversationOutput.publish(event) => publish(event);
     };
 }
 
-public flow failure(state: State, message: string, status: i32) -> TextTurn {
+public flow failure(state: TraceState, message: string, status: i32) -> TextTurn {
     return text_failure(state, message, status) with {
         ConversationOutput.publish(event) => publish(event);
     };
 }
 
-public flow reject(state: State, message: string) -> TextTurn {
+public flow reject(state: TraceState, message: string) -> TextTurn {
     return text_reject(state, message) with {
         ConversationOutput.publish(event) => publish(event);
     };
 }
 
-public flow turn(raw: string, maximum: i32, budget: i32, previous: State) -> TextTurn {
+public flow turn(raw: string, maximum: i32, budget: i32, previous: TraceState) -> TextTurn {
     return turn_controller(raw, maximum, budget, previous) with {
         ConversationOutput.publish(event) => publish(event);
     };
 }
 
-public flow utf8_chat_run_turn_controller(request: string, allowed: Array<string>, invocation: Invocation) -> TurnResult {
+public flow utf8_chat_run_turn_controller(request: string, allowed: Array<string>, invocation: ReadInvocation) -> TurnResult {
     return run_shared_turn(request, allowed, invocation, true);
 }
 
-public flow run_private_turn_controller(request: string, allowed: Array<string>, invocation: Invocation) -> TurnResult {
+public flow run_private_turn_controller(request: string, allowed: Array<string>, invocation: ReadInvocation) -> TurnResult {
     return chat_run_private_turn(request, allowed, invocation, true);
 }
-
-public type ConversationInput = {
-    current: Context,
-    history: Array<Event>
-};
 
 public flow run_text(request: string) -> i32 {
     return text_delegation_run(request) with {

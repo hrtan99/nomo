@@ -1,5 +1,7 @@
 module nomo.adapters.cli.harness;
 
+import nomo.domain.harness.delegation.DelegationStatus;
+import nomo.domain.harness.edit.{EditStage};
 import nomo.adapters.cli.console.{
     ascii_read_refused,
     display,
@@ -40,7 +42,7 @@ import nomo.application.harness.work.{
 import nomo.application.resources.{EditableRoot, ReadOnlyRoot};
 import nomo.bootstrap.harness.{ascii_read_run, ascii_read_work_child_turn, chain_child_turn, harness_run, run_text, unicode_read_run};
 import nomo.domain.editing.{Confirmed, Selector, prepare_original_legacy};
-import nomo.domain.harness.delegation.{Job, Outcome};
+import nomo.domain.harness.delegation.{ProcessJob, Outcome};
 import nomo.domain.harness.edit.{
     EditLedger,
     bump,
@@ -74,11 +76,12 @@ flow emit(outcome: Outcome, turn: i32) -> unit {
     let prefix = "TURN " + from_i32(turn) + " ";
     @limits([Iterations(3)]) for message in outcome.messages {
         println(
-            prefix + "EVENT " + message.sender + " -> " + message.recipient + " " + message.kind + " "
+            prefix + "EVENT " + message.sender.wire() + " -> " + message.recipient.wire() + " "
+                + message.kind.wire() + " "
                 + message.child_id + ": " + message.text
         );
     }
-    println(prefix + "FINAL " + outcome.status + ": " + outcome.text);
+    println(prefix + "FINAL " + outcome.status.wire() + ": " + outcome.text);
     println(
         prefix + "LEDGER maximum=" + from_i32(outcome.ledger.maximum) + " spent="
             + from_i32(outcome.ledger.spent) + " reserved=" + from_i32(outcome.ledger.reserved)
@@ -99,15 +102,15 @@ public flow harness_chat_run(args: Array<string>) -> i32 {
             return 1;
         }
     };
-    if request.kind == "help" {
+    if request.is_help() {
         harness_chat_help();
         return 0;
     }
-    if request.kind != "new" {
+    if !request.is_new() {
         println("REFUSED resume is unavailable in the offline harness chat");
         return 1;
     }
-    if request.once_supplied {
+    if request.once() != None() {
         println("REFUSED this line entry requires new without --once");
         return 1;
     }
@@ -127,16 +130,16 @@ public flow harness_chat_run(args: Array<string>) -> i32 {
         match cli_request_parse_line(raw) {
             Err(error) => println("REFUSED " + error),
             Ok(command) => {
-                if command.kind == "exit" {
+                if command.is_exit() {
                     stop("exit", turns, spent);
                     return 0;
                 }
-                if command.kind == "help" {
+                if command.is_help() {
                     harness_chat_help();
                 }
                 else {
-                    let job = Job {
-                        task = command.text,
+                    let job = ProcessJob {
+                        task = command.prompt(),
                         context,
                         maximum = 16,
                         spent
@@ -147,7 +150,7 @@ public flow harness_chat_run(args: Array<string>) -> i32 {
                             turns = turns + 1;
                             spent = outcome.ledger.spent;
                             emit(outcome, turns);
-                            if outcome.status != "completed" {
+                            if outcome.status != DelegationStatus.Completed {
                                 stop("child refused", turns, spent);
                                 return 1;
                             }
@@ -155,7 +158,7 @@ public flow harness_chat_run(args: Array<string>) -> i32 {
                                 stop("turn limit", turns, spent);
                                 return 0;
                             }
-                            context = context.push(command.text);
+                            context = context.push(command.prompt());
                         }
                     };
                 }
@@ -181,9 +184,10 @@ flow harness_edit_entry_refused(state: EditLedger, error: string) -> i32 {
     return 1;
 }
 
-flow harness_edit_entry_stage(phase: string, state: EditLedger) -> unit {
+flow harness_edit_entry_stage(phase: EditStage, state: EditLedger) -> unit {
     println(
-        "STAGE " + phase + " child-1 steps=" + from_i32(state.steps) + " calls=" + from_i32(state.calls)
+        "STAGE " + phase.wire() + " child-1 steps=" + from_i32(state.steps) + " calls="
+            + from_i32(state.calls)
             + " token_allowance=" + from_i32(state.tokens) + " remaining_calls=" + from_i32(3 - state.calls)
             + " remaining_token_allowance=" + from_i32(38912 - state.tokens) + " native_token_allowance="
             + from_i32(state.native_tokens) + " remaining_native_token_allowance="
@@ -242,7 +246,7 @@ public flow harness_edit_entry_run(args: Array<string>) -> i32 ![
             return harness_edit_entry_refused(state, error);
         }
     };
-    let initial = edit_context("plan", selected, input.request, "", before);
+    let initial = edit_context(EditStage.Plan, selected, input.request, "", before);
     let invalid = context_error(initial);
     if invalid != "" {
         return harness_edit_entry_refused(state, invalid);
@@ -253,7 +257,7 @@ public flow harness_edit_entry_run(args: Array<string>) -> i32 ![
             return harness_edit_entry_refused(state, error);
         }
     };
-    harness_edit_entry_stage("plan", state);
+    harness_edit_entry_stage(EditStage.Plan, state);
     let task = match decode_plan(plan(initial)) {
         Ok(value) => value,
         Err(error) => {
@@ -267,7 +271,7 @@ public flow harness_edit_entry_run(args: Array<string>) -> i32 ![
         }
     };
     display("EVENT main -> child-1 request ", task);
-    let delegated = edit_context("child", selected, input.request, task, before);
+    let delegated = edit_context(EditStage.Child, selected, input.request, task, before);
     let invalid_child = context_error(delegated);
     if invalid_child != "" {
         return harness_edit_entry_refused(state, invalid_child);
@@ -278,7 +282,7 @@ public flow harness_edit_entry_run(args: Array<string>) -> i32 ![
             return harness_edit_entry_refused(state, error);
         }
     };
-    harness_edit_entry_stage("child", state);
+    harness_edit_entry_stage(EditStage.Child, state);
     let request = match decode_edit(propose(delegated)) {
         Ok(value) => value,
         Err(error) => {
@@ -327,7 +331,7 @@ public flow harness_edit_entry_run(args: Array<string>) -> i32 ![
             return harness_edit_entry_refused(state, "edit completed; " + error);
         }
     };
-    harness_edit_entry_stage("aggregate", state);
+    harness_edit_entry_stage(EditStage.Aggregate, state);
     let answer = aggregate(final_context);
     let invalid_answer = text_error(answer, "final answer");
     if invalid_answer != "" {
@@ -354,22 +358,22 @@ public flow harness_entry_run(args: Array<string>) -> i32 {
             return 1;
         }
     };
-    if request.kind == "help" {
+    if request.is_help() {
         harness_entry_help();
         return 0;
     }
-    if request.kind != "new" {
+    if !request.is_new() {
         println("REFUSED resume is unavailable in the offline harness entry");
         return 1;
     }
-    if !request.once_supplied {
+    if request.once() == None() {
         println("REFUSED this entry requires new --once TEXT");
         return 1;
     }
     let context: Array<string> = [];
     // Pass exact raw data; admission enforces 256 before calling the child.
-    let job = Job {
-        task = request.once,
+    let job = ProcessJob {
+        task = request.once().unwrap(),
         context,
         maximum = 5,
         spent = 0
@@ -383,16 +387,17 @@ public flow harness_entry_run(args: Array<string>) -> i32 {
     };
     @limits([Iterations(3)]) for message in outcome.messages {
         println(
-            "EVENT " + message.sender + " -> " + message.recipient + " " + message.kind + " "
+            "EVENT " + message.sender.wire() + " -> " + message.recipient.wire() + " " + message.kind.wire()
+                + " "
                 + message.child_id + ": " + message.text
         );
     }
-    println("FINAL " + outcome.status + ": " + outcome.text);
+    println("FINAL " + outcome.status.wire() + ": " + outcome.text);
     println(
         "LEDGER maximum=" + from_i32(outcome.ledger.maximum) + " spent=" + from_i32(outcome.ledger.spent)
             + " reserved=" + from_i32(outcome.ledger.reserved)
     );
-    if outcome.status != "completed" {
+    if outcome.status != DelegationStatus.Completed {
         return 1;
     }
     return 0;
@@ -414,17 +419,17 @@ public flow harness_model_entry_run(args: Array<string>) -> i32 {
             return text_delegation_refused(text_fresh(), error);
         }
     };
-    if request.kind == "help" {
+    if request.is_help() {
         harness_model_entry_help();
         return 0;
     }
-    if request.kind != "new" {
+    if !request.is_new() {
         return text_delegation_refused(text_fresh(), "resume is unavailable in the model harness");
     }
-    if !request.once_supplied {
+    if request.once() == None() {
         return text_delegation_refused(text_fresh(), "this entry requires new --once TEXT");
     }
-    return run_text(request.once);
+    return run_text(request.once().unwrap());
 }
 
 public flow harness_model_tools_chat_run(args: Array<string>) -> i32 {
@@ -503,23 +508,23 @@ public flow harness_model_tools_entry_run(args: Array<string>) -> i32 {
             return ascii_read_refused(read_fresh(), error);
         }
     };
-    if request.kind == "help" {
+    if request.is_help() {
         if extracted.supplied {
             return ascii_read_refused(read_fresh(), "help must be used alone");
         }
         harness_model_tools_entry_help();
         return 0;
     }
-    if request.kind != "new" {
+    if !request.is_new() {
         return ascii_read_refused(read_fresh(), "resume is unavailable in the model/tool harness");
     }
-    if !request.once_supplied {
+    if request.once() == None() {
         return ascii_read_refused(read_fresh(), "this entry requires new --once TEXT");
     }
     if !extracted.supplied {
         return ascii_read_refused(read_fresh(), "this entry requires --allow FILE[,FILE]");
     }
-    return ascii_read_run(request.once, split(extracted.allowed, ","));
+    return ascii_read_run(request.once().unwrap(), split(extracted.allowed, ","));
 }
 
 public flow chain_ledger(state: WorkLedger) -> unit {
@@ -893,21 +898,21 @@ public flow read_model_tools_entry_run(args: Array<string>) -> i32 {
             return unicode_read_refused(read_fresh(), error);
         }
     };
-    if request.kind == "help" {
+    if request.is_help() {
         if extracted.supplied {
             return unicode_read_refused(read_fresh(), "help must be used alone");
         }
         read_model_tools_entry_help();
         return 0;
     }
-    if request.kind != "new" {
+    if !request.is_new() {
         return unicode_read_refused(read_fresh(), "resume is unavailable in the model/tool harness");
     }
-    if !request.once_supplied {
+    if request.once() == None() {
         return unicode_read_refused(read_fresh(), "this entry requires new --once TEXT");
     }
     if !extracted.supplied {
         return unicode_read_refused(read_fresh(), "this entry requires --allow FILE[,FILE...]");
     }
-    return unicode_read_run(request.once, split(extracted.allowed, ","));
+    return unicode_read_run(request.once().unwrap(), split(extracted.allowed, ","));
 }

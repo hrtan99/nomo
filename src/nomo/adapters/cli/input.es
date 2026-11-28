@@ -22,17 +22,63 @@ import std.text.{
 };
 
 // CLI-001A: intents only; these records neither select storage nor authorize work.
-public type Request = {
-    kind: string,
-    session_id: string,
-    once_supplied: bool,
-    once: string
-};
+public enum Request {
+    Help,
+    New(Option<string>),
+    ResumeLatest(Option<string>),
+    ResumeId(string, Option<string>)
+}
+impl Request {
+    public flow is_help(self) -> bool ![] {
+        return match self {
+            Request.Help => true,
+            _ => false
+        };
+    }
 
-public type LineCommand = {
-    kind: string,
-    text: string
-};
+    public flow is_new(self) -> bool ![] {
+        return match self {
+            Request.New(_) => true,
+            _ => false
+        };
+    }
+
+    public flow once(self) -> Option<string> ![] {
+        return match self {
+            Request.Help => None(),
+            Request.New(value) => value,
+            Request.ResumeLatest(value) => value,
+            Request.ResumeId(_, value) => value
+        };
+    }
+}
+public enum LineCommand {
+    Help,
+    Exit,
+    Prompt(string)
+}
+impl LineCommand {
+    public flow is_help(self) -> bool ![] {
+        return match self {
+            LineCommand.Help => true,
+            _ => false
+        };
+    }
+
+    public flow is_exit(self) -> bool ![] {
+        return match self {
+            LineCommand.Exit => true,
+            _ => false
+        };
+    }
+
+    public flow prompt(self) -> string ![] {
+        return match self {
+            LineCommand.Prompt(value) => value,
+            _ => abort("prompt command required")
+        };
+    }
+}
 
 public flow cli_request_parse_args(args: Array<string>) -> Result<Request, string> {
     if args.len() == 0 || args.len() > 5 {
@@ -43,12 +89,7 @@ public flow cli_request_parse_args(args: Array<string>) -> Result<Request, strin
         if args.len() != 1 {
             return Err("help must be used alone");
         }
-        return Ok(Request {
-            kind = "help",
-            session_id = "",
-            once_supplied = false,
-            once = ""
-        });
+        return Ok(Request.Help);
     }
     if verb != "new" && verb != "resume" {
         return Err("expected new, resume or help");
@@ -116,19 +157,22 @@ public flow cli_request_parse_args(args: Array<string>) -> Result<Request, strin
     if verb == "resume" && !selected {
         return Err("resume requires --id ID or --latest");
     }
-    var kind = "new";
-    if verb == "resume" {
-        kind = "resume-id";
-        if latest {
-            kind = "resume-latest";
+    let once = if supplied {
+        Some(input)
+    } else {
+        None()
+    };
+    return Ok(
+        if verb == "new" {
+            Request.New(once)
+        } else {
+            if latest {
+                Request.ResumeLatest(once)
+            } else {
+                Request.ResumeId(session_id, once)
+            }
         }
-    }
-    return Ok(Request {
-        kind,
-        session_id,
-        once_supplied = supplied,
-        once = input
-    });
+    );
 }
 
 // Raw Console line: the ceiling includes an optional single final LF/CRLF.
@@ -149,25 +193,16 @@ public flow cli_request_parse_line(raw: string) -> Result<LineCommand, string> {
     }
     let command = trim(body);
     if command == "/help" {
-        return Ok(LineCommand {
-            kind = "help",
-            text = ""
-        });
+        return Ok(LineCommand.Help);
     }
     if command == "/exit" {
-        return Ok(LineCommand {
-            kind = "exit",
-            text = ""
-        });
+        return Ok(LineCommand.Exit);
     }
     let invalid = input_error(command);
     if invalid != "" {
         return Err(invalid);
     }
-    return Ok(LineCommand {
-        kind = "prompt",
-        text = command
-    });
+    return Ok(LineCommand.Prompt(command));
 }
 
 public type Config = {
@@ -311,12 +346,7 @@ flow prompt_error(value: string) -> string {
 
 public flow read_cli_parse_args(args: Array<string>) -> Result<Request, string> {
     if args.len() == 1 && (args[0] == "help" || args[0] == "--help") {
-        return Ok(Request {
-            kind = "help",
-            session_id = "",
-            once_supplied = false,
-            once = ""
-        });
+        return Ok(Request.Help);
     }
     if args.len() != 3 || args[0] != "new" || args[1] != "--once" {
         return Err("expected new --once TEXT");
@@ -325,12 +355,7 @@ public flow read_cli_parse_args(args: Array<string>) -> Result<Request, string> 
     if invalid != "" {
         return Err(invalid);
     }
-    return Ok(Request {
-        kind = "new",
-        session_id = "",
-        once_supplied = true,
-        once = args[2]
-    });
+    return Ok(Request.New(Some(args[2])));
 }
 
 public flow read_cli_parse_line(raw: string) -> Result<LineCommand, string> {
@@ -349,25 +374,16 @@ public flow read_cli_parse_line(raw: string) -> Result<LineCommand, string> {
     }
     let command = trim(body);
     if command == "/help" {
-        return Ok(LineCommand {
-            kind = "help",
-            text = ""
-        });
+        return Ok(LineCommand.Help);
     }
     if command == "/exit" {
-        return Ok(LineCommand {
-            kind = "exit",
-            text = ""
-        });
+        return Ok(LineCommand.Exit);
     }
     let invalid = prompt_error(command);
     if invalid != "" {
         return Err(invalid);
     }
-    return Ok(LineCommand {
-        kind = "prompt",
-        text = command
-    });
+    return Ok(LineCommand.Prompt(command));
 }
 
 flow argv(raw: string) -> Argv {

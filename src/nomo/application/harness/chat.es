@@ -1,14 +1,18 @@
 module nomo.application.harness.chat;
 
+import nomo.domain.harness.chat.ReservationStage;
+import nomo.domain.conversation.{TraceKind, TraceRole};
+import nomo.domain.harness.loop.{tool_name};
+import nomo.domain.harness.chat.{ChatStage};
 import nomo.application.harness.ports.{ConversationOutput, HarnessProgress, LegacyChatStages};
-import nomo.domain.conversation.{Event, State};
+import nomo.domain.conversation.{TraceEvent, TraceState};
 import nomo.domain.harness.chat.{
     ChatBudgetPolicy,
     Completed,
     Context,
-    Invocation,
+    ReadInvocation,
     LocalTurn,
-    Previous,
+    PriorRead,
     SelectedBudget,
     TurnResult,
     chat_context_error,
@@ -40,52 +44,54 @@ flow refused(usage: ReadLedger, error: string, resolved: bool) -> LocalTurn {
     };
 }
 
-flow completed(request: string, raw_plan: string, selected: Previous, child: State) -> Completed {
+flow completed(request: string, raw_plan: string, selected: PriorRead, child: TraceState) -> Completed {
     var records = [
-        Event {
-            role = "user",
-            kind = "request",
+        TraceEvent {
+            role = TraceRole.User,
+            kind = TraceKind.Request,
             name = "",
             text = request
         },
-        Event {
-            role = "main",
-            kind = "plan",
+        TraceEvent {
+            role = TraceRole.Main,
+            kind = TraceKind.Plan,
             name = "",
             text = raw_plan
         },
-        Event {
-            role = "main",
-            kind = "delegate",
+        TraceEvent {
+            role = TraceRole.Main,
+            kind = TraceKind.Delegate,
             name = "child-1",
             text = selected.task
         }
     ];
     records = records.extend(child.events);
     records = records.push(
-        Event {
-            role = "main",
-            kind = "consume",
+        TraceEvent {
+            role = TraceRole.Main,
+            kind = TraceKind.Consume,
             name = "child-1",
             text = selected.result
         }
     );
-    if selected.tool != "" {
+    if selected.tool != None() {
         records = records.push(
-            Event {
-                role = "main",
-                kind = "tool",
-                name = selected.tool,
+            TraceEvent {
+                role = TraceRole.Main,
+                kind = TraceKind.Tool,
+                name = tool_name(selected.tool),
                 text = selected.outcome
             }
         );
     }
-    records = records.push(Event {
-        role = "main",
-        kind = "answer",
-        name = "",
-        text = selected.answer
-    });
+    records = records.push(
+        TraceEvent {
+            role = TraceRole.Main,
+            kind = TraceKind.Answer,
+            name = "",
+            text = selected.answer
+        }
+    );
     return Completed {
         request,
         task = selected.task,
@@ -107,15 +113,21 @@ flow total(before: ReadLedger, local: ReadLedger) -> ReadLedger {
     };
 }
 
-flow stage<P ~ ChatBudgetPolicy>(policy: P, turn: i32, phase: string, before: ReadLedger, local: ReadLedger) -> unit {
+flow stage<P ~ ChatBudgetPolicy>(
+    policy: P,
+    turn: i32,
+    phase: ReservationStage,
+    before: ReadLedger,
+    local: ReadLedger
+) -> unit {
     let pending = policy.pending(phase);
     perform HarnessProgress.write(
-        "TURN " + from_i32(turn) + " STAGE " + phase + " " + numbers(total(before, local))
+        "TURN " + from_i32(turn) + " STAGE " + phase.wire() + " " + numbers(total(before, local))
             + " reserved_steps=" + from_i32(pending.steps) + " reserved_calls=" + from_i32(pending.calls)
             + " reserved_tokens=" + from_i32(pending.tokens) + " reserved_tools=" + from_i32(pending.tools)
             + " reserved_scan=" + from_i32(pending.scan)
     );
-    if phase == "child" {
+    if phase == ReservationStage.Child {
         perform HarnessProgress.write(
             "RESERVATION child-1 " + numbers(policy.child_pending())
                 + " tail_steps=2 tail_calls=1 tail_tokens=" + from_i32(policy.parent_tokens())
@@ -130,7 +142,7 @@ flow execute<P ~ ChatBudgetPolicy>(
     policy: P,
     request: string,
     allowed: Array<string>,
-    prior: Previous,
+    prior: PriorRead,
     before: ReadLedger,
     turn: i32
 ) -> LocalTurn {
@@ -154,11 +166,11 @@ flow execute<P ~ ChatBudgetPolicy>(
         return refused(state, paths, true);
     }
     let plan = Context {
-        phase = "plan",
+        phase = ChatStage.Plan,
         request,
         task = "",
         result = "",
-        tool = "",
+        tool = None(),
         outcome = "",
         allowed,
         prior
@@ -177,7 +189,7 @@ flow execute<P ~ ChatBudgetPolicy>(
             return refused(state, error, true);
         }
     };
-    stage(policy, turn, "plan", before, state);
+    stage(policy, turn, ReservationStage.Plan, before, state);
     let raw = perform LegacyChatStages.main(plan);
     let decoded = if unicode {
         decode_work_plan(raw)
@@ -197,14 +209,14 @@ flow execute<P ~ ChatBudgetPolicy>(
         }
     };
     perform ConversationOutput.publish(
-        Event {
-            role = "main -> child-1",
-            kind = "request",
+        TraceEvent {
+            role = TraceRole.MainToChild,
+            kind = TraceKind.Request,
             name = "child-1",
             text = task
         }
     );
-    stage(policy, turn, "child", before, state);
+    stage(policy, turn, ReservationStage.Child, before, state);
     let child = perform LegacyChatStages.child(
         task,
         allowed,
@@ -247,7 +259,7 @@ flow execute<P ~ ChatBudgetPolicy>(
             }
         };
     }
-    let pending = policy.pending("child");
+    let pending = policy.pending(ReservationStage.Child);
     perform HarnessProgress.write(
         "SETTLED child-1 " + numbers(total(before, state)) + " released_steps="
             + from_i32(pending.steps - state.steps) + " released_calls="
@@ -269,9 +281,9 @@ flow execute<P ~ ChatBudgetPolicy>(
         return refused(state, "invalid bounded child result", true);
     }
     perform ConversationOutput.publish(
-        Event {
-            role = "child-1 -> main",
-            kind = "result",
+        TraceEvent {
+            role = TraceRole.ChildToMain,
+            kind = TraceKind.Result,
             name = "child-1",
             text = observed.result
         }
@@ -283,25 +295,25 @@ flow execute<P ~ ChatBudgetPolicy>(
         }
     };
     perform ConversationOutput.publish(
-        Event {
-            role = "main -> main",
-            kind = "consume",
+        TraceEvent {
+            role = TraceRole.MainToMain,
+            kind = TraceKind.Consume,
             name = "child-1",
             text = observed.result
         }
     );
-    if observed.tool != "" {
+    if observed.tool != None() {
         perform ConversationOutput.publish(
-            Event {
-                role = "main -> main",
-                kind = "tool",
-                name = observed.tool,
+            TraceEvent {
+                role = TraceRole.MainToMain,
+                kind = TraceKind.Tool,
+                name = tool_name(observed.tool),
                 text = observed.outcome
             }
         );
     }
     let aggregate = Context {
-        phase = "aggregate",
+        phase = ChatStage.Aggregate,
         request,
         task,
         result = observed.result,
@@ -324,7 +336,7 @@ flow execute<P ~ ChatBudgetPolicy>(
             return refused(state, error, true);
         }
     };
-    stage(policy, turn, "aggregate", before, state);
+    stage(policy, turn, ReservationStage.Aggregate, before, state);
     let answer = perform LegacyChatStages.main(aggregate);
     if !(if unicode {
         bounded(answer, message_bytes())
@@ -334,7 +346,7 @@ flow execute<P ~ ChatBudgetPolicy>(
         return refused(state, "invalid bounded final answer", true);
     }
     perform HarnessProgress.write("FINAL " + answer);
-    let selected = Previous {
+    let selected = PriorRead {
         task,
         result = observed.result,
         tool = observed.tool,
@@ -354,7 +366,7 @@ flow run_policy<P ~ ChatBudgetPolicy>(
     policy: P,
     request: string,
     allowed: Array<string>,
-    invocation: Invocation
+    invocation: ReadInvocation
 ) -> TurnResult {
     let invalid = policy.validate_invocation(invocation);
     if invalid != "" {
@@ -412,7 +424,7 @@ flow run_policy<P ~ ChatBudgetPolicy>(
     };
 }
 
-public flow run_mode(request: string, allowed: Array<string>, invocation: Invocation, unicode: bool) -> TurnResult {
+public flow run_mode(request: string, allowed: Array<string>, invocation: ReadInvocation, unicode: bool) -> TurnResult {
     return match select(invocation, unicode) {
         SelectedBudget.Single(policy) => run_policy(policy, request, allowed, invocation),
         SelectedBudget.Multi(policy) => run_policy(policy, request, allowed, invocation),

@@ -1,5 +1,8 @@
 module nomo.adapters.storage.checks;
 
+import nomo.domain.sessions.work.{WorkPhase};
+import nomo.domain.sessions.work.{CheckState, CheckOutcome};
+import nomo.domain.editing.LiteralEditPhase;
 import nomo.adapters.storage.edits.edit_operation_store_inspect;
 import nomo.adapters.storage.session_records.{commit_native, submit_native};
 import nomo.adapters.storage.work_admission.{
@@ -13,10 +16,10 @@ import nomo.application.sessions.admission.{history_check_store_finish, history_
 import nomo.application.sessions.persistence.commit_once;
 import nomo.application.sessions.ports.{CasRows, CheckAccess, HistoricalWorkTicket, HistoryCheckRows, Submission, Target};
 import nomo.domain.sessions.event_codec.{Policy, encode_prefix, event_text_codec_decode};
-import nomo.domain.sessions.work.{CheckFrame, CheckRecord, WorkRecord, invalid_values};
+import nomo.domain.sessions.work.{CapturedCheckAttempt, CheckAttempt, WorkAttempt, invalid_values};
 import std.memory.{MemoryEntry, MemoryVersion, Missing, WriteCondition};
 
-public flow check_store_invalid(value: CheckFrame, policy: Policy, binding: string) -> string {
+public flow check_store_invalid(value: CapturedCheckAttempt, policy: Policy, binding: string) -> string {
     if value.format != 1 || value.policy_binding != binding || value.work_history == ""
         || value.workspace == "" || value.path == "" {
         return "invalid recoverable check binding";
@@ -25,7 +28,7 @@ public flow check_store_invalid(value: CheckFrame, policy: Policy, binding: stri
     if error != "" {
         return error;
     }
-    if value.check.phase != "complete" {
+    if !value.check.phase.is_complete() {
         if value.stdout != "" || value.stderr != "" || value.stdout_truncated || value.stderr_truncated {
             return "unfinished check has output";
         }
@@ -47,11 +50,11 @@ public flow check_store_invalid(value: CheckFrame, policy: Policy, binding: stri
 }
 
 public flow load_rows<A ~ CheckAccess>(
-    row: Option<MemoryEntry<string, CheckFrame>>,
+    row: Option<MemoryEntry<string, CapturedCheckAttempt>>,
     access: A,
     policy: Policy,
     binding: string
-) -> Result<Option<MemoryEntry<string, CheckFrame>>, string> {
+) -> Result<Option<MemoryEntry<string, CapturedCheckAttempt>>, string> {
     let work = match access.work() {
         Ok(Some(item)) => item,
         Ok(None()) => {
@@ -75,8 +78,8 @@ public flow load_rows<A ~ CheckAccess>(
                 || saved.path != work.path || saved.work_history != work.history_version {
                 return Err("check and work bindings differ");
             }
-            if saved.check.phase != "planned" {
-                if work.phase != "complete" {
+            if saved.check.phase != CheckState.Planned {
+                if work.phase != WorkPhase.Complete {
                     return Err("check requires completed work");
                 }
                 let edit = access.completed_edit(saved.check.id, saved.workspace, saved.path);
@@ -90,10 +93,10 @@ public flow load_rows<A ~ CheckAccess>(
     return Ok(row);
 }
 
-public flow write_rows<R ~ CasRows<CheckFrame>>(
+public flow write_rows<R ~ CasRows<CapturedCheckAttempt>>(
     rows: R,
-    value: CheckFrame,
-    expected: Option<MemoryEntry<string, CheckFrame>>,
+    value: CapturedCheckAttempt,
+    expected: Option<MemoryEntry<string, CapturedCheckAttempt>>,
     policy: Policy,
     binding: string
 ) -> Result<MemoryVersion, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
@@ -118,12 +121,12 @@ public flow write_rows<R ~ CasRows<CheckFrame>>(
         Some(item) => Some(item.version),
         None() => None()
     };
-    return commit_once<CheckFrame, R>(rows, value, condition, previous);
+    return commit_once<CapturedCheckAttempt, R>(rows, value, condition, previous);
 }
 
-public flow plan_rows<R ~ CasRows<CheckFrame>>(
+public flow plan_rows<R ~ CasRows<CapturedCheckAttempt>>(
     rows: R,
-    work: WorkRecord,
+    work: WorkAttempt,
     digest: string,
     policy: Policy,
     binding: string
@@ -137,15 +140,13 @@ public flow plan_rows<R ~ CasRows<CheckFrame>>(
             return Err(error);
         }
     }
-    let record = CheckRecord {
+    let record = CheckAttempt {
         format = 1,
-        phase = "planned",
+        phase = CheckState.Planned,
         id = work.id,
         digest,
-        outcome = "",
-        exit_code = ""
     };
-    let frame = CheckFrame {
+    let frame = CapturedCheckAttempt {
         format = 1,
         policy_binding = binding,
         work_history = work.history_version,
@@ -163,7 +164,7 @@ public flow plan_rows<R ~ CasRows<CheckFrame>>(
     }
 }
 
-public flow start_rows<R ~ CasRows<CheckFrame>, A ~ CheckAccess>(
+public flow start_rows<R ~ CasRows<CapturedCheckAttempt>, A ~ CheckAccess>(
     rows: R,
     access: A,
     id: string,
@@ -178,7 +179,7 @@ public flow start_rows<R ~ CasRows<CheckFrame>, A ~ CheckAccess>(
         }
     };
     let old = before.value;
-    if old.check.id != id || old.check.digest != digest || old.check.phase != "planned" {
+    if old.check.id != id || old.check.digest != digest || old.check.phase != CheckState.Planned {
         return Err("planned check differs; no retry");
     }
     let work = match access.work() {
@@ -187,20 +188,18 @@ public flow start_rows<R ~ CasRows<CheckFrame>, A ~ CheckAccess>(
             return Err("completed work missing");
         }
     };
-    if work.phase != "complete" {
+    if work.phase != WorkPhase.Complete {
         return Err("completed work required");
     }
     let edit = access.completed_edit(id, old.workspace, old.path);
     if edit != "" {
         return Err(edit);
     }
-    let record = CheckRecord {
+    let record = CheckAttempt {
         format = 1,
-        phase = "running",
+        phase = CheckState.Running,
         id,
         digest,
-        outcome = "",
-        exit_code = ""
     };
     let frame = old {
         format = 1,
@@ -217,12 +216,11 @@ public flow start_rows<R ~ CasRows<CheckFrame>, A ~ CheckAccess>(
     }
 }
 
-public flow finish_rows<R ~ CasRows<CheckFrame>>(
+public flow finish_rows<R ~ CasRows<CapturedCheckAttempt>>(
     rows: R,
     id: string,
     digest: string,
-    outcome: string,
-    exit_code: string,
+    outcome: CheckOutcome,
     stdout: string,
     stderr: string,
     out_truncated: bool,
@@ -237,7 +235,7 @@ public flow finish_rows<R ~ CasRows<CheckFrame>>(
         }
     };
     let old = before.value;
-    if old.check.id != id || old.check.digest != digest || old.check.phase != "running" {
+    if old.check.id != id || old.check.digest != digest || old.check.phase != CheckState.Running {
         return Err("running check differs; no retry");
     }
     let out = match encode_prefix(stdout, out_truncated, policy) {
@@ -252,13 +250,11 @@ public flow finish_rows<R ~ CasRows<CheckFrame>>(
             return Err(error);
         }
     };
-    let record = CheckRecord {
+    let record = CheckAttempt {
         format = 1,
-        phase = "complete",
+        phase = CheckState.Complete(outcome),
         id,
-        digest,
-        outcome,
-        exit_code
+        digest
     };
     let frame = old {
         format = 1,
@@ -275,7 +271,12 @@ public flow finish_rows<R ~ CasRows<CheckFrame>>(
     }
 }
 
-public flow abandon_rows<R ~ CasRows<CheckFrame>>(rows: R, id: string, policy: Policy, binding: string) -> Result<
+public flow abandon_rows<R ~ CasRows<CapturedCheckAttempt>>(
+    rows: R,
+    id: string,
+    policy: Policy,
+    binding: string
+) -> Result<
     bool,
     string
 > ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
@@ -286,13 +287,11 @@ public flow abandon_rows<R ~ CasRows<CheckFrame>>(rows: R, id: string, policy: P
         }
     };
     let old = before.value;
-    if old.check.id != id || old.check.phase != "running" {
+    if old.check.id != id || old.check.phase != CheckState.Running {
         return Err("interrupted check identity or phase differs");
     }
     let record = old.check {
-        phase = "abandoned",
-        outcome = "",
-        exit_code = ""
+        phase = CheckState.Abandoned
     };
     let frame = old {
         check = record
@@ -303,14 +302,12 @@ public flow abandon_rows<R ~ CasRows<CheckFrame>>(rows: R, id: string, policy: P
     };
 }
 
-public flow history_check_guard_invalid(value: CheckRecord) -> string {
+public flow history_check_guard_invalid(value: CheckAttempt) -> string {
     return invalid_values(
         value.format,
         value.phase,
         value.id,
         value.digest,
-        value.outcome,
-        value.exit_code,
         true
     );
 }
@@ -336,29 +333,29 @@ public flow history_check_guard_start(id: string, digest: string) -> Result<bool
     return start(FirstCheckRows {}, id, digest);
 }
 
-public flow history_check_guard_finish(id: string, digest: string, outcome: string, exit_code: string) -> Result<
+public flow history_check_guard_finish(id: string, digest: string, outcome: CheckOutcome) -> Result<
     bool,
     string
 > ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
-    return history_check_store_finish(FirstCheckRows {}, id, digest, outcome, exit_code);
+    return history_check_store_finish(FirstCheckRows {}, id, digest, outcome,);
 }
 
-public flow inspect() -> Result<Option<CheckRecord>, string> {
+public flow inspect() -> Result<Option<CheckAttempt>, string> {
     return history_check_store_inspect(FirstCheckRows {});
 }
 
 public type FirstCheckRows = {};
 
 impl FirstCheckRows ~ HistoryCheckRows {
-    flow read(self) -> Option<MemoryEntry<string, CheckRecord>> {
+    flow read(self) -> Option<MemoryEntry<string, CheckAttempt>> {
         return HistoryChecks.Rows.get_entry("check");
     }
 
-    flow write(self, row: CheckRecord, condition: WriteCondition) -> Result<
+    flow write(self, row: CheckAttempt, condition: WriteCondition) -> Result<
         MemoryVersion,
         string
     > ![Memory, Error<StorageError>, Error<IndexError>] {
-        return commit_native<CheckRecord>(
+        return commit_native<CheckAttempt>(
             HistoryChecks.Rows,
             Target {
                 store = ["Rows"],
@@ -378,7 +375,7 @@ impl FirstCheckRows ~ HistoryCheckRows {
                 return "completed work record required";
             }
         };
-        if work.phase != "complete" || work.id != id {
+        if work.phase != WorkPhase.Complete || work.id != id {
             return "completed work identity required";
         }
         let edit = match edit_operation_store_inspect(work.id, work.workspace, work.path) {
@@ -387,7 +384,7 @@ impl FirstCheckRows ~ HistoryCheckRows {
                 return "completed edit record required";
             }
         };
-        return if edit.phase == "completed" {
+        return if edit.phase == LiteralEditPhase.Completed {
             ""
         } else {
             "completed edit record required"
@@ -411,7 +408,7 @@ public type FirstCheckAdapter = {
     binding: string
 };
 
-impl FirstCheckAdapter ~ CasRows<CheckFrame> {
+impl FirstCheckAdapter ~ CasRows<CapturedCheckAttempt> {
     flow target(self) -> Target ![] {
         return Target {
             store = ["Rows"],
@@ -421,24 +418,24 @@ impl FirstCheckAdapter ~ CasRows<CheckFrame> {
         };
     }
 
-    flow submit(self, value: CheckFrame, condition: WriteCondition) -> Submission ![
+    flow submit(self, value: CapturedCheckAttempt, condition: WriteCondition) -> Submission ![
         Memory,
         Error<StorageError>
     ] {
         return submit_native(RecoverableChecks.Rows, "check", value, condition);
     }
 
-    flow read(self) -> Result<Option<MemoryEntry<string, CheckFrame>>, string> {
+    flow read(self) -> Result<Option<MemoryEntry<string, CapturedCheckAttempt>>, string> {
         return load(self.redaction, self.binding);
     }
 
-    flow same(self, left: CheckFrame, right: CheckFrame) -> bool ![] {
+    flow same(self, left: CapturedCheckAttempt, right: CapturedCheckAttempt) -> bool ![] {
         return left == right;
     }
 }
 
 impl FirstCheckAdapter ~ CheckAccess {
-    flow work(self) -> Result<Option<WorkRecord>, string> {
+    flow work(self) -> Result<Option<WorkAttempt>, string> {
         return match recoverable_work_store_load(self.redaction, self.binding) {
             Ok(Some(item)) => Ok(Some(item.value.work)),
             Ok(None()) => Ok(None()),
@@ -453,7 +450,7 @@ impl FirstCheckAdapter ~ CheckAccess {
                 return "completed edit required";
             }
         };
-        return if edit.phase == "completed" {
+        return if edit.phase == LiteralEditPhase.Completed {
             ""
         } else {
             "completed edit required"
@@ -461,7 +458,10 @@ impl FirstCheckAdapter ~ CheckAccess {
     }
 }
 
-public flow load(policy: Policy, binding: string) -> Result<Option<MemoryEntry<string, CheckFrame>>, string> ![
+public flow load(policy: Policy, binding: string) -> Result<
+    Option<MemoryEntry<string, CapturedCheckAttempt>>,
+    string
+> ![
     Memory,
     Error<StorageError>,
     Error<IndexError>,
@@ -509,8 +509,7 @@ public flow recoverable_check_store_start(id: string, digest: string, policy: Po
 public flow recoverable_check_store_finish(
     id: string,
     digest: string,
-    outcome: string,
-    exit_code: string,
+    outcome: CheckOutcome,
     stdout: string,
     stderr: string,
     out_truncated: bool,
@@ -527,7 +526,6 @@ public flow recoverable_check_store_finish(
         id,
         digest,
         outcome,
-        exit_code,
         stdout,
         stderr,
         out_truncated,
@@ -551,7 +549,7 @@ public flow abandon(id: string, policy: Policy, binding: string) -> Result<bool,
 }
 
 alias HistoryChecksSchema = MemoryRegion<{
-    Rows: Store<string, CheckRecord>
+    Rows: Store<string, CheckAttempt>
 }>;
 
 public let HistoryChecks = std.memory.region<HistoryChecksSchema>(
@@ -560,7 +558,7 @@ public let HistoryChecks = std.memory.region<HistoryChecksSchema>(
 );
 
 alias RecoverableChecksSchema = MemoryRegion<{
-    Rows: Store<string, CheckFrame>
+    Rows: Store<string, CapturedCheckAttempt>
 }>;
 
 public let RecoverableChecks = std.memory.region<RecoverableChecksSchema>(

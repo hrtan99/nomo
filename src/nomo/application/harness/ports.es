@@ -1,7 +1,10 @@
 module nomo.application.harness.ports;
 
+import nomo.domain.harness.chat.ReservationStage;
+
+import nomo.domain.harness.read.TextStage;
 import nomo.application.resources.ReadOnlyRoot;
-import nomo.domain.conversation.{Event, State};
+import nomo.domain.conversation.{TraceEvent, TraceState};
 import nomo.domain.harness.chat.Context as chat_Context;
 import nomo.domain.harness.edit.Context as edit_Context;
 import nomo.domain.harness.loop.{Action, Context as loop_Context, LoopTurn, ReadLedger, Session, Shape};
@@ -17,7 +20,7 @@ public effect LegacyChatStages {
     action child(
         task: string,
         allowed: Array<string>,
-        selected: State,
+        selected: TraceState,
         multi: bool,
         resilient: bool,
         high_input: bool,
@@ -28,7 +31,7 @@ public effect LegacyChatStages {
 // Legacy strings and inspected child returns; never a native typed-output bridge.
 public effect LegacyStringStages {
     action main(context: ReadContext) -> string;
-    action child(task: string, allowed: Array<string>, selected: State) -> LoopTurn;
+    action child(task: string, allowed: Array<string>, selected: TraceState) -> LoopTurn;
 }
 
 public effect LegacyChildModel {
@@ -42,7 +45,7 @@ public effect LegacyEditStages {
 }
 
 public effect ConversationOutput {
-    action publish(event: Event) -> unit;
+    action publish(event: TraceEvent) -> unit;
 }
 
 public effect DiagnosticOutput {
@@ -76,7 +79,7 @@ public spec ReadStages {
         self,
         task: string,
         files: Array<string>,
-        selected: State,
+        selected: TraceState,
         multi: bool,
         resilient: bool,
         high_input: bool,
@@ -92,7 +95,7 @@ public spec ReadStages {
 
 public spec ChatMainStage: callable chat_Context => string ![];
 
-public spec ChatChildStage<R ~ Region>: callable (string, Array<string>, State) => LoopTurn ![
+public spec ChatChildStage<R ~ Region>: callable (string, Array<string>, TraceState) => LoopTurn ![
     Fs.read<R>,
     Error<IOError>,
     Error<fs_IOError>,
@@ -100,7 +103,7 @@ public spec ChatChildStage<R ~ Region>: callable (string, Array<string>, State) 
     Error<BudgetExceeded>
 ];
 
-public spec WideChatChildStage<R ~ Region>: callable (string, Array<string>, State, bool, bool) => LoopTurn ![
+public spec WideChatChildStage<R ~ Region>: callable (string, Array<string>, TraceState, bool, bool) => LoopTurn ![
     Fs.read<R>,
     Error<IOError>,
     Error<fs_IOError>,
@@ -118,10 +121,10 @@ public spec ToolActionDecoder {
 }
 
 // Console is requested/default-handled by println; this bounds escaping errors.
-public spec ConsoleEventSink: callable Event => unit ![Error<IOError>];
+public spec ConsoleEventSink: callable TraceEvent => unit ![Error<IOError>];
 
 public spec ConversationSink {
-    flow publish(self, event: Event) -> unit ![Error<IOError>];
+    flow publish(self, event: TraceEvent) -> unit ![Error<IOError>];
 }
 
 // Diagnostics are terminal observations, not conversation events or budget
@@ -177,12 +180,12 @@ public spec ReadContextBudget {
 }
 
 public spec ReadContextProgress {
-    flow progress(self, phase: string, state: ReadLedger, prefix: string) -> Array<string> ![];
+    flow progress(self, phase: ReservationStage, state: ReadLedger, prefix: string) -> Array<string> ![];
 }
 
 public spec WorkModelStages {
     flow read(self, context: ReadContext) -> string ![];
-    flow read_child(self, task: string, files: Array<string>, selected: State) -> LoopTurn ![
+    flow read_child(self, task: string, files: Array<string>, selected: TraceState) -> LoopTurn ![
         Fs.read<ReadOnlyRoot>,
         Error<IOError>,
         Error<fs_IOError>,
@@ -209,7 +212,7 @@ public spec ChainEditStage: callable (work_Context, Array<ParentFacts>) => strin
 
 // Copied conversation data only. The caller owns the attempt and its budget.
 public type Context = {
-    history: Array<Event>,
+    history: Array<TraceEvent>,
     request: string
 };
 
@@ -220,7 +223,7 @@ public effect TextDelegationStages {
 }
 
 public effect TextDelegationOutput {
-    action precharged(phase: string, state: Ledger) -> unit;
+    action precharged(phase: TextStage, state: Ledger) -> unit;
     action settled(state: Ledger) -> unit;
     action refused(state: Ledger, error: string) -> i32;
     action line(text: string) -> unit;

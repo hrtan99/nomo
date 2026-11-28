@@ -1,10 +1,19 @@
 module nomo.domain.sessions.work;
 
-import nomo.domain.conversation.Event;
+import std.collections.Map;
+
+import nomo.domain.conversation.{wire_traces};
+import nomo.domain.conversation.{TraceKind, TraceRole};
+import nomo.domain.sessions.chat.{ChatPhase};
+import nomo.domain.harness.loop.ReadOperation;
+import nomo.domain.wire.{value as json_value, fields as json_fields};
+import nomo.domain.editing.wire_literal_edit;
+import std.json.JsonValue;
+import nomo.domain.conversation.TraceEvent;
 import nomo.domain.editing.{
     Binding,
     Confirmed,
-    EditOperation,
+    LiteralEditRecord,
     Prepared,
     Selector,
     bind,
@@ -18,47 +27,457 @@ import nomo.domain.harness.loop.ReadLedger;
 import nomo.domain.harness.read.question_error;
 import nomo.domain.harness.work.{Context, Evidence, WorkLedger, evidence_error, ledger_error, native_budget, native_tokens};
 import nomo.domain.limits.{compatible_scan_i32, context_bytes, history_bytes, message_frame_bytes};
-import nomo.domain.sessions.chat.{RecoverableChatFrame, recoverable_events_invalid};
-import nomo.domain.sessions.event_codec.{EventFrame, Policy, event_text_codec_decode, redact_text};
+import nomo.domain.sessions.chat.{ChatSessionSnapshot, recoverable_events_invalid};
+import nomo.domain.sessions.event_codec.{TraceFrame, Policy, event_text_codec_decode, redact_text};
 import nomo.domain.text.{flat_string_frame, hex_digest};
 import nomo.domain.wire.{encode as wire_encode, string_fields};
 import std.memory.MemoryEntry;
 import std.text.{char_count, concat, from_char, from_i32, from_usize, get_char_slice, join, len, parse_i32};
 
-flow valid_failure_code(value: string) -> bool {
-    if char_count(value) < 1 || char_count(value) > 3 {
-        return false;
-    }
-    return match parse_i32(value) {
-        Ok(number) => number >= 1 && number <= 123 && from_i32(number) == value,
-        Err(_) => false
-    };
+public enum WorkPhase {
+    Running,
+    Complete,
+    Abandoned
 }
 
-public flow invalid_values(
-    format: i32,
-    phase: string,
-    id: string,
-    digest: string,
-    outcome: string,
-    exit_code: string,
-    allow_abandoned: bool
-) -> string {
-    if format != 1 || (phase != "planned" && phase != "running" && phase != "complete" && !(
-        allow_abandoned
-            && phase == "abandoned"
-    )) || id == "" || !hex_digest(digest) {
+impl WorkPhase {
+    public flow wire(self) -> string ![] {
+        return match self {
+            WorkPhase.Running => "running",
+            WorkPhase.Complete => "complete",
+            WorkPhase.Abandoned => "abandoned"
+        };
+    }
+
+    public flow parse(raw: string) -> WorkPhase ![] {
+        return match raw {
+            "running" => WorkPhase.Running,
+            "complete" => WorkPhase.Complete,
+            "abandoned" => WorkPhase.Abandoned,
+            _ => abort("invalid WorkPhase spelling: " + raw)
+        };
+    }
+}
+
+public enum FollowupPhase {
+    Running,
+    Complete
+}
+
+impl FollowupPhase {
+    public flow wire(self) -> string ![] {
+        return match self {
+            FollowupPhase.Running => "running",
+            FollowupPhase.Complete => "complete"
+        };
+    }
+
+    public flow parse(raw: string) -> FollowupPhase ![] {
+        return match raw {
+            "running" => FollowupPhase.Running,
+            "complete" => FollowupPhase.Complete,
+            _ => abort("invalid FollowupPhase spelling: " + raw)
+        };
+    }
+}
+
+public enum StoredWorkPhase {
+    SummaryUnconfirmed,
+    SummaryConfirmed
+}
+
+impl StoredWorkPhase {
+    public flow wire(self) -> string ![] {
+        return match self {
+            StoredWorkPhase.SummaryUnconfirmed => "summary-unconfirmed",
+            StoredWorkPhase.SummaryConfirmed => "summary-confirmed"
+        };
+    }
+
+    public flow parse(raw: string) -> StoredWorkPhase ![] {
+        return match raw {
+            "summary-unconfirmed" => StoredWorkPhase.SummaryUnconfirmed,
+            "summary-confirmed" => StoredWorkPhase.SummaryConfirmed,
+            _ => abort("invalid StoredWorkPhase spelling: " + raw)
+        };
+    }
+}
+
+public enum CheckSlot {
+    First,
+    Followup
+}
+
+impl CheckSlot {
+    public flow wire(self) -> string ![] {
+        return match self {
+            CheckSlot.First => "first",
+            CheckSlot.Followup => "followup"
+        };
+    }
+
+    public flow parse(raw: string) -> CheckSlot ![] {
+        return match raw {
+            "first" => CheckSlot.First,
+            "followup" => CheckSlot.Followup,
+            _ => abort("invalid CheckSlot spelling: " + raw)
+        };
+    }
+}
+
+public enum SummarySource {
+    Model,
+    System,
+    Unknown
+}
+
+impl SummarySource {
+    public flow wire(self) -> string ![] {
+        return match self {
+            SummarySource.Model => "model",
+            SummarySource.System => "system",
+            SummarySource.Unknown => "unknown"
+        };
+    }
+
+    public flow parse(raw: string) -> SummarySource ![] {
+        return match raw {
+            "model" => SummarySource.Model,
+            "system" => SummarySource.System,
+            "unknown" => SummarySource.Unknown,
+            _ => abort("invalid SummarySource spelling: " + raw)
+        };
+    }
+}
+
+public enum WorkProfile {
+    Narrow,
+    V2,
+    Wide,
+    WideV2,
+    WideV3,
+    WideV4,
+    WideV5,
+    HighInputV1,
+    HighInputV2
+}
+
+impl WorkProfile {
+    public flow wire(self) -> string ![] {
+        return match self {
+            WorkProfile.Narrow => "narrow",
+            WorkProfile.V2 => "v2",
+            WorkProfile.Wide => "wide",
+            WorkProfile.WideV2 => "wide-v2",
+            WorkProfile.WideV3 => "wide-v3",
+            WorkProfile.WideV4 => "wide-v4",
+            WorkProfile.WideV5 => "wide-v5",
+            WorkProfile.HighInputV1 => "high-input-v1",
+            WorkProfile.HighInputV2 => "high-input-v2"
+        };
+    }
+
+    public flow parse(raw: string) -> WorkProfile ![] {
+        return match raw {
+            "narrow" => WorkProfile.Narrow,
+            "v2" => WorkProfile.V2,
+            "wide" => WorkProfile.Wide,
+            "wide-v2" => WorkProfile.WideV2,
+            "wide-v3" => WorkProfile.WideV3,
+            "wide-v4" => WorkProfile.WideV4,
+            "wide-v5" => WorkProfile.WideV5,
+            "high-input-v1" => WorkProfile.HighInputV1,
+            "high-input-v2" => WorkProfile.HighInputV2,
+            _ => abort("invalid WorkProfile spelling: " + raw)
+        };
+    }
+}
+
+public enum SummaryProvenance {
+    Unversioned(SummarySource),
+    V2(SummarySource),
+    V3(SummarySource),
+    V4(SummarySource),
+    V5(SummarySource),
+    HighInput(SummarySource),
+    HighInputV2(SummarySource)
+}
+impl SummaryProvenance {
+    public flow source(self) -> SummarySource ![] {
+        return match self {
+            SummaryProvenance.Unversioned(value) => value,
+            SummaryProvenance.V2(value) => value,
+            SummaryProvenance.V3(value) => value,
+            SummaryProvenance.V4(value) => value,
+            SummaryProvenance.V5(value) => value,
+            SummaryProvenance.HighInput(value) => value,
+            SummaryProvenance.HighInputV2(value) => value
+        };
+    }
+
+    public flow wire(self) -> string ![] {
+        return self.source().wire() + match self {
+            SummaryProvenance.Unversioned(_) => "",
+            SummaryProvenance.V2(_) => "-v2",
+            SummaryProvenance.V3(_) => "-v3",
+            SummaryProvenance.V4(_) => "-v4",
+            SummaryProvenance.V5(_) => "-v5",
+            SummaryProvenance.HighInput(_) => "-high-input",
+            SummaryProvenance.HighInputV2(_) => "-high-input-v2"
+        };
+    }
+
+    public flow generated(profile: WorkProfile, source: SummarySource) -> SummaryProvenance ![] {
+        return match profile {
+            WorkProfile.Narrow => SummaryProvenance.Unversioned(source),
+            WorkProfile.Wide => SummaryProvenance.Unversioned(source),
+            WorkProfile.V2 => SummaryProvenance.V2(source),
+            WorkProfile.WideV2 => SummaryProvenance.V2(source),
+            WorkProfile.WideV3 => SummaryProvenance.V3(source),
+            WorkProfile.WideV4 => SummaryProvenance.V4(source),
+            WorkProfile.WideV5 => SummaryProvenance.V5(source),
+            WorkProfile.HighInputV1 => SummaryProvenance.HighInput(source),
+            WorkProfile.HighInputV2 => SummaryProvenance.HighInputV2(source)
+        };
+    }
+}
+
+public enum SummaryState {
+    Running(WorkProfile),
+    Complete(SummaryProvenance),
+    Abandoned(WorkProfile)
+}
+impl SummaryState {
+    public flow wire(self) -> string ![] {
+        return match self {
+            SummaryState.Running(_) => "running",
+            SummaryState.Complete(_) => "complete",
+            SummaryState.Abandoned(_) => "abandoned"
+        };
+    }
+
+    public flow profile(self) -> WorkProfile ![] {
+        return match self {
+            SummaryState.Running(value) => value,
+            SummaryState.Abandoned(value) => value,
+            SummaryState.Complete(_) => abort("completed summary has no reservation")
+        };
+    }
+
+    public flow source(self) -> SummarySource ![] {
+        return match self {
+            SummaryState.Complete(value) => value.source(),
+            _ => SummarySource.Unknown
+        };
+    }
+
+    public flow wire_source(self) -> string ![] {
+        return match self {
+            SummaryState.Running(value) => value.wire(),
+            SummaryState.Abandoned(value) => value.wire(),
+            SummaryState.Complete(value) => value.wire()
+        };
+    }
+
+    public flow is_running(self) -> bool ![] {
+        return match self {
+            SummaryState.Running(_) => true,
+            _ => false
+        };
+    }
+
+    public flow is_complete(self) -> bool ![] {
+        return match self {
+            SummaryState.Complete(_) => true,
+            _ => false
+        };
+    }
+
+    public flow is_abandoned(self) -> bool ![] {
+        return match self {
+            SummaryState.Abandoned(_) => true,
+            _ => false
+        };
+    }
+}
+
+public enum ContinuousEditState {
+    NotStarted,
+    Intent(Binding),
+    Completed(Binding)
+}
+impl ContinuousEditState {
+    public flow wire(self) -> string ![] {
+        return match self {
+            ContinuousEditState.NotStarted => "none",
+            ContinuousEditState.Intent(_) => "intent",
+            ContinuousEditState.Completed(_) => "completed"
+        };
+    }
+
+    public flow binding(self) -> Option<Binding> ![] {
+        return match self {
+            ContinuousEditState.NotStarted => None(),
+            ContinuousEditState.Intent(value) => Some(value),
+            ContinuousEditState.Completed(value) => Some(value)
+        };
+    }
+
+    public flow is_intent(self) -> bool ![] {
+        return match self {
+            ContinuousEditState.Intent(_) => true,
+            _ => false
+        };
+    }
+
+    public flow is_completed(self) -> bool ![] {
+        return match self {
+            ContinuousEditState.Completed(_) => true,
+            _ => false
+        };
+    }
+}
+
+public enum CheckSummary {
+    NotRequested,
+    NotStartedAfterAbandoned,
+    Unknown,
+    Abandoned,
+    Complete(CheckOutcome, Option<CheckOutput>)
+}
+impl CheckSummary {
+    public flow wire(self) -> string ![] {
+        return match self {
+            CheckSummary.NotRequested => "not requested",
+            CheckSummary.NotStartedAfterAbandoned => "not started after abandoned work",
+            CheckSummary.Unknown => "unknown",
+            CheckSummary.Abandoned => "abandoned; outcome unknown",
+            CheckSummary.Complete(value, _) => value.wire()
+        };
+    }
+
+    public flow wire_exit(self) -> string ![] {
+        return match self {
+            CheckSummary.Complete(value, _) => from_i32(value.exit_code()),
+            _ => ""
+        };
+    }
+
+    public flow output(self) -> Option<CheckOutput> ![] {
+        return match self {
+            CheckSummary.Complete(_, output) => output,
+            _ => None()
+        };
+    }
+
+    public flow with_output(self, output: Option<CheckOutput>) -> CheckSummary ![] {
+        return match self {
+            CheckSummary.Complete(value, _) => CheckSummary.Complete(value, output),
+            _ => self
+        };
+    }
+
+    public flow recorded(state: CheckState, output: Option<CheckOutput>) -> CheckSummary ![] {
+        return match state {
+            CheckState.Complete(value) => CheckSummary.Complete(value, output),
+            CheckState.NotRequested => CheckSummary.NotRequested,
+            CheckState.Abandoned => CheckSummary.Abandoned,
+            _ => CheckSummary.Unknown
+        };
+    }
+}
+
+public enum CheckOutcome {
+    Passed,
+    Failed(i32)
+}
+
+impl CheckOutcome {
+    public flow exit_code(self) -> i32 ![] {
+        return match self {
+            CheckOutcome.Passed => 0,
+            CheckOutcome.Failed(code) => code
+        };
+    }
+
+    public flow wire(self) -> string ![] {
+        return match self {
+            CheckOutcome.Passed => "passed",
+            CheckOutcome.Failed(_) => "failed"
+        };
+    }
+
+    public flow parse(outcome: string, exit: string) -> Result<CheckOutcome, string> ![] {
+        if outcome == "passed" && exit == "0" {
+            return Ok(CheckOutcome.Passed);
+        }
+        if outcome == "failed" {
+            match parse_i32(exit) {
+                Ok(code) => {
+                    if code >= 1 && code <= 123 && from_i32(code) == exit {
+                        return Ok(CheckOutcome.Failed(code));
+                    }
+                },
+                Err(_) => (),
+            }
+        }
+        return Err("invalid completed check outcome");
+    }
+}
+
+public enum CheckState {
+    NotRequested,
+    Planned,
+    Running,
+    Complete(CheckOutcome),
+    Abandoned
+}
+
+impl CheckState {
+    public flow wire(self) -> string ![] {
+        return match self {
+            CheckState.NotRequested => "none",
+            CheckState.Planned => "planned",
+            CheckState.Running => "running",
+            CheckState.Complete(_) => "complete",
+            CheckState.Abandoned => "abandoned"
+        };
+    }
+
+    public flow is_complete(self) -> bool ![] {
+        return match self {
+            CheckState.Complete(_) => true,
+            _ => false
+        };
+    }
+
+    public flow wire_outcome(self) -> string ![] {
+        return match self {
+            CheckState.Complete(outcome) => outcome.wire(),
+            _ => ""
+        };
+    }
+
+    public flow wire_exit(self) -> string ![] {
+        return match self {
+            CheckState.Complete(outcome) => from_i32(outcome.exit_code()),
+            _ => ""
+        };
+    }
+}
+
+public flow invalid_values(format: i32, phase: CheckState, id: string, digest: string, allow_abandoned: bool) -> string {
+    if format != 1 || phase == CheckState.NotRequested || (!allow_abandoned && phase == CheckState.Abandoned)
+        || id == "" || !hex_digest(digest) {
         return "invalid history-check record";
     }
-    if phase != "complete" {
-        if outcome != "" || exit_code != "" {
-            return "unfinished check has an outcome";
-        }
-    } else if !((outcome == "passed" && exit_code == "0") || (
-        outcome == "failed"
-            && valid_failure_code(exit_code)
-    )) {
-        return "invalid completed check outcome";
+    match phase {
+        CheckState.Complete(CheckOutcome.Failed(code)) => {
+            if code < 1 || code > 123 {
+                return "invalid completed check outcome";
+            }
+        },
+        _ => (),
     }
     return "";
 }
@@ -71,21 +490,18 @@ public type WorkRequest = {
     allowed: Array<string>
 };
 
-public type CheckResult = {
-    outcome: string,
-    exit_code: string,
+public type ExecutedCheck = {
+    outcome: CheckOutcome,
     stdout: string,
     stderr: string,
     stdout_truncated: bool,
     stderr_truncated: bool
 };
 
-public type CheckFacts = {
+public type CheckObservation = {
     id: string,
     digest: string,
-    phase: string,
-    outcome: string,
-    exit_code: string,
+    phase: CheckState,
     output: Option<CheckOutput>
 };
 
@@ -99,12 +515,10 @@ public type CheckOutput = {
 public type WorkFacts = {
     id: string,
     summary: string,
-    summary_source: string,
+    summary_source: SummarySource,
     selection: Option<string>,
     evidence: Option<string>,
-    check: string,
-    exit_code: string,
-    output: Option<CheckOutput>
+    check: CheckSummary
 };
 
 public type BudgetFacts = {
@@ -142,8 +556,8 @@ public flow historical_followup_zero() -> FollowupBudget {
     };
 }
 
-public flow historical_followup_invalid(row: FollowupRecord) -> string {
-    if row.format != 1 || (row.phase != "running" && row.phase != "complete") {
+public flow historical_followup_invalid(row: FollowupAttempt) -> string {
+    if row.format != 1 {
         return "invalid followup phase";
     }
     let selected = selector_error(row.id, row.workspace, row.path);
@@ -156,7 +570,7 @@ public flow historical_followup_invalid(row: FollowupRecord) -> string {
     if question_error(row.request) != "" || row.history_version == "" || char_count(row.history_version) > 512 {
         return "invalid followup request or history";
     }
-    if row.phase == "running" {
+    if row.phase == FollowupPhase.Running {
         if row.summary != "" || row.reserved != historical_followup_full() || row.settled != None() {
             return "invalid followup reservation";
         }
@@ -264,11 +678,8 @@ flow expected_scan(format: i32, value: i32) -> bool {
     };
 }
 
-public flow historical_work_invalid(value: WorkRecord) -> string {
-    if (value.format < 1 || value.format > 10) || (
-        value.phase != "running" && value.phase != "complete"
-            && value.phase != "abandoned"
-    ) {
+public flow historical_work_invalid(value: WorkAttempt) -> string {
+    if value.format < 1 || value.format > 10 {
         return "invalid history-work phase";
     }
     let selected = selector_error(value.id, value.workspace, value.path);
@@ -282,7 +693,7 @@ public flow historical_work_invalid(value: WorkRecord) -> string {
     if value.history_version == "" || char_count(value.history_version) > 512 {
         return "invalid history version";
     }
-    if value.phase == "running" || value.phase == "abandoned" {
+    if value.phase == WorkPhase.Running || value.phase == WorkPhase.Abandoned {
         let expected = if value.format == 1 {
             historical_work_full()
         } else {
@@ -368,14 +779,14 @@ public flow running_record(
     request: string,
     history_version: string,
     wide: bool
-) -> WorkRecord {
-    return WorkRecord {
+) -> WorkAttempt {
+    return WorkAttempt {
         format = if wide {
             8
         } else {
             5
         },
-        phase = "running",
+        phase = WorkPhase.Running,
         id,
         workspace,
         path,
@@ -395,8 +806,8 @@ public flow running_record_mode(
     history_version: string,
     wide: bool,
     high_input: bool
-) -> WorkRecord {
-    return WorkRecord {
+) -> WorkAttempt {
+    return WorkAttempt {
         format = if high_input {
             10
         } else {
@@ -406,7 +817,7 @@ public flow running_record_mode(
                 5
             }
         },
-        phase = "running",
+        phase = WorkPhase.Running,
         id,
         workspace,
         path,
@@ -418,51 +829,52 @@ public flow running_record_mode(
     };
 }
 
-public flow completed_record(old: WorkRecord, summary: string, spent: WorkLedger) -> WorkRecord {
+public flow completed_record(old: WorkAttempt, summary: string, spent: WorkLedger) -> WorkAttempt {
     return old {
-        phase = "complete",
+        phase = WorkPhase.Complete,
         reserved = recoverable_work_state_zero(),
         settled = Some(spent),
         summary
     };
 }
 
-public flow abandoned_record(old: WorkRecord, id: string, label: string) -> Result<
-    WorkRecord,
+public flow abandoned_record(old: WorkAttempt, id: string, label: string) -> Result<
+    WorkAttempt,
     string
 > {
-    if old.id != id || old.phase != "running" {
+    if old.id != id || old.phase != WorkPhase.Running {
         return Err("interrupted " + label + " identity or phase differs");
     }
     return Ok(old {
-        phase = "abandoned"
+        phase = WorkPhase.Abandoned
     });
 }
 
 public flow admission_chat_error(
-    current: MemoryEntry<string, RecoverableChatFrame>,
-    expected: MemoryEntry<string, RecoverableChatFrame>
+    current: MemoryEntry<string, ChatSessionSnapshot>,
+    expected: MemoryEntry<string, ChatSessionSnapshot>
 ) -> string {
     if current != expected || expected.value.chat.invocation.admitted < 1
-        || expected.value.chat.phase == "running" || expected.value.chat.pending != "" {
+        || expected.value.chat.phase == ChatPhase.Running || expected.value.chat.pending != "" {
         return "completed unchanged recoverable chat required";
     }
     return "";
 }
 
 public flow claim_chat_error(
-    current: MemoryEntry<string, RecoverableChatFrame>,
-    expected: MemoryEntry<string, RecoverableChatFrame>,
-    work: WorkRecord,
+    current: MemoryEntry<string, ChatSessionSnapshot>,
+    expected: MemoryEntry<string, ChatSessionSnapshot>,
+    work: WorkAttempt,
     label: string
 ) -> string {
-    if current != expected || work.history_version != current.version.opaque || work.phase != "running" {
+    if current != expected || work.history_version != current.version.opaque
+        || work.phase != WorkPhase.Running {
         return label + " chat binding changed; no retry";
     }
     return "";
 }
 
-public flow work_data_error(work: WorkRecord, events: EventFrame, policy: Policy) -> string {
+public flow work_data_error(work: WorkAttempt, events: TraceFrame, policy: Policy) -> string {
     let work_error = historical_work_invalid(work);
     if work_error != "" {
         return work_error;
@@ -471,8 +883,8 @@ public flow work_data_error(work: WorkRecord, events: EventFrame, policy: Policy
     if event_error != "" {
         return event_error;
     }
-    if ((work.phase == "running" || work.phase == "abandoned") && events.turns != 0)
-        || (work.phase == "complete" && events.turns != 1) {
+    if ((work.phase == WorkPhase.Running || work.phase == WorkPhase.Abandoned) && events.turns != 0)
+        || (work.phase == WorkPhase.Complete && events.turns != 1) {
         return "work phase and event boundary differ";
     }
     @limits([Iterations(5)]) for field in [work.id, work.workspace, work.path, work.request, work.summary] {
@@ -499,7 +911,10 @@ public flow work_data_error(work: WorkRecord, events: EventFrame, policy: Policy
 
 // Selected, validated facts from the actual work controller. This is not a
 // complete raw model/effect trace, and an approval event is not a future grant.
-public flow capture(pending: Pending, confirmed: Confirmed, summary: Summary) -> Result<Array<Event>, string> {
+public flow capture(pending: Pending, confirmed: Confirmed, summary: Summary) -> Result<
+    Array<TraceEvent>,
+    string
+> {
     let selected = pending.selected;
     let expected = match bind(selected.id, selected.workspace, selected.path, pending.prepared) {
         Ok(item) => item,
@@ -520,8 +935,8 @@ public flow capture(pending: Pending, confirmed: Confirmed, summary: Summary) ->
     }
     let read = pending.evidence;
     // Keep fields unescaped until the event codec filters known literals.
-    var selection = read.operation + "\n";
-    if read.operation == "search" {
+    var selection = read.operation.wire() + "\n";
+    if read.operation == ReadOperation.Search {
         selection = selection + read.literal + "\n";
     }
     if read.files.len() > 0 {
@@ -529,64 +944,64 @@ public flow capture(pending: Pending, confirmed: Confirmed, summary: Summary) ->
     }
     return Ok(
         [
-            Event {
-                role = "user",
-                kind = "request",
+            TraceEvent {
+                role = TraceRole.User,
+                kind = TraceKind.Request,
                 name = "",
                 text = pending.request
             },
-            Event {
-                role = "tool",
-                kind = "request",
-                name = read.operation,
+            TraceEvent {
+                role = TraceRole.Tool,
+                kind = TraceKind.Request,
+                name = read.operation.wire(),
                 text = selection
             },
-            Event {
-                role = "tool",
-                kind = "result",
-                name = read.operation,
+            TraceEvent {
+                role = TraceRole.Tool,
+                kind = TraceKind.Result,
+                name = read.operation.wire(),
                 text = read.outcome
             },
-            Event {
-                role = "assistant",
-                kind = "result",
+            TraceEvent {
+                role = TraceRole.Assistant,
+                kind = TraceKind.Result,
                 name = "read-child",
                 text = read.result
             },
-            Event {
-                role = "assistant",
-                kind = "result",
+            TraceEvent {
+                role = TraceRole.Assistant,
+                kind = TraceKind.Result,
                 name = "read-summary",
                 text = read.summary
             },
-            Event {
-                role = "assistant",
-                kind = "delegate",
+            TraceEvent {
+                role = TraceRole.Assistant,
+                kind = TraceKind.Delegate,
                 name = "edit-child",
                 text = pending.task
             },
-            Event {
-                role = "user",
-                kind = "approval",
+            TraceEvent {
+                role = TraceRole.User,
+                kind = TraceKind.Approval,
                 name = "edit",
                 text = "confirmed for this invocation only"
             },
-            Event {
-                role = "tool",
-                kind = "applied",
+            TraceEvent {
+                role = TraceRole.Tool,
+                kind = TraceKind.Applied,
                 name = "edit",
                 text = selected.id
             },
-            Event {
+            TraceEvent {
                 role = if summary.model_generated {
-                    "assistant"
+                    TraceRole.Assistant
                 } else {
-                    "system"
+                    TraceRole.System
                 },
                 kind = if summary.model_generated {
-                    "answer"
+                    TraceKind.Answer
                 } else {
-                    "notice"
+                    TraceKind.Notice
                 },
                 name = "",
                 text = summary.answer
@@ -597,9 +1012,12 @@ public flow capture(pending: Pending, confirmed: Confirmed, summary: Summary) ->
 
 // Old work records have no selection event. Never infer missing selections
 // from results: a file with no matches will not appear in a search outcome.
-public flow selection(events: Array<Event>, policy: Policy) -> Result<Option<string>, string> {
+public flow selection(events: Array<TraceEvent>, policy: Policy) -> Result<Option<string>, string> {
     @limits([Iterations(48)]) for event in events {
-        if event.role == "tool" && event.kind == "request" && (event.name == "read" || event.name == "search") {
+        if event.role == TraceRole.Tool && event.kind == TraceKind.Request && (
+            event.name == "read"
+                || event.name == "search"
+        ) {
             let text = match event_text_codec_decode(event.text, policy) {
                 Ok(value) => value,
                 Err(error) => {
@@ -615,10 +1033,13 @@ public flow selection(events: Array<Event>, policy: Policy) -> Result<Option<str
 // The canonical work record retains the complete selected read/search result.
 // Timeline copies may be compacted, so resumed model context must project this
 // field from the canonical record rather than from the display timeline.
-public flow evidence(events: Array<Event>, policy: Policy) -> Result<Option<string>, string> {
+public flow evidence(events: Array<TraceEvent>, policy: Policy) -> Result<Option<string>, string> {
     var selected: Option<string> = None();
     @limits([Iterations(48)]) for event in events {
-        if event.role == "tool" && event.kind == "result" && (event.name == "read" || event.name == "search") {
+        if event.role == TraceRole.Tool && event.kind == TraceKind.Result && (
+            event.name == "read"
+                || event.name == "search"
+        ) {
             if selected != None() {
                 return Err("multiple canonical work evidence events");
             }
@@ -635,16 +1056,17 @@ public flow evidence(events: Array<Event>, policy: Policy) -> Result<Option<stri
 }
 
 // Older or incomplete records may lack attributable events; never guess their origin.
-public flow summary_source(frame: EventFrame, summary: string, policy: Policy) -> Result<
-    string,
+public flow summary_source(frame: TraceFrame, summary: string, policy: Policy) -> Result<
+    SummarySource,
     string
 > {
-    var origin = "unknown";
+    var origin = SummarySource.Unknown;
     var matches: usize = 0;
     @limits([Iterations(48)]) for event in frame.events {
-        if (event.role == "assistant" && event.kind == "answer") || (
-            event.role == "system"
-                && event.kind == "notice"
+        if (event.role == TraceRole.Assistant && event.kind == TraceKind.Answer)
+            || (
+            event.role == TraceRole.System
+                && event.kind == TraceKind.Notice
         ) {
             let value = match event_text_codec_decode(event.text, policy) {
                 Ok(item) => item,
@@ -654,10 +1076,10 @@ public flow summary_source(frame: EventFrame, summary: string, policy: Policy) -
             };
             if value == summary {
                 matches = matches + 1;
-                origin = if event.role == "system" {
-                    "system"
+                origin = if event.role == TraceRole.System {
+                    SummarySource.System
                 } else {
-                    "model"
+                    SummarySource.Model
                 };
             }
         }
@@ -665,7 +1087,7 @@ public flow summary_source(frame: EventFrame, summary: string, policy: Policy) -
     return Ok(if matches == 1 {
         origin
     } else {
-        "unknown"
+        SummarySource.Unknown
     });
 }
 
@@ -681,23 +1103,14 @@ public flow settled_usage(value: WorkLedger) -> WorkUsage {
     };
 }
 
-public flow stored_fact(
-    id: string,
-    summary: string,
-    source: string,
-    check: string,
-    exit_code: string,
-    output: Option<CheckOutput>
-) -> WorkFacts {
+public flow stored_fact(id: string, summary: string, source: SummarySource, check: CheckSummary) -> WorkFacts {
     return WorkFacts {
         id,
         summary,
         summary_source = source,
         selection = None(),
         evidence = None(),
-        check,
-        exit_code,
-        output
+        check
     };
 }
 
@@ -705,26 +1118,27 @@ public flow abandoned_fact(id: string) -> WorkFacts {
     return stored_fact(
         id,
         "User abandoned interrupted work; its effect is unknown. Inspect the file before a new edit.",
-        "system",
-        "unknown",
-        "",
-        None()
+        SummarySource.System,
+        CheckSummary.Unknown
     );
 }
 
 // Pure projections of captured historical records; no storage, file or model calls.
-public flow extra_fact(item: ContinuousEntry, policy: Policy) -> Result<WorkFacts, string> {
-    if item.result.phase == "abandoned" && (item.check.phase == "none" || item.check.phase == "planned") {
+public flow extra_fact(item: ContinuousWorkEntry, policy: Policy) -> Result<WorkFacts, string> {
+    if item.result.phase.is_abandoned() && (
+        item.check.phase == CheckState.NotRequested
+            || item.check.phase == CheckState.Planned
+    ) {
         return Ok(abandoned_fact(item.core.id));
     }
-    if item.result.phase != "complete" || (
-        item.check.phase != "none" && item.check.phase != "complete"
-            && item.check.phase != "abandoned"
+    if !item.result.phase.is_complete() || (
+        item.check.phase != CheckState.NotRequested && !item.check.phase.is_complete()
+            && item.check.phase != CheckState.Abandoned
     ) {
         return Err("continuous work unresolved");
     }
     var output: Option<CheckOutput> = None();
-    if item.check.phase == "complete" {
+    if item.check.phase.is_complete() {
         output = Some(
             match check_values(
                 item.check.stdout,
@@ -756,38 +1170,10 @@ public flow extra_fact(item: ContinuousEntry, policy: Policy) -> Result<WorkFact
         WorkFacts {
             id = item.core.id,
             summary = item.result.summary,
-            summary_source = if (
-                item.result.source == "model-v2" || item.result.source == "model-v3"
-                    || item.result.source == "model-v4" || item.result.source == "model-v5"
-                    || item.result.source == "model-high-input"
-                    || item.result.source == "model-high-input-v2"
-            ) {
-                "model"
-            } else {
-                if (
-                    item.result.source == "system-v2" || item.result.source == "system-v3"
-                        || item.result.source == "system-v4" || item.result.source == "system-v5"
-                        || item.result.source == "system-high-input"
-                        || item.result.source == "system-high-input-v2"
-                ) {
-                    "system"
-                } else {
-                    item.result.source
-                }
-            },
+            summary_source = item.result.phase.source(),
             selection = chosen,
             evidence = observed,
-            check = if item.check.phase == "none" {
-                "not requested"
-            } else {
-                if item.check.phase == "abandoned" {
-                    "abandoned; outcome unknown"
-                } else {
-                    item.check.outcome
-                }
-            },
-            exit_code = item.check.exit_code,
-            output
+            check = CheckSummary.recorded(item.check.phase, output)
         }
     );
 }
@@ -805,7 +1191,7 @@ flow short_text(value: string) -> string {
 }
 
 public flow compact(value: WorkFacts) -> WorkFacts {
-    let output = match value.output {
+    let output = match value.check.output() {
         None() => None(),
         Some(item) => {
             let out = short_text(item.stdout);
@@ -823,7 +1209,7 @@ public flow compact(value: WorkFacts) -> WorkFacts {
     };
     return value {
         evidence = None(),
-        output
+        check = value.check.with_output(output)
     };
 }
 
@@ -859,28 +1245,22 @@ public flow check_values(
 }
 
 public flow completed_fact(
-    work: WorkRecord,
-    events: EventFrame,
-    check: Option<CheckFacts>,
+    work: WorkAttempt,
+    events: TraceFrame,
+    check: Option<CheckObservation>,
     policy: Policy,
     label: string
 ) -> Result<WorkFacts, string> {
-    var outcome = "not requested";
-    var exit = "";
-    var output: Option<CheckOutput> = None();
-    match check {
-        Some(value) => if value.phase == "abandoned" {
-            outcome = "abandoned; outcome unknown";
-        } else {
-            if value.phase != "complete" {
+    let outcome = match check {
+        None() => CheckSummary.NotRequested,
+        Some(value) => match value.phase {
+            CheckState.Complete(result) => CheckSummary.Complete(result, value.output),
+            CheckState.Abandoned => CheckSummary.Abandoned,
+            _ => {
                 return Err(label + " check unresolved");
             }
-            outcome = value.outcome;
-            exit = value.exit_code;
-            output = value.output;
-        },
-        None() => (),
-    }
+        }
+    };
     let origin = match summary_source(events, work.summary, policy) {
         Ok(value) => value,
         Err(error) => {
@@ -906,9 +1286,7 @@ public flow completed_fact(
             summary_source = origin,
             selection = chosen,
             evidence = observed,
-            check = outcome,
-            exit_code = exit,
-            output
+            check = outcome
         }
     );
 }
@@ -995,8 +1373,12 @@ flow decode(body: string) -> Result<Array<string>, string> {
     return Ok(fields);
 }
 
-flow outer_error(row: StoredWorkRecord) -> string {
-    let encoded = match wire_encode(row, "work row conversion refused", "work row serialization refused") {
+flow outer_error(row: CapturedWork) -> string {
+    let encoded = match wire_encode(
+        wire_stored_work(row),
+        "work row conversion refused",
+        "work row serialization refused"
+    ) {
         Ok(value) => value,
         Err(error) => {
             return error;
@@ -1008,7 +1390,7 @@ flow outer_error(row: StoredWorkRecord) -> string {
     return "";
 }
 
-flow fields(value: Captured, phase: string) -> Array<string> {
+flow fields(value: Captured, phase: StoredWorkPhase) -> Array<string> {
     let binding = value.binding;
     let read = value.ledger.read;
     let edit = value.ledger.edit;
@@ -1020,10 +1402,10 @@ flow fields(value: Captured, phase: string) -> Array<string> {
     if value.evidence.files.len() == 2 {
         selected_second = value.evidence.files[1];
     }
-    let confirmed = phase == "summary-confirmed";
+    let confirmed = phase == StoredWorkPhase.SummaryConfirmed;
     return [
         "nomo-work-record-v1",
-        phase,
+        phase.wire(),
         binding.id,
         binding.workspace,
         binding.region,
@@ -1035,7 +1417,7 @@ flow fields(value: Captured, phase: string) -> Array<string> {
         from_usize(binding.after_bytes),
         value.evidence.request,
         value.evidence.task,
-        value.evidence.operation,
+        value.evidence.operation.wire(),
         value.evidence.allowed[0],
         allowed_second,
         value.evidence.files[0],
@@ -1093,7 +1475,7 @@ flow fields(value: Captured, phase: string) -> Array<string> {
     ];
 }
 
-flow encode(value: Captured, phase: string) -> Result<StoredWorkRecord, string> {
+flow encode(value: Captured, phase: StoredWorkPhase) -> Result<CapturedWork, string> {
     if value.evidence.allowed.len() > 2 || value.evidence.files.len() > 2 {
         return Err("legacy work record supports at most two files");
     }
@@ -1111,7 +1493,7 @@ flow encode(value: Captured, phase: string) -> Result<StoredWorkRecord, string> 
     if !framed(body) {
         return Err("work record encoded bounds exceeded");
     }
-    let row = StoredWorkRecord {
+    let row = CapturedWork {
         format = 1,
         phase,
         binding = value.binding,
@@ -1124,8 +1506,8 @@ flow encode(value: Captured, phase: string) -> Result<StoredWorkRecord, string> 
     return Ok(row);
 }
 
-public flow validate(row: StoredWorkRecord) -> Result<Captured, string> {
-    if row.format != 1 || (row.phase != "summary-unconfirmed" && row.phase != "summary-confirmed") {
+public flow validate(row: CapturedWork) -> Result<Captured, string> {
+    if row.format != 1 {
         return Err("unsupported work record format or phase");
     }
     let invalid = binding_error(row.binding);
@@ -1138,7 +1520,7 @@ public flow validate(row: StoredWorkRecord) -> Result<Captured, string> {
             return Err(error);
         }
     };
-    if data[0] != "nomo-work-record-v1" || data[1] != row.phase {
+    if data[0] != "nomo-work-record-v1" || data[1] != row.phase.wire() {
         return Err("work body marker or phase mismatch");
     }
     let prepared = match prepare_original(data[5], data[25], data[23], data[24]) {
@@ -1179,7 +1561,7 @@ public flow validate(row: StoredWorkRecord) -> Result<Captured, string> {
     let evidence = Evidence {
         request = data[11],
         task = data[12],
-        operation = data[13],
+        operation = ReadOperation.parse(data[13]),
         files = selected,
         literal = data[18],
         outcome = data[19],
@@ -1196,7 +1578,7 @@ public flow validate(row: StoredWorkRecord) -> Result<Captured, string> {
     if invalid_task != "" {
         return Err(invalid_task);
     }
-    let confirmed = row.phase == "summary-confirmed";
+    let confirmed = row.phase == StoredWorkPhase.SummaryConfirmed;
     if confirmed {
         let summary = text_error(data[27], "saved final summary");
         if summary != "" {
@@ -1231,7 +1613,7 @@ public flow validate(row: StoredWorkRecord) -> Result<Captured, string> {
 // A predicted valid binding is admission data, never completion authority.
 // Only the caller's matched typed Confirmed result permits publication.
 public flow partial(binding: Binding, evidence: Evidence, task: string, prepared: Prepared) -> Result<
-    StoredWorkRecord,
+    CapturedWork,
     string
 > {
     let invalid = binding_error(binding);
@@ -1266,7 +1648,7 @@ public flow partial(binding: Binding, evidence: Evidence, task: string, prepared
         summary = "",
         ledger = stage(false, evidence.ledger)
     };
-    let row = match encode(captured, "summary-unconfirmed") {
+    let row = match encode(captured, StoredWorkPhase.SummaryUnconfirmed) {
         Ok(value) => value,
         Err(error) => {
             return Err(error);
@@ -1281,14 +1663,14 @@ public flow partial(binding: Binding, evidence: Evidence, task: string, prepared
     return Ok(row);
 }
 
-public flow confirm(row: StoredWorkRecord, summary: string) -> Result<StoredWorkRecord, string> {
+public flow confirm(row: CapturedWork, summary: string) -> Result<CapturedWork, string> {
     let captured = match validate(row) {
         Ok(value) => value,
         Err(error) => {
             return Err(error);
         }
     };
-    if row.phase != "summary-unconfirmed" {
+    if row.phase != StoredWorkPhase.SummaryUnconfirmed {
         return Err("work summary update requires an unconfirmed record");
     }
     let invalid = text_error(summary, "saved final summary");
@@ -1299,7 +1681,7 @@ public flow confirm(row: StoredWorkRecord, summary: string) -> Result<StoredWork
         summary,
         ledger = stage(true, captured.evidence.ledger)
     };
-    let result = match encode(complete, "summary-confirmed") {
+    let result = match encode(complete, StoredWorkPhase.SummaryConfirmed) {
         Ok(value) => value,
         Err(error) => {
             return Err(error);
@@ -1317,14 +1699,14 @@ public flow confirm(row: StoredWorkRecord, summary: string) -> Result<StoredWork
 // This hypothetical summary supplies the maximum escape expansion, including
 // second escaping in the complete row. Capacity admission grants no completion
 // authority and does not require the hypothetical text to be a valid summary.
-public flow admit(row: StoredWorkRecord) -> Result<bool, string> {
+public flow admit(row: CapturedWork) -> Result<bool, string> {
     let captured = match validate(row) {
         Ok(value) => value,
         Err(error) => {
             return Err(error);
         }
     };
-    if row.phase != "summary-unconfirmed" {
+    if row.phase != StoredWorkPhase.SummaryUnconfirmed {
         return Err("work admission requires an unconfirmed candidate");
     }
     let control = from_char(char.from_u32(1).unwrap());
@@ -1334,13 +1716,13 @@ public flow admit(row: StoredWorkRecord) -> Result<bool, string> {
         summary,
         ledger = stage(true, captured.evidence.ledger)
     };
-    return match encode(hypothetical, "summary-confirmed") {
+    return match encode(hypothetical, StoredWorkPhase.SummaryConfirmed) {
         Ok(_) => Ok(true),
         Err(error) => Err(error)
     };
 }
 
-public flow same_record(left: StoredWorkRecord, right: StoredWorkRecord) -> bool {
+public flow same_record(left: CapturedWork, right: CapturedWork) -> bool {
     return left == right;
 }
 
@@ -1373,9 +1755,9 @@ public type Summary = {
 
 // Output is untrusted diagnostic text, never authority or evidence that a
 // command may run again. Records bind to an independently completed check.
-public type CheckOutputRecord = {
+public type CapturedCheckOutput = {
     format: i32,
-    slot: string,
+    slot: CheckSlot,
     id: string,
     digest: string,
     stdout: string,
@@ -1384,13 +1766,13 @@ public type CheckOutputRecord = {
     stderr_truncated: bool
 };
 
-public type CheckFrame = {
+public type CapturedCheckAttempt = {
     format: i32,
     policy_binding: string,
     work_history: string,
     workspace: string,
     path: string,
-    check: CheckRecord,
+    check: CheckAttempt,
     stdout: string,
     stderr: string,
     stdout_truncated: bool,
@@ -1404,51 +1786,41 @@ public type ContinuousCore = {
     request: string
 };
 
-public type ContinuousEdit = {
-    phase: string,
-    binding: Option<Binding>
-};
-
-public type ContinuousResult = {
-    phase: string,
+public type WorkSummary = {
+    phase: SummaryState,
     summary: string,
-    source: string,
     calls: i32,
     generation: i32,
-    events: Array<Event>
+    events: Array<TraceEvent>
 };
 
-public type ContinuousCheck = {
-    phase: string,
+public type ContinuousCheckAttempt = {
+    phase: CheckState,
     digest: string,
-    outcome: string,
-    exit_code: string,
     stdout: string,
     stderr: string,
     stdout_truncated: bool,
     stderr_truncated: bool
 };
 
-public type ContinuousEntry = {
+public type ContinuousWorkEntry = {
     core: ContinuousCore,
-    edit: ContinuousEdit,
-    result: ContinuousResult,
-    check: ContinuousCheck
+    edit: ContinuousEditState,
+    result: WorkSummary,
+    check: ContinuousCheckAttempt
 };
 
-public type ContinuousBook = {
+public type ContinuousWorkHistory = {
     binding: string,
-    history: Array<ContinuousEntry>,
-    current: ContinuousEntry
+    history: Array<ContinuousWorkEntry>,
+    current: ContinuousWorkEntry
 };
 
-public type CheckRecord = {
+public type CheckAttempt = {
     format: i32,
-    phase: string,
+    phase: CheckState,
     id: string,
-    digest: string,
-    outcome: string,
-    exit_code: string
+    digest: string
 };
 
 // One additional work attempt, with separate reserved budget and fresh grants.
@@ -1460,21 +1832,21 @@ public type FollowupBudget = {
     native_tokens: i32
 };
 
-public type FollowupParent = {
-    work: WorkRecord,
-    edit: EditOperation,
-    check: Option<CheckRecord>
+public type FollowupPredecessor = {
+    work: WorkAttempt,
+    edit: LiteralEditRecord,
+    check: Option<CheckAttempt>
 };
 
-public type FollowupRecord = {
+public type FollowupAttempt = {
     format: i32,
-    phase: string,
+    phase: FollowupPhase,
     id: string,
     workspace: string,
     path: string,
     request: string,
     history_version: string,
-    parent: FollowupParent,
+    parent: FollowupPredecessor,
     reserved: FollowupBudget,
     settled: Option<WorkLedger>,
     summary: string
@@ -1489,9 +1861,9 @@ public type WorkBudget = {
     native_tokens: i32
 };
 
-public type WorkRecord = {
+public type WorkAttempt = {
     format: i32,
-    phase: string,
+    phase: WorkPhase,
     id: string,
     workspace: string,
     path: string,
@@ -1506,29 +1878,107 @@ public type WorkRecord = {
 // The work row and its bounded event batch commit together. Edit intent remains
 // a separate durable boundary; if any boundary is uncertain, callers must
 // retain the reservation and refuse replay rather than infer an outcome.
-public type RecoverableFollowupFrame = {
+public type FollowupSessionFrame = {
     format: i32,
     policy_binding: string,
     parent_work_version: string,
     parent_check_version: string,
-    work: WorkRecord,
-    events: EventFrame
+    work: WorkAttempt,
+    events: TraceFrame
 };
 
 // One separately reserved work slot linked to the current event-chat version.
 // The work row and its bounded event batch commit together. Edit intent remains
 // a separate durable boundary; if any boundary is uncertain, callers must
 // retain the reservation and refuse replay rather than infer an outcome.
-public type RecoverableWorkFrame = {
+public type WorkSessionFrame = {
     format: i32,
     policy_binding: string,
-    work: WorkRecord,
-    events: EventFrame
+    work: WorkAttempt,
+    events: TraceFrame
 };
 
-public type StoredWorkRecord = {
+public type CapturedWork = {
     format: i32,
-    phase: string,
+    phase: StoredWorkPhase,
     binding: Binding,
     body: string
 };
+
+public flow wire_check_attempt(input: CheckAttempt) -> JsonValue ![] {
+    return json_fields(
+        json_value(input),
+        [
+            ("phase", JsonValue.String(input.phase.wire())),
+            ("outcome", JsonValue.String(input.phase.wire_outcome())),
+            ("exit_code", JsonValue.String(input.phase.wire_exit()))
+        ]
+    );
+}
+
+public flow wire_check_frame(input: CapturedCheckAttempt) -> JsonValue ![] {
+    return json_fields(json_value(input), [("check", wire_check_attempt(input.check))]);
+}
+
+public flow wire_check_output(input: CapturedCheckOutput) -> JsonValue ![] {
+    return json_fields(json_value(input), [("slot", JsonValue.String(input.slot.wire()))]);
+}
+
+public flow wire_work(input: WorkAttempt) -> JsonValue ![] {
+    return json_fields(json_value(input), [("phase", JsonValue.String(input.phase.wire()))]);
+}
+
+public flow wire_stored_work(input: CapturedWork) -> JsonValue ![] {
+    return json_fields(json_value(input), [("phase", JsonValue.String(input.phase.wire()))]);
+}
+
+public flow wire_followup(input: FollowupAttempt) -> JsonValue ![] {
+    let parent = json_fields(
+        json_value(input.parent),
+        [
+            ("work", wire_work(input.parent.work)),
+            ("edit", wire_literal_edit(input.parent.edit)),
+            ("check", json_value(input.parent.check.map(item => wire_check_attempt(item))))
+        ]
+    );
+    return json_fields(
+        json_value(input),
+        [("phase", JsonValue.String(input.phase.wire())), ("parent", parent)]
+    );
+}
+
+public flow wire_work_fact(input: WorkFacts) -> JsonValue ![] {
+    return json_fields(
+        json_value(input),
+        [
+            ("summary_source", JsonValue.String(input.summary_source.wire())),
+            ("check", JsonValue.String(input.check.wire())),
+            ("exit_code", JsonValue.String(input.check.wire_exit())),
+            ("output", json_value(input.check.output()))
+        ]
+    );
+}
+
+public flow wire_continuous(input: ContinuousWorkEntry) -> JsonValue ![] {
+    let edit = json_fields(
+        JsonValue.Object(Map.new()),
+        [("phase", JsonValue.String(input.edit.wire())), ("binding", json_value(input.edit.binding()))]
+    );
+    let result = json_fields(
+        json_value(input.result),
+        [
+            ("events", wire_traces(input.result.events)),
+            ("phase", JsonValue.String(input.result.phase.wire())),
+            ("source", JsonValue.String(input.result.phase.wire_source()))
+        ]
+    );
+    let check = json_fields(
+        json_value(input.check),
+        [
+            ("phase", JsonValue.String(input.check.phase.wire())),
+            ("outcome", JsonValue.String(input.check.phase.wire_outcome())),
+            ("exit_code", JsonValue.String(input.check.phase.wire_exit()))
+        ]
+    );
+    return json_fields(json_value(input), [("edit", edit), ("result", result), ("check", check)]);
+}

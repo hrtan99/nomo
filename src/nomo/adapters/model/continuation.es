@@ -1,7 +1,13 @@
 module nomo.adapters.model.continuation;
 
+import nomo.domain.sessions.work.BudgetFacts;
+import nomo.domain.harness.chat.ContinuationAction;
+import nomo.domain.conversation.{wire_traces};
+import nomo.domain.sessions.work.wire_work_fact;
+import nomo.domain.wire.{value as json_value, fields as json_fields};
+import std.json.JsonValue;
 import nomo.adapters.model.read.MainMode;
-import nomo.domain.conversation.Event;
+import nomo.domain.conversation.TraceEvent;
 import nomo.domain.harness.chat.Context;
 import nomo.domain.harness.read.decode_work_plan;
 import nomo.domain.sessions.work.WorkFacts;
@@ -61,30 +67,36 @@ public flow decide(mode: MainMode, prompt: Prompt) -> string {
         MainMode.Large => (LargeDecision {}).run(prompt),
         MainMode.Full => (FullDecision {}).run(prompt)
     };
-    if value.action == "ANSWER" {
-        return value.answer;
-    }
-    if value.action == "NEXT_PAGE" {
-        return "NEXT_PAGE";
-    }
-    if value.action == "CHECK" {
-        let raw = match encode(
-            value.command,
-            "check command conversion failed",
-            "check command encoding failed"
-        ) {
+    return render_decision(decode_decision(value));
+}
+
+flow decode_decision(raw: Decision) -> ContinuationAction ![] {
+    return match raw.action {
+        "ANSWER" => ContinuationAction.Answer(raw.answer),
+        "NEXT_PAGE" => ContinuationAction.NextPage,
+        "CHECK" => ContinuationAction.Check(raw.command),
+        "EDIT" => ContinuationAction.Edit(raw.path),
+        "EDIT_CHECK" => ContinuationAction.Edit(raw.path),
+        "EDIT_MORE" => ContinuationAction.EditMore(raw.path),
+        "EDIT_MORE_CHECK" => ContinuationAction.EditMore(raw.path),
+        _ => abort("unknown natural work action")
+    };
+}
+
+// External launcher protocol: preserve its existing spellings at this boundary.
+flow render_decision(action: ContinuationAction) -> string ![] {
+    return match action {
+        ContinuationAction.Answer(text) => text,
+        ContinuationAction.NextPage => "NEXT_PAGE",
+        ContinuationAction.Check(command) => "CHECK_JSON "
+            + match encode(command, "check command conversion failed", "check command encoding failed") {
             Ok(value) => value,
-            Err(error) => abort(error),
-        };
-        return "CHECK_JSON " + raw;
-    }
-    if value.action == "EDIT" || value.action == "EDIT_CHECK" {
-        return "EDIT_CHECK " + value.path;
-    }
-    if value.action == "EDIT_MORE" || value.action == "EDIT_MORE_CHECK" {
-        return "EDIT_MORE_CHECK " + value.path;
-    }
-    abort("unknown natural work action");
+            Err(error) => abort(error)
+        },
+        ContinuationAction.Edit(path) => "EDIT_CHECK "
+            + path,
+        ContinuationAction.EditMore(path) => "EDIT_MORE_CHECK " + path
+    };
 }
 
 flow prompt_Main() -> Trusted<string> {
@@ -176,7 +188,7 @@ public flow route(
 
 public type Input = {
     current: Context,
-    history: Array<Event>,
+    history: Array<TraceEvent>,
     work: Option<WorkFacts>,
     followup: Option<WorkFacts>,
     additional: Array<WorkFacts>,
@@ -190,3 +202,61 @@ public type Decision = {
     command: Array<string>,
     answer: string
 };
+
+impl Input {
+    public flow wire(self) -> JsonValue ![] {
+        return json_fields(
+            json_value(self),
+            [
+                ("history", wire_traces(self.history)),
+                ("current", self.current.wire()),
+                ("work", json_value(self.work.map(item => wire_work_fact(item)))),
+                ("followup", json_value(self.followup.map(item => wire_work_fact(item)))),
+                ("additional", JsonValue.Array(self.additional.iter().map(item => wire_work_fact(item)).collect()))
+            ]
+        );
+    }
+}
+
+public type WorkReadInput = {
+    current: Context,
+    work: WorkFacts,
+    history: Array<TraceEvent>
+};
+
+impl WorkReadInput {
+    public flow wire(self) -> JsonValue ![] {
+        return json_fields(
+            json_value(self),
+            [
+                ("history", wire_traces(self.history)),
+                ("current", self.current.wire()),
+                ("work", wire_work_fact(self.work))
+            ]
+        );
+    }
+}
+
+public type FollowupReadInput = {
+    current: Context,
+    work: WorkFacts,
+    followup: WorkFacts,
+    additional: Array<WorkFacts>,
+    history: Array<TraceEvent>,
+    budget: BudgetFacts
+};
+
+impl FollowupReadInput {
+    public flow wire(self) -> JsonValue ![] {
+        return json_fields(
+            json_value(self),
+            [
+                ("history", wire_traces(self.history)),
+                ("current", self.current.wire()),
+                ("work", wire_work_fact(self.work)),
+                ("followup", wire_work_fact(self.followup)),
+                ("additional", JsonValue.Array(self.additional.iter().map(item => wire_work_fact(item)).collect()))
+            ]
+        );
+    }
+}

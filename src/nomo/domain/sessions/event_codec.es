@@ -1,7 +1,7 @@
 module nomo.domain.sessions.event_codec;
 
-import nomo.domain.conversation.Event;
-import nomo.domain.harness.chat.{Previous, chat_policy_prior_error};
+import nomo.domain.conversation.TraceEvent;
+import nomo.domain.harness.chat.{PriorRead, chat_policy_prior_error};
 import nomo.domain.harness.read.question_error;
 import nomo.domain.limits.{event_bytes, history_bytes, message_bytes, outcome_bytes};
 import nomo.domain.text.{data_safe, flat_string_frame, safe, text_printable};
@@ -249,12 +249,12 @@ public type Text = {
 
 public type PreviousData = {
     request: string,
-    previous: Previous,
+    previous: PriorRead,
     replacements: usize
 };
 
 public type Events = {
-    events: Array<Event>,
+    events: Array<TraceEvent>,
     replacements: usize
 };
 
@@ -311,7 +311,7 @@ public flow redact_text(value: string, policy: Policy) -> Result<Text, string> {
     });
 }
 
-public flow previous(request: string, prior: Previous, policy: Policy) -> Result<PreviousData, string> {
+public flow previous(request: string, prior: PriorRead, policy: Policy) -> Result<PreviousData, string> {
     let req = match redact_text(request, policy) {
         Ok(value) => value,
         Err(error) => {
@@ -330,12 +330,6 @@ public flow previous(request: string, prior: Previous, policy: Policy) -> Result
             return Err(error);
         }
     };
-    let tool = match redact_text(prior.tool, policy) {
-        Ok(value) => value,
-        Err(error) => {
-            return Err(error);
-        }
-    };
     let outcome = match redact_text(prior.outcome, policy) {
         Ok(value) => value,
         Err(error) => {
@@ -348,10 +342,10 @@ public flow previous(request: string, prior: Previous, policy: Policy) -> Result
             return Err(error);
         }
     };
-    let projected = Previous {
+    let projected = PriorRead {
         task = task.value,
         result = result.value,
-        tool = tool.value,
+        tool = prior.tool,
         outcome = outcome.value,
         answer = answer.value
     };
@@ -362,13 +356,13 @@ public flow previous(request: string, prior: Previous, policy: Policy) -> Result
         PreviousData {
             request = req.value,
             previous = projected,
-            replacements = req.replacements + task.replacements + result.replacements + tool.replacements
+            replacements = req.replacements + task.replacements + result.replacements
                 + outcome.replacements + answer.replacements
         }
     );
 }
 
-public flow events(value: Array<Event>, policy: Policy) -> Result<Events, string> {
+public flow events(value: Array<TraceEvent>, policy: Policy) -> Result<Events, string> {
     let problem = policy_error(policy);
     if problem != "" {
         return Err(problem);
@@ -376,14 +370,15 @@ public flow events(value: Array<Event>, policy: Policy) -> Result<Events, string
     if value.len() > 24 {
         return Err("too many historical events");
     }
-    var output: Array<Event> = [];
+    var output: Array<TraceEvent> = [];
     var replacements: usize = 0;
     @limits([Iterations(24)]) for event in value {
-        if !safe(event.role, 128) || !safe(event.kind, 128) || !safe(event.name, 128) {
+        if !safe(event.role.wire(), 128) || !safe(event.kind.wire(), 128) || !safe(event.name, 128) {
             return Err("invalid historical event metadata");
         }
         @limits([Iterations(8)]) for literal in policy.literals {
-            if contains(event.role, literal) || contains(event.kind, literal) || contains(event.name, literal) {
+            if contains(event.role.wire(), literal) || contains(event.kind.wire(), literal)
+                || contains(event.name, literal) {
                 return Err("sensitive literal in event metadata");
             }
         }
@@ -409,19 +404,19 @@ public flow events(value: Array<Event>, policy: Policy) -> Result<Events, string
 
 // Only a trusted caller's known literals are redacted. No policy or literal is
 // stored here. This isolated store is not yet linked atomically to chat turns.
-public type History = {
+public type RecordedTraceHistory = {
     format: i32,
     turns: i32,
     first_count: usize,
-    events: Array<Event>
+    events: Array<TraceEvent>
 };
 
 // A pure, bounded projection. This does not persist events or grant authority.
 // Exact known-literal filtering is not comprehensive secret detection; callers
 // must supply an appropriate trusted policy before using any persisted form.
-public type EventFrame = {
+public type TraceFrame = {
     format: i32,
     turns: i32,
     first_count: usize,
-    events: Array<Event>
+    events: Array<TraceEvent>
 };

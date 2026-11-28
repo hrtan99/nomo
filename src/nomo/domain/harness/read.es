@@ -1,6 +1,11 @@
 module nomo.domain.harness.read;
 
-import nomo.domain.conversation.Event;
+import nomo.domain.conversation.{TraceKind, TraceRole};
+import nomo.domain.wire.{value as json_value, fields as json_fields};
+import std.json.JsonValue;
+import nomo.domain.harness.loop.{ReadOperation, tool_name};
+import nomo.domain.harness.loop.{ReadAction};
+import nomo.domain.conversation.TraceEvent;
 import nomo.domain.harness.loop.{
     Action,
     ReadLedger,
@@ -30,8 +35,54 @@ import nomo.domain.limits.{
 import nomo.domain.text.{bounded as text_bounded, context_json_error, data_safe, text_printable};
 import nomo.domain.wire.{FieldError, decode_fields, encode, string_fields};
 import std.agent.message.Message;
-import std.json.JsonValue;
 import std.text.{char_count, from_char, from_i32, len, starts_with, trim};
+
+public enum TextStage {
+    Plan,
+    Child,
+    Aggregate
+}
+
+impl TextStage {
+    public flow wire(self) -> string ![] {
+        return match self {
+            TextStage.Plan => "plan",
+            TextStage.Child => "child",
+            TextStage.Aggregate => "aggregate"
+        };
+    }
+
+    public flow parse(raw: string) -> TextStage ![] {
+        return match raw {
+            "plan" => TextStage.Plan,
+            "child" => TextStage.Child,
+            "aggregate" => TextStage.Aggregate,
+            _ => abort("invalid TextStage spelling: " + raw)
+        };
+    }
+}
+
+public enum ReadStage {
+    Plan,
+    Aggregate
+}
+
+impl ReadStage {
+    public flow wire(self) -> string ![] {
+        return match self {
+            ReadStage.Plan => "plan",
+            ReadStage.Aggregate => "aggregate"
+        };
+    }
+
+    public flow parse(raw: string) -> ReadStage ![] {
+        return match raw {
+            "plan" => ReadStage.Plan,
+            "aggregate" => ReadStage.Aggregate,
+            _ => abort("invalid ReadStage spelling: " + raw)
+        };
+    }
+}
 
 public type ChildTask = {
     id: string,
@@ -41,7 +92,7 @@ public type ChildTask = {
 };
 
 public type TextContext = {
-    phase: string,
+    phase: TextStage,
     request: string,
     task: string,
     result: string
@@ -236,7 +287,7 @@ public flow read_aggregate_error(raw: string) -> string {
 
 // Check the complete Prompt.data encoding, not just its unescaped field values.
 public flow text_context_error(context: TextContext) -> string {
-    let message = Message.new(context);
+    let message = Message.new(context.wire());
     return context_json_error(
         message.cast<JsonValue>(),
         context_bytes(),
@@ -286,18 +337,18 @@ public flow charge_boundary(state: Ledger) -> Result<Ledger, string> {
 }
 
 public type ReadContext = {
-    phase: string,
+    phase: ReadStage,
     request: string,
     task: string,
     result: string,
-    tool: string,
+    tool: Option<ReadOperation>,
     outcome: string,
     allowed: Array<string>
 };
 
 public type Observed = {
     result: string,
-    tool: string,
+    tool: Option<ReadOperation>,
     outcome: string
 };
 
@@ -721,7 +772,7 @@ public flow work_settle(state: ReadLedger, child: Session) -> Result<
 }
 
 public flow read_context_error(context: ReadContext) -> string {
-    let message = Message.new(context);
+    let message = Message.new(context.wire());
     return context_json_error(
         message.cast<JsonValue>(),
         context_bytes(),
@@ -730,7 +781,7 @@ public flow read_context_error(context: ReadContext) -> string {
     );
 }
 
-public flow same(event: Event, role: string, kind: string, name: string, text: string) -> bool {
+public flow same(event: TraceEvent, role: TraceRole, kind: TraceKind, name: string, text: string) -> bool {
     return event.role == role && event.kind == kind && event.name == name && event.text == text;
 }
 
@@ -783,18 +834,20 @@ public flow inspect_shared(
         }
         characters = characters + char_count(event.name) + char_count(event.text);
     }
-    if characters != child.history.characters || !same(events[0], "user", "context", "original", request)
-        || !same(events[1], "user", "input", "", task) || !same(events[2], "model", "text", "qwen", "") {
+    if characters != child.history.characters
+        || !same(events[0], TraceRole.User, TraceKind.Context, "original", request)
+        || !same(events[1], TraceRole.User, TraceKind.Input, "", task)
+        || !same(events[2], TraceRole.Model, TraceKind.Text, "qwen", "") {
         return Err("child original request or task history changed");
     }
-    var tool = "";
+    var tool: Option<ReadOperation> = None();
     var outcome = "";
     if child.tools == 0 {
         if size != 4 || child.calls != 1 || (status != 0 && status != 3) {
             return Err("invalid direct child shape");
         }
     } else {
-        if size < 5 || events[3].role != "model" || events[3].kind != "request" {
+        if size < 5 || events[3].role != TraceRole.Model || events[3].kind != TraceKind.Request {
             return Err("missing selected child tool request");
         }
         let action = match if unicode {
@@ -808,12 +861,18 @@ public flow inspect_shared(
                 return Err(error);
             }
         };
-        if (action.operation != "read" && action.operation != "search") || events[3].name != action.operation
-            || events[4].role != "tool" || events[4].name != action.operation {
+        let selected = match action {
+            Action.Tool(value) => value,
+            Action.Final(_) => {
+                return Err("child tool identity changed");
+            }
+        };
+        if events[3].name != selected.operation().wire()
+            || events[4].role != TraceRole.Tool || events[4].name != selected.operation().wire() {
             return Err("child tool identity changed");
         }
         if size == 5 {
-            if child.calls != 1 || status != 3 || events[4].kind != "error" || !(
+            if child.calls != 1 || status != 3 || events[4].kind != TraceKind.Error || !(
                 if unicode {
                     text_bounded(events[4].text, message_bytes())
                 } else {
@@ -823,7 +882,7 @@ public flow inspect_shared(
                 return Err("invalid failed tool shape");
             }
         } else {
-            if events[4].kind != "complete" || !(
+            if events[4].kind != TraceKind.Complete || !(
                 if unicode {
                     text_bounded(events[4].text, outcome_bytes())
                 } else {
@@ -837,16 +896,17 @@ public flow inspect_shared(
                     return Err("invalid child context-refusal shape");
                 }
             } else if child.calls != 2 || (status != 0 && status != 3)
-                || !same(events[5], "model", "text", "qwen", "") {
+                || !same(events[5], TraceRole.Model, TraceKind.Text, "qwen", "") {
                 return Err("invalid second child call shape");
             }
-            tool = action.operation;
+            tool = Some(selected.operation());
             outcome = events[4].text;
         }
     }
     let last = events[size - 1];
     if status == 0 {
-        if last.role != "assistant" || last.kind != "final" || last.name != "" || !(
+        if last.role != TraceRole.Assistant || last.kind != TraceKind.Final || last.name != ""
+            || !(
             if unicode {
                 text_bounded(last.text, child_answer_bytes())
             } else {
@@ -862,7 +922,7 @@ public flow inspect_shared(
         });
     }
     if size != 5 && (
-        last.role != "error" || last.kind != "error" || last.name != "" || !(
+        last.role != TraceRole.Error || last.kind != TraceKind.Error || last.name != "" || !(
             if unicode {
                 text_bounded(last.text, message_bytes())
             } else {
@@ -874,7 +934,7 @@ public flow inspect_shared(
     }
     return Ok(Observed {
         result = "",
-        tool = "",
+        tool = None(),
         outcome = ""
     });
 }
@@ -995,12 +1055,7 @@ public flow decode_child(raw: string, allowed: Array<string>, final_only: bool) 
                 return Err(error);
             }
         };
-        return Ok(Action {
-            operation = "final",
-            files = [],
-            literal = "",
-            text = final
-        });
+        return Ok(Action.Final(final));
     }
     if final_only {
         return Err("second response must be final");
@@ -1010,16 +1065,11 @@ public flow decode_child(raw: string, allowed: Array<string>, final_only: bool) 
         return Err("tool action exceeds 8388608 UTF-8 bytes");
     }
     if values[0] == "search" && values.len() == 3 && values[2] == "*" {
-        let selected = read_selection_error("search", [allowed[0]], values[1], allowed);
+        let selected = read_selection_error(ReadOperation.Search, [allowed[0]], values[1], allowed);
         if selected != "" {
             return Err(selected);
         }
-        return Ok(Action {
-            operation = "search",
-            files = ["*"],
-            literal = values[1],
-            text = ""
-        });
+        return Ok(Action.Tool(ReadAction.Search(values[1], ["*"])));
     }
     var files: Array<string> = [];
     var literal = "";
@@ -1041,20 +1091,23 @@ public flow decode_child(raw: string, allowed: Array<string>, final_only: bool) 
     } else {
         return Err("unsupported action or arity");
     }
-    let selected = read_selection_error(values[0], files, literal, allowed);
+    let selected = read_selection_error(ReadOperation.parse(values[0]), files, literal, allowed);
     if selected != "" {
         return Err(selected);
     }
-    return Ok(Action {
-        operation = values[0],
-        files,
-        literal,
-        text = ""
-    });
+    return Ok(
+        Action.Tool(
+            if values[0] == "read" {
+                ReadAction.Read(files[0])
+            } else {
+                ReadAction.Search(literal, files)
+            }
+        )
+    );
 }
 
 public flow read_validation_context_error(context: ReadContext) -> string {
-    let message = Message.new(context);
+    let message = Message.new(context.wire());
     return context_json_error(
         message.cast<JsonValue>(),
         context_bytes(),
@@ -1078,4 +1131,18 @@ public flow inspect_work(child: Session, status: i32, request: string, task: str
     string
 > {
     return inspect_shared(child, status, request, task, allowed, true, true);
+}
+
+impl TextContext {
+    public flow wire(self) -> JsonValue ![] {
+        return json_fields(json_value(self), [("phase", JsonValue.String(self.phase.wire()))]);
+    }
+}
+impl ReadContext {
+    public flow wire(self) -> JsonValue ![] {
+        return json_fields(
+            json_value(self),
+            [("phase", JsonValue.String(self.phase.wire())), ("tool", JsonValue.String(tool_name(self.tool)))]
+        );
+    }
 }

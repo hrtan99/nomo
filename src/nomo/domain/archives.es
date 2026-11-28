@@ -1,9 +1,12 @@
 module nomo.domain.archives;
 
-import nomo.domain.attempts.Attempt as attempts_Attempt;
-import nomo.domain.changes.{Journal as changes_Journal, SavedPath, Step as changes_Step};
+import nomo.domain.changes.{JournalPhase, StepPhase};
+import nomo.domain.attempts.wire_attempt;
+import nomo.domain.wire.{value as json_value, fields};
+import nomo.domain.attempts.ExecutionAttempt as attempts_Attempt;
+import nomo.domain.changes.{FileJournal as changes_Journal, SavedPath, FileStep as changes_Step};
 import nomo.domain.conversation.{ChatMessage, SavedSession, StoredEvent};
-import nomo.domain.processes.{ArchivedJob as processes_ArchivedJob, Job as processes_Job, JobEvent};
+import nomo.domain.processes.{ArchivedProcessJob as processes_ArchivedJob, ProcessJob as processes_Job, ProcessOutput};
 import nomo.domain.settings.CachedConfiguration;
 import std.json.JsonValue;
 
@@ -14,16 +17,16 @@ public enum NativeRecord {
     Session(string, SavedSession),
     Event(string, StoredEvent),
     Chunk(string, string),
-    Copy(string, CopyJob),
+    Copy(string, ConversationCopy),
     AttemptCounter(string, i64),
-    Attempt(string, attempts_Attempt),
+    ExecutionAttempt(string, attempts_Attempt),
     Configuration(string, CachedConfiguration),
     Projects(string, Array<string>),
-    Journal(string, changes_Journal),
-    Step(string, changes_Step),
-    Job(string, processes_Job),
-    Output(string, JobEvent),
-    ArchivedJob(string, processes_ArchivedJob),
+    FileJournal(string, changes_Journal),
+    FileStep(string, changes_Step),
+    ProcessJob(string, processes_Job),
+    Output(string, ProcessOutput),
+    ArchivedProcessJob(string, processes_ArchivedJob),
     ArchivedPart(string, bytes)
 }
 
@@ -81,12 +84,12 @@ public type ProjectImage = {
     jobs: Array<ProjectJob>
 };
 
-public flow edit_phases(phase: string) -> (string, string) {
+public flow edit_phases(phase: string) -> (JournalPhase, StepPhase) {
     return match phase {
-        "applied" => ("applied", "applied"),
-        "undone" => ("undone", "restored"),
-        "rolled_back" => ("rolled_back", "restored"),
-        "applying" => ("interrupted", "applying"),
+        "applied" => (JournalPhase.Applied, StepPhase.Applied),
+        "undone" => (JournalPhase.Undone, StepPhase.Restored),
+        "rolled_back" => (JournalPhase.RolledBack, StepPhase.Restored),
+        "applying" => (JournalPhase.Interrupted, StepPhase.Applying),
         _ => abort("unsupported old project edit phase"),
     };
 }
@@ -139,15 +142,14 @@ public type ExportPreview = {
 };
 
 public type ExportOutcome = {
-    path: string,
-    status: string
+    path: string
 };
 
 public type ExportMetadata = {
     format: string,
     conversation: SavedSession,
     attempts: Array<attempts_Attempt>,
-    copies: Array<CopyJob>
+    copies: Array<ConversationCopy>
 };
 
 public type Imported = {
@@ -162,16 +164,16 @@ public enum ArchiveDocument {
     Outcome(ExportOutcome)
 }
 
-public type CopyJob = {
+public type ConversationCopy = {
     id: string,
     workspace: string,
     title: string,
-    kind: string,
+    kind: CopyKind,
     source: string,
     digest: bytes,
     total: i64,
     cursor: i64,
-    phase: string
+    phase: CopyPhase
 };
 
 // Encoded by the destination type's official codec after a checked direct
@@ -187,3 +189,74 @@ public type RelocatedImage = {
     source_sha256: string,
     rows: Array<RelocatedRow>
 };
+
+public flow wire_metadata(input: ExportMetadata) -> JsonValue ![] {
+    return fields(
+        json_value(input),
+        [
+            ("attempts", JsonValue.Array(input.attempts.iter().map(attempt => wire_attempt(attempt)).collect())),
+            ("copies", JsonValue.Array(input.copies.iter().map(copy => wire_copy(copy)).collect()))
+        ]
+    );
+}
+
+public enum CopyKind {
+    Fork,
+    Import
+}
+
+impl CopyKind {
+    public flow wire(self) -> string ![] {
+        return match self {
+            CopyKind.Fork => "fork",
+            CopyKind.Import => "import"
+        };
+    }
+
+    public flow parse(raw: string) -> CopyKind ![] {
+        return match raw {
+            "fork" => CopyKind.Fork,
+            "import" => CopyKind.Import,
+            _ => abort("invalid CopyKind spelling: " + raw)
+        };
+    }
+}
+
+public enum CopyPhase {
+    Staging,
+    Copying,
+    Ready,
+    Discarded
+}
+
+impl CopyPhase {
+    public flow wire(self) -> string ![] {
+        return match self {
+            CopyPhase.Staging => "staging",
+            CopyPhase.Copying => "copying",
+            CopyPhase.Ready => "ready",
+            CopyPhase.Discarded => "discarded"
+        };
+    }
+
+    public flow parse(raw: string) -> CopyPhase ![] {
+        return match raw {
+            "staging" => CopyPhase.Staging,
+            "copying" => CopyPhase.Copying,
+            "ready" => CopyPhase.Ready,
+            "discarded" => CopyPhase.Discarded,
+            _ => abort("invalid CopyPhase spelling: " + raw)
+        };
+    }
+}
+
+public flow wire_copy(input: ConversationCopy) -> JsonValue ![] {
+    return fields(
+        json_value(input),
+        [("kind", JsonValue.String(input.kind.wire())), ("phase", JsonValue.String(input.phase.wire()))]
+    );
+}
+
+public flow wire_export_outcome(input: ExportOutcome) -> JsonValue ![] {
+    return fields(json_value(input), [("status", JsonValue.String("applied"))]);
+}

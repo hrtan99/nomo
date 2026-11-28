@@ -1,5 +1,14 @@
 module nomo.adapters.cli.chat;
 
+import nomo.domain.sessions.work.WorkPhase;
+import nomo.domain.editing.LiteralEditPhase;
+import nomo.domain.conversation.wire_trace;
+import nomo.domain.conversation.{TraceKind, TraceRole};
+import nomo.domain.sessions.chat.{ChatPhase};
+import nomo.domain.sessions.work.wire_continuous;
+import nomo.domain.wire.{value as json_value, fields as json_fields};
+import nomo.domain.sessions.work.{CheckSlot};
+import nomo.domain.sessions.work.CheckState;
 import nomo.adapters.cli.checks.{Selection, show};
 import nomo.adapters.filesystem.workspace.selection;
 import nomo.adapters.model.continuation.{delegated, route as continuation_route};
@@ -25,12 +34,12 @@ import nomo.application.sessions.chat.{finish, open, reserve_loaded};
 import nomo.application.sessions.ports.Entry;
 import nomo.bootstrap.harness.{read_tool_chat_run_private_turn, run_with_history};
 import nomo.bootstrap.work.{run, run_after_followup, run_turn};
-import nomo.domain.conversation.Event;
-import nomo.domain.editing.EditOperation;
+import nomo.domain.conversation.TraceEvent;
+import nomo.domain.editing.LiteralEditRecord;
 import nomo.domain.harness.loop.candidate_error;
 import nomo.domain.harness.read.question_error;
 import nomo.domain.sessions.chat.policy as chat_policy;
-import nomo.domain.sessions.work.{BudgetFacts, ContinuousEntry};
+import nomo.domain.sessions.work.{BudgetFacts, ContinuousWorkEntry};
 import nomo.domain.text.within;
 import nomo.domain.wire.ascii_json_with;
 import std.agent.message.Message;
@@ -197,7 +206,7 @@ public flow read_session_status(args: Array<string>) -> i32 ![
     };
     let entry = snapshot.chat;
     let saved = entry.value;
-    println("SESSION " + saved.phase + " turns=" + from_i32(saved.invocation.admitted));
+    println("SESSION " + saved.phase.wire() + " turns=" + from_i32(saved.invocation.admitted));
     if entry.schema == 1 {
         println("EVENTS unavailable for legacy history");
     }
@@ -215,7 +224,10 @@ public flow read_session_status(args: Array<string>) -> i32 ![
             );
         }
         @limits([Iterations(48)]) for event in entry.events {
-            println("EVENT " + event.role + " " + event.kind + " " + event.name + " " + event.text);
+            println(
+                "EVENT " + event.role.wire() + " " + event.kind.wire() + " " + event.name + " "
+                    + event.text
+            );
         }
     }
     let reservation = chat_policy(saved.format).pending_reservation(saved.phase);
@@ -229,7 +241,7 @@ public flow read_session_status(args: Array<string>) -> i32 ![
     let work = snapshot.work;
     match work {
         Some(value) => {
-            println("WORK " + value.phase + " id=" + value.id + " path=" + value.path);
+            println("WORK " + value.phase.wire() + " id=" + value.id + " path=" + value.path);
             println(
                 "WORK BUDGET reserved_calls=" + from_i32(value.reserved.calls) + " reserved_generation="
                     + from_i32(value.reserved.generation)
@@ -247,7 +259,7 @@ public flow read_session_status(args: Array<string>) -> i32 ![
             match snapshot.work_edit {
                 Some(item) => println(
                     "EDIT "
-                        + item.phase
+                        + item.phase.wire()
                 ),
                 None() => println("EDIT no recorded intent; missing data does not prove no effect"),
             }
@@ -256,18 +268,18 @@ public flow read_session_status(args: Array<string>) -> i32 ![
     }
     let check = snapshot.check;
     match check {
-        Some(value) => if value.phase == "complete" {
-            println("CHECK complete result=" + value.outcome + " exit=" + value.exit_code);
+        Some(value) => if value.phase.is_complete() {
+            println("CHECK complete result=" + value.phase.wire_outcome() + " exit=" + value.phase.wire_exit());
         }
         else {
-            println("CHECK " + value.phase + "; no automatic retry or inferred outcome");
+            println("CHECK " + value.phase.wire() + "; no automatic retry or inferred outcome");
         },
         None() => (),
     }
     let followup = snapshot.followup;
     match followup {
         Some(value) => {
-            println("FOLLOWUP " + value.phase + " id=" + value.id + " path=" + value.path);
+            println("FOLLOWUP " + value.phase.wire() + " id=" + value.id + " path=" + value.path);
             println(
                 "FOLLOWUP BUDGET reserved_calls=" + from_i32(value.reserved.calls)
                     + " reserved_generation=" + from_i32(value.reserved.generation)
@@ -285,7 +297,7 @@ public flow read_session_status(args: Array<string>) -> i32 ![
             match snapshot.followup_edit {
                 Some(item) => println(
                     "FOLLOWUP EDIT "
-                        + item.phase
+                        + item.phase.wire()
                 ),
                 None() => println("FOLLOWUP EDIT no recorded intent; missing data does not prove no effect"),
             }
@@ -294,11 +306,14 @@ public flow read_session_status(args: Array<string>) -> i32 ![
     }
     let followup_check = snapshot.followup_check;
     match followup_check {
-        Some(value) => if value.phase == "complete" {
-            println("FOLLOWUP CHECK complete result=" + value.outcome + " exit=" + value.exit_code);
+        Some(value) => if value.phase.is_complete() {
+            println(
+                "FOLLOWUP CHECK complete result=" + value.phase.wire_outcome() + " exit="
+                    + value.phase.wire_exit()
+            );
         }
         else {
-            println("FOLLOWUP CHECK " + value.phase + "; no automatic retry or inferred outcome");
+            println("FOLLOWUP CHECK " + value.phase.wire() + "; no automatic retry or inferred outcome");
         },
         None() => (),
     }
@@ -320,14 +335,14 @@ public flow read_session_status(args: Array<string>) -> i32 ![
             }),
             None() => None()
         };
-        match show("first", first) {
+        match show(CheckSlot.First, first) {
             Ok(_) => (),
             Err(error) => {
                 println("REFUSED " + error);
                 return 1;
             }
         }
-        match show("followup", second) {
+        match show(CheckSlot.Followup, second) {
             Ok(_) => (),
             Err(error) => {
                 println("REFUSED " + error);
@@ -561,39 +576,56 @@ public flow recoverable_read_session_run(args: Array<string>) -> i32 ![
     return 0;
 }
 
-flow edit_phase(result: Result<Option<EditOperation>, string>) -> string {
+public enum EditObservation {
+    Missing,
+    Recorded(LiteralEditPhase),
+    Unavailable
+}
+impl EditObservation {
+    flow wire(self) -> string ![] {
+        return match self {
+            EditObservation.Missing => "none",
+            EditObservation.Recorded(phase) => phase.wire(),
+            EditObservation.Unavailable => "unknown"
+        };
+    }
+}
+flow edit_phase(result: Result<Option<LiteralEditRecord>, string>) -> EditObservation {
     return match result {
-        Ok(Some(item)) => item.phase,
-        Ok(None()) => "none",
-        Err(_) => "unknown"
+        Ok(Some(item)) => EditObservation.Recorded(item.phase),
+        Ok(None()) => EditObservation.Missing,
+        Err(_) => EditObservation.Unavailable
     };
 }
 
-flow show_edit_status(label: string, phase: string) -> unit {
-    if phase == "completed" {
-        println(
-            "UNRESOLVED " + label
-                + ": edit completion was recorded; inspect the current file, which may have changed since."
-        );
-    }
-    else if phase == "intent" {
-        println(
-            "UNRESOLVED " + label
-                + ": edit intent was recorded but its outcome is unknown; inspect the file."
-        );
-    }
-    else if phase == "none" {
-        println("UNRESOLVED " + label + ": no edit journal is recorded; the earlier process may still act.");
-    }
-    else {
-        println("UNRESOLVED " + label + ": edit record is unavailable or changed; inspect the file.");
-    }
+flow show_edit_status(label: string, phase: EditObservation) -> unit {
+    let text = match phase {
+        EditObservation.Recorded(LiteralEditPhase.Completed) => "edit completion was recorded; inspect the current file, which may have changed since.",
+        EditObservation.Recorded(LiteralEditPhase.Intent) => "edit intent was recorded but its outcome is unknown; inspect the file.",
+        EditObservation.Missing => "no edit journal is recorded; the earlier process may still act.",
+        EditObservation.Unavailable => "edit record is unavailable or changed; inspect the file."
+    };
+    println("UNRESOLVED " + label + ": " + text);
+}
+
+flow work_label(value: Option<WorkPhase>) -> string ![] {
+    return match value {
+        Some(phase) => phase.wire(),
+        None() => "none"
+    };
+}
+
+flow check_label(value: Option<CheckState>) -> string ![] {
+    return match value {
+        Some(phase) => phase.wire(),
+        None() => "none"
+    };
 }
 
 public type View = {
     format: i32,
     encoding: string,
-    phase: string,
+    phase: nomo.domain.sessions.chat.ChatPhase,
     turns: i32,
     first_count: usize,
     used_calls: i32,
@@ -602,44 +634,40 @@ public type View = {
     used_scan: i32,
     reserved_calls: i32,
     reserved_tokens: i32,
-    events: Array<Event>,
-    work_phase: string,
-    work_edit_phase: string,
+    events: Array<TraceEvent>,
+    work_phase: Option<WorkPhase>,
+    work_edit_phase: EditObservation,
     work_reserved_calls: i32,
     work_reserved_tokens: i32,
     work_settled_calls: i32,
     work_settled_tokens: i32,
-    work_events: Array<Event>,
-    check_phase: string,
+    work_events: Array<TraceEvent>,
+    check_phase: Option<CheckState>,
     check_id: string,
     check_digest: string,
-    check_outcome: string,
-    check_exit: string,
     check_stdout: string,
     check_stderr: string,
     check_stdout_truncated: bool,
     check_stderr_truncated: bool,
     check_stdout_omitted: bool,
     check_stderr_omitted: bool,
-    followup_phase: string,
-    followup_edit_phase: string,
+    followup_phase: Option<WorkPhase>,
+    followup_edit_phase: EditObservation,
     followup_reserved_calls: i32,
     followup_reserved_tokens: i32,
     followup_settled_calls: i32,
     followup_settled_tokens: i32,
-    followup_events: Array<Event>,
-    followup_check_phase: string,
+    followup_events: Array<TraceEvent>,
+    followup_check_phase: Option<CheckState>,
     followup_check_id: string,
     followup_check_digest: string,
-    followup_check_outcome: string,
-    followup_check_exit: string,
     followup_check_stdout: string,
     followup_check_stderr: string,
     followup_check_stdout_truncated: bool,
     followup_check_stderr_truncated: bool,
     followup_check_stdout_omitted: bool,
     followup_check_stderr_omitted: bool,
-    additional_work: Array<ContinuousEntry>
+    additional_work: Array<ContinuousWorkEntry>
 };
 
 public flow recoverable_read_session_status(args: Array<string>) -> i32 ![
@@ -711,7 +739,7 @@ public flow recoverable_read_session_status(args: Array<string>) -> i32 ![
     let followup = snapshot.followup;
     let followup_check = snapshot.followup_check;
     let extra = snapshot.additional;
-    var additional: Array<ContinuousEntry> = [];
+    var additional: Array<ContinuousWorkEntry> = [];
     match extra {
         Some(item) => {
             additional = item.value.history.push(item.value.current);
@@ -722,7 +750,7 @@ public flow recoverable_read_session_status(args: Array<string>) -> i32 ![
     var native_configured: i32 = 0;
     var legacy_native_unknown = false;
     @limits([Iterations(4096)]) for event in saved.value.events.events {
-        if event.role == "system" && event.kind == "native-budget" && (
+        if event.role == TraceRole.System && event.kind == TraceKind.NativeBudget && (
             event.name == "chat"
                 || event.name == "chat-large" || event.name == "chat-resilient"
                 || event.name == "chat-high-input"
@@ -744,7 +772,7 @@ public flow recoverable_read_session_status(args: Array<string>) -> i32 ![
             };
         }
     }
-    let completed_new = if saved.value.chat.phase == "running" && chat_reservations > 0 {
+    let completed_new = if saved.value.chat.phase == ChatPhase.Running && chat_reservations > 0 {
         chat_reservations - 1
     } else {
         chat_reservations
@@ -801,19 +829,23 @@ public flow recoverable_read_session_status(args: Array<string>) -> i32 ![
         None() => (),
     }
     @limits([Iterations(48)]) for item in additional {
-        if item.result.source == "high-input-v2" || ends_with(item.result.source, "-high-input-v2") {
+        if item.result.phase.wire_source() == "high-input-v2"
+            || ends_with(item.result.phase.wire_source(), "-high-input-v2") {
             native_configured = native_configured + 7340032;
         } else {
-            if item.result.source == "high-input-v1" || ends_with(item.result.source, "-high-input") {
+            if item.result.phase.wire_source() == "high-input-v1"
+                || ends_with(item.result.phase.wire_source(), "-high-input") {
                 native_configured = native_configured + 6000000;
             } else {
-                if ends_with(item.result.source, "-v5") || ends_with(item.result.source, "-v4") {
+                if ends_with(item.result.phase.wire_source(), "-v5")
+                    || ends_with(item.result.phase.wire_source(), "-v4") {
                     native_configured = native_configured + 2811008;
                 } else {
-                    if ends_with(item.result.source, "-v3") {
+                    if ends_with(item.result.phase.wire_source(), "-v3") {
                         native_configured = native_configured + 2073152;
                     } else {
-                        if item.result.source == "v2" || ends_with(item.result.source, "-v2") {
+                        if item.result.phase.wire_source() == "v2"
+                            || ends_with(item.result.phase.wire_source(), "-v2") {
                             native_configured = native_configured + 1335296;
                         } else {
                             legacy_native_unknown = true;
@@ -833,20 +865,24 @@ public flow recoverable_read_session_status(args: Array<string>) -> i32 ![
     );
     @limits([Iterations(48)]) for item in additional {
         println(
-            "ADDITIONAL WORK " + item.core.id + " phase=" + item.result.phase + " edit=" + item.edit.phase
-                + " check=" + item.check.phase + " settled_calls=" + from_i32(item.result.calls)
+            "ADDITIONAL WORK " + item.core.id + " phase=" + item.result.phase.wire() + " edit="
+                + item.edit.wire()
+                + " check=" + item.check.phase.wire() + " settled_calls=" + from_i32(item.result.calls)
                 + " settled_generation=" + from_i32(item.result.generation)
-                + if item.result.phase == "running" || item.result.phase == "abandoned" {
-                if item.result.source == "wide-v5" || item.result.source == "wide-v4" {
+                + if item.result.phase.is_running() || item.result.phase.is_abandoned() {
+                if item.result.phase.wire_source() == "wide-v5"
+                    || item.result.phase.wire_source() == "wide-v4" {
                     " reserved_calls=7 reserved_generation=286720"
                 } else {
-                    if item.result.source == "high-input-v2" {
+                    if item.result.phase.wire_source() == "high-input-v2" {
                         " reserved_calls=7 reserved_generation=917504"
                     } else {
-                        if item.result.source == "wide-v3" || item.result.source == "high-input-v1" {
+                        if item.result.phase.wire_source() == "wide-v3"
+                            || item.result.phase.wire_source() == "high-input-v1" {
                             " reserved_calls=7 reserved_generation=188416"
                         } else {
-                            if item.result.source == "wide" || item.result.source == "wide-v2" {
+                            if item.result.phase.wire_source() == "wide"
+                                || item.result.phase.wire_source() == "wide-v2" {
                                 " reserved_calls=7 reserved_generation=61440"
                             } else {
                                 " reserved_calls=7 reserved_generation=51200"
@@ -858,20 +894,20 @@ public flow recoverable_read_session_status(args: Array<string>) -> i32 ![
                 " reserved_calls=0 reserved_generation=0"
             }
         );
-        if item.check.phase == "abandoned" {
+        if item.check.phase == CheckState.Abandoned {
             println("ABANDONED CHECK: outcome unknown; inspect the workspace before further action.");
         }
     }
-    var followup_phase = "none";
-    var followup_edit_phase = "none";
+    var followup_phase: Option<WorkPhase> = None();
+    var followup_edit_phase = EditObservation.Missing;
     var followup_reserved_calls: i32 = 0;
     var followup_reserved_tokens: i32 = 0;
     var followup_settled_calls: i32 = 0;
     var followup_settled_tokens: i32 = 0;
-    var followup_events: Array<Event> = [];
+    var followup_events: Array<TraceEvent> = [];
     match followup {
         Some(item) => {
-            followup_phase = item.value.work.phase;
+            followup_phase = Some(item.value.work.phase);
             followup_reserved_calls = item.value.work.reserved.calls;
             followup_reserved_tokens = item.value.work.reserved.generation;
             let selected = item.value.work;
@@ -887,17 +923,15 @@ public flow recoverable_read_session_status(args: Array<string>) -> i32 ![
                 None() => (),
             }
             println(
-                "RECORDED FOLLOWUP " + followup_phase
+                "RECORDED FOLLOWUP " + work_label(followup_phase)
                     + "; selected facts only, no replay or root identity implied."
             );
         }
         None() => (),
     }
-    var followup_check_phase = "none";
+    var followup_check_phase: Option<CheckState> = None();
     var followup_check_id = "";
     var followup_check_digest = "";
-    var followup_check_outcome = "";
-    var followup_check_exit = "";
     var followup_check_stdout = "";
     var followup_check_stderr = "";
     var followup_check_stdout_truncated = false;
@@ -906,11 +940,9 @@ public flow recoverable_read_session_status(args: Array<string>) -> i32 ![
     var followup_check_stderr_omitted = false;
     match followup_check {
         Some(item) => {
-            followup_check_phase = item.value.check.phase;
+            followup_check_phase = Some(item.value.check.phase);
             followup_check_id = item.value.check.id;
             followup_check_digest = item.value.check.digest;
-            followup_check_outcome = item.value.check.outcome;
-            followup_check_exit = item.value.check.exit_code;
             followup_check_stdout = item.value.stdout;
             followup_check_stderr = item.value.stderr;
             followup_check_stdout_truncated = item.value.stdout_truncated;
@@ -921,17 +953,15 @@ public flow recoverable_read_session_status(args: Array<string>) -> i32 ![
                 println("FOLLOWUP CHECK OUTPUT omitted because capture or transfer limits were exceeded; inspect or rerun only under a new explicitly authorized operation.");
             }
             println(
-                "RECORDED FOLLOWUP CHECK " + followup_check_phase
+                "RECORDED FOLLOWUP CHECK " + check_label(followup_check_phase)
                     + "; an interrupted check is not replayed."
             );
         }
         None() => (),
     }
-    var check_phase = "none";
+    var check_phase: Option<CheckState> = None();
     var check_id = "";
     var check_digest = "";
-    var check_outcome = "";
-    var check_exit = "";
     var check_stdout = "";
     var check_stderr = "";
     var check_stdout_truncated = false;
@@ -940,11 +970,9 @@ public flow recoverable_read_session_status(args: Array<string>) -> i32 ![
     var check_stderr_omitted = false;
     match check {
         Some(item) => {
-            check_phase = item.value.check.phase;
+            check_phase = Some(item.value.check.phase);
             check_id = item.value.check.id;
             check_digest = item.value.check.digest;
-            check_outcome = item.value.check.outcome;
-            check_exit = item.value.check.exit_code;
             check_stdout = item.value.stdout;
             check_stderr = item.value.stderr;
             check_stdout_truncated = item.value.stdout_truncated;
@@ -954,20 +982,20 @@ public flow recoverable_read_session_status(args: Array<string>) -> i32 ![
             if check_stdout_omitted || check_stderr_omitted {
                 println("CHECK OUTPUT omitted because capture or transfer limits were exceeded; inspect or rerun only under a new explicitly authorized operation.");
             }
-            println("RECORDED CHECK " + check_phase + "; an interrupted check is not replayed.");
+            println("RECORDED CHECK " + check_label(check_phase) + "; an interrupted check is not replayed.");
         }
         None() => (),
     }
-    var work_phase = "none";
-    var work_edit_phase = "none";
+    var work_phase: Option<WorkPhase> = None();
+    var work_edit_phase = EditObservation.Missing;
     var work_reserved_calls: i32 = 0;
     var work_reserved_tokens: i32 = 0;
     var work_settled_calls: i32 = 0;
     var work_settled_tokens: i32 = 0;
-    var work_events: Array<Event> = [];
+    var work_events: Array<TraceEvent> = [];
     match work {
         Some(item) => {
-            work_phase = item.value.work.phase;
+            work_phase = Some(item.value.work.phase);
             work_reserved_calls = item.value.work.reserved.calls;
             let selected = item.value.work;
             work_edit_phase = edit_phase(
@@ -983,43 +1011,45 @@ public flow recoverable_read_session_status(args: Array<string>) -> i32 ![
                 None() => (),
             }
             println(
-                "RECORDED WORK " + work_phase
+                "RECORDED WORK " + work_label(work_phase)
                     + "; selected facts only, no replay or root identity implied."
             );
         }
         None() => (),
     }
     let used = saved.value.chat.invocation.usage;
-    let pending = saved.value.chat.phase == "running";
+    let pending = saved.value.chat.phase == ChatPhase.Running;
     if pending {
         println("UNRESOLVED CHAT: the turn was reserved; its outcome and process termination are not established. Do not repeat it.");
     }
-    if work_phase == "running" {
+    if work_phase == Some(WorkPhase.Running) {
         show_edit_status("WORK", work_edit_phase);
     }
-    if work_phase == "abandoned" {
+    if work_phase == Some(WorkPhase.Abandoned) {
         println("ABANDONED WORK: user chose to continue; the prior effect remains unknown and its full reservation is retained.");
     }
-    if followup_phase == "running" {
+    if followup_phase == Some(WorkPhase.Running) {
         show_edit_status("FOLLOWUP", followup_edit_phase);
     }
-    if check_phase == "abandoned" || followup_check_phase == "abandoned" {
+    if check_phase == Some(CheckState.Abandoned) || followup_check_phase == Some(CheckState.Abandoned) {
         println("ABANDONED CHECK: outcome unknown; inspect the workspace before further action.");
     }
-    if check_phase == "planned" {
+    if check_phase == Some(CheckState.Planned) {
         println("UNRESOLVED CHECK: no start was recorded at this snapshot; the earlier process may still act. Do not rerun automatically.");
     }
-    else if check_phase == "running" {
+    else if check_phase == Some(CheckState.Running) {
         println("UNRESOLVED CHECK: start was recorded but completion is unknown. Do not rerun automatically.");
     }
-    if followup_check_phase == "planned" {
+    if followup_check_phase == Some(CheckState.Planned) {
         println("UNRESOLVED FOLLOWUP CHECK: no start was recorded at this snapshot; the earlier process may still act. Do not rerun automatically.");
     }
-    else if followup_check_phase == "running" {
+    else if followup_check_phase == Some(CheckState.Running) {
         println("UNRESOLVED FOLLOWUP CHECK: start was recorded but completion is unknown. Do not rerun automatically.");
     }
-    if pending || work_phase == "running" || followup_phase == "running" || check_phase == "planned"
-        || check_phase == "running" || followup_check_phase == "planned" || followup_check_phase == "running" {
+    if pending || work_phase == Some(WorkPhase.Running) || followup_phase == Some(WorkPhase.Running)
+        || check_phase == Some(CheckState.Planned)
+        || check_phase == Some(CheckState.Running) || followup_check_phase == Some(CheckState.Planned)
+        || followup_check_phase == Some(CheckState.Running) {
         println("Before starting a separate session, ensure the earlier invocation has stopped and inspect the workspace. Use session-chat --new or session-id start with selected roots; a new session does not resolve this one and requires fresh approval.");
     }
     let pending_budget = chat_policy(saved.value.chat.format).pending_reservation(saved.value.chat.phase);
@@ -1046,8 +1076,6 @@ public flow recoverable_read_session_status(args: Array<string>) -> i32 ![
         check_phase,
         check_id,
         check_digest,
-        check_outcome,
-        check_exit,
         check_stdout,
         check_stderr,
         check_stdout_truncated,
@@ -1064,8 +1092,6 @@ public flow recoverable_read_session_status(args: Array<string>) -> i32 ![
         followup_check_phase,
         followup_check_id,
         followup_check_digest,
-        followup_check_outcome,
-        followup_check_exit,
         followup_check_stdout,
         followup_check_stderr,
         followup_check_stdout_truncated,
@@ -1074,14 +1100,7 @@ public flow recoverable_read_session_status(args: Array<string>) -> i32 ![
         followup_check_stderr_omitted,
         additional_work = additional
     };
-    let converted: Option<Message<JsonValue>> = Message.new(view).cast<JsonValue>();
-    let value = match converted {
-        Some(item) => item.body,
-        None() => {
-            println("REFUSED event view conversion");
-            return 1;
-        }
-    };
+    let value = view.wire();
     let raw = match stringify(value) {
         Ok(item) => item,
         Err(_) => {
@@ -1105,4 +1124,37 @@ public flow recoverable_read_session_status(args: Array<string>) -> i32 ![
     println("EVENT VIEW untrusted; known literal filtering is incomplete. Text values are JSON strings encoded within the outer JSON.");
     println("EVENT VIEW " + output);
     return 0;
+}
+
+impl View {
+    flow wire(self) -> JsonValue ![] {
+        let check = match self.check_phase {
+            Some(value) => value,
+            None() => CheckState.NotRequested
+        };
+        let followup_check = match self.followup_check_phase {
+            Some(value) => value,
+            None() => CheckState.NotRequested
+        };
+        return json_fields(
+            json_value(self),
+            [
+                ("phase", JsonValue.String(self.phase.wire())),
+                ("events", JsonValue.Array(self.events.iter().map(event => wire_trace(event)).collect())),
+                ("work_phase", JsonValue.String(work_label(self.work_phase))),
+                ("work_edit_phase", JsonValue.String(self.work_edit_phase.wire())),
+                ("work_events", JsonValue.Array(self.work_events.iter().map(event => wire_trace(event)).collect())),
+                ("check_phase", JsonValue.String(check_label(self.check_phase))),
+                ("check_outcome", JsonValue.String(check.wire_outcome())),
+                ("check_exit", JsonValue.String(check.wire_exit())),
+                ("followup_phase", JsonValue.String(work_label(self.followup_phase))),
+                ("followup_edit_phase", JsonValue.String(self.followup_edit_phase.wire())),
+                ("followup_events", JsonValue.Array(self.followup_events.iter().map(event => wire_trace(event)).collect())),
+                ("followup_check_phase", JsonValue.String(check_label(self.followup_check_phase))),
+                ("followup_check_outcome", JsonValue.String(followup_check.wire_outcome())),
+                ("followup_check_exit", JsonValue.String(followup_check.wire_exit())),
+                ("additional_work", JsonValue.Array(self.additional_work.iter().map(item => wire_continuous(item)).collect()))
+            ]
+        );
+    }
 }

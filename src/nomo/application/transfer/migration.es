@@ -11,7 +11,7 @@ import nomo.application.transfer.ports.{
     RelocatedStateSource
 };
 import nomo.domain.archives.{MigrationReport, NativeRecord, ProjectEdit, ProjectEvent, edit_phases};
-import nomo.domain.changes.{Journal, Step};
+import nomo.domain.changes.{FileJournal, FileStep};
 import nomo.domain.conversation.{ConversationLedger, SavedSession};
 import std.effects.Fs;
 import std.fs.{IOError as fs_IOError, ReadLimitError};
@@ -50,17 +50,20 @@ flow migrate_edit<D ~ NativeStateDestination, E ~ HistoricalEvents>(
     var steps: i64 = 0;
     for saved in edit.paths {
         destination.insert(
-            NativeRecord.Step(edit.id + "/" + from_i64(steps), Step {
-                phase = step_phase,
-                paths = [saved]
-            })
+            NativeRecord.FileStep(
+                edit.id + "/" + from_i64(steps),
+                FileStep {
+                    phase = step_phase,
+                    paths = [saved]
+                }
+            )
         );
         steps = steps + 1;
     }
     destination.insert(
-        NativeRecord.Journal(
+        NativeRecord.FileJournal(
             edit.id,
-            Journal {
+            FileJournal {
                 id = edit.id,
                 session = edit.session,
                 name = "migrated_project_edit",
@@ -179,7 +182,7 @@ public flow project_state_migrate<
         rows = rows + 1;
     }
     for job in image.jobs {
-        destination.insert(NativeRecord.ArchivedJob(job.record.id, job.record));
+        destination.insert(NativeRecord.ArchivedProcessJob(job.record.id, job.record));
         var part: usize = 0;
         for data in job.chunks {
             destination.insert(NativeRecord.ArchivedPart(job.record.id + "/" + from_usize(part), data));

@@ -1,5 +1,8 @@
 module nomo.adapters.codec;
 
+import nomo.domain.archives.wire_export_outcome;
+import nomo.domain.archives.wire_metadata;
+import nomo.domain.conversation.wire_model_turn;
 import nomo.application.conversation.ports.ContextProjection;
 import nomo.application.sessions.ports.{RecordCodec, RecordEncoder};
 import nomo.application.transfer.ports.ArchiveEncoding;
@@ -38,7 +41,11 @@ public type RollingContext = {};
 
 impl RollingContext ~ ContextProjection {
     flow bytes(self, input: ModelTurn) -> usize {
-        let json = match encode(input, "context conversion failed", "context encoding failed") {
+        let json = match encode(
+            wire_model_turn(input),
+            "context conversion failed",
+            "context encoding failed"
+        ) {
             Ok(value) => value,
             Err(error) => abort(error),
         };
@@ -141,9 +148,9 @@ public type JsonArchiveEncoding = {};
 impl JsonArchiveEncoding ~ ArchiveEncoding {
     flow encode(self, document: ArchiveDocument) -> string ![] {
         return match document {
-            ArchiveDocument.Metadata(value) => json(value),
+            ArchiveDocument.Metadata(value) => json(wire_metadata(value)),
             ArchiveDocument.Conversation(value) => json(value),
-            ArchiveDocument.Outcome(value) => json(value)
+            ArchiveDocument.Outcome(value) => json(wire_export_outcome(value))
         };
     }
 

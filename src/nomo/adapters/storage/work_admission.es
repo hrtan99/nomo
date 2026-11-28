@@ -1,5 +1,8 @@
 module nomo.adapters.storage.work_admission;
 
+import nomo.domain.sessions.work.{WorkPhase};
+import nomo.domain.sessions.work.{WorkProfile, SummaryState, SummaryProvenance, SummarySource};
+import nomo.domain.sessions.work.{CheckState, CheckOutcome};
 import nomo.adapters.storage.chat.{chat_history_load, matches_version};
 import nomo.adapters.storage.edits.{FirstEditJournal, edit_operation_store_begin, edit_operation_store_complete};
 import nomo.adapters.storage.session_records.{commit_native, submit_native};
@@ -12,22 +15,22 @@ import nomo.application.sessions.admission.{
     history_work_inspect
 };
 import nomo.application.sessions.ports.{CasRows, Entry, HistoricalWorkTicket, PriorChatReader, Submission, Target};
-import nomo.domain.conversation.Event;
+import nomo.domain.conversation.TraceEvent;
 import nomo.domain.editing.Binding;
 import nomo.domain.harness.work.{WorkLedger, ledger_error, native_budget};
 import nomo.domain.limits.compatible_scan_i32;
-import nomo.domain.sessions.chat.{RecoverableChatFrame, empty, work_batch};
+import nomo.domain.sessions.chat.{ChatSessionSnapshot, empty, work_batch};
 import nomo.domain.sessions.event_codec.{Policy, encode_prefix, redact_text};
 import nomo.domain.sessions.work.{
-    ContinuousBook,
-    ContinuousCheck,
+    ContinuousWorkHistory,
+    ContinuousCheckAttempt,
     ContinuousCore,
-    ContinuousEdit,
-    ContinuousEntry,
-    ContinuousResult,
-    RecoverableWorkFrame,
+    ContinuousEditState,
+    ContinuousWorkEntry,
+    WorkSummary,
+    WorkSessionFrame,
     Summary,
-    WorkRecord,
+    WorkAttempt,
     abandoned_record,
     admission_chat_error,
     completed_record,
@@ -56,7 +59,7 @@ public flow continuous_work_load(binding: string) -> Result<Option<Stored>, stri
     };
 }
 
-flow continuous_work_write(book: ContinuousBook, previous: Option<Stored>) -> Result<Stored, string> ![
+flow continuous_work_write(book: ContinuousWorkHistory, previous: Option<Stored>) -> Result<Stored, string> ![
     Memory,
     Error<StorageError>,
     Error<IndexError>
@@ -92,7 +95,7 @@ flow continuous_work_write(book: ContinuousBook, previous: Option<Stored>) -> Re
     });
 }
 
-flow put(previous: Stored, item: ContinuousEntry) -> Result<Stored, string> ![
+flow put(previous: Stored, item: ContinuousWorkEntry) -> Result<Stored, string> ![
     Memory,
     Error<StorageError>,
     Error<IndexError>
@@ -119,18 +122,18 @@ public flow continuous_work_admit(
             return Err(error);
         }
     };
-    var history: Array<ContinuousEntry> = [];
+    var history: Array<ContinuousWorkEntry> = [];
     match previous {
         Some(item) => {
             let last = item.value.current;
-            if last.result.phase == "abandoned" {
-                if last.check.phase != "none" && last.check.phase != "planned" {
+            if last.result.phase.is_abandoned() {
+                if last.check.phase != CheckState.NotRequested && last.check.phase != CheckState.Planned {
                     return Err("abandoned check unresolved");
                 }
             }
-            else if last.result.phase != "complete" || (
-                last.check.phase != "none"
-                    && last.check.phase != "complete" && last.check.phase != "abandoned"
+            else if !last.result.phase.is_complete() || (
+                last.check.phase != CheckState.NotRequested
+                    && !last.check.phase.is_complete() && last.check.phase != CheckState.Abandoned
             ) {
                 return Err("previous work or check is unfinished");
             }
@@ -163,47 +166,41 @@ public flow continuous_work_admit(
             return Err(error);
         }
     };
-    let item = ContinuousEntry {
+    let item = ContinuousWorkEntry {
         core = ContinuousCore {
             id,
             request = clean
         },
-        edit = ContinuousEdit {
-            phase = "none",
-            binding = None()
-        },
-        result = ContinuousResult {
-            phase = "running",
-            summary = "",
-            source = if high_input {
-                "high-input-v2"
+        edit = ContinuousEditState.NotStarted,
+        result = WorkSummary {
+            phase = SummaryState.Running(if high_input {
+                WorkProfile.HighInputV2
             } else {
                 if wide {
-                    "wide-v5"
+                    WorkProfile.WideV5
                 } else {
-                    "v2"
+                    WorkProfile.V2
                 }
-            },
+            }),
+            summary = "",
             calls = 0,
             generation = 0,
             events = []
         },
-        check = ContinuousCheck {
+        check = ContinuousCheckAttempt {
             phase = if digest == "" {
-                "none"
+                CheckState.NotRequested
             } else {
-                "planned"
+                CheckState.Planned
             },
             digest,
-            outcome = "",
-            exit_code = "",
             stdout = "",
             stderr = "",
             stdout_truncated = false,
             stderr_truncated = false
         }
     };
-    return continuous_work_write(ContinuousBook {
+    return continuous_work_write(ContinuousWorkHistory {
         binding,
         history,
         current = item
@@ -216,14 +213,12 @@ public flow edit_intent(ticket: Stored, binding: Binding) -> Result<Stored, stri
     Error<IndexError>
 ] {
     let item = ticket.value.current;
-    if item.result.phase != "running" || item.edit.phase != "none" || binding.id != item.core.id {
+    if !item.result.phase.is_running() || item.edit != ContinuousEditState.NotStarted
+        || binding.id != item.core.id {
         return Err("work edit changed");
     }
     return put(ticket, item {
-        edit = ContinuousEdit {
-            phase = "intent",
-            binding = Some(binding)
-        }
+        edit = ContinuousEditState.Intent(binding)
     });
 }
 
@@ -233,70 +228,87 @@ public flow edit_complete(ticket: Stored) -> Result<Stored, string> ![
     Error<IndexError>
 ] {
     let item = ticket.value.current;
-    if item.edit.phase != "intent" {
+    if !item.edit.is_intent() {
         return Err("work edit intent missing");
     }
-    return put(ticket, item {
-        edit = item.edit {
-            phase = "completed"
+    return put(
+        ticket,
+        item {
+            edit = match item.edit {
+                ContinuousEditState.Intent(binding) => ContinuousEditState.Completed(binding),
+                _ => {
+                    return Err("work edit intent missing");
+                }
+            }
         }
-    });
+    );
 }
 
 public flow continuous_work_finish(
     ticket: Stored,
     summary: string,
-    source: string,
+    source: SummarySource,
     spent: WorkLedger,
-    records: Array<Event>,
+    records: Array<TraceEvent>,
     policy: Policy
 ) -> Result<Stored, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     let item = ticket.value.current;
-    if item.edit.phase != "completed" || item.result.phase != "running" {
+    if !item.edit.is_completed() || !item.result.phase.is_running() {
         return Err("completed work edit required");
     }
     if ledger_error(spent) != "" || spent.read.calls + spent.edit.calls != 7 || spent.read.tokens
-        + spent.edit.tokens != (if item.result.source == "wide-v5" || item.result.source == "wide-v4" {
-        286720
-    } else {
-        if item.result.source == "high-input-v2" {
-            917504
+        + spent.edit.tokens != (
+        if item.result.phase.profile() == WorkProfile.WideV5
+            || item.result.phase.profile() == WorkProfile.WideV4 {
+            286720
         } else {
-            if item.result.source == "wide-v3" || item.result.source == "high-input-v1" {
-                188416
+            if item.result.phase.profile() == WorkProfile.HighInputV2 {
+                917504
             } else {
-                if item.result.source == "wide" || item.result.source == "wide-v2" {
-                    61440
+                if item.result.phase.profile() == WorkProfile.WideV3
+                    || item.result.phase.profile() == WorkProfile.HighInputV1 {
+                    188416
                 } else {
-                    51200
+                    if item.result.phase.profile() == WorkProfile.Wide
+                        || item.result.phase.profile() == WorkProfile.WideV2 {
+                        61440
+                    } else {
+                        51200
+                    }
                 }
             }
         }
-    }) {
+    ) {
         return Err("additional work ledger differs from reservation");
     }
     // High-input sources store their 6M configured run ceiling durably;
     // native_budget remains the compatible stage-shape counter, not usage.
     if (
-        item.result.source == "wide-v5" || item.result.source == "wide-v4" || item.result.source == "wide-v3"
-            || item.result.source == "wide-v2" || item.result.source == "v2"
-            || item.result.source == "high-input-v1" || item.result.source == "high-input-v2"
+        item.result.phase.profile() == WorkProfile.WideV5 || item.result.phase.profile() == WorkProfile.WideV4
+            || item.result.phase.profile() == WorkProfile.WideV3
+            || item.result.phase.profile() == WorkProfile.WideV2
+            || item.result.phase.profile() == WorkProfile.V2
+            || item.result.phase.profile() == WorkProfile.HighInputV1
+            || item.result.phase.profile() == WorkProfile.HighInputV2
     )
-        && (native_budget(spent) != (if item.result.source == "high-input-v2" {
+        && (native_budget(spent) != (if item.result.phase.profile() == WorkProfile.HighInputV2 {
         7340032
     } else {
-        if item.result.source == "wide-v5" || item.result.source == "wide-v4" {
+        if item.result.phase.profile() == WorkProfile.WideV5
+            || item.result.phase.profile() == WorkProfile.WideV4 {
             2811008
         } else {
-            if item.result.source == "wide-v3" || item.result.source == "high-input-v1" {
+            if item.result.phase.profile() == WorkProfile.WideV3
+                || item.result.phase.profile() == WorkProfile.HighInputV1 {
                 2073152
             } else {
                 1335296
             }
         }
     }) || !(
-        if item.result.source == "wide-v5" || item.result.source == "high-input-v1"
-            || item.result.source == "high-input-v2" {
+        if item.result.phase.profile() == WorkProfile.WideV5
+            || item.result.phase.profile() == WorkProfile.HighInputV1
+            || item.result.phase.profile() == WorkProfile.HighInputV2 {
             compatible_scan_i32(spent.read.scan)
         } else {
             spent.read.scan == 65540
@@ -316,34 +328,9 @@ public flow continuous_work_finish(
             return Err(error);
         }
     };
-    let result = ContinuousResult {
-        phase = "complete",
+    let result = WorkSummary {
+        phase = SummaryState.Complete(SummaryProvenance.generated(item.result.phase.profile(), source)),
         summary = cleaned,
-        source = if item.result.source == "high-input-v2" {
-            source + "-high-input-v2"
-        } else {
-            if item.result.source == "high-input-v1" {
-                source + "-high-input"
-            } else {
-                if item.result.source == "wide-v5" {
-                    source + "-v5"
-                } else {
-                    if item.result.source == "wide-v4" {
-                        source + "-v4"
-                    } else {
-                        if item.result.source == "wide-v3" {
-                            source + "-v3"
-                        } else {
-                            if item.result.source == "wide-v2" || item.result.source == "v2" {
-                                source + "-v2"
-                            } else {
-                                source
-                            }
-                        }
-                    }
-                }
-            }
-        },
         calls = spent.read.calls + spent.edit.calls,
         generation = spent.read.tokens + spent.edit.tokens,
         events = saved
@@ -365,15 +352,13 @@ public flow start_check(binding: string, id: string, digest: string) -> Result<S
         }
     };
     let item = row.value.current;
-    if item.core.id != id || item.result.phase != "complete" || item.check.phase != "planned"
+    if item.core.id != id || !item.result.phase.is_complete() || item.check.phase != CheckState.Planned
         || item.check.digest != digest {
         return Err("planned check missing");
     }
-    let check = ContinuousCheck {
-        phase = "running",
+    let check = ContinuousCheckAttempt {
+        phase = CheckState.Running,
         digest,
-        outcome = "",
-        exit_code = "",
         stdout = "",
         stderr = "",
         stdout_truncated = false,
@@ -388,8 +373,7 @@ public flow finish_check(
     binding: string,
     id: string,
     digest: string,
-    outcome: string,
-    exit_code: string,
+    outcome: CheckOutcome,
     stdout: string,
     stderr: string,
     out_truncated: bool,
@@ -403,7 +387,7 @@ public flow finish_check(
         }
     };
     let item = row.value.current;
-    if item.core.id != id || item.check.phase != "running" || item.check.digest != digest {
+    if item.core.id != id || item.check.phase != CheckState.Running || item.check.digest != digest {
         return Err("running check missing");
     }
     let out = match encode_prefix(stdout, out_truncated, policy) {
@@ -418,11 +402,9 @@ public flow finish_check(
             return Err(error);
         }
     };
-    let check = ContinuousCheck {
-        phase = "complete",
+    let check = ContinuousCheckAttempt {
+        phase = CheckState.Complete(outcome),
         digest,
-        outcome,
-        exit_code,
         stdout = out.value,
         stderr = err.value,
         stdout_truncated = out.truncated,
@@ -445,14 +427,14 @@ public flow continuous_work_abandon(binding: string, id: string) -> Result<bool,
         }
     };
     let item = row.value.current;
-    if item.core.id != id || item.result.phase != "running" || (
-        item.check.phase != "none"
-            && item.check.phase != "planned"
+    if item.core.id != id || !item.result.phase.is_running() || (
+        item.check.phase != CheckState.NotRequested
+            && item.check.phase != CheckState.Planned
     ) {
         return Err("interrupted work identity or phase differs");
     }
     let result = item.result {
-        phase = "abandoned"
+        phase = SummaryState.Abandoned(item.result.phase.profile())
     };
     return match put(row, item {
         result
@@ -474,11 +456,11 @@ public flow abandon_check(binding: string, id: string) -> Result<bool, string> !
         }
     };
     let item = row.value.current;
-    if item.core.id != id || item.result.phase != "complete" || item.check.phase != "running" {
+    if item.core.id != id || !item.result.phase.is_complete() || item.check.phase != CheckState.Running {
         return Err("interrupted check identity or phase differs");
     }
     let check = item.check {
-        phase = "abandoned"
+        phase = CheckState.Abandoned
     };
     return match put(row, item {
         check
@@ -490,7 +472,7 @@ public flow abandon_check(binding: string, id: string) -> Result<bool, string> !
 
 public type NativeHistoryWork = {};
 
-impl NativeHistoryWork ~ CasRows<WorkRecord> {
+impl NativeHistoryWork ~ CasRows<WorkAttempt> {
     flow target(self) -> Target ![] {
         return Target {
             store = ["Rows"],
@@ -500,18 +482,18 @@ impl NativeHistoryWork ~ CasRows<WorkRecord> {
         };
     }
 
-    flow submit(self, value: WorkRecord, condition: WriteCondition) -> Submission ![
+    flow submit(self, value: WorkAttempt, condition: WriteCondition) -> Submission ![
         Memory,
         Error<StorageError>
     ] {
         return submit_native(HistoryWorkRuns.Rows, "work", value, condition);
     }
 
-    flow read(self) -> Result<Option<MemoryEntry<string, WorkRecord>>, string> {
+    flow read(self) -> Result<Option<MemoryEntry<string, WorkAttempt>>, string> {
         return Ok(HistoryWorkRuns.Rows.get_entry("work"));
     }
 
-    flow same(self, left: WorkRecord, right: WorkRecord) -> bool ![] {
+    flow same(self, left: WorkAttempt, right: WorkAttempt) -> bool ![] {
         return left == right;
     }
 }
@@ -552,11 +534,11 @@ public flow chat_available() -> Result<bool, string> {
     return admission_chat_available(NativeHistoryWork {});
 }
 
-public flow inspect() -> Result<Option<WorkRecord>, string> {
+public flow inspect() -> Result<Option<WorkAttempt>, string> {
     return history_work_inspect(NativeHistoryWork {});
 }
 
-flow frame_error(value: RecoverableWorkFrame, policy: Policy, binding: string) -> string {
+flow frame_error(value: WorkSessionFrame, policy: Policy, binding: string) -> string {
     if value.format != 1 || value.policy_binding != binding {
         return "invalid recoverable work format or policy binding";
     }
@@ -564,7 +546,7 @@ flow frame_error(value: RecoverableWorkFrame, policy: Policy, binding: string) -
 }
 
 public flow recoverable_work_store_load(policy: Policy, binding: string) -> Result<
-    Option<MemoryEntry<string, RecoverableWorkFrame>>,
+    Option<MemoryEntry<string, WorkSessionFrame>>,
     string
 > ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
     let row = RecoverableWorks.Rows.get_entry("work");
@@ -584,11 +566,11 @@ public flow recoverable_work_store_load(policy: Policy, binding: string) -> Resu
 }
 
 flow recoverable_work_store_write(
-    value: RecoverableWorkFrame,
-    expected: Option<MemoryEntry<string, RecoverableWorkFrame>>,
+    value: WorkSessionFrame,
+    expected: Option<MemoryEntry<string, WorkSessionFrame>>,
     policy: Policy,
     binding: string
-) -> Result<MemoryEntry<string, RecoverableWorkFrame>, string> ![
+) -> Result<MemoryEntry<string, WorkSessionFrame>, string> ![
     Memory,
     Error<StorageError>,
     Error<IndexError>,
@@ -639,7 +621,7 @@ public flow recoverable_work_store_admit(
     workspace: string,
     path: string,
     request: string,
-    chat: MemoryEntry<string, RecoverableChatFrame>,
+    chat: MemoryEntry<string, ChatSessionSnapshot>,
     policy: Policy,
     binding: string
 ) -> Result<Ticket, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
@@ -675,7 +657,7 @@ public flow recoverable_work_store_admit(
         wide,
         chat.value.chat.format == 18 || chat.value.chat.format == 19
     );
-    let frame = RecoverableWorkFrame {
+    let frame = WorkSessionFrame {
         format = 1,
         policy_binding = binding,
         work = row,
@@ -695,7 +677,7 @@ public flow recoverable_work_store_admit(
 }
 
 flow claimed(ticket: Ticket, policy: Policy, binding: string) -> Result<
-    MemoryEntry<string, RecoverableWorkFrame>,
+    MemoryEntry<string, WorkSessionFrame>,
     string
 > ![
     Memory,
@@ -703,7 +685,8 @@ flow claimed(ticket: Ticket, policy: Policy, binding: string) -> Result<
     Error<IndexError>,
     Error<BudgetExceeded>
 ] {
-    if ticket.frame.work.history_version != ticket.chat.version.opaque || ticket.frame.work.phase != "running" {
+    if ticket.frame.work.history_version != ticket.chat.version.opaque
+        || ticket.frame.work.phase != WorkPhase.Running {
         return Err("recoverable work chat binding changed; no retry");
     }
     let current_chat = match matches_version(ticket.chat.version) {
@@ -741,7 +724,7 @@ public flow recoverable_work_store_finish(
     ticket: Ticket,
     summary: string,
     spent: WorkLedger,
-    records: Array<Event>,
+    records: Array<TraceEvent>,
     policy: Policy,
     binding: string
 ) -> Result<bool, string> ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
@@ -758,7 +741,7 @@ public flow recoverable_work_store_finish(
         }
     };
     let row = completed_record(ticket.frame.work, summary, spent);
-    let frame = RecoverableWorkFrame {
+    let frame = WorkSessionFrame {
         format = 1,
         policy_binding = binding,
         work = row,
@@ -827,7 +810,7 @@ impl FirstPersistence ~ WorkPersistence<ports_Ticket, bool> {
         return self.journal.complete(ticket);
     }
 
-    flow finish(self, edited: bool, summary: Summary, records: Array<Event>) -> Result<bool, string> ![
+    flow finish(self, edited: bool, summary: Summary, records: Array<TraceEvent>) -> Result<bool, string> ![
         Memory,
         Error<StorageError>,
         Error<IndexError>,
@@ -868,7 +851,7 @@ impl RecoverableFirstPersistence ~ WorkPersistence<ports_Ticket, bool> {
         return edit_operation_store_complete(ticket);
     }
 
-    flow finish(self, edited: bool, summary: Summary, records: Array<Event>) -> Result<bool, string> ![
+    flow finish(self, edited: bool, summary: Summary, records: Array<TraceEvent>) -> Result<bool, string> ![
         Memory,
         Error<StorageError>,
         Error<IndexError>,
@@ -907,7 +890,7 @@ impl ContinuousPersistence ~ WorkPersistence<Stored, Stored> {
         return edit_complete(ticket);
     }
 
-    flow finish(self, edited: Stored, summary: Summary, records: Array<Event>) -> Result<bool, string> ![
+    flow finish(self, edited: Stored, summary: Summary, records: Array<TraceEvent>) -> Result<bool, string> ![
         Memory,
         Error<StorageError>,
         Error<IndexError>,
@@ -917,9 +900,9 @@ impl ContinuousPersistence ~ WorkPersistence<Stored, Stored> {
             edited,
             summary.answer,
             if summary.model_generated {
-                "model"
+                SummarySource.Model
             } else {
-                "system"
+                SummarySource.System
             },
             summary.state,
             records,
@@ -933,18 +916,18 @@ impl ContinuousPersistence ~ WorkPersistence<Stored, Stored> {
 
 public type Stored = {
     key: string,
-    value: ContinuousBook,
+    value: ContinuousWorkHistory,
     version: MemoryVersion
 };
 
 public type Ticket = {
-    frame: RecoverableWorkFrame,
+    frame: WorkSessionFrame,
     version: MemoryVersion,
-    chat: MemoryEntry<string, RecoverableChatFrame>
+    chat: MemoryEntry<string, ChatSessionSnapshot>
 };
 
 alias ContinuousBooksSchema = MemoryRegion<{
-    Rows: Store<string, ContinuousBook>
+    Rows: Store<string, ContinuousWorkHistory>
 }>;
 
 public let ContinuousBooks = std.memory.region<ContinuousBooksSchema>(
@@ -953,7 +936,7 @@ public let ContinuousBooks = std.memory.region<ContinuousBooksSchema>(
 );
 
 alias HistoryWorkRunsSchema = MemoryRegion<{
-    Rows: Store<string, WorkRecord>
+    Rows: Store<string, WorkAttempt>
 }>;
 
 public let HistoryWorkRuns = std.memory.region<HistoryWorkRunsSchema>(
@@ -962,7 +945,7 @@ public let HistoryWorkRuns = std.memory.region<HistoryWorkRunsSchema>(
 );
 
 alias RecoverableWorksSchema = MemoryRegion<{
-    Rows: Store<string, RecoverableWorkFrame>
+    Rows: Store<string, WorkSessionFrame>
 }>;
 
 public let RecoverableWorks = std.memory.region<RecoverableWorksSchema>(

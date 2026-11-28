@@ -77,13 +77,44 @@ public flow valid_path(name: string) -> bool {
     );
 }
 
+public enum WorkspaceOutcomeStatus {
+    Complete,
+    Refused,
+    Unsupported,
+    Incomplete,
+    Truncated
+}
+
+impl WorkspaceOutcomeStatus {
+    public flow wire(self) -> string ![] {
+        return match self {
+            WorkspaceOutcomeStatus.Complete => "complete",
+            WorkspaceOutcomeStatus.Refused => "refused",
+            WorkspaceOutcomeStatus.Unsupported => "unsupported",
+            WorkspaceOutcomeStatus.Incomplete => "incomplete",
+            WorkspaceOutcomeStatus.Truncated => "truncated"
+        };
+    }
+
+    public flow parse(raw: string) -> WorkspaceOutcomeStatus ![] {
+        return match raw {
+            "complete" => WorkspaceOutcomeStatus.Complete,
+            "refused" => WorkspaceOutcomeStatus.Refused,
+            "unsupported" => WorkspaceOutcomeStatus.Unsupported,
+            "incomplete" => WorkspaceOutcomeStatus.Incomplete,
+            "truncated" => WorkspaceOutcomeStatus.Truncated,
+            _ => abort("invalid WorkspaceOutcomeStatus spelling: " + raw)
+        };
+    }
+}
+
 public type Outcome = {
-    status: string,
+    status: WorkspaceOutcomeStatus,
     text: string,
     scanned: usize
 };
 
-public flow outcome(status: string, text: string, scanned: usize) -> Outcome {
+public flow outcome(status: WorkspaceOutcomeStatus, text: string, scanned: usize) -> Outcome {
     return Outcome {
         status,
         text,
@@ -95,20 +126,28 @@ public flow outcome(status: string, text: string, scanned: usize) -> Outcome {
 // so a literal marker cannot impersonate LF/CR/TAB. Other controls are refused.
 public flow read_contract_display(result: Outcome) -> Outcome {
     if char_count(result.text) > file_bytes() {
-        return outcome("refused", "result exceeds 1048576 characters", result.scanned);
+        return outcome(WorkspaceOutcomeStatus.Refused, "result exceeds 1048576 characters", result.scanned);
     }
     var checked = replace(result.text, "\n", "");
     checked = replace(checked, "\r", "");
     checked = replace(checked, "\t", "");
     if !text_printable(checked) {
-        return outcome("unsupported", "result contains unsupported terminal characters", result.scanned);
+        return outcome(
+            WorkspaceOutcomeStatus.Unsupported,
+            "result contains unsupported terminal characters",
+            result.scanned
+        );
     }
     var escaped = replace(result.text, "<", "<LT>");
     escaped = replace(escaped, "\n", "<LF>");
     escaped = replace(escaped, "\r", "<CR>");
     escaped = replace(escaped, "\t", "<TAB>");
     if char_count(escaped) > outcome_bytes() {
-        return outcome("refused", "escaped result exceeds 1048576 characters", result.scanned);
+        return outcome(
+            WorkspaceOutcomeStatus.Refused,
+            "escaped result exceeds 1048576 characters",
+            result.scanned
+        );
     }
     return outcome(result.status, escaped, result.scanned);
 }
@@ -119,7 +158,7 @@ public flow read_contract_display(result: Outcome) -> Outcome {
 public flow read_display_display(result: Outcome) -> Outcome {
     if len(result.text) > file_bytes() {
         return outcome(
-            "refused",
+            WorkspaceOutcomeStatus.Refused,
             "result exceeds " + from_usize(file_bytes()) + " UTF-8 bytes",
             result.scanned
         );
@@ -130,13 +169,17 @@ public flow read_display_display(result: Outcome) -> Outcome {
     escaped = replace(escaped, "\t", "%t");
     if len(escaped) > display_bytes() {
         return outcome(
-            "refused",
+            WorkspaceOutcomeStatus.Refused,
             "escaped result exceeds " + from_usize(display_bytes()) + " UTF-8 bytes",
             result.scanned
         );
     }
     if !safe(escaped, display_bytes()) {
-        return outcome("unsupported", "result contains unsupported terminal characters", result.scanned);
+        return outcome(
+            WorkspaceOutcomeStatus.Unsupported,
+            "result contains unsupported terminal characters",
+            result.scanned
+        );
     }
     return outcome(result.status, escaped, result.scanned);
 }

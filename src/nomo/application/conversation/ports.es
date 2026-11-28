@@ -4,12 +4,18 @@ import nomo.application.editing.ports.ChangeOperations;
 import nomo.application.execution.ports.{CommandOperations, ProcessOperations};
 import nomo.application.resources.ProjectRoot;
 import nomo.application.workspace.ports.WorkspaceObservations;
-import nomo.domain.archives.CopyJob;
-import nomo.domain.attempts.Attempt;
-import nomo.domain.changes.{ChangeOutcome, Journal};
+import nomo.domain.archives.ConversationCopy;
+import nomo.domain.attempts.ExecutionAttempt;
+import nomo.domain.changes.{ChangeOutcome, FileJournal};
 import nomo.domain.commands.{CheckOutcome, Command as commands_Command, CommandOutput};
 import nomo.domain.conversation.{Answer, ChatMessage, ModelTurn, SavedSession, Summary};
-import nomo.domain.processes.{ArchivedJob as processes_ArchivedJob, ArchivedOutput as processes_ArchivedOutput, InputResult, Job, JobEvent};
+import nomo.domain.processes.{
+    ArchivedProcessJob as processes_ArchivedJob,
+    ArchivedOutput as processes_ArchivedOutput,
+    InputResult,
+    ProcessJob as ProcessJobRecord,
+    ProcessOutput
+};
 import nomo.domain.settings.{ConfigurationStatus, Settings};
 import nomo.domain.workspace.FileContent;
 import std.effects.Fs;
@@ -27,7 +33,11 @@ public spec ContextProjection {
 }
 
 public spec SavedJobsReader {
-    flow read(self, session: string) -> Array<Job> ![Memory, Error<StorageError>, Error<BudgetExceeded>];
+    flow read(self, session: string) -> Array<ProcessJobRecord> ![
+        Memory,
+        Error<StorageError>,
+        Error<BudgetExceeded>
+    ];
 }
 
 public effect ConversationModel {
@@ -239,28 +249,28 @@ public enum TerminalEvent {
     Welcome,
     Project(string),
     SessionHeader(SavedSession),
-    CopyState(CopyJob),
+    CopyState(ConversationCopy),
     Pending(string),
-    UnresolvedAttempt(Attempt),
+    UnresolvedAttempt(ExecutionAttempt),
     History(ChatMessage),
     MoreHistory(i64),
     Status(SavedSession),
     Git(CommandOutput),
     CommandResult(CommandOutput),
-    ProcessJob(Job),
-    JobRead(JobEvent),
+    ProcessJob(ProcessJobRecord),
+    JobRead(ProcessOutput),
     JobInput(InputResult),
-    JobOutput(Array<JobEvent>),
-    ArchivedJob(processes_ArchivedJob),
+    JobOutput(Array<ProcessOutput>),
+    ArchivedProcessJob(processes_ArchivedJob),
     ArchivedOutput(processes_ArchivedOutput),
     Discovery(CommandOutput),
     File(FileContent),
-    Edit(Journal),
+    Edit(FileJournal),
     EditResult(ChangeOutcome),
-    Copy(CopyJob),
-    UnfinishedCopy(CopyJob),
-    Run(Attempt),
-    Resolved(Attempt),
+    Copy(ConversationCopy),
+    UnfinishedCopy(ConversationCopy),
+    Run(ExecutionAttempt),
+    Resolved(ExecutionAttempt),
     Config(ConfigurationStatus),
     Check(CheckOutcome)
 }

@@ -1,5 +1,6 @@
 module nomo.adapters.filesystem.workspace;
 
+import nomo.domain.workspace.WorkspaceOutcomeStatus;
 import nomo.application.resources.{LaunchRoot, ProjectRoot, ReadOnlyRoot};
 import nomo.application.transfer.ports.ArchiveWorkspace;
 import nomo.application.workspace.ports.{
@@ -380,14 +381,14 @@ flow read_bounded(name: string, bound: usize) -> Outcome ![
     Error<BudgetExceeded>
 ] {
     if !valid_path(name) {
-        return outcome("refused", "invalid relative path", 0);
+        return outcome(WorkspaceOutcomeStatus.Refused, "invalid relative path", 0);
     }
     return handle {
         let bytes = read_bytes_limited(target(name), bound);
         let decoded = utf8_decode(bytes, Strict);
         match decoded {
-            Err(_) => outcome("unsupported", "file is not UTF-8", 0),
-            Ok(text) => outcome("complete", text, len(bytes)),
+            Err(_) => outcome(WorkspaceOutcomeStatus.Unsupported, "file is not UTF-8", 0),
+            Ok(text) => outcome(WorkspaceOutcomeStatus.Complete, text, len(bytes)),
         }
     } with {
         Error<ReadLimitError>.raise(ReadLimitError.LimitExceeded(maximum)) => {
@@ -395,7 +396,7 @@ flow read_bounded(name: string, bound: usize) -> Outcome ![
                 abort("unexpected workspace read limit");
             }
             finish outcome(
-                "refused",
+                WorkspaceOutcomeStatus.Refused,
                 if bound == 16384 {
                     "file exceeds 16384 bytes"
                 } else {
@@ -437,14 +438,14 @@ public flow read_legacy(name: string) -> Outcome ![
 // Do not invent names or mistake a count for the requested named-entry listing.
 public flow list_directory(name: string) -> Outcome {
     if !valid_path(name) {
-        return outcome("refused", "invalid relative path", 0);
+        return outcome(WorkspaceOutcomeStatus.Refused, "invalid relative path", 0);
     }
     let entries = list(target(name));
     if entries.len() > 16 {
-        return outcome("refused", "directory exceeds 16 entries (post-list check)", 0);
+        return outcome(WorkspaceOutcomeStatus.Refused, "directory exceeds 16 entries (post-list check)", 0);
     }
     return outcome(
-        "unsupported",
+        WorkspaceOutcomeStatus.Unsupported,
         "named listing unavailable: opaque WorkspacePath; entries=" + from_usize(entries.len()),
         0
     );
@@ -464,14 +465,14 @@ flow search_with(names: Array<string>, literal: string, maximum: usize) -> Outco
     } else {
         4
     }) {
-        return outcome("refused", "search file count exceeds scope", 0);
+        return outcome(WorkspaceOutcomeStatus.Refused, "search file count exceeds scope", 0);
     }
     if !search_literal(literal) {
-        return outcome("refused", "literal must be 1..65536 safe UTF-8 bytes", 0);
+        return outcome(WorkspaceOutcomeStatus.Refused, "literal must be 1..65536 safe UTF-8 bytes", 0);
     }
     let invalid = candidate_error(names);
     if invalid != "" {
-        return outcome("refused", invalid, 0);
+        return outcome(WorkspaceOutcomeStatus.Refused, invalid, 0);
     }
     var output = TextBuilder.new();
     var output_characters: usize = 0;
@@ -498,7 +499,7 @@ flow search_with(names: Array<string>, literal: string, maximum: usize) -> Outco
             per_file
         };
         let file = read_bounded(name, bound);
-        if file.status != "complete" {
+        if file.status != WorkspaceOutcomeStatus.Complete {
             if maximum != 4194304 {
                 return outcome(file.status, name + ": " + file.text, scanned);
             }
@@ -514,7 +515,7 @@ flow search_with(names: Array<string>, literal: string, maximum: usize) -> Outco
             consumed = consumed + file.scanned;
             let line_limit = file_bytes() + 1;
             if count(file.text, "\n") + 1 > line_limit {
-                return outcome("refused", "file exceeds line limit", scanned);
+                return outcome(WorkspaceOutcomeStatus.Refused, "file exceeds line limit", scanned);
             }
             scanned = scanned + file.scanned;
             @limits([Iterations(1048577)]) for (index, text) in split_iter(file.text, "\n").enumerate() {
@@ -524,9 +525,9 @@ flow search_with(names: Array<string>, literal: string, maximum: usize) -> Outco
                     if matches >= 65536 || output_characters + entry_characters > message_bytes() {
                         return outcome(
                             if maximum == 4194304 {
-                                "incomplete"
+                                WorkspaceOutcomeStatus.Incomplete
                             } else {
-                                "truncated"
+                                WorkspaceOutcomeStatus.Truncated
                             },
                             if maximum == 4194304 {
                                 "match limit reached; partial results\n" + output.build()
@@ -549,7 +550,7 @@ flow search_with(names: Array<string>, literal: string, maximum: usize) -> Outco
     }
     if skipped > 0 || consumed > maximum {
         return outcome(
-            "incomplete",
+            WorkspaceOutcomeStatus.Incomplete,
             (if consumed > maximum {
                 "scan allowance exhausted; "
             } else {
@@ -560,7 +561,7 @@ flow search_with(names: Array<string>, literal: string, maximum: usize) -> Outco
             scanned
         );
     }
-    return outcome("complete", output.build(), scanned);
+    return outcome(WorkspaceOutcomeStatus.Complete, output.build(), scanned);
 }
 
 public flow search_files(names: Array<string>, literal: string) -> Outcome ![
@@ -571,7 +572,7 @@ public flow search_files(names: Array<string>, literal: string) -> Outcome ![
 ] ~ NomoSearch<ReadOnlyRoot> {
     if names.len() > 0 && names[0] == "*" {
         if names.len() > 257 {
-            return outcome("refused", "search file count exceeds scope", 0);
+            return outcome(WorkspaceOutcomeStatus.Refused, "search file count exceeds scope", 0);
         }
         var selected: Array<string> = [];
         var i: usize = 1;

@@ -1,5 +1,10 @@
 module nomo.adapters.cli.followup;
 
+import nomo.adapters.model.work.{HistoryWork, PriorWork};
+import nomo.domain.sessions.chat.{ChatPhase};
+import nomo.domain.sessions.work.{CheckSlot, CheckSummary, SummarySource};
+import nomo.domain.sessions.work.{WorkPhase};
+import nomo.domain.sessions.work.{CheckState};
 import nomo.adapters.cli.console.{TerminalWorkOutput, simple_refused};
 import nomo.adapters.cli.edit_input.{application, parse_recorded};
 import nomo.adapters.cli.editing.{LegacyWorkOutput, TerminalPreview};
@@ -38,10 +43,10 @@ import nomo.adapters.storage.work_history.{EventWorkTimeline, LegacyWorkTimeline
 import nomo.application.editing.ports.{Run, Ticket};
 import nomo.application.editing.workflow.work_controller_execute;
 import nomo.application.resources.{EditableRoot, PolicyRoot, ReadOnlyRoot};
-import nomo.bootstrap.work.{HistoryFollowupStages, HistoryWork, PriorWork};
-import nomo.domain.conversation.Event;
-import nomo.domain.harness.chat.Previous;
-import nomo.domain.sessions.chat.RecoverableChatFrame;
+import nomo.bootstrap.work.{HistoryFollowupStages};
+import nomo.domain.conversation.TraceEvent;
+import nomo.domain.harness.chat.PriorRead;
+import nomo.domain.sessions.chat.ChatSessionSnapshot;
 import nomo.domain.sessions.event_codec.{Policy, event_text_codec_decode};
 import nomo.domain.sessions.work.{CheckOutput, WorkFacts, WorkRequest, selection, summary_source};
 import std.effects.Fs;
@@ -103,10 +108,10 @@ public flow history_followup_run(args: Array<string>) -> i32 ![
     var first_output: Option<CheckOutput> = None();
     match first_check {
         Some(value) => {
-            if value.phase != "complete" {
+            if !value.phase.is_complete() {
                 return refused("first check outcome unresolved");
             }
-            let saved = match load("first", value.id, value.digest) {
+            let saved = match load(CheckSlot.First, value.id, value.digest) {
                 Ok(found) => found,
                 Err(error) => {
                     return refused(error);
@@ -159,21 +164,15 @@ public flow history_followup_run(args: Array<string>) -> i32 ![
     }
     println("RESERVED history-followup; failure or interruption cannot be retried automatically.");
     let checked = match ticket.record.parent.check {
-        Some(value) => value.outcome,
-        None() => "not requested"
-    };
-    let exit = match ticket.record.parent.check {
-        Some(value) => value.exit_code,
-        None() => ""
+        Some(value) => CheckSummary.recorded(value.phase, first_output),
+        None() => CheckSummary.NotRequested
     };
     let prior_work = PriorWork {
         request = ticket.record.parent.work.request,
         summary = ticket.record.parent.work.summary,
-        summary_source = "unknown",
+        summary_source = SummarySource.Unknown,
         selection = None(),
         check = checked,
-        exit_code = exit,
-        output = first_output,
         history = []
     };
     let stages = HistoryFollowupStages {
@@ -226,8 +225,7 @@ flow historical(value: WorkFacts) -> HistoryWork {
         summary = value.summary,
         summary_source = value.summary_source,
         selection = value.selection,
-        check = value.check,
-        exit_code = value.exit_code
+        check = value.check
     };
 }
 
@@ -236,9 +234,9 @@ flow historical(value: WorkFacts) -> HistoryWork {
 flow more(
     input: WorkRequest,
     prior_request: string,
-    previous: Previous,
-    conversation: Array<Event>,
-    chat: MemoryEntry<string, RecoverableChatFrame>,
+    previous: PriorRead,
+    conversation: Array<TraceEvent>,
+    chat: MemoryEntry<string, ChatSessionSnapshot>,
     first_id: string,
     check_digest: string,
     policy: Policy,
@@ -300,8 +298,6 @@ flow more(
         summary_source = latest.summary_source,
         selection = latest.selection,
         check = latest.check,
-        exit_code = latest.exit_code,
-        output = latest.output,
         history
     };
     let ticket = match continuous_work_admit(
@@ -426,7 +422,7 @@ public flow recoverable_history_followup_run(args: Array<string>) -> i32 ![
             return simple_refused(error);
         }
     };
-    if history.value.chat.phase == "running" {
+    if history.value.chat.phase == ChatPhase.Running {
         return simple_refused("chat turn unresolved");
     }
     let first_work = match recoverable_work_store_load(policy, binding) {
@@ -435,7 +431,7 @@ public flow recoverable_history_followup_run(args: Array<string>) -> i32 ![
             return simple_refused("completed first work required");
         }
     };
-    if first_work.value.work.phase != "complete" && first_work.value.work.phase != "abandoned" {
+    if first_work.value.work.phase != WorkPhase.Complete && first_work.value.work.phase != WorkPhase.Abandoned {
         return simple_refused("first work unresolved");
     }
     match followup_load(policy, binding) {
@@ -472,15 +468,15 @@ public flow recoverable_history_followup_run(args: Array<string>) -> i32 ![
         }
     };
     var first_output: Option<CheckOutput> = None();
-    var checked = "not requested";
-    var exit = "";
+    var checked = CheckSummary.NotRequested;
     match first_check {
-        Some(value) => if value.value.check.phase == "abandoned" {
-            checked = "abandoned; outcome unknown";
-        } else if first_work.value.work.phase == "abandoned" && value.value.check.phase == "planned" {
-            checked = "not started after abandoned work";
+        Some(value) => if value.value.check.phase == CheckState.Abandoned {
+            checked = CheckSummary.Abandoned;
+        } else if first_work.value.work.phase == WorkPhase.Abandoned
+            && value.value.check.phase == CheckState.Planned {
+            checked = CheckSummary.NotStartedAfterAbandoned;
         } else {
-            if value.value.check.phase != "complete" {
+            if !value.value.check.phase.is_complete() {
                 return simple_refused("first check outcome unresolved");
             }
             let out = match event_text_codec_decode(value.value.stdout, policy) {
@@ -503,8 +499,7 @@ public flow recoverable_history_followup_run(args: Array<string>) -> i32 ![
                     stderr_truncated = value.value.stderr_truncated
                 }
             );
-            checked = value.value.check.outcome;
-            exit = value.value.check.exit_code;
+            checked = CheckSummary.recorded(value.value.check.phase, first_output);
         },
         None() => (),
     }
@@ -574,20 +569,18 @@ public flow recoverable_history_followup_run(args: Array<string>) -> i32 ![
     let previous = history.value.chat.invocation.prior;
     let prior_work = PriorWork {
         request = first_work.value.work.request,
-        summary = if first_work.value.work.phase == "abandoned" {
+        summary = if first_work.value.work.phase == WorkPhase.Abandoned {
             "User abandoned interrupted work; its effect is unknown. Inspect the file before a new edit."
         } else {
             first_work.value.work.summary
         },
-        summary_source = if first_work.value.work.phase == "abandoned" {
-            "system"
+        summary_source = if first_work.value.work.phase == WorkPhase.Abandoned {
+            SummarySource.System
         } else {
             origin
         },
         selection = chosen,
         check = checked,
-        exit_code = exit,
-        output = first_output,
         history = []
     };
     let wide = ticket.frame.work.format == 3 || ticket.frame.work.format == 4 || ticket.frame.work.format == 6
@@ -663,7 +656,7 @@ public flow abandon(args: Array<string>) -> i32 ![
         }
     };
     let result = match extra {
-        Some(item) => if item.value.current.result.phase == "complete" {
+        Some(item) => if item.value.current.result.phase.is_complete() {
             abandon_check(args[0], args[1])
         } else {
             continuous_work_abandon(args[0], args[1])
@@ -675,7 +668,7 @@ public flow abandon(args: Array<string>) -> i32 ![
                     return simple_refused("interrupted followup missing");
                 }
             };
-            if work.value.work.phase == "complete" {
+            if work.value.work.phase == WorkPhase.Complete {
                 followup_checks_abandon(args[1], policy, args[0])
             } else {
                 followup_abandon(args[1], policy, args[0])

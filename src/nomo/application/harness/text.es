@@ -1,7 +1,10 @@
 module nomo.application.harness.text;
 
+import nomo.domain.conversation.{TraceKind, TraceRole};
+import nomo.domain.harness.delegation.{DelegationStatus, Reply};
+import nomo.domain.harness.read.{TextStage};
 import nomo.application.harness.ports.{Context, ConversationOutput, ModelText, TextDelegationOutput, TextDelegationStages};
-import nomo.domain.conversation.{Event, State, TextTurn, add, capacity_error, charge, stop};
+import nomo.domain.conversation.{TraceEvent, TraceState, TextTurn, add, capacity_error, charge, stop};
 import nomo.domain.harness.delegation.{ChildResult, ChildTask, child_error as delegation_child_error, dispatch, fixed_refusal, next, safe_text};
 import nomo.domain.harness.read.{
     ChildTask as read_ChildTask,
@@ -25,7 +28,7 @@ flow refused(task: ChildTask, used: i32, text: string) -> ChildResult {
     };
     return ChildResult {
         id = task.id,
-        status = "refused",
+        status = DelegationStatus.Refused,
         text = safe,
         used
     };
@@ -38,16 +41,16 @@ public flow harness_child_run(task: ChildTask) -> ChildResult {
     if invalid != "" {
         return ChildResult {
             id = task.id,
-            status = "refused",
+            status = DelegationStatus.Refused,
             text = invalid,
             used = 0
         };
     }
-    var history: Array<Event> = [];
+    var history: Array<TraceEvent> = [];
     @limits([Iterations(4)]) for text in task.context {
-        history = history.push(Event {
-            role = "user",
-            kind = "input",
+        history = history.push(TraceEvent {
+            role = TraceRole.User,
+            kind = TraceKind.Input,
             name = "",
             text
         });
@@ -59,32 +62,35 @@ public flow harness_child_run(task: ChildTask) -> ChildResult {
     @limits([Iterations(3)]) while used < task.allowance {
         used = used + 1;
         let reply = next(request, history, has_result, result);
-        if reply.kind == "error" {
-            return refused(task, used, reply.text);
-        }
-        if reply.kind == "final" {
-            if !safe_text(reply.text, 1152) {
-                return refused(task, used, "invalid child output");
-            }
-            return ChildResult {
-                id = task.id,
-                status = "completed",
-                text = reply.text,
-                used
-            };
-        }
-        if reply.kind != "tool" || has_result {
+        let (tool, text) = match reply {
+            Reply.Error(text) => {
+                return refused(task, used, text);
+            },
+            Reply.Final(text) => {
+                if !safe_text(text, 1152) {
+                    return refused(task, used, "invalid child output");
+                }
+                return ChildResult {
+                    id = task.id,
+                    status = DelegationStatus.Completed,
+                    text,
+                    used
+                };
+            },
+            Reply.Tool(tool, text) => (tool, text)
+        };
+        if has_result {
             return refused(task, used, "invalid stub response");
         }
         // Refuse an unpermitted selection before dispatch and its second charge.
-        if reply.tool != "echo" {
+        if tool.name != "echo" {
             return refused(task, used, "unknown tool");
         }
         if used >= task.allowance {
             return refused(task, used, "child step limit exhausted");
         }
         used = used + 1;
-        let outcome = dispatch(reply.tool, reply.text);
+        let outcome = dispatch(tool, text);
         if !outcome.ok {
             return refused(task, used, outcome.text);
         }
@@ -105,7 +111,7 @@ public flow text_delegation_run(request: string) -> i32 {
         );
     }
     let plan_context = TextContext {
-        phase = "plan",
+        phase = TextStage.Plan,
         request,
         task = "",
         result = ""
@@ -120,7 +126,7 @@ public flow text_delegation_run(request: string) -> i32 {
             return perform TextDelegationOutput.refused(state, error);
         }
     };
-    perform TextDelegationOutput.precharged("plan", state);
+    perform TextDelegationOutput.precharged(TextStage.Plan, state);
     let raw_plan = perform TextDelegationStages.main(plan_context);
     let task = match text_decode_plan(raw_plan) {
         Ok(value) => value,
@@ -142,7 +148,7 @@ public flow text_delegation_run(request: string) -> i32 {
     };
     perform TextDelegationOutput.line("EVENT main -> " + child.id + " request " + child.id + ": " + child.task);
     let child_context = TextContext {
-        phase = "child",
+        phase = TextStage.Child,
         request = child.request,
         task = child.task,
         result = ""
@@ -157,7 +163,7 @@ public flow text_delegation_run(request: string) -> i32 {
             return perform TextDelegationOutput.refused(state, error);
         }
     };
-    perform TextDelegationOutput.precharged("child", state);
+    perform TextDelegationOutput.precharged(TextStage.Child, state);
     let result = perform TextDelegationStages.child(child_context);
     if !bounded(result, message_bytes()) {
         return perform TextDelegationOutput.refused(state, "invalid bounded child result");
@@ -171,7 +177,7 @@ public flow text_delegation_run(request: string) -> i32 {
     };
     perform TextDelegationOutput.line("EVENT main -> main consume " + child.id + ": " + result);
     let aggregate_context = TextContext {
-        phase = "aggregate",
+        phase = TextStage.Aggregate,
         request,
         task = child.task,
         result
@@ -186,7 +192,7 @@ public flow text_delegation_run(request: string) -> i32 {
             return perform TextDelegationOutput.refused(state, error);
         }
     };
-    perform TextDelegationOutput.precharged("aggregate", state);
+    perform TextDelegationOutput.precharged(TextStage.Aggregate, state);
     let answer = perform TextDelegationStages.main(aggregate_context);
     if !bounded(answer, message_bytes()) {
         return perform TextDelegationOutput.refused(state, "invalid bounded final answer");
@@ -196,8 +202,8 @@ public flow text_delegation_run(request: string) -> i32 {
     return 0;
 }
 
-public flow emit(state: State, role: string, kind: string, name: string, text: string) -> State {
-    let event = Event {
+public flow emit(state: TraceState, role: TraceRole, kind: TraceKind, name: string, text: string) -> TraceState {
+    let event = TraceEvent {
         role,
         kind,
         name,
@@ -208,14 +214,14 @@ public flow emit(state: State, role: string, kind: string, name: string, text: s
     return updated;
 }
 
-public flow failure(state: State, message: string, status: i32) -> TextTurn {
+public flow failure(state: TraceState, message: string, status: i32) -> TextTurn {
     return TextTurn {
-        state = emit(state, "error", "error", "", message),
+        state = emit(state, TraceRole.Error, TraceKind.Error, "", message),
         status
     };
 }
 
-public flow reject(state: State, message: string) -> TextTurn {
+public flow reject(state: TraceState, message: string) -> TextTurn {
     let full = capacity_error(state, 1, 64);
     if full != "" {
         return failure(stop(state), full, 4);
@@ -223,7 +229,7 @@ public flow reject(state: State, message: string) -> TextTurn {
     return failure(state, message, 2);
 }
 
-public flow model_turn_controller(raw: string, maximum: i32, budget: i32, previous: State) -> TextTurn {
+public flow model_turn_controller(raw: string, maximum: i32, budget: i32, previous: TraceState) -> TextTurn {
     if previous.stopped {
         return TextTurn {
             state = previous,
@@ -244,7 +250,7 @@ public flow model_turn_controller(raw: string, maximum: i32, budget: i32, previo
     if 2 * (previous.characters + char_count(request)) + 128 * previous.events.len() + 256 > context_bytes() {
         return reject(previous, "model context capacity exhausted");
     }
-    var state = emit(previous, "user", "input", "", request);
+    var state = emit(previous, TraceRole.User, TraceKind.Input, "", request);
     if maximum < 1 {
         return failure(state, "step limit exhausted", 4);
     }
@@ -256,7 +262,7 @@ public flow model_turn_controller(raw: string, maximum: i32, budget: i32, previo
         return failure(state, "model token reservation exhausted", 4);
     }
     state = charge(state);
-    state = emit(state, "model", "text", "qwen", "");
+    state = emit(state, TraceRole.Model, TraceKind.Text, "qwen", "");
     let response = perform ModelText.infer(Context {
         history = previous.events,
         request
@@ -272,12 +278,12 @@ public flow model_turn_controller(raw: string, maximum: i32, budget: i32, previo
         return failure(state, "model output must be printable ASCII single-line text", 3);
     }
     return TextTurn {
-        state = emit(state, "assistant", "final", "", text),
+        state = emit(state, TraceRole.Assistant, TraceKind.Final, "", text),
         status = 0
     };
 }
 
-public flow turn_controller(raw: string, maximum: i32, budget: i32, previous: State) -> TextTurn {
+public flow turn_controller(raw: string, maximum: i32, budget: i32, previous: TraceState) -> TextTurn {
     if previous.stopped {
         return TextTurn {
             state = previous,
@@ -299,7 +305,7 @@ public flow turn_controller(raw: string, maximum: i32, budget: i32, previous: St
     if full != "" {
         return failure(stop(previous), full, 4);
     }
-    var state = emit(previous, "user", "input", "", request);
+    var state = emit(previous, TraceRole.User, TraceKind.Input, "", request);
     var used: i32 = 0;
     var has_result = false;
     var result = "";
@@ -310,19 +316,19 @@ public flow turn_controller(raw: string, maximum: i32, budget: i32, previous: St
         used = used + 1;
         state = charge(state);
         let reply = next(request, previous.events, has_result, result);
-        if reply.kind == "error" {
-            return failure(state, reply.text, 3);
-        }
-        if reply.kind == "final" {
-            return TextTurn {
-                state = emit(state, "assistant", "final", "", reply.text),
-                status = 0
-            };
-        }
-        if reply.kind != "tool" {
-            return failure(state, "invalid stub response", 3);
-        }
-        state = emit(state, "model", "request", reply.tool, reply.text);
+        let (tool, text) = match reply {
+            Reply.Error(text) => {
+                return failure(state, text, 3);
+            },
+            Reply.Final(text) => {
+                return TextTurn {
+                    state = emit(state, TraceRole.Assistant, TraceKind.Final, "", text),
+                    status = 0
+                };
+            },
+            Reply.Tool(tool, text) => (tool, text)
+        };
+        state = emit(state, TraceRole.Model, TraceKind.Request, tool.name, text);
         if used >= maximum {
             return failure(state, "step limit exhausted", 4);
         }
@@ -331,14 +337,14 @@ public flow turn_controller(raw: string, maximum: i32, budget: i32, previous: St
         }
         used = used + 1;
         state = charge(state);
-        let output = dispatch(reply.tool, reply.text);
+        let output = dispatch(tool, text);
         if !output.ok {
             return TextTurn {
-                state = emit(state, "tool", "error", reply.tool, output.text),
+                state = emit(state, TraceRole.Tool, TraceKind.Error, tool.name, output.text),
                 status = 3
             };
         }
-        state = emit(state, "tool", "complete", reply.tool, output.text);
+        state = emit(state, TraceRole.Tool, TraceKind.Complete, tool.name, output.text);
         result = output.text;
         has_result = true;
     }

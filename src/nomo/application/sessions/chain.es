@@ -8,7 +8,7 @@ import nomo.domain.sessions.chain.{
     CapturedShow,
     ObservationPass,
     ObservedRow,
-    Record,
+    WorkChain,
     Selector,
     Snapshot,
     TurnRequest,
@@ -29,7 +29,7 @@ public spec SnapshotCapture: callable ObservationPass => Result<Snapshot, string
     Error<IndexError>
 ];
 
-public spec InspectAuthority: callable (string, string, string) => Result<Option<Record>, string> ![
+public spec InspectAuthority: callable (string, string, string) => Result<Option<WorkChain>, string> ![
     Memory,
     Error<StorageError>,
     Error<IndexError>,

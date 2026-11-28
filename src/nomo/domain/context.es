@@ -1,6 +1,7 @@
 module nomo.domain.context;
 
-import nomo.domain.conversation.{Event, ModelTurn};
+import nomo.domain.conversation.{TraceKind, TraceRole};
+import nomo.domain.conversation.{TraceEvent, ModelTurn};
 import nomo.domain.harness.loop.{Context, bounded_context_error};
 import nomo.domain.limits.{context_bytes, message_bytes};
 import nomo.domain.settings.{as_number, effective_window, estimated_tokens};
@@ -160,11 +161,11 @@ flow optional(policy: EventPolicy) -> bool {
     };
 }
 
-flow protected(event: Event) -> bool {
-    return event.role == "tool" || (event.role == "user" && (
-        event.kind == "context"
-            || event.kind == "input"
-    )) || (event.role == "assistant" && event.kind == "final");
+flow protected(event: TraceEvent) -> bool {
+    return event.role == TraceRole.Tool || (event.role == TraceRole.User && (
+        event.kind == TraceKind.Context
+            || event.kind == TraceKind.Input
+    )) || (event.role == TraceRole.Assistant && event.kind == TraceKind.Final);
 }
 
 // Reproject from the original history so optional trials cannot reorder events.

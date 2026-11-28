@@ -1,5 +1,12 @@
 module nomo.application.harness.read;
 
+import nomo.domain.harness.chat.ReservationStage;
+
+import nomo.domain.conversation.{TraceKind, TraceRole};
+import nomo.domain.workspace.WorkspaceOutcomeStatus;
+import nomo.domain.harness.loop.{ReadOperation, tool_name};
+import nomo.domain.harness.read.{ReadStage};
+import nomo.domain.harness.loop.{Action, ReadAction};
 import nomo.application.harness.ports.{
     ChildLoopPolicy,
     ConversationOutput,
@@ -20,7 +27,7 @@ import nomo.application.harness.ports.{
 import nomo.application.harness.text.{emit, failure};
 import nomo.application.workspace.ports.ReadTools;
 import nomo.domain.context.{EventPolicy, SelectionRefusal, select};
-import nomo.domain.conversation.{Event, State, add, capacity_error, charge, stop};
+import nomo.domain.conversation.{TraceEvent, TraceState, add, capacity_error, charge, stop};
 import nomo.domain.harness.loop.{
     Context,
     Limits,
@@ -327,7 +334,7 @@ flow reserve(state: Session, limits: Limits, tool: bool) -> Result<Session, stri
     return Ok(charge_action(state, tool, limits));
 }
 
-public flow history(session: Session, state: State) -> Session {
+public flow history(session: Session, state: TraceState) -> Session {
     return session {
         history = state
     };
@@ -351,10 +358,10 @@ public flow bounded_model_context(input: Context, maximum: usize) -> Result<Cont
     var policies: Array<EventPolicy> = [];
     @limits([Iterations(32)]) for event in input.history {
         var policy = EventPolicy.Required;
-        if event.role == "model" && event.kind == "text" {
+        if event.role == TraceRole.Model && event.kind == TraceKind.Text {
             policy = EventPolicy.Optional;
         }
-        if event.role == "user" && event.kind == "input" {
+        if event.role == TraceRole.User && event.kind == TraceKind.Input {
             policy = EventPolicy.Task;
         }
         policies = policies.push(policy);
@@ -407,13 +414,13 @@ flow tool_failure(result: Outcome) -> string {
     if contains(result.text, "file exceeds remaining scan allowance") {
         return "scan allowance";
     }
-    if result.status == "truncated" {
+    if result.status == WorkspaceOutcomeStatus.Truncated {
         return "match limit";
     }
-    return if result.status == "unsupported" {
+    return if result.status == WorkspaceOutcomeStatus.Unsupported {
         "unsupported output"
     } else {
-        if result.status == "refused" {
+        if result.status == WorkspaceOutcomeStatus.Refused {
             "refused input or limit"
         } else {
             "invalid tool outcome"
@@ -449,7 +456,7 @@ flow run_policy<P ~ ChildLoopPolicy, D ~ ToolActionDecoder>(
     if paths != "" {
         return read_tool_controller_failed(previous, paths, 2);
     }
-    var session = history(previous, emit(previous.history, "user", "input", "", raw));
+    var session = history(previous, emit(previous.history, TraceRole.User, TraceKind.Input, "", raw));
     var calls: usize = 0;
     var tools: usize = 0;
     @limits([Iterations(4)]) while calls < shape.calls {
@@ -479,7 +486,7 @@ flow run_policy<P ~ ChildLoopPolicy, D ~ ToolActionDecoder>(
                 return read_tool_controller_failed(session, error, 4);
             }
         };
-        session = history(session, emit(session.history, "model", "text", "qwen", ""));
+        session = history(session, emit(session.history, TraceRole.Model, TraceKind.Text, "qwen", ""));
         calls = calls + 1;
         let phase = if final_only {
             "read-child-final"
@@ -506,7 +513,7 @@ flow run_policy<P ~ ChildLoopPolicy, D ~ ToolActionDecoder>(
                 )
             );
         }
-        let action = match decoder.decode(response, allowed, final_only) {
+        let decoded_action = match decoder.decode(response, allowed, final_only) {
             Ok(value) => value,
             Err(error) => {
                 let diagnostic = decoder.diagnostic(response, error, final_only);
@@ -516,13 +523,19 @@ flow run_policy<P ~ ChildLoopPolicy, D ~ ToolActionDecoder>(
                 return read_tool_controller_failed(session, error, 3);
             }
         };
-        if action.operation == "final" {
-            return LoopTurn {
-                state = history(session, emit(session.history, "assistant", "final", "", action.text)),
-                status = 0
-            };
-        }
-        if action.operation == "search" && action.files[0] == "*" && !shape.whole_scope {
+        let action = match decoded_action {
+            Action.Final(text) => {
+                return LoopTurn {
+                    state = history(
+                        session,
+                        emit(session.history, TraceRole.Assistant, TraceKind.Final, "", text)
+                    ),
+                    status = 0
+                };
+            },
+            Action.Tool(selected) => selected
+        };
+        if action.operation() == ReadOperation.Search && action.files()[0] == "*" && !shape.whole_scope {
             return read_tool_controller_failed(
                 session,
                 "whole-scope search requires a multi-step reservation",
@@ -537,7 +550,13 @@ flow run_policy<P ~ ChildLoopPolicy, D ~ ToolActionDecoder>(
         }
         session = history(
             session,
-            emit(session.history, "model", "request", action.operation, decoder.record(response))
+            emit(
+                session.history,
+                TraceRole.Model,
+                TraceKind.Request,
+                action.operation().wire(),
+                decoder.record(response)
+            )
         );
         session = match policy.reserve_tool(session) {
             Ok(value) => value,
@@ -547,33 +566,40 @@ flow run_policy<P ~ ChildLoopPolicy, D ~ ToolActionDecoder>(
         };
         tools = tools + 1;
         perform HarnessProgress.write("CHILD STAGE tool");
-        var files = action.files;
-        if action.operation == "search" && files[0] == "*" {
+        var files = action.files();
+        if action.operation() == ReadOperation.Search && files[0] == "*" {
             files = files.extend(allowed);
         }
-        var result = if action.operation == "read" {
-            read_display_display(perform ReadTools.read(files[0]))
-        } else {
-            read_display_display(perform ReadTools.search(files, action.literal))
+        var result = match action {
+            ReadAction.Read(path) => read_display_display(perform ReadTools.read(path)),
+            ReadAction.Search(literal, _) => read_display_display(perform ReadTools.search(files, literal))
         };
         if shape.legacy_text {
             if char_count(result.text) > outcome_bytes() {
-                result = outcome("refused", "tool result exceeds 2097176 display characters", result.scanned);
+                result = outcome(
+                    WorkspaceOutcomeStatus.Refused,
+                    "tool result exceeds 2097176 display characters",
+                    result.scanned
+                );
             }
         } else if !safe(result.text, shape.result_characters) {
-            result = outcome("refused", "tool result exceeds large-context display bound", result.scanned);
+            result = outcome(
+                WorkspaceOutcomeStatus.Refused,
+                "tool result exceeds large-context display bound",
+                result.scanned
+            );
         }
-        if result.status == "incomplete" {
+        if result.status == WorkspaceOutcomeStatus.Incomplete {
             perform DiagnosticOutput.write("Search incomplete: results are partial; some candidates were skipped or the match limit was reached.");
         }
-        let complete = result.status == "complete" || (
-            shape.partial_search && action.operation == "search"
-                && result.status == "incomplete"
+        let complete = result.status == WorkspaceOutcomeStatus.Complete || (
+            shape.partial_search && action.operation() == ReadOperation.Search
+                && result.status == WorkspaceOutcomeStatus.Incomplete
         );
         if !complete {
             if shape.partial_search {
                 perform DiagnosticOutput.write(
-                    "CHILD TOOL FAILURE operation=" + action.operation
+                    "CHILD TOOL FAILURE operation=" + action.operation().wire()
                         + " category=" + tool_failure(result)
                 );
             }
@@ -582,10 +608,10 @@ flow run_policy<P ~ ChildLoopPolicy, D ~ ToolActionDecoder>(
                     session,
                     emit(
                         session.history,
-                        "tool",
-                        "error",
-                        action.operation,
-                        result.status + ": " + result.text
+                        TraceRole.Tool,
+                        TraceKind.Error,
+                        action.operation().wire(),
+                        result.status.wire() + ": " + result.text
                     )
                 ),
                 status = 3
@@ -593,7 +619,13 @@ flow run_policy<P ~ ChildLoopPolicy, D ~ ToolActionDecoder>(
         }
         session = history(
             session,
-            emit(session.history, "tool", "complete", action.operation, result.status + ": " + result.text)
+            emit(
+                session.history,
+                TraceRole.Tool,
+                TraceKind.Complete,
+                action.operation().wire(),
+                result.status.wire() + ": " + result.text
+            )
         );
     }
     return read_tool_controller_failed(session, "child model reservation exhausted", 4);
@@ -655,11 +687,11 @@ public flow run_context_policy<
         return read_controller_failed(state, invalid_allowed, true);
     }
     let plan = ReadContext {
-        phase = "plan",
+        phase = ReadStage.Plan,
         request,
         task = "",
         result = "",
-        tool = "",
+        tool = None(),
         outcome = "",
         allowed
     };
@@ -673,7 +705,7 @@ public flow run_context_policy<
             return read_controller_failed(state, error, true);
         }
     };
-    @limits([Iterations(2)]) for line in policy.progress("plan", state, prefix) {
+    @limits([Iterations(2)]) for line in policy.progress(ReservationStage.Plan, state, prefix) {
         perform HarnessProgress.write(line);
     }
     let raw = perform LegacyStringStages.main(plan);
@@ -710,14 +742,14 @@ public flow run_context_policy<
     let empty = fresh_loop();
     let selected = add(
         empty.history,
-        Event {
-            role = "user",
-            kind = "context",
+        TraceEvent {
+            role = TraceRole.User,
+            kind = TraceKind.Context,
             name = "original",
             text = request
         }
     );
-    @limits([Iterations(2)]) for line in policy.progress("child", state, prefix) {
+    @limits([Iterations(2)]) for line in policy.progress(ReservationStage.Child, state, prefix) {
         perform HarnessProgress.write(line);
     }
     let child = perform LegacyStringStages.child(task, allowed, selected);
@@ -758,11 +790,14 @@ public flow run_context_policy<
         }
     };
     perform HarnessProgress.write("EVENT main -> main consume child-1: " + observed.result);
-    if observed.tool != "" {
-        perform HarnessProgress.write("EVENT main -> main tool " + observed.tool + ": " + observed.outcome);
+    if observed.tool != None() {
+        perform HarnessProgress.write(
+            "EVENT main -> main tool " + tool_name(observed.tool) + ": "
+                + observed.outcome
+        );
     }
     let aggregate = ReadContext {
-        phase = "aggregate",
+        phase = ReadStage.Aggregate,
         request,
         task,
         result = observed.result,
@@ -780,7 +815,7 @@ public flow run_context_policy<
             return read_controller_failed(state, error, true);
         }
     };
-    @limits([Iterations(2)]) for line in policy.progress("aggregate", state, prefix) {
+    @limits([Iterations(2)]) for line in policy.progress(ReservationStage.Aggregate, state, prefix) {
         perform HarnessProgress.write(line);
     }
     let answer = perform LegacyStringStages.main(aggregate);
@@ -806,7 +841,7 @@ public flow run_context_policy<
 }
 
 public flow stage(
-    phase: string,
+    phase: ReservationStage,
     state: ReadLedger,
     prefix: string,
     expanded: bool,
@@ -815,31 +850,31 @@ public flow stage(
     scan: i32
 ) -> Array<string> {
     let steps: i32 = match phase {
-        "plan" => 6,
-        "child" => 5,
-        _ => 0
+        ReservationStage.Plan => 6,
+        ReservationStage.Child => 5,
+        ReservationStage.Aggregate => 0
     };
-    let calls = if phase == "aggregate" {
+    let calls = if phase == ReservationStage.Aggregate {
         0
     } else {
         3
     };
-    let tools = if phase == "aggregate" {
+    let tools = if phase == ReservationStage.Aggregate {
         0
     } else {
         1
     };
     var lines = [
-        "STAGE " + prefix + phase + " child-1 " + numbers(state) + " reserved_steps=" + from_i32(steps)
+        "STAGE " + prefix + phase.wire() + " child-1 " + numbers(state) + " reserved_steps=" + from_i32(steps)
             + " reserved_calls=" + from_i32(calls) + " reserved_tokens=" + from_i32(
             if high_input
-                && phase != "aggregate" {
+                && phase != ReservationStage.Aggregate {
                 393216
             } else {
-                if wide && phase != "aggregate" {
+                if wide && phase != ReservationStage.Aggregate {
                     139264
                 } else {
-                    if expanded && phase != "aggregate" {
+                    if expanded && phase != ReservationStage.Aggregate {
                         10240
                     } else {
                         calls * 2048
@@ -848,7 +883,7 @@ public flow stage(
             }
         ) + " reserved_tools=" + from_i32(tools) + " reserved_scan=" + from_i32(tools * scan)
     ];
-    if phase == "child" {
+    if phase == ReservationStage.Child {
         lines = lines.push(if high_input {
             "RESERVATION child-1 steps=3 calls=2 tokens=262144 tools=1 scan=" + from_i32(scan_i32())
                 + " tail_steps=2 tail_calls=1 tail_tokens=131072 unresolved=true"
@@ -987,7 +1022,7 @@ impl UnicodeContext ~ ReadContextBudget {
 }
 
 impl UnicodeContext ~ ReadContextProgress {
-    flow progress(self, phase: string, state: ReadLedger, prefix: string) -> Array<string> ![] {
+    flow progress(self, phase: ReservationStage, state: ReadLedger, prefix: string) -> Array<string> ![] {
         return stage(
             phase,
             state,
@@ -1078,7 +1113,7 @@ impl AsciiContext ~ ReadContextBudget {
 }
 
 impl AsciiContext ~ ReadContextProgress {
-    flow progress(self, phase: string, state: ReadLedger, prefix: string) -> Array<string> ![] {
+    flow progress(self, phase: ReservationStage, state: ReadLedger, prefix: string) -> Array<string> ![] {
         return stage(phase, state, prefix, false, false, false, 4096);
     }
 }

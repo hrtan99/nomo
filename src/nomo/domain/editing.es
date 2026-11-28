@@ -1,5 +1,7 @@
 module nomo.domain.editing;
 
+import nomo.domain.wire.{value as json_value, fields as json_fields};
+import std.json.JsonValue;
 import nomo.domain.limits.{file_bytes, message_bytes};
 import nomo.domain.text.{hex_digest, text_printable};
 import nomo.domain.wire.{digest, json, json_scalar_width};
@@ -645,8 +647,8 @@ public flow binding_error(value: Binding) -> string {
     return "";
 }
 
-public flow record_error(value: EditOperation) -> string {
-    if value.format != 1 || (value.phase != "intent" && value.phase != "completed") {
+public flow record_error(value: LiteralEditRecord) -> string {
+    if value.format != 1 {
         return "invalid edit operation format or phase";
     }
     return binding_error(value.binding);
@@ -659,7 +661,7 @@ public flow same_binding(left: Binding, right: Binding) -> bool {
         && left.before_bytes == right.before_bytes && left.after_bytes == right.after_bytes;
 }
 
-public flow same_record(left: EditOperation, right: EditOperation) -> bool {
+public flow same_record(left: LiteralEditRecord, right: LiteralEditRecord) -> bool {
     return left.format == right.format && left.phase == right.phase
         && same_binding(left.binding, right.binding);
 }
@@ -676,8 +678,34 @@ public type Binding = {
     after_bytes: usize
 };
 
-public type EditOperation = {
+public type LiteralEditRecord = {
     format: i32,
-    phase: string,
+    phase: LiteralEditPhase,
     binding: Binding
 };
+
+public enum LiteralEditPhase {
+    Intent,
+    Completed
+}
+
+impl LiteralEditPhase {
+    public flow wire(self) -> string ![] {
+        return match self {
+            LiteralEditPhase.Intent => "intent",
+            LiteralEditPhase.Completed => "completed"
+        };
+    }
+
+    public flow parse(raw: string) -> LiteralEditPhase ![] {
+        return match raw {
+            "intent" => LiteralEditPhase.Intent,
+            "completed" => LiteralEditPhase.Completed,
+            _ => abort("invalid LiteralEditPhase spelling: " + raw)
+        };
+    }
+}
+
+public flow wire_literal_edit(input: LiteralEditRecord) -> JsonValue ![] {
+    return json_fields(json_value(input), [("phase", JsonValue.String(input.phase.wire()))]);
+}

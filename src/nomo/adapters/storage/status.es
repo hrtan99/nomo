@@ -8,22 +8,22 @@ import nomo.adapters.storage.followup.{inspect as followup_inspect, load as foll
 import nomo.adapters.storage.followup_checks.{inspect as followup_checks_inspect, load as followup_checks_load};
 import nomo.adapters.storage.work_admission.{Stored, continuous_work_load, inspect, recoverable_work_store_load};
 import nomo.application.sessions.ports.{Entry, SessionStatusReader};
-import nomo.domain.editing.EditOperation;
-import nomo.domain.sessions.chain.RecoveryDecision;
-import nomo.domain.sessions.chat.RecoverableChatFrame;
+import nomo.domain.editing.LiteralEditRecord;
+import nomo.domain.sessions.chain.RecordedRecovery;
+import nomo.domain.sessions.chat.ChatSessionSnapshot;
 import nomo.domain.sessions.event_codec.Policy;
-import nomo.domain.sessions.work.{CheckFrame, CheckRecord, FollowupRecord, RecoverableFollowupFrame, RecoverableWorkFrame, WorkRecord};
+import nomo.domain.sessions.work.{CapturedCheckAttempt, CheckAttempt, FollowupAttempt, FollowupSessionFrame, WorkSessionFrame, WorkAttempt};
 import std.memory.MemoryEntry;
 
 public type LegacyStatus = {
     chat: Entry,
-    work: Option<WorkRecord>,
-    work_edit: Option<EditOperation>,
-    check: Option<CheckRecord>,
-    followup: Option<FollowupRecord>,
-    followup_edit: Option<EditOperation>,
-    followup_check: Option<CheckRecord>,
-    decisions: Array<RecoveryDecision>
+    work: Option<WorkAttempt>,
+    work_edit: Option<LiteralEditRecord>,
+    check: Option<CheckAttempt>,
+    followup: Option<FollowupAttempt>,
+    followup_edit: Option<LiteralEditRecord>,
+    followup_check: Option<CheckAttempt>,
+    decisions: Array<RecordedRecovery>
 };
 
 public type LegacySessionStatusReader = {};
@@ -45,7 +45,7 @@ impl LegacySessionStatusReader ~ SessionStatusReader<LegacyStatus> {
                 return Err(error);
             }
         };
-        var work_edit: Option<EditOperation> = None();
+        var work_edit: Option<LiteralEditRecord> = None();
         match work {
             Some(value) => {
                 work_edit = match edit_operation_store_inspect(value.id, value.workspace, value.path) {
@@ -69,7 +69,7 @@ impl LegacySessionStatusReader ~ SessionStatusReader<LegacyStatus> {
                 return Err(error);
             }
         };
-        var followup_edit: Option<EditOperation> = None();
+        var followup_edit: Option<LiteralEditRecord> = None();
         match followup {
             Some(value) => {
                 followup_edit = match history_followup_edit_store_inspect(
@@ -91,7 +91,7 @@ impl LegacySessionStatusReader ~ SessionStatusReader<LegacyStatus> {
                 return Err(error);
             }
         };
-        var decisions: Array<RecoveryDecision> = [];
+        var decisions: Array<RecordedRecovery> = [];
         @limits([Iterations(4)]) for target in ["work", "check", "followup", "followup-check"] {
             let decision = match get(target) {
                 Ok(value) => value,
@@ -121,13 +121,13 @@ impl LegacySessionStatusReader ~ SessionStatusReader<LegacyStatus> {
     }
 }
 
-public alias ChatEntry = MemoryEntry<string, RecoverableChatFrame>;
+public alias ChatEntry = MemoryEntry<string, ChatSessionSnapshot>;
 
-public alias WorkEntry = MemoryEntry<string, RecoverableWorkFrame>;
+public alias WorkEntry = MemoryEntry<string, WorkSessionFrame>;
 
-public alias CheckEntry = MemoryEntry<string, CheckFrame>;
+public alias CheckEntry = MemoryEntry<string, CapturedCheckAttempt>;
 
-public alias FollowupEntry = MemoryEntry<string, RecoverableFollowupFrame>;
+public alias FollowupEntry = MemoryEntry<string, FollowupSessionFrame>;
 
 public alias Snapshot = {
     chat: ChatEntry,

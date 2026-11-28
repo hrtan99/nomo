@@ -4,8 +4,8 @@ import nomo.application.execution.ports.CommandOperations;
 import nomo.application.harness.ports.{DiagnosticOutput, HarnessProgress};
 import nomo.application.resources.{EditableRoot, ProjectRoot, ReadOnlyRoot};
 import nomo.application.scope.SessionContext;
-import nomo.domain.changes.{Change, ChangeOutcome, FileChange, FileOutcome, Journal, Step};
-import nomo.domain.conversation.{ChatMessage, Event, PendingRequest, SavedSession};
+import nomo.domain.changes.{Change, ChangeOutcome, FileChange, FileOutcome, FileJournal, FileStep};
+import nomo.domain.conversation.{ChatMessage, TraceEvent, PendingRequest, SavedSession};
 import nomo.domain.editing.{Binding, Confirmed, Prepared, Selector};
 import nomo.domain.harness.work.WorkLedger;
 import nomo.domain.sessions.event_codec.Policy;
@@ -81,12 +81,12 @@ public effect MutationFiles {
 }
 
 public effect ChangeJournal {
-    action lookup(id: string) -> Option<Journal>;
-    action insert(value: Journal) -> unit;
-    action save(value: Journal) -> unit;
-    action step(key: string) -> Option<Step>;
-    action save_step(key: string, value: Step) -> unit;
-    action list(session: string) -> Array<Journal>;
+    action lookup(id: string) -> Option<FileJournal>;
+    action insert(value: FileJournal) -> unit;
+    action save(value: FileJournal) -> unit;
+    action step(key: string) -> Option<FileStep>;
+    action save_step(key: string, value: FileStep) -> unit;
+    action list(session: string) -> Array<FileJournal>;
 }
 
 public effect MutationHistory {
@@ -105,12 +105,12 @@ public effect MutationOutput {
 // Model/terminal entry adapters carry the session explicitly across handlers.
 public effect ChangeOperations {
     action replace(session: string, change: FileChange) -> FileOutcome;
-    action inspect(session: string) -> Array<Journal>;
+    action inspect(session: string) -> Array<FileJournal>;
     action apply(session: string, name: string, changes: Array<Change>) -> ChangeOutcome;
     action undo(session: string, edit: string) -> ChangeOutcome;
     action rollback(session: string, edit: string) -> ChangeOutcome;
     action reconcile(session: string, edit: string) -> ChangeOutcome;
-    action list(session: string) -> Array<Journal>;
+    action list(session: string) -> Array<FileJournal>;
 }
 
 public spec MutationFileAccess {
@@ -135,16 +135,20 @@ public spec MutationFileAccess {
 }
 
 public spec ChangeJournalStore {
-    flow lookup(self, id: string) -> Option<Journal> ![Memory, Error<StorageError>];
-    flow insert(self, value: Journal) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>];
-    flow save(self, value: Journal) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>];
-    flow step(self, key: string) -> Option<Step> ![Memory, Error<StorageError>];
-    flow save_step(self, key: string, value: Step) -> unit ![
+    flow lookup(self, id: string) -> Option<FileJournal> ![Memory, Error<StorageError>];
+    flow insert(self, value: FileJournal) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>];
+    flow save(self, value: FileJournal) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>];
+    flow step(self, key: string) -> Option<FileStep> ![Memory, Error<StorageError>];
+    flow save_step(self, key: string, value: FileStep) -> unit ![
         Memory,
         Error<StorageError>,
         Error<MemoryConflict>
     ];
-    flow list(self, session: string) -> Array<Journal> ![Memory, Error<StorageError>, Error<BudgetExceeded>];
+    flow list(self, session: string) -> Array<FileJournal> ![
+        Memory,
+        Error<StorageError>,
+        Error<BudgetExceeded>
+    ];
 }
 
 public spec MutationHistoryStore {
@@ -220,7 +224,7 @@ public spec WorkPersistence<Intent, Edited> {
         Error<IndexError>,
         Error<BudgetExceeded>
     ];
-    flow finish(self, edited: Edited, summary: Summary, records: Array<Event>) -> Result<bool, string> ![
+    flow finish(self, edited: Edited, summary: Summary, records: Array<TraceEvent>) -> Result<bool, string> ![
         Memory,
         Error<StorageError>,
         Error<IndexError>,
@@ -259,10 +263,10 @@ public spec WorkConfirmation {
 public spec WorkTimeline {
     flow enabled(self) -> bool ![];
     flow capture(self, pending: Pending, confirmed: Confirmed, summary: Summary) -> Result<
-        Array<Event>,
+        Array<TraceEvent>,
         string
     > ![Error<IndexError>, Error<BudgetExceeded>];
-    flow save(self, id: string, records: Array<Event>, policy: Policy, binding: string) -> Result<
+    flow save(self, id: string, records: Array<TraceEvent>, policy: Policy, binding: string) -> Result<
         bool,
         string
     > ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>];

@@ -1,5 +1,8 @@
 module nomo.adapters.storage.chains;
 
+import nomo.domain.sessions.chain.{ChainEditPhase, ChainPhase, RecoveryChoice};
+import nomo.domain.sessions.work.{FollowupPhase, WorkPhase};
+import nomo.domain.sessions.work.{CheckState};
 import nomo.adapters.storage.checks.inspect as checks_inspect;
 import nomo.adapters.storage.followup.inspect;
 import nomo.adapters.storage.followup_checks.inspect as followup_checks_inspect;
@@ -17,13 +20,13 @@ import nomo.application.sessions.ports.{DiscoveryAuthority, SessionObservation, 
 import nomo.domain.editing.{Binding, selector_error};
 import nomo.domain.sessions.chain.{
     Caps,
-    CapturedJournal,
-    EditJournalRecord,
+    CapturedChainEdit,
+    ChainEditJournal,
     ObservationPass,
     ObservedJournal,
     ObservedRow,
-    Record,
-    RecoveryDecision,
+    WorkChain,
+    RecordedRecovery,
     Selector,
     Snapshot,
     confirm,
@@ -36,10 +39,10 @@ import nomo.domain.sessions.chain.{
     successor,
     work_chain_validate
 };
-import nomo.domain.sessions.work.StoredWorkRecord;
+import nomo.domain.sessions.work.CapturedWork;
 import std.memory.{MemoryEntry, MemoryVersion, Missing, WriteCondition};
 
-flow recovery_decision_read(target: string) -> Option<MemoryEntry<string, RecoveryDecision>> {
+flow recovery_decision_read(target: string) -> Option<MemoryEntry<string, RecordedRecovery>> {
     return RecoveryDecisions.Rows.get_entry(target);
 }
 
@@ -55,7 +58,7 @@ flow validate_target(target: string, id: string) -> string {
             return "followup work identity differs";
         }
         if target == "followup" {
-            if work.phase != "running" {
+            if work.phase != FollowupPhase.Running {
                 return "followup work is not unresolved";
             }
         } else {
@@ -65,7 +68,7 @@ flow validate_target(target: string, id: string) -> string {
                     return "followup check record missing or invalid";
                 }
             };
-            if check.phase != "running" || check.id != id {
+            if check.phase != CheckState.Running || check.id != id {
                 return "followup check is not unresolved";
             }
         }
@@ -81,7 +84,7 @@ flow validate_target(target: string, id: string) -> string {
         return "work identity differs";
     }
     if target == "work" {
-        if work.phase != "running" {
+        if work.phase != WorkPhase.Running {
             return "work is not unresolved";
         }
     } else if target == "check" {
@@ -91,7 +94,7 @@ flow validate_target(target: string, id: string) -> string {
                 return "check record missing or invalid";
             }
         };
-        if check.phase != "running" || check.id != id {
+        if check.phase != CheckState.Running || check.id != id {
             return "check is not unresolved";
         }
     } else {
@@ -100,7 +103,7 @@ flow validate_target(target: string, id: string) -> string {
     return "";
 }
 
-public flow get(target: string) -> Result<Option<RecoveryDecision>, string> {
+public flow get(target: string) -> Result<Option<RecordedRecovery>, string> {
     if target != "work" && target != "check" && target != "followup" && target != "followup-check" {
         return Err("unknown recovery target");
     }
@@ -111,7 +114,8 @@ public flow get(target: string) -> Result<Option<RecoveryDecision>, string> {
         }
         Some(value) => {
             let item = value.value;
-            if value.key != target || item.format != 1 || item.target != target || item.choice != "abandon"
+            if value.key != target || item.format != 1 || item.target != target
+                || item.choice != RecoveryChoice.Abandon
                 || item.id == "" {
                 return Err("invalid recovery decision");
             }
@@ -140,13 +144,13 @@ public flow abandon(target: string, id: string) -> Result<MemoryVersion, string>
     if recovery_decision_read(target) != None() {
         return Err("recovery decision already recorded; no retry");
     }
-    let item = RecoveryDecision {
+    let item = RecordedRecovery {
         format = 1,
         id,
         target,
-        choice = "abandon"
+        choice = RecoveryChoice.Abandon
     };
-    return commit_native<RecoveryDecision>(
+    return commit_native<RecordedRecovery>(
         RecoveryDecisions.Rows,
         Target {
             store = ["Rows"],
@@ -167,16 +171,16 @@ flow work_chain_journal_key(turn: i32) -> string {
     };
 }
 
-flow work_chain_journal_read(turn: i32) -> Option<MemoryEntry<string, EditJournalRecord>> {
+flow work_chain_journal_read(turn: i32) -> Option<MemoryEntry<string, ChainEditJournal>> {
     return ChainJournal.Rows.get_entry(work_chain_journal_key(turn));
 }
 
-flow invalid(row: EditJournalRecord) -> string {
+flow invalid(row: ChainEditJournal) -> string {
     return chain_invalid(captured(row));
 }
 
-public flow captured(row: EditJournalRecord) -> CapturedJournal {
-    return CapturedJournal {
+public flow captured(row: ChainEditJournal) -> CapturedChainEdit {
+    return CapturedChainEdit {
         format = row.format,
         chain = row.chain,
         turn = row.turn,
@@ -185,7 +189,7 @@ public flow captured(row: EditJournalRecord) -> CapturedJournal {
     };
 }
 
-flow work_chain_journal_write(row: EditJournalRecord, condition: WriteCondition) -> Result<
+flow work_chain_journal_write(row: ChainEditJournal, condition: WriteCondition) -> Result<
     MemoryVersion,
     string
 > ![
@@ -199,7 +203,7 @@ flow work_chain_journal_write(row: EditJournalRecord, condition: WriteCondition)
         return Err(error);
     }
     let selected = work_chain_journal_key(row.turn);
-    return commit_native<EditJournalRecord>(
+    return commit_native<ChainEditJournal>(
         ChainJournal.Rows,
         Target {
             store = ["Rows"],
@@ -229,11 +233,11 @@ public flow begin(chain: string, turn: i32, binding: Binding) -> Result<WorkChai
     Error<IndexError>,
     Error<BudgetExceeded>
 ] {
-    let row = EditJournalRecord {
+    let row = ChainEditJournal {
         format = 2,
         chain,
         turn,
-        phase = "intent",
+        phase = ChainEditPhase.Intent,
         binding
     };
     let error = invalid(row);
@@ -268,7 +272,7 @@ public flow work_chain_journal_complete(ticket: WorkChainJournalTicket) -> Resul
     if error != "" {
         return Err(error);
     }
-    if ticket.row.phase != "intent" {
+    if ticket.row.phase != ChainEditPhase.Intent {
         return Err("v2 edit completion requires the exact intent");
     }
     let before = match work_chain_journal_read(ticket.row.turn) {
@@ -283,7 +287,7 @@ public flow work_chain_journal_complete(ticket: WorkChainJournalTicket) -> Resul
     }
     let row = ticket.row {
         format = 2,
-        phase = "completed"
+        phase = ChainEditPhase.Completed
     };
     let version = match work_chain_journal_write(row, WriteCondition.Match(before.version)) {
         Ok(value) => value,
@@ -298,7 +302,7 @@ public flow work_chain_journal_complete(ticket: WorkChainJournalTicket) -> Resul
 }
 
 public flow work_chain_journal_inspect(chain: string, turn: i32, id: string, workspace: string, path: string) -> Result<
-    Option<EditJournalRecord>,
+    Option<ChainEditJournal>,
     string
 > {
     let error = selector_error(id, workspace, path);
@@ -336,7 +340,7 @@ public flow work_chain_journal_inspect(chain: string, turn: i32, id: string, wor
 }
 
 // Fixed-slot read only; storage errors remain native errors, never empty results.
-public flow observe(turn: i32) -> Result<Option<MemoryEntry<string, EditJournalRecord>>, string> {
+public flow observe(turn: i32) -> Result<Option<MemoryEntry<string, ChainEditJournal>>, string> {
     if turn != 1 && turn != 2 {
         return Err("v2 edit journal permits only two turns");
     }
@@ -351,11 +355,11 @@ flow work_chain_store_key(turn: i32) -> string {
     };
 }
 
-flow work_chain_store_read(turn: i32) -> Option<MemoryEntry<string, Record>> {
+flow work_chain_store_read(turn: i32) -> Option<MemoryEntry<string, WorkChain>> {
     return Chains.Rows.get_entry(work_chain_store_key(turn));
 }
 
-flow journal_error(row: Record) -> string {
+flow journal_error(row: WorkChain) -> string {
     let journal = match work_chain_journal_inspect(row.chain, row.turn, row.id, row.workspace, row.path) {
         Ok(value) => value,
         Err(error) => {
@@ -371,7 +375,7 @@ flow journal_error(row: Record) -> string {
 
 // The first fixed turn row is also the global owner/root admission. It is
 // never removed or adopted under another root ID in this private store.
-flow work_chain_store_write(row: Record, condition: WriteCondition) -> Result<
+flow work_chain_store_write(row: WorkChain, condition: WriteCondition) -> Result<
     MemoryVersion,
     string
 > ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
@@ -380,7 +384,7 @@ flow work_chain_store_write(row: Record, condition: WriteCondition) -> Result<
         return Err(error);
     }
     let selected = work_chain_store_key(row.turn);
-    return commit_native<Record>(
+    return commit_native<WorkChain>(
         Chains.Rows,
         Target {
             store = ["Rows"],
@@ -412,7 +416,7 @@ public flow read_parent_access(id: string, workspace: string, path: string) -> P
         return ParentAccess.Refused(invalid);
     }
     let row = before.value;
-    if before.key != work_chain_store_key(1) || row.turn != 1 || row.phase != "summary-confirmed"
+    if before.key != work_chain_store_key(1) || row.turn != 1 || row.phase != ChainPhase.SummaryConfirmed
         || row.id != id || row.chain != id || row.workspace != workspace || row.path != path {
         return ParentAccess.Refused("only the matching fully confirmed first v2 turn can continue; no partial or third turn");
     }
@@ -433,7 +437,7 @@ public flow read_parent_access(id: string, workspace: string, path: string) -> P
 }
 
 public flow read_parent(id: string, workspace: string, path: string) -> Result<
-    MemoryEntry<string, Record>,
+    MemoryEntry<string, WorkChain>,
     string
 > {
     return match read_parent_access(id, workspace, path) {
@@ -443,7 +447,7 @@ public flow read_parent(id: string, workspace: string, path: string) -> Result<
     };
 }
 
-flow parent_error(ticket: WorkChainStoreTicket, row: Record) -> string {
+flow parent_error(ticket: WorkChainStoreTicket, row: WorkChain) -> string {
     if row.turn == 1 {
         if ticket.parent != None() {
             return "v2 root ticket unexpectedly has a parent";
@@ -588,7 +592,7 @@ public flow admit_continue(
     request: string,
     allowed: Array<string>,
     policy: Caps,
-    expected_parent: MemoryEntry<string, Record>
+    expected_parent: MemoryEntry<string, WorkChain>
 ) -> Result<WorkChainStoreTicket, string> ![
     Memory,
     Error<StorageError>,
@@ -643,7 +647,7 @@ public flow admit_continue(
     return Ok(ticket);
 }
 
-public flow publish_partial(ticket: WorkChainStoreTicket, work: StoredWorkRecord) -> Result<
+public flow publish_partial(ticket: WorkChainStoreTicket, work: CapturedWork) -> Result<
     WorkChainStoreTicket,
     string
 > ![Memory, Error<StorageError>, Error<IndexError>, Error<BudgetExceeded>] {
@@ -727,7 +731,7 @@ public flow work_chain_store_complete(ticket: WorkChainStoreTicket, summary: str
 // Validate the complete two-slot graph and journals before returning captured
 // data. Missing work never establishes that an edit did not occur.
 public flow work_chain_store_inspect(id: string, workspace: string, path: string) -> Result<
-    Option<Record>,
+    Option<WorkChain>,
     string
 > {
     let error = selector_error(id, workspace, path);
@@ -883,7 +887,7 @@ flow capture_adapter(pass: ObservationPass) -> Result<Snapshot, string> ![
     return observed_snapshot();
 }
 
-flow inspect_adapter(id: string, workspace: string, path: string) -> Result<Option<Record>, string> ![
+flow inspect_adapter(id: string, workspace: string, path: string) -> Result<Option<WorkChain>, string> ![
     Memory,
     Error<StorageError>,
     Error<IndexError>,
@@ -944,24 +948,24 @@ public flow latest_parent(workspace: string, path: string) -> Result<string, str
 }
 
 public type WorkChainJournalTicket = {
-    row: EditJournalRecord,
+    row: ChainEditJournal,
     version: MemoryVersion
 };
 
 public type WorkChainStoreTicket = {
-    row: Record,
+    row: WorkChain,
     version: MemoryVersion,
-    parent: Option<MemoryEntry<string, Record>>
+    parent: Option<MemoryEntry<string, WorkChain>>
 };
 
 public enum ParentAccess {
-    Found(MemoryEntry<string, Record>),
+    Found(MemoryEntry<string, WorkChain>),
     Refused(string),
     UserContext
 }
 
 alias RecoveryDecisionsSchema = MemoryRegion<{
-    Rows: Store<string, RecoveryDecision>
+    Rows: Store<string, RecordedRecovery>
 }>;
 
 public let RecoveryDecisions = std.memory.region<RecoveryDecisionsSchema>(
@@ -970,7 +974,7 @@ public let RecoveryDecisions = std.memory.region<RecoveryDecisionsSchema>(
 );
 
 alias ChainJournalSchema = MemoryRegion<{
-    Rows: Store<string, EditJournalRecord>
+    Rows: Store<string, ChainEditJournal>
 }>;
 
 public let ChainJournal = std.memory.region<ChainJournalSchema>(
@@ -979,7 +983,7 @@ public let ChainJournal = std.memory.region<ChainJournalSchema>(
 );
 
 alias ChainsSchema = MemoryRegion<{
-    Rows: Store<string, Record>
+    Rows: Store<string, WorkChain>
 }>;
 
 public let Chains = std.memory.region<ChainsSchema>(stable_id = "nomo-work-chain-v2", store = "work-chain");

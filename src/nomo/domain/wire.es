@@ -3,7 +3,7 @@ module nomo.domain.wire;
 import nomo.domain.limits.{edit_json_bytes, file_bytes};
 import std.agent.message.Message;
 import std.codec.text.utf8_encode;
-import std.collections.unique;
+import std.collections.{Map, unique};
 import std.core.Index;
 import std.crypto.sha256;
 import std.json.{JsonValue, parse, stringify};
@@ -261,4 +261,23 @@ public flow ascii_json_with(
         output.append(fragment);
     }
     return Ok(output.build());
+}
+
+public flow value<T>(input: T) -> JsonValue ![] {
+    let converted: Option<Message<JsonValue>> = Message.new(input).cast<JsonValue>();
+    return match converted {
+        Some(value) => value.body,
+        None() => abort("wire projection failed")
+    };
+}
+
+public flow fields(input: JsonValue, updates: Array<(string, JsonValue)>) -> JsonValue ![] {
+    var object: Map<string, JsonValue> = match input {
+        JsonValue.Object(value) => value,
+        _ => abort("wire projection requires an object")
+    };
+    for (name, value) in updates {
+        object = object.insert(name, value);
+    }
+    return JsonValue.Object(object);
 }

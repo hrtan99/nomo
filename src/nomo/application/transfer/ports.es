@@ -1,9 +1,10 @@
 module nomo.application.transfer.ports;
 
+import nomo.domain.archives.{CopyKind, CopyPhase};
 import nomo.application.resources.{MigrationRoot, ProjectRoot};
 import nomo.domain.archives.{
     ArchiveDocument,
-    CopyJob,
+    ConversationCopy,
     ExportPreview,
     Imported,
     NativeImage,
@@ -51,11 +52,18 @@ public effect ArchiveFiles {
 }
 
 public effect CopyStorage {
-    action lookup(id: string) -> Option<CopyJob>;
-    action list(workspace: string) -> Array<CopyJob>;
-    action prepare(workspace: string, title: string, kind: string, source: string, digest: bytes, total: i64) -> CopyJob;
+    action lookup(id: string) -> Option<ConversationCopy>;
+    action list(workspace: string) -> Array<ConversationCopy>;
+    action prepare(
+        workspace: string,
+        title: string,
+        kind: CopyKind,
+        source: string,
+        digest: bytes,
+        total: i64
+    ) -> ConversationCopy;
     action ensure_session(id: string) -> unit;
-    action advance(id: string, cursor: i64, phase: string) -> CopyJob;
+    action advance(id: string, cursor: i64, phase: CopyPhase) -> ConversationCopy;
     action event(id: string, index: i64, role: string, name: string, text: string) -> unit;
     action sealed(id: string) -> Option<string>;
     action summary(id: string, slot: i64) -> unit;
@@ -81,25 +89,29 @@ public effect TransferOperations {
     action fork(session: string, through: i64) -> SavedSession;
     action resume_fork(workspace: string, id: string) -> SavedSession;
     action discard(workspace: string, id: string) -> unit;
-    action status(id: string) -> Option<CopyJob>;
-    action copies(workspace: string) -> Array<CopyJob>;
-    action job(id: string) -> CopyJob;
+    action status(id: string) -> Option<ConversationCopy>;
+    action copies(workspace: string) -> Array<ConversationCopy>;
+    action job(id: string) -> ConversationCopy;
 }
 
 public spec CopyRepository {
-    flow lookup(self, id: string) -> Option<CopyJob> ![Memory, Error<StorageError>];
-    flow list(self, workspace: string) -> Array<CopyJob> ![Memory, Error<StorageError>, Error<BudgetExceeded>];
+    flow lookup(self, id: string) -> Option<ConversationCopy> ![Memory, Error<StorageError>];
+    flow list(self, workspace: string) -> Array<ConversationCopy> ![
+        Memory,
+        Error<StorageError>,
+        Error<BudgetExceeded>
+    ];
     flow prepare(
         self,
         workspace: string,
         title: string,
-        kind: string,
+        kind: CopyKind,
         source: string,
         digest: bytes,
         total: i64
-    ) -> CopyJob ![Memory, Error<StorageError>, Error<MemoryConflict>];
+    ) -> ConversationCopy ![Memory, Error<StorageError>, Error<MemoryConflict>];
     flow ensure_session(self, id: string) -> unit ![Memory, Error<StorageError>, Error<MemoryConflict>];
-    flow advance(self, id: string, cursor: i64, phase: string) -> CopyJob ![
+    flow advance(self, id: string, cursor: i64, phase: CopyPhase) -> ConversationCopy ![
         Memory,
         Error<StorageError>,
         Error<MemoryConflict>

@@ -18,7 +18,7 @@ import nomo.application.harness.ports.{DiagnosticOutput, HarnessProgress};
 import nomo.application.harness.work.complete;
 import nomo.application.resources.{EditableRoot, ReadOnlyRoot};
 import nomo.application.sessions.ports.EditJournal;
-import nomo.domain.conversation.Event;
+import nomo.domain.conversation.TraceEvent;
 import nomo.domain.editing.{Binding, Confirmed, Prepared, Selector, bind, render_edit, selector_error, validate};
 import nomo.domain.limits.edit_json_bytes;
 import nomo.domain.sessions.work.WorkRequest;
@@ -290,7 +290,7 @@ public flow work_controller_execute<
             return output.refused(failure.error);
         }
     };
-    var records: Array<Event> = [];
+    var records: Array<TraceEvent> = [];
     if timeline.enabled() {
         output.progress("POST_EDIT events");
         records = match timeline.capture(pending, confirmed, summary) {

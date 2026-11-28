@@ -1,10 +1,13 @@
 module nomo.domain.sessions.checkpoints;
 
-import nomo.domain.conversation.{Event, State};
+import nomo.domain.conversation.{TraceRole, TraceKind};
+import nomo.domain.harness.chat.{ChatStage};
+import nomo.domain.harness.loop.{ReadOperation, tool_name, recorded_tool};
+import nomo.domain.conversation.{TraceEvent, TraceState};
 import nomo.domain.harness.chat.{
     Context,
-    Invocation,
-    Previous,
+    ReadInvocation,
+    PriorRead,
     TurnResult,
     chat_context_error,
     chat_inspect_turn,
@@ -18,20 +21,117 @@ import nomo.domain.text.text_printable;
 import nomo.domain.wire.{encode, string_fields};
 import std.text.{char_count, from_char, from_i32, from_usize, is_ascii, len, parse_i32, trim};
 
+public enum CheckpointLifecycle {
+    Completed
+}
+
+impl CheckpointLifecycle {
+    public flow wire(self) -> string ![] {
+        return match self {
+            CheckpointLifecycle.Completed => "completed"
+        };
+    }
+
+    public flow parse(raw: string) -> CheckpointLifecycle ![] {
+        return match raw {
+            "completed" => CheckpointLifecycle.Completed,
+            _ => abort("invalid CheckpointLifecycle spelling: " + raw)
+        };
+    }
+}
+
+public enum SuccessorLifecycle {
+    Completed
+}
+
+impl SuccessorLifecycle {
+    public flow wire(self) -> string ![] {
+        return match self {
+            SuccessorLifecycle.Completed => "completed"
+        };
+    }
+
+    public flow parse(raw: string) -> SuccessorLifecycle ![] {
+        return match raw {
+            "completed" => SuccessorLifecycle.Completed,
+            _ => abort("invalid SuccessorLifecycle spelling: " + raw)
+        };
+    }
+}
+
+public enum CheckpointRecordPhase {
+    Ready,
+    Claimed,
+    Pending,
+    Published
+}
+
+impl CheckpointRecordPhase {
+    public flow wire(self) -> string ![] {
+        return match self {
+            CheckpointRecordPhase.Ready => "ready",
+            CheckpointRecordPhase.Claimed => "claimed",
+            CheckpointRecordPhase.Pending => "pending",
+            CheckpointRecordPhase.Published => "published"
+        };
+    }
+
+    public flow parse(raw: string) -> CheckpointRecordPhase ![] {
+        return match raw {
+            "ready" => CheckpointRecordPhase.Ready,
+            "claimed" => CheckpointRecordPhase.Claimed,
+            "pending" => CheckpointRecordPhase.Pending,
+            "published" => CheckpointRecordPhase.Published,
+            _ => abort("invalid CheckpointRecordPhase spelling: " + raw)
+        };
+    }
+}
+
+public enum SuccessorRecordPhase {
+    Admitted,
+    Failed,
+    Settled,
+    Pending,
+    Published
+}
+
+impl SuccessorRecordPhase {
+    public flow wire(self) -> string ![] {
+        return match self {
+            SuccessorRecordPhase.Admitted => "admitted",
+            SuccessorRecordPhase.Failed => "failed",
+            SuccessorRecordPhase.Settled => "settled",
+            SuccessorRecordPhase.Pending => "pending",
+            SuccessorRecordPhase.Published => "published"
+        };
+    }
+
+    public flow parse(raw: string) -> SuccessorRecordPhase ![] {
+        return match raw {
+            "admitted" => SuccessorRecordPhase.Admitted,
+            "failed" => SuccessorRecordPhase.Failed,
+            "settled" => SuccessorRecordPhase.Settled,
+            "pending" => SuccessorRecordPhase.Pending,
+            "published" => SuccessorRecordPhase.Published,
+            _ => abort("invalid SuccessorRecordPhase spelling: " + raw)
+        };
+    }
+}
+
 public type Checkpoint = {
     format: i32,
     identity: Identity,
     request: string,
     task: string,
     result: string,
-    tool: string,
+    tool: Option<ReadOperation>,
     outcome: string,
     answer: string,
-    records: Array<Event>,
+    records: Array<TraceEvent>,
     usage: ReadLedger,
     maximum: ReadLedger,
     admitted: i32,
-    lifecycle: string,
+    lifecycle: CheckpointLifecycle,
     resolved: bool
 };
 
@@ -58,13 +158,14 @@ public flow checkpoint_validate(saved: Checkpoint, requested: Identity) -> Resul
     if saved.identity != requested {
         return Err("checkpoint identity or workspace binding mismatch");
     }
-    if saved.format != 1 || saved.admitted != 1 || saved.lifecycle != "completed" || !saved.resolved {
+    if saved.format != 1 || saved.admitted != 1 || saved.lifecycle != CheckpointLifecycle.Completed
+        || !saved.resolved {
         return Err("checkpoint is not a completed settled first turn");
     }
     if !bounded(saved.request, message_bytes()) || !bounded(saved.task, message_bytes()) {
         return Err("invalid checkpoint request or task");
     }
-    let prior = Previous {
+    let prior = PriorRead {
         task = saved.task,
         result = saved.result,
         tool = saved.tool,
@@ -78,7 +179,7 @@ public flow checkpoint_validate(saved: Checkpoint, requested: Identity) -> Resul
     var tools: i32 = 0;
     var child_count: usize = 4;
     var record_count: usize = 9;
-    if saved.tool != "" {
+    if saved.tool != None() {
         tools = 1;
         child_count = 7;
         record_count = 13;
@@ -116,9 +217,9 @@ public flow checkpoint_validate(saved: Checkpoint, requested: Identity) -> Resul
     if record_error != "" {
         return Err(record_error);
     }
-    if !same(records[0], "user", "request", "", saved.request)
-        || !same(records[1], "main", "plan", "", records[1].text)
-        || !same(records[2], "main", "delegate", "child-1", saved.task) {
+    if !same(records[0], TraceRole.User, TraceKind.Request, "", saved.request)
+        || !same(records[1], TraceRole.Main, TraceKind.Plan, "", records[1].text)
+        || !same(records[2], TraceRole.Main, TraceKind.Delegate, "child-1", saved.task) {
         return Err("invalid checkpoint planning records");
     }
     let task = match text_decode_plan(records[1].text) {
@@ -130,7 +231,7 @@ public flow checkpoint_validate(saved: Checkpoint, requested: Identity) -> Resul
     if task != saved.task {
         return Err("checkpoint plan and delegated task disagree");
     }
-    var events: Array<Event> = [];
+    var events: Array<TraceEvent> = [];
     var child_characters: usize = 0;
     var index: usize = 0;
     @limits([Iterations(7)]) while index < child_count {
@@ -150,7 +251,7 @@ public flow checkpoint_validate(saved: Checkpoint, requested: Identity) -> Resul
         1
     };
     let child = Session {
-        history = State {
+        history = TraceState {
             events,
             characters = child_characters,
             spent = 1
@@ -172,11 +273,17 @@ public flow checkpoint_validate(saved: Checkpoint, requested: Identity) -> Resul
         return Err("checkpoint child records and selected result disagree");
     }
     let consumed = 3 + child_count;
-    if !same(records[consumed], "main", "consume", "child-1", saved.result)
-        || !same(records[record_count - 1], "main", "answer", "", saved.answer) {
+    if !same(records[consumed], TraceRole.Main, TraceKind.Consume, "child-1", saved.result)
+        || !same(records[record_count - 1], TraceRole.Main, TraceKind.Answer, "", saved.answer) {
         return Err("invalid checkpoint consumption records");
     }
-    if tools == 1 && !same(records[consumed + 1], "main", "tool", saved.tool, saved.outcome) {
+    if tools == 1 && !same(
+        records[consumed + 1],
+        TraceRole.Main,
+        TraceKind.Tool,
+        tool_name(saved.tool),
+        saved.outcome
+    ) {
         return Err("checkpoint completed tool record mismatch");
     }
     return Ok(saved);
@@ -192,7 +299,7 @@ public flow checkpoint_from_turn(identity: Identity, turn: TurnResult) -> Result
             return Err("completed application records missing");
         }
     };
-    let prior = Previous {
+    let prior = PriorRead {
         task = completed.task,
         result = completed.result,
         tool = completed.tool,
@@ -215,7 +322,7 @@ public flow checkpoint_from_turn(identity: Identity, turn: TurnResult) -> Result
         usage = turn.state.usage,
         maximum = turn.state.maximum,
         admitted = 1,
-        lifecycle = "completed",
+        lifecycle = CheckpointLifecycle.Completed,
         resolved = true
     };
     return checkpoint_validate(saved, identity);
@@ -344,12 +451,14 @@ public flow read_ledger(fields: Array<string>, offset: usize, label: string) -> 
     );
 }
 
-public flow records_error(records: Array<Event>, maximum: usize, label: string) -> string {
+public flow records_error(records: Array<TraceEvent>, maximum: usize, label: string) -> string {
     var characters: usize = 0;
     @limits([Iterations(18)]) for event in records {
-        if char_count(event.role) > 9 || char_count(event.kind) > 8 || char_count(event.name) > 8
-            || char_count(event.text) > message_bytes() || !text_printable(event.role)
-            || !text_printable(event.kind) || !text_printable(event.name) || !text_printable(event.text) {
+        if char_count(event.role.wire()) > 9 || char_count(event.kind.wire()) > 8
+            || char_count(event.name) > 8
+            || char_count(event.text) > message_bytes() || !text_printable(event.role.wire())
+            || !text_printable(event.kind.wire()) || !text_printable(event.name)
+            || !text_printable(event.text) {
             return "invalid " + label + " record data";
         }
         characters = characters + char_count(event.name) + char_count(event.text);
@@ -408,7 +517,7 @@ public flow checkpoint_encode(saved: Checkpoint) -> Result<string, string> {
         saved.request,
         saved.task,
         saved.result,
-        saved.tool,
+        tool_name(saved.tool),
         saved.outcome,
         saved.answer,
         from_i32(saved.usage.steps),
@@ -427,8 +536,8 @@ public flow checkpoint_encode(saved: Checkpoint) -> Result<string, string> {
         from_usize(saved.records.len())
     ];
     @limits([Iterations(13)]) for event in saved.records {
-        fields = fields.push(event.role);
-        fields = fields.push(event.kind);
+        fields = fields.push(event.role.wire());
+        fields = fields.push(event.kind.wire());
         fields = fields.push(event.name);
         fields = fields.push(event.text);
     }
@@ -503,14 +612,14 @@ public flow checkpoint_decode(raw: string) -> Result<Checkpoint, string> {
             return Err(error);
         }
     };
-    var records: Array<Event> = [];
+    var records: Array<TraceEvent> = [];
     var index: usize = 0;
     @limits([Iterations(13)]) while index < record_count {
         let offset = 25 + index * 4;
         records = records.push(
-            Event {
-                role = fields[offset],
-                kind = fields[offset + 1],
+            TraceEvent {
+                role = TraceRole.parse(fields[offset]),
+                kind = TraceKind.parse(fields[offset + 1]),
                 name = fields[offset + 2],
                 text = fields[offset + 3]
             }
@@ -523,14 +632,14 @@ public flow checkpoint_decode(raw: string) -> Result<Checkpoint, string> {
         request = fields[5],
         task = fields[6],
         result = fields[7],
-        tool = fields[8],
+        tool = recorded_tool(fields[8]),
         outcome = fields[9],
         answer = fields[10],
         records,
         usage,
         maximum,
         admitted = 1,
-        lifecycle = "completed",
+        lifecycle = CheckpointLifecycle.Completed,
         resolved = true
     };
     return checkpoint_validate(saved, identity);
@@ -545,19 +654,19 @@ public type Successor = {
     request: string,
     task: string,
     result: string,
-    tool: string,
+    tool: Option<ReadOperation>,
     outcome: string,
     answer: string,
-    records: Array<Event>,
+    records: Array<TraceEvent>,
     usage: ReadLedger,
     maximum: ReadLedger,
     admitted: i32,
-    lifecycle: string,
+    lifecycle: SuccessorLifecycle,
     resolved: bool
 };
 
-flow previous(saved: Checkpoint) -> Previous {
-    return Previous {
+flow previous(saved: Checkpoint) -> PriorRead {
+    return PriorRead {
         task = saved.task,
         result = saved.result,
         tool = saved.tool,
@@ -566,14 +675,14 @@ flow previous(saved: Checkpoint) -> Previous {
     };
 }
 
-public flow restore(saved: Checkpoint) -> Result<Invocation, string> {
+public flow restore(saved: Checkpoint) -> Result<ReadInvocation, string> {
     match checkpoint_validate(saved, saved.identity) {
         Ok(_) => (),
         Err(error) => {
             return Err(error);
         }
     }
-    let invocation = Invocation {
+    let invocation = ReadInvocation {
         usage = saved.usage,
         maximum = saved.maximum,
         admitted = saved.admitted,
@@ -615,13 +724,14 @@ public flow successor_validate(saved: Successor, requested: Identity, predecesso
         || !text_printable(saved.predecessor_version) || trim(saved.predecessor_version) == "" {
         return Err("invalid predecessor version");
     }
-    if saved.format != 1 || saved.admitted != 2 || saved.lifecycle != "completed" || !saved.resolved {
+    if saved.format != 1 || saved.admitted != 2 || saved.lifecycle != SuccessorLifecycle.Completed
+        || !saved.resolved {
         return Err("successor is not a completed settled second turn");
     }
     if !bounded(saved.request, message_bytes()) || !bounded(saved.task, message_bytes()) {
         return Err("invalid successor request or task");
     }
-    let selected = Previous {
+    let selected = PriorRead {
         task = saved.task,
         result = saved.result,
         tool = saved.tool,
@@ -635,7 +745,7 @@ public flow successor_validate(saved: Successor, requested: Identity, predecesso
     var tools: i32 = 0;
     var child_count: usize = 9;
     var record_count: usize = 14;
-    if saved.tool != "" {
+    if saved.tool != None() {
         tools = 1;
         child_count = 12;
         record_count = 18;
@@ -659,9 +769,9 @@ public flow successor_validate(saved: Successor, requested: Identity, predecesso
     if record_error != "" {
         return Err(record_error);
     }
-    if !same(records[0], "user", "request", "", saved.request)
-        || !same(records[1], "main", "plan", "", records[1].text)
-        || !same(records[2], "main", "delegate", "child-1", saved.task) {
+    if !same(records[0], TraceRole.User, TraceKind.Request, "", saved.request)
+        || !same(records[1], TraceRole.Main, TraceKind.Plan, "", records[1].text)
+        || !same(records[2], TraceRole.Main, TraceKind.Delegate, "child-1", saved.task) {
         return Err("invalid successor planning records");
     }
     let task = match text_decode_plan(records[1].text) {
@@ -673,11 +783,11 @@ public flow successor_validate(saved: Successor, requested: Identity, predecesso
     if task != saved.task {
         return Err("successor plan and delegated task disagree");
     }
-    var events: Array<Event> = [];
+    var events: Array<TraceEvent> = [];
     var child_characters: usize = 0;
     var index: usize = 0;
-    var first_input: Array<Event> = [];
-    var final_input: Array<Event> = [];
+    var first_input: Array<TraceEvent> = [];
+    var final_input: Array<TraceEvent> = [];
     @limits([Iterations(12)]) while index < child_count {
         let event = records[3 + index];
         events = events.push(event);
@@ -701,7 +811,7 @@ public flow successor_validate(saved: Successor, requested: Identity, predecesso
         1
     };
     let child = Session {
-        history = State {
+        history = TraceState {
             events,
             characters = child_characters,
             spent = 1
@@ -730,25 +840,31 @@ public flow successor_validate(saved: Successor, requested: Identity, predecesso
         return Err("successor child records and selected result disagree");
     }
     let consumed = 3 + child_count;
-    if !same(records[consumed], "main", "consume", "child-1", saved.result)
-        || !same(records[record_count - 1], "main", "answer", "", saved.answer) {
+    if !same(records[consumed], TraceRole.Main, TraceKind.Consume, "child-1", saved.result)
+        || !same(records[record_count - 1], TraceRole.Main, TraceKind.Answer, "", saved.answer) {
         return Err("invalid successor consumption records");
     }
-    if tools == 1 && !same(records[consumed + 1], "main", "tool", saved.tool, saved.outcome) {
+    if tools == 1 && !same(
+        records[consumed + 1],
+        TraceRole.Main,
+        TraceKind.Tool,
+        tool_name(saved.tool),
+        saved.outcome
+    ) {
         return Err("successor completed tool record mismatch");
     }
     let plan = Context {
-        phase = "plan",
+        phase = ChatStage.Plan,
         request = saved.request,
         task = "",
         result = "",
-        tool = "",
+        tool = None(),
         outcome = "",
         allowed = saved.identity.allowed,
         prior = restored.prior
     };
     let aggregate = Context {
-        phase = "aggregate",
+        phase = ChatStage.Aggregate,
         request = saved.request,
         task = saved.task,
         result = saved.result,
@@ -803,7 +919,7 @@ public flow successor_from_turn(
             return Err("completed successor records missing");
         }
     };
-    let selected = Previous {
+    let selected = PriorRead {
         task = completed.task,
         result = completed.result,
         tool = completed.tool,
@@ -828,7 +944,7 @@ public flow successor_from_turn(
         usage = turn.state.usage,
         maximum = turn.state.maximum,
         admitted = 2,
-        lifecycle = "completed",
+        lifecycle = SuccessorLifecycle.Completed,
         resolved = true
     };
     return successor_validate(saved, identity, predecessor.identity);
@@ -862,7 +978,7 @@ public flow successor_encode(saved: Successor) -> Result<string, string> {
         saved.request,
         saved.task,
         saved.result,
-        saved.tool,
+        tool_name(saved.tool),
         saved.outcome,
         saved.answer,
         from_i32(saved.usage.steps),
@@ -881,8 +997,8 @@ public flow successor_encode(saved: Successor) -> Result<string, string> {
         from_usize(saved.records.len())
     ];
     @limits([Iterations(18)]) for event in saved.records {
-        fields = fields.push(event.role);
-        fields = fields.push(event.kind);
+        fields = fields.push(event.role.wire());
+        fields = fields.push(event.kind.wire());
         fields = fields.push(event.name);
         fields = fields.push(event.text);
     }
@@ -963,14 +1079,14 @@ public flow successor_decode(raw: string) -> Result<Successor, string> {
             return Err(error);
         }
     };
-    var records: Array<Event> = [];
+    var records: Array<TraceEvent> = [];
     var index: usize = 0;
     @limits([Iterations(18)]) while index < record_count {
         let offset = 27 + index * 4;
         records = records.push(
-            Event {
-                role = fields[offset],
-                kind = fields[offset + 1],
+            TraceEvent {
+                role = TraceRole.parse(fields[offset]),
+                kind = TraceKind.parse(fields[offset + 1]),
                 name = fields[offset + 2],
                 text = fields[offset + 3]
             }
@@ -985,14 +1101,14 @@ public flow successor_decode(raw: string) -> Result<Successor, string> {
         request = fields[7],
         task = fields[8],
         result = fields[9],
-        tool = fields[10],
+        tool = recorded_tool(fields[10]),
         outcome = fields[11],
         answer = fields[12],
         records,
         usage,
         maximum,
         admitted = 2,
-        lifecycle = "completed",
+        lifecycle = SuccessorLifecycle.Completed,
         resolved = true
     };
     return successor_validate(saved, identity, predecessor.identity);
@@ -1004,16 +1120,16 @@ public type Identity = {
     allowed: Array<string>
 };
 
-public type CheckpointRecord = {
+public type StoredCheckpoint = {
     format: i32,
-    phase: string,
+    phase: CheckpointRecordPhase,
     identity: Identity,
     body: string
 };
 
-public type SuccessorRecord = {
+public type StoredSuccessor = {
     format: i32,
-    phase: string,
+    phase: SuccessorRecordPhase,
     predecessor: Identity,
     successor: Identity,
     predecessor_version: string,

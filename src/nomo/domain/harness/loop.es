@@ -1,13 +1,15 @@
 module nomo.domain.harness.loop;
 
-import nomo.domain.conversation.{Event, State, charge, fresh};
+import nomo.domain.conversation.{wire_traces};
+import nomo.domain.wire.{value as json_value, fields as json_fields};
+import std.json.JsonValue;
+import nomo.domain.conversation.{TraceEvent, TraceState, charge, fresh};
 import nomo.domain.limits.{context_bytes, edit_response_bytes, message_bytes, message_frame_bytes, outcome_bytes};
 import nomo.domain.text.{context_json_error, search_literal, text_printable};
 import nomo.domain.wire.{FieldError, decode_fields, json, json_scalar_width};
 import nomo.domain.workspace.valid_path;
 import std.agent.message.Message;
 import std.collections.unique;
-import std.json.JsonValue;
 import std.text.{TextBuilder, char_count, contains, from_char, from_usize, len, lowercase, trim};
 
 public type Shape = {
@@ -152,15 +154,61 @@ public flow returned_text(raw: string, excluded: string) -> string {
     return response_text(raw, "read-plan", excluded, 384);
 }
 
-public type Action = {
-    operation: string,
-    files: Array<string>,
-    literal: string,
-    text: string
-};
+public enum ReadOperation {
+    Read,
+    Search
+}
+
+impl ReadOperation {
+    public flow wire(self) -> string ![] {
+        return match self {
+            ReadOperation.Read => "read",
+            ReadOperation.Search => "search"
+        };
+    }
+
+    public flow parse(raw: string) -> ReadOperation ![] {
+        return match raw {
+            "read" => ReadOperation.Read,
+            "search" => ReadOperation.Search,
+            _ => abort("invalid ReadOperation spelling: " + raw)
+        };
+    }
+}
+
+public enum ReadAction {
+    Read(string),
+    Search(string, Array<string>)
+}
+impl ReadAction {
+    public flow operation(self) -> ReadOperation ![] {
+        return match self {
+            ReadAction.Read(_) => ReadOperation.Read,
+            ReadAction.Search(_, _) => ReadOperation.Search
+        };
+    }
+
+    public flow files(self) -> Array<string> ![] {
+        return match self {
+            ReadAction.Read(path) => [path],
+            ReadAction.Search(_, files) => files
+        };
+    }
+
+    public flow wire_literal(self) -> string ![] {
+        return match self {
+            ReadAction.Read(_) => "",
+            ReadAction.Search(literal, _) => literal
+        };
+    }
+}
+public enum Action {
+    Tool(ReadAction),
+    Final(string)
+}
 
 public type Session = {
-    history: State,
+    history: TraceState,
     calls: usize,
     tokens: usize,
     tools: usize,
@@ -221,7 +269,7 @@ flow selected_error(names: Array<string>, allowed: Array<string>) -> string {
 
 // Shared semantic selection guard for legacy wire decoding and native records.
 public flow read_selection_error(
-    operation: string,
+    operation: ReadOperation,
     files: Array<string>,
     literal: string,
     allowed: Array<string>
@@ -230,19 +278,17 @@ public flow read_selection_error(
     if invalid != "" {
         return invalid;
     }
-    if operation == "read" {
+    if operation == ReadOperation.Read {
         if files.len() != 1 {
             return "unsupported action or arity";
         }
         if literal != "" {
             return "read action requires an empty literal";
         }
-    } else if operation == "search" {
+    } else {
         if !search_literal(literal) {
             return "invalid search literal";
         }
-    } else {
-        return "unsupported action or arity";
     }
     return selected_error(files, allowed);
 }
@@ -334,12 +380,7 @@ public flow decode_reply(raw: string, allowed: Array<string>, final_only: bool) 
             || !text_printable(fields[1]) || trim(fields[1]) == "" {
             return Err("invalid bounded final answer");
         }
-        let action = Action {
-            operation = "final",
-            files = [],
-            literal = "",
-            text = fields[1]
-        };
+        let action = Action.Final(fields[1]);
         return Ok(action);
     }
     if final_only {
@@ -362,16 +403,17 @@ public flow decode_reply(raw: string, allowed: Array<string>, final_only: bool) 
     } else {
         return Err("unsupported action or arity");
     }
-    let selected = read_selection_error(fields[0], files, literal, allowed);
+    let selected = read_selection_error(ReadOperation.parse(fields[0]), files, literal, allowed);
     if selected != "" {
         return Err(selected);
     }
-    let action = Action {
-        operation = fields[0],
-        files,
-        literal,
-        text = ""
-    };
+    let action = Action.Tool(
+        if fields[0] == "read" {
+            ReadAction.Read(files[0])
+        } else {
+            ReadAction.Search(literal, files)
+        }
+    );
     return Ok(action);
 }
 
@@ -439,10 +481,18 @@ public flow decode_work_reply(raw: string, allowed: Array<string>, final_only: b
             return Err(response_error(raw, phase, work_category(raw, error), maximum));
         }
     };
-    if !final_only && action.operation == "final" {
+    if !final_only && match action {
+        Action.Final(_) => true,
+        _ => false
+    }
+    {
         return Err(response_error(raw, phase, "verb", maximum));
     }
-    if final_only && char_count(action.text) > message_bytes() {
+    if final_only && match action {
+        Action.Final(text) => char_count(text) > message_bytes(),
+        _ => false
+    }
+    {
         return Err(response_error(raw, phase, "answer", maximum));
     }
     return Ok(action);
@@ -451,7 +501,7 @@ public flow decode_work_reply(raw: string, allowed: Array<string>, final_only: b
 // Prompt.data uses the same checked HostValue -> JSON conversion. Inspect the
 // whole serialized record, including escaped strings, metadata and both paths.
 public flow context_error(context: Context) -> string {
-    let message = Message.new(context);
+    let message = Message.new(context.wire());
     return context_json_error(
         message.cast<JsonValue>(),
         context_bytes(),
@@ -520,13 +570,6 @@ public flow charge_action(state: Session, tool: bool, limits: Limits) -> Session
     };
 }
 
-public type ToolSelection = {
-    operation: string,
-    files: Array<string>,
-    literal: string,
-    text: string
-};
-
 public enum LoopMode {
     Public(limits: Limits, work: bool, inspect: bool),
     Private(limits: Limits, work: bool),
@@ -536,7 +579,7 @@ public enum LoopMode {
 }
 
 public type Context = {
-    history: Array<Event>,
+    history: Array<TraceEvent>,
     allowed: Array<string>,
     final_only: bool
 };
@@ -577,7 +620,7 @@ public flow bounded_context_error(value: Context) -> string {
         return "context history exceeds 32 events";
     }
     if value.history.iter().any(
-        event => char_count(event.role) > 128 || char_count(event.kind) > 128
+        event => char_count(event.role.wire()) > 128 || char_count(event.kind.wire()) > 128
             || char_count(event.name) > 128 || char_count(event.text) > outcome_bytes()
     ) {
         return "context event exceeds bounded input";
@@ -592,3 +635,25 @@ public type ReadLedger = {
     tools: i32,
     scan: i32
 };
+
+public flow tool_name(value: Option<ReadOperation>) -> string ![] {
+    return match value {
+        None() => "",
+        Some(operation) => operation.wire()
+    };
+}
+
+public flow recorded_tool(raw: string) -> Option<ReadOperation> ![] {
+    return match raw {
+        "" => None(),
+        "read" => Some(ReadOperation.Read),
+        "search" => Some(ReadOperation.Search),
+        _ => abort("invalid recorded read operation")
+    };
+}
+
+impl Context {
+    public flow wire(self) -> JsonValue ![] {
+        return json_fields(json_value(self), [("history", wire_traces(self.history))]);
+    }
+}

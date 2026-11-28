@@ -1,21 +1,148 @@
 module nomo.domain.conversation;
 
-import nomo.domain.attempts.Attempt;
+import nomo.domain.processes.ProcessWire;
+import nomo.domain.attempts.wire_attempt;
+import nomo.domain.wire.{value as json_value, fields};
+import std.json.JsonValue;
+import nomo.domain.attempts.ExecutionAttempt;
 import nomo.domain.limits.history_bytes;
-import nomo.domain.processes.{ArchivedJob, Job};
+import nomo.domain.processes.{ArchivedProcessJob, ProcessJob};
 import nomo.domain.settings.Settings;
 import nomo.domain.workspace.ProjectInstruction;
 import std.text.char_count;
 
-public type Event = {
-    role: string,
-    kind: string,
+public enum TraceRole {
+    User,
+    Assistant,
+    Error,
+    Model,
+    Tool,
+    Main,
+    System,
+    Other,
+    MainToChild,
+    MainToMain,
+    ChildToMain
+}
+impl TraceRole {
+    public flow wire(self) -> string ![] {
+        return match self {
+            TraceRole.User => "user",
+            TraceRole.Assistant => "assistant",
+            TraceRole.Error => "error",
+            TraceRole.Model => "model",
+            TraceRole.Tool => "tool",
+            TraceRole.Main => "main",
+            TraceRole.System => "system",
+            TraceRole.Other => "other",
+            TraceRole.MainToChild => "main -> child-1",
+            TraceRole.MainToMain => "main -> main",
+            TraceRole.ChildToMain => "child-1 -> main"
+        };
+    }
+
+    public flow parse(raw: string) -> TraceRole ![] {
+        return match raw {
+            "user" => TraceRole.User,
+            "assistant" => TraceRole.Assistant,
+            "error" => TraceRole.Error,
+            "model" => TraceRole.Model,
+            "tool" => TraceRole.Tool,
+            "main" => TraceRole.Main,
+            "system" => TraceRole.System,
+            "other" => TraceRole.Other,
+            "main -> child-1" => TraceRole.MainToChild,
+            "main -> main" => TraceRole.MainToMain,
+            "child-1 -> main" => TraceRole.ChildToMain,
+            _ => abort("invalid trace role")
+        };
+    }
+}
+public enum TraceKind {
+    Answer,
+    Applied,
+    Approval,
+    Check,
+    Complete,
+    Consume,
+    Context,
+    Delegate,
+    Error,
+    TraceEvent,
+    Final,
+    Input,
+    NativeBudget,
+    Notice,
+    Plan,
+    Request,
+    Result,
+    Text,
+    Tool,
+    WorkBoundary
+}
+
+impl TraceKind {
+    public flow wire(self) -> string ![] {
+        return match self {
+            TraceKind.Answer => "answer",
+            TraceKind.Applied => "applied",
+            TraceKind.Approval => "approval",
+            TraceKind.Check => "check",
+            TraceKind.Complete => "complete",
+            TraceKind.Consume => "consume",
+            TraceKind.Context => "context",
+            TraceKind.Delegate => "delegate",
+            TraceKind.Error => "error",
+            TraceKind.TraceEvent => "event",
+            TraceKind.Final => "final",
+            TraceKind.Input => "input",
+            TraceKind.NativeBudget => "native-budget",
+            TraceKind.Notice => "notice",
+            TraceKind.Plan => "plan",
+            TraceKind.Request => "request",
+            TraceKind.Result => "result",
+            TraceKind.Text => "text",
+            TraceKind.Tool => "tool",
+            TraceKind.WorkBoundary => "work-boundary"
+        };
+    }
+
+    public flow parse(raw: string) -> TraceKind ![] {
+        return match raw {
+            "answer" => TraceKind.Answer,
+            "applied" => TraceKind.Applied,
+            "approval" => TraceKind.Approval,
+            "check" => TraceKind.Check,
+            "complete" => TraceKind.Complete,
+            "consume" => TraceKind.Consume,
+            "context" => TraceKind.Context,
+            "delegate" => TraceKind.Delegate,
+            "error" => TraceKind.Error,
+            "event" => TraceKind.TraceEvent,
+            "final" => TraceKind.Final,
+            "input" => TraceKind.Input,
+            "native-budget" => TraceKind.NativeBudget,
+            "notice" => TraceKind.Notice,
+            "plan" => TraceKind.Plan,
+            "request" => TraceKind.Request,
+            "result" => TraceKind.Result,
+            "text" => TraceKind.Text,
+            "tool" => TraceKind.Tool,
+            "work-boundary" => TraceKind.WorkBoundary,
+            _ => abort("invalid TraceKind spelling: " + raw)
+        };
+    }
+}
+
+public type TraceEvent = {
+    role: TraceRole,
+    kind: TraceKind,
     name: string,
     text: string
 };
 
-public type State = {
-    events: Array<Event>,
+public type TraceState = {
+    events: Array<TraceEvent>,
     characters: usize,
     spent: i32,
     stopped: bool
@@ -27,6 +154,8 @@ public type PendingRequest = {
     complete: bool
 };
 
+// Native and imported conversation roles are an open protocol. Preserve every label verbatim;
+// the closed Harness trace roles above do not constrain this history.
 public type ChatMessage = {
     id: string,
     role: string,
@@ -128,9 +257,9 @@ public flow forwarded(options: Options, selection: SessionSelection) -> Array<st
     return arguments;
 }
 
-public flow fresh() -> State {
-    let events: Array<Event> = [];
-    return State {
+public flow fresh() -> TraceState {
+    let events: Array<TraceEvent> = [];
+    return TraceState {
         events,
         characters = 0,
         spent = 0,
@@ -139,7 +268,7 @@ public flow fresh() -> State {
 }
 
 // Always preserve one event and 64 characters for a capacity terminal error.
-public flow capacity_error(state: State, slots: usize, characters: usize) -> string {
+public flow capacity_error(state: TraceState, slots: usize, characters: usize) -> string {
     if state.events.len() + slots + 1 > 32 {
         return "history event capacity exhausted; start a new invocation";
     }
@@ -149,20 +278,20 @@ public flow capacity_error(state: State, slots: usize, characters: usize) -> str
     return "";
 }
 
-public flow add(state: State, event: Event) -> State {
+public flow add(state: TraceState, event: TraceEvent) -> TraceState {
     return state {
         events = state.events.push(event),
         characters = state.characters + char_count(event.name) + char_count(event.text)
     };
 }
 
-public flow charge(state: State) -> State {
+public flow charge(state: TraceState) -> TraceState {
     return state {
         spent = state.spent + 1
     };
 }
 
-public flow stop(state: State) -> State {
+public flow stop(state: TraceState) -> TraceState {
     return state {
         stopped = true
     };
@@ -185,14 +314,14 @@ public type ModelTurn = {
     pending: string,
     history: Array<ChatMessage>,
     instructions: Array<ProjectInstruction>,
-    runs: Array<Attempt>,
+    runs: Array<ExecutionAttempt>,
     settings: Settings,
-    jobs: Array<Job>,
-    archived_jobs: Array<ArchivedJob>
+    jobs: Array<ProcessJob>,
+    archived_jobs: Array<ArchivedProcessJob>
 };
 
 public type TextTurn = {
-    state: State,
+    state: TraceState,
     status: i32
 };
 
@@ -216,6 +345,7 @@ public type SavedSession = {
     ledger: ConversationLedger
 };
 
+// Same lossless open-role contract as ChatMessage.
 public type StoredEvent = {
     role: string,
     name: string,
@@ -223,3 +353,29 @@ public type StoredEvent = {
     chunks: usize,
     complete: bool
 };
+
+public flow wire_model_turn(input: ModelTurn) -> JsonValue ![] {
+    return fields(
+        json_value(input),
+        [
+            ("runs", JsonValue.Array(input.runs.iter().map(run => wire_attempt(run)).collect())),
+            ("jobs", JsonValue.Array(input.jobs.iter().map(job => job.wire()).collect())),
+            ("archived_jobs", JsonValue.Array(input.archived_jobs.iter().map(job => job.wire()).collect()))
+        ]
+    );
+}
+
+public flow wire_trace(input: TraceEvent) -> JsonValue ![] {
+    return fields(
+        json_value(input),
+        [("role", JsonValue.String(input.role.wire())), ("kind", JsonValue.String(input.kind.wire()))]
+    );
+}
+
+public flow wire_traces(input: Array<TraceEvent>) -> JsonValue ![] {
+    return JsonValue.Array(input.iter().map(event => wire_trace(event)).collect());
+}
+
+public flow wire_state(input: TraceState) -> JsonValue ![] {
+    return fields(json_value(input), [("events", wire_traces(input.events))]);
+}

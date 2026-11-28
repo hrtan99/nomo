@@ -1,5 +1,9 @@
 module nomo.application.sessions.admission;
 
+import nomo.domain.sessions.chat.{ChatPhase};
+import nomo.domain.sessions.work.{FollowupPhase, WorkPhase};
+import nomo.domain.sessions.work.{CheckState, CheckOutcome};
+import nomo.domain.editing.LiteralEditPhase;
 import nomo.application.editing.ports.Ticket;
 import nomo.application.sessions.persistence.commit_once;
 import nomo.application.sessions.ports.{
@@ -11,13 +15,13 @@ import nomo.application.sessions.ports.{
     HistoryCheckRows,
     PriorChatReader
 };
-import nomo.domain.editing.{Binding, EditOperation, Selector, binding_error, record_error, same_record, selector_error};
+import nomo.domain.editing.{Binding, LiteralEditRecord, Selector, binding_error, record_error, same_record, selector_error};
 import nomo.domain.harness.work.WorkLedger;
 import nomo.domain.sessions.work.{
-    CheckRecord,
-    FollowupParent,
-    FollowupRecord,
-    WorkRecord,
+    CheckAttempt,
+    FollowupPredecessor,
+    FollowupAttempt,
+    WorkAttempt,
     historical_followup_full,
     historical_followup_invalid,
     historical_followup_zero,
@@ -28,19 +32,17 @@ import nomo.domain.sessions.work.{
 };
 import std.memory.{MemoryVersion, Missing, WriteCondition};
 
-flow invalid<R ~ HistoryCheckRows>(rows: R, value: CheckRecord) -> string {
+flow invalid<R ~ HistoryCheckRows>(rows: R, value: CheckAttempt) -> string {
     return invalid_values(
         value.format,
         value.phase,
         value.id,
         value.digest,
-        value.outcome,
-        value.exit_code,
         rows.allow_abandoned()
     );
 }
 
-flow save<R ~ HistoryCheckRows>(rows: R, value: CheckRecord, condition: WriteCondition) -> Result<
+flow save<R ~ HistoryCheckRows>(rows: R, value: CheckAttempt, condition: WriteCondition) -> Result<
     MemoryVersion,
     string
 > {
@@ -55,13 +57,11 @@ public flow plan<R ~ HistoryCheckRows>(rows: R, id: string, digest: string) -> R
     if rows.read() != None() {
         return Err("history-check already planned; no retry");
     }
-    let value = CheckRecord {
+    let value = CheckAttempt {
         format = 1,
-        phase = "planned",
+        phase = CheckState.Planned,
         id,
         digest,
-        outcome = "",
-        exit_code = ""
     };
     match save(rows, value, Missing) {
         Ok(_) => Ok(true),
@@ -73,10 +73,9 @@ flow transition<R ~ HistoryCheckRows>(
     rows: R,
     id: string,
     digest: string,
-    outcome: string,
-    exit_code: string,
-    finishing: bool
+    state: CheckState
 ) -> Result<bool, string> {
+    let finishing = state.is_complete();
     let proof = rows.confirmed_work(id);
     if proof != "" {
         return Err(proof);
@@ -97,9 +96,9 @@ flow transition<R ~ HistoryCheckRows>(
     }
     if before.key != "check" || before.value.id != id || before.value.digest != digest
         || before.value.phase != (if finishing {
-        "running"
+        CheckState.Running
     } else {
-        "planned"
+        CheckState.Planned
     }) {
         return Err(if finishing {
             "running check differs; no retry"
@@ -107,17 +106,11 @@ flow transition<R ~ HistoryCheckRows>(
             "planned check differs; no retry"
         });
     }
-    let value = CheckRecord {
+    let value = CheckAttempt {
         format = 1,
-        phase = if finishing {
-            "complete"
-        } else {
-            "running"
-        },
+        phase = state,
         id,
-        digest,
-        outcome,
-        exit_code
+        digest
     };
     let version = match save(rows, value, WriteCondition.Match(before.version)) {
         Ok(item) => item,
@@ -132,20 +125,19 @@ flow transition<R ~ HistoryCheckRows>(
 }
 
 public flow start<R ~ HistoryCheckRows>(rows: R, id: string, digest: string) -> Result<bool, string> {
-    return transition(rows, id, digest, "", "", false);
+    return transition(rows, id, digest, CheckState.Running);
 }
 
 public flow history_check_store_finish<R ~ HistoryCheckRows>(
     rows: R,
     id: string,
     digest: string,
-    outcome: string,
-    exit_code: string
+    outcome: CheckOutcome
 ) -> Result<bool, string> {
-    return transition(rows, id, digest, outcome, exit_code, true);
+    return transition(rows, id, digest, CheckState.Complete(outcome));
 }
 
-public flow history_check_store_inspect<R ~ HistoryCheckRows>(rows: R) -> Result<Option<CheckRecord>, string> {
+public flow history_check_store_inspect<R ~ HistoryCheckRows>(rows: R) -> Result<Option<CheckAttempt>, string> {
     let before = rows.read();
     match before {
         None() => Ok(None()),
@@ -163,7 +155,7 @@ public flow history_check_store_inspect<R ~ HistoryCheckRows>(rows: R) -> Result
             if work_id != value.value.id {
                 return Err("history-check work identity differs");
             }
-            if value.value.phase != "planned" {
+            if value.value.phase != CheckState.Planned {
                 let proof = rows.confirmed_work(value.value.id);
                 if proof != "" {
                     return Err(proof);
@@ -178,7 +170,7 @@ public flow history_check_store_inspect<R ~ HistoryCheckRows>(rows: R) -> Result
 }
 
 // Both namespaces share transitions, but each adapter has one fixed native store.
-public flow available<S ~ CasRows<EditOperation>>(rows: S) -> Result<bool, string> {
+public flow available<S ~ CasRows<LiteralEditRecord>>(rows: S) -> Result<bool, string> {
     return match rows.read() {
         Ok(None()) => Ok(true),
         Ok(Some(_)) => Err("edit operation slot already consumed; no retry"),
@@ -186,7 +178,7 @@ public flow available<S ~ CasRows<EditOperation>>(rows: S) -> Result<bool, strin
     };
 }
 
-public flow begin<S ~ CasRows<EditOperation>>(rows: S, binding: Binding) -> Result<Ticket, string> {
+public flow begin<S ~ CasRows<LiteralEditRecord>>(rows: S, binding: Binding) -> Result<Ticket, string> {
     let invalid = binding_error(binding);
     if invalid != "" {
         return Err(invalid);
@@ -197,12 +189,12 @@ public flow begin<S ~ CasRows<EditOperation>>(rows: S, binding: Binding) -> Resu
             return Err(error);
         }
     }
-    let row = EditOperation {
+    let row = LiteralEditRecord {
         format = 1,
-        phase = "intent",
+        phase = LiteralEditPhase.Intent,
         binding
     };
-    let version = match commit_once<EditOperation, S>(rows, row, Missing, None()) {
+    let version = match commit_once<LiteralEditRecord, S>(rows, row, Missing, None()) {
         Ok(value) => value,
         Err(error) => {
             return Err(error);
@@ -214,7 +206,7 @@ public flow begin<S ~ CasRows<EditOperation>>(rows: S, binding: Binding) -> Resu
     });
 }
 
-public flow complete<S ~ CasRows<EditOperation>>(rows: S, ticket: Ticket) -> Result<bool, string> {
+public flow complete<S ~ CasRows<LiteralEditRecord>>(rows: S, ticket: Ticket) -> Result<bool, string> {
     let invalid = binding_error(ticket.binding);
     if invalid != "" {
         return Err(invalid);
@@ -225,21 +217,21 @@ public flow complete<S ~ CasRows<EditOperation>>(rows: S, ticket: Ticket) -> Res
             return Err("edit intent missing; no retry");
         }
     };
-    let expected = EditOperation {
+    let expected = LiteralEditRecord {
         format = 1,
-        phase = "intent",
+        phase = LiteralEditPhase.Intent,
         binding = ticket.binding
     };
     if before.key != "operation" || !same_record(before.value, expected)
         || before.version.opaque != ticket.version.opaque {
         return Err("edit intent binding or version changed; no retry");
     }
-    let row = EditOperation {
+    let row = LiteralEditRecord {
         format = 1,
-        phase = "completed",
+        phase = LiteralEditPhase.Completed,
         binding = ticket.binding
     };
-    return match commit_once<EditOperation, S>(
+    return match commit_once<LiteralEditRecord, S>(
         rows,
         row,
         WriteCondition.Match(before.version),
@@ -251,8 +243,8 @@ public flow complete<S ~ CasRows<EditOperation>>(rows: S, ticket: Ticket) -> Res
 }
 
 // Status reads never mutate or authorize an edit; completion is historical fact.
-public flow edit_operations_inspect<S ~ CasRows<EditOperation>>(rows: S, selector: Selector) -> Result<
-    Option<EditOperation>,
+public flow edit_operations_inspect<S ~ CasRows<LiteralEditRecord>>(rows: S, selector: Selector) -> Result<
+    Option<LiteralEditRecord>,
     string
 > {
     let invalid = selector_error(selector.id, selector.workspace, selector.path);
@@ -292,14 +284,14 @@ public flow edit_operations_inspect<S ~ CasRows<EditOperation>>(rows: S, selecto
     return Ok(Some(before.value));
 }
 
-public flow parent<S ~ FollowupPredecessors>(source: S) -> Result<FollowupParent, string> {
+public flow parent<S ~ FollowupPredecessors>(source: S) -> Result<FollowupPredecessor, string> {
     let work = match source.work() {
         Ok(Some(value)) => value,
         _ => {
             return Err("completed first work required");
         }
     };
-    if work.phase != "complete" {
+    if work.phase != WorkPhase.Complete {
         return Err("first work is unresolved; inspect without retry");
     }
     let edit = match source.edit(work.id, work.workspace, work.path) {
@@ -308,7 +300,7 @@ public flow parent<S ~ FollowupPredecessors>(source: S) -> Result<FollowupParent
             return Err("completed first edit required");
         }
     };
-    if edit.phase != "completed" {
+    if edit.phase != LiteralEditPhase.Completed {
         return Err("first edit is unresolved");
     }
     let check = match source.check() {
@@ -319,13 +311,13 @@ public flow parent<S ~ FollowupPredecessors>(source: S) -> Result<FollowupParent
     };
     match check {
         Some(value) => {
-            if value.phase != "complete" || value.id != work.id {
+            if !value.phase.is_complete() || value.id != work.id {
                 return Err("first check is unresolved");
             }
         },
         None() => (),
     }
-    return Ok(FollowupParent {
+    return Ok(FollowupPredecessor {
         work,
         edit,
         check
@@ -333,7 +325,8 @@ public flow parent<S ~ FollowupPredecessors>(source: S) -> Result<FollowupParent
 }
 
 flow history_followup_history_error<S ~ PriorChatReader>(source: S, history: Entry) -> string {
-    if history.key != "latest" || history.value.invocation.admitted < 1 || history.value.phase == "running"
+    if history.key != "latest" || history.value.invocation.admitted < 1
+        || history.value.phase == ChatPhase.Running
         || history.value.pending != "" {
         return "completed chat history required";
     }
@@ -349,20 +342,20 @@ flow history_followup_history_error<S ~ PriorChatReader>(source: S, history: Ent
     return "";
 }
 
-flow history_followup_write<S ~ CasRows<FollowupRecord>>(
+flow history_followup_write<S ~ CasRows<FollowupAttempt>>(
     source: S,
-    row: FollowupRecord,
+    row: FollowupAttempt,
     condition: WriteCondition
 ) -> Result<MemoryVersion, string> {
     let error = historical_followup_invalid(row);
     if error != "" {
         return Err(error);
     }
-    return commit_once<FollowupRecord, S>(source, row, condition, None());
+    return commit_once<FollowupAttempt, S>(source, row, condition, None());
 }
 
 public flow history_followup_admit<
-    S ~ CasRows<FollowupRecord> + PriorChatReader
+    S ~ CasRows<FollowupAttempt> + PriorChatReader
         + FollowupPredecessors
 >(
     source: S,
@@ -396,9 +389,9 @@ public flow history_followup_admit<
             return Err(problem);
         }
     };
-    let row = FollowupRecord {
+    let row = FollowupAttempt {
         format = 1,
-        phase = "running",
+        phase = FollowupPhase.Running,
         id,
         workspace,
         path,
@@ -423,7 +416,7 @@ public flow history_followup_admit<
 }
 
 public flow history_followup_claim<
-    S ~ CasRows<FollowupRecord> + PriorChatReader
+    S ~ CasRows<FollowupAttempt> + PriorChatReader
         + FollowupPredecessors
 >(source: S, ticket: HistoricalFollowupTicket) -> Result<bool, string> {
     let error = historical_followup_invalid(ticket.record);
@@ -443,7 +436,8 @@ public flow history_followup_claim<
     if prior != ticket.record.parent {
         return Err("first work changed; no retry");
     }
-    if ticket.record.phase != "running" || ticket.record.history_version != ticket.history.version.opaque {
+    if ticket.record.phase != FollowupPhase.Running
+        || ticket.record.history_version != ticket.history.version.opaque {
         return Err("followup ticket changed");
     }
     let actual = match source.read() {
@@ -463,7 +457,7 @@ public flow history_followup_claim<
 }
 
 public flow history_followup_finish<
-    S ~ CasRows<FollowupRecord> + PriorChatReader
+    S ~ CasRows<FollowupAttempt> + PriorChatReader
         + FollowupPredecessors
 >(source: S, ticket: HistoricalFollowupTicket, summary: string, spent: WorkLedger) -> Result<
     bool,
@@ -478,7 +472,7 @@ public flow history_followup_finish<
     let old = ticket.record;
     let row = old {
         format = 1,
-        phase = "complete",
+        phase = FollowupPhase.Complete,
         reserved = historical_followup_zero(),
         settled = Some(spent),
         summary
@@ -496,9 +490,9 @@ public flow history_followup_finish<
 }
 
 public flow history_followup_inspect<
-    S ~ CasRows<FollowupRecord>
+    S ~ CasRows<FollowupAttempt>
         + FollowupPredecessors
->(source: S) -> Result<Option<FollowupRecord>, string> {
+>(source: S) -> Result<Option<FollowupAttempt>, string> {
     let before = match source.read() {
         Ok(value) => value,
         Err(error) => {
@@ -536,7 +530,8 @@ public flow history_followup_inspect<
 }
 
 flow history_work_history_error<S ~ PriorChatReader>(source: S, history: Entry) -> string {
-    if history.key != "latest" || history.value.invocation.admitted < 1 || history.value.phase == "running"
+    if history.key != "latest" || history.value.invocation.admitted < 1
+        || history.value.phase == ChatPhase.Running
         || history.value.pending != "" {
         return "a completed prior chat turn is required";
     }
@@ -552,20 +547,20 @@ flow history_work_history_error<S ~ PriorChatReader>(source: S, history: Entry) 
     return "";
 }
 
-flow history_work_write<S ~ CasRows<WorkRecord>>(
+flow history_work_write<S ~ CasRows<WorkAttempt>>(
     rows: S,
-    row: WorkRecord,
+    row: WorkAttempt,
     condition: WriteCondition
 ) -> Result<MemoryVersion, string> {
     let error = historical_work_invalid(row);
     if error != "" {
         return Err(error);
     }
-    return commit_once<WorkRecord, S>(rows, row, condition, None());
+    return commit_once<WorkAttempt, S>(rows, row, condition, None());
 }
 
 public flow history_work_admit<
-    S ~ CasRows<WorkRecord>
+    S ~ CasRows<WorkAttempt>
         + PriorChatReader
 >(
     source: S,
@@ -588,9 +583,9 @@ public flow history_work_admit<
     if error != "" {
         return Err(error);
     }
-    let row = WorkRecord {
+    let row = WorkAttempt {
         format = 1,
-        phase = "running",
+        phase = WorkPhase.Running,
         id,
         workspace,
         path,
@@ -614,7 +609,7 @@ public flow history_work_admit<
 }
 
 public flow history_work_claim<
-    S ~ CasRows<WorkRecord>
+    S ~ CasRows<WorkAttempt>
         + PriorChatReader
 >(source: S, ticket: HistoricalWorkTicket) -> Result<bool, string> {
     let error = historical_work_invalid(ticket.record);
@@ -625,7 +620,8 @@ public flow history_work_claim<
     if history != "" {
         return Err(history);
     }
-    if ticket.record.phase != "running" || ticket.record.history_version != ticket.history.version.opaque {
+    if ticket.record.phase != WorkPhase.Running
+        || ticket.record.history_version != ticket.history.version.opaque {
         return Err("history-work ticket changed");
     }
     let actual = match source.read() {
@@ -644,7 +640,7 @@ public flow history_work_claim<
 }
 
 public flow history_work_finish<
-    S ~ CasRows<WorkRecord>
+    S ~ CasRows<WorkAttempt>
         + PriorChatReader
 >(source: S, ticket: HistoricalWorkTicket, summary: string, spent: WorkLedger) -> Result<
     bool,
@@ -659,7 +655,7 @@ public flow history_work_finish<
     let old = ticket.record;
     let row = old {
         format = 1,
-        phase = "complete",
+        phase = WorkPhase.Complete,
         reserved = historical_work_zero(),
         settled = Some(spent),
         summary
@@ -676,7 +672,7 @@ public flow history_work_finish<
     return Ok(true);
 }
 
-public flow chat_available<S ~ CasRows<WorkRecord>>(rows: S) -> Result<bool, string> {
+public flow chat_available<S ~ CasRows<WorkAttempt>>(rows: S) -> Result<bool, string> {
     return match rows.read() {
         Ok(None()) => Ok(true),
         Ok(Some(_)) => Err("history-work consumes this session; no chat continuation"),
@@ -685,8 +681,8 @@ public flow chat_available<S ~ CasRows<WorkRecord>>(rows: S) -> Result<bool, str
 }
 
 // Status is data only; it is never a current root observation or a grant.
-public flow history_work_inspect<S ~ CasRows<WorkRecord>>(rows: S) -> Result<
-    Option<WorkRecord>,
+public flow history_work_inspect<S ~ CasRows<WorkAttempt>>(rows: S) -> Result<
+    Option<WorkAttempt>,
     string
 > {
     let before = match rows.read() {

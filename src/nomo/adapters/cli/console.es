@@ -1,5 +1,12 @@
 module nomo.adapters.cli.console;
 
+import nomo.domain.harness.read.TextStage;
+import nomo.domain.conversation.{TraceRole, TraceKind};
+import nomo.domain.changes.{wire_journal, wire_change_outcome};
+import std.json.JsonValue;
+import nomo.domain.archives.wire_copy;
+import nomo.domain.processes.ProcessWire;
+import nomo.domain.attempts.wire_attempt;
 import nomo.adapters.cli.input.command;
 import nomo.adapters.codec.json as codec_json;
 import nomo.application.conversation.ports.{ConversationOutputSink, ConversationPicker, TerminalDisplay, TerminalEvent, TerminalInput};
@@ -12,7 +19,7 @@ import nomo.application.transfer.ports.TransferRenderer;
 import nomo.application.workspace.ports.ProjectRenderer;
 import nomo.domain.archives.ExportPreview;
 import nomo.domain.commands.{Command as commands_Command, CommandRequest};
-import nomo.domain.conversation.{Event, SavedSession};
+import nomo.domain.conversation.{TraceEvent, SavedSession};
 import nomo.domain.editing.Selector;
 import nomo.domain.harness.loop.ReadLedger;
 import nomo.domain.harness.read.Ledger;
@@ -74,7 +81,7 @@ impl ConsoleTerminalDisplay ~ TerminalDisplay {
                     + value.title
             ),
             TerminalEvent.CopyState(job) => println(
-                "[COPY   ] " + job.phase + "; /resume-copy " + job.id
+                "[COPY   ] " + job.phase.wire() + "; /resume-copy " + job.id
                     + " or /discard-copy " + job.id
             ),
             TerminalEvent.Pending(value) => println(
@@ -82,8 +89,8 @@ impl ConsoleTerminalDisplay ~ TerminalDisplay {
                     + " has no recorded completion. Inspect actual state; it is not automatically replayed."
             ),
             TerminalEvent.UnresolvedAttempt(attempt) => println(
-                "[RUN    ] " + attempt.id + " " + attempt.kind
-                    + " " + attempt.phase
+                "[RUN    ] " + attempt.id + " " + attempt.kind.wire()
+                    + " " + attempt.phase.wire()
                     + "; no completion recorded. Inspect actual state, then /resolve-run ID [NOTE]."
             ),
             TerminalEvent.History(item) => println(
@@ -112,31 +119,31 @@ impl ConsoleTerminalDisplay ~ TerminalDisplay {
             ),
             TerminalEvent.ProcessJob(value) => json(
                 "[JOB    ] ",
-                value,
+                value.wire(),
                 "process conversion failed",
                 "process encoding failed"
             ),
             TerminalEvent.JobRead(value) => json(
                 "[JOB    ] ",
-                value,
+                value.wire(),
                 "process conversion failed",
                 "process encoding failed"
             ),
             TerminalEvent.JobInput(value) => json(
                 "[JOB    ] ",
-                value,
+                value.wire(),
                 "process conversion failed",
                 "process encoding failed"
             ),
             TerminalEvent.JobOutput(value) => json(
                 "[JOB    ] ",
-                value,
+                JsonValue.Array(value.iter().map(item => item.wire()).collect()),
                 "process conversion failed",
                 "process encoding failed"
             ),
-            TerminalEvent.ArchivedJob(value) => json(
+            TerminalEvent.ArchivedProcessJob(value) => json(
                 "[OLD JOB] ",
-                value,
+                value.wire(),
                 "archived job conversion failed",
                 "archived job encoding failed"
             ),
@@ -163,30 +170,35 @@ impl ConsoleTerminalDisplay ~ TerminalDisplay {
             ),
             TerminalEvent.Edit(value) => json(
                 "[EDIT   ] ",
-                value,
+                wire_journal(value),
                 "edit conversion failed",
                 "edit encoding failed"
             ),
             TerminalEvent.EditResult(value) => json(
                 "[EDIT   ] ",
-                value,
+                wire_change_outcome(value),
                 "edit result conversion failed",
                 "edit result encoding failed"
             ),
             TerminalEvent.Copy(value) => json(
                 "[COPY   ] ",
-                value,
+                wire_copy(value),
                 "copy conversion failed",
                 "copy encoding failed"
             ),
             TerminalEvent.UnfinishedCopy(job) => println(
-                "[COPY   ] Unfinished " + job.kind + " " + job.id
+                "[COPY   ] Unfinished " + job.kind.wire() + " " + job.id
                     + "; /resume-copy " + job.id + " or /discard-copy "
                     + job.id
             ),
-            TerminalEvent.Run(value) => json("[RUN    ] ", value, "run conversion failed", "run encoding failed"),
+            TerminalEvent.Run(value) => json(
+                "[RUN    ] ",
+                wire_attempt(value),
+                "run conversion failed",
+                "run encoding failed"
+            ),
             TerminalEvent.Resolved(value) => println(
-                "[RUN    ] " + value.id + " " + value.phase
+                "[RUN    ] " + value.id + " " + value.phase.wire()
                     + "; prior operations were not replayed."
             ),
             TerminalEvent.Config(value) => json(
@@ -253,54 +265,57 @@ public type PublicHarnessEvents = {};
 
 public type RedactedHarnessEvents = {};
 
-flow harness(event: Event, text: string) -> unit ![Error<IOError>] {
-    println("EVENT " + event.role + " " + event.kind + " " + event.name + ": " + text);
+flow harness(event: TraceEvent, text: string) -> unit ![Error<IOError>] {
+    println("EVENT " + event.role.wire() + " " + event.kind.wire() + " " + event.name + ": " + text);
 }
 
 impl PublicChildEvents ~ ConversationSink {
-    flow publish(self, event: Event) -> unit ![Error<IOError>] {
+    flow publish(self, event: TraceEvent) -> unit ![Error<IOError>] {
         publish(event);
     }
 }
 
 impl RedactedChildEvents ~ ConversationSink {
-    flow publish(self, event: Event) -> unit ![Error<IOError>] {
-        println("CHILD EVENT " + event.role + " " + event.kind + " " + event.name + ": [REDACTED]");
+    flow publish(self, event: TraceEvent) -> unit ![Error<IOError>] {
+        println(
+            "CHILD EVENT " + event.role.wire() + " " + event.kind.wire() + " " + event.name
+                + ": [REDACTED]"
+        );
     }
 }
 
 impl PublicHarnessEvents ~ ConversationSink {
-    flow publish(self, event: Event) -> unit ![Error<IOError>] {
+    flow publish(self, event: TraceEvent) -> unit ![Error<IOError>] {
         harness(event, event.text);
     }
 }
 
 impl RedactedHarnessEvents ~ ConversationSink {
-    flow publish(self, event: Event) -> unit ![Error<IOError>] {
+    flow publish(self, event: TraceEvent) -> unit ![Error<IOError>] {
         harness(event, "[REDACTED]");
     }
 }
 
-public flow publish(event: Event) -> unit ![Error<IOError>] ~ ConsoleEventSink {
+public flow publish(event: TraceEvent) -> unit ![Error<IOError>] ~ ConsoleEventSink {
     let role = event.role;
     let kind = event.kind;
     let name = event.name;
     let text = event.text;
-    if kind == "error" {
+    if kind == TraceKind.Error {
         println("error: " + text);
     }
-    else if role == "model" {
-        println(if kind == "text" {
+    else if role == TraceRole.Model {
+        println(if kind == TraceKind.Text {
             "model: text " + name
         } else {
             "model: tool " + name
         });
     }
-    else if role == "tool" {
+    else if role == TraceRole.Tool {
         println("tool: " + name + ": " + text);
     }
     else {
-        println(role + ": " + text);
+        println(role.wire() + ": " + text);
     }
 }
 
@@ -466,9 +481,10 @@ flow numbers(state: Ledger) -> string {
         + from_i32(state.tokens);
 }
 
-public flow precharged(phase: string, state: Ledger) -> unit {
+public flow precharged(phase: TextStage, state: Ledger) -> unit {
     println(
-        "STAGE " + phase + " child-1 " + numbers(state) + " reserved_steps=" + from_i32(5 - state.steps)
+        "STAGE " + phase.wire() + " child-1 " + numbers(state) + " reserved_steps="
+            + from_i32(5 - state.steps)
             + " reserved_calls=" + from_i32(3 - state.calls) + " reserved_tokens="
             + from_i32(6144 - state.tokens)
     );
